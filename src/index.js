@@ -23,6 +23,7 @@ const LANGUAGE_KEY = 'bespiral.language'
 const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
+const SYNCED_WITH_GLOBAL_STORAGE_KEY = 'bespiral.synced_with_global_storage'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN
@@ -875,20 +876,24 @@ const setupIframe = (onLoad) => {
 
 const mainApp = () => {
   let hasRunMain = false
+  const isGlobalStorageSynced = window.localStorage.getItem(SYNCED_WITH_GLOBAL_STORAGE_KEY) !== null
+
   // Receive a `getMany` response, and write all of the content to localStorage
   window.onmessage = (e) => {
     const payload = e.data
 
-    if (payload.method && payload.method === 'getMany') {
-      payload.data.forEach(({ key, value }) => {
-        if (value) {
-          window.localStorage.setItem(key, value)
-        } else {
-          window.localStorage.removeItem(key)
-        }
-      })
+    if (payload.method) {
+      if (payload.method === 'getMany') {
+        payload.data.forEach(({ key, value }) => {
+          if (value) {
+            window.localStorage.setItem(key, value)
+          } else {
+            window.localStorage.removeItem(key)
+          }
+        })
+      }
 
-      if (!hasRunMain) {
+      if ((payload.method === 'getMany' || payload.method === 'setMany') && !hasRunMain) {
         hasRunMain = true
         main()
       }
@@ -904,10 +909,27 @@ const mainApp = () => {
         contentWindow.postMessage(message, src)
       }
 
-      postMessage({
-        method: 'getMany',
-        keys: [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
-      })
+      const keys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+      const hasUser = window.localStorage.getItem(USER_KEY) !== null
+
+      if (isGlobalStorageSynced || !hasUser) {
+        postMessage({
+          method: 'getMany',
+          keys
+        })
+      } else {
+        const entries = keys.reduce((prevEntries, key) => {
+          prevEntries[key] = window.localStorage.getItem(key)
+          return prevEntries
+        }, {})
+
+        postMessage({
+          method: 'setMany',
+          entries
+        })
+      }
+
+      window.localStorage.setItem(SYNCED_WITH_GLOBAL_STORAGE_KEY, true)
     })
   }
 }
@@ -933,6 +955,16 @@ const globalStorage = () => {
     switch (payload.method) {
       case 'set':
         window.localStorage.setItem(payload.key, payload.value)
+        break
+      case 'setMany':
+        Object.entries(payload.entries).forEach(([key, value]) => {
+          if (value !== null) {
+            window.localStorage.setItem(key, value)
+          }
+        })
+        respond({
+          method: 'setMany'
+        })
         break
       case 'get':
         respond({ data: window.localStorage.getItem(payload.key) })
