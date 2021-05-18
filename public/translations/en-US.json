@@ -903,7 +903,7 @@
       },
       "invitation": {
         "title": "Access to the community",
-        "description": "When a community \"invitation\" is set, new members only get access through an invitation."
+        "description": "When a community is invite-only, new members only get access through an invitation."
       },
       "cover_photo": {
         "title": "Community cover picture",
@@ -911,30 +911,30 @@
       },
       "fields": {
         "name": "Community name",
-        "description": "What is the community",
+        "description": "Describe the community",
         "website": "Community's website",
         "url": "Community custom URL",
         "invitation": "Invitation"
       },
       "placeholders": {
-        "name": "Give your community a name",
-        "description": "Say something about your community",
+        "name": "Give the community a name",
+        "description": "Say something about the community",
         "url": "Choose a personalized URL"
       },
       "errors": {
         "logo_upload": "There was an error uploading the logo",
         "cover_upload": "There was an error uploading the cover picture",
         "name": {
-          "blank": "Your community needs a name"
+          "blank": "The community needs a name"
         },
         "description": {
-          "blank": "Your community needs a description"
+          "blank": "The community needs a description"
         },
         "website": {
           "invalid": "Please enter a valid website"
         },
         "url": {
-          "blank": "Your community needs a URL",
+          "blank": "The community needs a URL",
           "invalid_char": "Do not use special characters",
           "invalid_case": "Only downcase is allowed",
           "too_short": "The URL must have at least 2 characters",

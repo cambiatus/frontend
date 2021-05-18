@@ -905,7 +905,7 @@
       },
       "invitation": {
         "title": "Acceso a la comunidad",
-        "description": "Cuando se establece una \"invitación\" de la comunidad, los nuevos miembros solo obtienen acceso a través de una invitación."
+        "description": "Cuando la comunidad necesita invitaciones, los nuevos miembros solo pueden acceder a través de una invitación."
       },
       "cover_photo": {
         "title": "Imagen de portada de la comunidad",
@@ -913,30 +913,30 @@
       },
       "fields": {
         "name": "Nombre de la comunidad",
-        "description": "Que es la comunidad",
+        "description": "Describe la comunidad",
         "website": "Sitio web de la comunidad",
         "url": "URL personalizada de la comunidad",
         "invitation": "Invitación"
       },
       "placeholders": {
-        "name": "Dale un nombre a tu comunidad",
-        "description": "Di algo sobre tu comunidad",
+        "name": "Dale un nombre a la comunidad",
+        "description": "Di algo sobre la comunidad",
         "url": "Elija una URL personalizada"
       },
       "errors": {
         "logo_upload": "Hubo un error al cargar el logo",
         "cover_upload": "Hubo un error al cargar la imagen de portada",
         "name": {
-          "blank": "Tu comunidad necesita un nombre"
+          "blank": "La comunidad necesita un nombre"
         },
         "description": {
-          "blank": "Tu comunidad necesita una descripción"
+          "blank": "La comunidad necesita una descripción"
         },
         "website": {
           "invalid": "Ingrese un sitio web válido"
         },
         "url": {
-          "blank": "Tu comunidad necesita una URL",
+          "blank": "La comunidad necesita una URL",
           "invalid_char": "No use caracteres especiales",
           "invalid_case": "Solo se permite downcase",
           "too_short": "La URL debe tener al menos 2 caracteres.",

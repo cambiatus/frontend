@@ -905,7 +905,7 @@
       },
       "invitation": {
         "title": "Accés a la comunitat",
-        "description": "Quan s'estableix una \"invitació\" de la comunitat, els membres nous només podran accedir mitjançant una invitació."
+        "description": "Quan la comunitat necessita invitacions, els nous membres només poden accedir mitjançant una invitació."
       },
       "cover_photo": {
         "title": "Imatge de portada de la comunitat",
@@ -913,30 +913,30 @@
       },
       "fields": {
         "name": "Nom de la Comunitat",
-        "description": "Què és la comunitat.",
+        "description": "Descriviu la comunitat",
         "website": "Lloc web de la comunitat",
         "url": "URL personalitzat de la comunitat.",
         "invitation": "Invitació"
       },
       "placeholders": {
-        "name": "Doneu un nom a la vostra comunitat",
-        "description": "Digueu alguna cosa sobre la vostra comunitat",
+        "name": "Doneu un nom a la comunitat",
+        "description": "Digueu alguna cosa sobre la comunitat",
         "url": "Trieu un URL personalitzat"
       },
       "errors": {
         "logo_upload": "S'ha produït un error en penjar el logotip",
         "cover_upload": "S'ha produït un error en penjar la imatge de portada",
         "name": {
-          "blank": "La vostra comunitat necessita un nom"
+          "blank": "La comunitat necessita un nom"
         },
         "description": {
-          "blank": "La vostra comunitat necessita una descripció"
+          "blank": "La comunitat necessita una descripció"
         },
         "website": {
           "invalid": "Introduïu un lloc web vàlid"
         },
         "url": {
-          "blank": "La vostra comunitat necessita un URL",
+          "blank": "La comunitat necessita un URL",
           "invalid_char": "No utilitzeu caràcters especials",
           "invalid_case": "Només es permet la minúscula",
           "too_short": "L'URL ha de tenir com a mínim 2 caràcters",

@@ -907,7 +907,7 @@
       },
       "invitation": {
         "title": "Acesso à comunidade",
-        "description": "Quando o \"convite\" da comunidade está habilitado, novos membros só conseguem acesso através de um convite."
+        "description": "Quando a comunidade precisa de convites, novos membros só conseguem acesso através de um convite."
       },
       "cover_photo": {
         "title": "Foto de capa da comunidade",
@@ -915,30 +915,30 @@
       },
       "fields": {
         "name": "Nome da comunidade",
-        "description": "O que é a comunidade",
+        "description": "Descreva a comunidade",
         "website": "Site da comunidade",
         "url": "URL personalizado da comunidade",
         "invitation": "Convite"
       },
       "placeholders": {
-        "name": "Dê um nome à sua comunidade",
-        "description": "Diga algo sobre sua comunidade",
+        "name": "Dê um nome à comunidade",
+        "description": "Diga algo sobre a comunidade",
         "url": "Escolha um URL personalizado"
       },
       "errors": {
         "logo_upload": "Houve um erro ao fazer o upload da logo",
         "cover_upload": "Houve um erro ao carregar a imagem de capa",
         "name": {
-          "blank": "Sua comunidade precisa de um nome"
+          "blank": "A comunidade precisa de um nome"
         },
         "description": {
-          "blank": "Sua comunidade precisa de uma descrição"
+          "blank": "A comunidade precisa de uma descrição"
         },
         "website": {
           "invalid": "Por favor insira um site válido"
         },
         "url": {
-          "blank": "Sua communidade precisa de uma URL",
+          "blank": "A communidade precisa de uma URL",
           "invalid_char": "Não use caracteres especiais",
           "invalid_case": "Somente letras minúsculas são permitidas",
           "too_short": "O URL precisa de pelo menos 2 caracteres",
