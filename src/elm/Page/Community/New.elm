@@ -299,11 +299,11 @@ viewSymbol ({ translators } as shared) isDisabled defVal errors =
         , onInput = EnteredSymbol
         , disabled = isDisabled
         , value = defVal
-        , placeholder = Just "_, _ _ _ _"
+        , placeholder = Just ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
         , problems = Just (getFieldProblems shared SymbolField errors)
         , translators = translators
         }
-        |> Input.withAttrs [ minlength 5, maxlength 6, required True ]
+        |> Input.withAttrs [ minlength (2 + Eos.minSymbolLength), maxlength (2 + Eos.maxSymbolLength), required True ]
         |> Input.toHtml
 
 

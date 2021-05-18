@@ -24,6 +24,8 @@ module Eos exposing
     , eosBoolToBool
     , formatSymbolAmount
     , getSymbolPrecision
+    , maxSymbolLength
+    , minSymbolLength
     , symbolDecoder
     , symbolFromString
     , symbolSelectionSet
@@ -325,6 +327,16 @@ symbolToSymbolCodeString (Symbol s _) =
     s
 
 
+minSymbolLength : Int
+minSymbolLength =
+    3
+
+
+maxSymbolLength : Int
+maxSymbolLength =
+    7
+
+
 symbolFromString : String -> Maybe Symbol
 symbolFromString str =
     let
@@ -342,7 +354,10 @@ symbolFromString str =
     in
     case ( maybeSymbolCode, maybePrecision ) of
         ( Just symbolCode, Just precision ) ->
-            if String.all Char.isAlpha symbolCode && (String.length symbolCode == 3 || String.length symbolCode == 4) then
+            if
+                String.all Char.isAlpha symbolCode
+                    && (String.length symbolCode >= minSymbolLength || String.length symbolCode <= maxSymbolLength)
+            then
                 Just (Symbol (String.toUpper symbolCode) precision)
 
             else
