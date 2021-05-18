@@ -20,6 +20,7 @@ module Transfer exposing
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PaginationArgs, pageInfoSelectionSet)
 import Cambiatus.Object
 import Cambiatus.Object.Community
+import Cambiatus.Object.Subdomain
 import Cambiatus.Object.Transfer
 import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.TransferEdge
@@ -57,15 +58,21 @@ type alias Transfer =
     , from : Profile.Model
     , value : Float
     , memo : Maybe String
-    , symbol : Symbol
+    , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
     , createdTx : String
     }
 
 
-type alias Cmm =
+type alias CommunityId =
     String
+
+
+type alias Cmm =
+    { symbol : Eos.Symbol
+    , subdomain : String
+    }
 
 
 type alias EdgeTransfer =
@@ -111,13 +118,23 @@ transferItemSelectionSet =
         |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
         |> with Cambiatus.Object.Transfer.amount
         |> with Cambiatus.Object.Transfer.memo
-        |> with (Eos.symbolSelectionSet Cambiatus.Object.Transfer.communityId)
         |> with
             (Cambiatus.Object.Transfer.community
                 Cambiatus.Object.Community.name
             )
+        |> with (Cambiatus.Object.Transfer.community communitySelectionSet)
         |> with Cambiatus.Object.Transfer.createdAt
         |> with Cambiatus.Object.Transfer.createdTx
+
+
+communitySelectionSet : SelectionSet Cmm Cambiatus.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed Cmm
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Community.symbol)
+        |> with
+            (Cambiatus.Object.Community.subdomain Cambiatus.Object.Subdomain.name
+                |> SelectionSet.map (Maybe.withDefault "")
+            )
 
 
 transferEdgeSelectionSet : SelectionSet EdgeTransfer Cambiatus.Object.TransferEdge

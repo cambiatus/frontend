@@ -735,7 +735,7 @@ viewTransfer shared payment =
             String.concat
                 [ String.fromFloat payment.value
                 , " "
-                , Eos.symbolToSymbolCodeString payment.symbol
+                , Eos.symbolToSymbolCodeString payment.community.symbol
                 ]
     in
     div

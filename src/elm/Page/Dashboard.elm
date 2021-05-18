@@ -540,7 +540,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
     in
     a
         [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
-        , Route.href (Route.ViewTransfer transfer.id)
+        , Route.externalHref shared transfer.community (Route.ViewTransfer transfer.id)
         ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
@@ -551,7 +551,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.symbol))
+            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.community.symbol))
         ]
 
 
