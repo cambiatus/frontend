@@ -60,6 +60,7 @@ storedKeys.forEach((key) => {
   const localStorageValue = window.localStorage.getItem(key)
   if (localStorageValue !== null) {
     setItem(key, localStorageValue)
+    window.localStorage.removeItem(key)
   }
 })
 
