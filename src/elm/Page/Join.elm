@@ -1,17 +1,21 @@
 module Page.Join exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Api.Graphql
+import Auth
 import Community
+import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
 import Page
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
+import View.Feedback as Feedback
 
 
 
@@ -41,6 +45,7 @@ init session =
 type Msg
     = ClickedJoinCommunity
     | CompletedLoadCommunity Community.Model
+    | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
 
 
 type alias UpdateResult =
@@ -58,8 +63,13 @@ update session msg model =
                             (Route.pushUrl guest.shared.navKey (Route.Register Nothing (Just Route.Dashboard)))
 
                 Page.LoggedIn loggedIn ->
-                    -- TODO - Sign up for community and redirect to Dashboard
                     UR.init model
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (Auth.signIn loggedIn.accountName loggedIn.shared Nothing)
+                                (CompletedSignIn loggedIn)
+                            )
 
         CompletedLoadCommunity community ->
             case session of
@@ -82,6 +92,43 @@ update session msg model =
                     in
                     UR.init model
                         |> redirectToDashboard
+
+        CompletedSignIn loggedIn (RemoteData.Success (Just { token, user })) ->
+            let
+                addCommunity =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            let
+                                communityInfo =
+                                    { symbol = community.symbol
+                                    , name = community.name
+                                    , logo = community.logo
+                                    , subdomain = community.subdomain
+                                    , hasShop = community.hasShop
+                                    , hasActions = community.hasObjectives
+                                    , hasKyc = community.hasKyc
+                                    }
+                            in
+                            UR.addExt (LoggedIn.AddedCommunity communityInfo)
+
+                        _ ->
+                            identity
+            in
+            model
+                |> UR.init
+                |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
+                |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
+                |> addCommunity
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+
+        CompletedSignIn loggedIn (RemoteData.Failure error) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg error
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "auth.failed"))
+
+        CompletedSignIn _ _ ->
+            UR.init model
 
 
 
@@ -247,3 +294,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedSignIn _ r ->
+            [ "CompletedSignIn", UR.remoteDataToString r ]
