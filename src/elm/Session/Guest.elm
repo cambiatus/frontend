@@ -318,7 +318,7 @@ update msg ({ shared } as model) =
 
         invalidCommunityRedirectUrl =
             if String.contains "localhost:" (Url.toString currentUrl) && shared.useSubdomain then
-                { currentUrl | host = "cambiatus.localhost" }
+                { currentUrl | host = "cambiatus.staging.localhost" }
                     |> Url.toString
 
             else

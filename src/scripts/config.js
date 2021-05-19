@@ -17,7 +17,6 @@ const dev = {
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://staging.cambiatus.io/',
     graphql: 'https://staging.cambiatus.io/api/graph',
-    globalStorage: 'https://globalstorage.staging.cambiatus.io/globalstorage',
     socket: 'wss://staging.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',
@@ -38,7 +37,6 @@ const chainUrl = isLocal ? dev.network.host : _env_.CHAIN_URL
 const chainPort = isLocal ? dev.network.port : _env_.CHAIN_PORT
 const chainId = isLocal ? dev.network.chainId : _env_.CHAIN_ID
 const graphqlUrl = isLocal ? dev.endpoints.graphql : _env_.GRAPHQL_URL
-const globalStorageUrl = isLocal ? dev.endpoints.globalStorage : _env_.GLOBALSTORAGE_URL
 const apiUrl = isLocal ? dev.endpoints.api : _env_.API_URL
 const chatUrl = isLocal ? dev.endpoints.chat : _env_.CHAT_URL
 const httpEndpoint = isLocal
@@ -78,7 +76,6 @@ const prod = {
     chat: chatUrl,
     eosio: httpEndpoint,
     graphql: graphqlUrl,
-    globalStorage: globalStorageUrl,
     socket: socketUrl
   },
   logo: appLogo,
