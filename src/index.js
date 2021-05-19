@@ -49,6 +49,15 @@ const setItem = (key, value) => {
   document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${domain}; path=/; SameSite=Strict`
 }
 
+const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+
+storedKeys.forEach((key) => {
+  const localStorageValue = window.localStorage.getItem(key)
+  if (localStorageValue !== null) {
+    setItem(key, localStorageValue)
+  }
+})
+
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
   Nunito: {
