@@ -17,7 +17,7 @@ const dev = {
     chat: 'https://app.cambiatus.io/chat',
     eosio: 'https://staging.cambiatus.io/',
     graphql: 'https://staging.cambiatus.io/api/graph',
-    globalStorage: 'https://staging.cambiatus.io/globalstorage',
+    globalStorage: 'https://globalstorage.staging.cambiatus.io/globalstorage',
     socket: 'wss://staging.cambiatus.io/socket'
   },
   logo: '/images/logo-cambiatus.png',

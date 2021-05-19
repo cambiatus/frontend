@@ -161,9 +161,10 @@ const main = () => {
     flags: flags()
   })
   setupIframe((iframe) => {
-    operationsBeforeIframeLoad.forEach(operation => {
-      iframe.contentWindow.postMessage(operation, config.endpoints.globalStorage)
-    })
+    iframe.contentWindow.postMessage({
+      method: 'postMany',
+      operations: operationsBeforeIframeLoad
+    }, config.endpoints.globalStorage)
 
     isIframeLoaded = true
   })
@@ -975,6 +976,20 @@ const globalStorage = () => {
           data: payload.keys.map((key) => ({
             key, value: window.localStorage.getItem(key)
           }))
+        })
+        break
+      case 'postMany':
+        payload.operations.forEach((operation) => {
+          switch (operation.method) {
+            case 'set':
+              window.localStorage.setItem(operation.key, operation.value)
+              break
+            case 'remove':
+              window.localStorage.removeItem(operation.key)
+              break
+            default:
+              break
+          }
         })
         break
       case 'remove':
