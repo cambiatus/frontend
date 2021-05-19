@@ -108,16 +108,28 @@ update session msg model =
                                     , hasActions = community.hasObjectives
                                     , hasKyc = community.hasKyc
                                     }
+
+                                minimalProfile =
+                                    { name = user.name
+                                    , account = user.account
+                                    , avatar = user.avatar
+                                    }
                             in
-                            UR.addExt (LoggedIn.AddedCommunity communityInfo)
+                            UR.addExt
+                                (LoggedIn.CommunityLoaded { community | members = minimalProfile :: community.members }
+                                    |> LoggedIn.ExternalBroadcast
+                                )
+                                >> UR.addExt
+                                    (LoggedIn.ProfileLoaded { user | communities = communityInfo :: user.communities }
+                                        |> LoggedIn.ExternalBroadcast
+                                    )
 
                         _ ->
-                            identity
+                            UR.logImpossible msg [ "NoCommunity" ]
             in
             model
                 |> UR.init
                 |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
-                |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
                 |> addCommunity
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
 
