@@ -34,7 +34,12 @@ const getItem = (key) => {
 }
 
 const removeItem = (key) => {
-  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`
+  let hostnameParts = window.location.hostname.split('.')
+  hostnameParts.shift()
+  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
+  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${domain}`
+
+  window.localStorage.removeItem(key)
 }
 
 const setItem = (key, value) => {
