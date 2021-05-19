@@ -40,6 +40,7 @@ import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
 import Page.ViewTransfer as ViewTransfer
 import Ports
+import RemoteData exposing (RemoteData(..))
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -619,13 +620,32 @@ updateGuestUResult toStatus toMsg model uResult =
                             , cmds_
                             )
 
-                        Guest.LoggedIn privateKey signInResponse ->
+                        Guest.LoggedIn privateKey { user, token } ->
                             let
                                 shared =
                                     guest.shared
 
+                                userWithCommunity =
+                                    { user
+                                        | communities =
+                                            case guest.community of
+                                                RemoteData.Success community ->
+                                                    { symbol = community.symbol
+                                                    , name = community.name
+                                                    , logo = community.logo
+                                                    , subdomain = community.subdomain
+                                                    , hasShop = community.hasShop
+                                                    , hasActions = community.hasObjectives
+                                                    , hasKyc = community.hasKyc
+                                                    }
+                                                        :: user.communities
+
+                                                _ ->
+                                                    user.communities
+                                    }
+
                                 ( session, cmd ) =
-                                    LoggedIn.initLogin shared (Just privateKey) signInResponse.user signInResponse.token
+                                    LoggedIn.initLogin shared (Just privateKey) userWithCommunity token
                             in
                             ( { m
                                 | session =

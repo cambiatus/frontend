@@ -256,24 +256,13 @@ view thisMsg page ({ shared } as model) content =
             viewHelper thisMsg page profile_ model content
 
 
-hideCommunityAndSearch : Page -> Model -> Profile.Model -> Bool
-hideCommunityAndSearch currentPage model profile_ =
+hideCommunityAndSearch : Page -> Model -> Bool
+hideCommunityAndSearch currentPage model =
     let
         hiddenPages =
             [ CommunitySelector ]
     in
-    if List.member currentPage hiddenPages then
-        True
-
-    else
-        case model.selectedCommunity of
-            RemoteData.Success community ->
-                List.map .account community.members
-                    |> List.member profile_.account
-                    |> not
-
-            _ ->
-                True
+    List.member currentPage hiddenPages || not (isCommunityMember model)
 
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
@@ -284,7 +273,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             [ div [ class "container mx-auto" ]
                 [ viewHeader page model profile_
                     |> Html.map pageMsg
-                , if hideCommunityAndSearch page model profile_ || Search.isActive model.searchModel then
+                , if hideCommunityAndSearch page model || Search.isActive model.searchModel then
                     text ""
 
                   else
@@ -453,7 +442,7 @@ viewHeader page ({ shared } as model) profile_ =
 
           else
             viewCommunitySelector model
-        , if hideCommunityAndSearch page model profile_ then
+        , if hideCommunityAndSearch page model then
             div [] []
 
           else
@@ -567,16 +556,7 @@ viewCommunitySelector model =
         hasMultipleCommunities =
             case model.profile of
                 RemoteData.Success p ->
-                    List.length p.communities > 1 || not (isMember p)
-
-                _ ->
-                    False
-
-        isMember p =
-            case model.selectedCommunity of
-                RemoteData.Success community ->
-                    List.map .account community.members
-                        |> List.member p.account
+                    List.length p.communities > 1 || not (isCommunityMember model)
 
                 _ ->
                     False
@@ -1277,6 +1257,20 @@ handleActionMsg ({ shared } as model) actionMsg =
             UR.init model
 
 
+isCommunityMember : Model -> Bool
+isCommunityMember model =
+    case ( profile model, model.selectedCommunity ) of
+        ( Just profile_, RemoteData.Success community ) ->
+            List.any (.symbol >> (==) community.symbol) profile_.communities
+                || List.any (.account >> (==) profile_.account) community.members
+
+        ( Nothing, RemoteData.Success community ) ->
+            List.any (.account >> (==) model.accountName) community.members
+
+        _ ->
+            False
+
+
 loadCommunity : Model -> Eos.Symbol -> ( Model, Cmd Msg )
 loadCommunity ({ shared } as model) symbol =
     ( { model
@@ -1297,7 +1291,12 @@ setCommunity : Community.Model -> Model -> ( Model, Cmd Msg )
 setCommunity community model =
     let
         isMember =
-            List.any (.account >> (==) model.accountName) community.members
+            case profile model of
+                Just profile_ ->
+                    List.any (.symbol >> (==) community.symbol) profile_.communities
+
+                Nothing ->
+                    List.any (.account >> (==) model.accountName) community.members
     in
     if isMember then
         let
