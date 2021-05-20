@@ -22,7 +22,13 @@ module.exports = {
           icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
             '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
             '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#8ACC9E"/>' +
+            '</svg>',
+          '&:disabled': {
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
+            '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#999999"/>' +
             '</svg>'
+          }
         }
       }
     }),
@@ -135,12 +141,16 @@ module.exports = {
         '7': '1.75rem',
         heading: '1.375rem',
         '14': '3.5rem',
+        '29': '7.25rem',
         '44': '11rem',
         '72': '18rem',
         '80': '20rem',
         select: '18.75rem',
         '1/3': '33%',
         '1/2': '50%'
+      },
+      maxHeight: {
+        '108': '27rem'
       },
       lineHeight: {
         caption: 0.75
@@ -160,7 +170,8 @@ module.exports = {
         form: '45.625rem'
       },
       opacity: {
-        '10': '0.1'
+        '10': '0.1',
+        '60': '0.6'
       },
       screens: {
         'xs-max': {

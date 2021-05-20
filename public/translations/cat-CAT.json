@@ -7,6 +7,7 @@
   },
   "menu": {
     "title": "Menú",
+    "welcome_to": "Benvingut a {{community_name}}",
     "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
@@ -107,6 +108,7 @@
     "alreadyTaken": "Ja està en ús. Si et plau, intenta-ho de nou.",
     "notMember": "Aquest usuari no és membre.",
     "chooseOrUploadLogo": "Escull o puja el teu propi logotip.",
+    "waitForLogoUpload": "Espereu fins que es carregui el logotip",
     "invalidSymbol": "Símbol invàlid.",
     "unknown": "Oh oh. Alguna cosa ha anat malament.",
     "accountNotFound": "Compte no trobat. Esteu segur que heu creat el vostre compte?",
@@ -398,6 +400,8 @@
     "title": "Comunitat",
     "create_button": "Crear comunitat",
     "not_found": "Comunitat no trobada",
+    "error_loading": "Error en carregar la comunitat",
+    "error_saving": "Error en desar la comunitat",
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",
@@ -460,6 +464,14 @@
         "yes": "Sí uniu-vos",
         "no": "No, cancel·la"
       }
+    },
+    "join": {
+      "title_generic": "Uniu-vos a la comunitat",
+      "title_with_community": "Introduïu {{community_name}}",
+      "member_count": "{{member_count}} membres",
+      "only_invited": "Aquesta comunitat només permet als hostes",
+      "already_member": "Ja sóc membre",
+      "visit_website": "Visiteu el lloc web"
     },
     "details": {
       "creator": "Creador",
@@ -885,11 +897,74 @@
     "success": "La configuració s'ha desat correctament",
     "community_info": {
       "title": "Informació de la Comunitat",
-      "description": "Logo, nome, des crição"
+      "description": "Logo, nom, descripció, url",
+      "logo": {
+        "title": "Logotip de la comunitat",
+        "guidance": "Orientació sobre la imatge del Logotip",
+        "description": "El fitxer ha de ser en format PNG, JPG o SVG. Ha de mesurar 80px d’amplada i 80px d’alçada per poder-se veure millor a la interfície."
+      },
+      "invitation": {
+        "title": "Accés a la comunitat",
+        "guidance": "Orientació sobre l'Accés a la Comunitat",
+        "description": "Quan la comunitat necessita invitacions, els nous membres només poden accedir mitjançant una invitació."
+      },
+      "cover_photo": {
+        "title": "Imatge de portada de la comunitat",
+        "description": "Assegureu-vos d’afegir una imatge de bona qualitat"
+      },
+      "url": {
+        "title": "URL personalitzat de la comunitat",
+        "guidance": "Orientació sobre l'URL Personalitzat"
+      },
+      "fields": {
+        "name": "Nom de la Comunitat",
+        "description": "Descriviu la comunitat",
+        "website": "Lloc web de la comunitat",
+        "invitation": "Invitació"
+      },
+      "placeholders": {
+        "name": "Doneu un nom a la comunitat",
+        "description": "Digueu alguna cosa sobre la comunitat",
+        "url": "Trieu un URL personalitzat"
+      },
+      "errors": {
+        "logo_upload": "S'ha produït un error en penjar el logotip",
+        "cover_upload": "S'ha produït un error en penjar la imatge de portada",
+        "name": {
+          "blank": "La comunitat necessita un nom"
+        },
+        "description": {
+          "blank": "La comunitat necessita una descripció"
+        },
+        "website": {
+          "invalid": "Introduïu un lloc web vàlid"
+        },
+        "url": {
+          "blank": "La comunitat necessita un URL",
+          "invalid_char": "No utilitzeu caràcters especials",
+          "invalid_case": "Només es permet la minúscula",
+          "too_short": "L'URL ha de tenir com a mínim 2 caràcters",
+          "already_taken": "L'URL que trieu ja s'ha pres"
+        }
+      },
+      "constraints": {
+        "length": "Màxim de 30 caràcters",
+        "characters": "Utilitzeu les lletres de la a la z i els números del 0 al 9.",
+        "donts": "No: utilitzeu paraules dolentes; utilitzeu majúscules; utilitzeu caràcters especials ni lletres amb accents. Per exemple. @!?:; âãá."
+      }
     },
-    "currency": {
-      "title": "Moeda",
-      "description": ""
+    "community_currency": {
+      "title": "Moneda",
+      "decimal_places": "Llocs decimals",
+      "format": "Aquest és l'exemple de la vostra moneda",
+      "supports_decimal_places": "La vostra moneda admet {{amount}} posicions decimals",
+      "token_type": "Tipus",
+      "expiry": "Caducitat",
+      "natural_expiration_period": "Període de caducitat de la persona física",
+      "juridical_expiration_period": "Període de caducitat de la persona jurídica",
+      "renovation_amount": "Import de la renovació",
+      "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "seconds": "segons"
     },
     "actions": {
       "title": "Objetius i Ações",

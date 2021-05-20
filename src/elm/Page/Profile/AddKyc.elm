@@ -8,17 +8,14 @@ module Page.Profile.AddKyc exposing
     , view
     )
 
-import Api.Graphql
-import Graphql.Http
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import Http
 import Page
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
 
@@ -28,9 +25,7 @@ import View.Feedback as Feedback
 
 
 type alias Model =
-    { status : ProfileStatus
-    , kycForm : KycForm.Model
-    }
+    KycForm.Model
 
 
 
@@ -38,18 +33,9 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
-    let
-        profileQuery =
-            Api.Graphql.query loggedIn.shared
-                (Just loggedIn.authToken)
-                (Profile.query loggedIn.accountName)
-                CompletedProfileLoad
-    in
-    ( { status = Loading loggedIn.accountName
-      , kycForm = KycForm.init
-      }
-    , profileQuery
+init _ =
+    ( KycForm.init
+    , Cmd.none
     )
 
 
@@ -59,7 +45,6 @@ init loggedIn =
 
 type Msg
     = FormMsg KycForm.Msg
-    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
 
 
 type alias UpdateResult =
@@ -73,57 +58,27 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        CompletedProfileLoad (RemoteData.Success Nothing) ->
-            UR.init model
-
-        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
-            case profile.kyc of
-                Just _ ->
-                    -- Users with already filled KYC data are restricted from seeing this page.
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (Route.Profile
-                                |> Route.replaceUrl loggedIn.shared.navKey
-                            )
-                        |> UR.addExt (ShowFeedback Feedback.Failure (t "community.kyc.add.restricted"))
-
-                Nothing ->
-                    { model
-                        | status = Loaded profile
-                    }
-                        |> UR.init
-
-        CompletedProfileLoad (RemoteData.Failure err) ->
-            UR.init { model | status = LoadingFailed loggedIn.accountName err }
-                |> UR.logGraphqlError msg err
-
-        CompletedProfileLoad _ ->
-            UR.init model
-
         FormMsg kycFormMsg ->
             let
                 newModel =
-                    { model
-                        | kycForm =
-                            KycForm.update
-                                loggedIn.shared.translators
-                                model.kycForm
-                                kycFormMsg
-                    }
+                    KycForm.update
+                        loggedIn.shared.translators
+                        model
+                        kycFormMsg
             in
             case kycFormMsg of
                 KycForm.Submitted _ ->
                     let
                         isFormValid =
-                            List.isEmpty newModel.kycForm.validationErrors
+                            List.isEmpty newModel.validationErrors
                     in
                     if isFormValid then
                         newModel
                             |> UR.init
+                            |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
                             |> UR.addCmd
                                 (KycForm.saveKycData loggedIn
-                                    newModel.kycForm
+                                    newModel
                                     |> Cmd.map FormMsg
                                 )
 
@@ -132,7 +87,7 @@ update msg model loggedIn =
                             |> UR.init
 
                 KycForm.Saved _ ->
-                    case newModel.kycForm.serverError of
+                    case newModel.serverError of
                         Just error ->
                             newModel
                                 |> UR.init
@@ -145,6 +100,7 @@ update msg model loggedIn =
                                     (Route.Profile
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
+                                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
                                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.add.success"))
 
                 _ ->
@@ -165,20 +121,23 @@ view loggedIn model =
             t "community.kyc.add.title"
 
         content =
-            case model.status of
-                Loading _ ->
+            case loggedIn.profile of
+                RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                LoadingFailed _ _ ->
-                    Page.fullPageError pageTitle Http.Timeout
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading loggedIn.shared
 
-                Loaded _ ->
+                RemoteData.Failure e ->
+                    Page.fullPageGraphQLError pageTitle e
+
+                RemoteData.Success _ ->
                     div [ class "bg-white" ]
                         [ Page.viewHeader loggedIn pageTitle Route.Profile
                         , div [ class "px-4" ]
                             [ KycForm.view
                                 loggedIn.shared.translators
-                                model.kycForm
+                                model
                                 |> Html.map FormMsg
                             ]
                         ]
@@ -195,8 +154,5 @@ view loggedIn model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.remoteDataToString r ]
-
         FormMsg _ ->
             [ "FormMsg" ]

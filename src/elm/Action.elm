@@ -5,7 +5,6 @@ module Action exposing
     , Model
     , Msg(..)
     , Proof(..)
-    , ProofPhotoStatus(..)
     , claimActionPort
     , isClosed
     , isPastDeadline
@@ -30,15 +29,16 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Attribute, Html, br, button, div, i, input, label, li, p, span, text, ul)
-import Html.Attributes exposing (accept, class, classList, disabled, multiple, style, type_)
-import Html.Events exposing (on, onClick)
+import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, disabled)
+import Html.Events exposing (onClick)
 import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile
+import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
@@ -46,6 +46,7 @@ import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
+import View.Form.FileUploader as FileUploader
 import View.Modal as Modal
 
 
@@ -73,7 +74,7 @@ type ActionFeedback
 
 
 type Proof
-    = Proof ProofPhotoStatus (Maybe ProofCode)
+    = Proof (RemoteData Http.Error String) (Maybe ProofCode)
 
 
 type alias ProofCode =
@@ -82,13 +83,6 @@ type alias ProofCode =
     , secondsAfterClaim : Int
     , availabilityPeriod : Int
     }
-
-
-type ProofPhotoStatus
-    = NoPhotoAdded
-    | Uploading
-    | UploadFailed Http.Error
-    | Uploaded String
 
 
 type alias Action =
@@ -183,7 +177,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> claimOrAskForPin action.id "" "" 0
 
         -- Valid: photo uploaded
-        ( ActionClaimed action ((Just (Proof (Uploaded url) maybeProofCode)) as proof), _ ) ->
+        ( ActionClaimed action ((Just (Proof (RemoteData.Success url) maybeProofCode)) as proof), _ ) ->
             let
                 ( proofCode, time ) =
                     case maybeProofCode of
@@ -210,7 +204,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( AgreedToClaimWithProof action, _ ) ->
             { model
-                | status = PhotoUploaderShowed action (Proof NoPhotoAdded Nothing)
+                | status = PhotoUploaderShowed action (Proof RemoteData.NotAsked Nothing)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -267,7 +261,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         }
             in
             { model
-                | status = PhotoUploaderShowed action (Proof NoPhotoAdded initProofCodeParts)
+                | status = PhotoUploaderShowed action (Proof RemoteData.NotAsked initProofCodeParts)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -340,7 +334,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( PhotoAdded (file :: _), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoUploaderShowed action (Proof Uploading proofCode)
+                | status = PhotoUploaderShowed action (Proof RemoteData.Loading proofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -349,7 +343,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( PhotoUploaded (Ok url), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoUploaderShowed action (Proof (Uploaded url) proofCode)
+                | status = PhotoUploaderShowed action (Proof (RemoteData.Success url) proofCode)
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -357,7 +351,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
 
         ( PhotoUploaded (Err error), PhotoUploaderShowed action (Proof _ proofCode) ) ->
             { model
-                | status = PhotoUploaderShowed action (Proof (UploadFailed error) proofCode)
+                | status = PhotoUploaderShowed action (Proof (RemoteData.Failure error) proofCode)
                 , feedback = Just <| Failure (t "error.invalid_image_file")
                 , needsPinConfirmation = False
             }
@@ -506,11 +500,11 @@ viewClaimConfirmation { t } model =
             text ""
 
 
-viewClaimButton : Translators -> Maybe Posix -> Action -> Html Msg
-viewClaimButton { t } maybeNow action =
+viewClaimButton : Translators -> Posix -> Action -> Html Msg
+viewClaimButton { t } now action =
     let
         ( buttonMsg, buttonClasses, buttonText ) =
-            if isClosed action maybeNow then
+            if isClosed action now then
                 ( NoOp, "button-disabled", "dashboard.closed" )
 
             else
@@ -530,8 +524,8 @@ viewClaimButton { t } maybeNow action =
         ]
 
 
-viewSearchActions : Translators -> Maybe Posix -> List Action -> Html Msg
-viewSearchActions ({ t } as translators) maybeToday actions =
+viewSearchActions : Translators -> Posix -> List Action -> Html Msg
+viewSearchActions ({ t } as translators) today actions =
     let
         viewAction action =
             if action.isCompleted then
@@ -550,7 +544,7 @@ viewSearchActions ({ t } as translators) maybeToday actions =
                                 , text " "
                                 , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]
-                            , viewClaimButton translators maybeToday action
+                            , viewClaimButton translators today action
                             ]
                         ]
                     ]
@@ -560,15 +554,10 @@ viewSearchActions ({ t } as translators) maybeToday actions =
 
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
-viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) isAuth action =
+viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) _ action =
     let
         isUploadingInProgress =
-            case photoStatus of
-                Uploading ->
-                    True
-
-                _ ->
-                    False
+            RemoteData.isLoading photoStatus
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
@@ -590,11 +579,14 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
 
                 _ ->
                     text ""
-            , div [ class "mb-4" ]
-                [ span [ class "input-label block mb-2" ]
-                    [ text (t "community.actions.proof.photo") ]
-                , viewPhotoUploader translators photoStatus
-                ]
+            , FileUploader.init
+                { label = "community.actions.proof.photo"
+                , id = "proof_photo_uploader"
+                , onFileInput = PhotoAdded
+                , status = photoStatus
+                }
+                |> FileUploader.withAttrs [ class "mb-4 md:w-2/3" ]
+                |> FileUploader.toHtml translators
             , div [ class "md:flex" ]
                 [ button
                     [ class "modal-cancel"
@@ -623,56 +615,6 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                     ]
                     [ text (t "menu.send") ]
                 ]
-            ]
-        ]
-
-
-viewPhotoUploader : Translators -> ProofPhotoStatus -> Html Msg
-viewPhotoUploader { t } proofPhotoStatus =
-    let
-        uploadedAttrs =
-            case proofPhotoStatus of
-                Uploaded url ->
-                    [ class "bg-no-repeat bg-center bg-cover"
-                    , style "background-image" ("url(" ++ url ++ ")")
-                    ]
-
-                _ ->
-                    []
-
-        onFileChange : (List File -> msg) -> Attribute msg
-        onFileChange toMsg =
-            Decode.list File.decoder
-                |> Decode.at [ "target", "files" ]
-                |> Decode.map toMsg
-                |> on "change"
-    in
-    label
-        (class "relative bg-purple-500 w-full md:w-2/3 h-56 rounded-sm flex justify-center items-center cursor-pointer"
-            :: uploadedAttrs
-        )
-        [ input
-            [ class "hidden-img-input"
-            , type_ "file"
-            , accept "image/*"
-            , onFileChange PhotoAdded
-            , multiple False
-            ]
-            []
-        , div []
-            [ case proofPhotoStatus of
-                Uploading ->
-                    div [ class "spinner spinner-light" ] []
-
-                Uploaded _ ->
-                    span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
-                        [ Icons.camera "" ]
-
-                _ ->
-                    div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
-                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
-                        ]
             ]
         ]
 
@@ -844,24 +786,19 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
         |> String.slice 0 8
 
 
-isPastDeadline : Action -> Maybe Posix -> Bool
-isPastDeadline action maybeNow =
+isPastDeadline : Action -> Posix -> Bool
+isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            case maybeNow of
-                Just now ->
-                    posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
-
-                Nothing ->
-                    False
+            posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
 
         Nothing ->
             False
 
 
-isClosed : Action -> Maybe Posix -> Bool
-isClosed action maybeNow =
-    isPastDeadline action maybeNow
+isClosed : Action -> Posix -> Bool
+isClosed action now =
+    isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
 
 

@@ -52,16 +52,14 @@ type alias Model =
     { state : State
     , currentQuery : String
     , recentQueries : List String
-    , selectedCommunity : Symbol
     }
 
 
-init : Symbol -> Model
-init selectedCommunity =
+init : Model
+init =
     { state = Inactive
     , currentQuery = ""
     , recentQueries = []
-    , selectedCommunity = selectedCommunity
     }
 
 
@@ -153,8 +151,8 @@ type Msg
     | FoundItemClicked Route
 
 
-update : Shared -> String -> Model -> Msg -> ( Model, Cmd Msg )
-update shared authToken model msg =
+update : Shared -> String -> Symbol -> Model -> Msg -> ( Model, Cmd Msg )
+update shared authToken symbol model msg =
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -173,6 +171,7 @@ update shared authToken model msg =
         RecentQueryClicked q ->
             update shared
                 authToken
+                symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
                     , currentQuery = q
@@ -207,10 +206,7 @@ update shared authToken model msg =
                     ( model, Cmd.none )
 
         CancelClicked ->
-            ( { model
-                | state = Inactive
-                , currentQuery = ""
-              }
+            ( closeSearch model
             , Cmd.none
             )
 
@@ -243,9 +239,6 @@ update shared authToken model msg =
                         |> Encode.list Encode.string
                         |> Encode.encode 0
                         |> Ports.storeRecentSearches
-
-                selectedCommunity =
-                    model.selectedCommunity
             in
             ( { model
                 | recentQueries = newRecentSearches
@@ -253,7 +246,7 @@ update shared authToken model msg =
               }
             , Cmd.batch
                 [ storeRecentSearches
-                , sendSearchQuery selectedCommunity shared model.currentQuery authToken
+                , sendSearchQuery symbol shared model.currentQuery authToken
                 ]
             )
 
@@ -339,12 +332,12 @@ viewForm { t } model =
 viewSearchBody :
     Translators
     -> Symbol
-    -> Maybe Posix
+    -> Posix
     -> (Msg -> parentMsg)
     -> (Action.Msg -> parentMsg)
     -> Model
     -> Html parentMsg
-viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg searchModel =
+viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
@@ -372,7 +365,7 @@ viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg 
                                 div [ class "w-full" ]
                                     [ viewTabs translators results ActionsTab
                                         |> Html.map searchToMsg
-                                    , Action.viewSearchActions translators maybeToday results.actions
+                                    , Action.viewSearchActions translators today results.actions
                                         |> Html.map actionToMsg
                                     ]
 
@@ -383,7 +376,7 @@ viewSearchBody translators selectedCommunity maybeToday searchToMsg actionToMsg 
                                     |> Html.map searchToMsg
 
             ResultsShowed RemoteData.Loading _ ->
-                View.Components.loadingLogoAnimated translators
+                View.Components.loadingLogoAnimated translators ""
 
             _ ->
                 viewRecentQueries translators searchModel.recentQueries
@@ -588,6 +581,6 @@ isActive model =
             True
 
 
-closeSearch : Shared -> String -> Model -> ( Model, Cmd Msg )
-closeSearch shared authToken model =
-    update shared authToken model CancelClicked
+closeSearch : Model -> Model
+closeSearch model =
+    { model | state = Inactive, currentQuery = "" }

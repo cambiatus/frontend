@@ -7,7 +7,8 @@
     },
     "menu": {
       "title": "የአማራጭ ዝርዝር",
-      "my_communities": "እንኳን ደህና መጡ ወደ ",
+      "welcome_to": "ወደ {{community_name}} እንኳን በደህና መጡ",
+      "my_communities": "እንኩአን ደህና መጡ ",
       "dashboard": "ዳሽቦርድ",
       "news": "ዜና",
       "learn": "መማር",
@@ -107,6 +108,7 @@
       "alreadyTaken": "ይህ ቀድሞ ተይዞል. እባኮን, ሌላ ይሞክሩ.",
       "notMember": "ይህ ተጠቃሚ አባል አይደለም.",
       "chooseOrUploadLogo": "አርማ ምረጥ ወይም ጫን .",
+      "waitForLogoUpload": "አርማው እስኪሰቀል ድረስ ይጠብቁ",
       "invalidSymbol": "ትክክል ያለሆነ ምልክት.",
       "unknown": "አይ. የሆነ ነገር ተሳሰተዋል.",
       "accountNotFound": "መለያ አልተገኘም. አዲስ መለያዎትን ለመከፈት እርግጠኛ ኖት?",
@@ -356,6 +358,8 @@
       "title": "ማህበረሰብ",
       "create_button": "ማህበረሰብ ፍጠር",
       "not_found": "ምህበረሰብ አልተገኘም",
+      "error_loading": "ማህበረሰብን መጫን ላይ ስህተት",
+      "error_saving": "ማህበረሰብን ማዳን ላይ ስህተት",
       "create": {
         "title": "ማህበረሰብ ፍጠር",
         "success": "ማህበረሰብ በትክክል ተቀምጧል",
@@ -364,7 +368,7 @@
           "symbol": "ምልክት",
           "description": "ማብራሪያ",
           "max_supply": "ከፍተኛዉ አቅርቦት",
-          "min balance": "ዝቅተኛዉ አቅርቦት",
+          "min_balance": "ዝቅተኛዉ አቅርቦት",
           "inviter_reward": "የጋባዥ ሽልማት",
           "invited_reward": "የተጋባዥ ሽልማት",
           "currency_name": "የገንዘብ ስም",
@@ -418,6 +422,14 @@
           "yes": "አዎ, ቀላቅል",
           "no": "አይ , ተዉ"
         }
+      },
+      "join": {
+        "title_generic": "ማህበረሰቡን ይቀላቀሉ",
+        "title_with_community": "{{community_name}} ያስገቡ",
+        "member_count": "{{member_count}} አባላት",
+        "only_invited": "ይህ ማህበረሰብ እንግዶችን ብቻ ይፈቅዳል",
+        "already_member": "እኔ ቀድሞውኑ አባል ነኝ",
+        "visit_website": "ድር ጣቢያ ይጎብኙ"
       },
       "details": {
         "creator": "ፈጣሪዉ",
@@ -844,11 +856,74 @@
       "success": "ቅንብሩ በትክክል ተቀምጧል",
       "community_info": {
         "title": "የማህበረሰብ መረጃ",
-        "description": "አርማ, ስም, ማብራራያ"
+        "description": "አርማ, ስም, ማብራራያ, ዩ.አር.ኤል.",
+        "logo": {
+          "title": "የማህበረሰብ አርማ",
+          "guidance": "በአርማው ምስል ላይ መመሪያ",
+          "description": "ፋይልዎ በ PNG ፣ JPG ወይም SVG ቅርጸት መሆን አለበት። በይነገጹ ላይ በተሻለ ሁኔታ ለመታየት 80 ፒክስልን ስፋት እና 80 ፒክስል ቁመት መለካት አለበት ፡፡"
+        },
+        "invitation": {
+          "title": "ወደ ህብረተሰቡ መድረስ",
+          "guidance": "ወደ ማህበረሰብ ተደራሽነት መመሪያ",
+          "description": "ህብረተሰቡ ግብዣዎችን ሲፈልግ አዳዲስ አባላት መድረስ የሚችሉት በግብዣ ብቻ ነው ፡፡"
+        },
+        "cover_photo": {
+          "title": "የማህበረሰብ ሽፋን ስዕል",
+          "description": "ጥሩ ጥራት ያለው ስዕል ማከልዎን እርግጠኛ ይሁኑ"
+        },
+        "url": {
+          "title": "የማህበረሰብ ብጁ ዩ.አር.ኤል.",
+          "guidance": "በብጁ ዩ.አር.ኤል. ላይ መመሪያ"
+        },
+        "fields": {
+          "name": "የማህበረሰብ ስም",
+          "description": "ማህበረሰቡን ይግለጹ",
+          "website": "የማህበረሰብ ድር ጣቢያ",
+          "invitation": "ግብዣ"
+        },
+        "placeholders": {
+          "name": "ለማህበረሰቡ ስም ይስጥ",
+          "description": "ስለ ማህበረሰቡ አንድ ነገር ይበሉ",
+          "url": "ግላዊነት የተላበሰ ዩ.አር.ኤል. ይምረጡ"
+        },
+      "errors": {
+        "logo_upload": "አርማውን በመስቀል ላይ አንድ ስህተት ነበር",
+        "cover_upload": "የሽፋኑን ስዕል መስቀል ላይ አንድ ስህተት ነበር",
+        "name": {
+          "blank": "ህብረተሰቡ ስም ይፈልጋል"
+        },
+        "description": {
+          "blank": "ህብረተሰቡ መግለጫ ይፈልጋል"
+        },
+        "website": {
+          "invalid": "እባክዎ ትክክለኛ ድር ጣቢያ ያስገቡ"
+        },
+        "url": {
+          "blank": "ማህበረሰቡ ዩአርኤል ይፈልጋል",
+          "invalid_char": "ልዩ ቁምፊዎችን አይጠቀሙ",
+          "invalid_case": "ሻንጣ ብቻ ይፈቀዳል",
+          "too_short": "ዩአርኤሉ ቢያንስ 2 ቁምፊዎች ሊኖረው ይገባል",
+          "already_taken": "የመረጡት ዩ.አር.ኤል. አስቀድሞ ተወስዷል"
+        }
       },
-      "currency": {
-        "title": "ገንዘብ",
-        "description": ""
+        "constraints": {
+          "length": "ከፍተኛው 30 ቁምፊዎች",
+          "characters": "ፊደሎችን ከ a እስከ z ፣ እና ከ 0 እስከ 9 ቁጥሮች ይጠቀሙ ፡፡",
+          "donts": "አታድርግ: መጥፎ ቃላትን ተጠቀም; አቢይ ሆሄ ይጠቀሙ; ልዩ ቁምፊዎችን እና ፊደላትን በድምጽ አነጋገር ይጠቀሙ ፡፡ ለምሳሌ. @!?:; âãá"
+        }
+      },
+      "community_currency": {
+        "title": "ምንዛሬ",
+        "decimal_places": "የአስርዮሽ ቦታዎች",
+        "format": "ይህ የእርስዎ የመገበያያ ገንዘብ ምሳሌ ነው",
+        "supports_decimal_places": "የእርስዎ ምንዛሬ {{amount}} የአስርዮሽ ቦታዎችን ይደግፋል",
+        "token_type": "ዓይነት",
+        "expiry": "ማብቂያ",
+        "natural_expiration_period": "የተፈጥሮ ሰው ማብቂያ ጊዜ",
+        "juridical_expiration_period": "የሕግ ሰው ማብቂያ ጊዜ",
+        "renovation_amount": "የማደስ መጠን",
+        "expiryopts_not_found": "የምልክትዎ ጊዜ ማብቂያ አማራጮችን ማግኘት አልቻልንም",
+        "seconds": "ሰከንዶች"
       },
       "actions": {
         "title": "ተጠባቂ ዉጤቶች እና ተግባራት",

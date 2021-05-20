@@ -325,7 +325,7 @@ msgToString msg =
             [ "SubmittedPin" ]
 
         GotSubmittedPinResponse r ->
-            [ "GotPinLogin", UR.resultToString r ]
+            [ "GotSubmittedPinResponse", UR.resultToString r ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg

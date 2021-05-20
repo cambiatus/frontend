@@ -15,7 +15,7 @@ type alias PageInfo =
 
 
 type alias Edge nodeType =
-    { cursor : String
+    { cursor : Maybe String
     , node : Maybe nodeType
     }
 

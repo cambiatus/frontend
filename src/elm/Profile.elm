@@ -6,6 +6,7 @@ module Profile exposing
     , Model
     , ProfileCreate
     , ProfileForm
+    , communityInfoSelectionSet
     , decode
     , deleteKycAndAddressMutation
     , emptyProfileForm
@@ -38,6 +39,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.DeleteKycAddress
+import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (Id(..))
@@ -108,9 +110,10 @@ buildModel name account avatar email bio location interests contacts communities
 
 
 type alias CommunityInfo =
-    { id : Symbol
+    { symbol : Symbol
     , name : String
     , logo : String
+    , subdomain : String
     , hasShop : Bool
     , hasActions : Bool
     , hasKyc : Bool
@@ -157,6 +160,7 @@ communityInfoSelectionSet =
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.name
         |> with Community.logo
+        |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
         |> with Community.hasShop
         |> with Community.hasObjectives
         |> with Community.hasKyc

@@ -311,36 +311,6 @@ encodeCountryInput input =
         [ ( "name", Encode.string input.name |> Just ) ]
 
 
-buildInviteInput :
-    (InviteInputOptionalFields -> InviteInputOptionalFields)
-    -> InviteInput
-buildInviteInput fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { id = Absent }
-    in
-    { id = optionals.id }
-
-
-type alias InviteInputOptionalFields =
-    { id : OptionalArgument String }
-
-
-{-| Type for the InviteInput input object.
--}
-type alias InviteInput =
-    { id : OptionalArgument String }
-
-
-{-| Encode a InviteInput into a value that can be used as an argument.
--}
-encodeInviteInput : InviteInput -> Value
-encodeInviteInput input =
-    Encode.maybeObject
-        [ ( "id", Encode.string |> Encode.optional input.id ) ]
-
-
 buildKycDataUpdateInput :
     KycDataUpdateInputRequiredFields
     -> KycDataUpdateInput
@@ -515,31 +485,6 @@ type alias ReadNotificationInput =
 -}
 encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
-    Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
-
-
-buildTransferInput :
-    TransferInputRequiredFields
-    -> TransferInput
-buildTransferInput required =
-    { id = required.id }
-
-
-type alias TransferInputRequiredFields =
-    { id : Int }
-
-
-{-| Type for the TransferInput input object.
--}
-type alias TransferInput =
-    { id : Int }
-
-
-{-| Encode a TransferInput into a value that can be used as an argument.
--}
-encodeTransferInput : TransferInput -> Value
-encodeTransferInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
 

@@ -7,6 +7,7 @@
   },
   "menu": {
     "title": "Menu",
+    "welcome_to": "Welcome to {{community_name}}",
     "my_communities": "Welcome to ",
     "dashboard": "Dashboard",
     "news": "News",
@@ -107,6 +108,7 @@
     "alreadyTaken": "This one is already taken. Please, Try another.",
     "notMember": "This user is not a member.",
     "chooseOrUploadLogo": "Choose or upload a logo.",
+    "waitForLogoUpload": "Wait until logo is uploaded",
     "invalidSymbol": "Invalid symbol.",
     "unknown": "Uoh. Something wrong happened.",
     "accountNotFound": "Account not found. Are you sure you created your account?",
@@ -394,6 +396,8 @@
     "title": "Community",
     "create_button": "Create Community",
     "not_found": "Community Not Found",
+    "error_loading": "Error loading community",
+    "error_saving": "Error saving community",
     "create": {
       "title": "Create community",
       "success": "Successfully saved community",
@@ -456,6 +460,14 @@
         "yes": "Yes, join",
         "no": "No, cancel"
       }
+    },
+    "join": {
+      "title_generic": "Join community",
+      "title_with_community": "Join {{community_name}}",
+      "member_count": "{{member_count}} members",
+      "only_invited": "This community only allows invited members",
+      "already_member": "I'm already a member",
+      "visit_website": "Visit the website"
     },
     "details": {
       "creator": "Creator",
@@ -883,11 +895,74 @@
     "success": "Settings saved successfully",
     "community_info": {
       "title": "Community Information",
-      "description": "Logo, name, description"
+      "description": "Logo, name, description, url",
+      "logo": {
+        "title": "Community logo",
+        "guidance": "Guidance on the Logo image",
+        "description": "Your file must be in PNG, JPG or SVG format. It should measure 80px in width and 80px in height to be better viewed on the interface."
+      },
+      "invitation": {
+        "title": "Access to the community",
+        "guidance": "Guidance on Access to Community",
+        "description": "When a community is invite-only, new members only get access through an invitation."
+      },
+      "cover_photo": {
+        "title": "Community cover picture",
+        "description": "Be sure to add a picture that has good quality"
+      },
+      "url": {
+        "title": "Community custom URL",
+        "guidance": "Guidance on the Custom URL"
+      },
+      "fields": {
+        "name": "Community name",
+        "description": "Describe the community",
+        "website": "Community's website",
+        "invitation": "Invitation"
+      },
+      "placeholders": {
+        "name": "Give the community a name",
+        "description": "Say something about the community",
+        "url": "Choose a personalized URL"
+      },
+      "errors": {
+        "logo_upload": "There was an error uploading the logo",
+        "cover_upload": "There was an error uploading the cover picture",
+        "name": {
+          "blank": "The community needs a name"
+        },
+        "description": {
+          "blank": "The community needs a description"
+        },
+        "website": {
+          "invalid": "Please enter a valid website"
+        },
+        "url": {
+          "blank": "The community needs a URL",
+          "invalid_char": "Do not use special characters",
+          "invalid_case": "Only downcase is allowed",
+          "too_short": "The URL must have at least 2 characters",
+          "already_taken": "The URL you chose is already taken"
+        }
+      },
+      "constraints": {
+        "length": "Maximum of 30 characters.",
+        "characters": "Use letters a to z, and numbers 0 to 9.",
+        "donts": "Do not: use bad words; use uppercase; use special characters and letters with accents. Eg. @!?:;âãá."
+      }
     },
-    "currency": {
+    "community_currency": {
       "title": "Currency",
-      "description": ""
+      "decimal_places": "Decimal places",
+      "format": "This is your currency's example",
+      "supports_decimal_places": "Your currency supports {{amount}} decimal places",
+      "token_type": "Type",
+      "expiry": "Expiry",
+      "natural_expiration_period": "Natural person expiration period",
+      "juridical_expiration_period": "Juridical person expiration period",
+      "renovation_amount": "Renovation amount",
+      "expiryopts_not_found": "We couldn't find the expiry options for your token",
+      "seconds": "seconds"
     },
     "actions": {
       "title": "Objectives and Actions",

@@ -4,19 +4,18 @@ module Page.Community.Transfer exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscription
     , update
     , view
     )
 
-import Api.Graphql
 import Browser.Events
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Document
-import Graphql.Http
 import Html exposing (Html, button, div, form, input, span, text, textarea)
 import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, rows, type_, value)
 import Html.Events exposing (onInput, onSubmit)
@@ -26,7 +25,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Page
 import Profile
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -39,10 +38,10 @@ import View.Feedback as Feedback
 import View.Form.InputCounter
 
 
-init : LoggedIn.Model -> Symbol -> Maybe String -> ( Model, Cmd Msg )
-init { shared, authToken } symbol maybeTo =
-    ( initModel symbol maybeTo
-    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
+init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
+init loggedIn maybeTo =
+    ( initModel maybeTo
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -56,27 +55,18 @@ subscription _ =
 
 
 type alias Model =
-    { communityId : Symbol
-    , maybeTo : Maybe String
-    , status : Status
+    { maybeTo : Maybe String
+    , transferStatus : TransferStatus
     , autoCompleteState : Select.State
     }
 
 
-initModel : Symbol -> Maybe String -> Model
-initModel symbol maybeTo =
-    { communityId = symbol
-    , maybeTo = maybeTo
-    , status = Loading
+initModel : Maybe String -> Model
+initModel maybeTo =
+    { maybeTo = maybeTo
+    , transferStatus = EditingTransfer emptyForm
     , autoCompleteState = Select.newState ""
     }
-
-
-type Status
-    = Loading
-    | Loaded Community.Model TransferStatus
-    | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community.Model))
 
 
 type TransferStatus
@@ -209,23 +199,23 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         content =
-            case model.status of
-                Loading ->
+            case ( loggedIn.selectedCommunity, model.transferStatus ) of
+                ( RemoteData.NotAsked, _ ) ->
                     Page.fullPageLoading shared
 
-                NotFound ->
-                    Page.viewCardEmpty [ text (shared.translators.t "community.not_found") ]
+                ( RemoteData.Loading, _ ) ->
+                    Page.fullPageLoading shared
 
-                Failed e ->
+                ( RemoteData.Failure e, _ ) ->
                     Page.fullPageGraphQLError (shared.translators.t "community.objectives.title_plural") e
 
-                Loaded community (EditingTransfer f) ->
+                ( RemoteData.Success community, EditingTransfer f ) ->
                     viewForm loggedIn model f community False
 
-                Loaded community (CreatingSubscription f) ->
+                ( RemoteData.Success community, CreatingSubscription f ) ->
                     viewForm loggedIn model f community True
 
-                Loaded community (SendingTransfer f) ->
+                ( RemoteData.Success community, SendingTransfer f ) ->
                     viewForm loggedIn model f community True
     in
     { title = shared.translators.t "transfer.title"
@@ -357,7 +347,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
     | OnSelect (Maybe Profile.Minimal)
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
@@ -396,32 +386,18 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logImpossible msg desc
     in
     case msg of
-        CompletedLoad (RemoteData.Success community) ->
-            case community of
-                Just cmm ->
-                    UR.init { model | status = Loaded cmm (getProfile model.maybeTo cmm) }
-
-                Nothing ->
-                    UR.init { model | status = NotFound }
-
-        CompletedLoad (RemoteData.Failure error) ->
-            { model | status = Failed error }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedLoad _ ->
-            UR.init model
+        CompletedLoadCommunity community ->
+            UR.init { model | transferStatus = getProfile model.maybeTo community }
 
         OnSelect maybeProfile ->
-            case model.status of
-                Loaded community (EditingTransfer form) ->
+            case model.transferStatus of
+                EditingTransfer form ->
                     { model
-                        | status =
+                        | transferStatus =
                             EditingTransfer
                                 ({ form | selectedProfile = maybeProfile }
                                     |> validateSelectedProfile loggedIn.accountName
                                 )
-                                |> Loaded community
                     }
                         |> UR.init
 
@@ -437,20 +413,19 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd cmd
 
         EnteredAmount value ->
-            let
-                getNumericValues : String -> String
-                getNumericValues =
-                    String.filter (validAmountCharacter loggedIn.selectedCommunity)
-            in
-            case model.status of
-                Loaded community (EditingTransfer form) ->
+            case ( loggedIn.selectedCommunity, model.transferStatus ) of
+                ( RemoteData.Success selectedCommunity, EditingTransfer form ) ->
+                    let
+                        getNumericValues : String -> String
+                        getNumericValues =
+                            String.filter (validAmountCharacter selectedCommunity.symbol)
+                    in
                     { model
-                        | status =
+                        | transferStatus =
                             EditingTransfer
                                 ({ form | amount = getNumericValues value }
-                                    |> validateAmount loggedIn.selectedCommunity
+                                    |> validateAmount selectedCommunity.symbol
                                 )
-                                |> Loaded community
                     }
                         |> UR.init
 
@@ -458,15 +433,14 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         EnteredMemo value ->
-            case model.status of
-                Loaded community (EditingTransfer form) ->
+            case model.transferStatus of
+                EditingTransfer form ->
                     { model
-                        | status =
+                        | transferStatus =
                             EditingTransfer
                                 ({ form | memo = value }
                                     |> validateMemo
                                 )
-                                |> Loaded community
                     }
                         |> UR.init
 
@@ -474,22 +448,22 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         SubmitForm ->
-            case model.status of
-                Loaded c (EditingTransfer form) ->
+            case ( model.transferStatus, loggedIn.selectedCommunity ) of
+                ( EditingTransfer form, RemoteData.Success community ) ->
                     case form.selectedProfile of
                         Just to ->
                             let
                                 newForm =
                                     validateForm loggedIn.accountName
-                                        loggedIn.selectedCommunity
+                                        community.symbol
                                         form
 
                                 subscriptionDoc =
-                                    Transfer.transferSucceedSubscription model.communityId (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
+                                    Transfer.transferSucceedSubscription community.symbol (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
                                         |> Graphql.Document.serializeSubscription
                             in
                             if isFormValid newForm then
-                                { model | status = Loaded c (CreatingSubscription newForm) }
+                                { model | transferStatus = CreatingSubscription newForm }
                                     |> UR.init
                                     |> UR.addPort
                                         { responseAddress = SubmitForm
@@ -503,18 +477,16 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.addExt LoggedIn.HideFeedback
 
                             else
-                                { model | status = Loaded c (EditingTransfer newForm) }
+                                { model | transferStatus = EditingTransfer newForm }
                                     |> UR.init
 
                         Nothing ->
                             { model
-                                | status =
-                                    Loaded c
-                                        (EditingTransfer
-                                            (validateForm loggedIn.accountName
-                                                loggedIn.selectedCommunity
-                                                form
-                                            )
+                                | transferStatus =
+                                    EditingTransfer
+                                        (validateForm loggedIn.accountName
+                                            community.symbol
+                                            form
                                         )
                             }
                                 |> UR.init
@@ -523,14 +495,14 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         PushTransaction ->
-            case ( model.status, LoggedIn.hasPrivateKey loggedIn ) of
-                ( Loaded c (CreatingSubscription form), True ) ->
+            case ( model.transferStatus, LoggedIn.hasPrivateKey loggedIn, loggedIn.selectedCommunity ) of
+                ( CreatingSubscription form, True, RemoteData.Success community ) ->
                     let
                         account =
                             Maybe.map .account form.selectedProfile
                                 |> Maybe.withDefault (Eos.stringToName "")
                     in
-                    { model | status = Loaded c (SendingTransfer form) }
+                    { model | transferStatus = SendingTransfer form }
                         |> UR.init
                         |> UR.addPort
                             { responseAddress = PushTransaction
@@ -550,7 +522,7 @@ update msg model ({ shared } as loggedIn) =
                                                 { amount =
                                                     String.toFloat form.amount
                                                         |> Maybe.withDefault 0.0
-                                                , symbol = model.communityId
+                                                , symbol = community.symbol
                                                 }
                                             , memo = form.memo
                                             }
@@ -559,7 +531,7 @@ update msg model ({ shared } as loggedIn) =
                                     ]
                             }
 
-                ( Loaded _ (CreatingSubscription _), False ) ->
+                ( CreatingSubscription _, False, _ ) ->
                     UR.init model
                         |> UR.addExt
                             (Just PushTransaction
@@ -581,8 +553,8 @@ update msg model ({ shared } as loggedIn) =
                 UR.init model
 
         GotTransferResult (Ok _) ->
-            case model.status of
-                Loaded _ (SendingTransfer _) ->
+            case model.transferStatus of
+                SendingTransfer _ ->
                     model
                         |> UR.init
 
@@ -594,9 +566,9 @@ update msg model ({ shared } as loggedIn) =
                 errorMessage =
                     EosError.parseTransferError loggedIn.shared.translators eosErrorString
             in
-            case model.status of
-                Loaded c (SendingTransfer form) ->
-                    { model | status = Loaded c (EditingTransfer form) }
+            case model.transferStatus of
+                SendingTransfer form ->
+                    { model | transferStatus = EditingTransfer form }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
@@ -604,14 +576,14 @@ update msg model ({ shared } as loggedIn) =
                     onlyLogImpossible []
 
         Redirect value ->
-            case model.status of
-                Loaded _ (SendingTransfer form) ->
+            case ( model.transferStatus, loggedIn.selectedCommunity ) of
+                ( SendingTransfer form, RemoteData.Success community ) ->
                     case form.selectedProfile of
                         Just to ->
                             let
                                 sub =
                                     Transfer.transferSucceedSubscription
-                                        model.communityId
+                                        community.symbol
                                         (Eos.nameToString loggedIn.accountName)
                                         (Eos.nameToString to.account)
                                         |> Graphql.Document.decoder
@@ -679,11 +651,21 @@ jsAddressToMsg addr val =
             Nothing
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         OnSelect _ ->
             [ "OnSelect" ]

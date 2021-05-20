@@ -1,9 +1,19 @@
-module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl)
+module Route exposing
+    ( Route(..)
+    , communityFullDomain
+    , externalHref
+    , fromUrl
+    , href
+    , loadExternalCommunity
+    , pushUrl
+    , replaceUrl
+    )
 
 import Browser.Navigation as Nav
-import Eos exposing (Symbol)
+import Eos
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Session.Shared exposing (Shared)
 import Shop
 import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
@@ -26,16 +36,18 @@ type Route
     | PaymentHistory String
     | Profile
     | Dashboard
-    | Community Symbol
+    | Community
     | NewCommunity
-    | CommunitySettings Symbol
-    | CommunitySettingsFeatures Symbol
-    | EditCommunity Symbol
-    | Objectives Symbol
-    | NewObjective Symbol
-    | EditObjective Symbol Int
-    | NewAction Symbol Int
-    | EditAction Symbol Int Int
+    | CommunitySettings
+    | CommunitySettingsFeatures
+    | CommunitySettingsInfo
+    | CommunitySettingsCurrency
+    | CommunitySelector
+    | Objectives
+    | NewObjective
+    | EditObjective Int
+    | NewAction Int
+    | EditAction Int Int
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -43,7 +55,8 @@ type Route
     | ViewSale String
     | ViewTransfer Int
     | Invite String
-    | Transfer Symbol (Maybe String)
+    | Join
+    | Transfer (Maybe String)
     | Analysis
 
 
@@ -82,15 +95,17 @@ parser url =
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
-        , Url.map Community (s "community" </> Eos.symbolUrlParser)
-        , Url.map EditCommunity (s "community" </> Eos.symbolUrlParser </> s "edit")
-        , Url.map CommunitySettings (s "community" </> Eos.symbolUrlParser </> s "settings")
-        , Url.map CommunitySettingsFeatures (s "community" </> Eos.symbolUrlParser </> s "settings" </> s "features")
-        , Url.map Objectives (s "community" </> Eos.symbolUrlParser </> s "objectives")
-        , Url.map NewObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> s "new")
-        , Url.map EditObjective (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> s "new")
-        , Url.map EditAction (s "community" </> Eos.symbolUrlParser </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map Community (s "community")
+        , Url.map CommunitySettings (s "community" </> s "settings")
+        , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
+        , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
+        , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
+        , Url.map CommunitySelector (s "community" </> s "selector")
+        , Url.map Objectives (s "community" </> s "objectives")
+        , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
+        , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
+        , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -109,7 +124,8 @@ parser url =
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
-        , Url.map Transfer (s "community" </> Eos.symbolUrlParser </> s "transfer" <?> Query.string "to")
+        , Url.map Join (s "join")
+        , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
@@ -138,8 +154,108 @@ pushUrl key route =
     Nav.pushUrl key (routeToString route)
 
 
+loadExternalCommunity : Shared -> { commuity | symbol : Eos.Symbol, subdomain : String } -> Route -> Cmd msg
+loadExternalCommunity shared community route =
+    if shared.useSubdomain then
+        externalCommunityLink shared community.subdomain route
+            |> Url.toString
+            |> Nav.load
+
+    else
+        pushUrl shared.navKey route
+
+
+externalHref : Shared -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> Attribute msg
+externalHref shared community route =
+    externalCommunityLink shared community.subdomain route
+        |> Url.toString
+        |> Attr.href
+
+
+communityFullDomain : Shared -> String -> String
+communityFullDomain shared subdomain =
+    let
+        communityUrl =
+            externalCommunityLink shared subdomain Root
+    in
+    { communityUrl
+        | host = String.replace "localhost" "staging.cambiatus.io" communityUrl.host
+        , port_ = Nothing
+    }
+        |> Url.toString
+        |> String.replace "http://" ""
+        |> String.replace "https://" ""
+        |> (\domain ->
+                if String.endsWith "/" domain then
+                    String.dropRight 1 domain
+
+                else
+                    domain
+           )
+
+
 
 -- INTERNAL
+
+
+{-| A link to a community. The link preserves the environment
+(staging/demo/prod/localhost) based on the current url
+-}
+externalCommunityLink : Shared -> String -> Route -> Url
+externalCommunityLink shared subdomain route =
+    let
+        currentUrl =
+            shared.url
+
+        communitySubdomain =
+            subdomain
+                |> String.split "."
+                |> List.head
+                |> Maybe.withDefault subdomain
+
+        environments =
+            [ "staging", "demo" ]
+
+        defaultEnding =
+            "cambiatus.io"
+
+        possibleEndings =
+            [ "localhost", defaultEnding ]
+
+        ending =
+            List.filter
+                (\possibleEnding -> String.endsWith possibleEnding currentUrl.host)
+                possibleEndings
+                |> List.head
+                |> Maybe.withDefault defaultEnding
+
+        communityHost =
+            case
+                String.dropRight (String.length ending) currentUrl.host
+                    |> String.split "."
+                    |> List.filter (not << String.isEmpty)
+            of
+                [] ->
+                    -- Something like `cambiatus.io`, `localhost`
+                    String.join "." [ communitySubdomain, ending ]
+
+                [ singlePart ] ->
+                    if List.member singlePart environments then
+                        -- Something like `staging.cambiatus.io`, `demo.cambiatus.io`
+                        String.join "." [ communitySubdomain, singlePart, ending ]
+
+                    else
+                        -- Something like `community.cambiatus.io`
+                        String.join "." [ communitySubdomain, ending ]
+
+                _ :: env :: _ ->
+                    -- Something like `community.staging.cambiatus.io`
+                    String.join "." [ communitySubdomain, env, ending ]
+    in
+    { currentUrl
+        | host = communityHost
+        , path = routeToString route
+    }
 
 
 parseRedirect : Url -> Maybe String -> Maybe Route
@@ -243,37 +359,43 @@ routeToString route =
                 Dashboard ->
                     ( [ "dashboard" ], [] )
 
-                Community symbol ->
-                    ( [ "community", Eos.symbolToString symbol ], [] )
+                Community ->
+                    ( [ "community" ], [] )
 
-                CommunitySettings symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "settings" ], [] )
+                CommunitySettings ->
+                    ( [ "community", "settings" ], [] )
 
-                CommunitySettingsFeatures symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "settings", "features" ], [] )
+                CommunitySettingsFeatures ->
+                    ( [ "community", "settings", "features" ], [] )
+
+                CommunitySettingsInfo ->
+                    ( [ "community", "settings", "info" ], [] )
+
+                CommunitySettingsCurrency ->
+                    ( [ "community", "settings", "currency" ], [] )
+
+                CommunitySelector ->
+                    ( [ "community", "selector" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
 
-                EditCommunity symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "edit" ], [] )
+                Objectives ->
+                    ( [ "community", "objectives" ], [] )
 
-                Objectives symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives" ], [] )
+                NewObjective ->
+                    ( [ "community", "objectives", "new" ], [] )
 
-                NewObjective symbol ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", "new" ], [] )
+                EditObjective objectiveId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
 
-                EditObjective symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "edit" ], [] )
-
-                NewAction symbol objectiveId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", "new" ]
+                NewAction objectiveId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "action", "new" ]
                     , []
                     )
 
-                EditAction symbol objectiveId actionId ->
-                    ( [ "community", Eos.symbolToString symbol, "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
+                EditAction objectiveId actionId ->
+                    ( [ "community", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 
@@ -308,9 +430,11 @@ routeToString route =
                 Invite invitationId ->
                     ( [ "invite", invitationId ], [] )
 
-                Transfer communityId maybeTo ->
+                Join ->
+                    ( [ "join" ], [] )
+
+                Transfer maybeTo ->
                     ( [ "community"
-                      , Eos.symbolToString communityId
                       , "transfer"
                       ]
                     , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]

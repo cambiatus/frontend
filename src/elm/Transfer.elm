@@ -20,6 +20,7 @@ module Transfer exposing
 import Api.Relay exposing (Edge, MetadataConnection, PageConnection, PaginationArgs, pageInfoSelectionSet)
 import Cambiatus.Object
 import Cambiatus.Object.Community
+import Cambiatus.Object.Subdomain
 import Cambiatus.Object.Transfer
 import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.TransferEdge
@@ -30,6 +31,7 @@ import Cambiatus.Subscription as Subscription
 import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos exposing (Name)
 import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Profile
@@ -56,15 +58,21 @@ type alias Transfer =
     , from : Profile.Model
     , value : Float
     , memo : Maybe String
-    , symbol : Symbol
+    , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
     , createdTx : String
     }
 
 
-type alias Cmm =
+type alias CommunityId =
     String
+
+
+type alias Cmm =
+    { symbol : Eos.Symbol
+    , subdomain : String
+    }
 
 
 type alias EdgeTransfer =
@@ -110,13 +118,23 @@ transferItemSelectionSet =
         |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
         |> with Cambiatus.Object.Transfer.amount
         |> with Cambiatus.Object.Transfer.memo
-        |> with (Eos.symbolSelectionSet Cambiatus.Object.Transfer.communityId)
         |> with
             (Cambiatus.Object.Transfer.community
                 Cambiatus.Object.Community.name
             )
+        |> with (Cambiatus.Object.Transfer.community communitySelectionSet)
         |> with Cambiatus.Object.Transfer.createdAt
         |> with Cambiatus.Object.Transfer.createdTx
+
+
+communitySelectionSet : SelectionSet Cmm Cambiatus.Object.Community
+communitySelectionSet =
+    SelectionSet.succeed Cmm
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.Community.symbol)
+        |> with
+            (Cambiatus.Object.Community.subdomain Cambiatus.Object.Subdomain.name
+                |> SelectionSet.map (Maybe.withDefault "")
+            )
 
 
 transferEdgeSelectionSet : SelectionSet EdgeTransfer Cambiatus.Object.TransferEdge
@@ -173,7 +191,7 @@ transfersUserQuery name paginateArgs =
 transfersCommunityQuery : Symbol -> (PaginationArgs -> PaginationArgs) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersCommunityQuery symbol paginateArgs =
     communityTransfersSelectionSet paginateArgs
-        |> Cambiatus.Query.community { symbol = Eos.symbolToString symbol }
+        |> Cambiatus.Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
 
 
 getTransfers : Maybe { t | transfers : Maybe ConnectionTransfer } -> List Transfer
@@ -239,7 +257,7 @@ transferQuery : Int -> SelectionSet (Maybe Transfer) RootQuery
 transferQuery tID =
     let
         args =
-            { input = { id = tID } }
+            { id = tID }
     in
     Cambiatus.Query.transfer args transferItemSelectionSet
 

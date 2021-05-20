@@ -19,6 +19,22 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias AddCommunityPhotosRequiredArguments =
+    { symbol : String
+    , urls : List String
+    }
+
+
+{-| [Auth required - Admin only] Adds photos of a community
+-}
+addCommunityPhotos :
+    AddCommunityPhotosRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet (Maybe decodesTo) RootMutation
+addCommunityPhotos requiredArgs object_ =
+    Object.selectionForCompositeField "addCommunityPhotos" [ Argument.required "symbol" requiredArgs.symbol Encode.string, Argument.required "urls" requiredArgs.urls (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
+
+
 type alias CompleteObjectiveRequiredArguments =
     { input : Cambiatus.InputObject.CompleteObjectiveInput }
 

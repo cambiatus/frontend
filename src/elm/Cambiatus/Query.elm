@@ -104,18 +104,52 @@ communities object_ =
     Object.selectionForCompositeField "communities" [] object_ (identity >> Decode.list)
 
 
-type alias CommunityRequiredArguments =
-    { symbol : String }
+type alias CommunityOptionalArguments =
+    { subdomain : OptionalArgument String
+    , symbol : OptionalArgument String
+    }
 
 
 {-| [Auth required] A single community
 -}
 community :
-    CommunityRequiredArguments
+    (CommunityOptionalArguments -> CommunityOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootQuery
-community requiredArgs object_ =
-    Object.selectionForCompositeField "community" [ Argument.required "symbol" requiredArgs.symbol Encode.string ] object_ (identity >> Decode.nullable)
+community fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { subdomain = Absent, symbol = Absent }
+
+        optionalArgs =
+            [ Argument.optional "subdomain" filledInOptionals.subdomain Encode.string, Argument.optional "symbol" filledInOptionals.symbol Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "community" optionalArgs object_ (identity >> Decode.nullable)
+
+
+type alias CommunityPreviewOptionalArguments =
+    { subdomain : OptionalArgument String
+    , symbol : OptionalArgument String
+    }
+
+
+{-| Community Preview, public data available for all communities
+-}
+communityPreview :
+    (CommunityPreviewOptionalArguments -> CommunityPreviewOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.CommunityPreview
+    -> SelectionSet (Maybe decodesTo) RootQuery
+communityPreview fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { subdomain = Absent, symbol = Absent }
+
+        optionalArgs =
+            [ Argument.optional "subdomain" filledInOptionals.subdomain Encode.string, Argument.optional "symbol" filledInOptionals.symbol Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "communityPreview" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias CountryRequiredArguments =
@@ -132,8 +166,22 @@ country requiredArgs object_ =
     Object.selectionForCompositeField "country" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCountryInput ] object_ (identity >> Decode.nullable)
 
 
+type alias DomainAvailableRequiredArguments =
+    { domain : String }
+
+
+{-| [Auth required] Informs if a domain is available or not under Cambiatus
+-}
+domainAvailable :
+    DomainAvailableRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Exists
+    -> SelectionSet (Maybe decodesTo) RootQuery
+domainAvailable requiredArgs object_ =
+    Object.selectionForCompositeField "domainAvailable" [ Argument.required "domain" requiredArgs.domain Encode.string ] object_ (identity >> Decode.nullable)
+
+
 type alias InviteRequiredArguments =
-    { input : Cambiatus.InputObject.InviteInput }
+    { id : String }
 
 
 {-| An invite
@@ -143,7 +191,7 @@ invite :
     -> SelectionSet decodesTo Cambiatus.Object.Invite
     -> SelectionSet (Maybe decodesTo) RootQuery
 invite requiredArgs object_ =
-    Object.selectionForCompositeField "invite" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeInviteInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "invite" [ Argument.required "id" requiredArgs.id Encode.string ] object_ (identity >> Decode.nullable)
 
 
 {-| [Auth required] User's notifications
@@ -225,7 +273,7 @@ search requiredArgs object_ =
 
 
 type alias TransferRequiredArguments =
-    { input : Cambiatus.InputObject.TransferInput }
+    { id : Int }
 
 
 {-| [Auth required] A single Transfer
@@ -235,7 +283,7 @@ transfer :
     -> SelectionSet decodesTo Cambiatus.Object.Transfer
     -> SelectionSet (Maybe decodesTo) RootQuery
 transfer requiredArgs object_ =
-    Object.selectionForCompositeField "transfer" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeTransferInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "transfer" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias UserRequiredArguments =

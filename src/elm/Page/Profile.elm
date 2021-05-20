@@ -14,13 +14,12 @@ module Page.Profile exposing
 import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
 import Html.Attributes exposing (class, href, target)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -30,7 +29,7 @@ import Profile.Contact as Contact
 import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), ProfileStatus(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
@@ -44,19 +43,9 @@ import View.Pin as Pin
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
-    let
-        profileQuery =
-            Api.Graphql.query loggedIn.shared
-                (Just loggedIn.authToken)
-                (Profile.query loggedIn.accountName)
-                CompletedProfileLoad
-    in
-    ( initModel loggedIn
-    , Cmd.batch
-        [ profileQuery
-        , Task.succeed CheckPushPref |> Task.perform identity
-        ]
+init _ =
+    ( initModel
+    , Task.succeed CheckPushPref |> Task.perform identity
     )
 
 
@@ -65,8 +54,7 @@ init loggedIn =
 
 
 type alias Model =
-    { status : ProfileStatus
-    , currentPin : Maybe String
+    { currentPin : Maybe String
     , isNewPinModalVisible : Bool
     , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
@@ -75,10 +63,9 @@ type alias Model =
     }
 
 
-initModel : LoggedIn.Model -> Model
-initModel loggedIn =
-    { status = Loading loggedIn.accountName
-    , currentPin = Nothing
+initModel : Model
+initModel =
+    { currentPin = Nothing
     , isNewPinModalVisible = False
     , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
@@ -102,22 +89,25 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         title =
-            case model.status of
-                Loaded profile ->
+            case loggedIn.profile of
+                RemoteData.Success profile ->
                     Maybe.withDefault "" profile.name
 
                 _ ->
                     ""
 
         content =
-            case model.status of
-                Loading _ ->
+            case loggedIn.profile of
+                RemoteData.Loading ->
                     Page.fullPageLoading shared
 
-                LoadingFailed _ _ ->
-                    Page.fullPageError (shared.translators.t "profile.title") Http.Timeout
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading shared
 
-                Loaded profile ->
+                RemoteData.Failure e ->
+                    Page.fullPageGraphQLError (shared.translators.t "profile.title") e
+
+                RemoteData.Success profile ->
                     div [ class "flex-grow flex flex-col" ]
                         [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
                         , viewUserInfo loggedIn
@@ -397,7 +387,6 @@ viewUserInfo loggedIn profile pageType privateView =
                         Public ->
                             viewTransferButton
                                 loggedIn.shared
-                                loggedIn.selectedCommunity
                                 account
 
                         Private ->
@@ -496,8 +485,8 @@ viewProfileItem lbl content vAlign extraContent =
         ]
 
 
-viewTransferButton : Shared -> Symbol -> String -> Html msg
-viewTransferButton shared symbol user =
+viewTransferButton : Shared -> String -> Html msg
+viewTransferButton shared user =
     let
         text_ s =
             text (shared.translators.t s)
@@ -505,7 +494,7 @@ viewTransferButton shared symbol user =
     div [ class "mt-3 mb-2" ]
         [ a
             [ class "button button-primary w-full"
-            , Route.href (Route.Transfer symbol (Just user))
+            , Route.href (Route.Transfer (Just user))
             ]
             [ text_ "transfer.title" ]
         ]
@@ -659,7 +648,6 @@ type alias UpdateResult =
 
 type Msg
     = Ignored
-    | CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | DownloadPdf String
     | DownloadPdfProcessed Bool
     | ClickedClosePdfDownloadError
@@ -714,56 +702,27 @@ update msg model loggedIn =
                     )
 
         DeleteKycAccepted ->
-            { model
-                | status = Loading loggedIn.accountName
-                , isDeleteKycModalShowed = False
-            }
+            { model | isDeleteKycModalShowed = False }
                 |> UR.init
-                |> UR.addCmd
-                    (deleteKycAndAddress loggedIn)
+                |> UR.addCmd (deleteKycAndAddress loggedIn)
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
 
         DeleteKycAndAddressCompleted resp ->
-            let
-                reloadProfile =
-                    Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Profile.query loggedIn.accountName)
-                        CompletedProfileLoad
-            in
             case resp of
                 RemoteData.Success _ ->
                     model
                         |> UR.init
-                        |> UR.addCmd reloadProfile
+                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
                         |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.delete.success"))
 
                 RemoteData.Failure err ->
                     model
                         |> UR.init
                         |> UR.logGraphqlError msg err
-                        |> UR.addCmd reloadProfile
+                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
 
                 _ ->
                     UR.init model
-
-        CompletedProfileLoad (RemoteData.Success Nothing) ->
-            UR.init model
-
-        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
-            { model | status = Loaded profile }
-                |> UR.init
-                |> UR.addExt
-                    -- Update global `LoggedIn.Model` to enable restrictions after removing KYC data
-                    (LoggedIn.UpdatedLoggedIn
-                        { loggedIn | profile = Loaded profile }
-                    )
-
-        CompletedProfileLoad (RemoteData.Failure err) ->
-            UR.init { model | status = LoadingFailed loggedIn.accountName err }
-                |> UR.logGraphqlError msg err
-
-        CompletedProfileLoad _ ->
-            UR.init model
 
         ClickedChangePin ->
             if LoggedIn.hasPrivateKey loggedIn then
@@ -1008,9 +967,6 @@ msgToString msg =
 
         DeleteKycAndAddressCompleted _ ->
             [ "DeleteKycAndAddressCompleted" ]
-
-        CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.remoteDataToString r ]
 
         DownloadPdf _ ->
             [ "DownloadPdf" ]

@@ -12,6 +12,58 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
+
+// =========================================
+// App startup
+// =========================================
+
+let eos = null
+const USER_KEY = 'bespiral.user'
+const LANGUAGE_KEY = 'bespiral.language'
+const PUSH_PREF = 'bespiral.push.pref'
+const AUTH_TOKEN = 'bespiral.auth_token'
+const RECENT_SEARCHES = 'bespiral.recent_search'
+const env = process.env.NODE_ENV || 'development'
+const graphqlSecret = process.env.GRAPHQL_SECRET || ''
+const useSubdomain = process.env.USE_SUBDOMAIN
+const config = configuration[env]
+
+const getItem = (key) => {
+  const result = document.cookie.match('(^|[^;]+)\\s*' + key + '\\s*=\\s*([^;]+)')
+  return result ? result.pop() : null
+}
+
+const removeItem = (key) => {
+  let hostnameParts = window.location.hostname.split('.')
+  hostnameParts.shift()
+  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
+  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${domain}`
+
+  window.localStorage.removeItem(key)
+}
+
+const setItem = (key, value) => {
+  // This is the maximum possible expiration date for some browsers, because
+  // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
+  // This is equivalent to the date 2038-01-19 04:14:07
+  const maxExpirationDate = 2147483647
+  let hostnameParts = window.location.hostname.split('.')
+  hostnameParts.shift()
+  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
+
+  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${domain}; path=/; SameSite=Strict`
+}
+
+const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+
+storedKeys.forEach((key) => {
+  const localStorageValue = window.localStorage.getItem(key)
+  if (localStorageValue !== null) {
+    setItem(key, localStorageValue)
+    window.localStorage.removeItem(key)
+  }
+})
+
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
   Nunito: {
@@ -55,27 +107,12 @@ if (process.env.NODE_ENV === 'development') {
   }
 }
 
-// =========================================
-// App startup
-// =========================================
-
-let eos = null
-const USER_KEY = 'bespiral.user'
-const LANGUAGE_KEY = 'bespiral.language'
-const PUSH_PREF = 'bespiral.push.pref'
-const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
-const AUTH_TOKEN = 'bespiral.auth_token'
-const RECENT_SEARCHES = 'bespiral.recent_search'
-const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
-const config = configuration[env]
-
 function getUserLanguage () {
   const urlParams = new URLSearchParams(window.location.search)
 
   return (
     urlParams.get('lang') ||
-    window.localStorage.getItem(LANGUAGE_KEY) ||
+    getItem(LANGUAGE_KEY) ||
     navigator.language ||
     navigator.userLanguage ||
     'en-US'
@@ -98,7 +135,7 @@ async function readClipboardWithPermission () {
 }
 
 function flags () {
-  const user = JSON.parse(window.localStorage.getItem(USER_KEY))
+  const user = JSON.parse(getItem(USER_KEY))
   return {
     env: env,
     graphqlSecret: graphqlSecret,
@@ -106,15 +143,15 @@ function flags () {
     language: getUserLanguage(),
     accountName: (user && user.accountName) || null,
     isPinAvailable: !!(user && user.encryptedKey),
-    authToken: window.localStorage.getItem(AUTH_TOKEN),
+    authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),
     allowCommunityCreation: config.allowCommunityCreation,
-    selectedCommunity: getSelectedCommunity() || config.selectedCommunity,
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
-    canReadClipboard: canReadClipboard()
+    canReadClipboard: canReadClipboard(),
+    useSubdomain: useSubdomain
   }
 }
 
@@ -122,6 +159,7 @@ function flags () {
 const app = Elm.Main.init({
   flags: flags()
 })
+
 Sentry.addBreadcrumb({
   message: 'Started Elm app',
   level: Sentry.Severity.Info,
@@ -206,32 +244,32 @@ eos = Eos(config.eosOptions)
 app.ports.storeLanguage.subscribe(storeLanguage)
 
 function storeLanguage (lang) {
-  window.localStorage.setItem(LANGUAGE_KEY, lang)
+  setItem(LANGUAGE_KEY, lang)
   debugLog(`stored language: ${lang}`, '')
 }
 
 // STORE RECENT SEARCHES
 app.ports.storeRecentSearches.subscribe(query => {
-  window.localStorage.setItem(RECENT_SEARCHES, query)
+  setItem(RECENT_SEARCHES, query)
   debugLog(`stored recent searches: ${query}`, '')
 })
 
 // RETRIEVE RECENT SEARCHES
 app.ports.getRecentSearches.subscribe(() => {
-  const recentSearches = window.localStorage.getItem(RECENT_SEARCHES) || '[]'
+  const recentSearches = getItem(RECENT_SEARCHES) || '[]'
   app.ports.gotRecentSearches.send(recentSearches)
   debugLog(`got recent searches: ${recentSearches}`, '')
 })
 
 app.ports.storeAuthToken.subscribe(token => {
-  window.localStorage.setItem(AUTH_TOKEN, token)
+  setItem(AUTH_TOKEN, token)
   debugLog(`stored auth token`, token)
 })
 
 // STORE PUSH PREF
 
 function storePushPref (pref) {
-  window.localStorage.setItem(PUSH_PREF, pref)
+  setItem(PUSH_PREF, pref)
   debugLog(`stored push pref: ${pref}`, '')
 }
 
@@ -252,21 +290,14 @@ function storePin (data, pin) {
     storeData.encryptedPassphrase = sjcl.encrypt(pin, data.passphrase)
   }
 
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.setItem(USER_KEY, JSON.stringify(storeData))
+  removeItem(USER_KEY)
+  setItem(USER_KEY, JSON.stringify(storeData))
   debugLog('stored pin', pin)
 }
 
-function getSelectedCommunity () {
-  const selectedCommunity = window.localStorage.getItem(SELECTED_COMMUNITY_KEY)
-  debugLog(`got selected community: ${selectedCommunity}`, '')
-  return selectedCommunity
-}
-
 function logout () {
-  window.localStorage.removeItem(USER_KEY)
-  window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-  window.localStorage.removeItem(AUTH_TOKEN)
+  removeItem(USER_KEY)
+  removeItem(AUTH_TOKEN)
 
   Sentry.addBreadcrumb({
     category: 'auth',
@@ -387,7 +418,7 @@ async function handleJavascriptPort (arg) {
       }
     }
     case 'changePin': {
-      const userStorage = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const userStorage = JSON.parse(getItem(USER_KEY))
       const currentPin = arg.data.currentPin
       const newPin = arg.data.newPin
       const decryptedKey = sjcl.decrypt(currentPin, userStorage.encryptedKey)
@@ -412,7 +443,7 @@ async function handleJavascriptPort (arg) {
       return { accountName: arg.data.accountName, privateKey: decryptedKey }
     }
     case 'getPrivateKey': {
-      const user = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const user = JSON.parse(getItem(USER_KEY))
       const pin = arg.data.pin
       // If private key and accountName are stored in localStorage
       const isUserLoggedIn = user && user.encryptedKey && user.accountName
@@ -428,12 +459,6 @@ async function handleJavascriptPort (arg) {
           // Configure Sentry logged user
           Sentry.setUser({ account: user.accountName })
           debugLog('set sentry user', user.accountName)
-
-          // Set default selected community
-          window.localStorage.setItem(
-            SELECTED_COMMUNITY_KEY,
-            flags().selectedCommunity
-          )
 
           Sentry.addBreadcrumb({
             category: 'auth',
@@ -467,7 +492,13 @@ async function handleJavascriptPort (arg) {
           return { transactionId: res.transaction_id }
         })
         .catch(errorString => {
-          const error = JSON.parse(errorString)
+          let error
+          try {
+            error = JSON.parse(errorString)
+          } catch {
+            error = errorString
+          }
+
           const response = { error }
 
           // Send to sentry
@@ -478,7 +509,13 @@ async function handleJavascriptPort (arg) {
             message: 'Failure pushing transaction to EOS'
           })
           Sentry.withScope(scope => {
-            const message = error.error.details[0].message || 'Generic EOS Error'
+            let message
+            try {
+              message = error.error.details[0].message || 'Generic EOS Error'
+            } catch {
+              message = errorString
+            }
+
             scope.setTag('type', 'eos-transaction')
             scope.setExtra('Sent data', arg.data)
             scope.setExtra('Response', response)
@@ -521,10 +558,10 @@ async function handleJavascriptPort (arg) {
       return { isSet: true }
     }
     case 'checkPushPref': {
-      return { isSet: window.localStorage.getItem(PUSH_PREF) !== null }
+      return { isSet: getItem(PUSH_PREF) !== null }
     }
     case 'disablePushPref': {
-      window.localStorage.removeItem(PUSH_PREF)
+      removeItem(PUSH_PREF)
       pushSub.unsubscribeFromPush()
       return { isSet: false }
     }
@@ -533,7 +570,7 @@ async function handleJavascriptPort (arg) {
       return downloadPdf(accountName, passphrase)
     }
     case 'downloadAuthPdfFromProfile': {
-      const store = JSON.parse(window.localStorage.getItem(USER_KEY))
+      const store = JSON.parse(getItem(USER_KEY))
       const pin = arg.data.pin
 
       // `.encryptedPassphrase` property was added in https://github.com/cambiatus/frontend/pull/270 while redesigning
@@ -807,26 +844,6 @@ async function handleJavascriptPort (arg) {
         debugLog('clipboard.readText() not supported', '')
         return { notSupported: true }
       }
-    }
-    case 'setSelectedCommunity': {
-      Sentry.addBreadcrumb({
-        type: 'navigation',
-        category: 'navigation',
-        data: {
-          from: window.localStorage.getItem(SELECTED_COMMUNITY_KEY),
-          to: arg.data.selectedCommunity
-        },
-        message: 'Changed to community ' + arg.data.selectedCommunity,
-        level: Sentry.Severity.Info
-      })
-
-      window.localStorage.removeItem(SELECTED_COMMUNITY_KEY)
-      window.localStorage.setItem(
-        SELECTED_COMMUNITY_KEY,
-        arg.data.selectedCommunity
-      )
-
-      return {}
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }

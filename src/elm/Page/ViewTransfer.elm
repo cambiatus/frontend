@@ -218,7 +218,7 @@ viewAmount { shared } transfer state =
                         String.fromFloat transfer.value
                     ]
                 , span [ class "ml-2 text-caption text-green font-thin" ]
-                    [ text <| Eos.symbolToSymbolCodeString transfer.symbol ]
+                    [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             ]
         , div [ class "w-1/4" ] [ Icons.arrowDown ("fill-current text-green " ++ direction) ]

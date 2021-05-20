@@ -10,6 +10,7 @@ window._env_ = {
   LOGO: '/images/logo-cambiatus.svg',
   LOGO_MOBILE: '/images/logo-cambiatus-mobile.svg',
   ALLOW_COMMUNITY_CREATION: 'true',
+  USE_SUBDOMAIN: true
   SELECTED_COMMUNITY: '0,CMB',
   COMMUNITY_CONTRACT: 'cambiatus.cm',
   TOKEN_CONTRACT: 'cambiatus.tk'

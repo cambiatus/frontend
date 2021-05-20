@@ -10,24 +10,21 @@ module Page.Community exposing
     )
 
 import Action exposing (Action)
-import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
-import Eos exposing (Symbol)
-import Graphql.Http
+import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode exposing (Value)
 import Page
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
-import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -37,22 +34,16 @@ import Utils
 -- INIT
 
 
-init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init ({ shared, authToken } as loggedIn) symbol =
-    ( initModel loggedIn symbol
-    , Cmd.batch
-        [ Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoadCommunity
-        , Task.perform GotTime Time.now
-        ]
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init loggedIn =
+    ( initModel loggedIn
+    , Cmd.none
     )
 
 
-initModel : LoggedIn.Model -> Symbol -> Model
-initModel _ _ =
-    { date = Nothing
-    , pageStatus = Loading
-    , openObjectiveId = Nothing
-    }
+initModel : LoggedIn.Model -> Model
+initModel _ =
+    { openObjectiveId = Nothing }
 
 
 
@@ -69,17 +60,7 @@ subscriptions _ =
 
 
 type alias Model =
-    { date : Maybe Posix
-    , pageStatus : PageStatus
-    , openObjectiveId : Maybe Int
-    }
-
-
-type PageStatus
-    = Loading
-    | Loaded Community.Model
-    | NotFound
-    | Failed (Graphql.Http.Error (Maybe Community.Model))
+    { openObjectiveId : Maybe Int }
 
 
 
@@ -92,34 +73,34 @@ view loggedIn model =
         t =
             loggedIn.shared.translators.t
 
-        text_ s =
-            text (t s)
-
         title =
-            case model.pageStatus of
-                Loaded community ->
-                    community.title
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    community.name
 
-                Loading ->
+                RemoteData.Loading ->
+                    t ""
+
+                RemoteData.NotAsked ->
                     t ""
 
                 _ ->
                     t "community.not_found"
 
         content =
-            case model.pageStatus of
-                Loading ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                NotFound ->
-                    Page.viewCardEmpty [ text_ "community.not_found" ]
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading loggedIn.shared
 
-                Failed e ->
+                RemoteData.Failure e ->
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
-                Loaded community ->
+                RemoteData.Success community ->
                     div []
-                        [ Page.viewHeader loggedIn community.title Route.Dashboard
+                        [ Page.viewHeader loggedIn community.name Route.Dashboard
                         , div [ class "bg-white p-4" ]
                             [ div [ class "container mx-auto px-4" ]
                                 [ div [ class "h-24 w-24 rounded-full mx-auto" ]
@@ -127,7 +108,7 @@ view loggedIn model =
                                     ]
                                 , div [ class "flex flex-wrap w-full items-center" ]
                                     [ p [ class "text-4xl font-bold" ]
-                                        [ text community.title ]
+                                        [ text community.name ]
                                     ]
                                 , p [ class "text-grey-200 text-sm" ] [ text community.description ]
                                 ]
@@ -242,7 +223,7 @@ viewObjective loggedIn model metadata index objective =
                     (\action ->
                         viewAction loggedIn.shared.translators
                             (LoggedIn.isAccount metadata.creator loggedIn)
-                            model.date
+                            loggedIn.shared.now
                             action
                     )
     in
@@ -302,8 +283,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | GotTime Posix
-    | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -311,17 +290,10 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model ({ shared } as loggedIn) =
-    let
-        { t } =
-            shared.translators
-    in
+update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        GotTime date ->
-            UR.init { model | date = Just date }
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -338,27 +310,6 @@ update msg model ({ shared } as loggedIn) =
                     )
 
         GotActionMsg _ ->
-            model
-                |> UR.init
-
-        CompletedLoadCommunity (RemoteData.Success community) ->
-            case community of
-                Just c ->
-                    { model
-                        | pageStatus = Loaded c
-                    }
-                        |> UR.init
-
-                Nothing ->
-                    { model | pageStatus = NotFound }
-                        |> UR.init
-
-        CompletedLoadCommunity (RemoteData.Failure err) ->
-            { model | pageStatus = Failed err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        CompletedLoadCommunity _ ->
             model
                 |> UR.init
 
@@ -384,14 +335,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        GotTime _ ->
-            [ "GotTime" ]
-
         GotActionMsg _ ->
             [ "GotCommunityActionMsg" ]
-
-        CompletedLoadCommunity r ->
-            [ "CompletedLoadCommunity", UR.remoteDataToString r ]
 
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]
@@ -400,8 +345,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Maybe Posix -> Action -> Html Msg
-viewAction translators canEdit maybeDate action =
+viewAction : Translators -> Bool -> Posix -> Action -> Html Msg
+viewAction translators canEdit date action =
     let
         { t, tr } =
             translators
@@ -423,12 +368,7 @@ viewAction translators canEdit maybeDate action =
         pastDeadline =
             case action.deadline of
                 Just _ ->
-                    case maybeDate of
-                        Just today ->
-                            posixToMillis today > posixToMillis posixDeadline
-
-                        Nothing ->
-                            False
+                    posixToMillis date > posixToMillis posixDeadline
 
                 Nothing ->
                     False
