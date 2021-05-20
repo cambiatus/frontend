@@ -32,7 +32,6 @@ module Profile exposing
     , viewLarge
     , viewProfileName
     , viewProfileNameTag
-    , viewSummary
     )
 
 import Avatar exposing (Avatar)
@@ -58,7 +57,6 @@ import Json.Encode as Encode
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Route
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -69,6 +67,9 @@ type alias Basic a =
         | name : Maybe String
         , account : Eos.Name
         , avatar : Avatar
+        , email : Maybe String
+        , bio : Maybe String
+        , contacts : List Contact.Normalized
     }
 
 
@@ -455,56 +456,19 @@ updateContacts ({ contacts } as profile) newContacts =
 -- View profile
 
 
-view : Shared -> Eos.Name -> { profile | account : Eos.Name, avatar : Avatar, name : Maybe String } -> Html msg
+view : Shared -> Eos.Name -> Basic profile -> Html msg
 view shared loggedInAccount profile =
-    a
-        [ class "flex flex-col items-center"
-        , href ("/profile/" ++ Eos.nameToString profile.account)
-        ]
-        [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view profile.avatar "w-10 h-10"
+    div [ class "relative" ]
+        [ a
+            [ class "flex flex-col items-center"
+            , href ("/profile/" ++ Eos.nameToString profile.account)
             ]
-        , div [ class "mt-2" ]
-            [ viewProfileNameTag shared loggedInAccount profile ]
-        ]
-
-
-viewSummary : Minimal -> Html msg
-viewSummary profile =
-    let
-        userName =
-            profile.name |> Maybe.withDefault ""
-
-        email =
-            profile.email |> Maybe.withDefault ""
-
-        account =
-            profile.account |> Eos.nameToString
-
-        bio =
-            profile.bio |> Maybe.withDefault ""
-    in
-    div [ class "flex flex-col" ]
-        [ div [ class "flex mb-4 items-center justify-center" ]
-            [ Avatar.view profile.avatar "w-20 h-20 mr-6 flex-shrink-0"
-            , div [ class "flex items-center justify-between" ]
-                [ ul [ class "text-sm text-gray-900" ]
-                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
-                        [ text userName ]
-                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
-                    , li [] [ text account ]
-                    ]
+            [ div [ class "w-10 h-10 rounded-full" ]
+                [ Avatar.view profile.avatar "w-10 h-10"
                 ]
+            , div [ class "mt-2" ]
+                [ viewProfileNameTag shared loggedInAccount profile ]
             ]
-        , p [ class "text-sm text-gray-900" ]
-            [ text bio ]
-        , div [ class "flex justify-evenly mt-6" ]
-            (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
-        , a
-            [ class "button button-primary w-full mt-6 cursor-pointer"
-            , Route.href (Route.ProfilePublic account)
-            ]
-            [ text "View full profile" ]
         ]
 
 

@@ -3,13 +3,15 @@ module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiv
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community exposing (Model)
+import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
+import List.Extra as List
 import Page
-import Profile
+import Profile.Summary
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -33,6 +35,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , openObjective : Maybe Int
+    , profileSummaries : Dict Int (List Profile.Summary.Model)
     }
 
 
@@ -40,6 +43,7 @@ initModel : Model
 initModel =
     { status = Loading
     , openObjective = Nothing
+    , profileSummaries = Dict.empty
     }
 
 
@@ -305,11 +309,21 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2 overflow-x-auto" ]
-                            (List.map
-                                (\u ->
-                                    div [ class "mr-4 action-verifier" ]
-                                        [ Profile.view shared loggedIn.accountName u ]
+                        div [ class "flex mr-2 flex-wrap" ]
+                            (List.indexedMap
+                                (\validatorIndex u ->
+                                    case
+                                        Dict.get action.id model.profileSummaries
+                                            |> Maybe.andThen (List.getAt validatorIndex)
+                                    of
+                                        Nothing ->
+                                            text ""
+
+                                        Just validatorSummary ->
+                                            div [ class "mr-4 action-verifier" ]
+                                                [ Profile.Summary.view shared loggedIn.accountName u validatorSummary
+                                                    |> Html.map (GotProfileSummaryMsg action.id validatorIndex)
+                                                ]
                                 )
                                 action.validators
                             )
@@ -336,6 +350,7 @@ type alias UpdateResult =
 type Msg
     = CompletedLoadCommunity Community.Model
     | OpenObjective Int
+    | GotProfileSummaryMsg Int Int Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -357,12 +372,40 @@ update msg model loggedIn =
 
         OpenObjective index ->
             if model.openObjective == Just index then
-                { model | openObjective = Nothing }
+                { model | openObjective = Nothing, profileSummaries = Dict.empty }
                     |> UR.init
 
             else
-                { model | openObjective = Just index }
+                { model
+                    | openObjective = Just index
+                    , profileSummaries =
+                        loggedIn.selectedCommunity
+                            |> RemoteData.toMaybe
+                            |> Maybe.map .objectives
+                            |> Maybe.andThen (List.getAt index)
+                            |> Maybe.map .actions
+                            |> Maybe.withDefault []
+                            |> List.map
+                                (\action ->
+                                    ( action.id
+                                    , List.map (\_ -> Profile.Summary.init False) action.validators
+                                    )
+                                )
+                            |> Dict.fromList
+                }
                     |> UR.init
+
+        GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
+            { model
+                | profileSummaries =
+                    Dict.update actionIndex
+                        (Maybe.withDefault []
+                            >> List.updateAt validatorIndex (Profile.Summary.update subMsg)
+                            >> Just
+                        )
+                        model.profileSummaries
+            }
+                |> UR.init
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -383,3 +426,6 @@ msgToString msg =
 
         OpenObjective _ ->
             [ "OpenObjective" ]
+
+        GotProfileSummaryMsg _ _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
