@@ -13,6 +13,7 @@ import View.Components
 
 
 
+-- TODO - Check if it goes out of the window
 -- MODEL
 
 
@@ -81,7 +82,7 @@ view shared loggedInAccount profile model =
             ]
         , if model.isExpanded then
             View.Components.dialogBubble
-                [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto"
+                [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto z-50"
                 , classList [ ( "hidden", not model.isExpanded ) ]
                 ]
                 [ viewUserInfo profile ]

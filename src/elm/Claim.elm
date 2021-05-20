@@ -38,13 +38,13 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
 import Profile
+import Profile.Summary
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
 import Time
 import Utils
-import View.Components
 import View.Modal as Modal
 
 
@@ -252,19 +252,16 @@ type alias VoteClaimModalOptions msg =
 
 
 type Msg
-    = Ignored
-    | OpenVoteModal ClaimId Bool
+    = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
     | RouteOpened Route
+    | GotProfileSummaryMsg Profile.Summary.Msg
 
 
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
 updateClaimModalStatus msg model =
     case msg of
-        Ignored ->
-            model
-
         OpenVoteModal claimId vote ->
             { model | claimModalStatus = VoteConfirmationModal claimId vote }
 
@@ -277,11 +274,14 @@ updateClaimModalStatus msg model =
         RouteOpened _ ->
             model
 
+        GotProfileSummaryMsg _ ->
+            model
+
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Html Msg
-viewClaimCard { shared, accountName } claim =
+viewClaimCard : LoggedIn.Model -> Profile.Summary.Model -> Model -> Html Msg
+viewClaimCard { shared, accountName } profileSummary claim =
     let
         { t } =
             shared.translators
@@ -326,12 +326,8 @@ viewClaimCard { shared, accountName } claim =
                         class "justify-center"
                 ]
                 [ div [ class "relative" ]
-                    [ Profile.view shared accountName claim.claimer
-                    , View.Components.dialogBubble
-                        [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto"
-                        , Utils.onClickNoBubble Ignored
-                        ]
-                        [ Profile.viewSummary claim.claimer ]
+                    [ Profile.Summary.view shared accountName claim.claimer profileSummary
+                        |> Html.map GotProfileSummaryMsg
                     ]
                 , case claim.proofPhoto of
                     Just url ->

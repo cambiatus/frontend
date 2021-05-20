@@ -30,6 +30,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Page
 import Profile
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Select
@@ -72,7 +73,7 @@ initModel =
 
 type Status
     = Loading
-    | Loaded (List Claim.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -118,11 +119,11 @@ view ({ shared } as loggedIn) model =
                 Loading ->
                     Page.fullPageLoading shared
 
-                Loaded claims pageInfo ->
+                Loaded claims profileSummaries pageInfo ->
                     let
-                        viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim
-                                |> Html.map ClaimMsg
+                        viewClaim profileSummary claimIndex claim =
+                            Claim.viewClaimCard loggedIn profileSummary claim
+                                |> Html.map (ClaimMsg claimIndex)
                     in
                     div []
                         [ Page.viewHeader loggedIn pageTitle Route.Dashboard
@@ -131,7 +132,11 @@ view ({ shared } as loggedIn) model =
                             , if List.length claims > 0 then
                                 div []
                                     [ div [ class "flex flex-wrap -mx-2" ]
-                                        (List.map viewClaim claims)
+                                        (List.map3 viewClaim
+                                            profileSummaries
+                                            (List.range 0 (List.length claims))
+                                            claims
+                                        )
                                     , viewPagination loggedIn pageInfo
                                     ]
 
@@ -143,7 +148,7 @@ view ({ shared } as loggedIn) model =
                                 Claim.viewVoteClaimModal
                                     loggedIn.shared.translators
                                     { voteMsg = VoteClaim
-                                    , closeMsg = ClaimMsg Claim.CloseClaimModals
+                                    , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
                                     , claimId = claimId
                                     , isApproving = isApproving
                                     , isInProgress = isLoading
@@ -158,7 +163,7 @@ view ({ shared } as loggedIn) model =
 
                             Claim.PhotoModal claim ->
                                 Claim.viewPhotoModal loggedIn claim
-                                    |> Html.map ClaimMsg
+                                    |> Html.map (ClaimMsg 0)
 
                             _ ->
                                 text ""
@@ -317,7 +322,7 @@ type alias UpdateResult =
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
-    | ClaimMsg Claim.Msg
+    | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -334,7 +339,7 @@ update msg model loggedIn =
     case msg of
         ClaimsLoaded (RemoteData.Success results) ->
             case model.status of
-                Loaded claims _ ->
+                Loaded claims _ _ ->
                     let
                         newClaims =
                             if model.reloadOnNextQuery then
@@ -344,7 +349,10 @@ update msg model loggedIn =
                                 claims ++ Claim.paginatedToList results
                     in
                     { model
-                        | status = Loaded newClaims (Claim.paginatedPageInfo results)
+                        | status =
+                            Loaded newClaims
+                                (List.map (\_ -> Profile.Summary.init False) newClaims)
+                                (Claim.paginatedPageInfo results)
                         , reloadOnNextQuery = False
                     }
                         |> UR.init
@@ -352,7 +360,9 @@ update msg model loggedIn =
                 _ ->
                     { model
                         | status =
-                            Loaded (Claim.paginatedToList results) (Claim.paginatedPageInfo results)
+                            Loaded (Claim.paginatedToList results)
+                                (List.map (\_ -> Profile.Summary.init False) (Claim.paginatedToList results))
+                                (Claim.paginatedPageInfo results)
                         , reloadOnNextQuery = False
                     }
                         |> UR.init
@@ -368,7 +378,7 @@ update msg model loggedIn =
                 |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
-        ClaimMsg m ->
+        ClaimMsg claimIndex m ->
             let
                 claimCmd =
                     case m of
@@ -377,14 +387,28 @@ update msg model loggedIn =
 
                         _ ->
                             Cmd.none
+
+                updatedModel =
+                    case ( model.status, m ) of
+                        ( Loaded claims profileSummaries pageInfo, Claim.GotProfileSummaryMsg subMsg ) ->
+                            { model
+                                | status =
+                                    Loaded claims
+                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
+                                        pageInfo
+                            }
+
+                        _ ->
+                            model
             in
-            Claim.updateClaimModalStatus m model
+            updatedModel
+                |> Claim.updateClaimModalStatus m
                 |> UR.init
                 |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ ->
+                Loaded _ _ _ ->
                     let
                         newModel =
                             { model
@@ -419,7 +443,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded claims pageInfo ->
+                Loaded claims profileSummaries pageInfo ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -443,7 +467,7 @@ update msg model loggedIn =
                                         claims
                             in
                             { model
-                                | status = Loaded updatedClaims pageInfo
+                                | status = Loaded updatedClaims profileSummaries pageInfo
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
@@ -462,9 +486,9 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.status of
-                Loaded claims pageInfo ->
+                Loaded claims profileSummaries pageInfo ->
                     { model
-                        | status = Loaded claims pageInfo
+                        | status = Loaded claims profileSummaries pageInfo
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -487,7 +511,7 @@ update msg model loggedIn =
                     model.filters
             in
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _, RemoteData.Success community ) ->
+                ( Loaded _ _ _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -505,7 +529,7 @@ update msg model loggedIn =
 
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ pageInfo, RemoteData.Success community ) ->
+                ( Loaded _ _ pageInfo, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -520,7 +544,7 @@ update msg model loggedIn =
 
         ClearSelectSelection ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _, RemoteData.Success community ) ->
+                ( Loaded _ _ _, RemoteData.Success community ) ->
                     let
                         oldFilters =
                             model.filters
@@ -770,7 +794,7 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        ClaimMsg _ ->
+        ClaimMsg _ _ ->
             [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->
