@@ -381,6 +381,18 @@ update msg model loggedIn =
                         (Just loggedIn.authToken)
                         (Notification.markAsReadMutation notificationId)
                         CompletedReading
+
+                redirectCmd newCommunity =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            if community.symbol == newCommunity.symbol then
+                                Route.replaceUrl loggedIn.shared.navKey
+
+                            else
+                                Route.loadExternalCommunity loggedIn.shared newCommunity
+
+                        _ ->
+                            \_ -> Cmd.none
             in
             case data of
                 T transfer ->
@@ -389,7 +401,7 @@ update msg model loggedIn =
                         |> UR.addCmd cmd
                         |> UR.addCmd
                             (Route.ViewTransfer transfer.id
-                                |> Route.replaceUrl loggedIn.shared.navKey
+                                |> redirectCmd transfer.community
                             )
 
                 M _ ->
@@ -403,7 +415,7 @@ update msg model loggedIn =
                         |> UR.addCmd cmd
                         |> UR.addCmd
                             (Route.ViewSale (String.fromInt sale.product.id)
-                                |> Route.replaceUrl loggedIn.shared.navKey
+                                |> redirectCmd sale.product.community
                             )
 
         CompletedReading (RemoteData.Success hist) ->

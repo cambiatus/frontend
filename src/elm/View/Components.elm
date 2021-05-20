@@ -1,6 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
+    , tooltip
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -16,10 +17,16 @@ state or configuration, such as loading indicators and containers
 
 @docs dialogBubble
 
+
+# Elements
+
+@docs tooltip
+
 -}
 
-import Html exposing (Html, div, img, p, text)
+import Html exposing (Html, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
+import Icons
 import Session.Shared exposing (Translators)
 
 
@@ -27,12 +34,10 @@ import Session.Shared exposing (Translators)
 -- LOADING
 
 
-{-| A fixed-size loading indicator, used mainly for full-screen loaders
--}
-loadingLogoAnimated : Translators -> Html msg
-loadingLogoAnimated { t } =
-    div [ class "w-full text-center" ]
-        [ img [ class "h-16 mx-auto mt-8", src "/images/loading.gif" ] []
+loadingLogoAnimated : Translators -> String -> Html msg
+loadingLogoAnimated { t } class_ =
+    div [ class ("w-full text-center " ++ class_) ]
+        [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
         , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t "loading.subtitle" ]
         ]
@@ -43,7 +48,7 @@ loadingLogoAnimated { t } =
 loadingLogoAnimatedFluid : Html msg
 loadingLogoAnimatedFluid =
     div [ class "w-full text-center h-full py-2" ]
-        [ img [ class "mx-auto h-full", src "/images/loading.gif" ] [] ]
+        [ img [ class "mx-auto h-full", src "/images/loading.svg" ] [] ]
 
 
 
@@ -58,3 +63,16 @@ dialogBubble attrs elements =
             ]
             :: elements
         )
+
+
+
+-- ELEMENTS
+
+
+tooltip : Translators -> String -> Html msg
+tooltip { t } tooltipMessage =
+    span [ class "icon-tooltip ml-1" ]
+        [ Icons.question "inline-block"
+        , div [ class "icon-tooltip-content" ]
+            [ text (t tooltipMessage) ]
+        ]

@@ -7,6 +7,7 @@
   },
   "menu": {
     "title": "Menu",
+    "welcome_to": "Bienvenido a {{community_name}}",
     "my_communities": "Bienvenido a ",
     "dashboard": "Inicio",
     "news": "Noticias",
@@ -107,6 +108,7 @@
     "alreadyTaken": "Ya esta en uso. Por favor, intenta de nuevo.",
     "notMember": "Este usuario no es miembro.",
     "chooseOrUploadLogo": "Escoje o sube tu propio logo.",
+    "waitForLogoUpload": "Espere hasta que se cargue el logotipo",
     "invalidSymbol": "Simbolo invalido.",
     "unknown": "Oh oh. Algo salió mal.",
     "accountNotFound": "Cuenta no encontrada. ¿Estás seguro de haber creado tu cuenta?",
@@ -398,6 +400,8 @@
     "title": "Comunidad",
     "create_button": "Crear Comunidad",
     "not_found": "Comunidad no encontrada",
+    "error_loading": "Error al cargar la comunidad",
+    "error_saving": "Error al guardar la comunidad",
     "create": {
       "title": "Crear comunidad",
       "success": "Comunidad guardada con éxito",
@@ -460,6 +464,14 @@
         "yes": "Sí, únete",
         "no": "No, cancelar"
       }
+    },
+    "join": {
+      "title_generic": "Unete a la communidad",
+      "title_with_community": "Ingresa {{community_name}}",
+      "member_count": "{{member_count}} miembros",
+      "only_invited": "Esta comunidad solo permite invitados",
+      "already_member": "Ya soy miembro",
+      "visit_website": "Visita la página web"
     },
     "details": {
       "creator": "Creador/a",
@@ -885,11 +897,74 @@
     "success": "Configuraciones guardadas exitosamente",
     "community_info": {
       "title": "Informações da Comunidade",
-      "description": "Logo, nome, des crição"
+      "description": "Logo, nombre, descripción, url",
+      "logo": {
+        "title": "Logotipo de la comunidad",
+        "guidance": "Orientación sobre la imagen del Logotipo",
+        "description": "Su archivo debe estar en formato PNG, JPG o SVG. Debe medir 80px de ancho y 80px de alto para que se vea mejor en la interfaz."
+      },
+      "invitation": {
+        "title": "Acceso a la comunidad",
+        "guidance": "Orientación sobre el Acceso a la Comunidad",
+        "description": "Cuando la comunidad necesita invitaciones, los nuevos miembros solo pueden acceder a través de una invitación."
+      },
+      "cover_photo": {
+        "title": "Imagen de portada de la comunidad",
+        "description": "Asegúrese de agregar una imagen de buena calidad"
+      },
+      "url": {
+        "title": "URL personalizada de la comunidad",
+        "guidance": "Orientación sobre la URL Personalizada"
+      },
+      "fields": {
+        "name": "Nombre de la comunidad",
+        "description": "Describe la comunidad",
+        "website": "Sitio web de la comunidad",
+        "invitation": "Invitación"
+      },
+      "placeholders": {
+        "name": "Dale un nombre a la comunidad",
+        "description": "Di algo sobre la comunidad",
+        "url": "Elija una URL personalizada"
+      },
+      "errors": {
+        "logo_upload": "Hubo un error al cargar el logo",
+        "cover_upload": "Hubo un error al cargar la imagen de portada",
+        "name": {
+          "blank": "La comunidad necesita un nombre"
+        },
+        "description": {
+          "blank": "La comunidad necesita una descripción"
+        },
+        "website": {
+          "invalid": "Ingrese un sitio web válido"
+        },
+        "url": {
+          "blank": "La comunidad necesita una URL",
+          "invalid_char": "No use caracteres especiales",
+          "invalid_case": "Solo se permite downcase",
+          "too_short": "La URL debe tener al menos 2 caracteres.",
+          "already_taken": "La URL que eliges ya está en uso"
+        }
+      },
+      "constraints": {
+        "length": "Máximo de 30 caracteres.",
+        "characters": "Utilice letras de la a a la z y números del 0 al 9.",
+        "donts": "No: uses malas palabras; use mayúsculas; utilice caracteres especiales ni letras con acentos. Ej. @!?:; âãá."
+      }
     },
-    "currency": {
-      "title": "Moeda",
-      "description": ""
+    "community_currency": {
+      "title": "Moneda",
+      "decimal_places": "Casas decimales",
+      "format": "Este es el ejemplo de tu moneda",
+      "supports_decimal_places": "Tu moneda admite {{amount}} decimales",
+      "token_type": "Tipo",
+      "expiry": "Expiración",
+      "natural_expiration_period": "Plazo de caducidad persona física",
+      "juridical_expiration_period": "Plazo de caducidad persona jurídica",
+      "renovation_amount": "Monto de la renovación",
+      "expiryopts_not_found": "No pudimos encontrar las opciones de vencimiento para su token",
+      "seconds": "segundos"
     },
     "actions": {
       "title": "Objetivos y acciones",

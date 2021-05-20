@@ -37,6 +37,10 @@ type Community
     = Community
 
 
+type CommunityPreview
+    = CommunityPreview
+
+
 type Contact
     = Contact
 
@@ -47,6 +51,10 @@ type Country
 
 type DeleteKycAddress
     = DeleteKycAddress
+
+
+type Exists
+    = Exists
 
 
 type Invite
@@ -105,6 +113,10 @@ type State
     = State
 
 
+type Subdomain
+    = Subdomain
+
+
 type Transfer
     = Transfer
 
@@ -119,6 +131,10 @@ type TransferEdge
 
 type UnreadNotifications
     = UnreadNotifications
+
+
+type Upload
+    = Upload
 
 
 type User

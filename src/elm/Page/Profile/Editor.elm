@@ -1,4 +1,4 @@
-module Page.Profile.Editor exposing (Model, Msg, init, msgToString, update, view)
+module Page.Profile.Editor exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Api
 import Api.Graphql
@@ -15,7 +15,7 @@ import Page
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -25,17 +25,10 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : Session.LoggedIn.Model -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    let
-        profileQuery =
-            Api.Graphql.query loggedIn.shared
-                (Just loggedIn.authToken)
-                (Profile.query loggedIn.accountName)
-                CompletedProfileLoad
-    in
     ( initModel
-    , profileQuery
+    , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
     )
 
 
@@ -50,9 +43,7 @@ type alias Model =
     , location : String
     , interests : List String
     , interest : String
-    , status : Status
     , avatar : Maybe Avatar
-    , wasSaved : Bool
     }
 
 
@@ -64,23 +55,15 @@ initModel =
     , location = ""
     , interests = []
     , interest = ""
-    , status = Loading
     , avatar = Nothing
-    , wasSaved = False
     }
-
-
-type Status
-    = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Profile.Model))
-    | Loaded Profile.Model
 
 
 
 -- VIEW
 
 
-view : Session.LoggedIn.Model -> Model -> { title : String, content : Html Msg }
+view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         { t } =
@@ -90,14 +73,17 @@ view loggedIn model =
             t "profile.edit.title"
 
         content =
-            case model.status of
-                Loading ->
+            case loggedIn.profile of
+                RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                LoadingFailed _ ->
-                    Page.fullPageError (t "profile.title") Http.Timeout
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading loggedIn.shared
 
-                Loaded profile ->
+                RemoteData.Failure e ->
+                    Page.fullPageGraphQLError (t "profile.title") e
+
+                RemoteData.Success profile ->
                     view_ loggedIn model profile
     in
     { title = title
@@ -105,7 +91,7 @@ view loggedIn model =
     }
 
 
-view_ : Session.LoggedIn.Model -> Model -> Profile.Model -> Html Msg
+view_ : LoggedIn.Model -> Model -> Profile.Model -> Html Msg
 view_ loggedIn model profile =
     let
         { t } =
@@ -147,7 +133,7 @@ view_ loggedIn model profile =
             , viewBio (t "profile.edit.labels.bio") Bio loggedIn.shared.translators model.bio
             , viewInput (t "profile.edit.labels.localization") Location model.location
             , viewInterests model.interest model.interests loggedIn.shared.translators
-            , viewButton (t "profile.edit.submit") ClickedSave "save" model.wasSaved
+            , viewButton (t "profile.edit.submit") ClickedSave "save" (RemoteData.isLoading loggedIn.profile)
             ]
         ]
 
@@ -295,11 +281,12 @@ viewAvatar url =
 
 
 type Msg
-    = CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    = CompletedLoadProfile Profile.Model
     | OnFieldInput Field String
     | AddInterest
     | RemoveInterest String
     | ClickedSave
+    | GotSaveResult (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | EnteredAvatar (List File)
     | CompletedAvatarUpload (Result Http.Error Avatar)
 
@@ -316,53 +303,26 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-update : Msg -> Model -> Session.LoggedIn.Model -> UpdateResult
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
         { t } =
             loggedIn.shared.translators
     in
     case msg of
-        CompletedProfileLoad (RemoteData.Success Nothing) ->
-            UR.init model
-
-        CompletedProfileLoad (RemoteData.Success (Just profile)) ->
+        CompletedLoadProfile profile ->
             let
                 nullable a =
                     Maybe.withDefault "" a
-
-                redirect =
-                    if model.wasSaved then
-                        UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
-
-                    else
-                        UR.addCmd Cmd.none
-
-                showSuccessMsg =
-                    if model.wasSaved then
-                        UR.addExt (ShowFeedback Feedback.Success (t "profile.edit_success"))
-
-                    else
-                        UR.addExt HideFeedback
             in
             UR.init
                 { model
-                    | status = Loaded profile
-                    , fullName = nullable profile.name
+                    | fullName = nullable profile.name
                     , email = nullable profile.email
                     , bio = nullable profile.bio
                     , location = nullable profile.localization
                     , interests = profile.interests
                 }
-                |> redirect
-                |> showSuccessMsg
-
-        CompletedProfileLoad (RemoteData.Failure err) ->
-            UR.init { model | status = LoadingFailed err }
-                |> UR.logGraphqlError msg err
-
-        CompletedProfileLoad _ ->
-            UR.init model
 
         OnFieldInput field data ->
             let
@@ -417,32 +377,53 @@ update msg model loggedIn =
                 }
 
         ClickedSave ->
-            case model.status of
-                Loaded profile ->
+            case loggedIn.profile of
+                RemoteData.Success profile ->
                     let
                         newProfile =
                             modelToProfile model profile
                     in
-                    { model | wasSaved = True }
+                    model
                         |> UR.init
+                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
                                 (Just loggedIn.authToken)
                                 (Profile.mutation (Profile.profileToForm newProfile))
-                                CompletedProfileLoad
+                                GotSaveResult
                             )
 
                 _ ->
                     UR.init model
                         |> UR.logImpossible msg []
 
+        GotSaveResult (RemoteData.Success (Just profile)) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ProfileLoaded profile |> LoggedIn.ExternalBroadcast)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "profile.edit_success"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
+
+        GotSaveResult (RemoteData.Success Nothing) ->
+            model
+                |> UR.init
+
+        GotSaveResult (RemoteData.Failure e) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Failure e })
+                |> UR.logGraphqlError msg e
+
+        GotSaveResult _ ->
+            UR.init model
+
         EnteredAvatar (file :: _) ->
             let
                 uploadAvatar file_ =
                     Api.uploadAvatar loggedIn.shared file_ CompletedAvatarUpload
             in
-            case model.status of
-                Loaded _ ->
+            case loggedIn.profile of
+                RemoteData.Success _ ->
                     model
                         |> UR.init
                         |> UR.addCmd (uploadAvatar file)
@@ -460,7 +441,7 @@ update msg model loggedIn =
         CompletedAvatarUpload (Err err) ->
             UR.init model
                 |> UR.logHttpError msg err
-                |> UR.addExt (Session.LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
 
 modelToProfile : Model -> Profile.Model -> Profile.Model
@@ -475,11 +456,21 @@ modelToProfile model profile =
     }
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedProfileLoad r ->
-            [ "CompletedProfileLoad", UR.remoteDataToString r ]
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
 
         OnFieldInput _ _ ->
             [ "OnFieldInput" ]
@@ -492,6 +483,9 @@ msgToString msg =
 
         ClickedSave ->
             [ "ClickedSave" ]
+
+        GotSaveResult r ->
+            [ "GotSaveResult", UR.remoteDataToString r ]
 
         CompletedAvatarUpload _ ->
             [ "CompletedAvatarUpload" ]

@@ -4,6 +4,7 @@ module Page.Shop exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscriptions
     , update
     , view
@@ -31,8 +32,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Filter, Product)
-import Task
-import Time exposing (Posix)
 import Transfer
 import UpdateResult as UR
 
@@ -49,12 +48,8 @@ init loggedIn filter =
     in
     ( model
     , Cmd.batch
-        [ Api.Graphql.query loggedIn.shared
-            (Just loggedIn.authToken)
-            (Shop.productsQuery filter loggedIn.accountName loggedIn.selectedCommunity)
-            CompletedSalesLoad
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
-        , Task.perform GotTime Time.now
         ]
     )
 
@@ -73,8 +68,7 @@ subscriptions =
 
 
 type alias Model =
-    { date : Maybe Posix
-    , cards : Status
+    { cards : Status
     , balances : List Balance
     , filter : Filter
     }
@@ -82,8 +76,7 @@ type alias Model =
 
 initModel : Filter -> Model
 initModel filter =
-    { date = Nothing
-    , cards = Loading
+    { cards = Loading
     , balances = []
     , filter = filter
     }
@@ -150,20 +143,9 @@ view loggedIn model =
             loggedIn.shared.translators
 
         selectedCommunityName =
-            case loggedIn.profile of
-                LoggedIn.Loaded profile ->
-                    let
-                        selectedCommunity =
-                            profile.communities
-                                |> List.filter (\p -> p.id == loggedIn.selectedCommunity)
-                                |> List.head
-                    in
-                    case selectedCommunity of
-                        Just c ->
-                            c.name
-
-                        Nothing ->
-                            Eos.symbolToSymbolCodeString loggedIn.selectedCommunity
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    community.name
 
                 _ ->
                     ""
@@ -196,17 +178,23 @@ view loggedIn model =
     in
     { title = title
     , content =
-        case loggedIn.hasShop of
-            LoggedIn.FeatureLoaded True ->
+        case RemoteData.map .hasShop loggedIn.selectedCommunity of
+            RemoteData.Success True ->
                 content
 
-            LoggedIn.FeatureLoaded False ->
+            RemoteData.Success False ->
                 Page.fullPageNotFound
                     (t "error.pageNotFound")
                     (t "shop.disabled.description")
 
-            LoggedIn.FeatureLoading ->
+            RemoteData.Loading ->
                 Page.fullPageLoading loggedIn.shared
+
+            RemoteData.NotAsked ->
+                Page.fullPageLoading loggedIn.shared
+
+            RemoteData.Failure e ->
+                Page.fullPageGraphQLError (t "community.error_loading") e
     }
 
 
@@ -402,9 +390,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | GotTime Posix
-    | CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    | CompletedLoadCommunity Community.Model
     | ClickedSendTransfer Card Int
     | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
@@ -416,12 +403,6 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        Ignored ->
-            UR.init model
-
-        GotTime date ->
-            UR.init { model | date = Just date }
-
         CompletedSalesLoad (RemoteData.Success sales) ->
             UR.init { model | cards = Loaded (List.map cardFromSale sales) }
 
@@ -431,6 +412,15 @@ update msg model loggedIn =
 
         CompletedSalesLoad _ ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd
+                    (Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
+                        CompletedSalesLoad
+                    )
 
         ClickedSendTransfer card cardIndex ->
             let
@@ -659,17 +649,24 @@ jsAddressToMsg addr _ =
             Nothing
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
-        GotTime _ ->
-            [ "GotTime" ]
-
         CompletedSalesLoad r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         ClickedSendTransfer _ _ ->
             [ "ClickedSendTransfer" ]

@@ -2,7 +2,6 @@ module Page exposing
     ( ExternalMsg(..)
     , Msg(..)
     , Session(..)
-    , errorToString
     , fullPageError
     , fullPageGraphQLError
     , fullPageLoading
@@ -40,7 +39,6 @@ import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
-import Graphql.Http.GraphqlError
 import Html exposing (Attribute, Html, a, br, button, div, img, label, li, p, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, for, src, title, type_, value)
 import Html.Events exposing (on)
@@ -59,6 +57,7 @@ import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
+import Utils
 import View.Components
 
 
@@ -76,7 +75,7 @@ init flags navKey url =
         ( Just ( accountName, _ ), Just authToken ) ->
             let
                 ( model, cmd ) =
-                    LoggedIn.init shared accountName flags authToken
+                    LoggedIn.init shared accountName authToken
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
@@ -320,7 +319,7 @@ viewDateDistance date maybeNow =
 
 fullPageLoading : Shared.Shared -> Html msg
 fullPageLoading { translators } =
-    View.Components.loadingLogoAnimated translators
+    View.Components.loadingLogoAnimated translators ""
 
 
 fullPageError : String -> Http.Error -> Html msg
@@ -336,7 +335,7 @@ fullPageGraphQLError title_ e =
     div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
-            , p [ class "text-center" ] [ text (errorToString e) ]
+            , p [ class "text-center" ] [ text (Utils.errorToString e) ]
             ]
         , img [ class "w-full", src "/images/error.svg" ] []
         ]
@@ -358,23 +357,6 @@ loading =
     div [ class "spinner spinner--delay" ] []
 
 
-errorToString : Graphql.Http.Error parsedData -> String
-errorToString errorData =
-    case errorData of
-        Graphql.Http.GraphqlError _ graphqlErrors ->
-            graphqlErrors
-                |> List.map graphqlErrorToString
-                |> String.join "\n"
-
-        Graphql.Http.HttpError _ ->
-            "Http Error"
-
-
-graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
-graphqlErrorToString error =
-    error.message
-
-
 
 -- UPDATE
 
@@ -385,6 +367,7 @@ type alias UpdateResult =
 
 type ExternalMsg
     = LoggedInExternalMsg LoggedIn.ExternalMsg
+    | GuestBroadcastMsg Guest.BroadcastMsg
 
 
 type Msg
@@ -411,7 +394,11 @@ update msg session =
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel
-                |> UR.map Guest GotGuestMsg (\() uR -> uR)
+                |> UR.map Guest
+                    GotGuestMsg
+                    (\extMsg uR ->
+                        UR.addExt (GuestBroadcastMsg extMsg) uR
+                    )
 
         ( GotLoggedInMsg subMsg, LoggedIn subModel ) ->
             LoggedIn.update subMsg subModel
@@ -466,8 +453,15 @@ updateShared session transform =
 
 logout : LoggedIn.Model -> ( Session, Cmd Msg )
 logout { shared } =
-    ( Guest (Guest.initModel { shared | maybeAccount = Nothing })
-    , Route.replaceUrl shared.navKey (Route.Login Nothing)
+    let
+        ( guest, guestCmd ) =
+            Guest.init shared
+    in
+    ( Guest { guest | shared = { shared | maybeAccount = Nothing } }
+    , Cmd.batch
+        [ Route.replaceUrl shared.navKey (Route.Login Nothing)
+        , Cmd.map GotGuestMsg guestCmd
+        ]
     )
 
 

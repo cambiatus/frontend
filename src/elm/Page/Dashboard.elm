@@ -1,9 +1,10 @@
 module Page.Dashboard exposing
     ( Model
-    , Msg
+    , Msg(..)
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , subscriptions
     , update
     , view
@@ -16,7 +17,7 @@ import Cambiatus.Enum.Direction
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import FormatNumber
@@ -36,11 +37,10 @@ import Profile
 import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..), FeatureStatus(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
-import Task
-import Time exposing (Posix)
+import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
@@ -53,14 +53,12 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, accountName, selectedCommunity, authToken } as loggedIn) =
+init ({ shared, accountName, authToken } as loggedIn) =
     ( initModel
     , Cmd.batch
-        [ fetchBalance shared accountName
-        , fetchTransfers shared accountName authToken
-        , fetchCommunity shared selectedCommunity authToken
-        , fetchAvailableAnalysis loggedIn Nothing initAnalysisFilter
-        , Task.perform GotTime Time.now
+        [ fetchTransfers shared accountName authToken
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
         ]
     )
 
@@ -79,9 +77,7 @@ subscriptions _ =
 
 
 type alias Model =
-    { date : Maybe Posix
-    , community : GraphqlStatus (Maybe Community.DashboardInfo) Community.DashboardInfo
-    , balance : Status Balance
+    { balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , analysisFilter : Direction
     , lastSocket : String
@@ -96,9 +92,7 @@ type alias Model =
 
 initModel : Model
 initModel =
-    { date = Nothing
-    , community = LoadingGraphql
-    , balance = Loading
+    { balance = RemoteData.NotAsked
     , analysis = LoadingGraphql
     , analysisFilter = initAnalysisFilter
     , lastSocket = ""
@@ -114,13 +108,6 @@ initModel =
 initAnalysisFilter : Direction
 initAnalysisFilter =
     DESC
-
-
-type Status a
-    = Loading
-    | Loaded a
-    | NotFound
-    | Failed Http.Error
 
 
 type GraphqlStatus err a
@@ -159,30 +146,33 @@ view ({ shared, accountName } as loggedIn) model =
             shared.translators.t
 
         isCommunityAdmin =
-            case model.community of
-                LoadedGraphql community _ ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     community.creator == accountName
 
                 _ ->
                     False
 
         areObjectivesEnabled =
-            case model.community of
-                LoadedGraphql community _ ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     community.hasObjectives == True
 
                 _ ->
                     False
 
         content =
-            case ( model.balance, loggedIn.profile, model.community ) of
-                ( Loading, _, _ ) ->
+            case ( model.balance, loggedIn.selectedCommunity ) of
+                ( RemoteData.Loading, _ ) ->
                     Page.fullPageLoading shared
 
-                ( Failed e, _, _ ) ->
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.Failure e, _ ) ->
                     Page.fullPageError (t "dashboard.sorry") e
 
-                ( Loaded balance, LoggedIn.Loaded profile, LoadedGraphql community _ ) ->
+                ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
                     div [ class "container mx-auto px-4 mb-10" ]
                         [ viewHeader loggedIn community isCommunityAdmin
                         , viewBalance loggedIn model balance
@@ -193,10 +183,10 @@ view ({ shared, accountName } as loggedIn) model =
                             text ""
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
-                        , addContactModal shared profile model
+                        , addContactModal shared model
                         ]
 
-                ( _, _, _ ) ->
+                ( RemoteData.Success _, _ ) ->
                     Page.fullPageNotFound (t "dashboard.sorry") ""
     in
     { title = t "menu.dashboard"
@@ -204,7 +194,7 @@ view ({ shared, accountName } as loggedIn) model =
     }
 
 
-viewHeader : LoggedIn.Model -> Community.DashboardInfo -> Bool -> Html Msg
+viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
     div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
         [ div []
@@ -215,7 +205,7 @@ viewHeader loggedIn community isCommunityAdmin =
             ]
         , if isCommunityAdmin then
             a
-                [ Route.href (Route.CommunitySettings loggedIn.selectedCommunity)
+                [ Route.href Route.CommunitySettings
                 , class "ml-auto"
                 ]
                 [ Icons.settings ]
@@ -225,16 +215,9 @@ viewHeader loggedIn community isCommunityAdmin =
         ]
 
 
-addContactModal : Shared -> Profile.Model -> Model -> Html Msg
-addContactModal shared profile ({ contactModel } as model) =
+addContactModal : Shared -> Model -> Html Msg
+addContactModal shared ({ contactModel } as model) =
     let
-        addContactLimitDate =
-            -- 01/01/2022
-            1641006000000
-
-        showContactModalFromDate =
-            addContactLimitDate - Time.posixToMillis shared.now > 0
-
         text_ s =
             shared.translators.t s
                 |> text
@@ -253,7 +236,7 @@ addContactModal shared profile ({ contactModel } as model) =
     in
     Modal.initWith
         { closeMsg = ClosedAddContactModal
-        , isVisible = model.showContactModal && showContactModalFromDate && List.isEmpty profile.contacts
+        , isVisible = model.showContactModal
         }
         |> Modal.withBody
             [ header
@@ -433,7 +416,7 @@ viewAnalysisList loggedIn model =
                       else
                         let
                             pendingClaims =
-                                List.map (\c -> viewAnalysis loggedIn c model.date) claims
+                                List.map (\c -> viewAnalysis loggedIn c) claims
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
@@ -446,7 +429,7 @@ viewAnalysisList loggedIn model =
 
 
 viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
-viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
+viewVoteConfirmationModal loggedIn { claimModalStatus } =
     let
         viewVoteModal claimId isApproving isLoading =
             Claim.viewVoteClaimModal
@@ -466,18 +449,18 @@ viewVoteConfirmationModal loggedIn { claimModalStatus, date } =
             viewVoteModal claimId vote True
 
         Claim.PhotoModal claim ->
-            Claim.viewPhotoModal loggedIn claim date
+            Claim.viewPhotoModal loggedIn claim
                 |> Html.map ClaimMsg
 
         Claim.Closed ->
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> ClaimStatus -> Maybe Time.Posix -> Html Msg
-viewAnalysis loggedIn claimStatus now =
+viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
+viewAnalysis loggedIn claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->
@@ -490,7 +473,7 @@ viewAnalysis loggedIn claimStatus now =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim now
+            Claim.viewClaimCard loggedIn claim
                 |> Html.map ClaimMsg
 
 
@@ -557,7 +540,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
     in
     a
         [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
-        , Route.href (Route.ViewTransfer transfer.id)
+        , Route.externalHref shared transfer.community (Route.ViewTransfer transfer.id)
         ]
         [ div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
@@ -568,7 +551,7 @@ viewTransfer ({ shared } as loggedIn) transfer =
                 [ text (Maybe.withDefault "" transfer.memo) ]
             ]
         , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.symbol))
+            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.community.symbol))
         ]
 
 
@@ -605,32 +588,41 @@ viewBalance ({ shared } as loggedIn) _ balance =
     div [ class "flex-wrap flex lg:space-x-3" ]
         [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
             [ div [ class "w-full" ]
-                [ div [ class "input-label mb-2" ]
+                ([ div [ class "input-label mb-2" ]
                     [ text_ "account.my_wallet.balances.current" ]
-                , div [ class "flex items-center mb-4" ]
+                 , div [ class "flex items-center mb-4" ]
                     [ div [ class "text-indigo-500 font-bold text-3xl" ]
                         [ text balanceText ]
                     , div [ class "text-indigo-500 ml-2" ]
                         [ text symbolText ]
                     ]
-                , a
-                    [ class "button button-primary w-full font-medium mb-2"
-                    , Route.href <| Route.Transfer loggedIn.selectedCommunity Nothing
-                    ]
-                    [ text_ "dashboard.transfer" ]
-                , a
-                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                    , Route.href <| Route.Community loggedIn.selectedCommunity
-                    ]
-                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString loggedIn.selectedCommunity ) ]
-                    , Icons.arrowDown "rotate--90"
-                    ]
-                , button
-                    [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                    , onClick CreateInvite
-                    ]
-                    [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
-                ]
+                 ]
+                    ++ (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                [ a
+                                    [ class "button button-primary w-full font-medium mb-2"
+                                    , Route.href <| Route.Transfer Nothing
+                                    ]
+                                    [ text_ "dashboard.transfer" ]
+                                , a
+                                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
+                                    , Route.href Route.Community
+                                    ]
+                                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
+                                    , Icons.arrowDown "rotate--90"
+                                    ]
+                                ]
+
+                            _ ->
+                                []
+                       )
+                    ++ [ button
+                            [ class "flex w-full items-center justify-between h-12 text-gray-600"
+                            , onClick CreateInvite
+                            ]
+                            [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
+                       ]
+                )
             ]
         , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
             [ viewQuickLinks loggedIn
@@ -646,8 +638,8 @@ viewQuickLinks ({ shared } as loggedIn) =
     in
     div [ class "flex-wrap flex" ]
         [ div [ class "w-1/2 lg:w-full" ]
-            [ case loggedIn.hasObjectives of
-                FeatureLoaded True ->
+            [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+                RemoteData.Success True ->
                     a
                         [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
                         , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
@@ -666,8 +658,8 @@ viewQuickLinks ({ shared } as loggedIn) =
                     text ""
             ]
         , div [ class "w-1/2 lg:w-full" ]
-            [ case loggedIn.hasShop of
-                FeatureLoaded True ->
+            [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
+                RemoteData.Success True ->
                     a
                         [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
                         , Route.href (Route.Shop Shop.UserSales)
@@ -693,15 +685,15 @@ viewQuickLinks ({ shared } as loggedIn) =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
-    = GotTime Posix
-    | CompletedLoadBalances (Result Http.Error (List Balance))
+    = CompletedLoadCommunity Community.Model
+    | CompletedLoadProfile Profile.Model
+    | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | CommunityLoaded (RemoteData (Graphql.Http.Error (Maybe Community.DashboardInfo)) (Maybe Community.DashboardInfo))
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -716,38 +708,34 @@ type Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model ({ shared, accountName } as loggedIn) =
     case msg of
-        GotTime date ->
-            UR.init { model | date = Just date }
-
-        CompletedLoadBalances (Ok balances) ->
-            let
-                findBalance balance =
-                    balance.asset.symbol == loggedIn.selectedCommunity
-
-                -- Try to find the balance, if not found default to the first balance
-                statusBalance =
-                    case List.find findBalance balances of
-                        Just b ->
-                            Loaded b
-
-                        Nothing ->
-                            case List.head balances of
-                                Just b ->
-                                    Loaded b
-
-                                Nothing ->
-                                    NotFound
-            in
+        CompletedLoadCommunity community ->
             UR.init
                 { model
-                    | balance = statusBalance
-                    , showContactModal = True
+                    | balance = RemoteData.Loading
+                    , analysis = LoadingGraphql
                 }
+                |> UR.addCmd (fetchBalance shared accountName community)
+                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
 
-        CompletedLoadBalances (Err httpError) ->
-            UR.init { model | balance = Failed httpError }
+        CompletedLoadProfile profile ->
+            let
+                addContactLimitDate =
+                    -- 01/01/2022
+                    1641006000000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis shared.now > 0
+            in
+            { model | showContactModal = showContactModalFromDate && List.isEmpty profile.contacts }
+                |> UR.init
+
+        CompletedLoadBalance (Ok balance) ->
+            UR.init { model | balance = RemoteData.Success balance }
+
+        CompletedLoadBalance (Err httpError) ->
+            UR.init { model | balance = RemoteData.Failure httpError }
                 |> UR.logHttpError msg httpError
 
         ClaimsLoaded (RemoteData.Success claims) ->
@@ -858,22 +846,22 @@ update msg model loggedIn =
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
 
                                 cmd =
-                                    case pageInfo of
-                                        Just page ->
+                                    case ( pageInfo, loggedIn.selectedCommunity ) of
+                                        ( Just page, RemoteData.Success community ) ->
                                             if page.hasNextPage then
-                                                fetchAvailableAnalysis loggedIn page.endCursor model.analysisFilter
+                                                fetchAvailableAnalysis loggedIn page.endCursor model.analysisFilter community
 
                                             else
                                                 Cmd.none
 
-                                        Nothing ->
+                                        ( _, _ ) ->
                                             Cmd.none
                             in
                             { model
                                 | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted) pageInfo
                             }
                                 |> UR.init
-                                |> UR.addExt (ShowFeedback Feedback.Success (message value))
+                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd cmd
 
                         Nothing ->
@@ -892,32 +880,14 @@ update msg model loggedIn =
                 LoadedGraphql claims pageInfo ->
                     { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
 
-        CommunityLoaded (RemoteData.Success community) ->
-            case community of
-                Just c ->
-                    { model | community = LoadedGraphql c Nothing }
-                        |> UR.init
-
-                Nothing ->
-                    model
-                        |> UR.init
-
-        CommunityLoaded (RemoteData.Failure err) ->
-            { model | community = FailedGraphql err }
-                |> UR.init
-                |> UR.logGraphqlError msg err
-
-        CommunityLoaded _ ->
-            UR.init model
-
         CreateInvite ->
             case model.balance of
-                Loaded b ->
+                RemoteData.Success (Just b) ->
                     UR.init
                         { model | inviteModalStatus = InviteModalLoading }
                         |> UR.addCmd
@@ -927,6 +897,7 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg [ "balanceNotLoaded" ]
 
         GotContactMsg subMsg ->
             case LoggedIn.profile loggedIn of
@@ -958,7 +929,10 @@ update msg model loggedIn =
                                     { model_ | showContactModal = False }
                                         |> UR.init
                                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = LoggedIn.Loaded newProfile })
+                                        |> UR.addExt
+                                            (LoggedIn.ProfileLoaded newProfile
+                                                |> LoggedIn.ExternalBroadcast
+                                            )
                     in
                     { model | contactModel = contactModel }
                         |> addContactResponse
@@ -1017,20 +991,43 @@ update msg model loggedIn =
                                     ASC
                         , analysis = LoadingGraphql
                     }
+
+                fetchCmd =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAvailableAnalysis loggedIn Nothing newModel.analysisFilter community
+
+                        _ ->
+                            Cmd.none
             in
             newModel
                 |> UR.init
-                |> UR.addCmd
-                    (fetchAvailableAnalysis loggedIn Nothing newModel.analysisFilter)
+                |> UR.addCmd fetchCmd
 
 
 
 -- HELPERS
 
 
-fetchBalance : Shared -> Eos.Name -> Cmd Msg
-fetchBalance shared accountName =
-    Api.getBalances shared accountName CompletedLoadBalances
+fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
+fetchBalance shared accountName community =
+    Api.getBalances shared
+        accountName
+        (Result.map
+            (\balances ->
+                let
+                    maybeBalance =
+                        List.find (.asset >> .symbol >> (==) community.symbol) balances
+                in
+                case maybeBalance of
+                    Just b ->
+                        Just b
+
+                    Nothing ->
+                        List.head balances
+            )
+            >> CompletedLoadBalance
+        )
 
 
 fetchTransfers : Shared -> Eos.Name -> String -> Cmd Msg
@@ -1046,11 +1043,11 @@ fetchTransfers shared accountName authToken =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Direction -> Cmd Msg
-fetchAvailableAnalysis { shared, selectedCommunity, authToken } maybeCursor direction =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Direction -> Community.Model -> Cmd Msg
+fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
     let
         arg =
-            { communityId = Eos.symbolToString selectedCommunity
+            { communityId = Eos.symbolToString community.symbol
             }
 
         optionalArguments =
@@ -1090,14 +1087,6 @@ fetchAvailableAnalysis { shared, selectedCommunity, authToken } maybeCursor dire
         (Just authToken)
         (Cambiatus.Query.claimsAnalysis optionalArguments arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
-
-
-fetchCommunity : Shared -> Symbol -> String -> Cmd Msg
-fetchCommunity shared selectedCommunity authToken =
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.community { symbol = Eos.symbolToString selectedCommunity } Community.dashboardSelectionSet)
-        CommunityLoaded
 
 
 setClaimStatus : List ClaimStatus -> Claim.ClaimId -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
@@ -1148,6 +1137,19 @@ unwrapClaimStatus claimStatus =
             claim
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
+        _ ->
+            Nothing
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -1179,11 +1181,14 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        GotTime _ ->
-            [ "GotTime" ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
-        CompletedLoadBalances result ->
-            [ "CompletedLoadBalances", UR.resultToString result ]
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
+
+        CompletedLoadBalance result ->
+            [ "CompletedLoadBalance", UR.resultToString result ]
 
         CompletedLoadUserTransfers result ->
             [ "CompletedLoadUserTransfers", UR.remoteDataToString result ]
@@ -1199,9 +1204,6 @@ msgToString msg =
 
         GotVoteResult _ result ->
             [ "GotVoteResult", UR.resultToString result ]
-
-        CommunityLoaded result ->
-            [ "CommunityLoaded", UR.remoteDataToString result ]
 
         CreateInvite ->
             [ "CreateInvite" ]

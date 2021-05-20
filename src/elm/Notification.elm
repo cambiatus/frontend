@@ -20,6 +20,7 @@ import Cambiatus.Object.Mint as Mint
 import Cambiatus.Object.NotificationHistory as NotificationHistory
 import Cambiatus.Object.Order as Order
 import Cambiatus.Object.Product as Product
+import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Transfer as Transfer
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -104,6 +105,7 @@ type alias MintData =
 type alias Community =
     { logo : String
     , symbol : Eos.Symbol
+    , subdomain : String
     }
 
 
@@ -213,3 +215,4 @@ logoSelectionSet =
     SelectionSet.succeed Community
         |> with Community.logo
         |> with (Eos.symbolSelectionSet Community.symbol)
+        |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))

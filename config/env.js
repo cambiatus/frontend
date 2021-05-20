@@ -74,7 +74,9 @@ function getClientEnvironment (publicUrl) {
         // images into the `src` and `import` them in code to get their paths.
         PUBLIC_URL: publicUrl,
         // GraphQL password for signing in
-        GRAPHQL_SECRET: process.env.GRAPHQL_SECRET || ''
+        GRAPHQL_SECRET: process.env.GRAPHQL_SECRET || '',
+        // Controls if you should be redirected to specific subdomains for each community
+        USE_SUBDOMAIN: process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN
       }
     )
   // Stringify all values so we can feed into Webpack DefinePlugin

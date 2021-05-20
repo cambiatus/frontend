@@ -1,4 +1,4 @@
-module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Address
 import Api.Graphql
@@ -38,7 +38,7 @@ import View.Form
 
 
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
-init invitationId { shared } =
+init invitationId ({ shared } as guest) =
     let
         initialStatus =
             case invitationId of
@@ -72,7 +72,10 @@ init invitationId { shared } =
                     Cmd.none
     in
     ( initialModel
-    , loadInvitationData
+    , Cmd.batch
+        [ loadInvitationData
+        , Guest.maybeInitWith CompletedLoadCommunity .community guest
+        ]
     )
 
 
@@ -157,15 +160,40 @@ type alias AccountKeys =
 
 
 view : Guest.Model -> Model -> { title : String, content : Html Msg }
-view { shared } model =
+view ({ shared } as guest) model =
     let
         { t } =
             shared.translators
+
+        content =
+            case guest.community of
+                RemoteData.Success community ->
+                    let
+                        hasInvite =
+                            case model.invitation of
+                                Just _ ->
+                                    True
+
+                                Nothing ->
+                                    False
+                    in
+                    if community.hasAutoInvite || hasInvite then
+                        viewCreateAccount shared.translators model
+
+                    else
+                        Page.fullPageLoading shared
+
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading shared
+
+                RemoteData.Loading ->
+                    Page.fullPageLoading shared
+
+                RemoteData.Failure e ->
+                    Page.fullPageGraphQLError (t "register.registerTab") e
     in
-    { title =
-        t "register.registerTab"
-    , content =
-        viewCreateAccount shared.translators model
+    { title = t "register.registerTab"
+    , content = content
     }
 
 
@@ -485,6 +513,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity Community.CommunityPreview
     | ValidateForm FormModel
     | GotAccountAvailabilityResponse Bool
     | AccountKeysGenerated (Result Decode.Error AccountKeys)
@@ -547,6 +576,19 @@ update _ msg model { shared } =
     case msg of
         NoOp ->
             model |> UR.init
+
+        CompletedLoadCommunity community ->
+            if community.hasAutoInvite then
+                UR.init model
+
+            else
+                case model.invitationId of
+                    Just _ ->
+                        UR.init model
+
+                    Nothing ->
+                        UR.init model
+                            |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
 
         ValidateForm formType ->
             let
@@ -957,6 +999,13 @@ signUp shared { accountName, ownerKey } invitationId form =
 -- INTEROP
 
 
+receiveBroadcast : Guest.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        Guest.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -997,6 +1046,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         FormMsg _ ->
             [ "FormMsg" ]

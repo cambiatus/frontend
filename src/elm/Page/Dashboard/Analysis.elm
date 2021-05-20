@@ -4,6 +4,7 @@ module Page.Dashboard.Analysis exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -35,20 +36,14 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
-import Task
-import Time
 import UpdateResult as UR
 import View.Feedback as Feedback
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, selectedCommunity, authToken } as loggedIn) =
+init loggedIn =
     ( initModel
-    , Cmd.batch
-        [ fetchAnalysis loggedIn initFilter Nothing
-        , Task.perform GotTime Time.now
-        , Api.Graphql.query shared (Just authToken) (Community.communityQuery selectedCommunity) CompletedCommunityLoad
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -58,24 +53,20 @@ init ({ shared, selectedCommunity, authToken } as loggedIn) =
 
 type alias Model =
     { status : Status
-    , communityStatus : CommunityStatus
     , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
-    , now : Maybe Time.Posix
     }
 
 
 initModel : Model
 initModel =
     { status = Loading
-    , communityStatus = LoadingCommunity
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
-    , now = Nothing
     }
 
 
@@ -83,12 +74,6 @@ type Status
     = Loading
     | Loaded (List Claim.Model) (Maybe Api.Relay.PageInfo)
     | Failed
-
-
-type CommunityStatus
-    = LoadingCommunity
-    | LoadedCommunity Community.Model
-    | FailedCommunity
 
 
 type alias Filter =
@@ -136,7 +121,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim model.now
+                            Claim.viewClaimCard loggedIn claim
                                 |> Html.map ClaimMsg
                     in
                     div []
@@ -172,7 +157,7 @@ view ({ shared } as loggedIn) model =
                                 viewVoteModal claimId vote True
 
                             Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim model.now
+                                Claim.viewPhotoModal loggedIn claim
                                     |> Html.map ClaimMsg
 
                             _ ->
@@ -197,8 +182,8 @@ viewFilters ({ shared } as loggedIn) model =
         [ div []
             [ span [ class "input-label" ]
                 [ text_ "all_analysis.filter.user" ]
-            , case model.communityStatus of
-                LoadedCommunity community ->
+            , case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     let
                         selectedUsers =
                             Maybe.map (\v -> [ v ]) model.filters.profile
@@ -331,18 +316,17 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    | CompletedLoadCommunity Community.Model
     | ClaimMsg Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
     | OnSelectVerifier (Maybe Profile.Minimal)
-    | CompletedCommunityLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
     | ToggleSorting
     | ClearFilters
-    | GotTime Time.Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -378,6 +362,11 @@ update msg model loggedIn =
 
         ClaimsLoaded _ ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg m ->
             let
@@ -497,8 +486,8 @@ update msg model loggedIn =
                 oldFilters =
                     model.filters
             in
-            case model.status of
-                Loaded _ _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -509,30 +498,14 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
 
                 _ ->
                     UR.init model
 
-        CompletedCommunityLoad (RemoteData.Success community) ->
-            case community of
-                Just cmm ->
-                    UR.init { model | communityStatus = LoadedCommunity cmm }
-
-                Nothing ->
-                    UR.init { model | communityStatus = FailedCommunity }
-
-        CompletedCommunityLoad (RemoteData.Failure error) ->
-            { model | communityStatus = FailedCommunity }
-                |> UR.init
-                |> UR.logGraphqlError msg error
-
-        CompletedCommunityLoad _ ->
-            UR.init model
-
         ShowMore ->
-            case model.status of
-                Loaded _ pageInfo ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ pageInfo, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -540,14 +513,14 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor)
+                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor community)
 
                 _ ->
                     UR.init model
 
         ClearSelectSelection ->
-            case model.status of
-                Loaded _ _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ _, RemoteData.Success community ) ->
                     let
                         oldFilters =
                             model.filters
@@ -561,7 +534,7 @@ update msg model loggedIn =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
 
                 _ ->
                     UR.init model
@@ -580,7 +553,14 @@ update msg model loggedIn =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
+                |> UR.addCmd
+                    (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn newModel.filters Nothing community
+
+                        _ ->
+                            Cmd.none
+                    )
 
         ClearFilters ->
             { model
@@ -589,7 +569,14 @@ update msg model loggedIn =
                 , status = Loading
             }
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn initFilter Nothing)
+                |> UR.addCmd
+                    (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn initFilter Nothing community
+
+                        _ ->
+                            Cmd.none
+                    )
 
         ToggleSorting ->
             let
@@ -609,17 +596,22 @@ update msg model loggedIn =
                         , reloadOnNextQuery = True
                         , status = Loading
                     }
+
+                fetchCmd =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            fetchAnalysis loggedIn newModel.filters Nothing community
+
+                        _ ->
+                            Cmd.none
             in
             newModel
                 |> UR.init
-                |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing)
-
-        GotTime date ->
-            UR.init { model | now = Just date }
+                |> UR.addCmd fetchCmd
 
 
-fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Cmd Msg
-fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, direction } maybeCursorAfter =
+fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
+fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
     let
         optionalClaimer =
             case profile of
@@ -656,7 +648,7 @@ fetchAnalysis { selectedCommunity, shared, authToken } { profile, statusFilter, 
             }
 
         required =
-            { communityId = Eos.symbolToString selectedCommunity }
+            { communityId = Eos.symbolToString community.symbol }
 
         mapFn =
             \s ->
@@ -734,6 +726,16 @@ viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
             )
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -765,6 +767,9 @@ msgToString msg =
         ClaimsLoaded r ->
             [ "ChecksLoaded", UR.remoteDataToString r ]
 
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
         ClaimMsg _ ->
             [ "ClaimMsg" ]
 
@@ -780,9 +785,6 @@ msgToString msg =
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]
 
-        CompletedCommunityLoad r ->
-            [ "CompletedCommunityLoad", UR.remoteDataToString r ]
-
         ShowMore ->
             [ "ShowMore" ]
 
@@ -797,6 +799,3 @@ msgToString msg =
 
         ToggleSorting ->
             [ "ToggleSorting" ]
-
-        GotTime _ ->
-            [ "GotTime" ]

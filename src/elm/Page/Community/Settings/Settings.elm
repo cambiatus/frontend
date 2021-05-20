@@ -1,52 +1,41 @@
-module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Community
-import Eos exposing (Symbol)
-import Graphql.Http
+import Eos
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, style)
 import Page
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 
 
-init : LoggedIn.Model -> Symbol -> ( Model, Cmd Msg )
-init { shared, authToken } symbol =
-    ( initModel symbol
-    , Api.Graphql.query shared (Just authToken) (Community.communityQuery symbol) CompletedLoad
+init : LoggedIn.Model -> ( Model, Cmd Msg )
+init loggedIn =
+    ( initModel
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
-type alias Model =
-    { currency : String
-    , status : Status
-    }
+type Model
+    = Loading
+    | Authorized
+    | Unauthorized
 
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-type Status
-    = Loading
-    | LoadingFailed (Graphql.Http.Error (Maybe Community.Model))
-    | Loaded Community.Model
-    | Unauthorized
-
-
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    = CompletedLoadCommunity Community.Model
 
 
-initModel : Symbol -> Model
-initModel symbol =
-    { currency = Eos.symbolToString symbol
-    , status = Loading
-    }
+initModel : Model
+initModel =
+    Loading
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
@@ -63,20 +52,26 @@ view ({ shared } as loggedIn) model =
                 header =
                     Page.viewHeader loggedIn headerText Route.Dashboard
             in
-            case model.status of
-                Loading ->
+            case ( loggedIn.selectedCommunity, model ) of
+                ( _, Loading ) ->
                     Page.fullPageLoading shared
 
-                Loaded community ->
+                ( RemoteData.Loading, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.Failure e, _ ) ->
+                    Page.fullPageGraphQLError headerText e
+
+                ( RemoteData.Success community, Authorized ) ->
                     div []
                         [ header
                         , viewSettingsList shared community
                         ]
 
-                LoadingFailed e ->
-                    Page.fullPageGraphQLError headerText e
-
-                Unauthorized ->
+                ( RemoteData.Success _, Unauthorized ) ->
                     div []
                         [ Page.viewHeader loggedIn title Route.Dashboard
                         , div [ class "card" ]
@@ -104,12 +99,14 @@ viewSettingsList shared community =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription (Route.CommunitySettingsFeatures community.symbol)
+        [ settingCard (translate "settings.community_info.title") (translate "menu.edit") (translate "settings.community_info.description") Route.CommunitySettingsInfo
+        , settingCard (translate "settings.community_currency.title") (translate "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
         , if community.hasObjectives then
-            settingCard (translate "settings.actions.title") (translate "menu.edit") "" (Route.Objectives community.symbol)
+            settingCard (translate "settings.actions.title") (translate "menu.edit") "" Route.Objectives
 
           else
             text ""
+        , settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription Route.CommunitySettingsFeatures
         ]
 
 
@@ -135,32 +132,28 @@ settingCard title action description route =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg _ loggedIn =
     case msg of
-        CompletedLoad (RemoteData.Success (Just community)) ->
-            let
-                newStatus =
-                    if community.creator == loggedIn.accountName then
-                        Loaded community
+        CompletedLoadCommunity community ->
+            if community.creator == loggedIn.accountName then
+                UR.init Authorized
 
-                    else
-                        Unauthorized
-            in
-            UR.init { model | status = newStatus }
+            else
+                UR.init Unauthorized
 
-        CompletedLoad (RemoteData.Success Nothing) ->
-            UR.init model
 
-        CompletedLoad (RemoteData.Failure err) ->
-            UR.init { model | status = LoadingFailed err }
-                |> UR.logGraphqlError msg err
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
 
-        CompletedLoad _ ->
-            UR.init model
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoad" ]

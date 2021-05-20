@@ -20,7 +20,12 @@ module Eos exposing
     , encodeSymbol
     , encodeTableQuery
     , encodeTransaction
+    , eosBoolDecoder
+    , eosBoolToBool
+    , formatSymbolAmount
     , getSymbolPrecision
+    , maxSymbolLength
+    , minSymbolLength
     , symbolDecoder
     , symbolFromString
     , symbolSelectionSet
@@ -290,9 +295,46 @@ symbolToString (Symbol symbol precision) =
         |> String.join ""
 
 
+formatSymbolAmount : Symbol -> Float -> String
+formatSymbolAmount (Symbol _ precision) amount =
+    let
+        separator =
+            "."
+    in
+    case String.fromFloat amount |> String.split separator of
+        [] ->
+            -- Impossible
+            String.fromFloat amount
+
+        [ withoutSeparator ] ->
+            if precision == 0 then
+                withoutSeparator
+
+            else
+                withoutSeparator ++ separator ++ String.repeat precision "0"
+
+        beforeSeparator :: afterSeparator :: _ ->
+            beforeSeparator
+                ++ separator
+                ++ (afterSeparator
+                        ++ String.repeat (precision - String.length afterSeparator) "0"
+                        |> String.left precision
+                   )
+
+
 symbolToSymbolCodeString : Symbol -> String
 symbolToSymbolCodeString (Symbol s _) =
     s
+
+
+minSymbolLength : Int
+minSymbolLength =
+    3
+
+
+maxSymbolLength : Int
+maxSymbolLength =
+    7
 
 
 symbolFromString : String -> Maybe Symbol
@@ -312,7 +354,10 @@ symbolFromString str =
     in
     case ( maybeSymbolCode, maybePrecision ) of
         ( Just symbolCode, Just precision ) ->
-            if String.length symbolCode == 3 || String.length symbolCode == 4 then
+            if
+                String.all Char.isAlpha symbolCode
+                    && (String.length symbolCode >= minSymbolLength || String.length symbolCode <= maxSymbolLength)
+            then
                 Just (Symbol (String.toUpper symbolCode) precision)
 
             else
@@ -375,6 +420,16 @@ boolToEosBool b =
         EosFalse
 
 
+eosBoolToBool : EosBool -> Bool
+eosBoolToBool eosBool =
+    case eosBool of
+        EosTrue ->
+            True
+
+        EosFalse ->
+            False
+
+
 encodeEosBool : EosBool -> Value
 encodeEosBool eosBool =
     case eosBool of
@@ -383,6 +438,21 @@ encodeEosBool eosBool =
 
         EosFalse ->
             Encode.int 0
+
+
+intToEosBool : Int -> EosBool
+intToEosBool v =
+    if v == 1 then
+        EosTrue
+
+    else
+        EosFalse
+
+
+eosBoolDecoder : Decoder EosBool
+eosBoolDecoder =
+    Decode.int
+        |> Decode.map intToEosBool
 
 
 

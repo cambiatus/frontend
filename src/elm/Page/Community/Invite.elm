@@ -3,6 +3,7 @@ module Page.Community.Invite exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
@@ -68,7 +69,7 @@ type alias Model =
 -- INIT
 
 
-initModel : String -> Model
+initModel : InvitationId -> Model
 initModel invitationId =
     { pageStatus = Loading
     , confirmationModalStatus = Closed
@@ -80,11 +81,16 @@ initModel invitationId =
 init : Session -> InvitationId -> ( Model, Cmd Msg )
 init session invitationId =
     ( initModel invitationId
-    , Api.Graphql.query
-        (toShared session)
-        Nothing
-        (Community.inviteQuery invitationId)
-        CompletedLoad
+    , case session of
+        Guest _ ->
+            Api.Graphql.query
+                (toShared session)
+                Nothing
+                (Community.inviteQuery invitationId)
+                CompletedLoadInvite
+
+        LoggedIn loggedIn ->
+            LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
     )
 
 
@@ -113,7 +119,7 @@ view session model =
                         ++ " "
                         ++ t "community.invitation.title"
                         ++ " "
-                        ++ invite.community.title
+                        ++ invite.community.name
 
                 _ ->
                     ""
@@ -132,7 +138,7 @@ view session model =
                 AlreadyMemberNotice invite ->
                     let
                         inner =
-                            viewExistingMemberNotice shared.translators invite.community.title
+                            viewExistingMemberNotice shared.translators invite.community.name
                     in
                     div []
                         [ viewHeader
@@ -203,7 +209,7 @@ viewNewMemberConfirmation { t } invitationId ({ community } as invite) =
     div []
         [ div [ class "mt-6 px-4 text-center" ]
             [ span [ class "mr-1" ] [ text (t "community.invitation.subtitle") ]
-            , text community.title
+            , text community.name
             , text "?"
             ]
         , div [ class "flex flex-wrap justify-center w-full mt-6" ]
@@ -248,7 +254,7 @@ viewContent { t } { creator, community } innerContent =
                     , text (t "community.invitation.title")
                     , text " "
                     , span [ class "font-medium" ]
-                        [ text community.title ]
+                        [ text community.name ]
                     ]
                 ]
             , innerContent
@@ -299,7 +305,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoad (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    = CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
+    | CompletedLoadProfile Profile.Model
     | OpenConfirmationModal
     | CloseConfirmationModal
     | InvitationRejected
@@ -376,13 +383,13 @@ update session msg model =
                     model
                         |> UR.init
 
-        CompletedLoad (RemoteData.Success (Just invite)) ->
+        CompletedLoadInvite (RemoteData.Success (Just invite)) ->
             let
                 userCommunities =
                     case session of
                         LoggedIn { profile } ->
                             case profile of
-                                LoggedIn.Loaded p ->
+                                RemoteData.Success p ->
                                     p.communities
 
                                 _ ->
@@ -394,7 +401,7 @@ update session msg model =
                 isAlreadyMember =
                     let
                         isMember c =
-                            symbolToString c.id == symbolToString invite.community.symbol
+                            symbolToString c.symbol == symbolToString invite.community.symbol
                     in
                     List.any isMember userCommunities
 
@@ -407,16 +414,25 @@ update session msg model =
             in
             UR.init { model | pageStatus = newPageStatus invite }
 
-        CompletedLoad (RemoteData.Success Nothing) ->
+        CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
 
-        CompletedLoad (RemoteData.Failure error) ->
+        CompletedLoadInvite (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
-        CompletedLoad _ ->
+        CompletedLoadInvite _ ->
             UR.init model
+
+        CompletedLoadProfile _ ->
+            UR.init model
+                |> UR.addCmd
+                    (Api.Graphql.query (toShared session)
+                        Nothing
+                        (Community.inviteQuery model.invitationId)
+                        CompletedLoadInvite
+                    )
 
         OpenConfirmationModal ->
             { model | confirmationModalStatus = Open }
@@ -448,7 +464,7 @@ update session msg model =
                     case session of
                         LoggedIn { profile } ->
                             case profile of
-                                LoggedIn.Loaded p ->
+                                RemoteData.Success p ->
                                     p.kyc
 
                                 _ ->
@@ -494,24 +510,29 @@ update session msg model =
                             )
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
-            let
-                maybeUpdateCommunity loggedInModel =
-                    getInvite model
-                        |> Maybe.map
-                            (.community >> LoggedIn.addCommunity loggedInModel)
-                        |> Maybe.withDefault loggedInModel
-            in
-            model
-                |> UR.init
-                |> UR.addExt
-                    ({ loggedIn
-                        | profile = LoggedIn.Loaded user
-                        , authToken = token
-                     }
-                        |> maybeUpdateCommunity
-                        |> LoggedIn.UpdatedLoggedIn
-                    )
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+            case getInvite model of
+                Just { community } ->
+                    let
+                        communityInfo =
+                            { symbol = community.symbol
+                            , name = community.name
+                            , logo = community.logo
+                            , subdomain = community.subdomain
+                            , hasShop = community.hasShop
+                            , hasActions = community.hasObjectives
+                            , hasKyc = community.hasKyc
+                            }
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
+                        |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
+
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
+                        |> UR.logImpossible msg [ "NoInvite" ]
 
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }
@@ -542,11 +563,24 @@ getInvite model =
 -- INTEROP
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.ProfileLoaded profile ->
+            Just (CompletedLoadProfile profile)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedLoad r ->
-            [ "CompletedLoad", UR.remoteDataToString r ]
+        CompletedLoadInvite r ->
+            [ "CompletedLoadInvite", UR.remoteDataToString r ]
+
+        CompletedLoadProfile _ ->
+            [ "CompletedLoadProfile" ]
 
         OpenConfirmationModal ->
             [ "OpenConfirmationModal" ]

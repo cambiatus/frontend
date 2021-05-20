@@ -20,8 +20,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Strftime
-import Task
-import Time exposing (Posix)
+import Time
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
@@ -34,10 +33,7 @@ import View.Feedback as Feedback
 init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
 init { shared, authToken } claimId =
     ( initModel claimId
-    , Cmd.batch
-        [ Task.perform GotTime Time.now
-        , fetchClaim claimId shared authToken
-        ]
+    , fetchClaim claimId shared authToken
     )
 
 
@@ -50,7 +46,6 @@ type alias Model =
     , statusClaim : Status
     , claimModalStatus : Claim.ModalStatus
     , isValidated : Bool
-    , now : Maybe Posix
     }
 
 
@@ -60,7 +55,6 @@ initModel claimId =
     , statusClaim = Loading
     , claimModalStatus = Claim.Closed
     , isValidated = False
-    , now = Nothing
     }
 
 
@@ -108,12 +102,12 @@ view ({ shared } as loggedIn) model =
                                 ]
                             , case model.claimModalStatus of
                                 Claim.PhotoModal c ->
-                                    Claim.viewPhotoModal loggedIn c model.now
+                                    Claim.viewPhotoModal loggedIn c
                                         |> Html.map ClaimMsg
 
                                 _ ->
                                     if
-                                        Claim.isVotable claim loggedIn.accountName model.now
+                                        Claim.isVotable claim loggedIn.accountName shared.now
                                             && not model.isValidated
                                     then
                                         viewVoteButtons shared.translators claim.id model.claimModalStatus
@@ -128,17 +122,23 @@ view ({ shared } as loggedIn) model =
     in
     { title = title
     , content =
-        case loggedIn.hasObjectives of
-            LoggedIn.FeatureLoaded True ->
+        case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+            RemoteData.Success True ->
                 content
 
-            LoggedIn.FeatureLoaded False ->
+            RemoteData.Success False ->
                 Page.fullPageNotFound
                     (t "error.pageNotFound")
                     (t "community.objectives.disabled.description")
 
-            LoggedIn.FeatureLoading ->
+            RemoteData.Loading ->
                 Page.fullPageLoading shared
+
+            RemoteData.NotAsked ->
+                Page.fullPageLoading shared
+
+            RemoteData.Failure e ->
+                Page.fullPageGraphQLError (t "community.error_loading") e
     }
 
 
@@ -242,7 +242,7 @@ viewTitle shared model claim =
                         [ text_ "claim.title_action_completed"
                         ]
 
-                else if Action.isClosed claim.action model.now then
+                else if Action.isClosed claim.action shared.now then
                     div
                         [ class "inline-block" ]
                         [ text_ "claim.title_action_closed"
@@ -280,7 +280,7 @@ viewDetails { shared } model claim =
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
                     ]
 
-              else if Action.isClosed claim.action model.now then
+              else if Action.isClosed claim.action shared.now then
                 div [ class "flex mb-2" ]
                     [ div
                         [ class "tag bg-gray-500 text-red" ]
@@ -437,7 +437,6 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
-    | GotTime Posix
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -544,9 +543,6 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
-        GotTime date ->
-            UR.init { model | now = Just date }
-
 
 
 -- HELPERS
@@ -600,6 +596,3 @@ msgToString msg =
 
         ClaimMsg _ ->
             [ "ClaimMsg" ]
-
-        GotTime _ ->
-            [ "GotTime" ]
