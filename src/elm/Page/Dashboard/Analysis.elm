@@ -58,6 +58,7 @@ type alias Model =
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , filters : Filter
+    , filterProfileSummary : Profile.Summary.Model
     }
 
 
@@ -68,6 +69,7 @@ initModel =
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
+    , filterProfileSummary = Profile.Summary.init False
     }
 
 
@@ -202,7 +204,7 @@ viewFilters ({ shared } as loggedIn) model =
                                 community.members
                                 selectedUsers
                             )
-                        , viewSelectedVerifiers loggedIn selectedUsers
+                        , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
                         ]
 
                 _ ->
@@ -332,6 +334,7 @@ type Msg
     | SelectStatusFilter StatusFilter
     | ToggleSorting
     | ClearFilters
+    | GotProfileSummaryMsg Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -633,6 +636,10 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd fetchCmd
 
+        GotProfileSummaryMsg subMsg ->
+            { model | filterProfileSummary = Profile.Summary.update subMsg model.filterProfileSummary }
+                |> UR.init
+
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
 fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
@@ -727,8 +734,8 @@ selectConfiguration shared isDisabled =
         isDisabled
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
-viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
+viewSelectedVerifiers : LoggedIn.Model -> Profile.Summary.Model -> List Profile.Minimal -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers =
     if List.isEmpty selectedVerifiers then
         text ""
 
@@ -739,7 +746,8 @@ viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
                     (\p ->
                         div
                             [ class "flex justify-between flex-col m-3 items-center" ]
-                            [ Profile.view shared loggedIn.accountName p
+                            [ Profile.Summary.view shared loggedIn.accountName p profileSummary
+                                |> Html.map GotProfileSummaryMsg
                             , div
                                 [ onClick ClearSelectSelection
                                 , class "h-6 w-6 flex items-center mt-4"
@@ -823,3 +831,6 @@ msgToString msg =
 
         ToggleSorting ->
             [ "ToggleSorting" ]
+
+        GotProfileSummaryMsg _ ->
+            [ "GotProfileSummaryMsg" ]
