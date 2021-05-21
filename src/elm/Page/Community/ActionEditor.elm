@@ -616,6 +616,7 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries = List.map (\_ -> Profile.Summary.init False) newVerifiers
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -639,6 +640,7 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries = List.map (\_ -> Profile.Summary.init False) newVerifiers
                                 }
             in
             { model | form = { oldForm | verification = verification } }

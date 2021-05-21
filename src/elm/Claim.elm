@@ -80,6 +80,7 @@ type alias ClaimId =
 type alias Check =
     { isApproved : Bool
     , validator : Profile.Minimal
+    , profileSummary : Profile.Summary.Model
     }
 
 
@@ -193,6 +194,7 @@ checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
         |> with (Check.validator Profile.minimalSelectionSet)
+        |> SelectionSet.hardcoded (Profile.Summary.init False)
 
 
 paginatedToList : Maybe Paginated -> List Model
