@@ -27,9 +27,7 @@ module Profile exposing
     , updateContacts
     , upsertKycMutation
     , username
-    , view
     , viewEmpty
-    , viewLarge
     , viewProfileName
     , viewProfileNameTag
     )
@@ -454,40 +452,6 @@ updateContacts ({ contacts } as profile) newContacts =
 
 
 -- View profile
-
-
-view : Shared -> Eos.Name -> Basic profile -> Html msg
-view shared loggedInAccount profile =
-    div [ class "relative" ]
-        [ a
-            [ class "flex flex-col items-center"
-            , href ("/profile/" ++ Eos.nameToString profile.account)
-            ]
-            [ div [ class "w-10 h-10 rounded-full" ]
-                [ Avatar.view profile.avatar "w-10 h-10"
-                ]
-            , div [ class "mt-2" ]
-                [ viewProfileNameTag shared loggedInAccount profile ]
-            ]
-        ]
-
-
-viewLarge :
-    Shared
-    -> Eos.Name
-    -> { profile | account : Eos.Name, name : Maybe String, avatar : Avatar }
-    -> Html msg
-viewLarge shared loggedInAccount profile =
-    a
-        [ class "flex flex-col items-center"
-        , href ("/profile/" ++ Eos.nameToString profile.account)
-        ]
-        [ div [ class "w-20 h-20 rounded-full" ]
-            [ Avatar.view profile.avatar "w-20 h-20"
-            ]
-        , div [ class "mt-2" ]
-            [ viewProfileNameTag shared loggedInAccount profile ]
-        ]
 
 
 viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
