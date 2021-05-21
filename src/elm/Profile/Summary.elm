@@ -82,7 +82,7 @@ view shared loggedInAccount profile model =
             ]
         , if model.isExpanded then
             View.Components.dialogBubble
-                [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto z-50"
+                [ class "absolute bottom-full right-1/2 transform translate-x-1/2 cursor-auto z-50 min-w-100"
                 , classList [ ( "hidden", not model.isExpanded ) ]
                 ]
                 [ viewUserInfo profile ]
@@ -107,7 +107,7 @@ viewUserInfo profile =
         bio =
             profile.bio |> Maybe.withDefault ""
     in
-    div [ class "flex flex-col" ]
+    div [ class "flex flex-col w-full" ]
         [ div [ class "flex mb-4 items-center justify-center" ]
             [ Avatar.view profile.avatar "w-20 h-20 mr-6 flex-shrink-0"
             , div [ class "flex items-center justify-between" ]

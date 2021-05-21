@@ -156,6 +156,9 @@ module.exports = {
       maxHeight: {
         '108': '27rem'
       },
+      minWidth: {
+        '100': '25rem'
+      },
       lineHeight: {
         caption: 0.75
       },
