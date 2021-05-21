@@ -60,9 +60,28 @@ init loggedIn filter =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Sub Msg
-subscriptions =
-    Sub.none
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.cards of
+        Loaded cards ->
+            let
+                availableCards =
+                    List.filter .isAvailable cards
+
+                unavailableCards =
+                    List.filter (.isAvailable >> not) cards
+            in
+            List.indexedMap (\index _ -> ( index, True )) availableCards
+                ++ List.indexedMap (\index _ -> ( index, False )) unavailableCards
+                |> List.map
+                    (\( index, isAvailable ) ->
+                        Profile.Summary.subscriptions
+                            |> Sub.map (GotProfileSummaryMsg index isAvailable)
+                    )
+                |> Sub.batch
+
+        _ ->
+            Sub.none
 
 
 
@@ -100,9 +119,15 @@ type alias Card =
 
 cardFromSale : Product -> Card
 cardFromSale p =
+    let
+        ( profileSummary, profileCmd ) =
+            Profile.Summary.init False ("product-profile-summary-" ++ String.fromInt p.id)
+
+        -- TODO - Use profileCmd
+    in
     { product = p
     , form = initSaleFrom
-    , profileSummary = Profile.Summary.init False
+    , profileSummary = profileSummary
     , isAvailable = p.units > 0 || not p.trackStock
     }
 
@@ -580,28 +605,29 @@ update msg model loggedIn =
                     let
                         targetCard =
                             cards
-                                |> List.filter
-                                    (\card ->
-                                        if isAvailable then
-                                            card.isAvailable
-
-                                        else
-                                            not card.isAvailable
-                                    )
+                                |> List.filter (\card -> isAvailable == card.isAvailable)
                                 |> LE.getAt index
 
-                        updatedCards =
+                        ( updatedCards, cmd ) =
                             case targetCard of
                                 Just card ->
-                                    LE.updateIf ((==) card)
-                                        (\c -> { c | profileSummary = Profile.Summary.update subMsg c.profileSummary })
+                                    let
+                                        ( updatedSummary, innerCmd ) =
+                                            Profile.Summary.update subMsg card.profileSummary
+                                    in
+                                    ( LE.updateIf (.product >> .id >> (==) card.product.id)
+                                        (\c -> { c | profileSummary = updatedSummary })
                                         cards
+                                    , innerCmd
+                                        |> Cmd.map (GotProfileSummaryMsg index isAvailable)
+                                    )
 
                                 Nothing ->
-                                    cards
+                                    ( cards, Cmd.none )
                     in
                     { model | cards = Loaded updatedCards }
                         |> UR.init
+                        |> UR.addCmd cmd
 
                 _ ->
                     UR.init model

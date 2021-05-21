@@ -62,8 +62,15 @@ initModel claimId =
 
 type Status
     = Loading
-    | Loaded Claim.Model Profile.Summary.Model (List Profile.Summary.Model)
+    | Loaded Claim.Model ProfileSummaries
     | Failed (Graphql.Http.Error Claim.Model)
+
+
+type alias ProfileSummaries =
+    { claimer : Profile.Summary.Model
+    , pending : List Profile.Summary.Model
+    , voter : List Profile.Summary.Model
+    }
 
 
 type ProfileSummaryKind
@@ -84,7 +91,7 @@ view ({ shared } as loggedIn) model =
 
         title =
             case model.statusClaim of
-                Loaded claim _ _ ->
+                Loaded claim _ ->
                     claim.action.description
 
                 _ ->
@@ -96,18 +103,18 @@ view ({ shared } as loggedIn) model =
                     Loading ->
                         Page.fullPageLoading shared
 
-                    Loaded claim claimerProfileSummary pendingProfileSummaries ->
+                    Loaded claim profileSummaries ->
                         div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn claim.action.description Route.Analysis
-                            , div [ class "mt-10 mb-8" ]
-                                [ Profile.Summary.view shared loggedIn.accountName claim.claimer claimerProfileSummary
+                            , div [ class "mt-10 mb-8 flex items-center justify-center" ]
+                                [ Profile.Summary.view shared loggedIn.accountName claim.claimer profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)
                                 ]
                             , div [ class "mx-auto container px-4" ]
                                 [ viewTitle shared model claim
                                 , viewProofs shared.translators claim
                                 , viewDetails loggedIn model claim
-                                , viewVoters loggedIn pendingProfileSummaries claim
+                                , viewVoters loggedIn profileSummaries claim
                                 ]
                             , case model.claimModalStatus of
                                 Claim.PhotoModal c ->
@@ -356,8 +363,8 @@ viewDetails { shared } model claim =
         ]
 
 
-viewVoters : LoggedIn.Model -> List Profile.Summary.Model -> Claim.Model -> Html Msg
-viewVoters ({ shared } as loggedIn) pendingProfileSummaries claim =
+viewVoters : LoggedIn.Model -> ProfileSummaries -> Claim.Model -> Html Msg
+viewVoters ({ shared } as loggedIn) profileSummaries claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -374,17 +381,19 @@ viewVoters ({ shared } as loggedIn) pendingProfileSummaries claim =
 
                   else
                     div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.indexedMap
-                            (\index c ->
+                        (List.map3
+                            (\profileSummary index c ->
                                 if c.isApproved then
                                     div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator c.profileSummary
+                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
                                             |> Html.map (GotProfileSummaryMsg (VoterSummary index))
                                         ]
 
                                 else
                                     text ""
                             )
+                            profileSummaries.voter
+                            (List.range 0 (List.length profileSummaries.voter))
                             claim.checks
                         )
                 ]
@@ -398,17 +407,19 @@ viewVoters ({ shared } as loggedIn) pendingProfileSummaries claim =
 
                   else
                     div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.indexedMap
-                            (\index c ->
+                        (List.map3
+                            (\profileSummary index c ->
                                 if not c.isApproved then
                                     div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator c.profileSummary
+                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
                                             |> Html.map (GotProfileSummaryMsg (VoterSummary index))
                                         ]
 
                                 else
                                     text ""
                             )
+                            profileSummaries.voter
+                            (List.range 0 (List.length profileSummaries.voter))
                             claim.checks
                         )
                 ]
@@ -430,8 +441,8 @@ viewVoters ({ shared } as loggedIn) pendingProfileSummaries claim =
                                     Profile.Summary.view shared loggedIn.accountName v profileSummary
                                         |> Html.map (GotProfileSummaryMsg (PendingSummary index))
                                 )
-                                pendingProfileSummaries
-                                (List.range 0 (List.length pendingProfileSummaries))
+                                profileSummaries.pending
+                                (List.range 0 (List.length profileSummaries.pending))
                         )
                 ]
             ]
@@ -473,14 +484,36 @@ update msg model loggedIn =
     in
     case msg of
         ClaimLoaded (RemoteData.Success response) ->
+            let
+                ( claimerSummary, claimerCmd ) =
+                    Profile.Summary.init True "TODO"
+                        |> Tuple.mapSecond (Cmd.map (GotProfileSummaryMsg ClaimerSummary))
+
+                ( voterSummaries, voterCmds ) =
+                    List.length response.checks
+                        |> Profile.Summary.initMany False
+                            (\_ -> "TODO")
+                            (\index -> GotProfileSummaryMsg (VoterSummary index))
+
+                ( pendingSummaries, pendingCmds ) =
+                    List.length response.checks
+                        |> Profile.Summary.initMany False
+                            (\_ -> "TODO")
+                            (\index -> GotProfileSummaryMsg (PendingSummary index))
+            in
             { model
                 | statusClaim =
-                    pendingValidators response
-                        |> List.map (\_ -> Profile.Summary.init False)
-                        |> Loaded response (Profile.Summary.init True)
+                    Loaded response
+                        { claimer = claimerSummary
+                        , voter = voterSummaries
+                        , pending = pendingSummaries
+                        }
                 , isValidated = Claim.isValidated response loggedIn.accountName
             }
                 |> UR.init
+                |> UR.addCmd claimerCmd
+                |> UR.addCmd voterCmds
+                |> UR.addCmd pendingCmds
 
         ClaimLoaded (RemoteData.Failure err) ->
             { model | statusClaim = Failed err }
@@ -496,7 +529,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.statusClaim of
-                Loaded _ _ _ ->
+                Loaded _ _ ->
                     let
                         newModel =
                             { model
@@ -531,7 +564,7 @@ update msg model loggedIn =
 
         GotVoteResult _ (Ok _) ->
             case model.statusClaim of
-                Loaded claim _ _ ->
+                Loaded claim _ ->
                     let
                         message val =
                             [ ( "value", val ) ]
@@ -561,9 +594,9 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.statusClaim of
-                Loaded claim claimerProfileSummary pendingProfileSummaries ->
+                Loaded claim profileSummaries ->
                     { model
-                        | statusClaim = Loaded claim claimerProfileSummary pendingProfileSummaries
+                        | statusClaim = Loaded claim profileSummaries
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -574,35 +607,42 @@ update msg model loggedIn =
 
         GotProfileSummaryMsg profileSummaryKind subMsg ->
             case model.statusClaim of
-                Loaded claim claimerProfileSummary pendingProfileSummaries ->
+                Loaded claim profileSummaries ->
                     case profileSummaryKind of
                         PendingSummary index ->
                             let
                                 newPendingProfileSummaries =
                                     List.updateAt index
-                                        (Profile.Summary.update subMsg)
-                                        pendingProfileSummaries
+                                        -- TODO
+                                        (Profile.Summary.update subMsg
+                                            >> Tuple.first
+                                        )
+                                        profileSummaries.pending
                             in
-                            { model | statusClaim = Loaded claim claimerProfileSummary newPendingProfileSummaries }
+                            { model | statusClaim = Loaded claim { profileSummaries | pending = newPendingProfileSummaries } }
                                 |> UR.init
 
                         VoterSummary index ->
                             let
-                                newChecks =
+                                newVoterProfileSummaries =
                                     List.updateAt index
-                                        (\check -> { check | profileSummary = Profile.Summary.update subMsg check.profileSummary })
-                                        claim.checks
+                                        -- TODO
+                                        (Profile.Summary.update subMsg
+                                            >> Tuple.first
+                                        )
+                                        profileSummaries.voter
                             in
-                            { model | statusClaim = Loaded { claim | checks = newChecks } claimerProfileSummary pendingProfileSummaries }
+                            { model | statusClaim = Loaded claim { profileSummaries | voter = newVoterProfileSummaries } }
                                 |> UR.init
 
                         ClaimerSummary ->
                             let
-                                newClaimerProfileSummary =
-                                    Profile.Summary.update subMsg claimerProfileSummary
+                                ( newClaimerProfileSummary, cmd ) =
+                                    Profile.Summary.update subMsg profileSummaries.claimer
                             in
-                            { model | statusClaim = Loaded claim newClaimerProfileSummary pendingProfileSummaries }
+                            { model | statusClaim = Loaded claim { profileSummaries | claimer = newClaimerProfileSummary } }
                                 |> UR.init
+                                |> UR.addCmd (cmd |> Cmd.map (GotProfileSummaryMsg profileSummaryKind))
 
                 _ ->
                     UR.init model

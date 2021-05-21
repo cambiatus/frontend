@@ -748,19 +748,34 @@ update msg model ({ shared, accountName } as loggedIn) =
             let
                 wrappedClaims =
                     List.map ClaimLoaded (Claim.paginatedToList claims)
+
+                initProfileSummaries cs =
+                    List.length cs
+                        -- TODO - Change Msg
+                        |> Profile.Summary.initMany False (\_ -> "TODO") (\_ _ -> CloseInviteModal)
+
+                -- TODO - Use profileCmds
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->
+                    let
+                        ( profileSummaries, profileCmds ) =
+                            initProfileSummaries (existingClaims ++ wrappedClaims)
+                    in
                     { model
                         | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims)
-                        , profileSummaries = List.map (\_ -> Profile.Summary.init False) (existingClaims ++ wrappedClaims)
+                        , profileSummaries = profileSummaries
                     }
                         |> UR.init
 
                 _ ->
+                    let
+                        ( profileSummaries, profileCmds ) =
+                            initProfileSummaries wrappedClaims
+                    in
                     { model
                         | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims)
-                        , profileSummaries = List.map (\_ -> Profile.Summary.init False) wrappedClaims
+                        , profileSummaries = profileSummaries
                     }
                         |> UR.init
 
@@ -797,7 +812,12 @@ update msg model ({ shared, accountName } as loggedIn) =
                 updatedProfileSummaries =
                     case m of
                         Claim.GotProfileSummaryMsg subMsg ->
-                            List.updateAt claimIndex (Profile.Summary.update subMsg) model.profileSummaries
+                            List.updateAt claimIndex
+                                (Profile.Summary.update subMsg
+                                    -- TODO
+                                    >> Tuple.first
+                                )
+                                model.profileSummaries
 
                         _ ->
                             model.profileSummaries

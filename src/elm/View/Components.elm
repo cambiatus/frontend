@@ -1,6 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
+    , Orientation(..)
     , tooltip
     )
 
@@ -16,6 +17,11 @@ state or configuration, such as loading indicators and containers
 # Containers
 
 @docs dialogBubble
+
+
+## Helper types
+
+@docs Orientation
 
 
 # Elements
@@ -55,10 +61,32 @@ loadingLogoAnimatedFluid =
 -- CONTAINERS
 
 
-dialogBubble : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-dialogBubble attrs elements =
+type Orientation
+    = Up
+    | Down
+    | Left
+    | Right
+
+
+dialogBubble : Orientation -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+dialogBubble orientation attrs elements =
+    let
+        position =
+            case orientation of
+                Up ->
+                    "-bottom-1 left-1/2 -translate-x-1/2"
+
+                Down ->
+                    "-top-1 left-1/2 -translate-x-1/2"
+
+                Left ->
+                    "-right-1 top-1/2 -translate-y-1/2"
+
+                Right ->
+                    "-left-1 top-1/2 -translate-y-1/2"
+    in
     div (class "p-6 bg-white flex rounded shadow-2xl" :: attrs)
-        (div [ class "absolute transform left-1/2 -bottom-1 -translate-x-1/2 -z-10" ]
+        (div [ class ("absolute transform -z-10 " ++ position) ]
             [ div [ class "w-8 h-8 bg-white transform -rotate-45 rounded-sm" ] []
             ]
             :: elements

@@ -186,11 +186,15 @@ update msg model loggedIn =
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
                 Just claims ->
-                    { model
-                        | status =
-                            Loaded (List.map (\_ -> Profile.Summary.init False) claims)
-                                (List.reverse claims)
-                    }
+                    let
+                        ( profileSummaries, profileCmds ) =
+                            -- TODO - Use profileCmd
+                            List.length claims
+                                |> Profile.Summary.initMany False
+                                    (\_ -> "TODO")
+                                    (\_ _ -> Cmd.none)
+                    in
+                    { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
 
                 Nothing ->
@@ -224,7 +228,13 @@ update msg model loggedIn =
                             { model
                                 | status =
                                     Loaded
-                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
+                                        (List.updateAt claimIndex
+                                            (Profile.Summary.update subMsg
+                                                -- TODO
+                                                >> Tuple.first
+                                            )
+                                            profileSummaries
+                                        )
                                         profileClaims
                             }
 

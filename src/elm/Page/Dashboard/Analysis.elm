@@ -64,12 +64,17 @@ type alias Model =
 
 initModel : Model
 initModel =
+    let
+        -- TODO - Use profileCmd
+        ( profileSummary, profileCmd ) =
+            Profile.Summary.init False "TODO"
+    in
     { status = Loading
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , filters = initFilter
-    , filterProfileSummary = Profile.Summary.init False
+    , filterProfileSummary = profileSummary
     }
 
 
@@ -341,6 +346,11 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         ClaimsLoaded (RemoteData.Success results) ->
+            let
+                initProfileSummaries claims =
+                    List.length claims
+                        |> Profile.Summary.initMany False (\_ -> "TODO") (\_ -> GotProfileSummaryMsg)
+            in
             case model.status of
                 Loaded claims _ _ ->
                     let
@@ -350,21 +360,30 @@ update msg model loggedIn =
 
                             else
                                 claims ++ Claim.paginatedToList results
+
+                        -- TODO - Use profileCmd
+                        ( profileSummaries, profileCmds ) =
+                            initProfileSummaries newClaims
                     in
                     { model
                         | status =
                             Loaded newClaims
-                                (List.map (\_ -> Profile.Summary.init False) newClaims)
+                                profileSummaries
                                 (Claim.paginatedPageInfo results)
                         , reloadOnNextQuery = False
                     }
                         |> UR.init
 
                 _ ->
+                    let
+                        -- TODO - Use profileCmd
+                        ( profileSummaries, profileCmds ) =
+                            initProfileSummaries (Claim.paginatedToList results)
+                    in
                     { model
                         | status =
                             Loaded (Claim.paginatedToList results)
-                                (List.map (\_ -> Profile.Summary.init False) (Claim.paginatedToList results))
+                                profileSummaries
                                 (Claim.paginatedPageInfo results)
                         , reloadOnNextQuery = False
                     }
@@ -397,7 +416,13 @@ update msg model loggedIn =
                             { model
                                 | status =
                                     Loaded claims
-                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
+                                        (List.updateAt claimIndex
+                                            (Profile.Summary.update subMsg
+                                                -- TODO
+                                                >> Tuple.first
+                                            )
+                                            profileSummaries
+                                        )
                                         pageInfo
                             }
 
@@ -637,8 +662,13 @@ update msg model loggedIn =
                 |> UR.addCmd fetchCmd
 
         GotProfileSummaryMsg subMsg ->
-            { model | filterProfileSummary = Profile.Summary.update subMsg model.filterProfileSummary }
+            let
+                ( updatedSummary, cmd ) =
+                    Profile.Summary.update subMsg model.filterProfileSummary
+            in
+            { model | filterProfileSummary = updatedSummary }
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotProfileSummaryMsg cmd)
 
 
 fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg

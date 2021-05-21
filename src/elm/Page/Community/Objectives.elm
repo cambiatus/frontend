@@ -6,7 +6,7 @@ import Community exposing (Model)
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra as List
@@ -376,9 +376,8 @@ update msg model loggedIn =
                     |> UR.init
 
             else
-                { model
-                    | openObjective = Just index
-                    , profileSummaries =
+                let
+                    ( profileSummaries, profileCmd ) =
                         loggedIn.selectedCommunity
                             |> RemoteData.toMaybe
                             |> Maybe.map .objectives
@@ -387,25 +386,43 @@ update msg model loggedIn =
                             |> Maybe.withDefault []
                             |> List.map
                                 (\action ->
-                                    ( action.id
-                                    , List.map (\_ -> Profile.Summary.init False) action.validators
-                                    )
+                                    let
+                                        ( summaries, cmd ) =
+                                            List.length action.validators
+                                                |> Profile.Summary.initMany False (validatorId index action.id) (GotProfileSummaryMsg action.id)
+                                    in
+                                    ( ( action.id, summaries ), cmd )
                                 )
-                            |> Dict.fromList
+                            |> List.unzip
+                            |> Tuple.mapBoth Dict.fromList Cmd.batch
+                in
+                { model
+                    | openObjective = Just index
+                    , profileSummaries = profileSummaries
                 }
                     |> UR.init
+                    |> UR.addCmd profileCmd
 
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model
                 | profileSummaries =
                     Dict.update actionIndex
                         (Maybe.withDefault []
-                            >> List.updateAt validatorIndex (Profile.Summary.update subMsg)
+                            >> List.updateAt validatorIndex
+                                (Profile.Summary.update subMsg
+                                    -- TODO
+                                    >> Tuple.first
+                                )
                             >> Just
                         )
                         model.profileSummaries
             }
                 |> UR.init
+
+
+validatorId : Int -> Int -> Int -> String
+validatorId objectiveId actionId validatorIndex =
+    "objective-" ++ String.fromInt objectiveId ++ "-action-" ++ String.fromInt actionId ++ "-validator-" ++ String.fromInt validatorIndex
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

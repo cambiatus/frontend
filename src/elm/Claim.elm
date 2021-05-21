@@ -80,7 +80,6 @@ type alias ClaimId =
 type alias Check =
     { isApproved : Bool
     , validator : Profile.Minimal
-    , profileSummary : Profile.Summary.Model
     }
 
 
@@ -194,7 +193,6 @@ checkSelectionSet =
     SelectionSet.succeed Check
         |> with Check.isVerified
         |> with (Check.validator Profile.minimalSelectionSet)
-        |> SelectionSet.hardcoded (Profile.Summary.init False)
 
 
 paginatedToList : Maybe Paginated -> List Model
@@ -327,7 +325,7 @@ viewClaimCard { shared, accountName } profileSummary claim =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ div [ class "relative" ]
+                [ div [ class "flex items-center justify-center" ]
                     [ Profile.Summary.view shared accountName claim.claimer profileSummary
                         |> Html.map GotProfileSummaryMsg
                     ]

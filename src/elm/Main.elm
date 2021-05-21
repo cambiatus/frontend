@@ -121,6 +121,10 @@ subscriptions model =
                 CommunityEditor.subscriptions subModel
                     |> Sub.map GotCommunityEditorMsg
 
+            Shop _ subModel ->
+                Shop.subscriptions subModel
+                    |> Sub.map GotShopMsg
+
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
@@ -128,6 +132,10 @@ subscriptions model =
             ShopViewer _ subModel ->
                 ShopViewer.subscriptions subModel
                     |> Sub.map GotShopViewerMsg
+
+            ActionEditor subModel ->
+                ActionEditor.subscriptions subModel
+                    |> Sub.map GotActionEditorMsg
 
             _ ->
                 Sub.none

@@ -317,8 +317,10 @@ update msg model user =
                 state =
                     findState transfer user
 
-                summary =
-                    Profile.Summary.init False
+                ( summary, summaryCmd ) =
+                    Profile.Summary.init False "TODO"
+
+                -- TODO - Use summaryCmd
             in
             { model
                 | status =
@@ -344,12 +346,24 @@ update msg model user =
                         subUpdate =
                             Profile.Summary.update subMsg
 
-                        updatedSummaries =
+                        ( updatedSummaries, cmd ) =
                             if isOrigin then
-                                { profileSummaries | originSummary = subUpdate profileSummaries.originSummary }
+                                let
+                                    ( updatedSummary, innerCmd ) =
+                                        subUpdate profileSummaries.originSummary
+                                in
+                                ( { profileSummaries | originSummary = updatedSummary }
+                                , innerCmd
+                                )
 
                             else
-                                { profileSummaries | destinationSummary = subUpdate profileSummaries.destinationSummary }
+                                let
+                                    ( updatedSummary, innerCmd ) =
+                                        subUpdate profileSummaries.destinationSummary
+                                in
+                                ( { profileSummaries | destinationSummary = updatedSummary }
+                                , innerCmd
+                                )
                     in
                     { model
                         | status =
@@ -358,6 +372,7 @@ update msg model user =
                                 updatedSummaries
                     }
                         |> UR.init
+                        |> UR.addCmd (cmd |> Cmd.map (GotProfileSummaryMsg isOrigin))
 
                 _ ->
                     UR.init model

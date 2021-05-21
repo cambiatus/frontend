@@ -7,6 +7,7 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , onScrollOrResize
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -89,3 +90,8 @@ port storeAuthToken : String -> Cmd msg
 {-| Receive recent searches from JS.
 -}
 port gotRecentSearches : (String -> msg) -> Sub msg
+
+
+{-| Get notified whenever the user has scrolled or resized the window
+-}
+port onScrollOrResize : (() -> msg) -> Sub msg
