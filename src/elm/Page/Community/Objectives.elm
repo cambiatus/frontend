@@ -6,7 +6,7 @@ import Community exposing (Model)
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList, id)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra as List
