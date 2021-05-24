@@ -12,6 +12,13 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
+import DialogBubble from './components/DialogBubble'
+
+// =========================================
+// Custom elements
+// =========================================
+
+window.customElements.define('dialog-bubble', DialogBubble)
 
 // =========================================
 // App startup

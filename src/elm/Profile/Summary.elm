@@ -4,7 +4,7 @@ import Avatar
 import Browser.Dom
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, li, p, text, ul)
-import Html.Attributes exposing (class, classList, href, id)
+import Html.Attributes exposing (class, href, id)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Ports
 import Profile
@@ -80,39 +80,13 @@ update msg model =
             ( { model | isExpanded = False }, Cmd.none )
 
         GotElement (Ok { element, viewport }) ->
-            let
-                width =
-                    25 * 16
-
-                height =
-                    400
-
-                orientation =
-                    if element.height >= viewport.height || element.width >= viewport.width then
-                        Modal
-
-                    else if element.x - viewport.x < (width / 2) then
-                        Bubble View.Components.Right
-
-                    else if viewport.width - element.x < (width / 2) then
-                        Bubble View.Components.Left
-
-                    else if element.y - height <= viewport.y then
-                        Bubble View.Components.Down
-
-                    else
-                        Bubble View.Components.Up
-            in
-            ( { model | viewStyle = Just orientation }, Cmd.none )
+            ( model, Cmd.none )
 
         GotElement (Err _) ->
             ( { model | viewStyle = Nothing }, Cmd.none )
 
         ScrolledOrResized ->
-            ( model
-            , Browser.Dom.getElement model.id
-                |> Task.attempt GotElement
-            )
+            ( model, Cmd.none )
 
 
 subscriptions : Sub Msg
@@ -127,26 +101,14 @@ subscriptions =
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 view shared loggedInAccount profile model =
     div [ id model.id ]
-        (case model.viewStyle of
-            Nothing ->
-                []
-
-            Just (Bubble orientation) ->
-                [ desktopView shared loggedInAccount profile orientation model
-                , mobileView shared loggedInAccount profile False model
-                ]
-
-            Just Modal ->
-                [ mobileView shared loggedInAccount profile True model ]
-        )
-
-
-mobileView : Shared -> Eos.Name -> Profile.Basic profile -> Bool -> Model -> Html Msg
-mobileView shared loggedInAccount profile isModalView model =
-    div
-        [ class "cursor-auto"
-        , classList [ ( "md:hidden", not isModalView ) ]
+        [ desktopView shared loggedInAccount profile model
+        , mobileView shared loggedInAccount profile model
         ]
+
+
+mobileView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+mobileView shared loggedInAccount profile model =
+    div [ class "md:hidden cursor-auto" ]
         [ viewUserImg shared loggedInAccount profile True model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
             |> Modal.withBody
@@ -157,24 +119,8 @@ mobileView shared loggedInAccount profile isModalView model =
         ]
 
 
-desktopView : Shared -> Eos.Name -> Profile.Basic profile -> View.Components.Orientation -> Model -> Html Msg
-desktopView shared loggedInAccount profile orientation model =
-    let
-        position =
-            case orientation of
-                View.Components.Down ->
-                    "top-full right-1/2 translate-x-1/2"
-
-                View.Components.Up ->
-                    "bottom-full right-1/2 translate-x-1/2"
-
-                -- TODO - Check this
-                View.Components.Left ->
-                    "right-full bottom-1/2 translate-y-1/2"
-
-                View.Components.Right ->
-                    "left-full bottom-1/2 translate-y-1/2"
-    in
+desktopView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+desktopView shared loggedInAccount profile model =
     div
         [ class "mx-auto hidden md:block relative"
         , onMouseEnter OpenedInfo
@@ -182,10 +128,7 @@ desktopView shared loggedInAccount profile orientation model =
         ]
         [ viewUserImg shared loggedInAccount profile False model
         , if model.isExpanded then
-            View.Components.dialogBubble orientation
-                [ class ("absolute transform cursor-auto z-50 min-w-100 " ++ position)
-                , classList [ ( "hidden", not model.isExpanded ) ]
-                ]
+            View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
                 [ viewUserInfo profile ]
 
           else

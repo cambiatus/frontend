@@ -30,8 +30,8 @@ state or configuration, such as loading indicators and containers
 
 -}
 
-import Html exposing (Html, div, img, p, span, text)
-import Html.Attributes exposing (class, src)
+import Html exposing (Html, div, img, node, p, span, text)
+import Html.Attributes exposing (attribute, class, src)
 import Icons
 import Session.Shared exposing (Translators)
 
@@ -68,29 +68,13 @@ type Orientation
     | Right
 
 
-dialogBubble : Orientation -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-dialogBubble orientation attrs elements =
-    let
-        position =
-            case orientation of
-                Up ->
-                    "-bottom-1 left-1/2 -translate-x-1/2"
-
-                Down ->
-                    "-top-1 left-1/2 -translate-x-1/2"
-
-                Left ->
-                    "-right-1 top-1/2 -translate-y-1/2"
-
-                Right ->
-                    "-left-1 top-1/2 -translate-y-1/2"
-    in
-    div (class "p-6 bg-white flex rounded shadow-2xl" :: attrs)
-        (div [ class ("absolute transform -z-10 " ++ position) ]
-            [ div [ class "w-8 h-8 bg-white transform -rotate-45 rounded-sm" ] []
-            ]
-            :: elements
-        )
+dialogBubble : { class_ : String, minWidth : Int } -> List (Html msg) -> Html msg
+dialogBubble { class_, minWidth } elements =
+    node "dialog-bubble"
+        [ attribute "elm-min-width" (String.fromInt minWidth)
+        , attribute "elm-class" class_
+        ]
+        elements
 
 
 
