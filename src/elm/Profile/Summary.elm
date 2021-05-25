@@ -162,7 +162,6 @@ viewUserInfo profile =
         , p [ class "text-sm text-gray-900" ]
             [ text bio ]
         , div [ class "flex justify-evenly mt-6" ]
-            -- TODO - Check telegram icon
             (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
         , a
             [ class "button button-primary w-full mt-6 cursor-pointer"
