@@ -265,7 +265,7 @@
       "document": {
         "type": "Document Type",
         "cedula_de_identidad": {
-          "label": "Social Security Number",
+          "label": "ID",
           "placeholder": "Enter the 9 digits",
           "maximum": "9"
         },
