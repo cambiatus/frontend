@@ -837,5 +837,5 @@ msgToString msg =
         ToggleSorting ->
             [ "ToggleSorting" ]
 
-        GotProfileSummaryMsg _ ->
-            [ "GotProfileSummaryMsg" ]
+        GotProfileSummaryMsg subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

@@ -714,5 +714,5 @@ msgToString msg =
         OnImageError _ ->
             [ "OnImageError" ]
 
-        GotProfileSummaryMsg _ _ _ ->
-            [ "GotProfileSummaryMsg" ]
+        GotProfileSummaryMsg _ _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

@@ -375,5 +375,5 @@ msgToString msg =
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.remoteDataToString r ]
 
-        GotProfileSummaryMsg _ _ ->
-            [ "GotProfileSummaryMsg" ]
+        GotProfileSummaryMsg _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

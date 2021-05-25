@@ -174,7 +174,6 @@ viewUserInfo profile =
 
 
 -- INTEROP
--- TODO - Use this in other pages
 
 
 msgToString : Msg -> List String
