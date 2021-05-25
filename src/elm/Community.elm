@@ -19,6 +19,7 @@ module Community exposing
     , communityPreviewImage
     , communityPreviewQuery
     , communityPreviewSelectionSet
+    , communityPreviewSymbolQuery
     , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
@@ -701,6 +702,12 @@ communityPreviewSelectionSet =
 communityPreviewQuery : String -> SelectionSet (Maybe CommunityPreview) RootQuery
 communityPreviewQuery subdomain =
     Query.communityPreview (\optionals -> { optionals | subdomain = Present subdomain })
+        communityPreviewSelectionSet
+
+
+communityPreviewSymbolQuery : Eos.Symbol -> SelectionSet (Maybe CommunityPreview) RootQuery
+communityPreviewSymbolQuery symbol =
+    Query.communityPreview (\optionals -> { optionals | symbol = Present (Eos.symbolToString symbol) })
         communityPreviewSelectionSet
 
 

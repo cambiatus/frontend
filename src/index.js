@@ -103,9 +103,10 @@ const LANGUAGE_KEY = 'bespiral.language'
 const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
-const useSubdomain = process.env.USE_SUBDOMAIN
+const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
 const getItem = (key) => {
@@ -134,7 +135,7 @@ const setItem = (key, value) => {
   document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${domain}; path=/; SameSite=Strict`
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
 storedKeys.forEach((key) => {
   const localStorageValue = window.localStorage.getItem(key)
@@ -231,7 +232,8 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
-    useSubdomain: useSubdomain
+    useSubdomain: useSubdomain,
+    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY)
   }
 }
 
@@ -344,6 +346,11 @@ app.ports.getRecentSearches.subscribe(() => {
 app.ports.storeAuthToken.subscribe(token => {
   setItem(AUTH_TOKEN, token)
   debugLog(`stored auth token`, token)
+})
+
+app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
+  setItem(SELECTED_COMMUNITY_KEY, symbol)
+  debugLog(`stored community`, symbol)
 })
 
 // STORE PUSH PREF
