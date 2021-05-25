@@ -84,17 +84,11 @@ mobileView shared loggedInAccount profile model =
 desktopView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 desktopView shared loggedInAccount profile model =
     div
-        [ class "mx-auto hidden md:block relative"
+        [ class "mx-auto hidden md:block"
         , onMouseEnter OpenedInfo
         , onMouseLeave ClosedInfo
         ]
         [ viewUserImg shared loggedInAccount profile False model
-        , if model.isExpanded then
-            View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
-                [ viewUserInfo profile ]
-
-          else
-            text ""
         ]
 
 
@@ -124,8 +118,14 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 a (Route.href route :: attrs)
     in
     container [ class "flex flex-col items-center" ]
-        [ div [ class ("rounded-full " ++ size) ]
+        [ div [ class ("rounded-full relative " ++ size) ]
             [ Avatar.view profile.avatar size
+            , if not isMobile && model.isExpanded then
+                View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
+                    [ viewUserInfo profile ]
+
+              else
+                text ""
             ]
         , div [ class "mt-2" ]
             [ Profile.viewProfileNameTag shared loggedInAccount profile ]
