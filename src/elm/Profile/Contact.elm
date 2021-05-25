@@ -634,8 +634,14 @@ circularIcon class_ (Normalized normalized) =
                 Phone ->
                     "bg-orange-300"
 
-                _ ->
-                    "bg-" ++ contactTypeColor normalized.contactType
+                Instagram ->
+                    "bg-instagram"
+
+                Telegram ->
+                    "bg-telegram"
+
+                Whatsapp ->
+                    "bg-whatsapp"
     in
     case normalized.contactType of
         Telegram ->
