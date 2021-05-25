@@ -5,7 +5,6 @@ module Page.Community.ActionEditor exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -231,12 +230,10 @@ editForm form action =
                             ( _, _ ) ->
                                 Disabled
 
-                    ( profileSummaries, _ ) =
+                    profileSummaries =
                         getInput verifiersValidator
                             |> List.length
                             |> Profile.Summary.initMany False
-                                (\index -> "validator-summary-" ++ String.fromInt index)
-                                (\_ _ -> Cmd.none)
                 in
                 Manual
                     { verifiersValidator = verifiersValidator
@@ -606,10 +603,10 @@ update msg model ({ shared } as loggedIn) =
 
         OnSelectVerifier maybeProfile ->
             let
-                ( verification, cmd ) =
+                verification =
                     case model.form.verification of
                         Automatic ->
-                            ( model.form.verification, Cmd.none )
+                            model.form.verification
 
                         Manual m ->
                             let
@@ -618,31 +615,24 @@ update msg model ({ shared } as loggedIn) =
                                     maybeProfile
                                         |> Maybe.map (List.singleton >> List.append (getInput m.verifiersValidator))
                                         |> Maybe.withDefault (getInput m.verifiersValidator)
-
-                                ( profileSummaries, profileCmd ) =
-                                    List.length newVerifiers
-                                        |> Profile.Summary.initMany False
-                                            (\index -> "validator-summary-" ++ String.fromInt index)
-                                            GotProfileSummaryMsg
                             in
-                            ( Manual
+                            Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
-                                    , profileSummaries = profileSummaries
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
-                            , profileCmd
-                            )
             in
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
-                |> UR.addCmd cmd
 
         OnRemoveVerifier profile ->
             let
-                ( verification, cmd ) =
+                verification =
                     case model.form.verification of
                         Automatic ->
-                            ( model.form.verification, Cmd.none )
+                            model.form.verification
 
                         Manual m ->
                             let
@@ -651,24 +641,17 @@ update msg model ({ shared } as loggedIn) =
                                     List.filter
                                         (\currVerifier -> currVerifier.account /= profile.account)
                                         (getInput m.verifiersValidator)
-
-                                ( profileSummaries, profileCmds ) =
-                                    List.length newVerifiers
-                                        |> Profile.Summary.initMany False
-                                            (\index -> "validator-summary-" ++ String.fromInt index)
-                                            GotProfileSummaryMsg
                             in
-                            ( Manual
+                            Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
-                                    , profileSummaries = profileSummaries
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
-                            , profileCmds
-                            )
             in
             { model | form = { oldForm | verification = verification } }
                 |> UR.init
-                |> UR.addCmd cmd
 
         SelectMsg subMsg ->
             let
@@ -1109,41 +1092,14 @@ update msg model ({ shared } as loggedIn) =
                         modelForm =
                             model.form
 
-                        ( newProfileSummaries, cmds ) =
-                            List.indexedMap
-                                (\idx summary ->
-                                    if idx == index then
-                                        Profile.Summary.update subMsg summary
-                                            |> Tuple.mapSecond (Cmd.map (GotProfileSummaryMsg idx))
-
-                                    else
-                                        ( summary, Cmd.none )
-                                )
-                                profileSummaries
-                                |> List.unzip
+                        newProfileSummaries =
+                            List.updateAt index (Profile.Summary.update subMsg) profileSummaries
                     in
                     { model | form = { modelForm | verification = Manual { verification | profileSummaries = newProfileSummaries } } }
                         |> UR.init
-                        |> UR.addCmd (Cmd.batch cmds)
 
                 Automatic ->
                     UR.init model
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.form.verification of
-        Manual m ->
-            getInput m.verifiersValidator
-                |> List.indexedMap
-                    (\index _ ->
-                        Profile.Summary.subscriptions
-                            |> Sub.map (GotProfileSummaryMsg index)
-                    )
-                |> Sub.batch
-
-        Automatic ->
-            Sub.none
 
 
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
@@ -1616,12 +1572,10 @@ viewVerifications ({ shared } as loggedIn) model community =
         verifiersValidator =
             defaultVerifiersValidator [] (getInput defaultMinVotes)
 
-        ( profileSummaries, profileCmds ) =
+        profileSummaries =
             getInput verifiersValidator
                 |> List.length
                 |> Profile.Summary.initMany False
-                    (\index -> "validator-summary-" ++ String.fromInt index)
-                    (\_ _ -> Cmd.none)
     in
     div [ class "mb-10" ]
         [ View.Form.Radio.init

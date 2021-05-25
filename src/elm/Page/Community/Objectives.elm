@@ -376,8 +376,9 @@ update msg model loggedIn =
                     |> UR.init
 
             else
-                let
-                    ( profileSummaries, profileCmd ) =
+                { model
+                    | openObjective = Just index
+                    , profileSummaries =
                         loggedIn.selectedCommunity
                             |> RemoteData.toMaybe
                             |> Maybe.map .objectives
@@ -386,43 +387,26 @@ update msg model loggedIn =
                             |> Maybe.withDefault []
                             |> List.map
                                 (\action ->
-                                    let
-                                        ( summaries, cmd ) =
-                                            List.length action.validators
-                                                |> Profile.Summary.initMany False (validatorId index action.id) (GotProfileSummaryMsg action.id)
-                                    in
-                                    ( ( action.id, summaries ), cmd )
+                                    ( action.id
+                                    , List.length action.validators
+                                        |> Profile.Summary.initMany False
+                                    )
                                 )
-                            |> List.unzip
-                            |> Tuple.mapBoth Dict.fromList Cmd.batch
-                in
-                { model
-                    | openObjective = Just index
-                    , profileSummaries = profileSummaries
+                            |> Dict.fromList
                 }
                     |> UR.init
-                    |> UR.addCmd profileCmd
 
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model
                 | profileSummaries =
                     Dict.update actionIndex
                         (Maybe.withDefault []
-                            >> List.updateAt validatorIndex
-                                (Profile.Summary.update subMsg
-                                    -- TODO
-                                    >> Tuple.first
-                                )
+                            >> List.updateAt validatorIndex (Profile.Summary.update subMsg)
                             >> Just
                         )
                         model.profileSummaries
             }
                 |> UR.init
-
-
-validatorId : Int -> Int -> Int -> String
-validatorId objectiveId actionId validatorIndex =
-    "objective-" ++ String.fromInt objectiveId ++ "-action-" ++ String.fromInt actionId ++ "-validator-" ++ String.fromInt validatorIndex
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

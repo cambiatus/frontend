@@ -751,31 +751,20 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 initProfileSummaries cs =
                     List.length cs
-                        -- TODO - Change Msg
-                        |> Profile.Summary.initMany False (\_ -> "TODO") (\_ _ -> CloseInviteModal)
-
-                -- TODO - Use profileCmds
+                        |> Profile.Summary.initMany False
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->
-                    let
-                        ( profileSummaries, profileCmds ) =
-                            initProfileSummaries (existingClaims ++ wrappedClaims)
-                    in
                     { model
                         | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims)
-                        , profileSummaries = profileSummaries
+                        , profileSummaries = initProfileSummaries (existingClaims ++ wrappedClaims)
                     }
                         |> UR.init
 
                 _ ->
-                    let
-                        ( profileSummaries, profileCmds ) =
-                            initProfileSummaries wrappedClaims
-                    in
                     { model
                         | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims)
-                        , profileSummaries = profileSummaries
+                        , profileSummaries = initProfileSummaries wrappedClaims
                     }
                         |> UR.init
 
@@ -813,10 +802,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     case m of
                         Claim.GotProfileSummaryMsg subMsg ->
                             List.updateAt claimIndex
-                                (Profile.Summary.update subMsg
-                                    -- TODO
-                                    >> Tuple.first
-                                )
+                                (Profile.Summary.update subMsg)
                                 model.profileSummaries
 
                         _ ->

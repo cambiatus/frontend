@@ -187,12 +187,9 @@ update msg model loggedIn =
             case results of
                 Just claims ->
                     let
-                        ( profileSummaries, profileCmds ) =
-                            -- TODO - Use profileCmd
+                        profileSummaries =
                             List.length claims
                                 |> Profile.Summary.initMany False
-                                    (\_ -> "TODO")
-                                    (\_ _ -> Cmd.none)
                     in
                     { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
@@ -229,10 +226,7 @@ update msg model loggedIn =
                                 | status =
                                     Loaded
                                         (List.updateAt claimIndex
-                                            (Profile.Summary.update subMsg
-                                                -- TODO
-                                                >> Tuple.first
-                                            )
+                                            (Profile.Summary.update subMsg)
                                             profileSummaries
                                         )
                                         profileClaims

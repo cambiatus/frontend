@@ -1,18 +1,14 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, subscriptions, update, view)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view)
 
 import Avatar
-import Browser.Dom
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, li, p, text, ul)
-import Html.Attributes exposing (class, href, id)
+import Html.Attributes exposing (class, href)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
-import Ports
 import Profile
 import Profile.Contact as Contact
 import Route
 import Session.Shared exposing (Shared)
-import Task
-import UpdateResult as UR
 import Utils exposing (onClickNoBubble)
 import View.Components
 import View.Modal as Modal
@@ -25,38 +21,20 @@ import View.Modal as Modal
 type alias Model =
     { isExpanded : Bool
     , isLarge : Bool
-    , viewStyle : Maybe ViewStyle
-    , id : String
     }
 
 
-type ViewStyle
-    = Modal
-    | Bubble View.Components.Orientation
+init : Bool -> Model
+init isLarge =
+    { isExpanded = False
+    , isLarge = isLarge
+    }
 
 
-init : Bool -> String -> ( Model, Cmd Msg )
-init isLarge id =
-    ( { isExpanded = False
-      , isLarge = isLarge
-      , viewStyle = Nothing
-      , id = id
-      }
-    , Browser.Dom.getElement id
-        |> Task.attempt GotElement
-    )
-
-
-initMany : Bool -> (Int -> String) -> (Int -> Msg -> msg) -> Int -> ( List Model, Cmd msg )
-initMany isLarge id toMsg amount =
-    List.range 0 amount
-        |> List.map
-            (\index ->
-                init isLarge (id index)
-                    |> Tuple.mapSecond (Cmd.map (toMsg index))
-            )
-        |> List.unzip
-        |> Tuple.mapSecond Cmd.batch
+initMany : Bool -> Int -> List Model
+initMany isLarge amount =
+    init isLarge
+        |> List.repeat amount
 
 
 
@@ -66,32 +44,16 @@ initMany isLarge id toMsg amount =
 type Msg
     = OpenedInfo
     | ClosedInfo
-    | GotElement (Result Browser.Dom.Error Browser.Dom.Element)
-    | ScrolledOrResized
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         OpenedInfo ->
-            ( { model | isExpanded = True }, Cmd.none )
+            { model | isExpanded = True }
 
         ClosedInfo ->
-            ( { model | isExpanded = False }, Cmd.none )
-
-        GotElement (Ok { element, viewport }) ->
-            ( model, Cmd.none )
-
-        GotElement (Err _) ->
-            ( { model | viewStyle = Nothing }, Cmd.none )
-
-        ScrolledOrResized ->
-            ( model, Cmd.none )
-
-
-subscriptions : Sub Msg
-subscriptions =
-    Ports.onScrollOrResize (\_ -> ScrolledOrResized)
+            { model | isExpanded = False }
 
 
 
@@ -100,7 +62,7 @@ subscriptions =
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 view shared loggedInAccount profile model =
-    div [ id model.id ]
+    div []
         [ desktopView shared loggedInAccount profile model
         , mobileView shared loggedInAccount profile model
         ]
@@ -223,9 +185,3 @@ msgToString msg =
 
         ClosedInfo ->
             [ "ClosedInfo" ]
-
-        GotElement r ->
-            [ "GotElement", UR.resultToString r ]
-
-        ScrolledOrResized ->
-            [ "ScrolledOrResized" ]

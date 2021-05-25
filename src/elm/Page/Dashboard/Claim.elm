@@ -485,21 +485,19 @@ update msg model loggedIn =
     case msg of
         ClaimLoaded (RemoteData.Success response) ->
             let
-                ( claimerSummary, claimerCmd ) =
-                    Profile.Summary.init True "TODO"
-                        |> Tuple.mapSecond (Cmd.map (GotProfileSummaryMsg ClaimerSummary))
+                claimerSummary =
+                    Profile.Summary.init True
 
-                ( voterSummaries, voterCmds ) =
+                pendingCount =
+                    pendingValidators response |> List.length
+
+                voterSummaries =
                     List.length response.checks
                         |> Profile.Summary.initMany False
-                            (\_ -> "TODO")
-                            (\index -> GotProfileSummaryMsg (VoterSummary index))
 
-                ( pendingSummaries, pendingCmds ) =
-                    List.length response.checks
+                pendingSummaries =
+                    pendingCount
                         |> Profile.Summary.initMany False
-                            (\_ -> "TODO")
-                            (\index -> GotProfileSummaryMsg (PendingSummary index))
             in
             { model
                 | statusClaim =
@@ -511,9 +509,6 @@ update msg model loggedIn =
                 , isValidated = Claim.isValidated response loggedIn.accountName
             }
                 |> UR.init
-                |> UR.addCmd claimerCmd
-                |> UR.addCmd voterCmds
-                |> UR.addCmd pendingCmds
 
         ClaimLoaded (RemoteData.Failure err) ->
             { model | statusClaim = Failed err }
@@ -610,39 +605,30 @@ update msg model loggedIn =
                 Loaded claim profileSummaries ->
                     case profileSummaryKind of
                         PendingSummary index ->
-                            let
-                                newPendingProfileSummaries =
-                                    List.updateAt index
-                                        -- TODO
-                                        (Profile.Summary.update subMsg
-                                            >> Tuple.first
-                                        )
-                                        profileSummaries.pending
-                            in
-                            { model | statusClaim = Loaded claim { profileSummaries | pending = newPendingProfileSummaries } }
+                            { model
+                                | statusClaim =
+                                    Loaded claim
+                                        { profileSummaries
+                                            | pending =
+                                                List.updateAt index (Profile.Summary.update subMsg) profileSummaries.pending
+                                        }
+                            }
                                 |> UR.init
 
                         VoterSummary index ->
-                            let
-                                newVoterProfileSummaries =
-                                    List.updateAt index
-                                        -- TODO
-                                        (Profile.Summary.update subMsg
-                                            >> Tuple.first
-                                        )
-                                        profileSummaries.voter
-                            in
-                            { model | statusClaim = Loaded claim { profileSummaries | voter = newVoterProfileSummaries } }
+                            { model
+                                | statusClaim =
+                                    Loaded claim
+                                        { profileSummaries
+                                            | voter =
+                                                List.updateAt index (Profile.Summary.update subMsg) profileSummaries.voter
+                                        }
+                            }
                                 |> UR.init
 
                         ClaimerSummary ->
-                            let
-                                ( newClaimerProfileSummary, cmd ) =
-                                    Profile.Summary.update subMsg profileSummaries.claimer
-                            in
-                            { model | statusClaim = Loaded claim { profileSummaries | claimer = newClaimerProfileSummary } }
+                            { model | statusClaim = Loaded claim { profileSummaries | claimer = Profile.Summary.update subMsg profileSummaries.claimer } }
                                 |> UR.init
-                                |> UR.addCmd (cmd |> Cmd.map (GotProfileSummaryMsg profileSummaryKind))
 
                 _ ->
                     UR.init model

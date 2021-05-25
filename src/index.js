@@ -268,14 +268,6 @@ app.ports.getRecentSearches.subscribe(() => {
   debugLog(`got recent searches: ${recentSearches}`, '')
 })
 
-// NOTIFY ELM ON SCROLL OR RESIZE
-window.onscroll = () => {
-  app.ports.onScrollOrResize.send(null)
-}
-window.onresize = () => {
-  app.ports.onScrollOrResize.send(null)
-}
-
 app.ports.storeAuthToken.subscribe(token => {
   setItem(AUTH_TOKEN, token)
   debugLog(`stored auth token`, token)
