@@ -35,8 +35,8 @@ module Icons exposing
     )
 
 import Html exposing (Html)
-import Svg exposing (Svg, defs, g, linearGradient, stop, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, gradientUnits, height, id, offset, r, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width, x1, x2, y1, y2)
+import Svg exposing (Svg, g, svg)
+import Svg.Attributes exposing (class, clipPath, clipRule, cx, cy, d, fill, fillRule, height, id, r, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
 
 
 dashboard : String -> Svg msg
