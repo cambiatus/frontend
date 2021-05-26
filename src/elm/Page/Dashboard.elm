@@ -641,7 +641,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
                         , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                         ]
                         [ div []
@@ -661,7 +661,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:ml-0"
                         , Route.href (Route.Shop Shop.UserSales)
                         ]
                         [ div []
