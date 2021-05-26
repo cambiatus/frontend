@@ -10,6 +10,7 @@ port module Ports exposing
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
+    , storeSelectedCommunitySymbol
     )
 
 import Json.Encode as Encode exposing (Value)
@@ -78,6 +79,12 @@ port getRecentSearches : () -> Cmd msg
 {-| Stores the auth token given by the server after signing in.
 -}
 port storeAuthToken : String -> Cmd msg
+
+
+{-| Store the selected community symbol. Useful for when running the app with
+`USE_SUBDOMAIN = false`
+-}
+port storeSelectedCommunitySymbol : String -> Cmd msg
 
 
 

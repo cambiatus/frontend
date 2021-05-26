@@ -7,6 +7,7 @@ module Flags exposing
     , defaultEndpoints
     )
 
+import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder, nullable, string)
 import Json.Decode.Pipeline as Decode exposing (optional, required)
@@ -27,6 +28,7 @@ type alias Flags =
     , authToken : Maybe String
     , canReadClipboard : Bool
     , useSubdomain : Bool
+    , selectedCommunity : Maybe Eos.Symbol
     }
 
 
@@ -46,6 +48,7 @@ default =
     , authToken = Nothing
     , canReadClipboard = False
     , useSubdomain = True
+    , selectedCommunity = Nothing
     }
 
 
@@ -73,6 +76,7 @@ decode =
         |> required "authToken" (Decode.nullable Decode.string)
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
+        |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
 
 
 type alias Endpoints =

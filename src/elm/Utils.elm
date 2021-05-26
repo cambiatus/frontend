@@ -1,4 +1,12 @@
-module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, errorToString, onClickNoBubble, posixDateTime)
+module Utils exposing
+    ( decodeDate
+    , decodeEnterKeyDown
+    , decodeTimestamp
+    , errorToString
+    , onClickNoBubble
+    , onClickPreventAll
+    , posixDateTime
+    )
 
 import Cambiatus.Scalar exposing (DateTime(..))
 import Graphql.Http
@@ -69,6 +77,8 @@ decodeEnterKeyDown =
             )
 
 
+{-| Click event listener that stops propagation, but doesn't prevent default
+-}
 onClickNoBubble : msg -> Html.Attribute msg
 onClickNoBubble message =
     Html.Events.custom "click"
@@ -76,6 +86,19 @@ onClickNoBubble message =
             { message = message
             , stopPropagation = True
             , preventDefault = False
+            }
+        )
+
+
+{-| Click event listener that stops propagation and prevents default
+-}
+onClickPreventAll : msg -> Html.Attribute msg
+onClickPreventAll message =
+    Html.Events.custom "click"
+        (Decode.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = True
             }
         )
 

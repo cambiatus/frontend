@@ -589,9 +589,12 @@ viewContactButton translators normalized =
     let
         { contactType } =
             Contact.unwrap normalized
+
+        textColor =
+            "text-" ++ Contact.contactTypeColor contactType
     in
     a
-        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeColor contactType)
+        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ textColor)
         , Contact.toHref normalized
         , target "_blank"
         ]

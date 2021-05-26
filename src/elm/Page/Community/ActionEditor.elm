@@ -38,9 +38,11 @@ import Html.Events exposing (onCheck, onClick, onInput)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
+import List.Extra as List
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
+import Profile.Summary
 import RemoteData
 import Route
 import Select
@@ -112,6 +114,7 @@ type Verification
         , verifierRewardValidator : Validator String
         , minVotesValidator : Validator String
         , photoProof : PhotoProof
+        , profileSummaries : List Profile.Summary.Model
         }
 
 
@@ -196,7 +199,6 @@ editForm form action =
 
             else
                 action.validators
-                    |> List.map (\v -> { name = v.name, account = v.account, avatar = v.avatar })
 
         verification : Verification
         verification =
@@ -227,12 +229,18 @@ editForm form action =
 
                             ( _, _ ) ->
                                 Disabled
+
+                    profileSummaries =
+                        getInput verifiersValidator
+                            |> List.length
+                            |> Profile.Summary.initMany False
                 in
                 Manual
                     { verifiersValidator = verifiersValidator
                     , verifierRewardValidator = verifierRewardValidator
                     , minVotesValidator = minVotesValidator
                     , photoProof = photoProof
+                    , profileSummaries = profileSummaries
                     }
 
         instructions =
@@ -474,6 +482,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | PressedEnter Bool
+    | GotProfileSummaryMsg Int Profile.Summary.Msg
 
 
 
@@ -610,6 +619,9 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -633,6 +645,9 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -1069,6 +1084,22 @@ update msg model ({ shared } as loggedIn) =
 
             else
                 UR.init model
+
+        GotProfileSummaryMsg index subMsg ->
+            case model.form.verification of
+                Manual ({ profileSummaries } as verification) ->
+                    let
+                        modelForm =
+                            model.form
+
+                        newProfileSummaries =
+                            List.updateAt index (Profile.Summary.update subMsg) profileSummaries
+                    in
+                    { model | form = { modelForm | verification = Manual { verification | profileSummaries = newProfileSummaries } } }
+                        |> UR.init
+
+                Automatic ->
+                    UR.init model
 
 
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
@@ -1537,6 +1568,14 @@ viewVerifications ({ shared } as loggedIn) model community =
 
         text_ s =
             text (t s)
+
+        verifiersValidator =
+            defaultVerifiersValidator [] (getInput defaultMinVotes)
+
+        profileSummaries =
+            getInput verifiersValidator
+                |> List.length
+                |> Profile.Summary.initMany False
     in
     div [ class "mb-10" ]
         [ View.Form.Radio.init
@@ -1572,10 +1611,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                 )
             |> View.Form.Radio.withOption
                 (Manual
-                    { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                    { verifiersValidator = verifiersValidator
                     , verifierRewardValidator = defaultVerificationReward
                     , minVotesValidator = defaultMinVotes
                     , photoProof = Disabled
+                    , profileSummaries = profileSummaries
                     }
                 )
                 (span []
@@ -1606,7 +1646,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Automatic ->
             text ""
 
-        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof, profileSummaries } ->
             let
                 isPhotoProofEnabled =
                     case photoProof of
@@ -1637,7 +1677,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                 , div []
                     [ viewVerifierSelect loggedIn model False
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
-                    , viewSelectedVerifiers loggedIn (getInput verifiersValidator)
+                    , viewSelectedVerifiers loggedIn profileSummaries (getInput verifiersValidator)
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1737,22 +1777,25 @@ viewVotesCount selectedCount count =
         ]
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
-viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
+viewSelectedVerifiers : LoggedIn.Model -> List Profile.Summary.Model -> List Profile.Minimal -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) profileSummaries selectedVerifiers =
     div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
-        (selectedVerifiers
-            |> List.map
-                (\p ->
-                    div
-                        [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ Profile.view shared loggedIn.accountName p
-                        , div
-                            [ onClick (OnRemoveVerifier p)
-                            , class "h-6 w-6 flex items-center mt-4"
-                            ]
-                            [ Icons.trash "" ]
+        (List.map3
+            (\profileSummary index verifier ->
+                div
+                    [ class "flex justify-between flex-col m-3 items-center" ]
+                    [ Profile.Summary.view shared loggedIn.accountName verifier profileSummary
+                        |> Html.map (GotProfileSummaryMsg index)
+                    , div
+                        [ onClick (OnRemoveVerifier verifier)
+                        , class "h-6 w-6 flex items-center mt-4"
                         ]
-                )
+                        [ Icons.trash "" ]
+                    ]
+            )
+            profileSummaries
+            (List.range 0 (List.length selectedVerifiers))
+            selectedVerifiers
         )
 
 
@@ -1950,3 +1993,6 @@ msgToString msg =
 
         PressedEnter _ ->
             [ "PressedEnter" ]
+
+        GotProfileSummaryMsg _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

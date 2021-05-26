@@ -5,7 +5,6 @@ module Page.Shop exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -13,6 +12,7 @@ module Page.Shop exposing
 import Api
 import Api.Graphql
 import Array
+import Claim exposing (Msg(..))
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
@@ -28,6 +28,7 @@ import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -52,15 +53,6 @@ init loggedIn filter =
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         ]
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Sub Msg
-subscriptions =
-    Sub.none
 
 
 
@@ -91,6 +83,8 @@ type Status
 type alias Card =
     { product : Product
     , form : SaleTransferForm
+    , profileSummary : Profile.Summary.Model
+    , isAvailable : Bool
     }
 
 
@@ -98,6 +92,8 @@ cardFromSale : Product -> Card
 cardFromSale p =
     { product = p
     , form = initSaleFrom
+    , profileSummary = Profile.Summary.init False
+    , isAvailable = p.units > 0 || not p.trackStock
     }
 
 
@@ -262,18 +258,18 @@ viewGrid loggedIn cards model =
     let
         outOfStockCards =
             cards
-                |> List.filter (\c -> c.product.units == 0 && c.product.trackStock)
+                |> List.filter (.isAvailable >> not)
 
         availableCards =
             cards
-                |> List.filter (\c -> c.product.units > 0 || not c.product.trackStock)
+                |> List.filter .isAvailable
     in
     div []
         [ div [ class "flex flex-wrap -mx-2" ]
             (List.indexedMap (viewCard model loggedIn) availableCards)
         , if List.length outOfStockCards > 0 then
             div []
-                [ p [ class " ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
+                [ p [ class "ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
                     [ text <| loggedIn.shared.translators.t "shop.out_of_stock" ]
                 , div [ class "flex flex-wrap -mx-2" ]
                     (List.indexedMap (viewCard model loggedIn) outOfStockCards)
@@ -351,12 +347,14 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             ]
         , div
-            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white overflow-hidden"
+            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white"
             ]
-            [ div [ class "w-full relative bg-gray-500" ]
-                [ img [ class "w-full h-48 object-cover", src image ] []
+            [ div [ class "w-full relative bg-gray-500 rounded-t-lg" ]
+                [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
                 , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.view shared loggedIn.accountName card.product.creator ]
+                    [ Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator card.profileSummary
+                        |> Html.map (GotProfileSummaryMsg index card.isAvailable)
+                    ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
@@ -398,6 +396,7 @@ type Msg
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | OnImageError Int
+    | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -565,6 +564,35 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
+        GotProfileSummaryMsg index isAvailable subMsg ->
+            case model.cards of
+                Loaded cards ->
+                    let
+                        targetCard =
+                            cards
+                                |> List.filter (\card -> isAvailable == card.isAvailable)
+                                |> LE.getAt index
+
+                        updatedCards =
+                            case targetCard of
+                                Just card ->
+                                    let
+                                        updatedSummary =
+                                            Profile.Summary.update subMsg card.profileSummary
+                                    in
+                                    LE.updateIf (.product >> .id >> (==) card.product.id)
+                                        (\c -> { c | profileSummary = updatedSummary })
+                                        cards
+
+                                Nothing ->
+                                    cards
+                    in
+                    { model | cards = Loaded updatedCards }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
 updateCard msg cardIndex transform ({ model } as uResult) =
@@ -685,3 +713,6 @@ msgToString msg =
 
         OnImageError _ ->
             [ "OnImageError" ]
+
+        GotProfileSummaryMsg _ _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

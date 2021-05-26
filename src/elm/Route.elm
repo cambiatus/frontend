@@ -179,7 +179,7 @@ communityFullDomain shared subdomain =
             externalCommunityLink shared subdomain Root
     in
     { communityUrl
-        | host = String.replace "localhost" "staging.cambiatus.io" communityUrl.host
+        | host = String.replace "localhost" "cambiatus.io" communityUrl.host
         , port_ = Nothing
     }
         |> Url.toString

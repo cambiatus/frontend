@@ -48,6 +48,7 @@ type alias Shared =
     , graphqlSecret : String
     , canReadClipboard : Bool
     , useSubdomain : Bool
+    , selectedCommunity : Maybe Eos.Symbol
     }
 
 
@@ -70,6 +71,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , graphqlSecret = flags.graphqlSecret
     , canReadClipboard = flags.canReadClipboard
     , useSubdomain = flags.useSubdomain
+    , selectedCommunity = flags.selectedCommunity
     }
 
 
