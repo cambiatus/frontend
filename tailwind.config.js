@@ -42,6 +42,7 @@ module.exports = {
         '300': '#e0e0e0',
         '400': '#bdbdbd',
         '500': '#E7E7E7',
+        '600': '#9E9E9E',
         '700': '#616161',
         '800': '#424242',
         '900': '#999999'
@@ -119,7 +120,6 @@ module.exports = {
     },
     extend: {
       colors: {
-        'body-blue': '#45469B',
         grey: '#D4D4D4',
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
