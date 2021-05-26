@@ -65,7 +65,8 @@ body {
 
 .input {
   /* Form input comes from tailwind/custom-forms */
-  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
+  /* @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black; */
+  @apply h-12 text-sm outline-none transition-colors duration-100 text-black;
 }
 
 .input:disabled {

@@ -201,7 +201,7 @@ module.exports = {
     require('tailwindcss-transforms')({
       '3d': false // defaults to false
     }),
-    require('@tailwindcss/custom-forms'),
+    require('@tailwindcss/forms'),
     // Pseudo-class to support hover on the parent's first child
     function ({ addVariant, e }) {
       addVariant('first-hover', ({ modifySelectors, separator }) => {
