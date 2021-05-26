@@ -75,6 +75,23 @@ module.exports = {
       lg: '1024px',
       xl: '1280px'
     },
+    // Needed after updating to tailwind 2.0
+    fontSize: {
+      caption: '0.625rem',
+      xs: '0.75rem',
+      sm: '0.875rem',
+      menu: '0.9125rem',
+      body: '0.9rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      heading: '1.375rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+      '4xl': '2.25rem',
+      '5xl': '3rem',
+      '6xl': '4rem'
+    },
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
@@ -131,16 +148,6 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Nunito', 'sans-serif']
-      },
-      fontSize: {
-        caption: '.625rem',
-        menu: '.9125rem',
-        body: '.9rem',
-        heading: '1.375rem',
-        'title-h3': '1.875rem',
-        'title-h2': '2.375rem',
-        'title-h1': '3rem',
-        hero: '3.375rem'
       },
       spacing: {
         '7': '1.75rem',
