@@ -341,7 +341,7 @@ viewCard model ({ shared } as loggedIn) index card =
                       else
                         div [ class "flex flex-none w-full items-center" ]
                             [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.product.price) ]
-                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
+                            , div [ class "uppercase text-xs ml-2 font-extralight font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]
                         [ div [ class "bg-gray-100 absolute uppercase text-xs px-2" ]
@@ -371,7 +371,7 @@ viewCard model ({ shared } as loggedIn) index card =
               else
                 div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.product.price) ]
-                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
+                    , div [ class "uppercase text-xs font-extralight mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                     ]
             , div [ class "px-6 pb-6" ]
                 [ div [ class "bg-gray-200 flex items-center justify-left text-xs px-4" ]

@@ -512,7 +512,7 @@ viewCard ({ shared } as loggedIn) card model =
                     [ div [ class "flex items-center" ]
                         [ div [ class "text-2xl text-green font-medium" ]
                             [ text (String.fromFloat card.product.price) ]
-                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ]
+                        , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
                             [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                         ]
                     , div [ class "flex" ]

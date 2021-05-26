@@ -333,7 +333,7 @@ viewAmount amount symbol =
                 "text-red"
     in
     [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ]
+    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ]
         [ text <| Eos.symbolToSymbolCodeString symbol ]
     ]
 
