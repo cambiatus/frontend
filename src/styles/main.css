@@ -367,7 +367,7 @@ textarea.input {
 }
 
 .claim-photo-thumb:hover {
-  @apply shadow-outline;
+  @apply ring;
 }
 /* End of Claims */
 
