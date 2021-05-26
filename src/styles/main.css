@@ -63,10 +63,12 @@ body {
 
 /* Input */
 
+.form-input {
+  @apply bg-white border border-gray-500 rounded-md px-2 py-3 placeholder-gray-400 focus:border-blue-600 focus:ring focus:ring-opacity-50 focus:ring-blue-600;
+}
+
 .input {
-  /* Form input comes from tailwind/custom-forms */
-  /* @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black; */
-  @apply h-12 text-sm outline-none transition-colors duration-100 text-black;
+  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
 }
 
 .input:disabled {
@@ -103,15 +105,10 @@ textarea.input {
 /* Select */
 
 .select {
-  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100;
+  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100 focus:border-purple-500;
 }
 
 /* End of Select */
-
-.input:focus,
-.select:focus {
-  @apply border-purple-500;
-}
 
 /* Elm Select*/
 

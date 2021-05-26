@@ -55,7 +55,10 @@ module.exports = {
       lightred: '#F56565',
       yellow: '#FFD200',
       green: '#8ACC9E',
-      blue: '#00BDCD',
+      blue: {
+        DEFAULT: '#00BDCD',
+        '600': '#4299E1'
+      },
       orange: {
         '100': '#FAB15C',
         '300': '#F99D33',
