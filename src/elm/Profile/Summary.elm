@@ -42,13 +42,17 @@ initMany isLarge amount =
 
 
 type Msg
-    = OpenedInfo
+    = Ignored
+    | OpenedInfo
     | ClosedInfo
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
+        Ignored ->
+            model
+
         OpenedInfo ->
             { model | isExpanded = True }
 
@@ -62,7 +66,7 @@ update msg model =
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 view shared loggedInAccount profile model =
-    div []
+    div [ Utils.onClickPreventAll Ignored ]
         [ desktopView shared loggedInAccount profile model
         , mobileView shared loggedInAccount profile model
         ]
@@ -117,9 +121,9 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 in
                 a (Route.href route :: attrs)
     in
-    container [ class "flex flex-col items-center" ]
+    div [ class "flex flex-col items-center" ]
         [ div [ class ("rounded-full relative " ++ size) ]
-            [ Avatar.view profile.avatar size
+            [ container [] [ Avatar.view profile.avatar size ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
                     [ viewUserInfo profile ]
@@ -178,6 +182,9 @@ viewUserInfo profile =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
         OpenedInfo ->
             [ "OpenedInfo" ]
 
