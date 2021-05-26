@@ -54,6 +54,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
 import Profile exposing (Model)
@@ -82,11 +83,28 @@ init shared accountName authToken =
     ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
+        , fetchCommunity shared authToken Nothing
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
     )
+
+
+fetchCommunity : Shared -> String -> Maybe Eos.Symbol -> Cmd Msg
+fetchCommunity shared authToken maybeToken =
+    if shared.useSubdomain then
+        Api.Graphql.query shared
+            (Just authToken)
+            (Community.subdomainQuery (Shared.communityDomain shared))
+            CompletedLoadCommunity
+
+    else
+        let
+            symbol =
+                Maybe.Extra.or maybeToken shared.selectedCommunity
+                    |> Maybe.withDefault Eos.cambiatusSymbol
+        in
+        Api.Graphql.query shared (Just authToken) (Community.symbolQuery symbol) CompletedLoadCommunity
 
 
 fetchTranslations : String -> Shared -> Cmd Msg
@@ -110,7 +128,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
+        , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -788,7 +806,8 @@ updateExternal externalMsg ({ shared } as model) =
                             newModel.profile
 
                         Just profile_ ->
-                            RemoteData.Success { profile_ | communities = communityInfo :: profile_.communities }
+                            RemoteData.Success
+                                { profile_ | communities = communityInfo :: profile_.communities }
             in
             { defaultResult
                 | model = { newModel | profile = profileWithCommunity }
@@ -1288,7 +1307,7 @@ loadCommunity ({ shared } as model) symbol =
 auto invites), and set it as default or redirect the user
 -}
 setCommunity : Community.Model -> Model -> ( Model, Cmd Msg )
-setCommunity community model =
+setCommunity community ({ shared } as model) =
     let
         isMember =
             case profile model of
@@ -1297,6 +1316,13 @@ setCommunity community model =
 
                 Nothing ->
                     List.any (.account >> (==) model.accountName) community.members
+
+        storeCommunityCmd =
+            Eos.symbolToString community.symbol
+                |> Ports.storeSelectedCommunitySymbol
+
+        sharedWithCommunity =
+            { shared | selectedCommunity = Just community.symbol }
     in
     if isMember then
         let
@@ -1323,17 +1349,20 @@ setCommunity community model =
         ( { model
             | selectedCommunity = RemoteData.Success community
             , profile = newProfile
+            , shared = sharedWithCommunity
           }
-        , Cmd.none
+        , storeCommunityCmd
         )
 
     else if community.hasAutoInvite then
-        ( { model | selectedCommunity = RemoteData.Success community }
-        , Route.pushUrl model.shared.navKey Route.Join
+        ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+        , Cmd.batch [ Route.pushUrl shared.navKey Route.Join, storeCommunityCmd ]
         )
 
     else
-        ( { model | selectedCommunity = RemoteData.Success community }, Route.pushUrl model.shared.navKey Route.CommunitySelector )
+        ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+        , Cmd.batch [ Route.pushUrl shared.navKey Route.CommunitySelector, storeCommunityCmd ]
+        )
 
 
 signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )
@@ -1358,10 +1387,7 @@ selectCommunity ({ shared, authToken } as model) community route =
 
     else
         ( { model | selectedCommunity = RemoteData.Loading }
-        , Api.Graphql.query shared
-            (Just authToken)
-            (Community.subdomainQuery community.subdomain)
-            CompletedLoadCommunity
+        , fetchCommunity shared authToken (Just community.symbol)
         )
 
 

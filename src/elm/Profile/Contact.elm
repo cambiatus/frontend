@@ -3,6 +3,7 @@ module Profile.Contact exposing
     , Model
     , Msg
     , Normalized
+    , circularIcon
     , contactTypeColor
     , contactTypeToIcon
     , contactTypeToString
@@ -29,7 +30,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Attribute, Html, button, div, img, p, text)
+import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
@@ -625,6 +626,43 @@ contactTypeToIcon class_ isInverted contactType =
                 Icons.whatsapp class_
 
 
+circularIcon : String -> Normalized -> Html msg
+circularIcon class_ (Normalized normalized) =
+    let
+        bgColor =
+            case normalized.contactType of
+                Phone ->
+                    "bg-orange-300"
+
+                Instagram ->
+                    "bg-instagram"
+
+                Telegram ->
+                    "bg-telegram"
+
+                Whatsapp ->
+                    "bg-whatsapp"
+    in
+    case normalized.contactType of
+        Telegram ->
+            a [ toHref (Normalized normalized) ]
+                [ contactTypeToIcon class_ False normalized.contactType
+                ]
+
+        _ ->
+            a
+                [ class
+                    (String.join " "
+                        [ "p-2 rounded-full flex items-center justify-center"
+                        , bgColor
+                        , class_
+                        ]
+                    )
+                , toHref (Normalized normalized)
+                ]
+                [ contactTypeToIcon "fill-current text-white object-contain" True normalized.contactType ]
+
+
 toHref : Normalized -> Attribute msg
 toHref (Normalized { contactType, contact }) =
     case contactType of
@@ -650,16 +688,16 @@ contactTypeColor : ContactType -> String
 contactTypeColor contactType =
     case contactType of
         Phone ->
-            "text-phone"
+            "phone"
 
         Instagram ->
-            "text-instagram"
+            "instagram"
 
         Telegram ->
-            "text-telegram"
+            "telegram"
 
         Whatsapp ->
-            "text-whatsapp"
+            "whatsapp"
 
 
 viewInput : Translators -> Basic -> Html Msg

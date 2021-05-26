@@ -630,15 +630,19 @@ updateGuestUResult toStatus toMsg model uResult =
                                         | communities =
                                             case guest.community of
                                                 RemoteData.Success community ->
-                                                    { symbol = community.symbol
-                                                    , name = community.name
-                                                    , logo = community.logo
-                                                    , subdomain = community.subdomain
-                                                    , hasShop = community.hasShop
-                                                    , hasActions = community.hasObjectives
-                                                    , hasKyc = community.hasKyc
-                                                    }
-                                                        :: user.communities
+                                                    if List.any (\c -> c.symbol == community.symbol) user.communities then
+                                                        user.communities
+
+                                                    else
+                                                        { symbol = community.symbol
+                                                        , name = community.name
+                                                        , logo = community.logo
+                                                        , subdomain = community.subdomain
+                                                        , hasShop = community.hasShop
+                                                        , hasActions = community.hasObjectives
+                                                        , hasKyc = community.hasKyc
+                                                        }
+                                                            :: user.communities
 
                                                 _ ->
                                                     user.communities

@@ -305,11 +305,6 @@ viewError { t, tr } validation =
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
 viewAutoCompleteAccount shared model form isDisabled community =
     let
-        users : List Profile.Minimal
-        users =
-            community.members
-                |> List.map (\u -> { name = u.name, account = u.account, avatar = u.avatar })
-
         selectedUsers =
             Maybe.map (\v -> [ v ]) form.selectedProfile
                 |> Maybe.withDefault []
@@ -319,7 +314,7 @@ viewAutoCompleteAccount shared model form isDisabled community =
             (Select.view
                 (selectConfiguration shared isDisabled)
                 model.autoCompleteState
-                users
+                community.members
                 selectedUsers
             )
         ]
