@@ -95,10 +95,8 @@ module.exports = {
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
-      'sm': '0.125rem',
-      DEFAULT: '.4rem',
-      default: '.4rem',
-      label: '.313rem', // 5px
+      DEFAULT: '0.4rem',
+      label: '0.313rem',
       'md': '0.375rem',
       'lg': '1.25rem',
       'full': '9999px',
@@ -170,7 +168,6 @@ module.exports = {
       borderRadius: {
         xs: '0.125rem',
         sm: '0.25rem',
-        default: '0.75rem',
         super: '2.5rem'
       },
       inset: {
