@@ -152,7 +152,7 @@ view ({ shared } as loggedIn) model =
     { title = t "community.create.title"
     , content =
         div [ class "bg-white pb-10" ]
-            [ Page.viewHeader loggedIn (t "community.create.title") Route.Dashboard
+            [ Page.viewHeader loggedIn (t "community.create.title")
             , Html.form
                 [ class "container mx-auto px-4"
                 , onSubmit SubmittedForm

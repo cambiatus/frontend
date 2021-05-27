@@ -254,8 +254,8 @@ viewTitle text_ =
         [ text text_ ]
 
 
-viewHeader : LoggedIn.Model -> String -> Route -> Html msg
-viewHeader { shared, routeHistory } title route =
+viewHeader : LoggedIn.Model -> String -> Html msg
+viewHeader { shared, routeHistory } title =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
         [ div [ class "flex container mx-auto" ]
             [ a

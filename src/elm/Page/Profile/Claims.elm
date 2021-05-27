@@ -84,7 +84,7 @@ view loggedIn model =
 
                 Loaded profileSummaries profileClaims ->
                     div []
-                        [ Page.viewHeader loggedIn pageTitle Route.Dashboard
+                        [ Page.viewHeader loggedIn pageTitle
                         , viewResults loggedIn profileSummaries profileClaims
                         , viewClaimVoteModal loggedIn model
                         ]

@@ -133,7 +133,7 @@ view loggedIn model =
 
                 RemoteData.Success _ ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn pageTitle Route.Profile
+                        [ Page.viewHeader loggedIn pageTitle
                         , div [ class "px-4" ]
                             [ KycForm.view
                                 loggedIn.shared.translators

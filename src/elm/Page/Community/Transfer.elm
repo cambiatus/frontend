@@ -230,7 +230,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
             text (loggedIn.shared.translators.t s)
     in
     div [ class "bg-white" ]
-        [ Page.viewHeader loggedIn (shared.translators.t "transfer.title") Route.Dashboard
+        [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
         , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]

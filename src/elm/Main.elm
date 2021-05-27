@@ -7,7 +7,6 @@ import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Log
-import Maybe.Extra
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage

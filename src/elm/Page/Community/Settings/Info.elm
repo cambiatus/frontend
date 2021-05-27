@@ -677,7 +677,7 @@ view ({ shared } as loggedIn) model =
 
                 RemoteData.Success community ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn title Route.CommunitySettings
+                        [ Page.viewHeader loggedIn title
                         , view_ loggedIn community model
                         ]
     in

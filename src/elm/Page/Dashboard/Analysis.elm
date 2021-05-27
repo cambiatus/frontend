@@ -128,7 +128,7 @@ view ({ shared } as loggedIn) model =
                                 |> Html.map (ClaimMsg claimIndex)
                     in
                     div []
-                        [ Page.viewHeader loggedIn pageTitle Route.Dashboard
+                        [ Page.viewHeader loggedIn pageTitle
                         , div [ class "container mx-auto px-4 mb-10" ]
                             [ viewFilters loggedIn model
                             , if List.length claims > 0 then
