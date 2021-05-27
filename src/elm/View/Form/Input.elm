@@ -154,7 +154,7 @@ input options =
                     "input"
 
                 TextArea ->
-                    "form-textarea"
+                    "form-input"
     in
     Html.div [ class "relative" ]
         [ inputElement
