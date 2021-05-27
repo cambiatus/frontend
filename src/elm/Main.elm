@@ -162,17 +162,17 @@ type Status
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
-    | Claim Claim.Model
+    | Claim Int Int Claim.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
-    | Login Login.Model
+    | Login (Maybe Route) Login.Model
     | Profile Profile.Model
-    | ProfilePublic ProfilePublic.Model
+    | ProfilePublic String ProfilePublic.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
     | ProfileAddContact ProfileAddContact.Model
-    | Register (Maybe String) Register.Model
+    | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
@@ -323,13 +323,13 @@ update msg model =
                     )
                     msgToString
 
-        ( GotRegisterMsg subMsg, Register maybeInvitation subModel ) ->
+        ( GotRegisterMsg subMsg, Register maybeInvitation maybeRedirect subModel ) ->
             -- Will return  a function expecting a Guest Model
             Register.update maybeInvitation subMsg subModel
                 -- will return a function expecting an UpdateResult
                 -- The composition operator will take the result of the above function and use as
                 -- an input for the below function
-                >> updateGuestUResult (Register maybeInvitation) GotRegisterMsg model
+                >> updateGuestUResult (Register maybeInvitation maybeRedirect) GotRegisterMsg model
                 -- provides the above composed function with the initial guest input
                 |> withGuest
 
@@ -338,9 +338,9 @@ update msg model =
                 >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn
 
-        ( GotLoginMsg subMsg, Login subModel ) ->
+        ( GotLoginMsg subMsg, Login maybeRedirect subModel ) ->
             Login.update subMsg subModel
-                >> updateGuestUResult Login GotLoginMsg model
+                >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
@@ -378,9 +378,9 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
-        ( GotProfilePublicMsg subMsg, ProfilePublic subModel ) ->
+        ( GotProfilePublicMsg subMsg, ProfilePublic profileName subModel ) ->
             ProfilePublic.update subMsg subModel
-                >> updateLoggedInUResult ProfilePublic GotProfilePublicMsg model
+                >> updateLoggedInUResult (ProfilePublic profileName) GotProfilePublicMsg model
                 |> withLoggedIn
 
         ( GotProfileMsg subMsg, Profile subModel ) ->
@@ -453,9 +453,9 @@ update msg model =
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn
 
-        ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
+        ( GotVerifyClaimMsg subMsg, Claim objectiveId actionId subModel ) ->
             Claim.update subMsg subModel
-                >> updateLoggedInUResult Claim GotVerifyClaimMsg model
+                >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn
 
         ( GotViewTransferScreenMsg subMsg, ViewTransfer transferId subModel ) ->
@@ -492,7 +492,7 @@ broadcastGuest broadcastMessage status =
     let
         maybeMsg =
             case status of
-                Register _ _ ->
+                Register _ _ _ ->
                     Register.receiveBroadcast broadcastMessage
                         |> Maybe.map GotRegisterMsg
 
@@ -806,9 +806,8 @@ statusToRoute status =
                 Just actionId ->
                     Just (Route.EditAction subModel.objectiveId actionId)
 
-        Claim subModel ->
-            -- TODO
-            Just (Route.Claim 0 0 subModel.claimId)
+        Claim objectiveId actionId subModel ->
+            Just (Route.Claim objectiveId actionId subModel.claimId)
 
         Notification _ ->
             Just Route.Notification
@@ -816,16 +815,14 @@ statusToRoute status =
         Dashboard _ ->
             Just Route.Dashboard
 
-        Login _ ->
-            -- TODO
-            Just (Route.Login Nothing)
+        Login maybeRedirect _ ->
+            Just (Route.Login maybeRedirect)
 
         Profile _ ->
             Just Route.Profile
 
-        ProfilePublic _ ->
-            -- TODO
-            Just (Route.ProfilePublic "")
+        ProfilePublic profileName _ ->
+            Just (Route.ProfilePublic profileName)
 
         ProfileEditor _ ->
             Just Route.ProfileEditor
@@ -839,9 +836,8 @@ statusToRoute status =
         ProfileAddContact _ ->
             Just Route.ProfileAddContact
 
-        Register inviteId _ ->
-            -- TODO
-            Just (Route.Register inviteId Nothing)
+        Register inviteId maybeRedirect _ ->
+            Just (Route.Register inviteId maybeRedirect)
 
         Shop filter _ ->
             Just (Route.Shop filter)
@@ -1001,13 +997,13 @@ changeRouteTo maybeRoute model =
         Just (Route.Register invitation maybeRedirect) ->
             withGuest
                 (Register.init invitation)
-                (updateStatusWith (Register invitation) GotRegisterMsg)
+                (updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg)
                 maybeRedirect
 
         Just (Route.Login maybeRedirect) ->
             withGuest
                 Login.init
-                (updateStatusWith Login GotLoginMsg)
+                (updateStatusWith (Login maybeRedirect) GotLoginMsg)
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
@@ -1027,7 +1023,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.ProfilePublic account) ->
             (\loggedIn -> ProfilePublic.init loggedIn account)
-                >> updateStatusWith ProfilePublic GotProfilePublicMsg model
+                >> updateStatusWith (ProfilePublic account) GotProfilePublicMsg model
                 |> withLoggedIn (Route.ProfilePublic account)
 
         Just Route.Profile ->
@@ -1122,7 +1118,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
-                >> updateStatusWith Claim GotVerifyClaimMsg model
+                >> updateStatusWith (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
         Just (Route.Shop maybeFilter) ->
@@ -1468,10 +1464,10 @@ view model =
         PaymentHistory subModel ->
             viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
-        Register _ subModel ->
+        Register _ _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
 
-        Login subModel ->
+        Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         Notification subModel ->
@@ -1507,13 +1503,13 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
-        Claim subModel ->
+        Claim _ _ subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
 
-        ProfilePublic subModel ->
+        ProfilePublic _ subModel ->
             viewLoggedIn subModel LoggedIn.ProfilePublic GotProfilePublicMsg ProfilePublic.view
 
         Profile subModel ->
