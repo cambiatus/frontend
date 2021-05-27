@@ -613,7 +613,7 @@ viewTransferForm { shared } card model =
             , p [ class "large__card__name" ] [ text accountName ]
             ]
         , div [ class "large__card__quant" ]
-            [ formField
+            [ div []
                 [ label [ for fieldId.units ]
                     [ text (t "shop.transfer.units_label") ]
                 , input
@@ -634,7 +634,7 @@ viewTransferForm { shared } card model =
                     span [ class "field-error" ]
                         [ text <| t (getValidationMessage form.unitValidation) ]
                 ]
-            , formField
+            , div []
                 [ label [ for fieldId.price ]
                     [ text (t "shop.transfer.quantity_label" ++ " (" ++ saleSymbol ++ ")") ]
                 , input
@@ -652,26 +652,24 @@ viewTransferForm { shared } card model =
         , p [ class "large__card__balance" ]
             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
         , div []
-            [ formField
-                [ label [ for fieldId.units ]
-                    [ text (t "shop.transfer.memo_label") ]
-                , textarea
-                    [ class "input"
-                    , id fieldId.memo
-                    , value form.memo
-                    , onInput EnteredMemo
-                    , required True
-                    , placeholder (t "shop.transfer.default_memo")
-                    , Html.Attributes.min "0"
-                    ]
-                    []
-                , if form.memoValidation == Valid then
-                    text ""
-
-                  else
-                    span [ class "field-error" ]
-                        [ text <| t (getValidationMessage form.memoValidation) ]
+            [ label [ for fieldId.units ]
+                [ text (t "shop.transfer.memo_label") ]
+            , textarea
+                [ class "input"
+                , id fieldId.memo
+                , value form.memo
+                , onInput EnteredMemo
+                , required True
+                , placeholder (t "shop.transfer.default_memo")
+                , Html.Attributes.min "0"
                 ]
+                []
+            , if form.memoValidation == Valid then
+                text ""
+
+              else
+                span [ class "field-error" ]
+                    [ text <| t (getValidationMessage form.memoValidation) ]
             ]
         ]
 
@@ -705,11 +703,6 @@ getValidationMessage validation =
 
                 MemoTooLong ->
                     "shop.transfer.errors.memoTooLong"
-
-
-formField : List (Html msg) -> Html msg
-formField =
-    div [ class "form-field" ]
 
 
 fieldSuffix : String -> String

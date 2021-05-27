@@ -1801,7 +1801,7 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummaries selectedVerifier
 
 viewFieldErrors : List String -> Html msg
 viewFieldErrors errors =
-    div [ class "form-field-error" ]
+    div []
         (List.map
             (\e ->
                 span [ class "form-error" ] [ text e ]
