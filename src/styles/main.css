@@ -61,11 +61,27 @@ body {
 
 /* End of Button */
 
-/* Input */
+/* Form */
+
+.focused-input {
+  @apply focus:ring focus:ring-offset-0 focus:ring-blue-600 focus:ring-opacity-50 focus:border-blue-600;
+}
 
 .form-input {
-  @apply bg-white border border-gray-500 rounded-md px-2 py-3 placeholder-gray-400 focus:border-blue-600 focus:ring focus:ring-opacity-50 focus:ring-blue-600;
+  @apply bg-white border border-gray-500 rounded-md px-2 py-3 placeholder-gray-400 focused-input;
 }
+
+.form-checkbox {
+  @apply text-green rounded-sm focused-input;
+}
+
+.form-checkbox:checked {
+  background-image: url('/icons/checkbox.svg');
+}
+
+/* End of form */
+
+/* Input */
 
 .input {
   @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
