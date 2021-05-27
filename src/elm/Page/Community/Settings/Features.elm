@@ -10,7 +10,6 @@ import Json.Encode
 import Page
 import Ports
 import RemoteData
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -90,7 +89,7 @@ view loggedIn model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white flex flex-col items-center" ]
-                        [ Page.viewHeader loggedIn title Route.CommunitySettings
+                        [ Page.viewHeader loggedIn title
                         , div
                             [ class "container divide-y px-4"
                             ]
@@ -126,7 +125,7 @@ view loggedIn model =
 
                 ( RemoteData.Success _, Unauthorized ) ->
                     div []
-                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
                             [ text (translate "community.edit.unauthorized") ]
                         ]

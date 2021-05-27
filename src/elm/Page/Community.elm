@@ -21,7 +21,6 @@ import Icons
 import Json.Encode exposing (Value)
 import Page
 import RemoteData
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
@@ -100,7 +99,7 @@ view loggedIn model =
 
                 RemoteData.Success community ->
                     div []
-                        [ Page.viewHeader loggedIn community.name Route.Dashboard
+                        [ Page.viewHeader loggedIn community.name
                         , div [ class "bg-white p-4" ]
                             [ div [ class "container mx-auto px-4" ]
                                 [ div [ class "h-24 w-24 rounded-full mx-auto" ]

@@ -75,7 +75,7 @@ view ({ shared } as loggedIn) model =
 
                 Loaded notifications ->
                     div []
-                        [ Page.viewHeader loggedIn (shared.translators.t "notifications.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn (shared.translators.t "notifications.title")
                         , div [ class "container mx-auto px-4 mb-6" ]
                             [ if notifications == [] then
                                 viewEmptyNotifications loggedIn.shared

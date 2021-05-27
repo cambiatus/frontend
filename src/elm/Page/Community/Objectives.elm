@@ -70,7 +70,7 @@ view ({ shared } as loggedIn) model =
             case ( loggedIn.selectedCommunity, model.status ) of
                 ( RemoteData.Success community, Loaded ) ->
                     div []
-                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural") Route.Community
+                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural")
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
@@ -84,7 +84,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success _, Unauthorized ) ->
                     div []
-                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
                             [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]

@@ -172,7 +172,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success _, Authorized editStatus ) ->
                     div []
-                        [ Page.viewHeader loggedIn (t "community.objectives.title") Route.Objectives
+                        [ Page.viewHeader loggedIn (t "community.objectives.title")
                         , case editStatus of
                             NewObjective objForm ->
                                 viewForm loggedIn objForm False

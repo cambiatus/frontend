@@ -50,7 +50,7 @@ view ({ shared } as loggedIn) model =
                     title
 
                 header =
-                    Page.viewHeader loggedIn headerText Route.Dashboard
+                    Page.viewHeader loggedIn headerText
             in
             case ( loggedIn.selectedCommunity, model ) of
                 ( _, Loading ) ->
@@ -73,7 +73,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success _, Unauthorized ) ->
                     div []
-                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
                             [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]

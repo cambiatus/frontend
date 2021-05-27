@@ -100,7 +100,7 @@ view loggedIn model =
 
                 LoadFailed error ->
                     div []
-                        [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn (t "transfer_result.title")
                         , Page.fullPageGraphQLError (t "transfer_result.title") error
                         ]
 
@@ -108,7 +108,7 @@ view loggedIn model =
                     case maybeTransfer of
                         Just transfer ->
                             div []
-                                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                                [ Page.viewHeader loggedIn (t "transfer_result.title")
                                 , div []
                                     [ viewTransfer loggedIn transfer state
                                     , viewDetails loggedIn transfer profileSummaries state

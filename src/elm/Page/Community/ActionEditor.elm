@@ -1259,7 +1259,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn (t "community.actions.title") Route.Objectives
+                        [ Page.viewHeader loggedIn (t "community.actions.title")
                         , viewForm loggedIn community model
                         ]
 

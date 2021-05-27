@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
@@ -160,17 +161,17 @@ type Status
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
-    | Claim Claim.Model
+    | Claim Int Int Claim.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
-    | Login Login.Model
+    | Login (Maybe Route) Login.Model
     | Profile Profile.Model
-    | ProfilePublic ProfilePublic.Model
+    | ProfilePublic String ProfilePublic.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
     | ProfileAddContact ProfileAddContact.Model
-    | Register (Maybe String) Register.Model
+    | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
     | ShopViewer String ShopViewer.Model
@@ -321,13 +322,13 @@ update msg model =
                     )
                     msgToString
 
-        ( GotRegisterMsg subMsg, Register maybeInvitation subModel ) ->
+        ( GotRegisterMsg subMsg, Register maybeInvitation maybeRedirect subModel ) ->
             -- Will return  a function expecting a Guest Model
             Register.update maybeInvitation subMsg subModel
                 -- will return a function expecting an UpdateResult
                 -- The composition operator will take the result of the above function and use as
                 -- an input for the below function
-                >> updateGuestUResult (Register maybeInvitation) GotRegisterMsg model
+                >> updateGuestUResult (Register maybeInvitation maybeRedirect) GotRegisterMsg model
                 -- provides the above composed function with the initial guest input
                 |> withGuest
 
@@ -336,9 +337,9 @@ update msg model =
                 >> updateLoggedInUResult PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn
 
-        ( GotLoginMsg subMsg, Login subModel ) ->
+        ( GotLoginMsg subMsg, Login maybeRedirect subModel ) ->
             Login.update subMsg subModel
-                >> updateGuestUResult Login GotLoginMsg model
+                >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
@@ -376,9 +377,9 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
-        ( GotProfilePublicMsg subMsg, ProfilePublic subModel ) ->
+        ( GotProfilePublicMsg subMsg, ProfilePublic profileName subModel ) ->
             ProfilePublic.update subMsg subModel
-                >> updateLoggedInUResult ProfilePublic GotProfilePublicMsg model
+                >> updateLoggedInUResult (ProfilePublic profileName) GotProfilePublicMsg model
                 |> withLoggedIn
 
         ( GotProfileMsg subMsg, Profile subModel ) ->
@@ -451,9 +452,9 @@ update msg model =
                 >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn
 
-        ( GotVerifyClaimMsg subMsg, Claim subModel ) ->
+        ( GotVerifyClaimMsg subMsg, Claim objectiveId actionId subModel ) ->
             Claim.update subMsg subModel
-                >> updateLoggedInUResult Claim GotVerifyClaimMsg model
+                >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn
 
         ( GotViewTransferScreenMsg subMsg, ViewTransfer transferId subModel ) ->
@@ -490,7 +491,7 @@ broadcastGuest broadcastMessage status =
     let
         maybeMsg =
             case status of
-                Register _ _ ->
+                Register _ _ _ ->
                     Register.receiveBroadcast broadcastMessage
                         |> Maybe.map GotRegisterMsg
 
@@ -746,6 +747,127 @@ hideFeedback model =
             { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
+statusToRoute : Status -> Maybe Route
+statusToRoute status =
+    case status of
+        Redirect ->
+            Nothing
+
+        NotFound ->
+            Nothing
+
+        ComingSoon ->
+            Nothing
+
+        PaymentHistory subModel ->
+            subModel.recipientProfile.account
+                |> Eos.Account.nameToString
+                |> Route.PaymentHistory
+                |> Just
+
+        Community _ ->
+            Just Route.CommunitySettings
+
+        CommunityEditor _ ->
+            Just Route.NewCommunity
+
+        CommunitySettings _ ->
+            Just Route.CommunitySettings
+
+        CommunitySettingsFeatures _ ->
+            Just Route.CommunitySettingsFeatures
+
+        CommunitySettingsInfo _ ->
+            Just Route.CommunitySettingsInfo
+
+        CommunitySettingsCurrency _ ->
+            Just Route.CommunitySettingsCurrency
+
+        CommunitySelector _ ->
+            Just Route.CommunitySelector
+
+        Objectives _ ->
+            Just Route.Objectives
+
+        ObjectiveEditor subModel ->
+            case subModel.objectiveId of
+                Nothing ->
+                    Just Route.NewObjective
+
+                Just objectiveId ->
+                    Just (Route.EditObjective objectiveId)
+
+        ActionEditor subModel ->
+            case subModel.actionId of
+                Nothing ->
+                    Just (Route.NewAction subModel.objectiveId)
+
+                Just actionId ->
+                    Just (Route.EditAction subModel.objectiveId actionId)
+
+        Claim objectiveId actionId subModel ->
+            Just (Route.Claim objectiveId actionId subModel.claimId)
+
+        Notification _ ->
+            Just Route.Notification
+
+        Dashboard _ ->
+            Just Route.Dashboard
+
+        Login maybeRedirect _ ->
+            Just (Route.Login maybeRedirect)
+
+        Profile _ ->
+            Just Route.Profile
+
+        ProfilePublic profileName _ ->
+            Just (Route.ProfilePublic profileName)
+
+        ProfileEditor _ ->
+            Just Route.ProfileEditor
+
+        ProfileAddKyc _ ->
+            Just Route.ProfileAddKyc
+
+        ProfileClaims subModel ->
+            Just (Route.ProfileClaims subModel.accountString)
+
+        ProfileAddContact _ ->
+            Just Route.ProfileAddContact
+
+        Register inviteId maybeRedirect _ ->
+            Just (Route.Register inviteId maybeRedirect)
+
+        Shop filter _ ->
+            Just (Route.Shop filter)
+
+        ShopEditor maybeSaleId _ ->
+            case maybeSaleId of
+                Nothing ->
+                    Just Route.NewSale
+
+                Just saleId ->
+                    Just (Route.EditSale saleId)
+
+        ShopViewer saleId _ ->
+            Just (Route.ViewSale saleId)
+
+        ViewTransfer transferId _ ->
+            Just (Route.ViewTransfer transferId)
+
+        Invite subModel ->
+            Just (Route.Invite subModel.invitationId)
+
+        Join _ ->
+            Just Route.Join
+
+        Transfer subModel ->
+            Just (Route.Transfer subModel.maybeTo)
+
+        Analysis _ ->
+            Just Route.Analysis
+
+
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
 changeRouteTo maybeRoute model =
     let
@@ -811,6 +933,23 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
+        addRouteToHistory status loggedIn =
+            case statusToRoute status of
+                Nothing ->
+                    loggedIn
+
+                Just newRoute ->
+                    case loggedIn.routeHistory of
+                        (_ :: second :: rest) as routeHistory ->
+                            if newRoute == second then
+                                { loggedIn | routeHistory = newRoute :: rest }
+
+                            else
+                                { loggedIn | routeHistory = newRoute :: routeHistory }
+
+                        routeHistory ->
+                            { loggedIn | routeHistory = newRoute :: routeHistory }
+
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -818,7 +957,7 @@ changeRouteTo maybeRoute model =
                         ( newModel, newCmd ) =
                             fn loggedIn
                     in
-                    ( newModel
+                    ( { newModel | session = addRouteToHistory newModel.status loggedIn |> Page.LoggedIn }
                     , Cmd.batch
                         [ newCmd
 
@@ -865,13 +1004,13 @@ changeRouteTo maybeRoute model =
         Just (Route.Register invitation maybeRedirect) ->
             withGuest
                 (Register.init invitation)
-                (updateStatusWith (Register invitation) GotRegisterMsg)
+                (updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg)
                 maybeRedirect
 
         Just (Route.Login maybeRedirect) ->
             withGuest
                 Login.init
-                (updateStatusWith Login GotLoginMsg)
+                (updateStatusWith (Login maybeRedirect) GotLoginMsg)
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
@@ -891,7 +1030,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.ProfilePublic account) ->
             (\loggedIn -> ProfilePublic.init loggedIn account)
-                >> updateStatusWith ProfilePublic GotProfilePublicMsg model
+                >> updateStatusWith (ProfilePublic account) GotProfilePublicMsg model
                 |> withLoggedIn (Route.ProfilePublic account)
 
         Just Route.Profile ->
@@ -986,7 +1125,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
-                >> updateStatusWith Claim GotVerifyClaimMsg model
+                >> updateStatusWith (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
         Just (Route.Shop maybeFilter) ->
@@ -1332,10 +1471,10 @@ view model =
         PaymentHistory subModel ->
             viewLoggedIn subModel LoggedIn.PaymentHistory GotPaymentHistoryMsg PaymentHistory.view
 
-        Register _ subModel ->
+        Register _ _ subModel ->
             viewGuest subModel Guest.Register GotRegisterMsg Register.view
 
-        Login subModel ->
+        Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         Notification subModel ->
@@ -1371,13 +1510,13 @@ view model =
         ActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.ActionEditor GotActionEditorMsg ActionEditor.view
 
-        Claim subModel ->
+        Claim _ _ subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
 
-        ProfilePublic subModel ->
+        ProfilePublic _ subModel ->
             viewLoggedIn subModel LoggedIn.ProfilePublic GotProfilePublicMsg ProfilePublic.view
 
         Profile subModel ->

@@ -302,7 +302,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                 ( t "menu.create", t "shop.create_offer" )
     in
     div [ class "bg-white" ]
-        [ Page.viewHeader loggedIn pageTitle (Route.Shop Shop.All)
+        [ Page.viewHeader loggedIn pageTitle
         , div
             [ class "container mx-auto" ]
             [ div [ class "px-4 py-6" ]
