@@ -226,5 +226,6 @@ module.exports = {
   purge: [
     './src/**/*.elm',
     './src/index.js'
-  ]
+  ],
+  mode: 'jit'
 }
