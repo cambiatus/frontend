@@ -2,10 +2,12 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
 import Log
+import Maybe.Extra
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
@@ -746,6 +748,131 @@ hideFeedback model =
             { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
+statusToRoute : Status -> Maybe Route
+statusToRoute status =
+    case status of
+        Redirect ->
+            Nothing
+
+        NotFound ->
+            Nothing
+
+        ComingSoon ->
+            Nothing
+
+        PaymentHistory subModel ->
+            subModel.recipientProfile.account
+                |> Eos.Account.nameToString
+                |> Route.PaymentHistory
+                |> Just
+
+        Community _ ->
+            Just Route.CommunitySettings
+
+        CommunityEditor _ ->
+            Just Route.NewCommunity
+
+        CommunitySettings _ ->
+            Just Route.CommunitySettings
+
+        CommunitySettingsFeatures _ ->
+            Just Route.CommunitySettingsFeatures
+
+        CommunitySettingsInfo _ ->
+            Just Route.CommunitySettingsInfo
+
+        CommunitySettingsCurrency _ ->
+            Just Route.CommunitySettingsCurrency
+
+        CommunitySelector _ ->
+            Just Route.CommunitySelector
+
+        Objectives _ ->
+            Just Route.Objectives
+
+        ObjectiveEditor subModel ->
+            case subModel.objectiveId of
+                Nothing ->
+                    Just Route.NewObjective
+
+                Just objectiveId ->
+                    Just (Route.EditObjective objectiveId)
+
+        ActionEditor subModel ->
+            case subModel.actionId of
+                Nothing ->
+                    Just (Route.NewAction subModel.objectiveId)
+
+                Just actionId ->
+                    Just (Route.EditAction subModel.objectiveId actionId)
+
+        Claim subModel ->
+            -- TODO
+            Just (Route.Claim 0 0 subModel.claimId)
+
+        Notification _ ->
+            Just Route.Notification
+
+        Dashboard _ ->
+            Just Route.Dashboard
+
+        Login _ ->
+            -- TODO
+            Just (Route.Login Nothing)
+
+        Profile _ ->
+            Just Route.Profile
+
+        ProfilePublic _ ->
+            -- TODO
+            Just (Route.ProfilePublic "")
+
+        ProfileEditor _ ->
+            Just Route.ProfileEditor
+
+        ProfileAddKyc _ ->
+            Just Route.ProfileAddKyc
+
+        ProfileClaims subModel ->
+            Just (Route.ProfileClaims subModel.accountString)
+
+        ProfileAddContact _ ->
+            Just Route.ProfileAddContact
+
+        Register inviteId _ ->
+            -- TODO
+            Just (Route.Register inviteId Nothing)
+
+        Shop filter _ ->
+            Just (Route.Shop filter)
+
+        ShopEditor maybeSaleId _ ->
+            case maybeSaleId of
+                Nothing ->
+                    Just Route.NewSale
+
+                Just saleId ->
+                    Just (Route.EditSale saleId)
+
+        ShopViewer saleId _ ->
+            Just (Route.ViewSale saleId)
+
+        ViewTransfer transferId _ ->
+            Just (Route.ViewTransfer transferId)
+
+        Invite subModel ->
+            Just (Route.Invite subModel.invitationId)
+
+        Join _ ->
+            Just Route.Join
+
+        Transfer subModel ->
+            Just (Route.Transfer subModel.maybeTo)
+
+        Analysis _ ->
+            Just Route.Analysis
+
+
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
 changeRouteTo maybeRoute model =
     let
@@ -818,7 +945,16 @@ changeRouteTo maybeRoute model =
                         ( newModel, newCmd ) =
                             fn loggedIn
                     in
-                    ( newModel
+                    ( { newModel
+                        | session =
+                            Page.LoggedIn
+                                { loggedIn
+                                    | previousRoute =
+                                        Maybe.Extra.or
+                                            (statusToRoute model.status)
+                                            loggedIn.previousRoute
+                                }
+                      }
                     , Cmd.batch
                         [ newCmd
 

@@ -153,6 +153,7 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
+    , previousRoute : Maybe Route.Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
@@ -175,6 +176,7 @@ type alias Model =
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
 initModel shared maybePrivateKey_ accountName authToken =
     { shared = shared
+    , previousRoute = Nothing
     , accountName = accountName
     , profile = RemoteData.Loading
     , selectedCommunity = RemoteData.Loading
