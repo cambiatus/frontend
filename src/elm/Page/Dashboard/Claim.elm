@@ -18,7 +18,6 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Route
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Strftime
@@ -105,7 +104,7 @@ view ({ shared } as loggedIn) model =
 
                     Loaded claim profileSummaries ->
                         div [ class "bg-gray-100" ]
-                            [ Page.viewHeader loggedIn claim.action.description Route.Analysis
+                            [ Page.viewHeader loggedIn claim.action.description
                             , div [ class "mt-10 mb-8 flex items-center justify-center" ]
                                 [ Profile.Summary.view shared loggedIn.accountName claim.claimer profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)

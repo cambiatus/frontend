@@ -10,7 +10,6 @@ import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 
@@ -74,7 +73,7 @@ view loggedIn status =
 
                 Loaded profile ->
                     div [ class "flex-grow flex flex-col" ]
-                        [ Page.viewHeader loggedIn (t "menu.profile") Route.Dashboard
+                        [ Page.viewHeader loggedIn (t "menu.profile")
                         , viewUserInfo loggedIn
                             profile
                             Public

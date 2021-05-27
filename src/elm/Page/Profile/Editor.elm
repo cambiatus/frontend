@@ -101,7 +101,7 @@ view_ loggedIn model profile =
             t "menu.edit" ++ " " ++ ("menu.profile" |> t |> String.toLower)
 
         pageHeader =
-            Page.viewHeader loggedIn title Route.Profile
+            Page.viewHeader loggedIn title
 
         avatar =
             case model.avatar of

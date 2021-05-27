@@ -109,7 +109,7 @@ view ({ shared } as loggedIn) model =
 
                 RemoteData.Success profile ->
                     div [ class "flex-grow flex flex-col" ]
-                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
+                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile")
                         , viewUserInfo loggedIn
                             profile
                             Private

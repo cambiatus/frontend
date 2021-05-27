@@ -410,13 +410,13 @@ view loggedIn model =
             case model.status of
                 LoadingSale _ ->
                     div []
-                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        [ Page.viewHeader loggedIn ""
                         , Page.fullPageLoading loggedIn.shared
                         ]
 
                 InvalidId invalidId ->
                     div [ class "container mx-auto px-4" ]
-                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        [ Page.viewHeader loggedIn ""
                         , div []
                             [ text (invalidId ++ " is not a valid Sale Id") ]
                         ]
@@ -432,7 +432,7 @@ view loggedIn model =
                                     cardFromSale sale
                             in
                             div []
-                                [ Page.viewHeader loggedIn cardData.product.title (Route.Shop Shop.All)
+                                [ Page.viewHeader loggedIn cardData.product.title
                                 , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
                                 ]
 

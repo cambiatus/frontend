@@ -106,7 +106,7 @@ view ({ shared } as loggedIn) model =
     { title = shared.translators.t "contact_form.options"
     , content =
         div [ class "bg-white pb-8" ]
-            [ Page.viewHeader loggedIn (shared.translators.t "contact_form.options") Route.Profile
+            [ Page.viewHeader loggedIn (shared.translators.t "contact_form.options")
             , case model of
                 RemoteData.Success contacts ->
                     Contact.view shared.translators contacts
