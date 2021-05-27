@@ -68,7 +68,7 @@ body {
 }
 
 .form-input {
-  @apply bg-white border border-gray-500 rounded-md px-2 py-3 placeholder-gray-400 focused-input;
+  @apply bg-white border border-gray-500 rounded-md px-3 py-2 placeholder-gray-400 focused-input;
 }
 
 .form-checkbox {
@@ -77,6 +77,13 @@ body {
 
 .form-checkbox:checked {
   background-image: url('/icons/checkbox.svg');
+}
+
+.form-select {
+  @apply form-input pr-10 bg-no-repeat focus:outline-none focused-input;
+  background-position: right 0.5rem center;
+  background-size: 1.5em;
+  background-image: url('/icons/select-arrow.svg');
 }
 
 /* End of form */
