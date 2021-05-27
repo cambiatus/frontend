@@ -934,6 +934,23 @@ changeRouteTo maybeRoute model =
                     , Route.replaceUrl shared.navKey redirect
                     )
 
+        addRouteToHistory status loggedIn =
+            case statusToRoute status of
+                Nothing ->
+                    loggedIn
+
+                Just newRoute ->
+                    case loggedIn.routeHistory of
+                        (_ :: second :: rest) as routeHistory ->
+                            if newRoute == second then
+                                { loggedIn | routeHistory = newRoute :: rest }
+
+                            else
+                                { loggedIn | routeHistory = newRoute :: routeHistory }
+
+                        routeHistory ->
+                            { loggedIn | routeHistory = newRoute :: routeHistory }
+
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -941,16 +958,7 @@ changeRouteTo maybeRoute model =
                         ( newModel, newCmd ) =
                             fn loggedIn
                     in
-                    ( { newModel
-                        | session =
-                            Page.LoggedIn
-                                { loggedIn
-                                    | previousRoute =
-                                        Maybe.Extra.or
-                                            (statusToRoute model.status)
-                                            loggedIn.previousRoute
-                                }
-                      }
+                    ( { newModel | session = addRouteToHistory newModel.status loggedIn |> Page.LoggedIn }
                     , Cmd.batch
                         [ newCmd
 

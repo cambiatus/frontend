@@ -255,12 +255,14 @@ viewTitle text_ =
 
 
 viewHeader : LoggedIn.Model -> String -> Route -> Html msg
-viewHeader { shared, previousRoute } title route =
+viewHeader { shared, routeHistory } title route =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
         [ div [ class "flex container mx-auto" ]
             [ a
                 [ class "flex items-center mr-4"
-                , previousRoute
+                , routeHistory
+                    |> List.drop 1
+                    |> List.head
                     |> Maybe.withDefault Route.Dashboard
                     |> Route.href
                 ]
