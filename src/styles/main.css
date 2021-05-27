@@ -80,10 +80,22 @@ body {
 }
 
 .form-select {
-  @apply form-input pr-10 bg-no-repeat focus:outline-none focused-input;
+  @apply form-input pr-10 bg-no-repeat focus:outline-none;
   background-position: right 0.5rem center;
   background-size: 1.5em;
   background-image: url('/icons/select-arrow.svg');
+}
+
+.form-radio {
+  @apply rounded-full border h-6 w-6 focused-input;
+}
+
+.form-radio:checked {
+  background-image: url('/icons/radio.svg');
+}
+
+.form-radio:checked:disabled {
+  background-image: url('/icons/radio-disabled.svg');
 }
 
 /* End of form */

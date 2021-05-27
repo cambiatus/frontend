@@ -5,25 +5,6 @@ module.exports = {
   // 1) Overwriting the default behaviour (this is what 'fontWeight' is doing)
   // 2) Add a new behaviour to the current one (using the 'extend' key below)
   theme: {
-    // Customize checkbox Icon for forms
-    customForms: theme => ({
-      default: {
-        radio: {
-          width: theme('spacing.6'),
-          height: theme('spacing.6'),
-          icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
-            '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#8ACC9E"/>' +
-            '</svg>',
-          '&:disabled': {
-            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
-            '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#999999"/>' +
-            '</svg>'
-          }
-        }
-      }
-    }),
     // Colors used on the 'Design System'
     colors: {
       black: '#000000',
