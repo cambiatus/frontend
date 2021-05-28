@@ -1,4 +1,4 @@
-module View.Form.Select exposing (disable, enable, init, toHtml, withOption)
+module View.Form.Select exposing (disable, enable, init, toHtml, withAttrs, withDisabled, withOption)
 
 {- | Creates a Cambiatus-style dropdown
 
@@ -20,7 +20,15 @@ import View.Form
 -}
 init : String -> String -> (String -> a) -> String -> Maybe (List String) -> Select a
 init id label onInput value problems =
-    { options = [], onInput = onInput, id = id, label = label, value = value, disabled = False, problems = problems }
+    { options = []
+    , onInput = onInput
+    , id = id
+    , label = label
+    , value = value
+    , disabled = False
+    , extraAttrs = []
+    , problems = problems
+    }
 
 
 disable : Select a -> Select a
@@ -31,6 +39,16 @@ disable select =
 enable : Select a -> Select a
 enable select =
     { select | disabled = False }
+
+
+withDisabled : Bool -> Select a -> Select a
+withDisabled isDisabled select =
+    { select | disabled = isDisabled }
+
+
+withAttrs : List (Html.Attribute a) -> Select a -> Select a
+withAttrs extraAttrs select =
+    { select | extraAttrs = select.extraAttrs ++ extraAttrs }
 
 
 {-| Adds a new option field to a dropdown
@@ -63,7 +81,14 @@ toHtml : Select a -> Html a
 toHtml select =
     Html.div [ class "mb-10" ]
         [ View.Form.label select.id select.label
-        , Html.select [ class "form-select select w-full", onInput select.onInput, disabled select.disabled ] select.options
+        , Html.select
+            ([ class "form-select select w-full"
+             , onInput select.onInput
+             , disabled select.disabled
+             ]
+                ++ select.extraAttrs
+            )
+            select.options
         , ul []
             (select.problems
                 |> Maybe.withDefault []
@@ -83,6 +108,7 @@ type alias Select a =
     , id : String
     , value : String
     , disabled : Bool
+    , extraAttrs : List (Html.Attribute a)
     , problems : Maybe (List String)
     }
 

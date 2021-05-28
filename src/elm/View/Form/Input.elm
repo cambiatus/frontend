@@ -55,7 +55,7 @@ and character counters.
 
 import Eos
 import Html exposing (Html, div, input, li, span, text, ul)
-import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, value)
+import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -248,7 +248,7 @@ withCounterType counterType options =
 asNumeric : InputOptions a -> InputOptions a
 asNumeric options =
     options
-        |> withAttrs [ attribute "inputmode" "numeric" ]
+        |> withAttrs [ attribute "inputmode" "numeric", type_ "number" ]
 
 
 
