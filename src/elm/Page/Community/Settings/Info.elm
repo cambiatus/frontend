@@ -322,7 +322,12 @@ update msg model ({ shared } as loggedIn) =
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
                                             , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
-                                            , website = model.websiteInput
+                                            , website =
+                                                if String.startsWith "https://" model.websiteInput || String.startsWith "http://" model.websiteInput then
+                                                    model.websiteInput
+
+                                                else
+                                                    "https://" ++ model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
