@@ -1,8 +1,8 @@
 module View.Form.FileUploader exposing
     ( init
-    , withAttrs, withVariant
+    , withAttrs, withVariant, withFileTypes
     , toHtml
-    , Variant(..)
+    , FileType(..), Variant(..)
     )
 
 {-| Creates a Cambiatus-style file uploader that supports pictures
@@ -23,7 +23,7 @@ module View.Form.FileUploader exposing
 
 # Helpers
 
-@docs withAttrs, withVariant
+@docs withAttrs, withVariant, withFileTypes
 
 
 # Converting to HTML
@@ -57,6 +57,7 @@ type alias Options msg =
     , status : RemoteData Http.Error String
     , extraAttrs : List (Html.Attribute msg)
     , variant : Variant
+    , fileTypes : List FileType
     }
 
 
@@ -79,6 +80,11 @@ type Variant
     | Large
 
 
+type FileType
+    = Image
+    | PDF
+
+
 {-| Initializes a file uploader
 -}
 init : InitialOptions msg -> Options msg
@@ -89,6 +95,7 @@ init options =
     , status = options.status
     , extraAttrs = []
     , variant = Large
+    , fileTypes = [ Image ]
     }
 
 
@@ -103,9 +110,18 @@ withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
+{-| Select the `Variant` to be used
+-}
 withVariant : Variant -> Options msg -> Options msg
 withVariant variant options =
     { options | variant = variant }
+
+
+{-| Define the file types we can accept
+-}
+withFileTypes : List FileType -> Options msg -> Options msg
+withFileTypes fileTypes options =
+    { options | fileTypes = fileTypes }
 
 
 
@@ -136,6 +152,24 @@ onFileChange toMsg =
         |> on "change"
 
 
+fileTypeToString : FileType -> String
+fileTypeToString fileType =
+    case fileType of
+        Image ->
+            "image/*"
+
+        PDF ->
+            ".pdf"
+
+
+acceptFileTypes : List FileType -> Html.Attribute msg
+acceptFileTypes fileTypes =
+    fileTypes
+        |> List.map fileTypeToString
+        |> String.join ","
+        |> accept
+
+
 viewLarge : Translators -> Options msg -> Html msg
 viewLarge ({ t } as translators) options =
     let
@@ -159,7 +193,7 @@ viewLarge ({ t } as translators) options =
                 [ id options.id
                 , class "hidden-img-input"
                 , type_ "file"
-                , accept "image/*"
+                , acceptFileTypes options.fileTypes
                 , onFileChange options.onFileInput
                 , multiple False
                 ]
@@ -205,7 +239,7 @@ viewSmall { t } options =
                 [ id options.id
                 , class "profile-img-input"
                 , type_ "file"
-                , accept "image/*"
+                , acceptFileTypes options.fileTypes
                 , onFileChange options.onFileInput
                 , multiple False
                 ]

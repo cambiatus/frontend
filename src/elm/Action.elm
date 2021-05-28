@@ -586,6 +586,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                 , status = photoStatus
                 }
                 |> FileUploader.withAttrs [ class "mb-4 md:w-2/3" ]
+                |> FileUploader.withFileTypes [ FileUploader.Image, FileUploader.PDF ]
                 |> FileUploader.toHtml translators
             , div [ class "md:flex" ]
                 [ button
