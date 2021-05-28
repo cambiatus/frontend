@@ -265,7 +265,7 @@ viewPageHeader model shared =
                 ]
                 [ Shared.langFlag shared.language
                 , if model.showLanguageNav then
-                    div [ class "flex-grow whitespace-no-wrap" ]
+                    div [ class "flex-grow whitespace-nowrap" ]
                         [ text (String.toUpper model.shared.language) ]
 
                   else

@@ -5,50 +5,19 @@ module.exports = {
   // 1) Overwriting the default behaviour (this is what 'fontWeight' is doing)
   // 2) Add a new behaviour to the current one (using the 'extend' key below)
   theme: {
-    // Customize checkbox Icon for forms
-    customForms: theme => ({
-      default: {
-        checkbox: {
-          width: theme('spacing.6'),
-          height: theme('spacing.6'),
-          icon: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<rect x="0.5" y="0.5" width="21" height="21" rx="2.5" fill="white" stroke="#E7E7E7"/>' +
-            '<rect x="5" y="5" width="12" height="12" rx="2" fill="#8ACC9E"/>' +
-            '</svg>'
-        },
-        radio: {
-          width: theme('spacing.6'),
-          height: theme('spacing.6'),
-          icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
-            '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#8ACC9E"/>' +
-            '</svg>',
-          '&:disabled': {
-            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<circle cx="12" cy="12" r="11.5" fill="white" stroke="#E7E7E7"/>' +
-            '<path d="M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629  6 12 6C15.3137 6 18 8.68629 18 12Z" fill="#999999"/>' +
-            '</svg>'
-          }
-        }
-      }
-    }),
     // Colors used on the 'Design System'
     colors: {
       black: '#000000',
       white: '#FFFFFF',
       gray: {
-        // '100': '#f5f5f5', // Tailwind original gray-100
         '100': '#F8F8F8',
         '200': '#eeeeee',
         '300': '#e0e0e0',
         '400': '#bdbdbd',
         '500': '#E7E7E7',
-        // '500': '#9e9e9e', // Tailwind original gray-500
-        // '600': '#757575',
-        '600': '#9e9e9e', // Tailwind original gray-500
+        '600': '#9E9E9E',
         '700': '#616161',
         '800': '#424242',
-        // '900': '#212121' // Tailwind original gray-900
         '900': '#999999'
       },
       purple: {
@@ -59,7 +28,10 @@ module.exports = {
       lightred: '#F56565',
       yellow: '#FFD200',
       green: '#8ACC9E',
-      blue: '#00BDCD',
+      blue: {
+        DEFAULT: '#00BDCD',
+        '600': '#4299E1'
+      },
       orange: {
         '100': '#FAB15C',
         '300': '#F99D33',
@@ -70,13 +42,38 @@ module.exports = {
         '500': '#45469B'
       }
     },
+    // Needed after updating to tailwind 2.0
+    screens: {
+      'xs-max': {
+        'max': '320px'
+      },
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px'
+    },
+    // Needed after updating to tailwind 2.0
+    fontSize: {
+      caption: '0.625rem',
+      xs: '0.75rem',
+      sm: '0.875rem',
+      menu: '0.9125rem',
+      body: '0.9rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      heading: '1.375rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+      '4xl': '2.25rem',
+      '5xl': '3rem',
+      '6xl': '4rem'
+    },
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
-      'sm': '0.125rem',
-      DEFAULT: '.4rem',
-      default: '.4rem',
-      label: '.313rem', // 5px
+      DEFAULT: '0.4rem',
+      label: '0.313rem',
       'md': '0.375rem',
       'lg': '1.25rem',
       'full': '9999px',
@@ -99,7 +96,6 @@ module.exports = {
     },
     extend: {
       colors: {
-        'body-blue': '#45469B',
         grey: '#D4D4D4',
         'light-grey': '#EEEEEE',
         'text-grey': '#666666',
@@ -126,16 +122,6 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Nunito', 'sans-serif']
-      },
-      fontSize: {
-        caption: '.625rem',
-        menu: '.9125rem',
-        body: '.9rem',
-        heading: '1.375rem',
-        'title-h3': '1.875rem',
-        'title-h2': '2.375rem',
-        'title-h1': '3rem',
-        hero: '3.375rem'
       },
       spacing: {
         heading: '1.375rem',
@@ -165,7 +151,6 @@ module.exports = {
       borderRadius: {
         xs: '0.125rem',
         sm: '0.25rem',
-        default: '0.75rem',
         super: '2.5rem'
       },
       inset: {
@@ -181,11 +166,6 @@ module.exports = {
       opacity: {
         '10': '0.1',
         '60': '0.6'
-      },
-      screens: {
-        'xs-max': {
-          'max': '320px'
-        }
       }
     }
   },
@@ -210,7 +190,7 @@ module.exports = {
     require('tailwindcss-transforms')({
       '3d': false // defaults to false
     }),
-    require('@tailwindcss/custom-forms'),
+    require('@tailwindcss/forms'),
     // Pseudo-class to support hover on the parent's first child
     function ({ addVariant, e }) {
       addVariant('first-hover', ({ modifySelectors, separator }) => {
@@ -246,5 +226,6 @@ module.exports = {
   purge: [
     './src/**/*.elm',
     './src/index.js'
-  ]
+  ],
+  mode: 'jit'
 }

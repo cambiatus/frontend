@@ -575,7 +575,7 @@ viewAmount amount symbol =
                 "text-red"
     in
     [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ] [ text symbol ]
+    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ] [ text symbol ]
     ]
 
 
@@ -647,7 +647,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
                         , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                         ]
                         [ div []
@@ -667,7 +667,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:ml-0"
                         , Route.href (Route.Shop Shop.UserSales)
                         ]
                         [ div []

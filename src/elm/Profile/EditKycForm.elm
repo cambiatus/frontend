@@ -149,7 +149,7 @@ view { t } model =
     div [ class "md:max-w-sm md:mx-auto py-6" ]
         [ form
             [ onSubmit (Submitted model) ]
-            [ div [ class "form-field mb-6" ]
+            [ div [ class "mb-6" ]
                 [ label [ class "input-label block" ]
                     [ text (t "register.form.document.type")
                     ]
@@ -174,7 +174,7 @@ view { t } model =
                         [ text (t "register.form.document.nite.label") ]
                     ]
                 ]
-            , div [ class "form-field mb-6" ]
+            , div [ class "mb-6" ]
                 [ label [ class "input-label block" ]
                     [ text (t title) ]
                 , input
@@ -189,7 +189,7 @@ view { t } model =
                     []
                 , showProblem DocumentNumber
                 ]
-            , div [ class "form-field mb-10" ]
+            , div [ class "mb-10" ]
                 [ label [ class "input-label block" ]
                     [ text (t "register.form.phone.label") ]
                 , input

@@ -224,7 +224,7 @@ viewAmount { shared } transfer state =
                     [ text <|
                         String.fromFloat transfer.value
                     ]
-                , span [ class "ml-2 text-caption text-green font-thin" ]
+                , span [ class "ml-2 text-caption text-green font-extralight" ]
                     [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             ]
