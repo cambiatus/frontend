@@ -300,7 +300,11 @@ viewClaimCard { shared, accountName } profileSummary claim =
                     ( t "all_analysis.disapproved", "text-red" )
 
                 Pending ->
-                    ( t "all_analysis.pending", "text-black" )
+                    if claim.action.isCompleted then
+                        ( t "community.actions.completed", "text-black" )
+
+                    else
+                        ( t "all_analysis.pending", "text-black" )
 
         claimRoute =
             Route.Claim

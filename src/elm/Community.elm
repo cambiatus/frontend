@@ -711,17 +711,20 @@ communityPreviewSymbolQuery symbol =
         communityPreviewSelectionSet
 
 
-defaultCommunityCoverPhoto : String
-defaultCommunityCoverPhoto =
-    "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/832a40918a9042c994b92ecde4e49705"
-
-
 communityPreviewImage :
     Bool
     -> Shared
     -> { community | name : String, uploads : List String, memberCount : Int }
     -> Html msg
 communityPreviewImage isLeftSide { translators } community =
+    let
+        defaultImage =
+            if isLeftSide then
+                "/images/community-bg-desktop.svg"
+
+            else
+                "/images/community-bg-mobile.svg"
+    in
     div
         [ class "relative"
         , classList
@@ -738,7 +741,7 @@ communityPreviewImage isLeftSide { translators } community =
                     ]
                 , src
                     (List.head community.uploads
-                        |> Maybe.withDefault defaultCommunityCoverPhoto
+                        |> Maybe.withDefault defaultImage
                     )
                 ]
                 []
