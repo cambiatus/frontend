@@ -1,8 +1,8 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
-    , Orientation(..)
     , tooltip
+    , bgNoScroll
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -27,6 +27,11 @@ state or configuration, such as loading indicators and containers
 # Elements
 
 @docs tooltip
+
+
+# Helpers
+
+@docs bgNoScroll
 
 -}
 
@@ -61,13 +66,6 @@ loadingLogoAnimatedFluid =
 -- CONTAINERS
 
 
-type Orientation
-    = Up
-    | Down
-    | Left
-    | Right
-
-
 dialogBubble : { class_ : String, minWidth : Int } -> List (Html msg) -> Html msg
 dialogBubble { class_, minWidth } elements =
     node "dialog-bubble"
@@ -88,3 +86,14 @@ tooltip { t } tooltipMessage =
         , div [ class "icon-tooltip-content" ]
             [ text (t tooltipMessage) ]
         ]
+
+
+
+-- HELPERS
+
+
+{-| A node that prevents the body from scrolling
+-}
+bgNoScroll : List (Html.Attribute msg) -> Html msg
+bgNoScroll attrs =
+    node "bg-no-scroll" attrs []

@@ -93,6 +93,31 @@ window.customElements.define('dialog-bubble',
   }
 )
 
+window.customElements.define('bg-no-scroll',
+  class BgNoScroll extends HTMLElement {
+    constructor () {
+      super()
+      this._preventScrollingClass = 'overflow-hidden'
+    }
+
+    connectedCallback () {
+      if (document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.add(this._preventScrollingClass)
+    }
+
+    disconnectedCallback () {
+      if (!document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.remove(this._preventScrollingClass)
+    }
+  }
+)
+
 // =========================================
 // App startup
 // =========================================
