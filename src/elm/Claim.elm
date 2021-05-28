@@ -32,8 +32,8 @@ import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
+import Html exposing (Html, a, button, div, embed, iframe, img, label, p, strong, text)
+import Html.Attributes exposing (class, classList, disabled, height, href, id, src, style, target, width)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -339,6 +339,7 @@ viewClaimCard { shared, accountName } profileSummary claim =
                             [ img
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)
                                 , src url
+                                , class "w-full h-full"
                                 ]
                                 []
                             ]
