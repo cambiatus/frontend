@@ -189,7 +189,7 @@ viewPassphrase ({ shared } as guest) model =
             }
             |> Input.withType Input.TextArea
             |> Input.withAttrs
-                [ class "form-textarea min-w-full block text-base"
+                [ class "min-w-full block text-base"
                 , classList
                     [ ( "field-with-error", not (List.isEmpty model.problems) )
                     , ( "pb-16", shared.canReadClipboard )

@@ -93,6 +93,31 @@ window.customElements.define('dialog-bubble',
   }
 )
 
+window.customElements.define('bg-no-scroll',
+  class BgNoScroll extends HTMLElement {
+    constructor () {
+      super()
+      this._preventScrollingClass = 'overflow-hidden'
+    }
+
+    connectedCallback () {
+      if (document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.add(this._preventScrollingClass)
+    }
+
+    disconnectedCallback () {
+      if (!document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.remove(this._preventScrollingClass)
+    }
+  }
+)
+
 // =========================================
 // App startup
 // =========================================
@@ -109,17 +134,26 @@ const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
+const cookieDomain = () => {
+  const environments = ['staging', 'demo']
+  let hostnameParts = window.location.hostname.split('.')
+  const isFirstPartEnv = environments.includes(hostnameParts[0]) || window.location.hostname === 'cambiatus.io'
+  if (isFirstPartEnv) {
+    hostnameParts = ['.', ...hostnameParts]
+  } else {
+    hostnameParts.shift()
+  }
+
+  return hostnameParts.length < 2 ? '' : `domain=${hostnameParts.join('.')}`
+}
+
 const getItem = (key) => {
   const result = document.cookie.match('(^|[^;]+)\\s*' + key + '\\s*=\\s*([^;]+)')
   return result ? result.pop() : null
 }
 
 const removeItem = (key) => {
-  let hostnameParts = window.location.hostname.split('.')
-  hostnameParts.shift()
-  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
-  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${domain}`
-
+  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}`
   window.localStorage.removeItem(key)
 }
 
@@ -128,11 +162,7 @@ const setItem = (key, value) => {
   // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
   // This is equivalent to the date 2038-01-19 04:14:07
   const maxExpirationDate = 2147483647
-  let hostnameParts = window.location.hostname.split('.')
-  hostnameParts.shift()
-  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
-
-  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${domain}; path=/; SameSite=Strict`
+  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict`
 }
 
 const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]

@@ -9,13 +9,17 @@ import RemoteData
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Task
 import UpdateResult as UR
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+    , Cmd.batch
+        [ Task.succeed RequestedReloadCommunity |> Task.perform identity
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        ]
     )
 
 
@@ -31,6 +35,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | RequestedReloadCommunity
 
 
 initModel : Model
@@ -132,7 +137,7 @@ settingCard title action description route =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg _ loggedIn =
+update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
@@ -140,6 +145,10 @@ update msg _ loggedIn =
 
             else
                 UR.init Unauthorized
+
+        RequestedReloadCommunity ->
+            UR.init model
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -156,4 +165,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
-            [ "CompletedLoad" ]
+            [ "CompletedLoadCommunity" ]
+
+        RequestedReloadCommunity ->
+            [ "RequestedReloadCommunity" ]

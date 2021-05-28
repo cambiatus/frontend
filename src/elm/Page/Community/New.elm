@@ -559,7 +559,12 @@ validateModel shared accountName model =
                         , hasObjectives = True
                         , hasKyc = False
                         , hasAutoInvite = model.hasAutoInvite
-                        , website = model.website
+                        , website =
+                            if String.startsWith "https://" model.website || String.startsWith "http://" model.website then
+                                model.website
+
+                            else
+                                "http://" ++ model.website
                         }
                 )
                 symbolValidation

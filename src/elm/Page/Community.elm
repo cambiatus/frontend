@@ -24,6 +24,7 @@ import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
+import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -36,7 +37,7 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel loggedIn
-    , Cmd.none
+    , Task.succeed RequestedReloadCommunity |> Task.perform identity
     )
 
 
@@ -241,7 +242,7 @@ viewObjective loggedIn model metadata index objective =
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ div
-                        [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                        [ class "truncate overflow-hidden whitespace-nowrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
                         ]
                         [ text objective.description ]
                     ]
@@ -282,6 +283,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | RequestedReloadCommunity
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -293,6 +295,10 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        RequestedReloadCommunity ->
+            UR.init model
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -333,6 +339,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        RequestedReloadCommunity ->
+            [ "RequestedReloadCommunity" ]
 
         GotActionMsg _ ->
             [ "GotCommunityActionMsg" ]

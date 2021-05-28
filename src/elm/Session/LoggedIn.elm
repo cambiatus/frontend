@@ -846,15 +846,13 @@ updateExternal externalMsg ({ shared } as model) =
 
         ReloadResource CommunityResource ->
             let
-                ( newModel, cmd ) =
-                    case model.selectedCommunity of
-                        RemoteData.Success community ->
-                            loadCommunity model community.symbol
-
-                        _ ->
-                            ( model, Cmd.none )
+                ( _, cmd ) =
+                    model.selectedCommunity
+                        |> RemoteData.map .symbol
+                        |> RemoteData.toMaybe
+                        |> loadCommunity model
             in
-            { defaultResult | model = newModel, cmd = cmd }
+            { defaultResult | cmd = cmd }
 
         ReloadResource ProfileResource ->
             { defaultResult
@@ -1196,7 +1194,7 @@ update msg model =
         SelectedCommunity ({ symbol } as newCommunity) ->
             let
                 ( loadCommunityModel, loadCommunityCmd ) =
-                    loadCommunity model symbol
+                    loadCommunity model (Just symbol)
             in
             case model.selectedCommunity of
                 RemoteData.Success selectedCommunity ->
@@ -1292,16 +1290,13 @@ isCommunityMember model =
             False
 
 
-loadCommunity : Model -> Eos.Symbol -> ( Model, Cmd Msg )
-loadCommunity ({ shared } as model) symbol =
+loadCommunity : Model -> Maybe Eos.Symbol -> ( Model, Cmd Msg )
+loadCommunity ({ shared } as model) maybeSymbol =
     ( { model
         | showCommunitySelector = False
         , selectedCommunity = RemoteData.Loading
       }
-    , Api.Graphql.query shared
-        (Just model.authToken)
-        (Community.symbolQuery symbol)
-        CompletedLoadCommunity
+    , fetchCommunity shared model.authToken maybeSymbol
     )
 
 

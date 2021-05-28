@@ -956,8 +956,17 @@ changeRouteTo maybeRoute model =
                     let
                         ( newModel, newCmd ) =
                             fn loggedIn
+
+                        newSession =
+                            case newModel.session of
+                                Page.LoggedIn newLoggedIn ->
+                                    addRouteToHistory newModel.status newLoggedIn
+                                        |> Page.LoggedIn
+
+                                Page.Guest guest ->
+                                    Page.Guest guest
                     in
-                    ( { newModel | session = addRouteToHistory newModel.status loggedIn |> Page.LoggedIn }
+                    ( { newModel | session = newSession }
                     , Cmd.batch
                         [ newCmd
 

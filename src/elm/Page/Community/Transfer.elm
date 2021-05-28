@@ -16,9 +16,9 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Document
-import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, rows, type_, value)
-import Html.Events exposing (onInput, onSubmit)
+import Html exposing (Html, button, div, form, span, text)
+import Html.Attributes exposing (class, classList, disabled, maxlength, rows, type_, value)
+import Html.Events exposing (onSubmit)
 import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -35,7 +35,7 @@ import Transfer
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
-import View.Form.InputCounter
+import View.Form.Input as Input
 
 
 init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
@@ -235,47 +235,42 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
             [ div [ class "mb-10" ]
                 [ span [ class "input-label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
-                , div [ class "" ]
+                , div []
                     [ viewAutoCompleteAccount shared model f isDisabled community ]
                 , viewError shared.translators f.selectedProfileValidation
                 ]
-            , div [ class "mb-10" ]
-                [ span [ class "input-label" ]
-                    [ text
-                        (shared.translators.tr
-                            "account.my_wallet.transfer.amount"
-                            [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
-                        )
-                    ]
-                , div [ class "flex h-12 rounded-sm border border-gray-500" ]
-                    [ input
-                        [ class "block w-4/5 border-none px-4 py-3 outline-none"
-                        , placeholder "0"
-                        , disabled isDisabled
-                        , onInput EnteredAmount
-                        , value f.amount
-                        ]
-                        []
-                    , span
-                        [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                        [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-                    ]
-                , viewError shared.translators f.amountValidation
-                ]
-            , div [ class "mb-10" ]
-                [ span [ class "input-label" ]
-                    [ text_ "account.my_wallet.transfer.memo" ]
-                , textarea
-                    [ class "w-full input rounded-sm"
-                    , rows 5
-                    , disabled isDisabled
-                    , onInput EnteredMemo
-                    , maxlength memoMaxLength
-                    ]
-                    []
-                , View.Form.InputCounter.view shared.translators.tr memoMaxLength f.memo
-                , viewError shared.translators f.memoValidation
-                ]
+            , Input.init
+                { label =
+                    shared.translators.tr "account.my_wallet.transfer.amount"
+                        [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
+                , id = "transfer-amount-field"
+                , onInput = EnteredAmount
+                , disabled = isDisabled
+                , value = f.amount
+                , placeholder = Just "0"
+                , problems =
+                    validationToString shared.translators f.amountValidation
+                        |> Maybe.map List.singleton
+                , translators = shared.translators
+                }
+                |> Input.withCurrency community.symbol
+                |> Input.toHtml
+            , Input.init
+                { label = shared.translators.t "account.my_wallet.transfer.memo"
+                , id = "transfer-memo-field"
+                , onInput = EnteredMemo
+                , disabled = isDisabled
+                , value = f.memo
+                , placeholder = Nothing
+                , problems =
+                    validationToString shared.translators f.memoValidation
+                        |> Maybe.map List.singleton
+                , translators = shared.translators
+                }
+                |> Input.withType Input.TextArea
+                |> Input.withAttrs [ rows 5, maxlength memoMaxLength ]
+                |> Input.withCounter 255
+                |> Input.toHtml
             , div [ class "mt-6" ]
                 [ button
                     [ class "button button-primary w-full"
@@ -289,17 +284,27 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-viewError : Shared.Translators -> Validation -> Html msg
-viewError { t, tr } validation =
+validationToString : Shared.Translators -> Validation -> Maybe String
+validationToString { t, tr } validation =
     case validation of
         Valid ->
-            text ""
+            Nothing
 
         Invalid e (Just replacements) ->
-            span [ class "form-error" ] [ text (tr e replacements) ]
+            Just <| tr e replacements
 
         Invalid e Nothing ->
-            span [ class "form-error" ] [ text (t e) ]
+            Just <| t e
+
+
+viewError : Shared.Translators -> Validation -> Html msg
+viewError translators validation =
+    case validationToString translators validation of
+        Nothing ->
+            text ""
+
+        Just translatedError ->
+            span [ class "form-error" ] [ text translatedError ]
 
 
 viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
