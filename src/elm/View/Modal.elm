@@ -32,6 +32,7 @@ import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class, classList)
 import Icons
 import Utils exposing (onClickNoBubble)
+import View.Components
 
 
 
@@ -150,11 +151,10 @@ viewModalDetails options =
     in
     div
         [ class "modal fade-in" ]
-        [ div
+        [ View.Components.bgNoScroll
             [ class "modal-bg"
             , onClickNoBubble options.closeMsg
             ]
-            []
         , div
             [ class "modal-content"
             , classList [ ( "modal-content-lg", options.isLarge ) ]
