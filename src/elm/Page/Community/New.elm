@@ -564,7 +564,7 @@ validateModel shared accountName model =
                                 model.website
 
                             else
-                                "https://" ++ model.website
+                                "http://" ++ model.website
                         }
                 )
                 symbolValidation

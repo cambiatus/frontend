@@ -327,7 +327,7 @@ update msg model ({ shared } as loggedIn) =
                                                     model.websiteInput
 
                                                 else
-                                                    "https://" ++ model.websiteInput
+                                                    "http://" ++ model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
