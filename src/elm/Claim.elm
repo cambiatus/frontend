@@ -381,30 +381,32 @@ viewClaimCard { shared, accountName } claim =
 viewClaimModal : Html Msg
 viewClaimModal =
     let
-        modalBodyHeader =
-            div [ class "flex mt-16 mb-8 space-x-4" ]
-                [ div [ class "block" ]
-                    [ img
-                        [ class "rounded-full m-auto"
-                        , style "width" "78.4px"
-                        , style "height" "78.4px"
-                        , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
-                        ]
-                        []
-                    , div
-                        [ class "flex items-center bg-black rounded-label p-1 mt-4" ]
-                        [ p
-                            [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
-                            [ text "CARLA DOS SANTOS" ]
-                        ]
+        photoAndTagName =
+            div [ class "ml-8 block" ]
+                [ img
+                    [ class "rounded-full m-auto"
+                    , style "width" "78.4px"
+                    , style "height" "78.4px"
+                    , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
                     ]
-                , div [ class "block" ]
-                    [ p [] [ text "CLAIMED IN 27 OUT 2020" ]
-                    , label []
-                        [ text "This claim is"
-                        ]
-                    , div [] [ text "pending" ]
+                    []
+                , div
+                    [ class "flex items-center bg-black rounded-label p-1 mt-4"
+                    , style "width" "78.4px"
                     ]
+                    [ p
+                        [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
+                        [ text "CARLA SANTOS" ]
+                    ]
+                ]
+
+        claimDateAndState =
+            div [ class "block" ]
+                [ p [] [ text "CLAIMED IN 27 OUT 2020" ]
+                , label []
+                    [ text "This claim is"
+                    ]
+                , div [] [ text "pending" ]
                 ]
 
         rewardBox =
@@ -419,6 +421,121 @@ viewClaimModal =
                     [ p [ class "my-2" ] [ text "10" ]
                     , p [ class "input-label" ] [ text "ANALYST REWARD" ]
                     ]
+                ]
+
+        approvedBy =
+            div
+                [ class "block mt-6 h-32 space-y-4" ]
+                [ p [ class "input-label" ] [ text "APPROVED BY" ]
+                , div
+                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
+                    [ div [ class "block" ]
+                        [ img
+                            [ class "rounded-full m-auto"
+                            , style "width" "36px"
+                            , style "height" "36px"
+                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                            ]
+                            []
+                        , div
+                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
+                            , style "width" "60px"
+                            ]
+                            [ p
+                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
+                                [ text "CARLA SANTOS" ]
+                            ]
+                        ]
+                    ]
+                ]
+
+        disapprovedBy =
+            div
+                [ class "block mt-6 h-32 space-y-4" ]
+                [ p [ class "input-label" ] [ text "DISAPPROVED BY" ]
+                , div
+                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
+                    [ div [ class "block" ]
+                        [ img
+                            [ class "rounded-full m-auto"
+                            , style "width" "36px"
+                            , style "height" "36px"
+                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                            ]
+                            []
+                        , div
+                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
+                            , style "width" "60px"
+                            ]
+                            [ p
+                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
+                                [ text "CARLA SANTOS" ]
+                            ]
+                        ]
+                    ]
+                ]
+
+        pendingVote =
+            div
+                [ class "block mt-6 h-32 space-y-4" ]
+                [ p [ class "input-label" ] [ text "PENDING VOTE" ]
+                , div
+                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
+                    [ div [ class "block" ]
+                        [ img
+                            [ class "rounded-full m-auto"
+                            , style "width" "36px"
+                            , style "height" "36px"
+                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                            ]
+                            []
+                        , div
+                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
+                            , style "width" "60px"
+                            ]
+                            [ p
+                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
+                                [ text "CARLA SANTOS" ]
+                            ]
+                        ]
+                    ]
+                ]
+
+        actionDetail =
+            div
+                [ class "block mt-6" ]
+                [ p [ class "input-label" ] [ text "ACTION" ]
+                , p [ class "text-left w-full" ] [ text "Contribuir com acoes no Mercado de Doacoes" ]
+                , div
+                    [ class "relative h-auto w-auto text-center text-white" ]
+                    [ div
+                        [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
+                        [ p [ class "text-left w-full" ] [ text "VERIFICATION CODE" ]
+                        , p [ class "text-left w-full" ] [ text "431254356" ]
+                        ]
+                    , img
+                        [ class "z-0 rounded-md my-4 w-full"
+                        , style "height" "200px"
+                        , src "https://www.w3schools.com/howto/img_snow_wide.jpg"
+                        ]
+                        []
+                    ]
+                ]
+
+        header =
+            div [ class "flex mt-16 space-x-8" ]
+                [ photoAndTagName
+                , claimDateAndState
+                ]
+
+        body =
+            div
+                [ class "block" ]
+                [ rewardBox
+                , approvedBy
+                , disapprovedBy
+                , pendingVote
+                , actionDetail
                 ]
 
         footer =
@@ -456,8 +573,11 @@ viewClaimModal =
             , isVisible = True
             }
             |> Modal.withBody
-                [ modalBodyHeader
-                , rewardBox
+                [ div
+                    [ class "block space-y-6" ]
+                    [ header
+                    , body
+                    ]
                 ]
             |> Modal.withFooter [ footer ]
             |> Modal.toHtml
