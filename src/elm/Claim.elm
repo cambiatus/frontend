@@ -33,7 +33,7 @@ import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
+import Html.Attributes exposing (class, classList, disabled, hidden, href, id, src, style, target)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -42,6 +42,7 @@ import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
+import Svg exposing (text_)
 import Time
 import Utils
 import View.Modal as Modal
@@ -304,7 +305,8 @@ viewClaimCard { shared, accountName } claim =
                 claim.id
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
-        [ div
+        [ viewClaimModal
+        , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
 
@@ -334,19 +336,17 @@ viewClaimCard { shared, accountName } claim =
                     Nothing ->
                         text ""
                 ]
-            , a [ Route.href claimRoute ]
-                [ div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
-                    [ p
-                        [ class ("text-caption uppercase " ++ textColor) ]
-                        [ text claimStatus ]
-                    ]
-                , div [ class "mb-6" ]
-                    [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
-                        [ text claim.action.description ]
-                    , p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text (date claim.createdAt) ]
-                    ]
+            , div [ class "bg-gray-100 flex items-center justify-center h-6 w-32 mb-2" ]
+                [ p
+                    [ class ("text-caption uppercase " ++ textColor) ]
+                    [ text claimStatus ]
+                ]
+            , div [ class "mb-6" ]
+                [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
+                    [ text claim.action.description ]
+                , p
+                    [ class "text-gray-900 text-caption uppercase" ]
+                    [ text (date claim.createdAt) ]
                 ]
             , if
                 isValidated claim accountName
@@ -375,6 +375,92 @@ viewClaimCard { shared, accountName } claim =
                         [ text (t "dashboard.verify") ]
                     ]
             ]
+        ]
+
+
+viewClaimModal : Html Msg
+viewClaimModal =
+    let
+        modalBodyHeader =
+            div [ class "flex mt-16 mb-8 space-x-4" ]
+                [ div [ class "block" ]
+                    [ img
+                        [ class "rounded-full m-auto"
+                        , style "width" "78.4px"
+                        , style "height" "78.4px"
+                        , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                        ]
+                        []
+                    , div
+                        [ class "flex items-center bg-black rounded-label p-1 mt-4" ]
+                        [ p
+                            [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
+                            [ text "CARLA DOS SANTOS" ]
+                        ]
+                    ]
+                , div [ class "block" ]
+                    [ p [] [ text "CLAIMED IN 27 OUT 2020" ]
+                    , label []
+                        [ text "This claim is"
+                        ]
+                    , div [] [ text "pending" ]
+                    ]
+                ]
+
+        rewardBox =
+            div
+                [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-8" ]
+                [ div
+                    []
+                    [ p [ class "my-2" ] [ text "30" ]
+                    , p [ class "input-label" ] [ text "CLAIMANT REWARD" ]
+                    ]
+                , div []
+                    [ p [ class "my-2" ] [ text "10" ]
+                    , p [ class "input-label" ] [ text "ANALYST REWARD" ]
+                    ]
+                ]
+
+        footer =
+            div [ class "flex justify-center w-full space-x-4" ]
+                [ button
+                    [ class "modal-cancel"
+
+                    --, onClick closeMsg
+                    --, classList [ ( "button-disabled", isInProgress ) ]
+                    --, disabled isInProgress
+                    ]
+                    --[ text "claim.modal.secondary" ]
+                    [ text "Disapprove" ]
+                , button
+                    [ class "modal-accept"
+
+                    --, classList [ ( "button-disabled", isInProgress ) ]
+                    --, disabled isInProgress
+                    --, onClick (voteMsg claimId isApproving)
+                    ]
+                    --[ if isApproving then
+                    --[ text "claim.modal.primary_approve"
+                    [ text "Approve"
+
+                    --
+                    --else
+                    --  text_ "claim.modal.primary_disapprove"
+                    ]
+                ]
+    in
+    div
+        []
+        [ Modal.initWith
+            { closeMsg = CloseClaimModals
+            , isVisible = True
+            }
+            |> Modal.withBody
+                [ modalBodyHeader
+                , rewardBox
+                ]
+            |> Modal.withFooter [ footer ]
+            |> Modal.toHtml
         ]
 
 
