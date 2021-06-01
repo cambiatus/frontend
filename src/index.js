@@ -438,10 +438,6 @@ function storePushPref (pref) {
   debugLog(`stored push pref: ${pref}`, '')
 }
 
-// HANDLE PDF-ELEMENT PORT
-
-// app.ports.sendPdfCommand.subscribe(pdfElement.pdfCommandReceiver(app))
-
 // STORE PIN
 
 function storePin (data, pin) {
