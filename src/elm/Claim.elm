@@ -402,11 +402,11 @@ viewClaimModal =
 
         claimDateAndState =
             div [ class "block" ]
-                [ p [] [ text "CLAIMED IN 27 OUT 2020" ]
-                , label []
+                [ p [ class "text-xs" ] [ text "CLAIMED IN 27 OUT 2020" ]
+                , label [ class "text-2xl font-bold" ]
                     [ text "This claim is"
                     ]
-                , div [] [ text "pending" ]
+                , div [ class "text-2xl text-gray-600 font-bold" ] [ text "pending" ]
                 ]
 
         rewardBox =
@@ -414,11 +414,11 @@ viewClaimModal =
                 [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-8" ]
                 [ div
                     []
-                    [ p [ class "my-2" ] [ text "30" ]
+                    [ p [ class "my-2 font-bold font-medium" ] [ text "30" ]
                     , p [ class "input-label" ] [ text "CLAIMANT REWARD" ]
                     ]
                 , div []
-                    [ p [ class "my-2" ] [ text "10" ]
+                    [ p [ class "my-2 font-bold font-medium" ] [ text "10" ]
                     , p [ class "input-label" ] [ text "ANALYST REWARD" ]
                     ]
                 ]
@@ -505,13 +505,13 @@ viewClaimModal =
             div
                 [ class "block mt-6" ]
                 [ p [ class "input-label" ] [ text "ACTION" ]
-                , p [ class "text-left w-full" ] [ text "Contribuir com acoes no Mercado de Doacoes" ]
+                , p [ class "text-left text-base w-full" ] [ text "Contribuir com acoes no Mercado de Doacoes" ]
                 , div
                     [ class "relative h-auto w-auto text-center text-white" ]
                     [ div
                         [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
-                        [ p [ class "text-left w-full" ] [ text "VERIFICATION CODE" ]
-                        , p [ class "text-left w-full" ] [ text "431254356" ]
+                        [ p [ class "text-xs text-left w-full" ] [ text "VERIFICATION CODE" ]
+                        , p [ class "text-base font-bold font-normal text-left w-full" ] [ text "431254356" ]
                         ]
                     , img
                         [ class "z-0 rounded-md my-4 w-full"
@@ -541,7 +541,7 @@ viewClaimModal =
         footer =
             div [ class "flex justify-center w-full space-x-4" ]
                 [ button
-                    [ class "modal-cancel"
+                    [ class "modal-cancel text-red"
 
                     --, onClick closeMsg
                     --, classList [ ( "button-disabled", isInProgress ) ]
