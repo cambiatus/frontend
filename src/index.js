@@ -27,10 +27,12 @@ window.customElements.define('pdf-viewer',
   class PdfViewer extends HTMLElement {
     connectedCallback () {
       const url = this.getAttribute('elm-url')
+      const childClass = this.getAttribute('elm-child-class')
 
       pdfjsLib.getDocument(url).promise.then((pdf) => {
         pdf.getPage(1).then((page) => {
           const canvas = document.createElement('canvas')
+          canvas.className = childClass
 
           const width = this.clientWidth
           const height = this.clientHeight
@@ -54,6 +56,7 @@ window.customElements.define('pdf-viewer',
         if (e.message === invalidPDFError) {
           const img = document.createElement('img')
           img.src = url
+          img.className = childClass
           this.appendChild(img)
         } else {
           debugLog('pdf-viewer error', e)

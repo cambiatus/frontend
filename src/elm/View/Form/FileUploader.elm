@@ -34,7 +34,7 @@ module View.Form.FileUploader exposing
 
 import File exposing (File)
 import Html exposing (Attribute, Html, div, img, input, label, span, text)
-import Html.Attributes exposing (accept, class, for, id, multiple, src, style, type_)
+import Html.Attributes exposing (accept, class, for, id, multiple, src, type_)
 import Html.Events exposing (on)
 import Http
 import Icons
@@ -172,23 +172,10 @@ acceptFileTypes fileTypes =
 
 viewLarge : Translators -> Options msg -> Html msg
 viewLarge ({ t } as translators) options =
-    let
-        uploadedAttrs =
-            case options.status of
-                RemoteData.Success url ->
-                    [ class "bg-no-repeat bg-center bg-contain"
-                    , style "background-image" ("url(" ++ url ++ ")")
-                    ]
-
-                _ ->
-                    []
-    in
     div options.extraAttrs
         [ span [ class "input-label" ] [ text (t options.label) ]
         , label
-            (class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
-                :: uploadedAttrs
-            )
+            [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
             [ input
                 [ id options.id
                 , class "hidden-img-input"
@@ -198,21 +185,27 @@ viewLarge ({ t } as translators) options =
                 , multiple False
                 ]
                 []
-            , div []
-                [ case options.status of
-                    RemoteData.Loading ->
-                        View.Components.loadingLogoAnimated translators "text-white"
+            , case options.status of
+                RemoteData.Loading ->
+                    View.Components.loadingLogoAnimated translators "text-white"
 
-                    RemoteData.Success _ ->
-                        span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
+                RemoteData.Success url ->
+                    div [ class "w-full h-full flex items-center justify-center" ]
+                        [ span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera "" ]
+                        , if List.member PDF options.fileTypes then
+                            View.Components.pdfViewer [ class "h-full w-full" ]
+                                { url = url, childClass = "max-h-full max-w-full" }
 
-                    _ ->
-                        div [ class "text-white text-body font-bold text-center" ]
-                            [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
-                            , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
-                            ]
-                ]
+                          else
+                            img [ src url, class "max-h-full max-w-full" ] []
+                        ]
+
+                _ ->
+                    div [ class "text-white text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
+                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        ]
             ]
         ]
 
@@ -226,7 +219,12 @@ viewSmall { t } options =
         viewImg =
             case options.status of
                 RemoteData.Success url ->
-                    img [ class imgClasses, src url ] []
+                    if List.member PDF options.fileTypes then
+                        View.Components.pdfViewer [ class imgClasses ]
+                            { url = url, childClass = imgClasses }
+
+                    else
+                        img [ class imgClasses, src url ] []
 
                 _ ->
                     div [ class (imgClasses ++ " bg-gray-500") ] []
