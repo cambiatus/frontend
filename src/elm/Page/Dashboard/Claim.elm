@@ -8,8 +8,8 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Html exposing (Html, button, div, h3, img, label, p, span, strong, text)
-import Html.Attributes exposing (class, classList, src)
+import Html exposing (Html, button, div, h3, label, p, span, strong, text)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -24,6 +24,7 @@ import Strftime
 import Time
 import UpdateResult as UR
 import Utils
+import View.Components
 import View.Feedback as Feedback
 
 
@@ -176,11 +177,9 @@ viewProofs { t } claim =
         Just url ->
             div [ class "mb-8 flex" ]
                 [ div [ class "claim-photo-thumb" ]
-                    [ img
-                        [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim)
-                        , src url
-                        ]
-                        []
+                    [ View.Components.pdfViewer
+                        [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim), class "h-full w-full" ]
+                        { url = url, childClass = "" }
                     ]
                 , viewProofCode
                 ]
