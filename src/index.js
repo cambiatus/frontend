@@ -13,10 +13,53 @@ import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 
+const pdfjsLib = window['pdfjs-dist/build/pdf']
+pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js'
+
 // =========================================
 // Custom elements
 // =========================================
 /* global HTMLElement */
+
+window.customElements.define('pdf-viewer',
+  class PdfViewer extends HTMLElement {
+    connectedCallback () {
+      const url = this.getAttribute('elm-url')
+
+      pdfjsLib.getDocument(url).promise.then((pdf) => {
+        pdf.getPage(1).then((page) => {
+          const canvas = document.createElement('canvas')
+
+          const width = this.clientWidth
+          const height = this.clientHeight
+          const unscaledViewport = page.getViewport({ scale: 1 })
+          const scale = Math.min((height / unscaledViewport.height), (width / unscaledViewport.width))
+
+          const viewport = page.getViewport({ scale })
+          const canvasContext = canvas.getContext('2d')
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+
+          const renderContext = { canvasContext, viewport }
+
+          const renderTask = page.render(renderContext)
+          renderTask.promise.then(() => {
+            this.appendChild(canvas)
+          })
+        })
+      }).catch((e) => {
+        const invalidPDFError = 'Invalid PDF structure.'
+        if (e.message === invalidPDFError) {
+          const img = document.createElement('img')
+          img.src = url
+          this.appendChild(img)
+        } else {
+          debugLog('pdf-viewer error', e)
+        }
+      })
+    }
+  }
+)
 
 window.customElements.define('dialog-bubble',
   class DialogBubble extends HTMLElement {
@@ -389,6 +432,10 @@ function storePushPref (pref) {
   setItem(PUSH_PREF, pref)
   debugLog(`stored push pref: ${pref}`, '')
 }
+
+// HANDLE PDF-ELEMENT PORT
+
+// app.ports.sendPdfCommand.subscribe(pdfElement.pdfCommandReceiver(app))
 
 // STORE PIN
 

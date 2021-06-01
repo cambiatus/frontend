@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
-    , tooltip
+    , tooltip, pdfViewer
     , bgNoScroll
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip
+@docs tooltip, pdfViewer
 
 
 # Helpers
@@ -86,6 +86,20 @@ tooltip { t } tooltipMessage =
         , div [ class "icon-tooltip-content" ]
             [ text (t tooltipMessage) ]
         ]
+
+
+{-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
+with `url` as `src`
+-}
+pdfViewer : List (Html.Attribute msg) -> String -> Html msg
+pdfViewer attrs url =
+    node "pdf-viewer"
+        ([ attribute "elm-url" url
+         , class "flex items-center justify-center"
+         ]
+            ++ attrs
+        )
+        []
 
 
 
