@@ -85,6 +85,7 @@
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
     "husky": "^4.2.5",
+    "pdfjs-dist": "^2.7.570",
     "pdfmake": "^0.1.64",
     "phoenix": "^1.4.10",
     "postcss": "^8.3.0",

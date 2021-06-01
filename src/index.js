@@ -12,9 +12,11 @@ import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
+import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 
-const pdfjsLib = window['pdfjs-dist/build/pdf']
-pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js'
+// If you're updating `pdfjs-dist`, make sure to
+// `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 // =========================================
 // Custom elements
