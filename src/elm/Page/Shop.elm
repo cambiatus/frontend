@@ -12,10 +12,8 @@ module Page.Shop exposing
 import Api
 import Api.Graphql
 import Array
-import Claim exposing (Msg(..))
 import Community exposing (Balance)
 import Eos
-import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, src, value)
@@ -24,7 +22,6 @@ import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
-import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
@@ -33,7 +30,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Filter, Product)
-import Transfer
 import UpdateResult as UR
 
 
@@ -116,16 +112,6 @@ initSaleFrom =
 
 type Validation
     = Valid
-    | Invalid ValidationError
-
-
-type ValidationError
-    = UnitsEmpty
-    | UnitTooLow
-    | UnitTooHigh
-    | UnitNotOnlyNumbers
-    | MemoEmpty
-    | MemoTooLong
 
 
 
@@ -390,8 +376,6 @@ type alias UpdateResult =
 type Msg
     = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
-    | ClickedSendTransfer Card Int
-    | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
@@ -421,94 +405,8 @@ update msg model loggedIn =
                         CompletedSalesLoad
                     )
 
-        ClickedSendTransfer card cardIndex ->
-            let
-                newForm =
-                    validateForm card.product card.form
-            in
-            if isFormValid newForm then
-                if LoggedIn.hasPrivateKey loggedIn then
-                    let
-                        authorization =
-                            { actor = loggedIn.accountName
-                            , permissionName = Eos.samplePermission
-                            }
-
-                        wantedUnits =
-                            case String.toInt card.form.unit of
-                                Just quantityInt ->
-                                    quantityInt
-
-                                Nothing ->
-                                    1
-
-                        tAmount =
-                            card.product.price * toFloat wantedUnits
-
-                        quantity =
-                            { amount = tAmount
-                            , symbol = card.product.symbol
-                            }
-
-                        from =
-                            loggedIn.accountName
-
-                        to =
-                            card.product.creatorId
-                    in
-                    UR.init model
-                        |> UR.addPort
-                            { responseAddress = TransferSuccess cardIndex
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.token
-                                      , name = "transfer"
-                                      , authorization = authorization
-                                      , data =
-                                            { from = from
-                                            , to = to
-                                            , value = quantity
-                                            , memo = card.form.memo
-                                            }
-                                                |> Transfer.encodeEosActionData
-                                      }
-                                    , { accountName = loggedIn.shared.contracts.community
-                                      , name = "transfersale"
-                                      , authorization = authorization
-                                      , data =
-                                            { id = card.product.id
-                                            , from = from
-                                            , to = to
-                                            , quantity = quantity
-                                            , units = wantedUnits
-                                            }
-                                                |> Shop.encodeTransferSale
-                                      }
-                                    ]
-                            }
-
-                else
-                    UR.init model
-                        |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
-
-            else
-                UR.init model
-
         TransferSuccess index ->
             updateCard msg index (\card -> ( card, [] )) (UR.init model)
-
-        ClickedMessages cardIndex creatorId ->
-            UR.init model
-                |> UR.addPort
-                    { responseAddress = ClickedMessages cardIndex creatorId
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString creatorId) )
-                            ]
-                    }
 
         ClickedFilter filter ->
             let
@@ -622,50 +520,6 @@ updateCard msg cardIndex transform ({ model } as uResult) =
             UR.logImpossible msg [] uResult
 
 
-validateForm : Product -> SaleTransferForm -> SaleTransferForm
-validateForm sale form =
-    let
-        unitValidation : Validation
-        unitValidation =
-            if form.unit == "" then
-                Invalid UnitsEmpty
-
-            else
-                case String.toInt form.unit of
-                    Just units ->
-                        if units > sale.units then
-                            Invalid UnitTooHigh
-
-                        else if units <= 0 then
-                            Invalid UnitTooLow
-
-                        else
-                            Valid
-
-                    Nothing ->
-                        Invalid UnitNotOnlyNumbers
-
-        memoValidation =
-            if form.memo == "" then
-                Invalid MemoEmpty
-
-            else if String.length form.memo > 256 then
-                Invalid MemoTooLong
-
-            else
-                Valid
-    in
-    { form
-        | unitValidation = unitValidation
-        , memoValidation = memoValidation
-    }
-
-
-isFormValid : SaleTransferForm -> Bool
-isFormValid form =
-    form.unitValidation == Valid && form.memoValidation == Valid
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr _ =
     case addr of
@@ -696,14 +550,8 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        ClickedSendTransfer _ _ ->
-            [ "ClickedSendTransfer" ]
-
         TransferSuccess index ->
             [ "TransferSuccess", String.fromInt index ]
-
-        ClickedMessages _ _ ->
-            [ "ClickedMessages" ]
 
         ClickedFilter _ ->
             [ "ClickedFilter" ]

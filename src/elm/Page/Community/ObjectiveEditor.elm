@@ -3,7 +3,6 @@ module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, j
 import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
-import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Objective as Objective
 import Community
 import Eos

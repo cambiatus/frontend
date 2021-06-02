@@ -11,7 +11,7 @@ module Transfer exposing
     , transfersUserQuery
     )
 
-import Api.Relay exposing (Edge,  PageConnection,  pageInfoSelectionSet)
+import Api.Relay exposing (Edge, PageConnection, pageInfoSelectionSet)
 import Cambiatus.Object
 import Cambiatus.Object.Community
 import Cambiatus.Object.Subdomain
@@ -25,7 +25,6 @@ import Cambiatus.Subscription as Subscription
 import Eos exposing (Symbol, symbolToString)
 import Eos.Account as Eos exposing (Name)
 import Graphql.Operation exposing (RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Profile

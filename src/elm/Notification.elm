@@ -27,9 +27,7 @@ import Cambiatus.Union.NotificationType
 import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Transfer
 
 
 

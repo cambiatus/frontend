@@ -54,7 +54,7 @@ and character counters.
 -}
 
 import Eos
-import Html exposing (Html, div, input, li, span, text, ul)
+import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)

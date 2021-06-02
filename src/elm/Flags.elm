@@ -9,7 +9,7 @@ module Flags exposing
 import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder, nullable, string)
-import Json.Decode.Pipeline as Decode exposing (optional, required)
+import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
 
 
 type alias Flags =
@@ -56,7 +56,7 @@ decode =
     Decode.succeed Flags
         |> required "env" decodeEnvironment
         |> required "language" string
-        |> Decode.custom
+        |> DecodePipeline.custom
             (Decode.succeed
                 (Maybe.map2 (\acc auth -> ( acc, auth )))
                 |> optional "accountName" (nullable Eos.nameDecoder) Nothing

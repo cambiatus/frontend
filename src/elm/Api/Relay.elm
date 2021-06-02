@@ -2,7 +2,6 @@ module Api.Relay exposing (Edge, PageConnection, PageInfo, pageInfoSelectionSet)
 
 import Cambiatus.Object
 import Cambiatus.Object.PageInfo
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 
 

@@ -159,7 +159,6 @@ type Msg
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy Product
     | ClickedEdit Product
-    | ClickedQuestions Product
     | ClickedTransfer Product
     | EnteredUnit String
     | EnteredMemo String
@@ -218,19 +217,6 @@ update msg model loggedIn =
 
         CompletedSaleLoad _ ->
             UR.init model
-
-        ClickedQuestions sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedQuestions sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
 
         ClickedEdit sale ->
             let
@@ -784,9 +770,6 @@ msgToString msg =
 
         ClickedEdit _ ->
             [ "ClickedEdit" ]
-
-        ClickedQuestions _ ->
-            [ "ClickedQuestions" ]
 
         ClickedTransfer _ ->
             [ "ClickedTransfer" ]

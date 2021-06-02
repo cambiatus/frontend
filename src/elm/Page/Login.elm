@@ -27,7 +27,7 @@ import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, required, rows, src, type_)
 import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
+import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Ports
 import RemoteData exposing (RemoteData)
@@ -625,8 +625,8 @@ jsAddressToMsg addr val =
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
-                        |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "privateKey" Eos.privateKeyDecoder
+                        |> DecodePipeline.required "accountName" Eos.nameDecoder
+                        |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
                         |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)

@@ -40,7 +40,7 @@ import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
+import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Ports
 import Profile exposing (Model)
@@ -298,8 +298,8 @@ jsAddressToMsg addr val =
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
-                        |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "privateKey" Eos.privateKeyDecoder
+                        |> DecodePipeline.required "accountName" Eos.nameDecoder
+                        |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
                         |> Decode.map (Ok >> GotSubmittedPinResponse)
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmittedPinResponse)

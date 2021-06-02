@@ -24,7 +24,6 @@ import Html.Events exposing (onClick, onSubmit)
 import Http
 import Icons
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page

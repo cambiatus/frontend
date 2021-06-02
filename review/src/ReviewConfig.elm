@@ -30,11 +30,10 @@ config =
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.Exports.rule
-        |> Rule.ignoreErrorsForDirectories [ "src/elm/Select" ]
         |> Rule.ignoreErrorsForFiles [ "src/elm/Select.elm", "src/elm/DataValidator.elm" ]
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     ]
         -- Ignore generated code
-        |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus" ])
+        |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])

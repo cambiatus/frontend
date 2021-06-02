@@ -27,7 +27,6 @@ module Community exposing
     )
 
 import Action exposing (Action)
-import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
@@ -50,7 +49,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as Decode exposing (required)
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile
 import Session.Shared exposing (Shared)

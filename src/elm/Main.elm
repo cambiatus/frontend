@@ -41,7 +41,7 @@ import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
 import Page.ViewTransfer as ViewTransfer
 import Ports
-import RemoteData exposing (RemoteData(..))
+import RemoteData
 import Route exposing (Route)
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn exposing (External(..))

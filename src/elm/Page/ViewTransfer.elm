@@ -4,7 +4,6 @@ import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
-import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, src)

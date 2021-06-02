@@ -2,7 +2,6 @@ module Api.Graphql exposing (mutation, query)
 
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import List.Extra as List
 import RemoteData exposing (RemoteData)
