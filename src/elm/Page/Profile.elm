@@ -7,7 +7,6 @@ module Page.Profile exposing
     , msgToString
     , update
     , view
-    , viewSettings
     , viewUserInfo
     )
 

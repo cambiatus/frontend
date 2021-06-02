@@ -6,26 +6,19 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
-    , addNotification
-    , askedAuthentication
     , hasPrivateKey
     , init
     , initLogin
     , isAccount
-    , isActive
     , jsAddressToMsg
-    , mapExternal
     , maybeInitWith
     , maybePrivateKey
     , msgToString
     , profile
-    , readAllNotifications
-    , showFeedback
     , subscriptions
     , update
     , updateExternal
     , view
-    , viewFooter
     )
 
 import Action
@@ -741,34 +734,6 @@ type Resource
     | TimeResource
 
 
-mapExternal : (msg -> msg2) -> External msg -> External msg2
-mapExternal transform ext =
-    case ext of
-        UpdatedLoggedIn m ->
-            UpdatedLoggedIn m
-
-        AddedCommunity communityInfo ->
-            AddedCommunity communityInfo
-
-        CreatedCommunity symbol subdomain ->
-            CreatedCommunity symbol subdomain
-
-        ExternalBroadcast broadcastMsg ->
-            ExternalBroadcast broadcastMsg
-
-        ReloadResource resource ->
-            ReloadResource resource
-
-        RequiredAuthentication maybeM ->
-            RequiredAuthentication (Maybe.map transform maybeM)
-
-        ShowFeedback message status ->
-            ShowFeedback message status
-
-        HideFeedback ->
-            HideFeedback
-
-
 updateExternal :
     External msg
     -> Model
@@ -1385,27 +1350,6 @@ askedAuthentication model =
         , showMainNav = False
         , showAuthModal = True
     }
-
-
-showFeedback : Feedback.Status -> String -> Model -> Model
-showFeedback feedbackStatus feedback model =
-    { model | feedback = Feedback.Visible feedbackStatus feedback }
-
-
-
--- TRANSFORM
-
-
-addNotification : Notification -> Model -> Model
-addNotification notification model =
-    { model
-        | notification = Notification.addNotification notification model.notification
-    }
-
-
-readAllNotifications : Model -> Model
-readAllNotifications model =
-    { model | notification = Notification.readAll model.notification }
 
 
 

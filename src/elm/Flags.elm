@@ -4,7 +4,6 @@ module Flags exposing
     , Flags
     , decode
     , default
-    , defaultEndpoints
     )
 
 import Eos

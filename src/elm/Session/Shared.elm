@@ -3,7 +3,6 @@ module Session.Shared exposing
     , TranslationStatus(..)
     , Translators
     , communityDomain
-    , communitySubdomainParts
     , init
     , langFlag
     , language
@@ -129,8 +128,10 @@ translationStatus shared =
 url. Example possible outputs:
 
     [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
-    , [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
-    , [ "cambiatus" ] -- Cambiatus community in the prod environment
+
+    [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
+
+    [ "cambiatus" ] -- Cambiatus community in the prod environment
 
 -}
 communitySubdomainParts : Shared -> List String

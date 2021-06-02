@@ -1,4 +1,4 @@
-module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime(..))
@@ -36,11 +36,6 @@ init { shared, authToken } transferId =
     ( model
     , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
     )
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 

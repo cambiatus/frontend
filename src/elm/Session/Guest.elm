@@ -7,7 +7,6 @@ module Session.Guest exposing
     , addAfterLoginRedirect
     , init
     , initLoggingIn
-    , initModel
     , maybeInitWith
     , msgToString
     , subscriptions

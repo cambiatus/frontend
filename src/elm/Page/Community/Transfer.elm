@@ -5,12 +5,10 @@ module Page.Community.Transfer exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscription
     , update
     , view
     )
 
-import Browser.Events
 import Community exposing (Model)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -30,10 +28,8 @@ import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
-import Task
 import Transfer
 import UpdateResult as UR
-import Utils
 import View.Feedback as Feedback
 import View.Form.Input as Input
 
@@ -43,11 +39,6 @@ init loggedIn maybeTo =
     ( initModel maybeTo
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
-
-
-subscription : Model -> Sub Msg
-subscription _ =
-    Sub.map PressedEnter (Browser.Events.onKeyDown Utils.decodeEnterKeyDown)
 
 
 
@@ -353,7 +344,6 @@ type Msg
     | EnteredAmount String
     | EnteredMemo String
     | SubmitForm
-    | PressedEnter Bool
     | PushTransaction
     | GotTransferResult (Result (Maybe Value) String)
     | Redirect Value
@@ -541,17 +531,6 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     onlyLogImpossible []
 
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed SubmitForm
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
         GotTransferResult (Ok _) ->
             case model.transferStatus of
                 SendingTransfer _ ->
@@ -681,9 +660,6 @@ msgToString msg =
 
         SubmitForm ->
             [ "SubmitForm" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]
 
         PushTransaction ->
             [ "PushTransaction" ]

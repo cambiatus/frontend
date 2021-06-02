@@ -6,11 +6,9 @@ module Notification exposing
     , NotificationType(..)
     , OrderData
     , TransferData
-    , addNotification
     , init
     , markAsReadMutation
     , notificationHistoryQuery
-    , readAll
     )
 
 import Cambiatus.Mutation as Mutation
@@ -121,23 +119,6 @@ type NotificationType
     = Transfer TransferData
     | SaleHistory OrderData
     | Mint MintData
-
-
-addNotification : Notification -> Model -> Model
-addNotification notification model =
-    { model
-        | unreadNotifications = notification :: model.unreadNotifications
-        , hasUnread = True
-    }
-
-
-readAll : Model -> Model
-readAll model =
-    { model
-        | hasUnread = False
-        , unreadNotifications = []
-        , readNotifications = model.readNotifications ++ model.unreadNotifications
-    }
 
 
 markAsReadMutation : Int -> SelectionSet History RootMutation

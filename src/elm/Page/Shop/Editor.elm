@@ -12,7 +12,6 @@ module Page.Shop.Editor exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
@@ -24,6 +23,7 @@ import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, disabled, for, id, maxlength, multiple, required, rows, style, type_, value)
 import Html.Events exposing (onClick)
 import Http
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -286,7 +286,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                     ]
 
                 _ ->
-                    [ Icon.addPhoto ""
+                    [ Icons.addPhoto ""
                     , span
                         []
                         [ text (t "shop.photo_label") ]

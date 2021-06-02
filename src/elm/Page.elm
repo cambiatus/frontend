@@ -7,53 +7,39 @@ module Page exposing
     , fullPageLoading
     , fullPageNotFound
     , init
-    , isLoggedIn
     , jsAddressToMsg
-    , labelWithTooltip
-    , loading
     , logout
     , msgToString
     , onFileChange
     , subscriptions
     , toShared
     , update
-    , viewButtonNew
     , viewCardEmpty
-    , viewCardList
-    , viewDateDistance
     , viewGuest
     , viewHeader
     , viewLoggedIn
-    , viewMaxTwoColumn
-    , viewMenuFilter
-    , viewMenuFilterButton
-    , viewMenuFilterTabButton
-    , viewMenuTab
     , viewTitle
     )
 
-import Asset.Icon as Icon
 import Auth
 import Browser.Navigation as Nav
-import DateDistance
 import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
-import Html exposing (Attribute, Html, a, br, button, div, img, label, li, p, span, text, ul)
-import Html.Attributes exposing (attribute, class, classList, for, src, title, type_, value)
+import Html exposing (Attribute, Html, a, div, img,  p,  text)
+import Html.Attributes exposing (class,  src, title)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode
 import Json.Encode exposing (Value)
 import Ports
 import RemoteData exposing (RemoteData)
-import Route exposing (Route)
+import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
-import Time exposing (Posix)
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
@@ -151,91 +137,12 @@ viewLoggedIn thisMsg page model content =
 -- VIEW >> HELPERS
 
 
-onClick : (a -> msg) -> Decoder a -> Html.Attribute msg
-onClick toMsg decoder =
-    on "click" (Decode.map toMsg decoder)
-
-
 onFileChange : (List File -> msg) -> Attribute msg
 onFileChange toMsg =
     Decode.list File.decoder
         |> Decode.at [ "target", "files" ]
         |> Decode.map toMsg
         |> on "change"
-
-
-viewMenuFilter : List (Html msg) -> Html msg
-viewMenuFilter buttons =
-    div
-        [ class "menu-filter__buttons sm:hidden md:flex" ]
-        buttons
-
-
-viewMenuFilterButton : Bool -> String -> Route -> Html msg
-viewMenuFilterButton isActive text_ route =
-    a
-        [ classList
-            [ ( "menu-filter__button"
-              , True
-              )
-            , ( "menu-filter__button-active"
-              , isActive
-              )
-            ]
-        , Route.href route
-        , title text_
-        ]
-        [ text text_ ]
-
-
-viewMenuTab : List (Html msg) -> Html msg
-viewMenuTab buttons =
-    div
-        [ class "flex justify-center" ]
-        buttons
-
-
-viewMenuFilterTabButton : Bool -> (a -> msg) -> Decoder a -> String -> Html msg
-viewMenuFilterTabButton isActive toMsg decoder text_ =
-    if isActive then
-        if String.startsWith "All offers" text_ then
-            button [ class "bg-purple-500 border border-purple-500 rounded-l px-12 py-2 text-white", value text_, onClick toMsg decoder ]
-                [ text text_ ]
-
-        else
-            button [ class "bg-purple-500 border border-purple-500 rounded-r px-12 py-2 text-white", value text_, onClick toMsg decoder ]
-                [ text text_ ]
-
-    else if String.startsWith "All offers" text_ then
-        button [ class "border border-purple-500 rounded-l px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
-            [ text text_ ]
-
-    else
-        button [ class "border border-purple-500 rounded-r px-16 py-2 text-gray", value text_, onClick toMsg decoder ]
-            [ text text_ ]
-
-
-viewCardList : List ( List (Html msg), Posix, Maybe Posix ) -> Html msg
-viewCardList items =
-    let
-        items_ =
-            List.map
-                (\( content, date, maybeNow ) ->
-                    li []
-                        [ span [ class "card__list-text" ] content
-                        , span [ class "card__list-date" ]
-                            (viewDateDistance date maybeNow)
-                        ]
-                )
-                items
-    in
-    div [ class "shadow-md rounded-lg bg-white" ]
-        [ ul [] items_
-        , div [ class "card__button-row" ]
-            [ button [ class "btn btn--primary" ]
-                [ text "See More" ]
-            ]
-        ]
 
 
 viewCardEmpty : List (Html msg) -> Html msg
@@ -275,52 +182,6 @@ viewHeader { shared, routeHistory } title =
         ]
 
 
-viewButtonNew : String -> Route -> Html msg
-viewButtonNew title_ route =
-    a
-        [ class "btn create-button my-3"
-        , title title_
-        , Route.href route
-        ]
-        [ text title_ ]
-
-
-viewMaxTwoColumn : List (Html msg) -> List (Html msg) -> Html msg
-viewMaxTwoColumn firstColContent secColContent =
-    div [ class "section-grid mt-4" ]
-        [ div [ class "section-grid__section" ] firstColContent
-        , div [ class "section-grid__section" ] secColContent
-        ]
-
-
-labelWithTooltip : String -> String -> String -> Html msg
-labelWithTooltip for_ text_ tooltipText =
-    label [ for for_ ]
-        [ div [ class "tooltip__text" ]
-            [ text text_
-            , button
-                [ class "tooltip"
-                , type_ "button"
-                , attribute "tooltip" tooltipText
-                ]
-                [ Icon.helpCircle "" ]
-            ]
-        ]
-
-
-viewDateDistance : Posix -> Maybe Posix -> List (Html msg)
-viewDateDistance date maybeNow =
-    case maybeNow of
-        Just now ->
-            [ text (DateDistance.viewDateDistance date now)
-            , br [] []
-            , text "ago"
-            ]
-
-        Nothing ->
-            []
-
-
 fullPageLoading : Shared.Shared -> Html msg
 fullPageLoading { translators } =
     View.Components.loadingLogoAnimated translators ""
@@ -354,11 +215,6 @@ fullPageNotFound title subTitle =
             ]
         , img [ class "w-full", src "/images/not_found.svg" ] []
         ]
-
-
-loading : Html msg
-loading =
-    div [ class "spinner spinner--delay" ] []
 
 
 
@@ -471,16 +327,6 @@ logout { shared } =
 
 
 -- INFO
-
-
-isLoggedIn : Session -> Bool
-isLoggedIn session =
-    case session of
-        LoggedIn _ ->
-            True
-
-        Guest _ ->
-            False
 
 
 toShared : Session -> Shared

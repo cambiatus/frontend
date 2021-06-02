@@ -1,7 +1,6 @@
 module Page.Register.Common exposing
     ( ProblemEvent(..)
     , containsLetters
-    , containsNumberGreaterThan
     , fieldProblems
     , findId
     , getCities
@@ -122,16 +121,6 @@ byId a b =
 
         EQ ->
             EQ
-
-
-containsNumberGreaterThan : Int -> String -> Bool
-containsNumberGreaterThan number str =
-    str
-        |> String.split ""
-        |> List.filterMap String.toInt
-        |> List.filter (\x -> x < 1 || x > number)
-        |> List.length
-        |> (/=) 0
 
 
 containsLetters : String -> Bool

@@ -11,7 +11,6 @@ module Page.Community.New exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Model)
 import Eos
@@ -23,6 +22,7 @@ import Html exposing (Html, button, div, input, label, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, required, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Http
+import Icons
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
@@ -365,7 +365,7 @@ viewLogo shared isDisabled selected logos =
                         , classList [ ( "disabled", isDisabled ) ]
                         ]
                         [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
-                            [ Icon.imageMultiple "text-white fill-current w-8 h-8" ]
+                            [ Icons.imageMultiple "text-white fill-current w-8 h-8" ]
                         , text (t "community.create.labels.upload_icon")
                         ]
                     ]

@@ -1,11 +1,17 @@
-module Avatar exposing (Avatar, decode, empty, encode, selectionSet, toMaybeString, view)
+module Avatar exposing
+    ( Avatar
+    , decode
+    , empty
+    , selectionSet
+    , toMaybeString
+    , view
+    )
 
-import Asset.Icon as Icon
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
 import Html.Attributes exposing (class, src)
+import Icons
 import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode exposing (Value)
 
 
 
@@ -26,25 +32,15 @@ decode =
     Decode.map Avatar (Decode.nullable Decode.string)
 
 
-encode : Avatar -> Value
-encode (Avatar maybeUrl) =
-    case maybeUrl of
-        Just url ->
-            Encode.string url
-
-        Nothing ->
-            Encode.null
-
-
 view : Avatar -> String -> Html msg
 view (Avatar maybeUrl) cls =
     case maybeUrl of
         Nothing ->
-            Icon.accountCircle cls
+            Icons.accountCircle cls
 
         Just url ->
             if String.isEmpty (String.trim url) then
-                Icon.accountCircle cls
+                Icons.accountCircle cls
 
             else
                 Html.div

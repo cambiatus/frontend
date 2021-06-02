@@ -5,7 +5,6 @@ module Action exposing
     , Model
     , Msg(..)
     , Proof(..)
-    , claimActionPort
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -13,7 +12,6 @@ module Action exposing
     , selectionSet
     , subscriptions
     , update
-    , viewClaimButton
     , viewClaimConfirmation
     , viewClaimWithProofs
     , viewSearchActions

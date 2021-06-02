@@ -7,9 +7,6 @@ module Profile.Contact exposing
     , contactTypeColor
     , contactTypeToIcon
     , contactTypeToString
-    , decode
-    , encode
-    , hasSameType
     , initMultiple
     , initSingle
     , selectionSet
@@ -34,8 +31,6 @@ import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode
 import List.Extra as LE
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
@@ -845,11 +840,6 @@ unwrap (Normalized contact) =
     contact
 
 
-hasSameType : Normalized -> Normalized -> Bool
-hasSameType (Normalized contact1) (Normalized contact2) =
-    contact1.contactType == contact2.contactType
-
-
 addErrors : List String -> Basic -> Basic
 addErrors errors basic =
     case errors of
@@ -1035,26 +1025,6 @@ supportedCountries =
       , flagIcon = "/icons/flag-usa.svg"
       }
     ]
-
-
-
--- JSON
--- All the data sent to/received from the backend should be normalized
-
-
-decode : Decoder Normalized
-decode =
-    Decode.map2 (\contactType contact -> Normalized { contactType = contactType, contact = contact })
-        ContactType.decoder
-        Decode.string
-
-
-encode : Normalized -> Encode.Value
-encode (Normalized { contactType, contact }) =
-    Encode.object
-        [ ( "type", Encode.string (ContactType.toString contactType) )
-        , ( "externalId", Encode.string contact )
-        ]
 
 
 

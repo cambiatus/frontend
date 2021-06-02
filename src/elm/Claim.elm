@@ -8,7 +8,6 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , isValidated
-    , isValidator
     , isVotable
     , paginatedPageInfo
     , paginatedToList

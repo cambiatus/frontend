@@ -8,13 +8,8 @@ module Search exposing
     , isActive
     , subscriptions
     , update
-    , viewEmptyResults
     , viewForm
-    , viewOffers
-    , viewRecentQueries
-    , viewResultsOverview
     , viewSearchBody
-    , viewTabs
     )
 
 import Action exposing (Action)
