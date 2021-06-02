@@ -317,7 +317,6 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
             (if isProofCodeActive then
                 { model
                     | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
-                    , feedback = model.feedback
                     , needsPinConfirmation = False
                 }
 

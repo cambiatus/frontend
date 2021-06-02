@@ -1166,11 +1166,7 @@ encodeUpdateForm product form selectedCommunity =
 
 getNumericValues : String -> String
 getNumericValues value =
-    value
-        |> String.toList
-        |> List.filter Char.isDigit
-        |> List.map String.fromChar
-        |> String.join ""
+    String.filter Char.isDigit value
 
 
 encodeDeleteForm : Product -> Value

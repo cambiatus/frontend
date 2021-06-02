@@ -1,11 +1,10 @@
-module Page.Profile.Public exposing (Model, Msg, Status, init, jsAddressToMsg, msgToString, update, view)
+module Page.Profile.Public exposing (Model, Msg, Status, init, msgToString, update, view)
 
 import Api.Graphql
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
-import Json.Decode exposing (Value)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
 import Profile exposing (Model)
@@ -110,13 +109,6 @@ update msg model _ =
 
         CompletedProfileLoad _ ->
             UR.init model
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr _ =
-    case addr of
-        _ ->
-            Nothing
 
 
 msgToString : Msg -> List String

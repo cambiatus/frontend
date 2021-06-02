@@ -110,10 +110,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            Dashboard subModel ->
-                Dashboard.subscriptions subModel
-                    |> Sub.map GotDashboardMsg
-
             Community subModel ->
                 CommunityPage.subscriptions subModel
                     |> Sub.map GotCommunityMsg
@@ -1182,10 +1178,6 @@ jsAddressToMsg address val =
             Maybe.map GotDashboardMsg
                 (Dashboard.jsAddressToMsg rAddress val)
 
-        "GotCommunityMsg" :: rAddress ->
-            Maybe.map GotCommunityMsg
-                (CommunityPage.jsAddressToMsg rAddress val)
-
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
                 (CommunityEditor.jsAddressToMsg rAddress val)
@@ -1209,10 +1201,6 @@ jsAddressToMsg address val =
         "GotShopMsg" :: rAddress ->
             Maybe.map GotShopMsg
                 (Shop.jsAddressToMsg rAddress val)
-
-        "GotProfilePublicMsg" :: rAddress ->
-            Maybe.map GotProfilePublicMsg
-                (ProfilePublic.jsAddressToMsg rAddress val)
 
         "GotProfileMsg" :: rAddress ->
             Maybe.map GotProfileMsg

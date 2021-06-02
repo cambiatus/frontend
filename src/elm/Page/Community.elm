@@ -2,7 +2,6 @@ module Page.Community exposing
     ( Model
     , Msg
     , init
-    , jsAddressToMsg
     , msgToString
     , subscriptions
     , update
@@ -18,7 +17,6 @@ import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Icons
-import Json.Encode exposing (Value)
 import Page
 import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -325,13 +323,6 @@ update msg model loggedIn =
         ClickedCloseObjective ->
             { model | openObjectiveId = Nothing }
                 |> UR.init
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        _ ->
-            Nothing
 
 
 msgToString : Msg -> List String

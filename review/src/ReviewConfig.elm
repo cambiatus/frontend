@@ -20,6 +20,7 @@ import NoUnused.CustomTypeConstructors
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.Exports
 import NoExposingEverything
+import Simplify
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -36,6 +37,9 @@ config =
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
+    , Simplify.defaults
+        |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
+        |> Simplify.rule
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])

@@ -953,7 +953,7 @@ symbolPlaceholder symbol amount =
         String.fromInt amount
 
     else
-        String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
+        String.fromInt amount ++ "." ++ String.concat (List.repeat precision "0")
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

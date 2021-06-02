@@ -62,13 +62,7 @@ withOption option select =
         html =
             Html.option
                 [ value option.value
-                , selected
-                    (if select.value == option.value then
-                        True
-
-                     else
-                        False
-                    )
+                , selected (select.value == option.value)
                 ]
                 [ text option.label ]
     in

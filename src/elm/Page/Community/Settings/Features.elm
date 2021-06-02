@@ -169,7 +169,7 @@ update msg model loggedIn =
                 |> saveFeaturePort loggedIn Objectives model.status state
 
         ToggleKyc ->
-            { model | hasKyc = model.hasKyc }
+            model
                 |> UR.init
 
         SaveSuccess ->

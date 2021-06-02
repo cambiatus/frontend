@@ -123,7 +123,7 @@ assetToString ({ symbol } as asset) =
                         p ->
                             amountString
                                 ++ "."
-                                ++ (List.repeat p "0" |> String.join "")
+                                ++ (List.repeat p "0" |> String.concat)
 
                 _ ->
                     ""
@@ -250,7 +250,7 @@ encodeSymbol symbol =
 symbolToString : Symbol -> String
 symbolToString (Symbol symbol precision) =
     [ String.fromInt precision, ",", symbol ]
-        |> String.join ""
+        |> String.concat
 
 
 formatSymbolAmount : Symbol -> Float -> String

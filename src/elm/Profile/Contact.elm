@@ -129,11 +129,13 @@ initBasicWith ((Normalized { contactType }) as normalized) =
 
                 Telegram ->
                     newPhoneContact
-                        |> String.dropLeft (String.length "https://t.me/")
+                        -- 13 == String.length "https://t.me/"
+                        |> String.dropLeft 13
 
                 Instagram ->
                     newPhoneContact
-                        |> String.dropLeft (String.length "https://instagram.com/")
+                        -- 22 == String.length "https://instagram.com/"
+                        |> String.dropLeft 22
     in
     { initial
         | contact = newContact

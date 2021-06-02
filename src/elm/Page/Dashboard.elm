@@ -5,7 +5,6 @@ module Page.Dashboard exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -62,15 +61,6 @@ init ({ shared, accountName, authToken } as loggedIn) =
         , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
         ]
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.batch []
 
 
 
@@ -159,7 +149,7 @@ view ({ shared, accountName } as loggedIn) model =
         areObjectivesEnabled =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    community.hasObjectives == True
+                    community.hasObjectives
 
                 _ ->
                     False

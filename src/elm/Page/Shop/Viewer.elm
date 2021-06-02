@@ -516,7 +516,7 @@ viewCard ({ shared } as loggedIn) card model =
                                 [ text_ "shop.edit" ]
                             ]
 
-                      else if card.product.units <= 0 && card.product.trackStock == True then
+                      else if card.product.units <= 0 && card.product.trackStock then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ disabled True

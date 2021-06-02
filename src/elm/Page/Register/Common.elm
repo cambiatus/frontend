@@ -137,12 +137,10 @@ containsLetters str =
 ifEmptyTuple : (a -> ( String, b )) -> c -> Validate.Validator c a
 ifEmptyTuple data error =
     Validate.ifFalse
-        (\subject ->
-            if Tuple.first (data subject) == "" then
-                False
-
-            else
-                True
+        (data
+            >> Tuple.first
+            >> String.isEmpty
+            >> not
         )
         error
 
