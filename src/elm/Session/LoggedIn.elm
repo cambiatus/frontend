@@ -215,7 +215,6 @@ type Page
     | Invite
     | Join
     | Dashboard
-    | Communities
     | Community
     | CommunitySettings
     | CommunitySettingsFeatures
@@ -227,13 +226,10 @@ type Page
     | ObjectiveEditor
     | ActionEditor
     | Claim
-    | News
-    | Learn
     | Notification
     | Shop
     | ShopEditor
     | ShopViewer
-    | FAQ
     | Profile
     | ProfilePublic
     | ProfileEditor
@@ -887,7 +883,6 @@ type alias UpdateResult =
 -}
 type ExternalMsg
     = AuthenticationSucceed
-    | AuthenticationFailed
     | Broadcast BroadcastMsg
 
 
@@ -905,9 +900,7 @@ type Msg
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
-    | ShowNotificationModal Bool
     | ShowUserNav Bool
-    | ShowMainNav Bool
     | ToggleLanguageItems
     | ClickedLanguage String
     | ClosedAuthModal
@@ -1091,26 +1084,9 @@ update msg model =
                             ]
                     }
 
-        ShowNotificationModal b ->
-            UR.init
-                { closeAllModals
-                    | showNotificationModal = b
-                    , notification =
-                        if b then
-                            model.notification
-
-                        else
-                            Notification.readAll model.notification
-                }
-                |> UR.addCmd (focusMainContent (not b) "notifications-modal")
-
         ShowUserNav b ->
             UR.init { closeAllModals | showUserNav = b }
                 |> UR.addCmd (focusMainContent (not b) "user-nav")
-
-        ShowMainNav b ->
-            UR.init { closeAllModals | showMainNav = b }
-                |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }
@@ -1543,14 +1519,8 @@ msgToString msg =
         ClickedLogout ->
             [ "ClickedLogout" ]
 
-        ShowNotificationModal _ ->
-            [ "ShowNotificationModal" ]
-
         ShowUserNav _ ->
             [ "ShowUserNav" ]
-
-        ShowMainNav _ ->
-            [ "ShowMainNav" ]
 
         ToggleLanguageItems ->
             [ "ToggleLanguageItems" ]

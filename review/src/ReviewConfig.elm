@@ -16,6 +16,7 @@ import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoUnused.Modules
 import NoUnused.Variables
+import NoUnused.CustomTypeConstructors
 import NoExposingEverything
 import Review.Rule as Rule exposing (Rule)
 
@@ -26,6 +27,7 @@ config =
     , NoDebug.TodoOrToString.rule
     , NoUnused.Variables.rule
     , NoUnused.Modules.rule
+    , NoUnused.CustomTypeConstructors.rule []
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]

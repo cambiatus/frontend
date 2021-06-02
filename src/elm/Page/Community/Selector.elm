@@ -1,4 +1,4 @@
-module Page.Community.Selector exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Selector exposing (Model, init, view)
 
 import Html exposing (Html, a, div, img, span, text)
 import Html.Attributes exposing (class, src)
@@ -9,7 +9,6 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
-import UpdateResult as UR
 
 
 
@@ -20,7 +19,7 @@ type alias Model =
     {}
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> ( Model, Cmd msg )
 init _ =
     ( {}
     , Cmd.none
@@ -29,28 +28,10 @@ init _ =
 
 
 -- UPDATE
-
-
-type Msg
-    = Ignored
-
-
-type alias UpdateResult =
-    UR.UpdateResult Model Msg (LoggedIn.External Msg)
-
-
-update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
-    case msg of
-        Ignored ->
-            UR.init model
-
-
-
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
+view : LoggedIn.Model -> Model -> { title : String, content : Html msg }
 view loggedIn _ =
     let
         title =
@@ -75,7 +56,7 @@ view loggedIn _ =
     }
 
 
-view_ : Shared -> Profile.Model -> Html Msg
+view_ : Shared -> Profile.Model -> Html msg
 view_ shared profile =
     div [ class "flex-grow flex flex-col" ]
         [ div [ class "flex flex-col items-center" ]
@@ -90,7 +71,7 @@ view_ shared profile =
         ]
 
 
-viewCommunity : Shared -> Profile.CommunityInfo -> Html Msg
+viewCommunity : Shared -> Profile.CommunityInfo -> Html msg
 viewCommunity shared community =
     a
         [ class "flex justify-between items-center py-6 text-black hover:text-orange-300"
@@ -106,14 +87,3 @@ viewCommunity shared community =
             ]
         , Icons.arrowDown "-rotate-90 fill-current"
         ]
-
-
-
--- UTILS
-
-
-msgToString : Msg -> List String
-msgToString msg =
-    case msg of
-        Ignored ->
-            [ "Ignored" ]

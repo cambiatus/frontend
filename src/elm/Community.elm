@@ -10,7 +10,6 @@ module Community exposing
     , Model
     , Objective
     , Transaction
-    , Verification(..)
     , Verifiers
     , WithObjectives
     , addPhotosMutation
@@ -307,11 +306,6 @@ encodeUpdateObjectiveAction c =
         , ( "description", Encode.string c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
-
-
-type Verification
-    = Manually Verifiers
-    | Automatically String
 
 
 type alias Verifiers =

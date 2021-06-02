@@ -287,8 +287,7 @@ type alias PinUpdateResult =
 
 
 type Msg
-    = KeyPressed Bool
-    | WentToPin (Validate.Valid PassphraseModel)
+    = WentToPin (Validate.Valid PassphraseModel)
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
 
@@ -329,23 +328,6 @@ type PinExternalMsg
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case ( msg, model ) of
-        ( KeyPressed isEnter, EnteringPassphrase _ ) ->
-            let
-                cmd =
-                    if isEnter then
-                        GotPassphraseMsg ClickedNextStep
-                            |> Task.succeed
-                            |> Task.perform identity
-
-                    else
-                        Cmd.none
-            in
-            UR.init model
-                |> UR.addCmd cmd
-
-        ( KeyPressed _, EnteringPin _ ) ->
-            UR.init model
-
         ( GotPassphraseMsg passphraseMsg, EnteringPassphrase passphraseModel ) ->
             updateWithPassphrase passphraseMsg passphraseModel guest
                 |> UR.map EnteringPassphrase
@@ -663,9 +645,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        KeyPressed _ ->
-            [ "KeyPressed" ]
-
         WentToPin _ ->
             [ "WentToPin" ]
 

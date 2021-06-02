@@ -199,7 +199,6 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
-    | GotCommunitySelectorMsg CommunitySelector.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -310,9 +309,6 @@ update msg model =
 
                                     Just aMsg ->
                                         update aMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
-                                ( { m | afterAuthMsg = Nothing }, Cmd.none )
 
                             Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
                                 ( m, broadcast broadcastMsg m.status )
@@ -425,11 +421,6 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySelectorMsg subMsg, CommunitySelector subModel ) ->
-            CommunitySelector.update subMsg subModel
-                >> updateLoggedInUResult CommunitySelector GotCommunitySelectorMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
@@ -616,11 +607,6 @@ updateGuestUResult toStatus toMsg model uResult =
 
                 Page.Guest guest ->
                     case commExtMsg of
-                        Guest.UpdatedGuest newGuest ->
-                            ( { m | session = Page.Guest newGuest }
-                            , cmds_
-                            )
-
                         Guest.LoggedIn privateKey { user, token } ->
                             let
                                 shared =
@@ -1099,7 +1085,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunitySelector ->
             CommunitySelector.init
-                >> updateStatusWith CommunitySelector GotCommunitySelectorMsg model
+                >> updateStatusWith CommunitySelector (\_ -> Ignored) model
                 |> withLoggedIn Route.CommunitySelector
 
         Just Route.NewCommunity ->
@@ -1304,9 +1290,6 @@ msgToString msg =
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
-        GotCommunitySelectorMsg subMsg ->
-            "GotCommunitySelectorMsg" :: CommunitySelector.msgToString subMsg
-
         GotObjectivesMsg subMsg ->
             "GotObjectives" :: Objectives.msgToString subMsg
 
@@ -1505,7 +1488,7 @@ view model =
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
 
         CommunitySelector subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySelector GotCommunitySelectorMsg CommunitySelector.view
+            viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view

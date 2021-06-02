@@ -50,7 +50,6 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
-import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -481,7 +480,6 @@ type Msg
     | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
-    | PressedEnter Bool
     | GotProfileSummaryMsg Int Profile.Summary.Msg
 
 
@@ -1073,17 +1071,6 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
-
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ValidateDeadline
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
 
         GotProfileSummaryMsg index subMsg ->
             case model.form.verification of
@@ -1990,9 +1977,6 @@ msgToString msg =
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]
 
         GotProfileSummaryMsg _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

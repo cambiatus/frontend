@@ -299,8 +299,7 @@ viewPageHeader model shared =
 
 
 type External
-    = UpdatedGuest Model
-    | LoggedIn Eos.PrivateKey Auth.SignInResponse
+    = LoggedIn Eos.PrivateKey Auth.SignInResponse
     | SetFeedback Feedback.Model
 
 

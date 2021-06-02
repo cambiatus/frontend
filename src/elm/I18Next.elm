@@ -47,8 +47,6 @@ custom delimiters(start and end) to account for different types of placeholders.
 -}
 type Delims
     = Curly
-    | Underscore
-    | Custom ( String, String )
 
 
 {-| An alias for replacements for use with placeholders. Each tuple should
@@ -173,12 +171,6 @@ delimsToTuple delims =
     case delims of
         Curly ->
             ( "{{", "}}" )
-
-        Underscore ->
-            ( "__", "__" )
-
-        Custom tuple ->
-            tuple
 
 
 {-| Translate a value at a key, while replacing placeholders, and trying

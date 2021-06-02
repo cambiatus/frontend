@@ -1,6 +1,5 @@
 module Page.Register.Common exposing
-    ( Errors(..)
-    , ProblemEvent(..)
+    ( ProblemEvent(..)
     , containsLetters
     , containsNumberGreaterThan
     , fieldProblems
@@ -157,10 +156,6 @@ ifEmptyTuple data error =
                 True
         )
         error
-
-
-type Errors
-    = InvalidField
 
 
 validateAccountName : Translators -> String -> String -> ( String, Maybe String )

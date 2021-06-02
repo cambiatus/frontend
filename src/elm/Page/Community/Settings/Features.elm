@@ -49,7 +49,6 @@ type Status
 type Feature
     = Shop
     | Objectives
-    | Kyc
 
 
 type Msg
@@ -218,9 +217,6 @@ saveFeaturePort ({ shared } as loggedIn) feature status state =
 
                 Objectives ->
                     ToggleObjectives
-
-                Kyc ->
-                    ToggleKyc
     in
     case ( loggedIn.selectedCommunity, status ) of
         ( RemoteData.Success community, Authorized ) ->
@@ -259,14 +255,6 @@ saveFeature feature state authorization { shared, accountName } community =
                 _ ->
                     community.hasObjectives
 
-        hasKyc =
-            case feature of
-                Kyc ->
-                    state
-
-                _ ->
-                    community.hasKyc
-
         data =
             { accountName = accountName
             , symbol = community.symbol
@@ -278,7 +266,7 @@ saveFeature feature state authorization { shared, accountName } community =
             , invitedReward = community.invitedReward
             , hasShop = hasShop
             , hasObjectives = hasObjectives
-            , hasKyc = hasKyc
+            , hasKyc = community.hasKyc
             , hasAutoInvite = community.hasAutoInvite
             , website = Maybe.withDefault "" community.website
             }
