@@ -704,7 +704,7 @@ viewDatePicker shared model =
             , case model.selectedDate of
                 Just _ ->
                     button
-                        [ onClick <| ClearDatePicker
+                        [ onClick ClearDatePicker
                         , class "absolute right-0 mr-12 top-0 mt-3"
                         ]
                         [ Icons.trash "" ]
