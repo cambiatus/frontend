@@ -22,7 +22,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (DeleteKycAndAddressResult, Model)
+import Profile exposing (DeleteKycAndAddressResult)
 import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route

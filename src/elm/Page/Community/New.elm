@@ -12,7 +12,7 @@ module Page.Community.New exposing
 import Api
 import Api.Graphql
 import Browser.Events as Events
-import Community exposing (Model)
+import Community
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -668,7 +668,7 @@ type Msg
     | SubmittedForm
     | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Encode.Value ( Eos.Symbol, String ))
+    | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
 

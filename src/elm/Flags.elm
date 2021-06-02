@@ -8,7 +8,7 @@ module Flags exposing
 
 import Eos
 import Eos.Account as Eos
-import Json.Decode as Decode exposing (Decoder, nullable, string)
+import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
 
 
@@ -55,13 +55,13 @@ decode : Decoder Flags
 decode =
     Decode.succeed Flags
         |> required "env" decodeEnvironment
-        |> required "language" string
+        |> required "language" Decode.string
         |> DecodePipeline.custom
             (Decode.succeed
                 (Maybe.map2 (\acc auth -> ( acc, auth )))
-                |> optional "accountName" (nullable Eos.nameDecoder) Nothing
+                |> optional "accountName" (Decode.nullable Eos.nameDecoder) Nothing
                 |> optional "isPinAvailable"
-                    (nullable Decode.bool)
+                    (Decode.nullable Decode.bool)
                     Nothing
             )
         |> required "endpoints" decodeEndpoints
@@ -96,9 +96,9 @@ defaultEndpoints =
 decodeEndpoints : Decoder Endpoints
 decodeEndpoints =
     Decode.succeed Endpoints
-        |> required "eosio" string
-        |> required "api" string
-        |> required "graphql" string
+        |> required "eosio" Decode.string
+        |> required "api" Decode.string
+        |> required "graphql" Decode.string
 
 
 type Environment
@@ -116,4 +116,4 @@ decodeEnvironment =
             else
                 Production
         )
-        string
+        Decode.string

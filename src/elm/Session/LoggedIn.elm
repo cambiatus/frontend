@@ -50,7 +50,7 @@ import List.Extra as List
 import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
-import Profile exposing (Model)
+import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
@@ -146,7 +146,7 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
-    , routeHistory : List Route.Route
+    , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model

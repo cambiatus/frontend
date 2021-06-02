@@ -40,7 +40,7 @@ import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
-import Eos exposing (EosBool(..), Symbol, symbolToString)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
@@ -66,7 +66,7 @@ import Utils
 type alias Metadata =
     { title : String
     , description : String
-    , symbol : Symbol
+    , symbol : Eos.Symbol
     , logo : String
     , creator : Eos.Name
     , memberCount : Int
@@ -80,7 +80,7 @@ type alias Metadata =
 type alias Model =
     { name : String
     , description : String
-    , symbol : Symbol
+    , symbol : Eos.Symbol
     , logo : String
     , subdomain : String
     , creator : Eos.Name
@@ -161,11 +161,11 @@ type alias NewCommunity =
     String
 
 
-newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
+newCommunitySubscription : Eos.Symbol -> SelectionSet NewCommunity RootSubscription
 newCommunitySubscription symbol =
     let
         stringSymbol =
-            symbolToString symbol
+            Eos.symbolToString symbol
                 |> String.toUpper
 
         selectionSet =
@@ -177,9 +177,9 @@ newCommunitySubscription symbol =
     Subscription.newcommunity args selectionSet
 
 
-symbolQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
+symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
 symbolQuery symbol =
-    Query.community (\optionals -> { optionals | symbol = Present <| symbolToString symbol }) communitySelectionSet
+    Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol }) communitySelectionSet
 
 
 subdomainQuery : String -> SelectionSet (Maybe Model) RootQuery

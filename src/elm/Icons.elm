@@ -68,7 +68,7 @@ camera class_ =
         [ Svg.clipPath [ id "a" ]
             [ Svg.path [ d "m0 0h16v16h-16z" ] []
             ]
-        , Svg.g
+        , g
             [ clipPath "url(#a)"
             , stroke "#fff"
             , strokeLinecap "round"

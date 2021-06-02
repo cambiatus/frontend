@@ -43,7 +43,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Ports
-import Profile exposing (Model)
+import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR

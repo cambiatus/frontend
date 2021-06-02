@@ -7,7 +7,7 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
-import Profile exposing (Model)
+import Profile
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR

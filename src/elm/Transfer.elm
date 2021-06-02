@@ -22,8 +22,8 @@ import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
-import Eos exposing (Symbol, symbolToString)
-import Eos.Account as Eos exposing (Name)
+import Eos exposing (symbolToString)
+import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
@@ -141,7 +141,7 @@ profileTransfersSelectionSet paginateArgs =
         |> with transfers
 
 
-transfersUserQuery : Name -> (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet (Maybe QueryTransfers) RootQuery
+transfersUserQuery : Eos.Name -> (User.TransfersOptionalArguments -> User.TransfersOptionalArguments) -> SelectionSet (Maybe QueryTransfers) RootQuery
 transfersUserQuery name paginateArgs =
     profileTransfersSelectionSet paginateArgs
         |> Cambiatus.Query.user { account = Eos.nameToString name }
@@ -195,7 +195,7 @@ transferQuery tID =
     Cambiatus.Query.transfer args transferItemSelectionSet
 
 
-transferSucceedSubscription : Symbol -> String -> String -> SelectionSet Transfer Graphql.Operation.RootSubscription
+transferSucceedSubscription : Eos.Symbol -> String -> String -> SelectionSet Transfer Graphql.Operation.RootSubscription
 transferSucceedSubscription symbol fromAccount toAccount =
     let
         args =

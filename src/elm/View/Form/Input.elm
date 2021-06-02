@@ -156,7 +156,7 @@ input options =
                 TextArea ->
                     "form-input"
     in
-    Html.div [ class "relative" ]
+    div [ class "relative" ]
         [ inputElement
             ([ id options.id
              , onInput options.onInput

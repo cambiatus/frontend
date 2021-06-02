@@ -32,7 +32,7 @@ posixDateTime maybedt =
                     Time.millisToPosix 0
 
 
-decodeTimestamp : Decode.Decoder Time.Posix
+decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
         |> Decode.andThen

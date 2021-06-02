@@ -8,7 +8,7 @@ module Api exposing
 
 import Avatar exposing (Avatar)
 import Community exposing (Balance)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Http
@@ -84,7 +84,7 @@ uploadImage shared file toMsg =
         }
 
 
-communityInvite : Shared -> Symbol -> Eos.Name -> (Result Http.Error String -> msg) -> Cmd msg
+communityInvite : Shared -> Eos.Symbol -> Eos.Name -> (Result Http.Error String -> msg) -> Cmd msg
 communityInvite shared symbol inviter toMsg =
     Http.post
         { url = backendUrl shared [ "invite" ] []

@@ -11,7 +11,7 @@ module Page.Community exposing
 import Action exposing (Action)
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Community exposing (Model)
+import Community
 import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)

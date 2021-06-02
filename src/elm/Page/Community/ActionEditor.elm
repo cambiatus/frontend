@@ -12,7 +12,7 @@ module Page.Community.ActionEditor exposing
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Model)
+import Community
 import DataValidator
     exposing
         ( Validator

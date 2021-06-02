@@ -32,7 +32,7 @@ import Page
 import RemoteData exposing (RemoteData)
 import Select
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
 import Time exposing (Month(..), Weekday(..))
@@ -662,7 +662,7 @@ viewAutoCompleteItem shared profile =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg ProfileBase
+selectConfiguration : Shared -> Bool -> Select.Config Msg ProfileBase
 selectConfiguration shared isDisabled =
     selectConfig
         (Select.newConfig

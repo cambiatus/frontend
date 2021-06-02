@@ -33,7 +33,7 @@ import Html.Events exposing (onClick)
 import Http
 import Icons
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
+import Json.Encode as Encode
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
@@ -41,7 +41,7 @@ import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
 import Task
-import Time exposing (Posix, posixToMillis)
+import Time
 import UpdateResult as UR
 import Utils
 import View.Form.FileUploader as FileUploader
@@ -114,12 +114,12 @@ type Msg
     | ClaimButtonClicked Action
     | ClaimConfirmationClosed
     | ActionClaimed Action (Maybe Proof)
-    | GotActionClaimedResponse (Result Value String)
+    | GotActionClaimedResponse (Result Encode.Value String)
       -- Claim with Proof Messages
     | AgreedToClaimWithProof Action
-    | GotProofTime Posix
+    | GotProofTime Time.Posix
     | AskedForUint64Name
-    | GotUint64Name (Result Value String)
+    | GotUint64Name (Result Encode.Value String)
     | Tick Time.Posix
     | PhotoAdded (List File)
     | PhotoUploaded (Result Http.Error String)
@@ -497,7 +497,7 @@ viewClaimConfirmation { t } model =
             text ""
 
 
-viewClaimButton : Translators -> Posix -> Action -> Html Msg
+viewClaimButton : Translators -> Time.Posix -> Action -> Html Msg
 viewClaimButton { t } now action =
     let
         ( buttonMsg, buttonClasses, buttonText ) =
@@ -521,7 +521,7 @@ viewClaimButton { t } now action =
         ]
 
 
-viewSearchActions : Translators -> Posix -> List Action -> Html Msg
+viewSearchActions : Translators -> Time.Posix -> List Action -> Html Msg
 viewSearchActions ({ t } as translators) today actions =
     let
         viewAction action =
@@ -700,7 +700,7 @@ encodeClaimAction c =
         ]
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ActionClaimed" :: [] ->
@@ -783,17 +783,17 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
         |> String.slice 0 8
 
 
-isPastDeadline : Action -> Posix -> Bool
+isPastDeadline : Action -> Time.Posix -> Bool
 isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
+            Time.posixToMillis now > Time.posixToMillis (Utils.posixDateTime action.deadline)
 
         Nothing ->
             False
 
 
-isClosed : Action -> Posix -> Bool
+isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)

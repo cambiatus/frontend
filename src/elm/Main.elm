@@ -44,7 +44,7 @@ import Ports
 import RemoteData
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Shop
 import Task
 import Time

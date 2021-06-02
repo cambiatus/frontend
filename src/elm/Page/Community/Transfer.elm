@@ -9,7 +9,7 @@ module Page.Community.Transfer exposing
     , view
     )
 
-import Community exposing (Model)
+import Community
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError

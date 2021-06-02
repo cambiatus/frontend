@@ -24,7 +24,7 @@ import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Translations, initialTranslations, t)
+import I18Next exposing (Translations, initialTranslations)
 import Time exposing (Posix)
 import Url exposing (Url)
 
@@ -278,7 +278,7 @@ viewFullError : Shared -> Http.Error -> msg -> String -> Html msg
 viewFullError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
-        , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]
+        , button [ onClick msg ] [ text (I18Next.t shared.translations "menu.try_again") ]
         ]
 
 
@@ -286,5 +286,5 @@ viewFullGraphqlError : Shared -> Graphql.Http.Error e -> msg -> String -> Html m
 viewFullGraphqlError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
-        , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]
+        , button [ onClick msg ] [ text (I18Next.t shared.translations "menu.try_again") ]
         ]

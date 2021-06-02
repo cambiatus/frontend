@@ -26,8 +26,8 @@ import Browser.Navigation as Nav
 import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
-import Html exposing (Attribute, Html, a, div, img,  p,  text)
-import Html.Attributes exposing (class,  src, title)
+import Html exposing (Attribute, Html, a, div, img, p, text)
+import Html.Attributes exposing (class, src, title)
 import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -182,7 +182,7 @@ viewHeader { shared, routeHistory } title =
         ]
 
 
-fullPageLoading : Shared.Shared -> Html msg
+fullPageLoading : Shared -> Html msg
 fullPageLoading { translators } =
     View.Components.loadingLogoAnimated translators ""
 
