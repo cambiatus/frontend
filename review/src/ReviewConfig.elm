@@ -20,6 +20,7 @@ import NoUnused.CustomTypeConstructors
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.Exports
 import NoExposingEverything
+import NoMissingTypeAnnotation
 import Simplify
 import Review.Rule as Rule exposing (Rule)
 
@@ -37,6 +38,7 @@ config =
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
+    , NoMissingTypeAnnotation.rule
     , Simplify.defaults
         |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
         |> Simplify.rule
