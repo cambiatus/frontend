@@ -584,16 +584,15 @@ viewBalance ({ shared } as loggedIn) _ balance =
     div [ class "flex-wrap flex lg:space-x-3" ]
         [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
             [ div [ class "w-full" ]
-                ([ div [ class "input-label mb-2" ]
+                (div [ class "input-label mb-2" ]
                     [ text_ "account.my_wallet.balances.current" ]
-                 , div [ class "flex items-center mb-4" ]
-                    [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                        [ text balanceText ]
-                    , div [ class "text-indigo-500 ml-2" ]
-                        [ text symbolText ]
-                    ]
-                 ]
-                    ++ (case loggedIn.selectedCommunity of
+                    :: div [ class "flex items-center mb-4" ]
+                        [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                            [ text balanceText ]
+                        , div [ class "text-indigo-500 ml-2" ]
+                            [ text symbolText ]
+                        ]
+                    :: (case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 [ a
                                     [ class "button button-primary w-full font-medium mb-2"

@@ -158,14 +158,13 @@ input options =
     in
     div [ class "relative" ]
         [ inputElement
-            ([ id options.id
-             , onInput options.onInput
-             , class ("w-full " ++ inputClass)
-             , disabled options.disabled
-             , value options.value
-             , placeholder (Maybe.withDefault "" options.placeholder)
-             ]
-                ++ options.extraAttrs
+            (id options.id
+                :: onInput options.onInput
+                :: class ("w-full " ++ inputClass)
+                :: disabled options.disabled
+                :: value options.value
+                :: placeholder (Maybe.withDefault "" options.placeholder)
+                :: options.extraAttrs
             )
             []
         , Maybe.withDefault (text "") options.extraElement

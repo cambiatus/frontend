@@ -276,9 +276,41 @@ hideCommunityAndSearch currentPage model =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
+    let
+        viewClaimWithProofs action proof =
+            [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
+                |> Html.map (GotActionMsg >> pageMsg)
+            ]
+
+        mainView =
+            case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                ( True, _ ) ->
+                    case model.selectedCommunity of
+                        RemoteData.Success community ->
+                            [ Search.viewSearchBody
+                                shared.translators
+                                community.symbol
+                                shared.now
+                                (GotSearchMsg >> pageMsg)
+                                (GotActionMsg >> pageMsg)
+                                model.searchModel
+                            ]
+
+                        _ ->
+                            []
+
+                ( False, Action.PhotoUploaderShowed action p ) ->
+                    viewClaimWithProofs action p
+
+                ( False, Action.ClaimInProgress action (Just p) ) ->
+                    viewClaimWithProofs action p
+
+                _ ->
+                    viewPageBody model profile_ page content
+    in
     div
         [ class "min-h-screen flex flex-col" ]
-        ([ div [ class "bg-white" ]
+        (div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader page model profile_
                     |> Html.map pageMsg
@@ -289,40 +321,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     viewMainMenu page model |> Html.map pageMsg
                 ]
             ]
-         , Feedback.view model.feedback
-            |> Html.map (GotFeedbackMsg >> pageMsg)
-         ]
-            ++ (let
-                    viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
-                            |> Html.map (GotActionMsg >> pageMsg)
-                        ]
-                in
-                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                    ( True, _ ) ->
-                        case model.selectedCommunity of
-                            RemoteData.Success community ->
-                                [ Search.viewSearchBody
-                                    shared.translators
-                                    community.symbol
-                                    shared.now
-                                    (GotSearchMsg >> pageMsg)
-                                    (GotActionMsg >> pageMsg)
-                                    model.searchModel
-                                ]
-
-                            _ ->
-                                []
-
-                    ( False, Action.PhotoUploaderShowed action p ) ->
-                        viewClaimWithProofs action p
-
-                    ( False, Action.ClaimInProgress action (Just p) ) ->
-                        viewClaimWithProofs action p
-
-                    _ ->
-                        viewPageBody model profile_ page content
-               )
+            :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
+            :: mainView
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)

@@ -121,10 +121,9 @@ toHtml ({ t } as translators) options =
                 "text-grey"
     in
     label
-        ([ class "flex w-full justify-between items-center text-sm"
-         , for options.id
-         ]
-            ++ options.extraAttrs
+        (class "flex w-full justify-between items-center text-sm"
+            :: for options.id
+            :: options.extraAttrs
         )
         [ div [ class "flex items-center" ]
             [ text_ options.label
