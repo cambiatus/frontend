@@ -581,7 +581,7 @@ passphraseValidator =
                 words =
                     String.words model.passphrase
 
-                has12words =
+                has12Words =
                     List.length words == 12
 
                 allWordsHaveAtLeastThreeLetters =
@@ -590,7 +590,7 @@ passphraseValidator =
                 trPrefix s =
                     "auth.login.wordsMode.input." ++ s
             in
-            if not has12words then
+            if not has12Words then
                 [ trPrefix "notPassphraseError" ]
 
             else if not allWordsHaveAtLeastThreeLetters then

@@ -274,10 +274,10 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                             ]
                     }
 
-        ( GotUint64Name (Ok uint64name), PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
+        ( GotUint64Name (Ok uint64Name), PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
                 verificationCode =
-                    generateVerificationCode action.id uint64name proofCode.claimTimestamp
+                    generateVerificationCode action.id uint64Name proofCode.claimTimestamp
 
                 newProofCode =
                     Just

@@ -286,8 +286,8 @@ viewCard model ({ shared } as loggedIn) index card =
         currBalance =
             String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
 
         title =
             if String.length card.product.title > 17 then

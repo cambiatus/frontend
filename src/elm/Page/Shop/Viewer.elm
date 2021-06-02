@@ -470,8 +470,8 @@ viewCard ({ shared } as loggedIn) card model =
         text_ str =
             text (shared.translators.t str)
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -590,8 +590,8 @@ viewTransferForm { shared } card model =
             in
             currBalance
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "large__card__transfer" ]
         [ div [ class "large__card__account" ]

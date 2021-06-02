@@ -228,8 +228,8 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         text_ s =
             text (shared.translators.t s)
 
-        tr r_id replaces =
-            loggedIn.shared.translators.tr r_id replaces
+        tr rId replaces =
+            loggedIn.shared.translators.tr rId replaces
     in
     div [ class "flex flex-wrap sm:flex-nowrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]

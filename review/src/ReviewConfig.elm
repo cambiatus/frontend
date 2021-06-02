@@ -23,6 +23,7 @@ import NoExposingEverything
 import NoMissingTypeAnnotation
 import Simplify
 import NoLeftPizza
+import UseCamelCase
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -44,6 +45,7 @@ config =
         |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
         |> Simplify.rule
     , NoLeftPizza.rule NoLeftPizza.Redundant
+    , UseCamelCase.rule UseCamelCase.default
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])
