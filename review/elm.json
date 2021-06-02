@@ -19,7 +19,8 @@
             "stil4m/elm-syntax": "7.2.5",
             "truqu/elm-review-nobooleancase": "1.0.0",
             "truqu/elm-review-noleftpizza": "2.0.0",
-            "truqu/elm-review-noredundantconcat": "1.0.0"
+            "truqu/elm-review-noredundantconcat": "1.0.0",
+            "truqu/elm-review-noredundantcons": "1.0.0"
         },
         "indirect": {
             "elm/html": "1.0.0",

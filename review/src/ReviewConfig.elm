@@ -26,6 +26,7 @@ import NoLeftPizza
 import UseCamelCase
 import NoModuleOnExposedNames
 import NoRedundantConcat
+import NoRedundantCons
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -50,6 +51,7 @@ config =
     , UseCamelCase.rule UseCamelCase.default
     , NoModuleOnExposedNames.rule
     , NoRedundantConcat.rule
+    , NoRedundantCons.rule
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])
