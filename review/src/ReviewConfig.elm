@@ -14,20 +14,21 @@ when inside the directory containing this file.
 import NoBooleanCase
 import NoDebug.Log
 import NoDebug.TodoOrToString
-import NoUnused.Modules
-import NoUnused.Variables
-import NoUnused.CustomTypeConstructors
-import NoUnused.CustomTypeConstructorArgs
-import NoUnused.Exports
 import NoExposingEverything
-import NoMissingTypeAnnotation
-import Simplify
+import NoInconsistentMsgToString
 import NoLeftPizza
-import UseCamelCase
+import NoMissingTypeAnnotation
 import NoModuleOnExposedNames
 import NoRedundantConcat
 import NoRedundantCons
+import NoUnused.CustomTypeConstructorArgs
+import NoUnused.CustomTypeConstructors
+import NoUnused.Exports
+import NoUnused.Modules
+import NoUnused.Variables
 import Review.Rule as Rule exposing (Rule)
+import Simplify
+import UseCamelCase
 
 
 config : List Rule
@@ -51,6 +52,7 @@ config =
     , UseCamelCase.rule UseCamelCase.default
     , NoModuleOnExposedNames.rule
     , NoRedundantConcat.rule
+    , NoInconsistentMsgToString.rule
     , NoRedundantCons.rule
     ]
         -- Ignore generated code
