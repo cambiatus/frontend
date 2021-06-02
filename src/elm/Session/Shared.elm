@@ -79,7 +79,7 @@ type TranslationStatus
     | LoadingTranslationFailed Http.Error
     | LoadedTranslation
     | LoadingAnotherTranslation
-    | LoadingAnotherTranslationFailed Http.Error
+    | LoadingAnotherTranslationFailed
 
 
 
@@ -187,7 +187,7 @@ toLoadingTranslation shared =
                 LoadedTranslation ->
                     LoadingAnotherTranslation
 
-                LoadingAnotherTranslationFailed _ ->
+                LoadingAnotherTranslationFailed ->
                     LoadingAnotherTranslation
 
                 _ ->
@@ -206,7 +206,7 @@ loadTranslation result shared =
                             LoadingTranslationFailed err
 
                         LoadingAnotherTranslation ->
-                            LoadingAnotherTranslationFailed err
+                            LoadingAnotherTranslationFailed
 
                         _ ->
                             shared.translationsStatus

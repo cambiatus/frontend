@@ -17,6 +17,7 @@ import NoDebug.TodoOrToString
 import NoUnused.Modules
 import NoUnused.Variables
 import NoUnused.CustomTypeConstructors
+import NoUnused.CustomTypeConstructorArgs
 import NoUnused.Exports
 import NoExposingEverything
 import Review.Rule as Rule exposing (Rule)
@@ -29,6 +30,7 @@ config =
     , NoUnused.Variables.rule
     , NoUnused.Modules.rule
     , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructorArgs.rule
     , NoUnused.Exports.rule
         |> Rule.ignoreErrorsForFiles [ "src/elm/Select.elm", "src/elm/DataValidator.elm" ]
     , NoBooleanCase.rule

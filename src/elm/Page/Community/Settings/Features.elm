@@ -55,7 +55,7 @@ type Msg
     = CompletedLoadCommunity Community.Model
     | ToggleShop Bool
     | ToggleObjectives Bool
-    | ToggleKyc Bool
+    | ToggleKyc
     | SaveSuccess
 
 
@@ -109,7 +109,7 @@ view loggedIn model =
                              , View.Toggle.init
                                 { label = "community.kyc.title"
                                 , id = "kyc-toggle"
-                                , onToggle = ToggleKyc
+                                , onToggle = \_ -> ToggleKyc
                                 , disabled = True
                                 , value = community.hasKyc
                                 }
@@ -168,7 +168,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
 
-        ToggleKyc _ ->
+        ToggleKyc ->
             { model | hasKyc = model.hasKyc }
                 |> UR.init
 
@@ -319,7 +319,7 @@ msgToString msg =
         ToggleObjectives _ ->
             [ "ToggleObjectives" ]
 
-        ToggleKyc _ ->
+        ToggleKyc ->
             [ "ToggleKyc" ]
 
         SaveSuccess ->

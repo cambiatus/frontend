@@ -28,7 +28,7 @@ init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { shared, authToken } transferId =
     let
         model =
-            { status = Loading transferId
+            { status = Loading
             , transferId = transferId
             }
     in
@@ -59,7 +59,7 @@ type alias ProfileSummaries =
 
 
 type Status
-    = Loading Int
+    = Loading
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
     | Loaded (Maybe Transfer) State ProfileSummaries
 
@@ -89,7 +89,7 @@ view loggedIn model =
 
         content =
             case model.status of
-                Loading _ ->
+                Loading ->
                     Page.fullPageLoading loggedIn.shared
 
                 LoadFailed error ->

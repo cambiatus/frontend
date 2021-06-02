@@ -84,7 +84,7 @@ type
     | Creating (List Balance) ImageStatus Form
       -- Update
     | LoadingBalancesUpdate ProductId
-    | LoadingSaleUpdate (List Balance) ProductId
+    | LoadingSaleUpdate (List Balance)
     | EditingUpdate (List Balance) Product ImageStatus DeleteModalStatus Form
     | Saving (List Balance) Product ImageStatus Form
     | Deleting (List Balance) Product ImageStatus Form
@@ -214,7 +214,7 @@ view loggedIn model =
                 LoadingBalancesUpdate _ ->
                     Page.fullPageLoading shared
 
-                LoadingSaleUpdate _ _ ->
+                LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
 
                 LoadBalancesFailed error ->
@@ -539,7 +539,7 @@ update msg model loggedIn =
                                         (Shop.productQuery id)
                                         CompletedSaleLoad
                     in
-                    LoadingSaleUpdate balances saleId
+                    LoadingSaleUpdate balances
                         |> UR.init
                         |> UR.addCmd saleFetch
 
@@ -555,7 +555,7 @@ update msg model loggedIn =
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
-                ( LoadingSaleUpdate balances _, Just sale ) ->
+                ( LoadingSaleUpdate balances, Just sale ) ->
                     let
                         balanceOptions =
                             List.map

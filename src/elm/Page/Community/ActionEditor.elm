@@ -130,7 +130,7 @@ type ProofNumberPresence
 type SaveStatus
     = NotAsked
     | Saving
-    | Failed String
+    | Failed
 
 
 type alias Form =
@@ -467,7 +467,7 @@ type Msg
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
     | EnteredMinVotes String
-    | ToggleValidity Bool
+    | ToggleValidity
     | ToggleDeadline Bool
     | TogglePhotoProof Bool
     | TogglePhotoProofNumber Bool
@@ -868,7 +868,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
                                 |> UR.logImpossible msg []
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             model
                 |> UR.init
 
@@ -1064,7 +1064,7 @@ update msg model ({ shared } as loggedIn) =
         GotSaveAction (Err val) ->
             let
                 newModel =
-                    { model | form = { oldForm | saveStatus = Failed (t "error.unknown") } }
+                    { model | form = { oldForm | saveStatus = Failed } }
             in
             newModel
                 |> UR.init
@@ -1410,7 +1410,7 @@ viewValidations { shared } model =
                             , name "expiration-toggle"
                             , class "form-switch-checkbox mr-2"
                             , checked (model.form.validation /= NoValidation)
-                            , onCheck ToggleValidity
+                            , onCheck (\_ -> ToggleValidity)
                             ]
                             []
                         , label [ class "form-switch-label", for "expiration-toggle" ] []
@@ -1936,7 +1936,7 @@ msgToString msg =
         SelectMsg _ ->
             [ "SelectMsg" ]
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             [ "ToggleValidity" ]
 
         ToggleDeadline _ ->

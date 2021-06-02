@@ -157,7 +157,7 @@ type Validation
 type Msg
     = CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | ClickedBuy Product
+    | ClickedBuy
     | ClickedEdit Product
     | ClickedTransfer Product
     | EnteredUnit String
@@ -228,7 +228,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale idString))
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             { model | viewing = EditingTransfer }
                 |> UR.init
 
@@ -538,7 +538,7 @@ viewCard ({ shared } as loggedIn) card model =
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full sm:w-40 mx-auto"
-                                , onClick (ClickedBuy card.product)
+                                , onClick ClickedBuy
                                 ]
                                 [ text_ "shop.buy" ]
                             ]
@@ -765,7 +765,7 @@ msgToString msg =
         GotTransferResult _ ->
             [ "GotTransferResult" ]
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             [ "ClickedBuy" ]
 
         ClickedEdit _ ->

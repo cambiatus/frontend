@@ -100,7 +100,7 @@ type Status
     | AccountTypeSelectorShowed
     | FormShowed FormModel
     | AccountCreated
-    | ErrorShowed Error
+    | ErrorShowed
     | NotFound
 
 
@@ -126,11 +126,6 @@ type alias PdfData =
     { passphrase : String
     , accountName : String
     }
-
-
-type Error
-    = FailedInvite (Graphql.Http.Error (Maybe Invite))
-    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
 
 
 type alias InvitationId =
@@ -248,7 +243,7 @@ viewCreateAccount translators model =
                         -- TODO: This should never happen
                         text ""
 
-            ErrorShowed _ ->
+            ErrorShowed ->
                 Page.fullPageNotFound (translators.t "error.unknown") ""
 
             NotFound ->
@@ -884,7 +879,7 @@ update _ msg model { shared } =
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (RemoteData.Failure error) ->
-            { model | status = ErrorShowed (FailedInvite error) }
+            { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
                 |> UR.logGraphqlError msg error
@@ -903,7 +898,7 @@ update _ msg model { shared } =
             UR.init { model | status = NotFound }
 
         CompletedLoadCountry (RemoteData.Failure error) ->
-            { model | status = ErrorShowed (FailedCountry error) }
+            { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
