@@ -277,8 +277,8 @@ hideCommunityAndSearch currentPage model =
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
-        viewClaimWithProofs action proof =
-            [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
+        viewClaimWithProofs action proof isLoading =
+            [ Action.viewClaimWithProofs proof shared.translators isLoading action
                 |> Html.map (GotActionMsg >> pageMsg)
             ]
 
@@ -300,10 +300,10 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                             []
 
                 ( False, Action.PhotoUploaderShowed action p ) ->
-                    viewClaimWithProofs action p
+                    viewClaimWithProofs action p False
 
                 ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p
+                    viewClaimWithProofs action p True
 
                 _ ->
                     viewPageBody model profile_ page content

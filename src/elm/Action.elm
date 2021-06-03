@@ -488,7 +488,7 @@ viewClaimConfirmation { t } model =
             modalContent acceptMsg False
 
         ClaimInProgress _ _ ->
-            modalContent NoOp True
+            text ""
 
         PhotoUploaderShowed _ _ ->
             text ""
@@ -551,7 +551,7 @@ viewSearchActions ({ t } as translators) today actions =
 
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
-viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) _ action =
+viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) isLoading action =
     let
         isUploadingInProgress =
             RemoteData.isLoading photoStatus
@@ -595,13 +595,13 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                          else
                             ClaimConfirmationClosed
                         )
-                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
-                    , disabled isUploadingInProgress
+                    , classList [ ( "button-disabled", isUploadingInProgress || isLoading ) ]
+                    , disabled (isUploadingInProgress || isLoading)
                     ]
                     [ text (t "menu.cancel") ]
                 , button
                     [ class "modal-accept"
-                    , classList [ ( "button-disabled", isUploadingInProgress ) ]
+                    , classList [ ( "button-disabled", isUploadingInProgress || isLoading ) ]
                     , onClick
                         (if isUploadingInProgress then
                             NoOp
@@ -609,7 +609,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                          else
                             ActionClaimed action (Just proof)
                         )
-                    , disabled isUploadingInProgress
+                    , disabled (isUploadingInProgress || isLoading)
                     ]
                     [ text (t "menu.send") ]
                 ]
