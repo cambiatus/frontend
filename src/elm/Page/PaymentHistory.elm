@@ -35,7 +35,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
-import Time exposing (Month(..), Weekday(..))
+import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
