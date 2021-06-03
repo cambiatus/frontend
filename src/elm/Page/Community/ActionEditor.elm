@@ -1679,8 +1679,8 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         ]
                         []
                     , span []
-                        [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
-                        , text (t "community.actions.form.photo_validation_hint")
+                        [ b [ class "block" ] [ text (t "community.actions.form.proof_validation") ]
+                        , text (t "community.actions.form.proof_validation_hint")
                         ]
                     ]
                 , if isPhotoProofEnabled then

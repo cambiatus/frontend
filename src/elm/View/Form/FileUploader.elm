@@ -208,7 +208,7 @@ viewLarge ({ t } as translators) options =
                 _ ->
                     div [ class "text-white text-body font-bold text-center" ]
                         [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
-                        , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
+                        , div [ class "px-4" ] [ text (t "community.actions.proof.upload_hint") ]
                         ]
             ]
         ]

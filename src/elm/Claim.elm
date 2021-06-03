@@ -417,7 +417,7 @@ viewPhotoModal loggedIn claim =
                                 , href url
                                 , target "_blank"
                                 ]
-                                [ text (t "community.actions.proof.photo_full")
+                                [ text (t "community.actions.proof.upload_full")
                                 , Icons.externalLink "inline-block ml-1 h-3 fill-current"
                                 ]
                             ]

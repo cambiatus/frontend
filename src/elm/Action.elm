@@ -195,7 +195,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
         -- Invalid: no photo presented
         ( ActionClaimed _ (Just _), _ ) ->
             { model
-                | feedback = Failure (t "community.actions.proof.no_photo_error") |> Just
+                | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
                 , needsPinConfirmation = False
             }
                 |> UR.init
@@ -577,7 +577,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
                 _ ->
                     text ""
             , FileUploader.init
-                { label = "community.actions.proof.photo"
+                { label = "community.actions.proof.upload"
                 , id = "proof_photo_uploader"
                 , onFileInput = PhotoAdded
                 , status = photoStatus
