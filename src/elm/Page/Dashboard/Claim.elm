@@ -159,7 +159,7 @@ view ({ shared } as loggedIn) model =
 
 
 viewProofs : Translators -> Claim.Model -> Html Msg
-viewProofs { t } claim =
+viewProofs ({ t } as translators) claim =
     let
         viewProofCode =
             case claim.proofCode of
@@ -179,7 +179,11 @@ viewProofs { t } claim =
                 [ div [ class "claim-photo-thumb" ]
                     [ View.Components.pdfViewer
                         [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim), class "h-full w-full" ]
-                        { url = url, childClass = "" }
+                        { url = url
+                        , childClass = ""
+                        , translators = translators
+                        , showLoading = False
+                        }
                     ]
                 , viewProofCode
                 ]

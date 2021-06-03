@@ -29,6 +29,36 @@ window.customElements.define('pdf-viewer',
       const url = this.getAttribute('elm-url')
       const childClass = this.getAttribute('elm-child-class')
 
+      const showLoading = this.getAttribute('elm-show-loading') === 'true'
+
+      let setContent = (node) => {
+        this.appendChild(node)
+      }
+
+      if (showLoading) {
+        const loadingImgContainer = document.createElement('div')
+        loadingImgContainer.className = 'w-full text-center'
+        const loadingImg = document.createElement('img')
+        loadingImg.className = 'h-16 mx-auto mt-8'
+        loadingImg.src = '/images/loading.svg'
+        const loadingTitle = document.createElement('p')
+        loadingTitle.className = 'font-bold text-2xl'
+        loadingTitle.textContent = this.getAttribute('elm-loading-title')
+        const loadingSubtitle = document.createElement('p')
+        loadingSubtitle.className = 'text-sm'
+        loadingSubtitle.textContent = this.getAttribute('elm-loading-subtitle')
+
+        loadingImgContainer.appendChild(loadingImg)
+        loadingImgContainer.appendChild(loadingTitle)
+        loadingImgContainer.appendChild(loadingSubtitle)
+        this.appendChild(loadingImgContainer)
+
+        setContent = (node) => {
+          this.removeChild(loadingImgContainer)
+          this.appendChild(node)
+        }
+      }
+
       pdfjsLib.getDocument(url).promise.then((pdf) => {
         pdf.getPage(1).then((page) => {
           const canvas = document.createElement('canvas')
@@ -48,7 +78,7 @@ window.customElements.define('pdf-viewer',
 
           const renderTask = page.render(renderContext)
           renderTask.promise.then(() => {
-            this.appendChild(canvas)
+            setContent(canvas)
           })
         })
       }).catch((e) => {
@@ -57,7 +87,7 @@ window.customElements.define('pdf-viewer',
           const img = document.createElement('img')
           img.src = url
           img.className = childClass
-          this.appendChild(img)
+          setContent(img)
         } else {
           debugLog('pdf-viewer error', e)
         }

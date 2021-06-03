@@ -194,8 +194,12 @@ viewLarge ({ t } as translators) options =
                         [ span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera "" ]
                         , if List.member PDF options.fileTypes then
-                            View.Components.pdfViewer [ class "h-full w-full" ]
-                                { url = url, childClass = "max-h-full max-w-full" }
+                            View.Components.pdfViewer [ class "h-full w-full text-white" ]
+                                { url = url
+                                , childClass = "max-h-full max-w-full"
+                                , translators = translators
+                                , showLoading = True
+                                }
 
                           else
                             img [ src url, class "max-h-full max-w-full" ] []
@@ -211,7 +215,7 @@ viewLarge ({ t } as translators) options =
 
 
 viewSmall : Translators -> Options msg -> Html msg
-viewSmall { t } options =
+viewSmall ({ t } as translators) options =
     let
         imgClasses =
             "object-cover rounded-full w-20 h-20"
@@ -221,7 +225,11 @@ viewSmall { t } options =
                 RemoteData.Success url ->
                     if List.member PDF options.fileTypes then
                         View.Components.pdfViewer [ class imgClasses ]
-                            { url = url, childClass = imgClasses }
+                            { url = url
+                            , childClass = imgClasses
+                            , translators = translators
+                            , showLoading = False
+                            }
 
                     else
                         img [ class imgClasses, src url ] []

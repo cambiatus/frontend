@@ -340,7 +340,11 @@ viewClaimCard { shared, accountName } profileSummary claim =
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)
                                 , class "w-full h-full"
                                 ]
-                                { url = url, childClass = "" }
+                                { url = url
+                                , childClass = ""
+                                , translators = shared.translators
+                                , showLoading = False
+                                }
                             ]
 
                     Nothing ->
@@ -403,7 +407,11 @@ viewPhotoModal loggedIn claim =
                         div [ class "sm:w-1/2" ]
                             [ View.Components.pdfViewer
                                 [ class "min-h-[100px] max-h-[42vh]" ]
-                                { url = url, childClass = "" }
+                                { url = url
+                                , childClass = ""
+                                , translators = loggedIn.shared.translators
+                                , showLoading = False
+                                }
                             , a
                                 [ class "underline inline-block py-1 text-gray"
                                 , href url
