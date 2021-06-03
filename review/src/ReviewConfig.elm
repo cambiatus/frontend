@@ -15,6 +15,7 @@ import NoBooleanCase
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoExposingEverything
+import NoInconsistentJsAddressToMsg
 import NoInconsistentMsgToString
 import NoLeftPizza
 import NoMissingTypeAnnotation
@@ -53,6 +54,7 @@ config =
     , NoModuleOnExposedNames.rule
     , NoRedundantConcat.rule
     , NoInconsistentMsgToString.rule
+    , NoInconsistentJsAddressToMsg.rule
     , NoRedundantCons.rule
     ]
         -- Ignore generated code

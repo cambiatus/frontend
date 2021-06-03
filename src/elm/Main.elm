@@ -1218,7 +1218,7 @@ jsAddressToMsg address val =
             Maybe.map GotCommunitySettingsCurrencyMsg
                 (CommunitySettingsCurrency.jsAddressToMsg rAddress val)
 
-        "GotActionEditor" :: rAddress ->
+        "GotActionEditorMsg" :: rAddress ->
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
@@ -1279,13 +1279,13 @@ msgToString msg =
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
         GotObjectivesMsg subMsg ->
-            "GotObjectives" :: Objectives.msgToString subMsg
+            "GotObjectivesMsg" :: Objectives.msgToString subMsg
 
         GotObjectiveEditorMsg subMsg ->
             "GotObjectiveEditorMsg" :: ObjectiveEditor.msgToString subMsg
 
         GotActionEditorMsg subMsg ->
-            "GotActionEditor" :: ActionEditor.msgToString subMsg
+            "GotActionEditorMsg" :: ActionEditor.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg

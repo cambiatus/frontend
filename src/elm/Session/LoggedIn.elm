@@ -1431,7 +1431,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
-            [ "Ignored" ]
+            [ "NoOp" ]
 
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
@@ -1455,7 +1455,7 @@ msgToString msg =
             [ "CompletedLoadProfile", UR.remoteDataToString r ]
 
         CompletedLoadCommunity r ->
-            [ "CompletedInitialLoad", UR.remoteDataToString r ]
+            [ "CompletedLoadCommunity", UR.remoteDataToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]

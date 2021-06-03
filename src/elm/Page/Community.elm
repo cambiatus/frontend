@@ -335,7 +335,7 @@ msgToString msg =
             [ "RequestedReloadCommunity" ]
 
         GotActionMsg _ ->
-            [ "GotCommunityActionMsg" ]
+            [ "GotActionMsg" ]
 
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]

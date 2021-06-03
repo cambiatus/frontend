@@ -1943,13 +1943,13 @@ msgToString msg =
             [ "ToggleDeadline" ]
 
         ToggleUsages _ ->
-            [ "ToggleDeadline" ]
+            [ "ToggleUsages" ]
 
         TogglePhotoProof _ ->
-            [ "TogglePhotoValidation" ]
+            [ "TogglePhotoProof" ]
 
         TogglePhotoProofNumber _ ->
-            [ "TogglePhotoWithNumberValidation" ]
+            [ "TogglePhotoProofNumber" ]
 
         EnteredVerifierReward _ ->
             [ "EnteredVerifierReward" ]
@@ -1961,7 +1961,7 @@ msgToString msg =
             [ "MarkAsCompleted" ]
 
         ValidateForm ->
-            [ "ValidateDeadline" ]
+            [ "ValidateForm" ]
 
         ValidateDeadline ->
             [ "ValidateDeadline" ]

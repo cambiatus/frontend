@@ -736,7 +736,7 @@ msgToString msg =
             [ "NoOp" ]
 
         ClaimButtonClicked _ ->
-            [ "ClaimConfirmationOpen" ]
+            [ "ClaimButtonClicked" ]
 
         ClaimConfirmationClosed ->
             [ "ClaimConfirmationClosed" ]
@@ -745,7 +745,7 @@ msgToString msg =
             [ "ActionClaimed" ]
 
         AgreedToClaimWithProof _ ->
-            [ "ActionWithPhotoLinkClicked" ]
+            [ "AgreedToClaimWithProof" ]
 
         GotActionClaimedResponse r ->
             [ "GotActionClaimedResponse", UR.resultToString r ]

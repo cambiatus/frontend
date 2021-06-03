@@ -104,7 +104,7 @@ caseVisitor ( patternNode, expressionNode ) =
                 Just firstNode ->
                     nodesVisitor patternNode firstNode
 
-                _ ->
+                Nothing ->
                     []
 
         OperatorApplication "::" Infix.Right firstOperator _ ->

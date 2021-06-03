@@ -1232,7 +1232,7 @@ msgToString msg =
             [ "EnteredTrackStock" ]
 
         EnteredUnits _ ->
-            [ "EnteredUnit" ]
+            [ "EnteredUnits" ]
 
         EnteredPrice _ ->
             [ "EnteredPrice" ]

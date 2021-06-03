@@ -29,6 +29,19 @@ msgToString msg =
                             , details = [ "Make sure the string representation of the `Msg` is equal to that `Msg`s name" ]
                             , under = "\"Oranges\""
                             }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+type Msg
+    = Apples
+    | Bananas
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        Apples ->
+            [ "Apples" ]
+        Bananas ->
+            [ "Bananas" ]
+"""
                         ]
         , test "should be successful when `msgToString` returns a single-element list that is equal to the `Msg`s name" <|
             \() ->
@@ -69,6 +82,19 @@ msgToString msg =
                             , details = [ "Make sure the string representation of the `Msg` is equal to that `Msg`s name" ]
                             , under = "\"Oranges\""
                             }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+type Msg
+    = Apples
+    | Bananas
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        Apples ->
+            "Apples" :: [ "Strawberries", "Watermelons" ]
+        Bananas ->
+            [ "Bananas" ]
+"""
                         ]
         , test "should be successful when `msgToString` returns a multiple-element list in which the first element is equal to the `Msg`s name " <|
             \() ->
