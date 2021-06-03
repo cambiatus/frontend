@@ -6,11 +6,9 @@ module Notification exposing
     , NotificationType(..)
     , OrderData
     , TransferData
-    , addNotification
     , init
     , markAsReadMutation
     , notificationHistoryQuery
-    , readAll
     )
 
 import Cambiatus.Mutation as Mutation
@@ -29,9 +27,7 @@ import Cambiatus.Union.NotificationType
 import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Transfer
 
 
 
@@ -121,23 +117,6 @@ type NotificationType
     = Transfer TransferData
     | SaleHistory OrderData
     | Mint MintData
-
-
-addNotification : Notification -> Model -> Model
-addNotification notification model =
-    { model
-        | unreadNotifications = notification :: model.unreadNotifications
-        , hasUnread = True
-    }
-
-
-readAll : Model -> Model
-readAll model =
-    { model
-        | hasUnread = False
-        , unreadNotifications = []
-        , readNotifications = model.readNotifications ++ model.unreadNotifications
-    }
 
 
 markAsReadMutation : Int -> SelectionSet History RootMutation

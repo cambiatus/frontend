@@ -90,7 +90,7 @@ init session invitationId =
                 CompletedLoadInvite
 
         LoggedIn loggedIn ->
-            LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
+            LoggedIn.maybeInitWith (\_ -> CompletedLoadProfile) .profile loggedIn
     )
 
 
@@ -306,7 +306,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
-    | CompletedLoadProfile Profile.Model
+    | CompletedLoadProfile
     | OpenConfirmationModal
     | CloseConfirmationModal
     | InvitationRejected
@@ -425,7 +425,7 @@ update session msg model =
         CompletedLoadInvite _ ->
             UR.init model
 
-        CompletedLoadProfile _ ->
+        CompletedLoadProfile ->
             UR.init model
                 |> UR.addCmd
                     (Api.Graphql.query (toShared session)
@@ -566,8 +566,8 @@ getInvite model =
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
-        LoggedIn.ProfileLoaded profile ->
-            Just (CompletedLoadProfile profile)
+        LoggedIn.ProfileLoaded _ ->
+            Just CompletedLoadProfile
 
         _ ->
             Nothing
@@ -579,7 +579,7 @@ msgToString msg =
         CompletedLoadInvite r ->
             [ "CompletedLoadInvite", UR.remoteDataToString r ]
 
-        CompletedLoadProfile _ ->
+        CompletedLoadProfile ->
             [ "CompletedLoadProfile" ]
 
         OpenConfirmationModal ->

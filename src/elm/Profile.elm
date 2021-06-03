@@ -4,29 +4,16 @@ module Profile exposing
     , DeleteKycAndAddressResult
     , Minimal
     , Model
-    , ProfileCreate
     , ProfileForm
-    , communityInfoSelectionSet
-    , decode
     , deleteKycAndAddressMutation
-    , emptyProfileForm
-    , encodeProfileCreate
-    , encodeProfileForm
-    , encodeProfileLogin
-    , encodeProfileLoginWithInvitation
-    , maxPinChars
-    , minPinChars
     , minimalSelectionSet
     , mutation
-    , pinValidationAttrs
     , profileToForm
     , query
     , selectConfig
     , selectFilter
     , selectionSet
-    , updateContacts
     , upsertKycMutation
-    , username
     , viewEmpty
     , viewProfileName
     , viewProfileNameTag
@@ -48,10 +35,7 @@ import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, span, text)
-import Html.Attributes exposing (class, maxlength, minlength, pattern, title, type_)
-import Json.Decode as Decode exposing (Decoder, int, nullable, string)
-import Json.Decode.Pipeline as Decode exposing (optional, required)
-import Json.Encode as Encode
+import Html.Attributes exposing (class)
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
@@ -158,34 +142,6 @@ communityInfoSelectionSet =
         |> with Community.hasShop
         |> with Community.hasObjectives
         |> with Community.hasKyc
-
-
-decode : Decoder Model
-decode =
-    Decode.succeed Model
-        |> optional "name" (nullable string) Nothing
-        |> required "account" Eos.nameDecoder
-        |> optional "avatar" Avatar.decode Avatar.empty
-        |> optional "email" (nullable string) Nothing
-        |> optional "bio" (nullable string) Nothing
-        |> optional "localization" (nullable string) Nothing
-        |> optional "contacts" (Decode.list Contact.decode) []
-        |> optional "interests" decodeInterests []
-        |> Decode.hardcoded []
-        |> Decode.at [ "data", "user" ]
-        |> optional "analysisCount" int 0
-        |> optional "kyc" (nullable Kyc.decode) Nothing
-        |> optional "address" (nullable Address.decode) Nothing
-
-
-decodeInterests : Decoder (List String)
-decodeInterests =
-    Decode.string
-        |> Decode.andThen
-            (\s ->
-                String.split "," s
-                    |> Decode.succeed
-            )
 
 
 query : Eos.Name -> SelectionSet (Maybe Model) RootQuery
@@ -298,50 +254,6 @@ deleteKycAndAddressMutation accountName =
 -- Profile Login
 
 
-encodeProfileLogin : Eos.Name -> Encode.Value
-encodeProfileLogin account =
-    let
-        accountEncoded =
-            Encode.object [ ( "account", Eos.encodeName account ) ]
-    in
-    Encode.object [ ( "user", accountEncoded ) ]
-
-
-encodeProfileLoginWithInvitation : Eos.Name -> String -> Encode.Value
-encodeProfileLoginWithInvitation account invitationId =
-    let
-        accountEncoded =
-            Encode.object [ ( "account", Eos.encodeName account ) ]
-    in
-    Encode.object
-        [ ( "user", accountEncoded )
-        , ( "invitation_id", Encode.string invitationId )
-        ]
-
-
-type alias ProfileCreate =
-    { name : String
-    , email : String
-    , account : Eos.Name
-    , invitationId : Maybe String
-    }
-
-
-encodeProfileCreate : ProfileCreate -> Encode.Value
-encodeProfileCreate form =
-    let
-        user =
-            [ Just ( "name", Encode.string form.name )
-            , Just ( "email", Encode.string form.email )
-            , Just ( "account", Eos.encodeName form.account )
-            , Maybe.map (\invId -> ( "invitation_id", Encode.string invId )) form.invitationId
-            ]
-                |> List.filterMap identity
-                |> Encode.object
-    in
-    Encode.object [ ( "user", user ) ]
-
-
 type alias ProfileForm =
     { name : String
     , email : String
@@ -352,20 +264,6 @@ type alias ProfileForm =
     , interest : String
     , interests : List String
     , errors : Dict String String
-    }
-
-
-emptyProfileForm : ProfileForm
-emptyProfileForm =
-    { name = ""
-    , email = ""
-    , bio = ""
-    , localization = ""
-    , avatar = Nothing
-    , contacts = []
-    , interest = ""
-    , interests = []
-    , errors = Dict.empty
     }
 
 
@@ -380,73 +278,6 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     , interest = ""
     , interests = interests
     , errors = Dict.empty
-    }
-
-
-encodeProfileForm : Eos.Name -> ProfileForm -> Encode.Value
-encodeProfileForm account form =
-    Encode.object
-        [ ( "name", Encode.string form.name )
-        , ( "email", Encode.string form.email )
-        , ( "bio", Encode.string form.bio )
-        , ( "localization", Encode.string form.localization )
-        , ( "account", Eos.encodeName account )
-        , ( "contacts", Encode.list Contact.encode form.contacts )
-        , ( "interests"
-          , Encode.list Encode.string form.interests
-          )
-        ]
-
-
-
-{- Show account.name if no profile name is set. -}
-
-
-username : Basic a -> String
-username { name, account } =
-    case Maybe.map String.trim name of
-        Nothing ->
-            Eos.nameToString account
-
-        Just "" ->
-            Eos.nameToString account
-
-        Just userName ->
-            userName
-
-
-minPinChars : Int
-minPinChars =
-    6
-
-
-maxPinChars : Int
-maxPinChars =
-    6
-
-
-pinValidationAttrs : List (Html.Attribute msg)
-pinValidationAttrs =
-    [ type_ "password"
-    , minlength minPinChars
-    , maxlength maxPinChars
-    , pattern "[0-9]*"
-    , Html.Attributes.attribute "inputmode" "numeric"
-    , title "Use only numbers."
-    ]
-
-
-updateContacts : Model -> List Contact.Normalized -> Model
-updateContacts ({ contacts } as profile) newContacts =
-    { profile
-        | contacts =
-            List.filter
-                (\contact ->
-                    List.any (Contact.hasSameType contact) newContacts
-                        |> not
-                )
-                contacts
-                ++ newContacts
     }
 
 

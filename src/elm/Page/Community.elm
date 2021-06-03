@@ -2,7 +2,6 @@ module Page.Community exposing
     ( Model
     , Msg
     , init
-    , jsAddressToMsg
     , msgToString
     , subscriptions
     , update
@@ -12,13 +11,12 @@ module Page.Community exposing
 import Action exposing (Action)
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Community exposing (Model)
+import Community
 import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Icons
-import Json.Encode exposing (Value)
 import Page
 import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -327,13 +325,6 @@ update msg model loggedIn =
                 |> UR.init
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        _ ->
-            Nothing
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -344,7 +335,7 @@ msgToString msg =
             [ "RequestedReloadCommunity" ]
 
         GotActionMsg _ ->
-            [ "GotCommunityActionMsg" ]
+            [ "GotActionMsg" ]
 
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]

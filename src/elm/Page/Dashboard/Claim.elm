@@ -459,7 +459,7 @@ type alias UpdateResult =
 type Msg
     = ClaimLoaded (RemoteData (Graphql.Http.Error Claim.Model) Claim.Model)
     | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | GotVoteResult (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
     | GotProfileSummaryMsg ProfileSummaryKind Profile.Summary.Msg
 
@@ -556,7 +556,7 @@ update msg model loggedIn =
                     model
                         |> UR.init
 
-        GotVoteResult _ (Ok _) ->
+        GotVoteResult (Ok _) ->
             case model.statusClaim of
                 Loaded claim _ ->
                     let
@@ -582,7 +582,7 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
-        GotVoteResult _ (Err eosErrorString) ->
+        GotVoteResult (Err eosErrorString) ->
             let
                 errorMsg =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
@@ -650,12 +650,7 @@ fetchClaim claimId shared authToken =
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "VoteClaim" :: claimId :: _ ->
-            let
-                id =
-                    String.toInt claimId
-                        |> Maybe.withDefault 0
-            in
+        "VoteClaim" :: _ ->
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.field "transactionId" Decode.string
@@ -665,7 +660,7 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << GotVoteResult id)
+                |> Result.map (Just << GotVoteResult)
                 |> Result.withDefault Nothing
 
         _ ->
@@ -681,7 +676,7 @@ msgToString msg =
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
 
-        GotVoteResult _ r ->
+        GotVoteResult r ->
             [ "GotVoteResult", UR.resultToString r ]
 
         ClaimMsg _ ->

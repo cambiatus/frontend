@@ -12,7 +12,7 @@ module Page.Community.ActionEditor exposing
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Model)
+import Community
 import DataValidator
     exposing
         ( Validator
@@ -50,7 +50,6 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
-import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -131,7 +130,7 @@ type ProofNumberPresence
 type SaveStatus
     = NotAsked
     | Saving
-    | Failed String
+    | Failed
 
 
 type alias Form =
@@ -468,7 +467,7 @@ type Msg
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
     | EnteredMinVotes String
-    | ToggleValidity Bool
+    | ToggleValidity
     | ToggleDeadline Bool
     | TogglePhotoProof Bool
     | TogglePhotoProofNumber Bool
@@ -481,7 +480,6 @@ type Msg
     | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
-    | PressedEnter Bool
     | GotProfileSummaryMsg Int Profile.Summary.Msg
 
 
@@ -870,7 +868,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
                                 |> UR.logImpossible msg []
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             model
                 |> UR.init
 
@@ -1066,24 +1064,13 @@ update msg model ({ shared } as loggedIn) =
         GotSaveAction (Err val) ->
             let
                 newModel =
-                    { model | form = { oldForm | saveStatus = Failed (t "error.unknown") } }
+                    { model | form = { oldForm | saveStatus = Failed } }
             in
             newModel
                 |> UR.init
                 |> UR.logDebugValue msg val
                 |> UR.logImpossible msg []
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
-
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ValidateDeadline
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
 
         GotProfileSummaryMsg index subMsg ->
             case model.form.verification of
@@ -1423,7 +1410,7 @@ viewValidations { shared } model =
                             , name "expiration-toggle"
                             , class "form-switch-checkbox mr-2"
                             , checked (model.form.validation /= NoValidation)
-                            , onCheck ToggleValidity
+                            , onCheck (\_ -> ToggleValidity)
                             ]
                             []
                         , label [ class "form-switch-label", for "expiration-toggle" ] []
@@ -1949,20 +1936,20 @@ msgToString msg =
         SelectMsg _ ->
             [ "SelectMsg" ]
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             [ "ToggleValidity" ]
 
         ToggleDeadline _ ->
             [ "ToggleDeadline" ]
 
         ToggleUsages _ ->
-            [ "ToggleDeadline" ]
+            [ "ToggleUsages" ]
 
         TogglePhotoProof _ ->
-            [ "TogglePhotoValidation" ]
+            [ "TogglePhotoProof" ]
 
         TogglePhotoProofNumber _ ->
-            [ "TogglePhotoWithNumberValidation" ]
+            [ "TogglePhotoProofNumber" ]
 
         EnteredVerifierReward _ ->
             [ "EnteredVerifierReward" ]
@@ -1974,7 +1961,7 @@ msgToString msg =
             [ "MarkAsCompleted" ]
 
         ValidateForm ->
-            [ "ValidateDeadline" ]
+            [ "ValidateForm" ]
 
         ValidateDeadline ->
             [ "ValidateDeadline" ]
@@ -1990,9 +1977,6 @@ msgToString msg =
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]
 
         GotProfileSummaryMsg _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

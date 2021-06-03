@@ -41,10 +41,10 @@ import Page.Shop.Editor as ShopEditor
 import Page.Shop.Viewer as ShopViewer
 import Page.ViewTransfer as ViewTransfer
 import Ports
-import RemoteData exposing (RemoteData(..))
+import RemoteData
 import Route exposing (Route)
 import Session.Guest as Guest
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Shop
 import Task
 import Time
@@ -110,10 +110,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            Dashboard subModel ->
-                Dashboard.subscriptions subModel
-                    |> Sub.map GotDashboardMsg
-
             Community subModel ->
                 CommunityPage.subscriptions subModel
                     |> Sub.map GotCommunityMsg
@@ -199,7 +195,6 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
-    | GotCommunitySelectorMsg CommunitySelector.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -310,9 +305,6 @@ update msg model =
 
                                     Just aMsg ->
                                         update aMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
-                                ( { m | afterAuthMsg = Nothing }, Cmd.none )
 
                             Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
                                 ( m, broadcast broadcastMsg m.status )
@@ -425,11 +417,6 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
-                |> withLoggedIn
-
-        ( GotCommunitySelectorMsg subMsg, CommunitySelector subModel ) ->
-            CommunitySelector.update subMsg subModel
-                >> updateLoggedInUResult CommunitySelector GotCommunitySelectorMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
@@ -616,11 +603,6 @@ updateGuestUResult toStatus toMsg model uResult =
 
                 Page.Guest guest ->
                     case commExtMsg of
-                        Guest.UpdatedGuest newGuest ->
-                            ( { m | session = Page.Guest newGuest }
-                            , cmds_
-                            )
-
                         Guest.LoggedIn privateKey { user, token } ->
                             let
                                 shared =
@@ -1099,7 +1081,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunitySelector ->
             CommunitySelector.init
-                >> updateStatusWith CommunitySelector GotCommunitySelectorMsg model
+                >> updateStatusWith CommunitySelector (\_ -> Ignored) model
                 |> withLoggedIn Route.CommunitySelector
 
         Just Route.NewCommunity ->
@@ -1196,10 +1178,6 @@ jsAddressToMsg address val =
             Maybe.map GotDashboardMsg
                 (Dashboard.jsAddressToMsg rAddress val)
 
-        "GotCommunityMsg" :: rAddress ->
-            Maybe.map GotCommunityMsg
-                (CommunityPage.jsAddressToMsg rAddress val)
-
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
                 (CommunityEditor.jsAddressToMsg rAddress val)
@@ -1224,10 +1202,6 @@ jsAddressToMsg address val =
             Maybe.map GotShopMsg
                 (Shop.jsAddressToMsg rAddress val)
 
-        "GotProfilePublicMsg" :: rAddress ->
-            Maybe.map GotProfilePublicMsg
-                (ProfilePublic.jsAddressToMsg rAddress val)
-
         "GotProfileMsg" :: rAddress ->
             Maybe.map GotProfileMsg
                 (Profile.jsAddressToMsg rAddress val)
@@ -1244,7 +1218,7 @@ jsAddressToMsg address val =
             Maybe.map GotCommunitySettingsCurrencyMsg
                 (CommunitySettingsCurrency.jsAddressToMsg rAddress val)
 
-        "GotActionEditor" :: rAddress ->
+        "GotActionEditorMsg" :: rAddress ->
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
 
@@ -1304,17 +1278,14 @@ msgToString msg =
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
-        GotCommunitySelectorMsg subMsg ->
-            "GotCommunitySelectorMsg" :: CommunitySelector.msgToString subMsg
-
         GotObjectivesMsg subMsg ->
-            "GotObjectives" :: Objectives.msgToString subMsg
+            "GotObjectivesMsg" :: Objectives.msgToString subMsg
 
         GotObjectiveEditorMsg subMsg ->
             "GotObjectiveEditorMsg" :: ObjectiveEditor.msgToString subMsg
 
         GotActionEditorMsg subMsg ->
-            "GotActionEditor" :: ActionEditor.msgToString subMsg
+            "GotActionEditorMsg" :: ActionEditor.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
@@ -1505,7 +1476,7 @@ view model =
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
 
         CommunitySelector subModel ->
-            viewLoggedIn subModel LoggedIn.CommunitySelector GotCommunitySelectorMsg CommunitySelector.view
+            viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view

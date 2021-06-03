@@ -3,7 +3,6 @@ module Eos exposing
     , Asset
     , Authorization
     , EosBool(..)
-    , Network
     , Symbol
     , TableQuery
     , Transaction
@@ -11,12 +10,8 @@ module Eos exposing
     , boolToEosBool
     , cambiatusSymbol
     , decodeAsset
-    , decodeAssetToFloat
-    , encodeAction
     , encodeAsset
-    , encodeAuthorization
     , encodeEosBool
-    , encodeNetwork
     , encodeSymbol
     , encodeTableQuery
     , encodeTransaction
@@ -31,38 +26,12 @@ module Eos exposing
     , symbolSelectionSet
     , symbolToString
     , symbolToSymbolCodeString
-    , symbolUrlParser
     )
 
 import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Url.Parser
-
-
-
--- NETWORK
-
-
-type alias Network =
-    { blockchain : String
-    , host : String
-    , port_ : Int
-    , protocol : String
-    , chainId : String
-    }
-
-
-encodeNetwork : Network -> Value
-encodeNetwork network =
-    Encode.object
-        [ ( "blockchain", Encode.string network.blockchain )
-        , ( "host", Encode.string network.host )
-        , ( "port", Encode.int network.port_ )
-        , ( "protocol", Encode.string network.protocol )
-        , ( "chainId", Encode.string network.chainId )
-        ]
 
 
 
@@ -154,7 +123,7 @@ assetToString ({ symbol } as asset) =
                         p ->
                             amountString
                                 ++ "."
-                                ++ (List.repeat p "0" |> String.join "")
+                                ++ (List.repeat p "0" |> String.concat)
 
                 _ ->
                     ""
@@ -190,17 +159,6 @@ decodeAsset =
                     Asset
                     value
                     symbol
-            )
-
-
-decodeAssetToFloat : Decoder Float
-decodeAssetToFloat =
-    Decode.string
-        |> Decode.andThen
-            (\s ->
-                assetStringToFloat s
-                    |> Maybe.map Decode.succeed
-                    |> Maybe.withDefault (Decode.fail "Fail to decode amount")
             )
 
 
@@ -292,7 +250,7 @@ encodeSymbol symbol =
 symbolToString : Symbol -> String
 symbolToString (Symbol symbol precision) =
     [ String.fromInt precision, ",", symbol ]
-        |> String.join ""
+        |> String.concat
 
 
 formatSymbolAmount : Symbol -> Float -> String
@@ -365,11 +323,6 @@ symbolFromString str =
 
         _ ->
             Nothing
-
-
-symbolUrlParser : Url.Parser.Parser (Symbol -> a) a
-symbolUrlParser =
-    Url.Parser.custom "SYMBOL" symbolFromString
 
 
 symbolSelectionSet : SelectionSet String typeLock -> SelectionSet Symbol typeLock

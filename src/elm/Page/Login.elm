@@ -27,7 +27,7 @@ import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, required, rows, src, type_)
 import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
+import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Ports
 import RemoteData exposing (RemoteData)
@@ -287,8 +287,7 @@ type alias PinUpdateResult =
 
 
 type Msg
-    = KeyPressed Bool
-    | WentToPin (Validate.Valid PassphraseModel)
+    = WentToPin (Validate.Valid PassphraseModel)
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
 
@@ -329,23 +328,6 @@ type PinExternalMsg
 update : Msg -> Model -> Guest.Model -> UpdateResult
 update msg model guest =
     case ( msg, model ) of
-        ( KeyPressed isEnter, EnteringPassphrase _ ) ->
-            let
-                cmd =
-                    if isEnter then
-                        GotPassphraseMsg ClickedNextStep
-                            |> Task.succeed
-                            |> Task.perform identity
-
-                    else
-                        Cmd.none
-            in
-            UR.init model
-                |> UR.addCmd cmd
-
-        ( KeyPressed _, EnteringPin _ ) ->
-            UR.init model
-
         ( GotPassphraseMsg passphraseMsg, EnteringPassphrase passphraseModel ) ->
             updateWithPassphrase passphraseMsg passphraseModel guest
                 |> UR.map EnteringPassphrase
@@ -599,7 +581,7 @@ passphraseValidator =
                 words =
                     String.words model.passphrase
 
-                has12words =
+                has12Words =
                     List.length words == 12
 
                 allWordsHaveAtLeastThreeLetters =
@@ -608,7 +590,7 @@ passphraseValidator =
                 trPrefix s =
                     "auth.login.wordsMode.input." ++ s
             in
-            if not has12words then
+            if not has12Words then
                 [ trPrefix "notPassphraseError" ]
 
             else if not allWordsHaveAtLeastThreeLetters then
@@ -643,8 +625,8 @@ jsAddressToMsg addr val =
             Decode.decodeValue
                 (Decode.oneOf
                     [ Decode.succeed Tuple.pair
-                        |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "privateKey" Eos.privateKeyDecoder
+                        |> DecodePipeline.required "accountName" Eos.nameDecoder
+                        |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
                         |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
                     , Decode.field "error" Decode.string
                         |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
@@ -663,9 +645,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        KeyPressed _ ->
-            [ "KeyPressed" ]
-
         WentToPin _ ->
             [ "WentToPin" ]
 

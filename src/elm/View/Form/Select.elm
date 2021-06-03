@@ -62,13 +62,7 @@ withOption option select =
         html =
             Html.option
                 [ value option.value
-                , selected
-                    (if select.value == option.value then
-                        True
-
-                     else
-                        False
-                    )
+                , selected (select.value == option.value)
                 ]
                 [ text option.label ]
     in
@@ -82,11 +76,10 @@ toHtml select =
     Html.div [ class "mb-10" ]
         [ View.Form.label select.id select.label
         , Html.select
-            ([ class "form-select select w-full"
-             , onInput select.onInput
-             , disabled select.disabled
-             ]
-                ++ select.extraAttrs
+            (class "form-select select w-full"
+                :: onInput select.onInput
+                :: disabled select.disabled
+                :: select.extraAttrs
             )
             select.options
         , ul []

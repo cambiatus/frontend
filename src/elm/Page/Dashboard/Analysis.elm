@@ -802,7 +802,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         ClaimsLoaded r ->
-            [ "ChecksLoaded", UR.remoteDataToString r ]
+            [ "ClaimsLoaded", UR.remoteDataToString r ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

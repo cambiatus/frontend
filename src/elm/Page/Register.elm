@@ -14,7 +14,7 @@ import Html exposing (Html, a, button, div, img, input, label, p, span, strong, 
 import Html.Attributes exposing (checked, class, disabled, id, src, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
-import Json.Decode.Pipeline as Decode
+import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
 import Page
 import Page.Register.Common exposing (ProblemEvent(..))
@@ -100,7 +100,7 @@ type Status
     | AccountTypeSelectorShowed
     | FormShowed FormModel
     | AccountCreated
-    | ErrorShowed Error
+    | ErrorShowed
     | NotFound
 
 
@@ -126,11 +126,6 @@ type alias PdfData =
     { passphrase : String
     , accountName : String
     }
-
-
-type Error
-    = FailedInvite (Graphql.Http.Error (Maybe Invite))
-    | FailedCountry (Graphql.Http.Error (Maybe Address.Country))
 
 
 type alias InvitationId =
@@ -248,7 +243,7 @@ viewCreateAccount translators model =
                         -- TODO: This should never happen
                         text ""
 
-            ErrorShowed _ ->
+            ErrorShowed ->
                 Page.fullPageNotFound (translators.t "error.unknown") ""
 
             NotFound ->
@@ -884,7 +879,7 @@ update _ msg model { shared } =
             UR.init { model | status = NotFound }
 
         CompletedLoadInvite (RemoteData.Failure error) ->
-            { model | status = ErrorShowed (FailedInvite error) }
+            { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
                 |> UR.logGraphqlError msg error
@@ -903,7 +898,7 @@ update _ msg model { shared } =
             UR.init { model | status = NotFound }
 
         CompletedLoadCountry (RemoteData.Failure error) ->
-            { model | status = ErrorShowed (FailedCountry error) }
+            { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.logGraphqlError msg error
 
@@ -1021,11 +1016,11 @@ jsAddressToMsg addr val =
                 decodeAccount : Decoder AccountKeys
                 decodeAccount =
                     Decode.succeed AccountKeys
-                        |> Decode.required "ownerKey" Decode.string
-                        |> Decode.required "activeKey" Decode.string
-                        |> Decode.required "accountName" Eos.nameDecoder
-                        |> Decode.required "words" Decode.string
-                        |> Decode.required "privateKey" Decode.string
+                        |> DecodePipeline.required "ownerKey" Decode.string
+                        |> DecodePipeline.required "activeKey" Decode.string
+                        |> DecodePipeline.required "accountName" Eos.nameDecoder
+                        |> DecodePipeline.required "words" Decode.string
+                        |> DecodePipeline.required "privateKey" Decode.string
             in
             Decode.decodeValue (Decode.field "data" decodeAccount) val
                 |> AccountKeysGenerated

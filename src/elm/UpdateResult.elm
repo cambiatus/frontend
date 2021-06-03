@@ -2,7 +2,6 @@ module UpdateResult exposing
     ( UpdateResult
     , addCmd
     , addExt
-    , addLog
     , addMsg
     , addPort
     , init
@@ -28,7 +27,7 @@ module UpdateResult exposing
    @docs UpdateResult
 
    # Common Helpers
-   @docs init, addCmd, addMsg, addExt, addPort, addLog, logHttpError, logImpossible, logGraphqlError, toModelCmd
+   @docs init, addCmd, addMsg, addExt, addPort,  logHttpError, logImpossible, logGraphqlError, toModelCmd
 
    # Mapping UpdateResults
    @docs map, mapModel, setModel

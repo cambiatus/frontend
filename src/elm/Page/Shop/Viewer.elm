@@ -157,9 +157,8 @@ type Validation
 type Msg
     = CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | ClickedBuy Product
+    | ClickedBuy
     | ClickedEdit Product
-    | ClickedQuestions Product
     | ClickedTransfer Product
     | EnteredUnit String
     | EnteredMemo String
@@ -219,19 +218,6 @@ update msg model loggedIn =
         CompletedSaleLoad _ ->
             UR.init model
 
-        ClickedQuestions sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedQuestions sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
-
         ClickedEdit sale ->
             let
                 idString =
@@ -242,7 +228,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale idString))
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             { model | viewing = EditingTransfer }
                 |> UR.init
 
@@ -484,8 +470,8 @@ viewCard ({ shared } as loggedIn) card model =
         text_ str =
             text (shared.translators.t str)
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -530,7 +516,7 @@ viewCard ({ shared } as loggedIn) card model =
                                 [ text_ "shop.edit" ]
                             ]
 
-                      else if card.product.units <= 0 && card.product.trackStock == True then
+                      else if card.product.units <= 0 && card.product.trackStock then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ disabled True
@@ -552,7 +538,7 @@ viewCard ({ shared } as loggedIn) card model =
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full sm:w-40 mx-auto"
-                                , onClick (ClickedBuy card.product)
+                                , onClick ClickedBuy
                                 ]
                                 [ text_ "shop.buy" ]
                             ]
@@ -604,8 +590,8 @@ viewTransferForm { shared } card model =
             in
             currBalance
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "large__card__transfer" ]
         [ div [ class "large__card__account" ]
@@ -779,14 +765,11 @@ msgToString msg =
         GotTransferResult _ ->
             [ "GotTransferResult" ]
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             [ "ClickedBuy" ]
 
         ClickedEdit _ ->
             [ "ClickedEdit" ]
-
-        ClickedQuestions _ ->
-            [ "ClickedQuestions" ]
 
         ClickedTransfer _ ->
             [ "ClickedTransfer" ]

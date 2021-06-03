@@ -1,6 +1,5 @@
 module Profile.Address exposing
     ( Address
-    , decode
     , selectionSet
     )
 
@@ -11,8 +10,6 @@ import Cambiatus.Object.Country as Country
 import Cambiatus.Object.Neighborhood as Neighborhood
 import Cambiatus.Object.State as State
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Json.Decode as Decode exposing (Decoder, string)
-import Json.Decode.Pipeline exposing (required)
 
 
 
@@ -55,18 +52,6 @@ selectionSet =
                 |> SelectionSet.map (Maybe.withDefault "")
             )
         |> with Address.zip
-
-
-decode : Decoder Address
-decode =
-    Decode.succeed Address
-        |> required "country" string
-        |> required "state" string
-        |> required "city" string
-        |> required "neighborhood" string
-        |> required "street" string
-        |> required "number" string
-        |> required "zip" string
 
 
 
