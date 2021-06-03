@@ -1,6 +1,5 @@
 module Utils exposing
-    ( decodeDate
-    , decodeEnterKeyDown
+    ( decodeEnterKeyDown
     , decodeTimestamp
     , errorToString
     , onClickNoBubble
@@ -14,7 +13,7 @@ import Graphql.Http.GraphqlError
 import Html
 import Html.Events
 import Iso8601
-import Json.Decode as Decode exposing (Decoder, string)
+import Json.Decode as Decode
 import Time exposing (Posix)
 
 
@@ -33,29 +32,7 @@ posixDateTime maybedt =
                     Time.millisToPosix 0
 
 
-decodeDate : Decoder Posix
-decodeDate =
-    string
-        |> Decode.andThen
-            (\s ->
-                let
-                    dateStr =
-                        if String.endsWith "Z" s then
-                            s
-
-                        else
-                            s ++ "Z"
-                in
-                case Iso8601.toTime dateStr of
-                    Ok posix ->
-                        Decode.succeed posix
-
-                    Err _ ->
-                        Decode.fail "Failed to parse date"
-            )
-
-
-decodeTimestamp : Decode.Decoder Time.Posix
+decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
         |> Decode.andThen

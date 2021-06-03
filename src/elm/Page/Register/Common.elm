@@ -1,8 +1,6 @@
 module Page.Register.Common exposing
-    ( Errors(..)
-    , ProblemEvent(..)
+    ( ProblemEvent(..)
     , containsLetters
-    , containsNumberGreaterThan
     , fieldProblems
     , findId
     , getCities
@@ -125,16 +123,6 @@ byId a b =
             EQ
 
 
-containsNumberGreaterThan : Int -> String -> Bool
-containsNumberGreaterThan number str =
-    str
-        |> String.split ""
-        |> List.filterMap String.toInt
-        |> List.filter (\x -> x < 1 || x > number)
-        |> List.length
-        |> (/=) 0
-
-
 containsLetters : String -> Bool
 containsLetters str =
     if String.length str == 0 then
@@ -149,18 +137,12 @@ containsLetters str =
 ifEmptyTuple : (a -> ( String, b )) -> c -> Validate.Validator c a
 ifEmptyTuple data error =
     Validate.ifFalse
-        (\subject ->
-            if Tuple.first (data subject) == "" then
-                False
-
-            else
-                True
+        (data
+            >> Tuple.first
+            >> String.isEmpty
+            >> not
         )
         error
-
-
-type Errors
-    = InvalidField
 
 
 validateAccountName : Translators -> String -> String -> ( String, Maybe String )

@@ -92,6 +92,7 @@ multiInputItemText =
     , ( "padding-right", ".3rem" )
     , ( "padding-top", ".05rem" )
     , ( "padding-bottom", ".05rem" )
+    , ( "display", "none" )
     ]
 
 

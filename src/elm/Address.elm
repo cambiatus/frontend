@@ -8,7 +8,6 @@ import Cambiatus.Object.State
 import Cambiatus.Query
 import Cambiatus.Scalar exposing (Id)
 import Graphql.Operation exposing (RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet, with)
 
 

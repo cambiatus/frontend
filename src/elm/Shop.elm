@@ -2,7 +2,6 @@ module Shop exposing
     ( Filter(..)
     , Product
     , ProductId
-    , decodeTargetValueToFilter
     , encodeTransferSale
     , productQuery
     , productsQuery
@@ -18,8 +17,6 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html.Events exposing (targetValue)
-import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Profile.Contact as Contact
 
@@ -83,22 +80,6 @@ encodeTransferSale t =
         , ( "quantity", Eos.encodeAsset t.quantity )
         , ( "units", Encode.int t.units )
         ]
-
-
-decodeTargetValueToFilter : ( String, String ) -> Decoder Filter
-decodeTargetValueToFilter ( all, user ) =
-    let
-        transform val =
-            if val == all then
-                Decode.succeed All
-
-            else if val == user then
-                Decode.succeed UserSales
-
-            else
-                Decode.fail ("Invalid filter: " ++ val)
-    in
-    Decode.andThen transform targetValue
 
 
 

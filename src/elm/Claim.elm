@@ -8,7 +8,6 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , isValidated
-    , isValidator
     , isVotable
     , paginatedPageInfo
     , paginatedToList
@@ -19,7 +18,7 @@ module Claim exposing
     , viewVoteClaimModal
     )
 
-import Action exposing (Action, isClosed)
+import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
@@ -100,7 +99,7 @@ isVotable : Model -> Eos.Name -> Time.Posix -> Bool
 isVotable claim accountName now =
     isValidator accountName claim
         && not (isValidated claim accountName)
-        && not (isClosed claim.action now)
+        && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
 
 

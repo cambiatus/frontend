@@ -12,7 +12,6 @@ module Page.Shop.Editor exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
@@ -24,6 +23,7 @@ import Html exposing (Html, button, div, input, label, p, span, text)
 import Html.Attributes exposing (accept, class, disabled, for, id, maxlength, multiple, required, rows, style, type_, value)
 import Html.Events exposing (onClick)
 import Http
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -84,7 +84,7 @@ type
     | Creating (List Balance) ImageStatus Form
       -- Update
     | LoadingBalancesUpdate ProductId
-    | LoadingSaleUpdate (List Balance) ProductId
+    | LoadingSaleUpdate (List Balance)
     | EditingUpdate (List Balance) Product ImageStatus DeleteModalStatus Form
     | Saving (List Balance) Product ImageStatus Form
     | Deleting (List Balance) Product ImageStatus Form
@@ -214,7 +214,7 @@ view loggedIn model =
                 LoadingBalancesUpdate _ ->
                     Page.fullPageLoading shared
 
-                LoadingSaleUpdate _ _ ->
+                LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
 
                 LoadBalancesFailed error ->
@@ -286,7 +286,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                     ]
 
                 _ ->
-                    [ Icon.addPhoto ""
+                    [ Icons.addPhoto ""
                     , span
                         []
                         [ text (t "shop.photo_label") ]
@@ -539,7 +539,7 @@ update msg model loggedIn =
                                         (Shop.productQuery id)
                                         CompletedSaleLoad
                     in
-                    LoadingSaleUpdate balances saleId
+                    LoadingSaleUpdate balances
                         |> UR.init
                         |> UR.addCmd saleFetch
 
@@ -555,7 +555,7 @@ update msg model loggedIn =
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
-                ( LoadingSaleUpdate balances _, Just sale ) ->
+                ( LoadingSaleUpdate balances, Just sale ) ->
                     let
                         balanceOptions =
                             List.map
@@ -1166,11 +1166,7 @@ encodeUpdateForm product form selectedCommunity =
 
 getNumericValues : String -> String
 getNumericValues value =
-    value
-        |> String.toList
-        |> List.filter Char.isDigit
-        |> List.map String.fromChar
-        |> String.join ""
+    String.filter Char.isDigit value
 
 
 encodeDeleteForm : Product -> Value
@@ -1236,7 +1232,7 @@ msgToString msg =
             [ "EnteredTrackStock" ]
 
         EnteredUnits _ ->
-            [ "EnteredUnit" ]
+            [ "EnteredUnits" ]
 
         EnteredPrice _ ->
             [ "EnteredPrice" ]

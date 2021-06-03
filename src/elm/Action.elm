@@ -5,7 +5,6 @@ module Action exposing
     , Model
     , Msg(..)
     , Proof(..)
-    , claimActionPort
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -13,7 +12,6 @@ module Action exposing
     , selectionSet
     , subscriptions
     , update
-    , viewClaimButton
     , viewClaimConfirmation
     , viewClaimWithProofs
     , viewSearchActions
@@ -35,7 +33,7 @@ import Html.Events exposing (onClick)
 import Http
 import Icons
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
+import Json.Encode as Encode
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
@@ -43,7 +41,7 @@ import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
 import Task
-import Time exposing (Posix, posixToMillis)
+import Time
 import UpdateResult as UR
 import Utils
 import View.Form.FileUploader as FileUploader
@@ -116,12 +114,12 @@ type Msg
     | ClaimButtonClicked Action
     | ClaimConfirmationClosed
     | ActionClaimed Action (Maybe Proof)
-    | GotActionClaimedResponse (Result Value String)
+    | GotActionClaimedResponse (Result Encode.Value String)
       -- Claim with Proof Messages
     | AgreedToClaimWithProof Action
-    | GotProofTime Posix
+    | GotProofTime Time.Posix
     | AskedForUint64Name
-    | GotUint64Name (Result Value String)
+    | GotUint64Name (Result Encode.Value String)
     | Tick Time.Posix
     | PhotoAdded (List File)
     | PhotoUploaded (Result Http.Error String)
@@ -276,10 +274,10 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                             ]
                     }
 
-        ( GotUint64Name (Ok uint64name), PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
+        ( GotUint64Name (Ok uint64Name), PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
                 verificationCode =
-                    generateVerificationCode action.id uint64name proofCode.claimTimestamp
+                    generateVerificationCode action.id uint64Name proofCode.claimTimestamp
 
                 newProofCode =
                     Just
@@ -319,7 +317,6 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
             (if isProofCodeActive then
                 { model
                     | status = PhotoUploaderShowed action (Proof photoStatus newProofCode)
-                    , feedback = model.feedback
                     , needsPinConfirmation = False
                 }
 
@@ -500,7 +497,7 @@ viewClaimConfirmation { t } model =
             text ""
 
 
-viewClaimButton : Translators -> Posix -> Action -> Html Msg
+viewClaimButton : Translators -> Time.Posix -> Action -> Html Msg
 viewClaimButton { t } now action =
     let
         ( buttonMsg, buttonClasses, buttonText ) =
@@ -524,7 +521,7 @@ viewClaimButton { t } now action =
         ]
 
 
-viewSearchActions : Translators -> Posix -> List Action -> Html Msg
+viewSearchActions : Translators -> Time.Posix -> List Action -> Html Msg
 viewSearchActions ({ t } as translators) today actions =
     let
         viewAction action =
@@ -704,7 +701,7 @@ encodeClaimAction c =
         ]
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
         "ActionClaimed" :: [] ->
@@ -740,7 +737,7 @@ msgToString msg =
             [ "NoOp" ]
 
         ClaimButtonClicked _ ->
-            [ "ClaimConfirmationOpen" ]
+            [ "ClaimButtonClicked" ]
 
         ClaimConfirmationClosed ->
             [ "ClaimConfirmationClosed" ]
@@ -749,7 +746,7 @@ msgToString msg =
             [ "ActionClaimed" ]
 
         AgreedToClaimWithProof _ ->
-            [ "ActionWithPhotoLinkClicked" ]
+            [ "AgreedToClaimWithProof" ]
 
         GotActionClaimedResponse r ->
             [ "GotActionClaimedResponse", UR.resultToString r ]
@@ -787,17 +784,17 @@ generateVerificationCode actionId makerAccountUint64 proofTimeSeconds =
         |> String.slice 0 8
 
 
-isPastDeadline : Action -> Posix -> Bool
+isPastDeadline : Action -> Time.Posix -> Bool
 isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            posixToMillis now > posixToMillis (Utils.posixDateTime action.deadline)
+            Time.posixToMillis now > Time.posixToMillis (Utils.posixDateTime action.deadline)
 
         Nothing ->
             False
 
 
-isClosed : Action -> Posix -> Bool
+isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)

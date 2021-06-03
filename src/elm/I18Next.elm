@@ -1,6 +1,6 @@
 module I18Next exposing
     ( Translations, Delims(..), Replacements, initialTranslations
-    , t, tr, tf, trf
+    , t, tr
     , translationsDecoder
     )
 
@@ -17,7 +17,7 @@ needed.
 
 # Using Translations
 
-@docs t, tr, tf, trf
+@docs t, tr
 
 
 # Fetching and Decoding
@@ -47,14 +47,11 @@ custom delimiters(start and end) to account for different types of placeholders.
 -}
 type Delims
     = Curly
-    | Underscore
-    | Custom ( String, String )
 
 
 {-| An alias for replacements for use with placeholders. Each tuple should
 contain the name of the placeholder as the first value and the value for
-the placeholder as the second entry. See [`tr`](I18Next#tr) and
-[`trf`](I18Next#trf) for usage examples.
+the placeholder as the second entry. See [`tr`](I18Next#tr) for usage examples.
 -}
 type alias Replacements =
     List ( String, String )
@@ -76,23 +73,28 @@ loading your JSON file via Http use
 [`fetchTranslations`](I18Next#fetchTranslations) instead.
 After decoding nested values will be available with any of the translate
 functions separated with dots.
-{- The JSON could look like this:
-{
-"buttons": {
-"save": "Save",
-"cancel": "Cancel"
-},
-"greetings": {
-"hello": "Hello",
-"goodDay": "Good Day {{firstName}} {{lastName}}"
-}
-}
--}
---Use the decoder like this on a string
-import I18Next exposing (translationsDecoder)
-Json.Decode.decodeString translationsDecoder "{ "greet": "Hello" }"
--- or on a Json.Encode.Value
-Json.Decode.decodeValue translationsDecoder encodedJson
+
+The JSON could look like this:
+
+    [
+        {
+            "buttons": {
+                "save": "Save",
+                "cancel": "Cancel"
+            },
+            "greetings": {
+                "hello": "Hello",
+                "goodDay": "Good Day {{firstName}} {{lastName}}"
+            }
+        }
+    ]
+
+    -- Use the decoder like this on a string
+    import I18Next exposing (translationsDecoder)
+    Json.Decode.decodeString translationsDecoder "{ "greet": "Hello" }"
+    -- or on a Json.Encode.Value
+    Json.Decode.decodeValue translationsDecoder encodedJson
+
 -}
 translationsDecoder : Decoder Translations
 translationsDecoder =
@@ -174,12 +176,6 @@ delimsToTuple delims =
         Curly ->
             ( "{{", "}}" )
 
-        Underscore ->
-            ( "__", "__" )
-
-        Custom tuple ->
-            tuple
-
 
 {-| Translate a value at a key, while replacing placeholders, and trying
 different fallback languages. Check the [`Delims`](I18Next#Delims) type for
@@ -194,44 +190,3 @@ tr (Translations translations) delims key replacements =
     Dict.get key translations
         |> Maybe.map (replacePlaceholders replacements delims)
         |> Maybe.withDefault key
-
-
-{-| Translate a value and try different fallback languages by providing a list
-of Translations. If the key you provide does not exist in the first of the list
-of languages, the function will try each language in the list.
-{- Will use german if the key exist there, or fall back to english
-if not. If the key is not in any of the provided languages the function
-will return the key. -}
-import I18Next exposing (tf)
-tf [germanTranslations, englishTranslations] "labels.greetings.hello"
--}
-tf : List Translations -> String -> String
-tf translationsList key =
-    case translationsList of
-        (Translations translations) :: rest ->
-            Dict.get key translations |> Maybe.withDefault (tf rest key)
-
-        [] ->
-            key
-
-
-{-| Combines the [`tr`](I18Next#tr) and the [`tf`](I18Next#tf) function.
-Only use this if you want to replace placeholders and apply fallback languages
-at the same time.
--- If your translations are { "greet": "Hello {{name}}" }
-import I18Next exposing (trf, Delims(..))
-let
-langList = [germanTranslations, englishTranslations]
-in
-trf langList Curly "greet" [("name", "Peter")] -- "Hello Peter"
--}
-trf : List Translations -> Delims -> String -> Replacements -> String
-trf translationsList delims key replacements =
-    case translationsList of
-        (Translations translations) :: rest ->
-            Dict.get key translations
-                |> Maybe.map (replacePlaceholders replacements delims)
-                |> Maybe.withDefault (trf rest delims key replacements)
-
-        [] ->
-            key

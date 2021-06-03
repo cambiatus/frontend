@@ -94,11 +94,10 @@ with `url` as `src`
 pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String } -> Html msg
 pdfViewer attrs { url, childClass } =
     node "pdf-viewer"
-        ([ attribute "elm-url" url
-         , attribute "elm-child-class" childClass
-         , class "flex items-center justify-center"
-         ]
-            ++ attrs
+        (attribute "elm-url" url
+            :: attribute "elm-child-class" childClass
+            :: class "flex items-center justify-center"
+            :: attrs
         )
         []
 

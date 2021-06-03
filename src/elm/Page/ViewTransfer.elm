@@ -1,10 +1,9 @@
-module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
-import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, src)
@@ -29,18 +28,13 @@ init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { shared, authToken } transferId =
     let
         model =
-            { status = Loading transferId
+            { status = Loading
             , transferId = transferId
             }
     in
     ( model
     , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
     )
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 
@@ -65,7 +59,7 @@ type alias ProfileSummaries =
 
 
 type Status
-    = Loading Int
+    = Loading
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
     | Loaded (Maybe Transfer) State ProfileSummaries
 
@@ -95,7 +89,7 @@ view loggedIn model =
 
         content =
             case model.status of
-                Loading _ ->
+                Loading ->
                     Page.fullPageLoading loggedIn.shared
 
                 LoadFailed error ->

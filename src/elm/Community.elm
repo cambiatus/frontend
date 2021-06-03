@@ -1,30 +1,18 @@
 module Community exposing
-    ( ActionVerification
-    , ActionVerificationsResponse
-    , Balance
-    , ClaimResponse
+    ( Balance
     , CommunityPreview
     , CreateCommunityData
     , Invite
     , Metadata
     , Model
     , Objective
-    , Transaction
-    , Verification(..)
-    , Verifiers
-    , WithObjectives
     , addPhotosMutation
-    , claimSelectionSet
-    , communitiesQuery
     , communityPreviewImage
     , communityPreviewQuery
-    , communityPreviewSelectionSet
     , communityPreviewSymbolQuery
-    , communitySelectionSet
     , createCommunityData
     , createCommunityDataDecoder
     , decodeBalance
-    , decodeTransaction
     , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
@@ -33,21 +21,14 @@ module Community exposing
     , inviteQuery
     , isNonExistingCommunityError
     , logoBackground
-    , logoUrl
     , newCommunitySubscription
-    , objectiveSelectionSet
     , subdomainQuery
     , symbolQuery
-    , toVerifications
     )
 
 import Action exposing (Action)
-import Cambiatus.Enum.VerificationType exposing (VerificationType(..))
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
-import Cambiatus.Object.Action as ActionObject
-import Cambiatus.Object.Check as Check
-import Cambiatus.Object.Claim as Claim exposing (ChecksOptionalArguments)
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
 import Cambiatus.Object.Exists
@@ -59,7 +40,7 @@ import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
-import Eos exposing (EosBool(..), Symbol, symbolToString)
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
@@ -67,15 +48,14 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
-import Json.Decode as Decode exposing (Decoder, string)
-import Json.Decode.Pipeline as Decode exposing (required)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
 import Profile
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
 import Token
 import Utils
-import View.Tag as Tag
 
 
 
@@ -86,7 +66,7 @@ import View.Tag as Tag
 type alias Metadata =
     { title : String
     , description : String
-    , symbol : Symbol
+    , symbol : Eos.Symbol
     , logo : String
     , creator : Eos.Name
     , memberCount : Int
@@ -100,7 +80,7 @@ type alias Metadata =
 type alias Model =
     { name : String
     , description : String
-    , symbol : Symbol
+    , symbol : Eos.Symbol
     , logo : String
     , subdomain : String
     , creator : Eos.Name
@@ -174,15 +154,6 @@ communitySelectionSet =
 
 
 
--- Communities Query
-
-
-communitiesQuery : SelectionSet (List Metadata) RootQuery
-communitiesQuery =
-    Query.communities communitiesSelectionSet
-
-
-
 -- NEW COMMUNITY NAME
 
 
@@ -190,11 +161,11 @@ type alias NewCommunity =
     String
 
 
-newCommunitySubscription : Symbol -> SelectionSet NewCommunity RootSubscription
+newCommunitySubscription : Eos.Symbol -> SelectionSet NewCommunity RootSubscription
 newCommunitySubscription symbol =
     let
         stringSymbol =
-            symbolToString symbol
+            Eos.symbolToString symbol
                 |> String.toUpper
 
         selectionSet =
@@ -206,15 +177,9 @@ newCommunitySubscription symbol =
     Subscription.newcommunity args selectionSet
 
 
-type alias WithObjectives =
-    { metadata : Metadata
-    , objectives : List Objective
-    }
-
-
-symbolQuery : Symbol -> SelectionSet (Maybe Model) RootQuery
+symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
 symbolQuery symbol =
-    Query.community (\optionals -> { optionals | symbol = Present <| symbolToString symbol }) communitySelectionSet
+    Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol }) communitySelectionSet
 
 
 subdomainQuery : String -> SelectionSet (Maybe Model) RootQuery
@@ -309,17 +274,6 @@ encodeUpdateObjectiveAction c =
         ]
 
 
-type Verification
-    = Manually Verifiers
-    | Automatically String
-
-
-type alias Verifiers =
-    { verifiers : List String
-    , reward : Float
-    }
-
-
 
 -- Balance
 
@@ -335,25 +289,6 @@ decodeBalance =
     Decode.succeed Balance
         |> required "balance" Eos.decodeAsset
         |> required "last_activity" Utils.decodeTimestamp
-
-
-
--- Transaction
-
-
-type alias Transaction =
-    { id : String
-    , accountFrom : Eos.Name
-    , symbol : Eos.Symbol
-    }
-
-
-decodeTransaction : Decoder Transaction
-decodeTransaction =
-    Decode.succeed Transaction
-        |> required "txId" string
-        |> required "accountFrom" Eos.nameDecoder
-        |> required "symbol" Eos.symbolDecoder
 
 
 
@@ -500,144 +435,6 @@ domainAvailableQuery : String -> SelectionSet Bool RootQuery
 domainAvailableQuery domain =
     Query.domainAvailable { domain = domain } domainAvailableSelectionSet
         |> SelectionSet.map (Maybe.map not >> Maybe.withDefault False)
-
-
-
--- Action Verification
-
-
-type alias ActionVerification =
-    { symbol : Maybe Symbol
-    , logo : String
-    , objectiveId : Int
-    , actionId : Int
-    , claimId : Int
-    , description : String
-    , createdAt : DateTime
-    , status : Tag.TagStatus
-    }
-
-
-type alias ActionVerificationsResponse =
-    List ClaimResponse
-
-
-type alias ClaimResponse =
-    { id : Int
-    , createdAt : DateTime
-    , checks : List CheckResponse
-    , action : ActionResponse
-    }
-
-
-type alias CheckResponse =
-    Bool
-
-
-type alias ActionResponse =
-    { id : Int
-    , description : String
-    , objective : ObjectiveResponse
-    }
-
-
-type alias ObjectiveResponse =
-    { id : Int
-    , community : CommunityResponse
-    }
-
-
-type alias CommunityResponse =
-    { symbol : String
-    , logo : String
-    }
-
-
-
--- Verifications SelectionSets
-
-
-claimSelectionSet : String -> SelectionSet ClaimResponse Cambiatus.Object.Claim
-claimSelectionSet validator =
-    let
-        checksArg : ChecksOptionalArguments -> ChecksOptionalArguments
-        checksArg _ =
-            { input = Present { validator = Present validator }
-            }
-    in
-    SelectionSet.succeed ClaimResponse
-        |> with Claim.id
-        |> with Claim.createdAt
-        |> with (Claim.checks checksArg checkSelectionSet)
-        |> with (Claim.action verificationActionSelectionSet)
-
-
-checkSelectionSet : SelectionSet CheckResponse Cambiatus.Object.Check
-checkSelectionSet =
-    Check.isVerified
-
-
-verificationActionSelectionSet : SelectionSet ActionResponse Cambiatus.Object.Action
-verificationActionSelectionSet =
-    SelectionSet.succeed ActionResponse
-        |> with ActionObject.id
-        |> with ActionObject.description
-        |> with (ActionObject.objective verificationObjectiveSelectionSet)
-
-
-verificationObjectiveSelectionSet : SelectionSet ObjectiveResponse Cambiatus.Object.Objective
-verificationObjectiveSelectionSet =
-    SelectionSet.succeed ObjectiveResponse
-        |> with Objective.id
-        |> with (Objective.community verificationCommunitySelectionSet)
-
-
-verificationCommunitySelectionSet : SelectionSet CommunityResponse Cambiatus.Object.Community
-verificationCommunitySelectionSet =
-    SelectionSet.succeed CommunityResponse
-        |> with Community.symbol
-        |> with Community.logo
-
-
-
--- convert claims response to verification
-
-
-toVerifications : ActionVerificationsResponse -> List ActionVerification
-toVerifications actionVerificationResponse =
-    let
-        claimsResponse : List ClaimResponse
-        claimsResponse =
-            actionVerificationResponse
-
-        toStatus : List CheckResponse -> Tag.TagStatus
-        toStatus checks =
-            case List.head checks of
-                Just check ->
-                    if check then
-                        Tag.APPROVED
-
-                    else
-                        Tag.DISAPPROVED
-
-                Nothing ->
-                    Tag.PENDING
-
-        toVerification : ClaimResponse -> ActionVerification
-        toVerification claimResponse =
-            { symbol = Eos.symbolFromString claimResponse.action.objective.community.symbol
-            , logo = claimResponse.action.objective.community.logo
-            , objectiveId = claimResponse.action.objective.id
-            , actionId = claimResponse.action.id
-            , claimId = claimResponse.id
-            , description = claimResponse.action.description
-            , createdAt = claimResponse.createdAt
-            , status = toStatus claimResponse.checks
-            }
-    in
-    List.map
-        toVerification
-        claimsResponse
 
 
 

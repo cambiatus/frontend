@@ -7,7 +7,6 @@ module Session.Guest exposing
     , addAfterLoginRedirect
     , init
     , initLoggingIn
-    , initModel
     , maybeInitWith
     , msgToString
     , subscriptions
@@ -299,8 +298,7 @@ viewPageHeader model shared =
 
 
 type External
-    = UpdatedGuest Model
-    | LoggedIn Eos.PrivateKey Auth.SignInResponse
+    = LoggedIn Eos.PrivateKey Auth.SignInResponse
     | SetFeedback Feedback.Model
 
 

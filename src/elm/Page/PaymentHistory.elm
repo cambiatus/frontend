@@ -32,10 +32,10 @@ import Page
 import RemoteData exposing (RemoteData)
 import Select
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
-import Time exposing (Month(..), Weekday(..))
+import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
@@ -662,7 +662,7 @@ viewAutoCompleteItem shared profile =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg ProfileBase
+selectConfiguration : Shared -> Bool -> Select.Config Msg ProfileBase
 selectConfiguration shared isDisabled =
     selectConfig
         (Select.newConfig
@@ -704,7 +704,7 @@ viewDatePicker shared model =
             , case model.selectedDate of
                 Just _ ->
                     button
-                        [ onClick <| ClearDatePicker
+                        [ onClick ClearDatePicker
                         , class "absolute right-0 mr-12 top-0 mt-3"
                         ]
                         [ Icons.trash "" ]

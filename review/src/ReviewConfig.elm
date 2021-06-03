@@ -14,10 +14,22 @@ when inside the directory containing this file.
 import NoBooleanCase
 import NoDebug.Log
 import NoDebug.TodoOrToString
+import NoExposingEverything
+import NoInconsistentJsAddressToMsg
+import NoInconsistentMsgToString
+import NoLeftPizza
+import NoMissingTypeAnnotation
+import NoModuleOnExposedNames
+import NoRedundantConcat
+import NoRedundantCons
+import NoUnused.CustomTypeConstructorArgs
+import NoUnused.CustomTypeConstructors
+import NoUnused.Exports
 import NoUnused.Modules
 import NoUnused.Variables
-import NoExposingEverything
 import Review.Rule as Rule exposing (Rule)
+import Simplify
+import UseCamelCase
 
 
 config : List Rule
@@ -26,9 +38,24 @@ config =
     , NoDebug.TodoOrToString.rule
     , NoUnused.Variables.rule
     , NoUnused.Modules.rule
+    , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructorArgs.rule
+    , NoUnused.Exports.rule
+        |> Rule.ignoreErrorsForFiles [ "src/elm/Select.elm", "src/elm/DataValidator.elm" ]
     , NoBooleanCase.rule
     , NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
+    , NoMissingTypeAnnotation.rule
+    , Simplify.defaults
+        |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
+        |> Simplify.rule
+    , NoLeftPizza.rule NoLeftPizza.Redundant
+    , UseCamelCase.rule UseCamelCase.default
+    , NoModuleOnExposedNames.rule
+    , NoRedundantConcat.rule
+    , NoInconsistentMsgToString.rule
+    , NoInconsistentJsAddressToMsg.rule
+    , NoRedundantCons.rule
     ]
         -- Ignore generated code
-        |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus" ])
+        |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])

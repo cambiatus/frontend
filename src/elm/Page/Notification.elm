@@ -58,7 +58,7 @@ type Status
 type Payload
     = T TransferData
     | S OrderData
-    | M MintData
+    | M
 
 
 
@@ -212,7 +212,7 @@ viewNotificationMint shared history notification =
     in
     div
         [ class "flex items-start lg:items-center p-4"
-        , onClick (MarkAsRead history.id (M notification))
+        , onClick (MarkAsRead history.id M)
         ]
         [ div [ class "flex-none" ]
             [ case maybeLogo of
@@ -404,7 +404,7 @@ update msg model loggedIn =
                                 |> redirectCmd transfer.community
                             )
 
-                M _ ->
+                M ->
                     model
                         |> UR.init
                         |> UR.addCmd cmd
