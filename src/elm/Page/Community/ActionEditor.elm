@@ -54,6 +54,7 @@ import Time
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
+import View.Form.Input as Input
 import View.Form.InputCounter
 import View.Form.Radio
 
@@ -1361,29 +1362,20 @@ viewReward { shared } community form =
     let
         { t } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
-    div [ class "mb-10" ]
-        [ span [ class "input-label" ]
-            [ text_ "community.actions.form.reward_label" ]
-        , div [ class "flex w-full sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
-            [ input
-                [ class "block w-4/5 border-none px-4 py-3 outline-none"
-                , classList [ ( "border-red", hasErrors form.reward ) ]
-                , type_ "number"
-                , placeholder "0.00"
-                , onInput EnteredReward
-                , value (getInput form.reward)
-                ]
-                []
-            , span
-                [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-            ]
-        , viewFieldErrors (listErrors shared.translations form.reward)
-        ]
+    Input.init
+        { label = t "community.actions.form.reward_label"
+        , id = "action_reward_field"
+        , onInput = EnteredReward
+        , disabled = False
+        , value = getInput form.reward
+        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+        , problems = listErrors shared.translations form.reward |> Just
+        , translators = shared.translators
+        }
+        |> Input.withContainerAttrs [ class "w-full sm:w-2/5" ]
+        |> Input.withCurrency community.symbol
+        |> Input.toHtml
 
 
 viewValidations : LoggedIn.Model -> Model -> Html Msg
@@ -1666,72 +1658,64 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
                     , viewSelectedVerifiers loggedIn profileSummaries (getInput verifiersValidator)
                     ]
-                , span [ class "input-label" ]
-                    [ text_ "community.actions.form.verifiers_reward_label" ]
-                , div [ class "mb-10" ]
-                    [ div [ class "flex flex-row border rounded-sm" ]
-                        [ input
-                            [ class "input w-4/5 border-none"
-                            , type_ "number"
-                            , placeholder "0.00"
-                            , onInput EnteredVerifierReward
-                            , value (getInput verifierRewardValidator)
-                            ]
-                            []
-                        , span
-                            [ class "w-1/5 flex input-token rounded-r-sm" ]
-                            [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+                , Input.init
+                    { label = t "community.actions.form.verifiers_reward_label"
+                    , id = "verifiers_reward_field"
+                    , onInput = EnteredVerifierReward
+                    , disabled = False
+                    , value = getInput verifierRewardValidator
+                    , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+                    , problems = listErrors shared.translations verifierRewardValidator |> Just
+                    , translators = shared.translators
+                    }
+                    |> Input.withCurrency community.symbol
+                    |> Input.toHtml
+                , label [ class "flex text-body block" ]
+                    [ input
+                        [ type_ "checkbox"
+                        , class "form-checkbox h-5 w-5 mr-2"
+                        , checked isPhotoProofEnabled
+                        , onCheck TogglePhotoProof
                         ]
-                    , viewFieldErrors (listErrors shared.translations verifierRewardValidator)
-                    , div [ class "mt-8" ]
+                        []
+                    , span []
+                        [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
+                        , text (t "community.actions.form.photo_validation_hint")
+                        ]
+                    ]
+                , if isPhotoProofEnabled then
+                    div [ class "mt-6" ]
                         [ label [ class "flex text-body block" ]
                             [ input
                                 [ type_ "checkbox"
                                 , class "form-checkbox h-5 w-5 mr-2"
-                                , checked isPhotoProofEnabled
-                                , onCheck TogglePhotoProof
+                                , checked isProofNumberEnabled
+                                , onCheck TogglePhotoProofNumber
                                 ]
                                 []
                             , span []
-                                [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
-                                , text (t "community.actions.form.photo_validation_hint")
+                                [ b [ class "block" ] [ text (t "community.actions.form.verification_code") ]
+                                , text (t "community.actions.form.verification_code_hint")
                                 ]
                             ]
-                        , if isPhotoProofEnabled then
-                            div [ class "mt-6" ]
-                                [ label [ class "flex text-body block" ]
-                                    [ input
-                                        [ type_ "checkbox"
-                                        , class "form-checkbox h-5 w-5 mr-2"
-                                        , checked isProofNumberEnabled
-                                        , onCheck TogglePhotoProofNumber
-                                        ]
-                                        []
-                                    , span []
-                                        [ b [ class "block" ] [ text (t "community.actions.form.verification_code") ]
-                                        , text (t "community.actions.form.verification_code_hint")
-                                        ]
-                                    ]
-                                , div [ class "mt-6" ]
-                                    [ label [ class "input-label" ]
-                                        [ text (t "community.actions.form.verification_instructions") ]
-                                    , textarea
-                                        [ class "input textarea-input w-full"
-                                        , classList [ ( "border-red", hasErrors model.form.instructions ) ]
-                                        , rows 5
-                                        , onInput EnteredInstructions
-                                        , value (getInput model.form.instructions)
-                                        ]
-                                        []
-                                    , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
-                                    , viewFieldErrors (listErrors shared.translations model.form.instructions)
-                                    ]
+                        , div [ class "mt-6" ]
+                            [ label [ class "input-label" ]
+                                [ text (t "community.actions.form.verification_instructions") ]
+                            , textarea
+                                [ class "input textarea-input w-full"
+                                , classList [ ( "border-red", hasErrors model.form.instructions ) ]
+                                , rows 5
+                                , onInput EnteredInstructions
+                                , value (getInput model.form.instructions)
                                 ]
-
-                          else
-                            text ""
+                                []
+                            , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
+                            , viewFieldErrors (listErrors shared.translations model.form.instructions)
+                            ]
                         ]
-                    ]
+
+                  else
+                    text ""
                 ]
 
 
