@@ -15,6 +15,7 @@ module Claim exposing
     , selectionSet
     , updateClaimModalStatus
     , viewClaimCard
+    , viewClaimModal
     , viewPhotoModal
     , viewVoteClaimModal
     )
@@ -277,10 +278,10 @@ updateClaimModalStatus msg model =
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
 viewClaimCard : LoggedIn.Model -> Model -> Html Msg
-viewClaimCard { shared, accountName } claim =
+viewClaimCard loggedIn claim =
     let
-        { t } =
-            shared.translators
+        t =
+            loggedIn.shared.translators.t
 
         date dateTime =
             Just dateTime
@@ -305,13 +306,12 @@ viewClaimCard { shared, accountName } claim =
                 claim.id
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
-        [ viewClaimModal
+        [ viewClaimModal loggedIn claim True
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
 
-            -- We can't just use `a` with `href` here because there are other `a`-nodes inside.
-            , onClick <| RouteOpened claimRoute
+            --, onClick <| OpenClaimModal claim
             ]
             [ div
                 [ class "flex mb-8"
@@ -322,7 +322,7 @@ viewClaimCard { shared, accountName } claim =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ Profile.view shared accountName claim.claimer
+                [ Profile.view loggedIn.shared loggedIn.accountName claim.claimer
                 , case claim.proofPhoto of
                     Just url ->
                         div [ class "claim-photo-thumb" ]
@@ -349,11 +349,11 @@ viewClaimCard { shared, accountName } claim =
                     [ text (date claim.createdAt) ]
                 ]
             , if
-                isValidated claim accountName
-                    || not (isValidator accountName claim)
+                isValidated claim loggedIn.accountName
+                    || not (isValidator loggedIn.accountName claim)
                     || claim.action.isCompleted
-                    || Action.isClosed claim.action shared.now
-                    || Action.isPastDeadline claim.action shared.now
+                    || Action.isClosed claim.action loggedIn.shared.now
+                    || Action.isPastDeadline claim.action loggedIn.shared.now
               then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
@@ -378,148 +378,184 @@ viewClaimCard { shared, accountName } claim =
         ]
 
 
-viewClaimModal : Html Msg
-viewClaimModal =
+viewClaimModal : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewClaimModal loggedIn claim isClaimModalOpen =
     let
+        t =
+            loggedIn.shared.translators.t
+
+        greenTextTitleStyle =
+            "uppercase text-green text-xs"
+
         photoAndTagName =
-            div [ class "ml-8 block" ]
-                [ img
-                    [ class "rounded-full m-auto"
-                    , style "width" "78.4px"
-                    , style "height" "78.4px"
-                    , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
-                    ]
-                    []
-                , div
-                    [ class "flex items-center bg-black rounded-label p-1 mt-4"
-                    , style "width" "78.4px"
-                    ]
-                    [ p
-                        [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
-                        [ text "CARLA SANTOS" ]
-                    ]
-                ]
+            div [ class "ml-8" ]
+                [ Profile.viewLarge loggedIn.shared loggedIn.accountName claim.claimer ]
 
         claimDateAndState =
+            let
+                date datetime =
+                    Just datetime
+                        |> Utils.posixDateTime
+                        |> Strftime.format "%d %b %Y" Time.utc
+
+                ( claimStatusPhrase, claimStatus, textColor ) =
+                    case claim.status of
+                        Approved ->
+                            ( t "claim.title_approved.1", t "claim.approved", "text-2xl font-bold lowercase text-green" )
+
+                        Rejected ->
+                            ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
+
+                        Pending ->
+                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+
+                claimDate =
+                    let
+                        claimedOn =
+                            t "claim.claimed_on"
+
+                        dateTime =
+                            date claim.createdAt
+                    in
+                    claimedOn ++ " " ++ dateTime
+            in
             div [ class "block" ]
-                [ p [ class "text-xs" ] [ text "CLAIMED IN 27 OUT 2020" ]
+                [ p [ class "text-xs uppercase" ] [ text claimDate ]
                 , label [ class "text-2xl font-bold" ]
-                    [ text "This claim is"
+                    [ text claimStatusPhrase
                     ]
-                , div [ class "text-2xl text-gray-600 font-bold" ] [ text "pending" ]
+                , div [ class textColor ] [ text claimStatus ]
                 ]
 
-        rewardBox =
+        rewardInfo =
+            let
+                rewardTxtStyle =
+                    "my-2 font-bold text-lg"
+            in
             div
-                [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-8" ]
+                [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-16" ]
                 [ div
                     []
-                    [ p [ class "my-2 font-bold font-medium" ] [ text "30" ]
-                    , p [ class "input-label" ] [ text "CLAIMANT REWARD" ]
+                    [ p [ class rewardTxtStyle ] [ text (String.fromFloat claim.action.reward) ]
+                    , p [ class greenTextTitleStyle ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
-                    [ p [ class "my-2 font-bold font-medium" ] [ text "10" ]
-                    , p [ class "input-label" ] [ text "ANALYST REWARD" ]
+                    [ p [ class rewardTxtStyle ] [ text (String.fromFloat claim.action.verifierReward) ]
+                    , p [ class greenTextTitleStyle ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]
 
         approvedBy =
             div
                 [ class "block mt-6 h-32 space-y-4" ]
-                [ p [ class "input-label" ] [ text "APPROVED BY" ]
-                , div
-                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
-                    [ div [ class "block" ]
-                        [ img
-                            [ class "rounded-full m-auto"
-                            , style "width" "36px"
-                            , style "height" "36px"
-                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                [ p [ class greenTextTitleStyle ] [ text (t "claim.approved_by") ]
+                , div []
+                    [ if List.isEmpty claim.checks then
+                        div [ class "flex mb-10" ]
+                            [ div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ]
                             ]
-                            []
-                        , div
-                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
-                            , style "width" "60px"
-                            ]
-                            [ p
-                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
-                                [ text "CARLA SANTOS" ]
-                            ]
-                        ]
+
+                      else
+                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                            (List.map
+                                (\c ->
+                                    if c.isApproved then
+                                        div [ class "px-2" ]
+                                            [ Profile.view loggedIn.shared loggedIn.accountName c.validator
+                                            ]
+
+                                    else
+                                        text ""
+                                )
+                                claim.checks
+                            )
                     ]
                 ]
 
         disapprovedBy =
             div
                 [ class "block mt-6 h-32 space-y-4" ]
-                [ p [ class "input-label" ] [ text "DISAPPROVED BY" ]
-                , div
-                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
-                    [ div [ class "block" ]
-                        [ img
-                            [ class "rounded-full m-auto"
-                            , style "width" "36px"
-                            , style "height" "36px"
-                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
-                            ]
-                            []
-                        , div
-                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
-                            , style "width" "60px"
-                            ]
-                            [ p
-                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
-                                [ text "CARLA SANTOS" ]
-                            ]
-                        ]
+                [ p [ class greenTextTitleStyle ] [ text (t "claim.disapproved_by") ]
+                , div [ class "flex mb-10 " ]
+                    [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
+                        div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ]
+
+                      else
+                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                            (List.map
+                                (\c ->
+                                    if not c.isApproved then
+                                        div [ class "px-2" ]
+                                            [ Profile.view loggedIn.shared loggedIn.accountName c.validator
+                                            ]
+
+                                    else
+                                        text ""
+                                )
+                                claim.checks
+                            )
                     ]
                 ]
 
         pendingVote =
+            let
+                pendingValidators =
+                    List.filter
+                        (\p -> not <| List.member p.account (List.map (\c -> c.validator.account) claim.checks))
+                        claim.action.validators
+            in
             div
                 [ class "block mt-6 h-32 space-y-4" ]
-                [ p [ class "input-label" ] [ text "PENDING VOTE" ]
-                , div
-                    [ class "flex float-left space-x-6 w-full overflow-y-auto" ]
-                    [ div [ class "block" ]
-                        [ img
-                            [ class "rounded-full m-auto"
-                            , style "width" "36px"
-                            , style "height" "36px"
-                            , src "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.girlshue.com%2Fwp-content%2Fuploads%2F2015%2F04%2F15-Inspiring-Spring-Face-Makeup-Looks-Ideas-Trends-For-Girls-2015-3.jpg&f=1&nofb=1"
+                [ p [ class greenTextTitleStyle ] [ text (t "claim.pending_vote") ]
+                , div [ class "pt-2" ]
+                    [ if List.length claim.checks == claim.action.verifications then
+                        div [ class "flex" ]
+                            [ Profile.viewEmpty loggedIn.shared
                             ]
-                            []
-                        , div
-                            [ class "flex items-center bg-black rounded-label p-1 mt-4"
-                            , style "width" "60px"
-                            ]
-                            [ p
-                                [ class "text-center mx-1 pt-caption uppercase font-bold text-white text-caption" ]
-                                [ text "CARLA SANTOS" ]
-                            ]
-                        ]
+
+                      else
+                        div [ class "flex flex-row flex-wrap space-x-6" ]
+                            (List.map (\v -> Profile.view loggedIn.shared loggedIn.accountName v) pendingValidators)
                     ]
                 ]
 
         actionDetail =
+            let
+                proofCode =
+                    case claim.proofCode of
+                        Just code ->
+                            code
+
+                        Nothing ->
+                            ""
+            in
             div
                 [ class "block mt-6" ]
-                [ p [ class "input-label" ] [ text "ACTION" ]
-                , p [ class "text-left text-base w-full" ] [ text "Contribuir com acoes no Mercado de Doacoes" ]
-                , div
-                    [ class "relative h-auto w-auto text-center text-white" ]
-                    [ div
-                        [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
-                        [ p [ class "text-xs text-left w-full" ] [ text "VERIFICATION CODE" ]
-                        , p [ class "text-base font-bold font-normal text-left w-full" ] [ text "431254356" ]
-                        ]
-                    , img
-                        [ class "z-0 rounded-md my-4 w-full"
-                        , style "height" "200px"
-                        , src "https://www.w3schools.com/howto/img_snow_wide.jpg"
-                        ]
-                        []
-                    ]
+                [ p [ class greenTextTitleStyle ] [ text (t "claim.action") ]
+                , p [ class "text-left mt-2 text-lg w-full" ] [ text claim.action.description ]
+                , case claim.proofPhoto of
+                    Just url ->
+                        div
+                            [ class "relative h-auto w-auto text-center text-white"
+                            , Utils.onClickNoBubble (OpenPhotoModal claim)
+                            ]
+                            [ div
+                                [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
+                                [ p [ class "text-xs text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
+                                , p [ class "text-base font-bold font-normal text-left w-full" ] [ text proofCode ]
+                                ]
+                            , div []
+                                [ img
+                                    [ class "z-0 rounded-md my-4 w-full"
+                                    , style "height" "200px"
+                                    , src url
+                                    ]
+                                    []
+                                ]
+                            ]
+
+                    Nothing ->
+                        text ""
                 ]
 
         header =
@@ -531,7 +567,7 @@ viewClaimModal =
         body =
             div
                 [ class "block" ]
-                [ rewardBox
+                [ rewardInfo
                 , approvedBy
                 , disapprovedBy
                 , pendingVote
@@ -539,38 +575,24 @@ viewClaimModal =
                 ]
 
         footer =
-            div [ class "flex justify-center w-full space-x-4" ]
+            div [ class "flex justify-between space-x-4 mt-4" ]
                 [ button
-                    [ class "modal-cancel text-red"
-
-                    --, onClick closeMsg
-                    --, classList [ ( "button-disabled", isInProgress ) ]
-                    --, disabled isInProgress
+                    [ class "button button-danger"
+                    , Utils.onClickNoBubble (OpenVoteModal claim.id False)
                     ]
-                    --[ text "claim.modal.secondary" ]
-                    [ text "Disapprove" ]
+                    [ text (t "dashboard.reject") ]
                 , button
-                    [ class "modal-accept"
-
-                    --, classList [ ( "button-disabled", isInProgress ) ]
-                    --, disabled isInProgress
-                    --, onClick (voteMsg claimId isApproving)
+                    [ class "button button-primary"
+                    , Utils.onClickNoBubble (OpenVoteModal claim.id True)
                     ]
-                    --[ if isApproving then
-                    --[ text "claim.modal.primary_approve"
-                    [ text "Approve"
-
-                    --
-                    --else
-                    --  text_ "claim.modal.primary_disapprove"
-                    ]
+                    [ text (t "dashboard.verify") ]
                 ]
     in
     div
         []
         [ Modal.initWith
             { closeMsg = CloseClaimModals
-            , isVisible = True
+            , isVisible = isClaimModalOpen
             }
             |> Modal.withBody
                 [ div
