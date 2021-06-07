@@ -341,7 +341,7 @@ viewClaimCard { shared, accountName } profileSummary claim =
                                 , class "w-full h-full"
                                 ]
                                 { url = url
-                                , childClass = ""
+                                , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Nothing
                                 }
                             ]
@@ -407,7 +407,7 @@ viewPhotoModal loggedIn claim =
                             [ View.Components.pdfViewer
                                 [ class "min-h-[100px] max-h-[42vh]" ]
                                 { url = url
-                                , childClass = ""
+                                , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Nothing
                                 }
                             , a

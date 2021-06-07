@@ -180,7 +180,7 @@ viewProofs { t } claim =
                     [ View.Components.pdfViewer
                         [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim), class "h-full w-full" ]
                         { url = url
-                        , childClass = ""
+                        , childClass = "max-w-full max-h-full"
                         , maybeTranslators = Nothing
                         }
                     ]
