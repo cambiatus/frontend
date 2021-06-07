@@ -121,7 +121,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims pageInfo ->
                     let
                         viewClaim claim =
-                            Claim.viewClaimCard loggedIn claim
+                            Claim.viewClaimCard loggedIn claim False
                                 |> Html.map ClaimMsg
                     in
                     div []
@@ -158,6 +158,10 @@ view ({ shared } as loggedIn) model =
 
                             Claim.PhotoModal claim ->
                                 Claim.viewPhotoModal loggedIn claim
+                                    |> Html.map ClaimMsg
+
+                            Claim.ClaimModal claim ->
+                                Claim.viewClaimModal loggedIn claim True
                                     |> Html.map ClaimMsg
 
                             _ ->

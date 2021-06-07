@@ -103,7 +103,7 @@ viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
 viewResults loggedIn claims =
     let
         viewClaim claim =
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim False
                 |> Html.map ClaimMsg
     in
     div [ class "container mx-auto px-4 mb-10" ]
@@ -141,6 +141,10 @@ viewClaimVoteModal loggedIn model =
 
         Claim.PhotoModal claimId ->
             Claim.viewPhotoModal loggedIn claimId
+                |> Html.map ClaimMsg
+
+        Claim.ClaimModal claim ->
+            Claim.viewClaimModal loggedIn claim True
                 |> Html.map ClaimMsg
 
         _ ->

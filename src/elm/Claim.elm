@@ -34,7 +34,7 @@ import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, hidden, href, id, src, style, target)
+import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -43,7 +43,6 @@ import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
-import Svg exposing (text_)
 import Time
 import Utils
 import View.Modal as Modal
@@ -65,6 +64,7 @@ type ModalStatus
     = Loading ClaimId Bool
     | VoteConfirmationModal ClaimId Bool
     | PhotoModal Model
+    | ClaimModal Model
     | Closed
 
 
@@ -256,6 +256,7 @@ type Msg
     = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
+    | OpenClaimModal Model
     | RouteOpened Route
 
 
@@ -271,14 +272,17 @@ updateClaimModalStatus msg model =
         OpenPhotoModal claimId ->
             { model | claimModalStatus = PhotoModal claimId }
 
+        OpenClaimModal claimId ->
+            { model | claimModalStatus = ClaimModal claimId }
+
         RouteOpened _ ->
             model
 
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Html Msg
-viewClaimCard loggedIn claim =
+viewClaimCard : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewClaimCard loggedIn claim showClaimModal =
     let
         t =
             loggedIn.shared.translators.t
@@ -298,20 +302,13 @@ viewClaimCard loggedIn claim =
 
                 Pending ->
                     ( t "all_analysis.pending", "text-black" )
-
-        claimRoute =
-            Route.Claim
-                claim.action.objective.id
-                claim.action.id
-                claim.id
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
-        [ viewClaimModal loggedIn claim True
+        [ viewClaimModal loggedIn claim showClaimModal
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
-
-            --, onClick <| OpenClaimModal claim
+            , Utils.onClickNoBubble (OpenClaimModal claim)
             ]
             [ div
                 [ class "flex mb-8"
@@ -357,7 +354,7 @@ viewClaimCard loggedIn claim =
               then
                 a
                     [ class "button button-secondary w-full font-medium mb-2"
-                    , Route.href claimRoute
+                    , Utils.onClickNoBubble (OpenClaimModal claim)
                     ]
                     [ text (t "all_analysis.more_details") ]
 
@@ -379,7 +376,7 @@ viewClaimCard loggedIn claim =
 
 
 viewClaimModal : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewClaimModal loggedIn claim isClaimModalOpen =
+viewClaimModal loggedIn claim showClaimModal =
     let
         t =
             loggedIn.shared.translators.t
@@ -387,8 +384,11 @@ viewClaimModal loggedIn claim isClaimModalOpen =
         greenTextTitleStyle =
             "uppercase text-green text-xs"
 
+        claimVerifiersList =
+            "block mt-6 h-32 space-y-4"
+
         photoAndTagName =
-            div [ class "ml-8" ]
+            div []
                 [ Profile.viewLarge loggedIn.shared loggedIn.accountName claim.claimer ]
 
         claimDateAndState =
@@ -447,16 +447,16 @@ viewClaimModal loggedIn claim isClaimModalOpen =
 
         approvedBy =
             div
-                [ class "block mt-6 h-32 space-y-4" ]
+                [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.approved_by") ]
-                , div []
+                , div [ class "overflow-x-auto" ]
                     [ if List.isEmpty claim.checks then
                         div [ class "flex mb-10" ]
                             [ div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ]
                             ]
 
                       else
-                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        div [ class "flex -mx-2 pt-2" ]
                             (List.map
                                 (\c ->
                                     if c.isApproved then
@@ -474,14 +474,15 @@ viewClaimModal loggedIn claim isClaimModalOpen =
 
         disapprovedBy =
             div
-                [ class "block mt-6 h-32 space-y-4" ]
+                [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.disapproved_by") ]
-                , div [ class "flex mb-10 " ]
+                , div [ class "overflow-x-auto" ]
                     [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                        div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ]
+                        div [ class "flex mb-10 " ]
+                            [ div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ] ]
 
                       else
-                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        div [ class "flex -mx-2 pt-2" ]
                             (List.map
                                 (\c ->
                                     if not c.isApproved then
@@ -505,16 +506,15 @@ viewClaimModal loggedIn claim isClaimModalOpen =
                         claim.action.validators
             in
             div
-                [ class "block mt-6 h-32 space-y-4" ]
+                [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.pending_vote") ]
-                , div [ class "pt-2" ]
+                , div [ class "overflow-x-auto" ]
                     [ if List.length claim.checks == claim.action.verifications then
-                        div [ class "flex" ]
-                            [ Profile.viewEmpty loggedIn.shared
-                            ]
+                        div [ class "flex mb-10 " ]
+                            [ div [ class "pt-2" ] [ Profile.viewEmpty loggedIn.shared ] ]
 
                       else
-                        div [ class "flex flex-row flex-wrap space-x-6" ]
+                        div [ class "flex space-x-6" ]
                             (List.map (\v -> Profile.view loggedIn.shared loggedIn.accountName v) pendingValidators)
                     ]
                 ]
@@ -559,7 +559,7 @@ viewClaimModal loggedIn claim isClaimModalOpen =
                 ]
 
         header =
-            div [ class "flex mt-16 space-x-8" ]
+            div [ class "flex mt-16 space-x-8 justify-center" ]
                 [ photoAndTagName
                 , claimDateAndState
                 ]
@@ -575,28 +575,33 @@ viewClaimModal loggedIn claim isClaimModalOpen =
                 ]
 
         footer =
-            div [ class "flex justify-between space-x-4 mt-4" ]
-                [ button
-                    [ class "button button-danger"
-                    , Utils.onClickNoBubble (OpenVoteModal claim.id False)
+            if isVotable claim loggedIn.accountName loggedIn.shared.now then
+                div [ class "flex justify-between space-x-4 mt-8 object-bottom" ]
+                    [ button
+                        [ class "button button-danger"
+                        , onClick (OpenVoteModal claim.id False)
+                        ]
+                        [ text (t "dashboard.reject") ]
+                    , button
+                        [ class "button button-primary"
+                        , onClick (OpenVoteModal claim.id True)
+                        ]
+                        [ text (t "dashboard.verify") ]
                     ]
-                    [ text (t "dashboard.reject") ]
-                , button
-                    [ class "button button-primary"
-                    , Utils.onClickNoBubble (OpenVoteModal claim.id True)
-                    ]
-                    [ text (t "dashboard.verify") ]
-                ]
+
+            else
+                div [] []
     in
     div
         []
         [ Modal.initWith
             { closeMsg = CloseClaimModals
-            , isVisible = isClaimModalOpen
+            , isVisible = showClaimModal
             }
             |> Modal.withBody
                 [ div
-                    [ class "block space-y-6" ]
+                    [ class "block space-y-6 "
+                    ]
                     [ header
                     , body
                     ]

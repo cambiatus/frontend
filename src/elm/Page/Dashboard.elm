@@ -383,7 +383,7 @@ viewAnalysisList loggedIn model =
                 [ div
                     [ class "w-full" ]
                     [ div [ class "flex justify-between text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex" ]
+                        [ div [ class "flex-wrap md:flex" ]
                             [ div [ class "text-indigo-500 mr-2 font-medium" ]
                                 [ text_ "dashboard.analysis.title.1"
                                 ]
@@ -452,6 +452,10 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
             Claim.viewPhotoModal loggedIn claim
                 |> Html.map ClaimMsg
 
+        Claim.ClaimModal claim ->
+            Claim.viewClaimModal loggedIn claim True
+                |> Html.map ClaimMsg
+
         Claim.Closed ->
             text ""
 
@@ -460,7 +464,7 @@ viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
 viewAnalysis loggedIn claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim False
                 |> Html.map ClaimMsg
 
         ClaimLoading _ ->
@@ -473,7 +477,7 @@ viewAnalysis loggedIn claimStatus =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim
+            Claim.viewClaimCard loggedIn claim False
                 |> Html.map ClaimMsg
 
 
