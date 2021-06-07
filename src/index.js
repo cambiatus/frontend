@@ -29,34 +29,36 @@ window.customElements.define('pdf-viewer',
       const url = this.getAttribute('elm-url')
       const childClass = this.getAttribute('elm-child-class')
 
-      const showLoading = this.getAttribute('elm-show-loading') === 'true'
+      const loadingImg = document.createElement('img')
+      loadingImg.src = '/images/loading.svg'
+      this.appendChild(loadingImg)
 
       let setContent = (node) => {
+        this.removeChild(loadingImg)
         this.appendChild(node)
       }
 
-      if (showLoading) {
-        const loadingImgContainer = document.createElement('div')
-        loadingImgContainer.className = 'w-full text-center'
-        const loadingImg = document.createElement('img')
-        loadingImg.className = 'h-16 mx-auto mt-8'
-        loadingImg.src = '/images/loading.svg'
+      if (this.getAttribute('elm-loading-title') && this.getAttribute('elm-loading-subtitle')) {
+        loadingImg.className = 'h-16 mt-8'
+
         const loadingTitle = document.createElement('p')
         loadingTitle.className = 'font-bold text-2xl'
         loadingTitle.textContent = this.getAttribute('elm-loading-title')
+        this.appendChild(loadingTitle)
+
         const loadingSubtitle = document.createElement('p')
         loadingSubtitle.className = 'text-sm'
         loadingSubtitle.textContent = this.getAttribute('elm-loading-subtitle')
-
-        loadingImgContainer.appendChild(loadingImg)
-        loadingImgContainer.appendChild(loadingTitle)
-        loadingImgContainer.appendChild(loadingSubtitle)
-        this.appendChild(loadingImgContainer)
+        this.appendChild(loadingSubtitle)
 
         setContent = (node) => {
-          this.removeChild(loadingImgContainer)
+          this.removeChild(loadingImg)
+          this.removeChild(loadingTitle)
+          this.removeChild(loadingSubtitle)
           this.appendChild(node)
         }
+      } else {
+        loadingImg.className = 'p-4'
       }
 
       pdfjsLib.getDocument(url).promise.then((pdf) => {

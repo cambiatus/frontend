@@ -89,24 +89,29 @@ tooltip { t } tooltipMessage =
 
 
 {-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
-with `url` as `src`
+with `url` as `src`. This element automatically shows a loading animation while
+it fetches the pdf. If you pass in `Translators`, there will also be a text
+under the loading animation
 -}
-pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, translators : Translators, showLoading : Bool } -> Html msg
-pdfViewer attrs { url, childClass, translators, showLoading } =
+pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, maybeTranslators : Maybe Translators } -> Html msg
+pdfViewer attrs { url, childClass, maybeTranslators } =
+    let
+        loadingAttributes =
+            case maybeTranslators of
+                Nothing ->
+                    []
+
+                Just { t } ->
+                    [ attribute "elm-loading-title" (t "loading.title")
+                    , attribute "elm-loading-subtitle" (t "loading.subtitle")
+                    ]
+    in
     node "pdf-viewer"
         (attribute "elm-url" url
             :: attribute "elm-child-class" childClass
-            :: attribute "elm-loading-title" (translators.t "loading.title")
-            :: attribute "elm-loading-subtitle" (translators.t "loading.subtitle")
-            :: attribute "elm-show-loading"
-                (if showLoading then
-                    "true"
-
-                 else
-                    "false"
-                )
-            :: class "flex items-center justify-center"
-            :: attrs
+            :: class "flex flex-col items-center justify-center"
+            :: loadingAttributes
+            ++ attrs
         )
         []
 

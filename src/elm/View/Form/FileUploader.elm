@@ -197,8 +197,7 @@ viewLarge ({ t } as translators) options =
                             View.Components.pdfViewer [ class "h-full w-full text-white" ]
                                 { url = url
                                 , childClass = "max-h-full max-w-full"
-                                , translators = translators
-                                , showLoading = True
+                                , maybeTranslators = Just translators
                                 }
 
                           else
@@ -215,7 +214,7 @@ viewLarge ({ t } as translators) options =
 
 
 viewSmall : Translators -> Options msg -> Html msg
-viewSmall ({ t } as translators) options =
+viewSmall { t } options =
     let
         imgClasses =
             "object-cover rounded-full w-20 h-20"
@@ -227,8 +226,7 @@ viewSmall ({ t } as translators) options =
                         View.Components.pdfViewer [ class imgClasses ]
                             { url = url
                             , childClass = imgClasses
-                            , translators = translators
-                            , showLoading = False
+                            , maybeTranslators = Nothing
                             }
 
                     else

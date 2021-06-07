@@ -159,7 +159,7 @@ view ({ shared } as loggedIn) model =
 
 
 viewProofs : Translators -> Claim.Model -> Html Msg
-viewProofs ({ t } as translators) claim =
+viewProofs { t } claim =
     let
         viewProofCode =
             case claim.proofCode of
@@ -181,8 +181,7 @@ viewProofs ({ t } as translators) claim =
                         [ onClick (ClaimMsg <| Claim.OpenPhotoModal claim), class "h-full w-full" ]
                         { url = url
                         , childClass = ""
-                        , translators = translators
-                        , showLoading = False
+                        , maybeTranslators = Nothing
                         }
                     ]
                 , viewProofCode

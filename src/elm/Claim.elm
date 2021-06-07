@@ -342,8 +342,7 @@ viewClaimCard { shared, accountName } profileSummary claim =
                                 ]
                                 { url = url
                                 , childClass = ""
-                                , translators = shared.translators
-                                , showLoading = False
+                                , maybeTranslators = Nothing
                                 }
                             ]
 
@@ -409,8 +408,7 @@ viewPhotoModal loggedIn claim =
                                 [ class "min-h-[100px] max-h-[42vh]" ]
                                 { url = url
                                 , childClass = ""
-                                , translators = loggedIn.shared.translators
-                                , showLoading = False
+                                , maybeTranslators = Nothing
                                 }
                             , a
                                 [ class "underline inline-block py-1 text-gray"
