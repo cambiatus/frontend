@@ -134,26 +134,40 @@ const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
-const cookieDomain = () => {
+const hostnameInfo = () => {
   const environments = ['staging', 'demo']
   let hostnameParts = window.location.hostname.split('.')
+
+  // `true` when on `staging.cambiatus.io`, `demo.cambiatus.io` or `cambiatus.io`
   const isFirstPartEnv = environments.includes(hostnameParts[0]) || window.location.hostname === 'cambiatus.io'
-  if (isFirstPartEnv) {
-    hostnameParts = ['.', ...hostnameParts]
-  } else {
+
+  if (!isFirstPartEnv) {
     hostnameParts.shift()
   }
 
-  return hostnameParts.length < 2 ? '' : `domain=${hostnameParts.join('.')}`
+  const hostnameEnv = hostnameParts[0] === 'cambiatus' ? 'prod' : hostnameParts[0]
+  const subdomain = `.${hostnameParts.join('.')}`
+
+  return { subdomain, hostnameEnv }
+}
+
+const cookieDomain = () => {
+  const { subdomain } = hostnameInfo()
+  return `domain=${subdomain}`
+}
+
+const cookieKey = (key) => {
+  const { hostnameEnv } = hostnameInfo()
+  return hostnameEnv === 'prod' ? key : `${key}.${hostnameEnv}`
 }
 
 const getItem = (key) => {
-  const result = document.cookie.match('(^|[^;]+)\\s*' + key + '\\s*=\\s*([^;]+)')
+  const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
   return result ? result.pop() : null
 }
 
 const removeItem = (key) => {
-  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}`
+  document.cookie = `${cookieKey(key)}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}`
   window.localStorage.removeItem(key)
 }
 
@@ -162,7 +176,7 @@ const setItem = (key, value) => {
   // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
   // This is equivalent to the date 2038-01-19 04:14:07
   const maxExpirationDate = 2147483647
-  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict`
+  document.cookie = `${cookieKey(key)}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
 }
 
 const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
