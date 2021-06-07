@@ -61,6 +61,17 @@ window.customElements.define('pdf-viewer',
         loadingImg.className = 'p-4'
       }
 
+      const notFoundTimeout = window.setTimeout(() => {
+        const notFoundImg = document.createElement('img')
+        notFoundImg.src = '/images/not_found.svg'
+        setContent(notFoundImg)
+
+        setContent = (node) => {
+          this.removeChild(notFoundImg)
+          this.appendChild(node)
+        }
+      }, 1000 * 3)
+
       pdfjsLib.getDocument(url).promise.then((pdf) => {
         pdf.getPage(1).then((page) => {
           const canvas = document.createElement('canvas')
@@ -80,6 +91,7 @@ window.customElements.define('pdf-viewer',
 
           const renderTask = page.render(renderContext)
           renderTask.promise.then(() => {
+            window.clearTimeout(notFoundTimeout)
             setContent(canvas)
           })
         })
@@ -89,6 +101,7 @@ window.customElements.define('pdf-viewer',
           const img = document.createElement('img')
           img.src = url
           img.className = childClass
+          window.clearTimeout(notFoundTimeout)
           setContent(img)
         } else {
           debugLog('pdf-viewer error', e)
