@@ -408,7 +408,7 @@ viewPhotoModal loggedIn claim =
                                 [ class "min-h-[100px] max-h-[42vh]" ]
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
-                                , maybeTranslators = Nothing
+                                , maybeTranslators = Just loggedIn.shared.translators
                                 }
                             , a
                                 [ class "underline inline-block py-1 text-gray"
