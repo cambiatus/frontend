@@ -4,32 +4,17 @@ module Profile exposing
     , DeleteKycAndAddressResult
     , Minimal
     , Model
-    , ProfileCreate
     , ProfileForm
-    , communityInfoSelectionSet
-    , decode
     , deleteKycAndAddressMutation
-    , emptyProfileForm
-    , encodeProfileCreate
-    , encodeProfileForm
-    , encodeProfileLogin
-    , encodeProfileLoginWithInvitation
-    , maxPinChars
-    , minPinChars
     , minimalSelectionSet
     , mutation
-    , pinValidationAttrs
     , profileToForm
     , query
     , selectConfig
     , selectFilter
     , selectionSet
-    , updateContacts
     , upsertKycMutation
-    , username
-    , view
     , viewEmpty
-    , viewLarge
     , viewProfileName
     , viewProfileNameTag
     )
@@ -49,11 +34,8 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, div, p, span, text)
-import Html.Attributes exposing (class, href, maxlength, minlength, pattern, title, type_)
-import Json.Decode as Decode exposing (Decoder, int, nullable, string)
-import Json.Decode.Pipeline as Decode exposing (optional, required)
-import Json.Encode as Encode
+import Html exposing (Html, div, p, span, text)
+import Html.Attributes exposing (class)
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
@@ -67,45 +49,35 @@ type alias Basic a =
         | name : Maybe String
         , account : Eos.Name
         , avatar : Avatar
+        , email : Maybe String
+        , bio : Maybe String
+        , contacts : List Contact.Normalized
     }
 
 
 type alias Minimal =
-    Basic {}
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , contacts : List Contact.Normalized
+    }
 
 
 type alias Model =
-    Basic
-        { email : Maybe String
-        , bio : Maybe String
-        , localization : Maybe String
-        , account : Eos.Name
-        , contacts : List Contact.Normalized
-        , interests : List String
-        , communities : List CommunityInfo
-        , analysisCount : Int
-        , kyc : Maybe ProfileKyc
-        , address : Maybe Address
-        }
-
-
-
--- buildModel : Maybe String -> Eos.Name -> Avatar -> Maybe String -> Maybe String -> Maybe String -> Eos.Name -> List String -> List CommunityInfo -> Int -> Maybe ProfileKyc -> Maybe Address
-
-
-buildModel name account avatar email bio location interests contacts communities analysis kyc address =
-    { name = name
-    , account = account
-    , avatar = avatar
-    , email = email
-    , bio = bio
-    , localization = location
-    , interests = interests
-    , contacts = contacts
-    , communities = communities
-    , analysisCount = analysis
-    , kyc = kyc
-    , address = address
+    { name : Maybe String
+    , account : Eos.Name
+    , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , localization : Maybe String
+    , contacts : List Contact.Normalized
+    , interests : List String
+    , communities : List CommunityInfo
+    , analysisCount : Int
+    , kyc : Maybe ProfileKyc
+    , address : Maybe Address
     }
 
 
@@ -120,25 +92,28 @@ type alias CommunityInfo =
     }
 
 
+userContactSelectionSet : SelectionSet (List Contact.Normalized) Cambiatus.Object.User
+userContactSelectionSet =
+    User.contacts Contact.selectionSet
+        |> SelectionSet.map (List.filterMap identity)
+
+
 selectionSet : SelectionSet Model Cambiatus.Object.User
 selectionSet =
-    SelectionSet.succeed buildModel
+    SelectionSet.succeed Model
         |> with User.name
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
         |> with User.bio
         |> with User.location
+        |> with userContactSelectionSet
         |> with
             (User.interests
                 |> SelectionSet.map
                     (\maybeInterests ->
                         Maybe.map (String.split ",") maybeInterests |> Maybe.withDefault []
                     )
-            )
-        |> with
-            (User.contacts Contact.selectionSet
-                |> SelectionSet.map (List.filterMap identity)
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
@@ -148,10 +123,13 @@ selectionSet =
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User
 minimalSelectionSet =
-    SelectionSet.succeed (\name account avatar -> { name = name, account = account, avatar = avatar })
+    SelectionSet.succeed Minimal
         |> with User.name
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
+        |> with User.email
+        |> with User.bio
+        |> with userContactSelectionSet
 
 
 communityInfoSelectionSet : SelectionSet CommunityInfo Cambiatus.Object.Community
@@ -164,34 +142,6 @@ communityInfoSelectionSet =
         |> with Community.hasShop
         |> with Community.hasObjectives
         |> with Community.hasKyc
-
-
-decode : Decoder Model
-decode =
-    Decode.succeed buildModel
-        |> optional "name" (nullable string) Nothing
-        |> required "account" Eos.nameDecoder
-        |> optional "avatar" Avatar.decode Avatar.empty
-        |> optional "email" (nullable string) Nothing
-        |> optional "bio" (nullable string) Nothing
-        |> optional "localization" (nullable string) Nothing
-        |> optional "interests" decodeInterests []
-        |> optional "contacts" (Decode.list Contact.decode) []
-        |> Decode.hardcoded []
-        |> Decode.at [ "data", "user" ]
-        |> optional "analysisCount" int 0
-        |> optional "kyc" (nullable Kyc.decode) Nothing
-        |> optional "address" (nullable Address.decode) Nothing
-
-
-decodeInterests : Decoder (List String)
-decodeInterests =
-    Decode.string
-        |> Decode.andThen
-            (\s ->
-                String.split "," s
-                    |> Decode.succeed
-            )
 
 
 query : Eos.Name -> SelectionSet (Maybe Model) RootQuery
@@ -304,50 +254,6 @@ deleteKycAndAddressMutation accountName =
 -- Profile Login
 
 
-encodeProfileLogin : Eos.Name -> Encode.Value
-encodeProfileLogin account =
-    let
-        accountEncoded =
-            Encode.object [ ( "account", Eos.encodeName account ) ]
-    in
-    Encode.object [ ( "user", accountEncoded ) ]
-
-
-encodeProfileLoginWithInvitation : Eos.Name -> String -> Encode.Value
-encodeProfileLoginWithInvitation account invitationId =
-    let
-        accountEncoded =
-            Encode.object [ ( "account", Eos.encodeName account ) ]
-    in
-    Encode.object
-        [ ( "user", accountEncoded )
-        , ( "invitation_id", Encode.string invitationId )
-        ]
-
-
-type alias ProfileCreate =
-    { name : String
-    , email : String
-    , account : Eos.Name
-    , invitationId : Maybe String
-    }
-
-
-encodeProfileCreate : ProfileCreate -> Encode.Value
-encodeProfileCreate form =
-    let
-        user =
-            [ Just ( "name", Encode.string form.name )
-            , Just ( "email", Encode.string form.email )
-            , Just ( "account", Eos.encodeName form.account )
-            , Maybe.map (\invId -> ( "invitation_id", Encode.string invId )) form.invitationId
-            ]
-                |> List.filterMap identity
-                |> Encode.object
-    in
-    Encode.object [ ( "user", user ) ]
-
-
 type alias ProfileForm =
     { name : String
     , email : String
@@ -358,20 +264,6 @@ type alias ProfileForm =
     , interest : String
     , interests : List String
     , errors : Dict String String
-    }
-
-
-emptyProfileForm : ProfileForm
-emptyProfileForm =
-    { name = ""
-    , email = ""
-    , bio = ""
-    , localization = ""
-    , avatar = Nothing
-    , contacts = []
-    , interest = ""
-    , interests = []
-    , errors = Dict.empty
     }
 
 
@@ -389,107 +281,8 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     }
 
 
-encodeProfileForm : Eos.Name -> ProfileForm -> Encode.Value
-encodeProfileForm account form =
-    Encode.object
-        [ ( "name", Encode.string form.name )
-        , ( "email", Encode.string form.email )
-        , ( "bio", Encode.string form.bio )
-        , ( "localization", Encode.string form.localization )
-        , ( "account", Eos.encodeName account )
-        , ( "contacts", Encode.list Contact.encode form.contacts )
-        , ( "interests"
-          , Encode.list Encode.string form.interests
-          )
-        ]
-
-
-
-{- Show account.name if no profile name is set. -}
-
-
-username : Basic a -> String
-username { name, account } =
-    case Maybe.map String.trim name of
-        Nothing ->
-            Eos.nameToString account
-
-        Just "" ->
-            Eos.nameToString account
-
-        Just userName ->
-            userName
-
-
-minPinChars : Int
-minPinChars =
-    6
-
-
-maxPinChars : Int
-maxPinChars =
-    6
-
-
-pinValidationAttrs : List (Html.Attribute msg)
-pinValidationAttrs =
-    [ type_ "password"
-    , minlength minPinChars
-    , maxlength maxPinChars
-    , pattern "[0-9]*"
-    , Html.Attributes.attribute "inputmode" "numeric"
-    , title "Use only numbers."
-    ]
-
-
-updateContacts : Model -> List Contact.Normalized -> Model
-updateContacts ({ contacts } as profile) newContacts =
-    { profile
-        | contacts =
-            List.filter
-                (\contact ->
-                    List.any (Contact.hasSameType contact) newContacts
-                        |> not
-                )
-                contacts
-                ++ newContacts
-    }
-
-
 
 -- View profile
-
-
-view : Shared -> Eos.Name -> { profile | account : Eos.Name, avatar : Avatar, name : Maybe String } -> Html msg
-view shared loggedInAccount profile =
-    a
-        [ class "flex flex-col items-center"
-        , href ("/profile/" ++ Eos.nameToString profile.account)
-        ]
-        [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view profile.avatar "w-10 h-10"
-            ]
-        , div [ class "mt-2" ]
-            [ viewProfileNameTag shared loggedInAccount profile ]
-        ]
-
-
-viewLarge :
-    Shared
-    -> Eos.Name
-    -> { profile | account : Eos.Name, name : Maybe String, avatar : Avatar }
-    -> Html msg
-viewLarge shared loggedInAccount profile =
-    a
-        [ class "flex flex-col items-center"
-        , href ("/profile/" ++ Eos.nameToString profile.account)
-        ]
-        [ div [ class "w-20 h-20 rounded-full" ]
-            [ Avatar.view profile.avatar "w-20 h-20"
-            ]
-        , div [ class "mt-2" ]
-            [ viewProfileNameTag shared loggedInAccount profile ]
-        ]
 
 
 viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg

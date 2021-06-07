@@ -1,9 +1,48 @@
-module View.Components exposing (loadingLogoAnimated, loadingLogoAnimatedFluid, tooltip)
+module View.Components exposing
+    ( loadingLogoAnimated, loadingLogoAnimatedFluid
+    , dialogBubble
+    , tooltip
+    , bgNoScroll
+    )
 
-import Html exposing (Html, div, img, p, span, text)
-import Html.Attributes exposing (class, src)
+{-| This module exports some simple components that don't need to manage any
+state or configuration, such as loading indicators and containers
+
+
+# Loading
+
+@docs loadingLogoAnimated, loadingLogoAnimatedFluid
+
+
+# Containers
+
+@docs dialogBubble
+
+
+## Helper types
+
+@docs Orientation
+
+
+# Elements
+
+@docs tooltip
+
+
+# Helpers
+
+@docs bgNoScroll
+
+-}
+
+import Html exposing (Html, div, img, node, p, span, text)
+import Html.Attributes exposing (attribute, class, src)
 import Icons
 import Session.Shared exposing (Translators)
+
+
+
+-- LOADING
 
 
 loadingLogoAnimated : Translators -> String -> Html msg
@@ -15,10 +54,29 @@ loadingLogoAnimated { t } class_ =
         ]
 
 
+{-| A fluid-size loading indicator, fills the space as much as possible
+-}
 loadingLogoAnimatedFluid : Html msg
 loadingLogoAnimatedFluid =
     div [ class "w-full text-center h-full py-2" ]
         [ img [ class "mx-auto h-full", src "/images/loading.svg" ] [] ]
+
+
+
+-- CONTAINERS
+
+
+dialogBubble : { class_ : String, minWidth : Int } -> List (Html msg) -> Html msg
+dialogBubble { class_, minWidth } elements =
+    node "dialog-bubble"
+        [ attribute "elm-min-width" (String.fromInt minWidth)
+        , attribute "elm-class" class_
+        ]
+        elements
+
+
+
+-- ELEMENTS
 
 
 tooltip : Translators -> String -> Html msg
@@ -28,3 +86,14 @@ tooltip { t } tooltipMessage =
         , div [ class "icon-tooltip-content" ]
             [ text (t tooltipMessage) ]
         ]
+
+
+
+-- HELPERS
+
+
+{-| A node that prevents the body from scrolling
+-}
+bgNoScroll : List (Html.Attribute msg) -> Html msg
+bgNoScroll attrs =
+    node "bg-no-scroll" attrs []

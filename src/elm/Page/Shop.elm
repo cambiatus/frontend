@@ -5,7 +5,6 @@ module Page.Shop exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -15,7 +14,6 @@ import Api.Graphql
 import Array
 import Community exposing (Balance)
 import Eos
-import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, src, value)
@@ -24,15 +22,14 @@ import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
-import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Filter, Product)
-import Transfer
 import UpdateResult as UR
 
 
@@ -52,15 +49,6 @@ init loggedIn filter =
         , Api.getBalances loggedIn.shared loggedIn.accountName CompletedLoadBalances
         ]
     )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Sub Msg
-subscriptions =
-    Sub.none
 
 
 
@@ -91,6 +79,8 @@ type Status
 type alias Card =
     { product : Product
     , form : SaleTransferForm
+    , profileSummary : Profile.Summary.Model
+    , isAvailable : Bool
     }
 
 
@@ -98,6 +88,8 @@ cardFromSale : Product -> Card
 cardFromSale p =
     { product = p
     , form = initSaleFrom
+    , profileSummary = Profile.Summary.init False
+    , isAvailable = p.units > 0 || not p.trackStock
     }
 
 
@@ -120,16 +112,6 @@ initSaleFrom =
 
 type Validation
     = Valid
-    | Invalid ValidationError
-
-
-type ValidationError
-    = UnitsEmpty
-    | UnitTooLow
-    | UnitTooHigh
-    | UnitNotOnlyNumbers
-    | MemoEmpty
-    | MemoTooLong
 
 
 
@@ -262,18 +244,18 @@ viewGrid loggedIn cards model =
     let
         outOfStockCards =
             cards
-                |> List.filter (\c -> c.product.units == 0 && c.product.trackStock)
+                |> List.filter (.isAvailable >> not)
 
         availableCards =
             cards
-                |> List.filter (\c -> c.product.units > 0 || not c.product.trackStock)
+                |> List.filter .isAvailable
     in
     div []
         [ div [ class "flex flex-wrap -mx-2" ]
             (List.indexedMap (viewCard model loggedIn) availableCards)
         , if List.length outOfStockCards > 0 then
             div []
-                [ p [ class " ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
+                [ p [ class "ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
                     [ text <| loggedIn.shared.translators.t "shop.out_of_stock" ]
                 , div [ class "flex flex-wrap -mx-2" ]
                     (List.indexedMap (viewCard model loggedIn) outOfStockCards)
@@ -304,8 +286,8 @@ viewCard model ({ shared } as loggedIn) index card =
         currBalance =
             String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
 
         title =
             if String.length card.product.title > 17 then
@@ -341,7 +323,7 @@ viewCard model ({ shared } as loggedIn) index card =
                       else
                         div [ class "flex flex-none w-full items-center" ]
                             [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.product.price) ]
-                            , div [ class "uppercase text-xs ml-2 font-thin font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
+                            , div [ class "uppercase text-xs ml-2 font-extralight font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]
                         [ div [ class "bg-gray-100 absolute uppercase text-xs px-2" ]
@@ -351,12 +333,14 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             ]
         , div
-            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white overflow-hidden"
+            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white"
             ]
-            [ div [ class "w-full relative bg-gray-500" ]
-                [ img [ class "w-full h-48 object-cover", src image ] []
+            [ div [ class "w-full relative bg-gray-500 rounded-t-lg" ]
+                [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
                 , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.view shared loggedIn.accountName card.product.creator ]
+                    [ Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator card.profileSummary
+                        |> Html.map (GotProfileSummaryMsg index card.isAvailable)
+                    ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
                 [ p [ class "text-xl" ] [ text title ]
@@ -371,7 +355,7 @@ viewCard model ({ shared } as loggedIn) index card =
               else
                 div [ class "flex flex-none w-full px-6 pb-2" ]
                     [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.product.price) ]
-                    , div [ class "uppercase text-xs font-thin mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
+                    , div [ class "uppercase text-xs font-extralight mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                     ]
             , div [ class "px-6 pb-6" ]
                 [ div [ class "bg-gray-200 flex items-center justify-left text-xs px-4" ]
@@ -392,12 +376,11 @@ type alias UpdateResult =
 type Msg
     = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
-    | ClickedSendTransfer Card Int
-    | ClickedMessages Int Eos.Name
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | OnImageError Int
+    | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -422,94 +405,8 @@ update msg model loggedIn =
                         CompletedSalesLoad
                     )
 
-        ClickedSendTransfer card cardIndex ->
-            let
-                newForm =
-                    validateForm card.product card.form
-            in
-            if isFormValid newForm then
-                if LoggedIn.hasPrivateKey loggedIn then
-                    let
-                        authorization =
-                            { actor = loggedIn.accountName
-                            , permissionName = Eos.samplePermission
-                            }
-
-                        wantedUnits =
-                            case String.toInt card.form.unit of
-                                Just quantityInt ->
-                                    quantityInt
-
-                                Nothing ->
-                                    1
-
-                        tAmount =
-                            card.product.price * toFloat wantedUnits
-
-                        quantity =
-                            { amount = tAmount
-                            , symbol = card.product.symbol
-                            }
-
-                        from =
-                            loggedIn.accountName
-
-                        to =
-                            card.product.creatorId
-                    in
-                    UR.init model
-                        |> UR.addPort
-                            { responseAddress = TransferSuccess cardIndex
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.token
-                                      , name = "transfer"
-                                      , authorization = authorization
-                                      , data =
-                                            { from = from
-                                            , to = to
-                                            , value = quantity
-                                            , memo = card.form.memo
-                                            }
-                                                |> Transfer.encodeEosActionData
-                                      }
-                                    , { accountName = loggedIn.shared.contracts.community
-                                      , name = "transfersale"
-                                      , authorization = authorization
-                                      , data =
-                                            { id = card.product.id
-                                            , from = from
-                                            , to = to
-                                            , quantity = quantity
-                                            , units = wantedUnits
-                                            }
-                                                |> Shop.encodeTransferSale
-                                      }
-                                    ]
-                            }
-
-                else
-                    UR.init model
-                        |> UR.addExt (Just (ClickedSendTransfer card cardIndex) |> RequiredAuthentication)
-
-            else
-                UR.init model
-
         TransferSuccess index ->
             updateCard msg index (\card -> ( card, [] )) (UR.init model)
-
-        ClickedMessages cardIndex creatorId ->
-            UR.init model
-                |> UR.addPort
-                    { responseAddress = ClickedMessages cardIndex creatorId
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString creatorId) )
-                            ]
-                    }
 
         ClickedFilter filter ->
             let
@@ -565,6 +462,35 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
+        GotProfileSummaryMsg index isAvailable subMsg ->
+            case model.cards of
+                Loaded cards ->
+                    let
+                        targetCard =
+                            cards
+                                |> List.filter (\card -> isAvailable == card.isAvailable)
+                                |> LE.getAt index
+
+                        updatedCards =
+                            case targetCard of
+                                Just card ->
+                                    let
+                                        updatedSummary =
+                                            Profile.Summary.update subMsg card.profileSummary
+                                    in
+                                    LE.updateIf (.product >> .id >> (==) card.product.id)
+                                        (\c -> { c | profileSummary = updatedSummary })
+                                        cards
+
+                                Nothing ->
+                                    cards
+                    in
+                    { model | cards = Loaded updatedCards }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
 updateCard msg cardIndex transform ({ model } as uResult) =
@@ -592,50 +518,6 @@ updateCard msg cardIndex transform ({ model } as uResult) =
 
         _ ->
             UR.logImpossible msg [] uResult
-
-
-validateForm : Product -> SaleTransferForm -> SaleTransferForm
-validateForm sale form =
-    let
-        unitValidation : Validation
-        unitValidation =
-            if form.unit == "" then
-                Invalid UnitsEmpty
-
-            else
-                case String.toInt form.unit of
-                    Just units ->
-                        if units > sale.units then
-                            Invalid UnitTooHigh
-
-                        else if units <= 0 then
-                            Invalid UnitTooLow
-
-                        else
-                            Valid
-
-                    Nothing ->
-                        Invalid UnitNotOnlyNumbers
-
-        memoValidation =
-            if form.memo == "" then
-                Invalid MemoEmpty
-
-            else if String.length form.memo > 256 then
-                Invalid MemoTooLong
-
-            else
-                Valid
-    in
-    { form
-        | unitValidation = unitValidation
-        , memoValidation = memoValidation
-    }
-
-
-isFormValid : SaleTransferForm -> Bool
-isFormValid form =
-    form.unitValidation == Valid && form.memoValidation == Valid
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -668,14 +550,8 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        ClickedSendTransfer _ _ ->
-            [ "ClickedSendTransfer" ]
-
         TransferSuccess index ->
             [ "TransferSuccess", String.fromInt index ]
-
-        ClickedMessages _ _ ->
-            [ "ClickedMessages" ]
 
         ClickedFilter _ ->
             [ "ClickedFilter" ]
@@ -685,3 +561,6 @@ msgToString msg =
 
         OnImageError _ ->
             [ "OnImageError" ]
+
+        GotProfileSummaryMsg _ _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

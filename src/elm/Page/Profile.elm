@@ -7,14 +7,12 @@ module Page.Profile exposing
     , msgToString
     , update
     , view
-    , viewSettings
     , viewUserInfo
     )
 
 import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
-import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
@@ -24,9 +22,8 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Page
-import Profile exposing (DeleteKycAndAddressResult, Model)
+import Profile exposing (DeleteKycAndAddressResult)
 import Profile.Contact as Contact
-import PushSubscription exposing (PushSubscription)
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -109,7 +106,7 @@ view ({ shared } as loggedIn) model =
 
                 RemoteData.Success profile ->
                     div [ class "flex-grow flex flex-col" ]
-                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile") Route.Dashboard
+                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile")
                         , viewUserInfo loggedIn
                             profile
                             Private
@@ -589,9 +586,12 @@ viewContactButton translators normalized =
     let
         { contactType } =
             Contact.unwrap normalized
+
+        textColor =
+            "text-" ++ Contact.contactTypeColor contactType
     in
     a
-        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeColor contactType)
+        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ textColor)
         , Contact.toHref normalized
         , target "_blank"
         ]
@@ -601,44 +601,6 @@ viewContactButton translators normalized =
 
 
 
--- viewTogglePush : LoggedIn.Model -> Model -> Html Msg
--- viewTogglePush loggedIn model =
---     let
---         tr str =
---             t loggedIn.shared.translations str
---         inputId =
---             "notifications"
---         lblColor =
---             if model.isPushNotificationsEnabled then
---                 "text-indigo-500"
---             else
---                 "text-gray"
---         lblText =
---             if model.isPushNotificationsEnabled then
---                 tr "settings.features.enabled"
---             else
---                 tr "settings.features.disabled"
---     in
---     div []
---         [ label
---             [ for inputId
---             , class "inline-block lowercase mr-2 cursor-pointer"
---             , class lblColor
---             ]
---             [ text lblText ]
---         , div [ class "form-switch inline-block align-middle" ]
---             [ input
---                 [ type_ "checkbox"
---                 , id inputId
---                 , name inputId
---                 , class "form-switch-checkbox"
---                 , checked model.isPushNotificationsEnabled
---                 , onClick RequestPush
---                 ]
---                 []
---             , label [ class "form-switch-label", for inputId ] []
---             ]
---         ]
 -- UPDATE
 
 
@@ -658,14 +620,11 @@ type Msg
     | ClickedCloseChangePin
     | PinChanged
     | GotPushPreference Bool
-    | RequestPush
     | ToggleDeleteKycModal
     | AddKycClicked
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
     | CheckPushPref
-    | GotPushSub PushSubscription
-    | CompletedPushUpload (RemoteData (Graphql.Http.Error ()) ())
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -831,55 +790,6 @@ update msg model loggedIn =
                         Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
                     }
 
-        RequestPush ->
-            if model.isPushNotificationsEnabled then
-                model
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = GotPushPreference False
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object [ ( "name", Encode.string "disablePushPref" ) ]
-                        }
-
-            else
-                model
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = RequestPush
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "name", Encode.string "requestPushPermission" ) ]
-                        }
-
-        GotPushSub push ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (uploadPushSubscription loggedIn push)
-
-        CompletedPushUpload res ->
-            case res of
-                RemoteData.Success _ ->
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = CompletedPushUpload res
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "completedPushUpload" ) ]
-                            }
-
-                RemoteData.Failure err ->
-                    model
-                        |> UR.init
-                        |> UR.logGraphqlError msg err
-
-                _ ->
-                    UR.init model
-
 
 decodePushPref : Value -> Maybe Msg
 decodePushPref val =
@@ -893,14 +803,6 @@ decodeIsPdfDownloaded val =
     Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
         |> Result.map DownloadPdfProcessed
         |> Result.toMaybe
-
-
-uploadPushSubscription : LoggedIn.Model -> PushSubscription -> Cmd Msg
-uploadPushSubscription { accountName, shared, authToken } data =
-    Api.Graphql.mutation shared
-        (Just authToken)
-        (PushSubscription.activatePushMutation accountName data)
-        CompletedPushUpload
 
 
 deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
@@ -923,27 +825,10 @@ jsAddressToMsg addr val =
         "DownloadPdfProcessed" :: _ ->
             decodeIsPdfDownloaded val
 
-        "RequestPush" :: _ ->
-            let
-                push =
-                    Decode.decodeValue (Decode.field "sub" Decode.string) val
-                        |> Result.andThen (Decode.decodeString Decode.value)
-                        |> Result.andThen (Decode.decodeValue PushSubscription.decode)
-            in
-            case push of
-                Ok res ->
-                    Just (GotPushSub res)
-
-                Err _ ->
-                    Nothing
-
         "ChangePinSubmitted" :: pin :: [] ->
             Just (ChangePinSubmitted pin)
 
         "GotPushPreference" :: _ ->
-            decodePushPref val
-
-        "CompletedPushUpload" :: _ ->
             decodePushPref val
 
         _ ->
@@ -995,17 +880,8 @@ msgToString msg =
         GotPushPreference _ ->
             [ "GotPushPreference" ]
 
-        RequestPush ->
-            [ "RequestPush" ]
-
         CheckPushPref ->
             [ "CheckPushPref" ]
-
-        GotPushSub _ ->
-            [ "GotPushSub" ]
-
-        CompletedPushUpload _ ->
-            [ "CompletedPushUpload" ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg

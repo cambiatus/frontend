@@ -1,4 +1,11 @@
-module Utils exposing (decodeDate, decodeEnterKeyDown, decodeTimestamp, errorToString, onClickNoBubble, posixDateTime)
+module Utils exposing
+    ( decodeEnterKeyDown
+    , decodeTimestamp
+    , errorToString
+    , onClickNoBubble
+    , onClickPreventAll
+    , posixDateTime
+    )
 
 import Cambiatus.Scalar exposing (DateTime(..))
 import Graphql.Http
@@ -6,7 +13,7 @@ import Graphql.Http.GraphqlError
 import Html
 import Html.Events
 import Iso8601
-import Json.Decode as Decode exposing (Decoder, string)
+import Json.Decode as Decode
 import Time exposing (Posix)
 
 
@@ -25,29 +32,7 @@ posixDateTime maybedt =
                     Time.millisToPosix 0
 
 
-decodeDate : Decoder Posix
-decodeDate =
-    string
-        |> Decode.andThen
-            (\s ->
-                let
-                    dateStr =
-                        if String.endsWith "Z" s then
-                            s
-
-                        else
-                            s ++ "Z"
-                in
-                case Iso8601.toTime dateStr of
-                    Ok posix ->
-                        Decode.succeed posix
-
-                    Err _ ->
-                        Decode.fail "Failed to parse date"
-            )
-
-
-decodeTimestamp : Decode.Decoder Time.Posix
+decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
         |> Decode.andThen
@@ -69,6 +54,8 @@ decodeEnterKeyDown =
             )
 
 
+{-| Click event listener that stops propagation, but doesn't prevent default
+-}
 onClickNoBubble : msg -> Html.Attribute msg
 onClickNoBubble message =
     Html.Events.custom "click"
@@ -76,6 +63,19 @@ onClickNoBubble message =
             { message = message
             , stopPropagation = True
             , preventDefault = False
+            }
+        )
+
+
+{-| Click event listener that stops propagation and prevents default
+-}
+onClickPreventAll : msg -> Html.Attribute msg
+onClickPreventAll message =
+    Html.Events.custom "click"
+        (Decode.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = True
             }
         )
 

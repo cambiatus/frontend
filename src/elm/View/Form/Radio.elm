@@ -1,6 +1,6 @@
 module View.Form.Radio exposing
     ( init
-    , withOption, withAttrs, withOptionAttrs, withVertical
+    , withOption, withAttrs, withVertical
     , toHtml
     , withDisabled
     )
@@ -31,7 +31,7 @@ module View.Form.Radio exposing
 
 # Helpers
 
-@docs withOption, withAttrs, withOptionAttrs, withVertical
+@docs withOption, withAttrs, withVertical
 
 
 # Converting to HTML
@@ -59,7 +59,6 @@ type alias Options option msg =
     , areOptionsEqual : option -> option -> Bool
     , options : List ( option, Html msg )
     , extraAttrs : List (Html.Attribute msg)
-    , optionAttrs : List (Html.Attribute msg)
     , isVertical : Bool
     , isDisabled : Bool
     }
@@ -93,7 +92,6 @@ init initialOptions =
     , areOptionsEqual = initialOptions.areOptionsEqual
     , options = []
     , extraAttrs = []
-    , optionAttrs = []
     , isVertical = False
     , isDisabled = False
     }
@@ -115,13 +113,6 @@ withOption option viewOption options =
 withAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
-
-
-{-| Adds attributes to the option labels
--}
-withOptionAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withOptionAttrs attrs options =
-    { options | optionAttrs = options.optionAttrs ++ attrs }
 
 
 {-| Defines if the group should be displayed in a row or in a column
@@ -153,14 +144,12 @@ toHtml { t } options =
 
         viewOption ( option, view ) =
             label
-                ([ class "flex items-center"
-                 , classList
+                [ class "flex items-center"
+                , classList
                     [ ( "mb-6", options.isVertical )
                     , ( "xs-max:mb-6 mr-29", not options.isVertical )
                     ]
-                 ]
-                    ++ options.optionAttrs
-                )
+                ]
                 [ input
                     [ type_ "radio"
                     , class "form-radio h-5 w-5 text-green"

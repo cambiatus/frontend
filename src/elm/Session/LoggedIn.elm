@@ -6,26 +6,19 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
-    , addNotification
-    , askedAuthentication
     , hasPrivateKey
     , init
     , initLogin
     , isAccount
-    , isActive
     , jsAddressToMsg
-    , mapExternal
     , maybeInitWith
     , maybePrivateKey
     , msgToString
     , profile
-    , readAllNotifications
-    , showFeedback
     , subscriptions
     , update
     , updateExternal
     , view
-    , viewFooter
     )
 
 import Action
@@ -54,9 +47,10 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
-import Profile exposing (Model)
+import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
@@ -82,11 +76,28 @@ init shared accountName authToken =
     ( initModel shared Nothing accountName authToken
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
+        , fetchCommunity shared authToken Nothing
         , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
     )
+
+
+fetchCommunity : Shared -> String -> Maybe Eos.Symbol -> Cmd Msg
+fetchCommunity shared authToken maybeToken =
+    if shared.useSubdomain then
+        Api.Graphql.query shared
+            (Just authToken)
+            (Community.subdomainQuery (Shared.communityDomain shared))
+            CompletedLoadCommunity
+
+    else
+        let
+            symbol =
+                Maybe.Extra.or maybeToken shared.selectedCommunity
+                    |> Maybe.withDefault Eos.cambiatusSymbol
+        in
+        Api.Graphql.query shared (Just authToken) (Community.symbolQuery symbol) CompletedLoadCommunity
 
 
 fetchTranslations : String -> Shared -> Cmd Msg
@@ -110,7 +121,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     , Cmd.batch
         [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
         , loadedProfile
-        , Api.Graphql.query shared (Just authToken) (Community.subdomainQuery (Shared.communityDomain shared)) CompletedLoadCommunity
+        , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -135,6 +146,7 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
+    , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
@@ -157,6 +169,7 @@ type alias Model =
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
 initModel shared maybePrivateKey_ accountName authToken =
     { shared = shared
+    , routeHistory = []
     , accountName = accountName
     , profile = RemoteData.Loading
     , selectedCommunity = RemoteData.Loading
@@ -195,7 +208,6 @@ type Page
     | Invite
     | Join
     | Dashboard
-    | Communities
     | Community
     | CommunitySettings
     | CommunitySettingsFeatures
@@ -207,13 +219,10 @@ type Page
     | ObjectiveEditor
     | ActionEditor
     | Claim
-    | News
-    | Learn
     | Notification
     | Shop
     | ShopEditor
     | ShopViewer
-    | FAQ
     | Profile
     | ProfilePublic
     | ProfileEditor
@@ -267,9 +276,41 @@ hideCommunityAndSearch currentPage model =
 
 viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
+    let
+        viewClaimWithProofs action proof =
+            [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
+                |> Html.map (GotActionMsg >> pageMsg)
+            ]
+
+        mainView =
+            case ( Search.isActive model.searchModel, model.claimingAction.status ) of
+                ( True, _ ) ->
+                    case model.selectedCommunity of
+                        RemoteData.Success community ->
+                            [ Search.viewSearchBody
+                                shared.translators
+                                community.symbol
+                                shared.now
+                                (GotSearchMsg >> pageMsg)
+                                (GotActionMsg >> pageMsg)
+                                model.searchModel
+                            ]
+
+                        _ ->
+                            []
+
+                ( False, Action.PhotoUploaderShowed action p ) ->
+                    viewClaimWithProofs action p
+
+                ( False, Action.ClaimInProgress action (Just p) ) ->
+                    viewClaimWithProofs action p
+
+                _ ->
+                    viewPageBody model profile_ page content
+    in
     div
         [ class "min-h-screen flex flex-col" ]
-        ([ div [ class "bg-white" ]
+        (div [ class "bg-white" ]
             [ div [ class "container mx-auto" ]
                 [ viewHeader page model profile_
                     |> Html.map pageMsg
@@ -280,40 +321,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     viewMainMenu page model |> Html.map pageMsg
                 ]
             ]
-         , Feedback.view model.feedback
-            |> Html.map (GotFeedbackMsg >> pageMsg)
-         ]
-            ++ (let
-                    viewClaimWithProofs action proof =
-                        [ Action.viewClaimWithProofs proof shared.translators (hasPrivateKey model) action
-                            |> Html.map (GotActionMsg >> pageMsg)
-                        ]
-                in
-                case ( Search.isActive model.searchModel, model.claimingAction.status ) of
-                    ( True, _ ) ->
-                        case model.selectedCommunity of
-                            RemoteData.Success community ->
-                                [ Search.viewSearchBody
-                                    shared.translators
-                                    community.symbol
-                                    shared.now
-                                    (GotSearchMsg >> pageMsg)
-                                    (GotActionMsg >> pageMsg)
-                                    model.searchModel
-                                ]
-
-                            _ ->
-                                []
-
-                    ( False, Action.PhotoUploaderShowed action p ) ->
-                        viewClaimWithProofs action p
-
-                    ( False, Action.ClaimInProgress action (Just p) ) ->
-                        viewClaimWithProofs action p
-
-                    _ ->
-                        viewPageBody model profile_ page content
-               )
+            :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
+            :: mainView
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
@@ -725,34 +734,6 @@ type Resource
     | TimeResource
 
 
-mapExternal : (msg -> msg2) -> External msg -> External msg2
-mapExternal transform ext =
-    case ext of
-        UpdatedLoggedIn m ->
-            UpdatedLoggedIn m
-
-        AddedCommunity communityInfo ->
-            AddedCommunity communityInfo
-
-        CreatedCommunity symbol subdomain ->
-            CreatedCommunity symbol subdomain
-
-        ExternalBroadcast broadcastMsg ->
-            ExternalBroadcast broadcastMsg
-
-        ReloadResource resource ->
-            ReloadResource resource
-
-        RequiredAuthentication maybeM ->
-            RequiredAuthentication (Maybe.map transform maybeM)
-
-        ShowFeedback message status ->
-            ShowFeedback message status
-
-        HideFeedback ->
-            HideFeedback
-
-
 updateExternal :
     External msg
     -> Model
@@ -788,7 +769,8 @@ updateExternal externalMsg ({ shared } as model) =
                             newModel.profile
 
                         Just profile_ ->
-                            RemoteData.Success { profile_ | communities = communityInfo :: profile_.communities }
+                            RemoteData.Success
+                                { profile_ | communities = communityInfo :: profile_.communities }
             in
             { defaultResult
                 | model = { newModel | profile = profileWithCommunity }
@@ -825,15 +807,13 @@ updateExternal externalMsg ({ shared } as model) =
 
         ReloadResource CommunityResource ->
             let
-                ( newModel, cmd ) =
-                    case model.selectedCommunity of
-                        RemoteData.Success community ->
-                            loadCommunity model community.symbol
-
-                        _ ->
-                            ( model, Cmd.none )
+                ( _, cmd ) =
+                    model.selectedCommunity
+                        |> RemoteData.map .symbol
+                        |> RemoteData.toMaybe
+                        |> loadCommunity model
             in
-            { defaultResult | model = newModel, cmd = cmd }
+            { defaultResult | cmd = cmd }
 
         ReloadResource ProfileResource ->
             { defaultResult
@@ -868,7 +848,6 @@ type alias UpdateResult =
 -}
 type ExternalMsg
     = AuthenticationSucceed
-    | AuthenticationFailed
     | Broadcast BroadcastMsg
 
 
@@ -886,9 +865,7 @@ type Msg
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
-    | ShowNotificationModal Bool
     | ShowUserNav Bool
-    | ShowMainNav Bool
     | ToggleLanguageItems
     | ClickedLanguage String
     | ClosedAuthModal
@@ -1072,26 +1049,9 @@ update msg model =
                             ]
                     }
 
-        ShowNotificationModal b ->
-            UR.init
-                { closeAllModals
-                    | showNotificationModal = b
-                    , notification =
-                        if b then
-                            model.notification
-
-                        else
-                            Notification.readAll model.notification
-                }
-                |> UR.addCmd (focusMainContent (not b) "notifications-modal")
-
         ShowUserNav b ->
             UR.init { closeAllModals | showUserNav = b }
                 |> UR.addCmd (focusMainContent (not b) "user-nav")
-
-        ShowMainNav b ->
-            UR.init { closeAllModals | showMainNav = b }
-                |> UR.addCmd (focusMainContent (not b) "mobile-main-nav")
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }
@@ -1175,7 +1135,7 @@ update msg model =
         SelectedCommunity ({ symbol } as newCommunity) ->
             let
                 ( loadCommunityModel, loadCommunityCmd ) =
-                    loadCommunity model symbol
+                    loadCommunity model (Just symbol)
             in
             case model.selectedCommunity of
                 RemoteData.Success selectedCommunity ->
@@ -1271,16 +1231,13 @@ isCommunityMember model =
             False
 
 
-loadCommunity : Model -> Eos.Symbol -> ( Model, Cmd Msg )
-loadCommunity ({ shared } as model) symbol =
+loadCommunity : Model -> Maybe Eos.Symbol -> ( Model, Cmd Msg )
+loadCommunity ({ shared } as model) maybeSymbol =
     ( { model
         | showCommunitySelector = False
         , selectedCommunity = RemoteData.Loading
       }
-    , Api.Graphql.query shared
-        (Just model.authToken)
-        (Community.symbolQuery symbol)
-        CompletedLoadCommunity
+    , fetchCommunity shared model.authToken maybeSymbol
     )
 
 
@@ -1288,7 +1245,7 @@ loadCommunity ({ shared } as model) symbol =
 auto invites), and set it as default or redirect the user
 -}
 setCommunity : Community.Model -> Model -> ( Model, Cmd Msg )
-setCommunity community model =
+setCommunity community ({ shared } as model) =
     let
         isMember =
             case profile model of
@@ -1297,6 +1254,13 @@ setCommunity community model =
 
                 Nothing ->
                     List.any (.account >> (==) model.accountName) community.members
+
+        storeCommunityCmd =
+            Eos.symbolToString community.symbol
+                |> Ports.storeSelectedCommunitySymbol
+
+        sharedWithCommunity =
+            { shared | selectedCommunity = Just community.symbol }
     in
     if isMember then
         let
@@ -1323,17 +1287,20 @@ setCommunity community model =
         ( { model
             | selectedCommunity = RemoteData.Success community
             , profile = newProfile
+            , shared = sharedWithCommunity
           }
-        , Cmd.none
+        , storeCommunityCmd
         )
 
     else if community.hasAutoInvite then
-        ( { model | selectedCommunity = RemoteData.Success community }
-        , Route.pushUrl model.shared.navKey Route.Join
+        ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+        , Cmd.batch [ Route.pushUrl shared.navKey Route.Join, storeCommunityCmd ]
         )
 
     else
-        ( { model | selectedCommunity = RemoteData.Success community }, Route.pushUrl model.shared.navKey Route.CommunitySelector )
+        ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+        , Cmd.batch [ Route.pushUrl shared.navKey Route.CommunitySelector, storeCommunityCmd ]
+        )
 
 
 signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )
@@ -1358,10 +1325,7 @@ selectCommunity ({ shared, authToken } as model) community route =
 
     else
         ( { model | selectedCommunity = RemoteData.Loading }
-        , Api.Graphql.query shared
-            (Just authToken)
-            (Community.subdomainQuery community.subdomain)
-            CompletedLoadCommunity
+        , fetchCommunity shared authToken (Just community.symbol)
         )
 
 
@@ -1386,27 +1350,6 @@ askedAuthentication model =
         , showMainNav = False
         , showAuthModal = True
     }
-
-
-showFeedback : Feedback.Status -> String -> Model -> Model
-showFeedback feedbackStatus feedback model =
-    { model | feedback = Feedback.Visible feedbackStatus feedback }
-
-
-
--- TRANSFORM
-
-
-addNotification : Notification -> Model -> Model
-addNotification notification model =
-    { model
-        | notification = Notification.addNotification notification model.notification
-    }
-
-
-readAllNotifications : Model -> Model
-readAllNotifications model =
-    { model | notification = Notification.readAll model.notification }
 
 
 
@@ -1488,7 +1431,7 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
-            [ "Ignored" ]
+            [ "NoOp" ]
 
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
@@ -1512,7 +1455,7 @@ msgToString msg =
             [ "CompletedLoadProfile", UR.remoteDataToString r ]
 
         CompletedLoadCommunity r ->
-            [ "CompletedInitialLoad", UR.remoteDataToString r ]
+            [ "CompletedLoadCommunity", UR.remoteDataToString r ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
@@ -1520,14 +1463,8 @@ msgToString msg =
         ClickedLogout ->
             [ "ClickedLogout" ]
 
-        ShowNotificationModal _ ->
-            [ "ShowNotificationModal" ]
-
         ShowUserNav _ ->
             [ "ShowUserNav" ]
-
-        ShowMainNav _ ->
-            [ "ShowMainNav" ]
 
         ToggleLanguageItems ->
             [ "ToggleLanguageItems" ]

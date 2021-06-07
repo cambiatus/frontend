@@ -12,7 +12,7 @@ module Page.Community.ActionEditor exposing
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
-import Community exposing (Model)
+import Community
 import DataValidator
     exposing
         ( Validator
@@ -38,9 +38,11 @@ import Html.Events exposing (onCheck, onClick, onInput)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
+import List.Extra as List
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
+import Profile.Summary
 import RemoteData
 import Route
 import Select
@@ -48,7 +50,6 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
-import Task
 import Time
 import UpdateResult as UR
 import Utils
@@ -112,6 +113,7 @@ type Verification
         , verifierRewardValidator : Validator String
         , minVotesValidator : Validator String
         , photoProof : PhotoProof
+        , profileSummaries : List Profile.Summary.Model
         }
 
 
@@ -128,7 +130,7 @@ type ProofNumberPresence
 type SaveStatus
     = NotAsked
     | Saving
-    | Failed String
+    | Failed
 
 
 type alias Form =
@@ -196,7 +198,6 @@ editForm form action =
 
             else
                 action.validators
-                    |> List.map (\v -> { name = v.name, account = v.account, avatar = v.avatar })
 
         verification : Verification
         verification =
@@ -227,12 +228,18 @@ editForm form action =
 
                             ( _, _ ) ->
                                 Disabled
+
+                    profileSummaries =
+                        getInput verifiersValidator
+                            |> List.length
+                            |> Profile.Summary.initMany False
                 in
                 Manual
                     { verifiersValidator = verifiersValidator
                     , verifierRewardValidator = verifierRewardValidator
                     , minVotesValidator = minVotesValidator
                     , photoProof = photoProof
+                    , profileSummaries = profileSummaries
                     }
 
         instructions =
@@ -460,7 +467,7 @@ type Msg
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
     | EnteredMinVotes String
-    | ToggleValidity Bool
+    | ToggleValidity
     | ToggleDeadline Bool
     | TogglePhotoProof Bool
     | TogglePhotoProofNumber Bool
@@ -473,7 +480,7 @@ type Msg
     | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
-    | PressedEnter Bool
+    | GotProfileSummaryMsg Int Profile.Summary.Msg
 
 
 
@@ -610,6 +617,9 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -633,6 +643,9 @@ update msg model ({ shared } as loggedIn) =
                             Manual
                                 { m
                                     | verifiersValidator = updateInput newVerifiers m.verifiersValidator
+                                    , profileSummaries =
+                                        List.length newVerifiers
+                                            |> Profile.Summary.initMany False
                                 }
             in
             { model | form = { oldForm | verification = verification } }
@@ -855,7 +868,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
                                 |> UR.logImpossible msg []
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             model
                 |> UR.init
 
@@ -1051,7 +1064,7 @@ update msg model ({ shared } as loggedIn) =
         GotSaveAction (Err val) ->
             let
                 newModel =
-                    { model | form = { oldForm | saveStatus = Failed (t "error.unknown") } }
+                    { model | form = { oldForm | saveStatus = Failed } }
             in
             newModel
                 |> UR.init
@@ -1059,16 +1072,21 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logImpossible msg []
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
-        PressedEnter val ->
-            if val then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ValidateDeadline
-                            |> Task.perform identity
-                        )
+        GotProfileSummaryMsg index subMsg ->
+            case model.form.verification of
+                Manual ({ profileSummaries } as verification) ->
+                    let
+                        modelForm =
+                            model.form
 
-            else
-                UR.init model
+                        newProfileSummaries =
+                            List.updateAt index (Profile.Summary.update subMsg) profileSummaries
+                    in
+                    { model | form = { modelForm | verification = Manual { verification | profileSummaries = newProfileSummaries } } }
+                        |> UR.init
+
+                Automatic ->
+                    UR.init model
 
 
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
@@ -1228,7 +1246,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn (t "community.actions.title") Route.Objectives
+                        [ Page.viewHeader loggedIn (t "community.actions.title")
                         , viewForm loggedIn community model
                         ]
 
@@ -1392,7 +1410,7 @@ viewValidations { shared } model =
                             , name "expiration-toggle"
                             , class "form-switch-checkbox mr-2"
                             , checked (model.form.validation /= NoValidation)
-                            , onCheck ToggleValidity
+                            , onCheck (\_ -> ToggleValidity)
                             ]
                             []
                         , label [ class "form-switch-label", for "expiration-toggle" ] []
@@ -1537,6 +1555,14 @@ viewVerifications ({ shared } as loggedIn) model community =
 
         text_ s =
             text (t s)
+
+        verifiersValidator =
+            defaultVerifiersValidator [] (getInput defaultMinVotes)
+
+        profileSummaries =
+            getInput verifiersValidator
+                |> List.length
+                |> Profile.Summary.initMany False
     in
     div [ class "mb-10" ]
         [ View.Form.Radio.init
@@ -1572,10 +1598,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                 )
             |> View.Form.Radio.withOption
                 (Manual
-                    { verifiersValidator = defaultVerifiersValidator [] (getInput defaultMinVotes)
+                    { verifiersValidator = verifiersValidator
                     , verifierRewardValidator = defaultVerificationReward
                     , minVotesValidator = defaultMinVotes
                     , photoProof = Disabled
+                    , profileSummaries = profileSummaries
                     }
                 )
                 (span []
@@ -1606,7 +1633,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
         Automatic ->
             text ""
 
-        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof } ->
+        Manual { verifiersValidator, verifierRewardValidator, minVotesValidator, photoProof, profileSummaries } ->
             let
                 isPhotoProofEnabled =
                     case photoProof of
@@ -1637,7 +1664,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                 , div []
                     [ viewVerifierSelect loggedIn model False
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
-                    , viewSelectedVerifiers loggedIn (getInput verifiersValidator)
+                    , viewSelectedVerifiers loggedIn profileSummaries (getInput verifiersValidator)
                     ]
                 , span [ class "input-label" ]
                     [ text_ "community.actions.form.verifiers_reward_label" ]
@@ -1737,28 +1764,31 @@ viewVotesCount selectedCount count =
         ]
 
 
-viewSelectedVerifiers : LoggedIn.Model -> List Profile.Minimal -> Html Msg
-viewSelectedVerifiers ({ shared } as loggedIn) selectedVerifiers =
+viewSelectedVerifiers : LoggedIn.Model -> List Profile.Summary.Model -> List Profile.Minimal -> Html Msg
+viewSelectedVerifiers ({ shared } as loggedIn) profileSummaries selectedVerifiers =
     div [ class "flex flex-row mt-3 mb-6 flex-wrap" ]
-        (selectedVerifiers
-            |> List.map
-                (\p ->
-                    div
-                        [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ Profile.view shared loggedIn.accountName p
-                        , div
-                            [ onClick (OnRemoveVerifier p)
-                            , class "h-6 w-6 flex items-center mt-4"
-                            ]
-                            [ Icons.trash "" ]
+        (List.map3
+            (\profileSummary index verifier ->
+                div
+                    [ class "flex justify-between flex-col m-3 items-center" ]
+                    [ Profile.Summary.view shared loggedIn.accountName verifier profileSummary
+                        |> Html.map (GotProfileSummaryMsg index)
+                    , div
+                        [ onClick (OnRemoveVerifier verifier)
+                        , class "h-6 w-6 flex items-center mt-4"
                         ]
-                )
+                        [ Icons.trash "" ]
+                    ]
+            )
+            profileSummaries
+            (List.range 0 (List.length selectedVerifiers))
+            selectedVerifiers
         )
 
 
 viewFieldErrors : List String -> Html msg
 viewFieldErrors errors =
-    div [ class "form-field-error" ]
+    div []
         (List.map
             (\e ->
                 span [ class "form-error" ] [ text e ]
@@ -1906,20 +1936,20 @@ msgToString msg =
         SelectMsg _ ->
             [ "SelectMsg" ]
 
-        ToggleValidity _ ->
+        ToggleValidity ->
             [ "ToggleValidity" ]
 
         ToggleDeadline _ ->
             [ "ToggleDeadline" ]
 
         ToggleUsages _ ->
-            [ "ToggleDeadline" ]
+            [ "ToggleUsages" ]
 
         TogglePhotoProof _ ->
-            [ "TogglePhotoValidation" ]
+            [ "TogglePhotoProof" ]
 
         TogglePhotoProofNumber _ ->
-            [ "TogglePhotoWithNumberValidation" ]
+            [ "TogglePhotoProofNumber" ]
 
         EnteredVerifierReward _ ->
             [ "EnteredVerifierReward" ]
@@ -1931,7 +1961,7 @@ msgToString msg =
             [ "MarkAsCompleted" ]
 
         ValidateForm ->
-            [ "ValidateDeadline" ]
+            [ "ValidateForm" ]
 
         ValidateDeadline ->
             [ "ValidateDeadline" ]
@@ -1948,5 +1978,5 @@ msgToString msg =
         GotSaveAction _ ->
             [ "GotSaveAction" ]
 
-        PressedEnter _ ->
-            [ "PressedEnter" ]
+        GotProfileSummaryMsg _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

@@ -1,16 +1,15 @@
-module Page.ViewTransfer exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
-import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Icons
 import Page
-import Profile
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -29,18 +28,13 @@ init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 init { shared, authToken } transferId =
     let
         model =
-            { status = Loading transferId
+            { status = Loading
             , transferId = transferId
             }
     in
     ( model
     , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
     )
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 
@@ -58,10 +52,16 @@ type State
     | Received
 
 
+type alias ProfileSummaries =
+    { originSummary : Profile.Summary.Model
+    , destinationSummary : Profile.Summary.Model
+    }
+
+
 type Status
-    = Loading Int
+    = Loading
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
-    | Loaded (Maybe Transfer) State
+    | Loaded (Maybe Transfer) State ProfileSummaries
 
 
 
@@ -76,7 +76,7 @@ view loggedIn model =
 
         title =
             case model.status of
-                Loaded maybeTransfer _ ->
+                Loaded maybeTransfer _ _ ->
                     case maybeTransfer of
                         Just _ ->
                             t "transfer_result.title"
@@ -89,23 +89,23 @@ view loggedIn model =
 
         content =
             case model.status of
-                Loading _ ->
+                Loading ->
                     Page.fullPageLoading loggedIn.shared
 
                 LoadFailed error ->
                     div []
-                        [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn (t "transfer_result.title")
                         , Page.fullPageGraphQLError (t "transfer_result.title") error
                         ]
 
-                Loaded maybeTransfer state ->
+                Loaded maybeTransfer state profileSummaries ->
                     case maybeTransfer of
                         Just transfer ->
                             div []
-                                [ Page.viewHeader loggedIn (t "transfer_result.title") Route.Dashboard
+                                [ Page.viewHeader loggedIn (t "transfer_result.title")
                                 , div []
                                     [ viewTransfer loggedIn transfer state
-                                    , viewDetails loggedIn transfer state
+                                    , viewDetails loggedIn transfer profileSummaries state
                                     ]
                                 ]
 
@@ -157,8 +157,8 @@ viewTransfer loggedIn transfer state =
         ]
 
 
-viewTransferCard : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewTransferCard loggedIn transfer state =
+viewTransferCard : LoggedIn.Model -> Transfer -> ProfileSummaries -> State -> Html Msg
+viewTransferCard loggedIn transfer { originSummary, destinationSummary } state =
     let
         originUser =
             case state of
@@ -176,13 +176,14 @@ viewTransferCard loggedIn transfer state =
                 Transferred ->
                     transfer.to
 
-        viewUser_ =
-            Profile.view loggedIn.shared loggedIn.accountName
+        viewSummary user summary =
+            Profile.Summary.view loggedIn.shared loggedIn.accountName user summary
+                |> Html.map (GotProfileSummaryMsg (user == originUser))
     in
-    div [ class "flex flex-row w-full justify-center items-center bg-gray-100 px-6 pt-8 pb-6" ]
-        [ div [ class "w-1/6" ] [ viewUser_ originUser ]
+    div [ class "flex flex-row w-full justify-center items-center bg-gray-100 px-6 pt-8 pb-6 my-8" ]
+        [ div [ class "w-1/6" ] [ viewSummary originUser originSummary ]
         , div [ class "w-4/6" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "w-1/6" ] [ viewUser_ destinationUser ]
+        , div [ class "w-1/6" ] [ viewSummary destinationUser destinationSummary ]
         ]
 
 
@@ -217,7 +218,7 @@ viewAmount { shared } transfer state =
                     [ text <|
                         String.fromFloat transfer.value
                     ]
-                , span [ class "ml-2 text-caption text-green font-thin" ]
+                , span [ class "ml-2 text-caption text-green font-extralight" ]
                     [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             ]
@@ -225,8 +226,8 @@ viewAmount { shared } transfer state =
         ]
 
 
-viewDetails : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewDetails ({ shared } as loggedIn) transfer state =
+viewDetails : LoggedIn.Model -> Transfer -> ProfileSummaries -> State -> Html Msg
+viewDetails ({ shared } as loggedIn) transfer profileSummaries state =
     let
         t str =
             shared.translators.t str
@@ -240,7 +241,7 @@ viewDetails ({ shared } as loggedIn) transfer state =
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
             [ div [ class "flex w-full" ]
-                [ viewTransferCard loggedIn transfer state
+                [ viewTransferCard loggedIn transfer profileSummaries state
                 ]
             , div [ class "w-full mb-10 px-4" ]
                 [ viewDetail (t "transfer_result.date") date
@@ -277,6 +278,7 @@ viewDetail title content =
 
 type Msg
     = CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
+    | GotProfileSummaryMsg Bool Profile.Summary.Msg
 
 
 type alias UpdateResult =
@@ -308,8 +310,16 @@ update msg model user =
                 -- find out state either transferred or received
                 state =
                     findState transfer user
+
+                summary =
+                    Profile.Summary.init False
             in
-            { model | status = Loaded transfer state }
+            { model
+                | status =
+                    Loaded transfer
+                        state
+                        { originSummary = summary, destinationSummary = summary }
+            }
                 |> UR.init
 
         CompletedTransferLoad (RemoteData.Failure error) ->
@@ -320,6 +330,32 @@ update msg model user =
 
         CompletedTransferLoad _ ->
             UR.init model
+
+        GotProfileSummaryMsg isOrigin subMsg ->
+            case model.status of
+                Loaded maybeTransfer state profileSummaries ->
+                    let
+                        subUpdate =
+                            Profile.Summary.update subMsg
+
+                        updatedSummaries =
+                            if isOrigin then
+                                { profileSummaries | originSummary = subUpdate profileSummaries.originSummary }
+
+                            else
+                                { profileSummaries | destinationSummary = subUpdate profileSummaries.destinationSummary }
+                    in
+                    { model
+                        | status =
+                            Loaded maybeTransfer
+                                state
+                                updatedSummaries
+                    }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg [ "NotLoaded" ]
 
 
 updateStatus : Status -> Model -> Model
@@ -332,3 +368,6 @@ msgToString msg =
     case msg of
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.remoteDataToString r ]
+
+        GotProfileSummaryMsg _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

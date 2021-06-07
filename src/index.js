@@ -14,6 +14,111 @@ import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 
 // =========================================
+// Custom elements
+// =========================================
+/* global HTMLElement */
+
+window.customElements.define('dialog-bubble',
+  class DialogBubble extends HTMLElement {
+    constructor () {
+      super()
+
+      this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
+      this._defaultPointClasses = 'absolute transform -z-10'
+
+      window.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
+      window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
+    }
+
+    connectedCallback () {
+      this.className = this._defaultClasses
+      const point = document.createElement('div')
+      const pointElement = document.createElement('div')
+      pointElement.className = 'w-8 h-8 bg-white transform -rotate-45 rounded-sm'
+
+      point.appendChild(pointElement)
+
+      point.className = this._defaultPointClasses
+      this.appendChild(point)
+
+      this._point = point
+
+      this._orientation = 'not defined'
+
+      this.setPosition()
+    }
+
+    setPosition () {
+      if (!this.isConnected) return
+      let orientation = ''
+
+      const element = this.getBoundingClientRect()
+      const parent = this.parentElement.getBoundingClientRect()
+
+      const minWidth = parseInt(this.getAttribute('elm-min-width'))
+      const width = element.width > minWidth ? element.width : minWidth
+
+      let positionClasses = ''
+
+      let pointPositionClasses = ''
+
+      if (parent.left <= width / 2) {
+        // Go to the right
+        positionClasses = 'left-full bottom-1/2 translate-y-1/2'
+        pointPositionClasses = '-left-1 top-1/2 -translate-y-1/2'
+        orientation = 'right'
+      } else if (parent.right + (width / 2) >= window.innerWidth) {
+        // Go to the left
+        positionClasses = 'right-full bottom-1/2 translate-y-1/2'
+        pointPositionClasses = '-right-1 top-1/2 -translate-y-1/2'
+        orientation = 'left'
+      } else if (parent.top <= element.height) {
+        // Go down
+        positionClasses = 'top-full right-1/2 translate-x-1/2'
+        pointPositionClasses = '-top-1 right-1/2 translate-x-1/2'
+        orientation = 'down'
+      } else {
+        // Go up
+        positionClasses = 'bottom-full right-1/2 translate-x-1/2'
+        pointPositionClasses = '-bottom-1 right-1/2 translate-x-1/2'
+        orientation = 'up'
+      }
+
+      if (orientation === this._orientation) return
+
+      this._orientation = orientation
+      this.className = `${this.getAttribute('elm-class')} ${this._defaultClasses} ${positionClasses}`
+      this._point.className = `${this._defaultPointClasses} ${pointPositionClasses}`
+    }
+  }
+)
+
+window.customElements.define('bg-no-scroll',
+  class BgNoScroll extends HTMLElement {
+    constructor () {
+      super()
+      this._preventScrollingClass = 'overflow-hidden'
+    }
+
+    connectedCallback () {
+      if (document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.add(this._preventScrollingClass)
+    }
+
+    disconnectedCallback () {
+      if (!document.body.classList.contains(this._preventScrollingClass)) {
+        return
+      }
+
+      document.body.classList.remove(this._preventScrollingClass)
+    }
+  }
+)
+
+// =========================================
 // App startup
 // =========================================
 
@@ -23,10 +128,24 @@ const LANGUAGE_KEY = 'bespiral.language'
 const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
-const useSubdomain = process.env.USE_SUBDOMAIN
+const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
+
+const cookieDomain = () => {
+  const environments = ['staging', 'demo']
+  let hostnameParts = window.location.hostname.split('.')
+  const isFirstPartEnv = environments.includes(hostnameParts[0]) || window.location.hostname === 'cambiatus.io'
+  if (isFirstPartEnv) {
+    hostnameParts = ['.', ...hostnameParts]
+  } else {
+    hostnameParts.shift()
+  }
+
+  return hostnameParts.length < 2 ? '' : `domain=${hostnameParts.join('.')}`
+}
 
 const getItem = (key) => {
   const result = document.cookie.match('(^|[^;]+)\\s*' + key + '\\s*=\\s*([^;]+)')
@@ -34,11 +153,7 @@ const getItem = (key) => {
 }
 
 const removeItem = (key) => {
-  let hostnameParts = window.location.hostname.split('.')
-  hostnameParts.shift()
-  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
-  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${domain}`
-
+  document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}`
   window.localStorage.removeItem(key)
 }
 
@@ -47,14 +162,10 @@ const setItem = (key, value) => {
   // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
   // This is equivalent to the date 2038-01-19 04:14:07
   const maxExpirationDate = 2147483647
-  let hostnameParts = window.location.hostname.split('.')
-  hostnameParts.shift()
-  const domain = hostnameParts.length < 2 ? '' : `domain=.${hostnameParts.join('.')};`
-
-  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${domain}; path=/; SameSite=Strict`
+  document.cookie = `${key}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict`
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES]
+const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
 storedKeys.forEach((key) => {
   const localStorageValue = window.localStorage.getItem(key)
@@ -151,7 +262,8 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
-    useSubdomain: useSubdomain
+    useSubdomain: useSubdomain,
+    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY)
   }
 }
 
@@ -264,6 +376,11 @@ app.ports.getRecentSearches.subscribe(() => {
 app.ports.storeAuthToken.subscribe(token => {
   setItem(AUTH_TOKEN, token)
   debugLog(`stored auth token`, token)
+})
+
+app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
+  setItem(SELECTED_COMMUNITY_KEY, symbol)
+  debugLog(`stored community`, symbol)
 })
 
 // STORE PUSH PREF

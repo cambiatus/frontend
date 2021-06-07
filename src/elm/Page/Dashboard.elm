@@ -5,7 +5,6 @@ module Page.Dashboard exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -35,6 +34,7 @@ import List.Extra as List
 import Page
 import Profile
 import Profile.Contact as Contact
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -64,15 +64,6 @@ init ({ shared, accountName, authToken } as loggedIn) =
 
 
 
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.batch []
-
-
-
 -- MODEL
 
 
@@ -80,6 +71,7 @@ type alias Model =
     { balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , analysisFilter : Direction
+    , profileSummaries : List Profile.Summary.Model
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , contactModel : Contact.Model
@@ -95,6 +87,7 @@ initModel =
     { balance = RemoteData.NotAsked
     , analysis = LoadingGraphql
     , analysisFilter = initAnalysisFilter
+    , profileSummaries = []
     , lastSocket = ""
     , transfers = LoadingGraphql
     , contactModel = Contact.initSingle
@@ -156,7 +149,7 @@ view ({ shared, accountName } as loggedIn) model =
         areObjectivesEnabled =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    community.hasObjectives == True
+                    community.hasObjectives
 
                 _ ->
                     False
@@ -416,7 +409,10 @@ viewAnalysisList loggedIn model =
                       else
                         let
                             pendingClaims =
-                                List.map (\c -> viewAnalysis loggedIn c) claims
+                                List.map3 (viewAnalysis loggedIn)
+                                    model.profileSummaries
+                                    (List.range 0 (List.length claims))
+                                    claims
                         in
                         div [ class "flex flex-wrap -mx-2" ] <|
                             List.append pendingClaims
@@ -435,7 +431,7 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
             Claim.viewVoteClaimModal
                 loggedIn.shared.translators
                 { voteMsg = VoteClaim
-                , closeMsg = ClaimMsg Claim.CloseClaimModals
+                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
                 , claimId = claimId
                 , isApproving = isApproving
                 , isInProgress = isLoading
@@ -450,7 +446,7 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
 
         Claim.PhotoModal claim ->
             Claim.viewPhotoModal loggedIn claim
-                |> Html.map ClaimMsg
+                |> Html.map (ClaimMsg 0)
 
         Claim.ClaimModal claim ->
             Claim.viewClaimModal loggedIn claim True
@@ -460,12 +456,12 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> ClaimStatus -> Html Msg
-viewAnalysis loggedIn claimStatus =
+viewAnalysis : LoggedIn.Model -> Profile.Summary.Model -> Int -> ClaimStatus -> Html Msg
+viewAnalysis loggedIn profileSummary claimIndex claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn claim False
-                |> Html.map ClaimMsg
+            Claim.viewClaimCard loggedIn profileSummary claim False
+                |> Html.map (ClaimMsg claimIndex)
 
         ClaimLoading _ ->
             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
@@ -477,8 +473,8 @@ viewAnalysis loggedIn claimStatus =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn claim False
-                |> Html.map ClaimMsg
+            Claim.viewClaimCard loggedIn profileSummary claim False
+                |> Html.map (ClaimMsg claimIndex)
 
 
 viewTransfers : LoggedIn.Model -> Model -> Html Msg
@@ -573,7 +569,7 @@ viewAmount amount symbol =
                 "text-red"
     in
     [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ] [ text symbol ]
+    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ] [ text symbol ]
     ]
 
 
@@ -592,16 +588,15 @@ viewBalance ({ shared } as loggedIn) _ balance =
     div [ class "flex-wrap flex lg:space-x-3" ]
         [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
             [ div [ class "w-full" ]
-                ([ div [ class "input-label mb-2" ]
+                (div [ class "input-label mb-2" ]
                     [ text_ "account.my_wallet.balances.current" ]
-                 , div [ class "flex items-center mb-4" ]
-                    [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                        [ text balanceText ]
-                    , div [ class "text-indigo-500 ml-2" ]
-                        [ text symbolText ]
-                    ]
-                 ]
-                    ++ (case loggedIn.selectedCommunity of
+                    :: div [ class "flex items-center mb-4" ]
+                        [ div [ class "text-indigo-500 font-bold text-3xl" ]
+                            [ text balanceText ]
+                        , div [ class "text-indigo-500 ml-2" ]
+                            [ text symbolText ]
+                        ]
+                    :: (case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 [ a
                                     [ class "button button-primary w-full font-medium mb-2"
@@ -645,7 +640,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
+                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
                         , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                         ]
                         [ div []
@@ -665,7 +660,7 @@ viewQuickLinks ({ shared } as loggedIn) =
             [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
                 RemoteData.Success True ->
                     a
-                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-no-wrap lg:justify-between lg:items-center lg:ml-0"
+                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:ml-0"
                         , Route.href (Route.Shop Shop.UserSales)
                         ]
                         [ div []
@@ -698,7 +693,7 @@ type Msg
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | ClaimMsg Claim.Msg
+    | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | CreateInvite
@@ -746,14 +741,24 @@ update msg model ({ shared, accountName } as loggedIn) =
             let
                 wrappedClaims =
                     List.map ClaimLoaded (Claim.paginatedToList claims)
+
+                initProfileSummaries cs =
+                    List.length cs
+                        |> Profile.Summary.initMany False
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->
-                    { model | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims) }
+                    { model
+                        | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims)
+                        , profileSummaries = initProfileSummaries (existingClaims ++ wrappedClaims)
+                    }
                         |> UR.init
 
                 _ ->
-                    { model | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims) }
+                    { model
+                        | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims)
+                        , profileSummaries = initProfileSummaries wrappedClaims
+                    }
                         |> UR.init
 
         ClaimsLoaded (RemoteData.Failure err) ->
@@ -776,7 +781,7 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedLoadUserTransfers _ ->
             UR.init model
 
-        ClaimMsg m ->
+        ClaimMsg claimIndex m ->
             let
                 claimCmd =
                     case m of
@@ -785,8 +790,19 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                         _ ->
                             Cmd.none
+
+                updatedProfileSummaries =
+                    case m of
+                        Claim.GotProfileSummaryMsg subMsg ->
+                            List.updateAt claimIndex
+                                (Profile.Summary.update subMsg)
+                                model.profileSummaries
+
+                        _ ->
+                            model.profileSummaries
             in
-            Claim.updateClaimModalStatus m model
+            { model | profileSummaries = updatedProfileSummaries }
+                |> Claim.updateClaimModalStatus m
                 |> UR.init
                 |> UR.addCmd claimCmd
 
@@ -1200,7 +1216,7 @@ msgToString msg =
         ClaimsLoaded result ->
             [ "ClaimsLoaded", UR.remoteDataToString result ]
 
-        ClaimMsg _ ->
+        ClaimMsg _ _ ->
             [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->

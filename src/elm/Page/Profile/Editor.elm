@@ -5,14 +5,14 @@ import Api.Graphql
 import Avatar exposing (Avatar)
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, form, input, label, span, text, textarea)
+import Html exposing (Html, button, div, form, input, span, text, textarea)
 import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_, value)
 import Html.Events exposing (onInput)
 import Http
 import Icons
 import Json.Decode
 import Page
-import Profile exposing (Model)
+import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -101,7 +101,7 @@ view_ loggedIn model profile =
             t "menu.edit" ++ " " ++ ("menu.profile" |> t |> String.toLower)
 
         pageHeader =
-            Page.viewHeader loggedIn title Route.Profile
+            Page.viewHeader loggedIn title
 
         avatar =
             case model.avatar of
@@ -123,7 +123,7 @@ view_ loggedIn model profile =
             else
                 viewInput
     in
-    Html.div [ class "bg-white" ]
+    div [ class "bg-white" ]
         [ pageHeader
         , form
             [ class "pt-4 container mx-auto p-4" ]
@@ -233,7 +233,7 @@ viewButton label msg area isDisabled =
 viewBio : String -> Field -> Translators -> String -> Html Msg
 viewBio lbl field { tr } currentValue =
     div [ class "mb-4" ]
-        [ label [ class "input-label" ] [ text lbl ]
+        [ Html.label [ class "input-label" ] [ text lbl ]
         , div [ class "relative" ]
             [ textarea
                 [ class "w-full input"
@@ -253,7 +253,7 @@ viewBio lbl field { tr } currentValue =
         ]
 
 
-viewAvatar : Avatar.Avatar -> Html Msg
+viewAvatar : Avatar -> Html Msg
 viewAvatar url =
     div
         [ class "m-auto w-20 relative mb-4" ]
@@ -266,7 +266,7 @@ viewAvatar url =
             , multiple False
             ]
             []
-        , label
+        , Html.label
             [ for "profile-upload-avatar"
             , class "block cursor-pointer"
             ]

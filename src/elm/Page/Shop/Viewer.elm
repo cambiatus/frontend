@@ -157,9 +157,8 @@ type Validation
 type Msg
     = CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | ClickedBuy Product
+    | ClickedBuy
     | ClickedEdit Product
-    | ClickedQuestions Product
     | ClickedTransfer Product
     | EnteredUnit String
     | EnteredMemo String
@@ -219,19 +218,6 @@ update msg model loggedIn =
         CompletedSaleLoad _ ->
             UR.init model
 
-        ClickedQuestions sale ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedQuestions sale
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "openChat" )
-                            , ( "username", Encode.string (Eos.nameToString sale.creatorId) )
-                            ]
-                    }
-
         ClickedEdit sale ->
             let
                 idString =
@@ -242,7 +228,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale idString))
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             { model | viewing = EditingTransfer }
                 |> UR.init
 
@@ -410,13 +396,13 @@ view loggedIn model =
             case model.status of
                 LoadingSale _ ->
                     div []
-                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        [ Page.viewHeader loggedIn ""
                         , Page.fullPageLoading loggedIn.shared
                         ]
 
                 InvalidId invalidId ->
                     div [ class "container mx-auto px-4" ]
-                        [ Page.viewHeader loggedIn "" (Route.Shop Shop.All)
+                        [ Page.viewHeader loggedIn ""
                         , div []
                             [ text (invalidId ++ " is not a valid Sale Id") ]
                         ]
@@ -432,7 +418,7 @@ view loggedIn model =
                                     cardFromSale sale
                             in
                             div []
-                                [ Page.viewHeader loggedIn cardData.product.title (Route.Shop Shop.All)
+                                [ Page.viewHeader loggedIn cardData.product.title
                                 , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
                                 ]
 
@@ -484,8 +470,8 @@ viewCard ({ shared } as loggedIn) card model =
         text_ str =
             text (shared.translators.t str)
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "flex flex-wrap" ]
         [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
@@ -512,7 +498,7 @@ viewCard ({ shared } as loggedIn) card model =
                     [ div [ class "flex items-center" ]
                         [ div [ class "text-2xl text-green font-medium" ]
                             [ text (String.fromFloat card.product.price) ]
-                        , div [ class "uppercase text-sm font-thin ml-2 text-green" ]
+                        , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
                             [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                         ]
                     , div [ class "flex" ]
@@ -530,7 +516,7 @@ viewCard ({ shared } as loggedIn) card model =
                                 [ text_ "shop.edit" ]
                             ]
 
-                      else if card.product.units <= 0 && card.product.trackStock == True then
+                      else if card.product.units <= 0 && card.product.trackStock then
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ disabled True
@@ -552,7 +538,7 @@ viewCard ({ shared } as loggedIn) card model =
                         div [ class "flex -mx-2 md:justify-end" ]
                             [ button
                                 [ class "button button-primary w-full sm:w-40 mx-auto"
-                                , onClick (ClickedBuy card.product)
+                                , onClick ClickedBuy
                                 ]
                                 [ text_ "shop.buy" ]
                             ]
@@ -604,8 +590,8 @@ viewTransferForm { shared } card model =
             in
             currBalance
 
-        tr r_id replaces =
-            shared.translators.tr r_id replaces
+        tr rId replaces =
+            shared.translators.tr rId replaces
     in
     div [ class "large__card__transfer" ]
         [ div [ class "large__card__account" ]
@@ -613,7 +599,7 @@ viewTransferForm { shared } card model =
             , p [ class "large__card__name" ] [ text accountName ]
             ]
         , div [ class "large__card__quant" ]
-            [ formField
+            [ div []
                 [ label [ for fieldId.units ]
                     [ text (t "shop.transfer.units_label") ]
                 , input
@@ -634,7 +620,7 @@ viewTransferForm { shared } card model =
                     span [ class "field-error" ]
                         [ text <| t (getValidationMessage form.unitValidation) ]
                 ]
-            , formField
+            , div []
                 [ label [ for fieldId.price ]
                     [ text (t "shop.transfer.quantity_label" ++ " (" ++ saleSymbol ++ ")") ]
                 , input
@@ -652,26 +638,24 @@ viewTransferForm { shared } card model =
         , p [ class "large__card__balance" ]
             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
         , div []
-            [ formField
-                [ label [ for fieldId.units ]
-                    [ text (t "shop.transfer.memo_label") ]
-                , textarea
-                    [ class "input"
-                    , id fieldId.memo
-                    , value form.memo
-                    , onInput EnteredMemo
-                    , required True
-                    , placeholder (t "shop.transfer.default_memo")
-                    , Html.Attributes.min "0"
-                    ]
-                    []
-                , if form.memoValidation == Valid then
-                    text ""
-
-                  else
-                    span [ class "field-error" ]
-                        [ text <| t (getValidationMessage form.memoValidation) ]
+            [ label [ for fieldId.units ]
+                [ text (t "shop.transfer.memo_label") ]
+            , textarea
+                [ class "input"
+                , id fieldId.memo
+                , value form.memo
+                , onInput EnteredMemo
+                , required True
+                , placeholder (t "shop.transfer.default_memo")
+                , Html.Attributes.min "0"
                 ]
+                []
+            , if form.memoValidation == Valid then
+                text ""
+
+              else
+                span [ class "field-error" ]
+                    [ text <| t (getValidationMessage form.memoValidation) ]
             ]
         ]
 
@@ -705,11 +689,6 @@ getValidationMessage validation =
 
                 MemoTooLong ->
                     "shop.transfer.errors.memoTooLong"
-
-
-formField : List (Html msg) -> Html msg
-formField =
-    div [ class "form-field" ]
 
 
 fieldSuffix : String -> String
@@ -786,14 +765,11 @@ msgToString msg =
         GotTransferResult _ ->
             [ "GotTransferResult" ]
 
-        ClickedBuy _ ->
+        ClickedBuy ->
             [ "ClickedBuy" ]
 
         ClickedEdit _ ->
             [ "ClickedEdit" ]
-
-        ClickedQuestions _ ->
-            [ "ClickedQuestions" ]
 
         ClickedTransfer _ ->
             [ "ClickedTransfer" ]

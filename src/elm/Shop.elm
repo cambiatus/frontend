@@ -2,7 +2,6 @@ module Shop exposing
     ( Filter(..)
     , Product
     , ProductId
-    , decodeTargetValueToFilter
     , encodeTransferSale
     , productQuery
     , productsQuery
@@ -18,9 +17,8 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html.Events exposing (targetValue)
-import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Profile.Contact as Contact
 
 
 
@@ -50,6 +48,8 @@ type alias ShopProfile =
     , name : Maybe String
     , avatar : Avatar
     , email : Maybe String
+    , bio : Maybe String
+    , contacts : List Contact.Normalized
     }
 
 
@@ -82,22 +82,6 @@ encodeTransferSale t =
         ]
 
 
-decodeTargetValueToFilter : ( String, String ) -> Decoder Filter
-decodeTargetValueToFilter ( all, user ) =
-    let
-        transform val =
-            if val == all then
-                Decode.succeed All
-
-            else if val == user then
-                Decode.succeed UserSales
-
-            else
-                Decode.fail ("Invalid filter: " ++ val)
-    in
-    Decode.andThen transform targetValue
-
-
 
 -- PRODUCT GRAPHQL API
 
@@ -124,6 +108,11 @@ shopProfileSelectionSet =
         |> with User.name
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
+        |> with User.bio
+        |> with
+            (User.contacts Contact.selectionSet
+                |> SelectionSet.map (List.filterMap identity)
+            )
 
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery

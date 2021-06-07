@@ -8,7 +8,6 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , isValidated
-    , isValidator
     , isVotable
     , paginatedPageInfo
     , paginatedToList
@@ -20,7 +19,7 @@ module Claim exposing
     , viewVoteClaimModal
     )
 
-import Action exposing (Action, isClosed)
+import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
@@ -39,6 +38,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
 import Profile
+import Profile.Summary
 import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
@@ -100,7 +100,7 @@ isVotable : Model -> Eos.Name -> Time.Posix -> Bool
 isVotable claim accountName now =
     isValidator accountName claim
         && not (isValidated claim accountName)
-        && not (isClosed claim.action now)
+        && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
 
 
@@ -258,6 +258,7 @@ type Msg
     | OpenPhotoModal Model
     | OpenClaimModal Model
     | RouteOpened Route
+    | GotProfileSummaryMsg Profile.Summary.Msg
 
 
 updateClaimModalStatus : Msg -> { m | claimModalStatus : ModalStatus } -> { m | claimModalStatus : ModalStatus }
@@ -278,11 +279,14 @@ updateClaimModalStatus msg model =
         RouteOpened _ ->
             model
 
-
+        GotProfileSummaryMsg _ ->
+            model
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewClaimCard loggedIn claim showClaimModal =
+
+
+viewClaimCard : LoggedIn.Model -> Profile.Summary.Model -> Model -> Bool -> Html Msg
+viewClaimCard loggedIn profileSummary claim showClaimModal =
     let
         t =
             loggedIn.shared.translators.t
@@ -301,7 +305,12 @@ viewClaimCard loggedIn claim showClaimModal =
                     ( t "all_analysis.disapproved", "text-red" )
 
                 Pending ->
-                    ( t "all_analysis.pending", "text-black" )
+                    if claim.action.isCompleted then
+                        ( t "community.actions.completed", "text-black" )
+
+                    else
+                        ( t "all_analysis.pending", "text-black" )
+
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ viewClaimModal loggedIn claim showClaimModal
@@ -319,7 +328,10 @@ viewClaimCard loggedIn claim showClaimModal =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ Profile.view loggedIn.shared loggedIn.accountName claim.claimer
+                [ div [ class "flex items-center justify-center" ]
+                    [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummary
+                        |> Html.map GotProfileSummaryMsg
+                    ]
                 , case claim.proofPhoto of
                     Just url ->
                         div [ class "claim-photo-thumb" ]

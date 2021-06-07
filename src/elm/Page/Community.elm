@@ -2,7 +2,6 @@ module Page.Community exposing
     ( Model
     , Msg
     , init
-    , jsAddressToMsg
     , msgToString
     , subscriptions
     , update
@@ -12,19 +11,18 @@ module Page.Community exposing
 import Action exposing (Action)
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
-import Community exposing (Model)
+import Community
 import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Icons
-import Json.Encode exposing (Value)
 import Page
 import RemoteData
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
+import Task
 import Time exposing (Posix, posixToMillis)
 import UpdateResult as UR
 import Utils
@@ -37,7 +35,7 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel loggedIn
-    , Cmd.none
+    , Task.succeed RequestedReloadCommunity |> Task.perform identity
     )
 
 
@@ -100,7 +98,7 @@ view loggedIn model =
 
                 RemoteData.Success community ->
                     div []
-                        [ Page.viewHeader loggedIn community.name Route.Dashboard
+                        [ Page.viewHeader loggedIn community.name
                         , div [ class "bg-white p-4" ]
                             [ div [ class "container mx-auto px-4" ]
                                 [ div [ class "h-24 w-24 rounded-full mx-auto" ]
@@ -242,7 +240,7 @@ viewObjective loggedIn model metadata index objective =
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ div
-                        [ class "truncate overflow-hidden whitespace-no-wrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                        [ class "truncate overflow-hidden whitespace-nowrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
                         ]
                         [ text objective.description ]
                     ]
@@ -283,6 +281,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | RequestedReloadCommunity
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -294,6 +293,10 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        RequestedReloadCommunity ->
+            UR.init model
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -322,21 +325,17 @@ update msg model loggedIn =
                 |> UR.init
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        _ ->
-            Nothing
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
 
+        RequestedReloadCommunity ->
+            [ "RequestedReloadCommunity" ]
+
         GotActionMsg _ ->
-            [ "GotCommunityActionMsg" ]
+            [ "GotActionMsg" ]
 
         ClickedOpenObjective _ ->
             [ "ClickedOpenObjective" ]

@@ -10,7 +10,6 @@ import Json.Encode
 import Page
 import Ports
 import RemoteData
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -50,14 +49,13 @@ type Status
 type Feature
     = Shop
     | Objectives
-    | Kyc
 
 
 type Msg
     = CompletedLoadCommunity Community.Model
     | ToggleShop Bool
     | ToggleObjectives Bool
-    | ToggleKyc Bool
+    | ToggleKyc
     | SaveSuccess
 
 
@@ -90,7 +88,7 @@ view loggedIn model =
 
                 ( RemoteData.Success community, Authorized ) ->
                     div [ class "bg-white flex flex-col items-center" ]
-                        [ Page.viewHeader loggedIn title Route.CommunitySettings
+                        [ Page.viewHeader loggedIn title
                         , div
                             [ class "container divide-y px-4"
                             ]
@@ -111,7 +109,7 @@ view loggedIn model =
                              , View.Toggle.init
                                 { label = "community.kyc.title"
                                 , id = "kyc-toggle"
-                                , onToggle = ToggleKyc
+                                , onToggle = \_ -> ToggleKyc
                                 , disabled = True
                                 , value = community.hasKyc
                                 }
@@ -126,7 +124,7 @@ view loggedIn model =
 
                 ( RemoteData.Success _, Unauthorized ) ->
                     div []
-                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
                             [ text (translate "community.edit.unauthorized") ]
                         ]
@@ -170,8 +168,8 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
 
-        ToggleKyc _ ->
-            { model | hasKyc = model.hasKyc }
+        ToggleKyc ->
+            model
                 |> UR.init
 
         SaveSuccess ->
@@ -219,9 +217,6 @@ saveFeaturePort ({ shared } as loggedIn) feature status state =
 
                 Objectives ->
                     ToggleObjectives
-
-                Kyc ->
-                    ToggleKyc
     in
     case ( loggedIn.selectedCommunity, status ) of
         ( RemoteData.Success community, Authorized ) ->
@@ -260,14 +255,6 @@ saveFeature feature state authorization { shared, accountName } community =
                 _ ->
                     community.hasObjectives
 
-        hasKyc =
-            case feature of
-                Kyc ->
-                    state
-
-                _ ->
-                    community.hasKyc
-
         data =
             { accountName = accountName
             , symbol = community.symbol
@@ -279,7 +266,7 @@ saveFeature feature state authorization { shared, accountName } community =
             , invitedReward = community.invitedReward
             , hasShop = hasShop
             , hasObjectives = hasObjectives
-            , hasKyc = hasKyc
+            , hasKyc = community.hasKyc
             , hasAutoInvite = community.hasAutoInvite
             , website = Maybe.withDefault "" community.website
             }
@@ -332,7 +319,7 @@ msgToString msg =
         ToggleObjectives _ ->
             [ "ToggleObjectives" ]
 
-        ToggleKyc _ ->
+        ToggleKyc ->
             [ "ToggleKyc" ]
 
         SaveSuccess ->

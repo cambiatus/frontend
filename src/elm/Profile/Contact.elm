@@ -3,12 +3,10 @@ module Profile.Contact exposing
     , Model
     , Msg
     , Normalized
+    , circularIcon
     , contactTypeColor
     , contactTypeToIcon
     , contactTypeToString
-    , decode
-    , encode
-    , hasSameType
     , initMultiple
     , initSingle
     , selectionSet
@@ -29,12 +27,10 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Attribute, Html, button, div, img, p, text)
+import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode
 import List.Extra as LE
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
@@ -133,11 +129,13 @@ initBasicWith ((Normalized { contactType }) as normalized) =
 
                 Telegram ->
                     newPhoneContact
-                        |> String.dropLeft (String.length "https://t.me/")
+                        -- 13 == String.length "https://t.me/"
+                        |> String.dropLeft 13
 
                 Instagram ->
                     newPhoneContact
-                        |> String.dropLeft (String.length "https://instagram.com/")
+                        -- 22 == String.length "https://instagram.com/"
+                        |> String.dropLeft 22
     in
     { initial
         | contact = newContact
@@ -625,6 +623,43 @@ contactTypeToIcon class_ isInverted contactType =
                 Icons.whatsapp class_
 
 
+circularIcon : String -> Normalized -> Html msg
+circularIcon class_ (Normalized normalized) =
+    let
+        bgColor =
+            case normalized.contactType of
+                Phone ->
+                    "bg-orange-300"
+
+                Instagram ->
+                    "bg-instagram"
+
+                Telegram ->
+                    "bg-telegram"
+
+                Whatsapp ->
+                    "bg-whatsapp"
+    in
+    case normalized.contactType of
+        Telegram ->
+            a [ toHref (Normalized normalized) ]
+                [ contactTypeToIcon class_ False normalized.contactType
+                ]
+
+        _ ->
+            a
+                [ class
+                    (String.join " "
+                        [ "p-2 rounded-full flex items-center justify-center"
+                        , bgColor
+                        , class_
+                        ]
+                    )
+                , toHref (Normalized normalized)
+                ]
+                [ contactTypeToIcon "fill-current text-white object-contain" True normalized.contactType ]
+
+
 toHref : Normalized -> Attribute msg
 toHref (Normalized { contactType, contact }) =
     case contactType of
@@ -650,16 +685,16 @@ contactTypeColor : ContactType -> String
 contactTypeColor contactType =
     case contactType of
         Phone ->
-            "text-phone"
+            "phone"
 
         Instagram ->
-            "text-instagram"
+            "instagram"
 
         Telegram ->
-            "text-telegram"
+            "telegram"
 
         Whatsapp ->
-            "text-whatsapp"
+            "whatsapp"
 
 
 viewInput : Translators -> Basic -> Html Msg
@@ -805,11 +840,6 @@ usesPhone contactType =
 unwrap : Normalized -> Contact
 unwrap (Normalized contact) =
     contact
-
-
-hasSameType : Normalized -> Normalized -> Bool
-hasSameType (Normalized contact1) (Normalized contact2) =
-    contact1.contactType == contact2.contactType
 
 
 addErrors : List String -> Basic -> Basic
@@ -997,26 +1027,6 @@ supportedCountries =
       , flagIcon = "/icons/flag-usa.svg"
       }
     ]
-
-
-
--- JSON
--- All the data sent to/received from the backend should be normalized
-
-
-decode : Decoder Normalized
-decode =
-    Decode.map2 (\contactType contact -> Normalized { contactType = contactType, contact = contact })
-        ContactType.decoder
-        Decode.string
-
-
-encode : Normalized -> Encode.Value
-encode (Normalized { contactType, contact }) =
-    Encode.object
-        [ ( "type", Encode.string (ContactType.toString contactType) )
-        , ( "externalId", Encode.string contact )
-        ]
 
 
 

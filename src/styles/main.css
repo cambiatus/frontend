@@ -23,48 +23,90 @@ body {
 
 /* Button */
 
-.button {
-  @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10 px-2;
-}
+@layer components {
+  .button {
+    @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10 px-2;
+  }
 
-.button:disabled {
-  @apply bg-opacity-75;
-}
+  .button:disabled {
+    @apply bg-opacity-75;
+  }
 
-.button-primary {
-  @apply bg-orange-300 text-white text-body rounded-super font-medium;
-}
+  .button-primary {
+    @apply bg-orange-300 text-white text-body rounded-super font-medium;
+  }
 
-.button-primary:hover {
-  @apply bg-orange-100;
-}
+  .button-primary:hover {
+    @apply bg-orange-100;
+  }
 
-.button-secondary {
-  @apply bg-white text-orange-300 rounded-full border font-medium;
-}
+  .button-secondary {
+    @apply bg-white text-orange-300 rounded-full border font-medium;
+  }
 
-.button-secondary:hover {
-  @apply border-orange-300;
-}
+  .button-secondary:hover {
+    @apply border-orange-300;
+  }
 
-.button-sm {
-  @apply py-1 px-4 h-8;
-}
+  .button-sm {
+    @apply py-1 px-4 h-8;
+  }
 
-.button-lg {
-  @apply py-3 px-6 h-12;
-}
+  .button-lg {
+    @apply py-3 px-6 h-12;
+  }
 
-.button-success {
-  @apply bg-green text-white rounded-full text-body;
+  .button-success {
+    @apply bg-green text-white rounded-full text-body;
+  }
 }
 
 /* End of Button */
 
+/* Form */
+
+@layer components {
+  .focused-input {
+    @apply focus:ring focus:ring-offset-0 focus:ring-blue-600 focus:ring-opacity-50 focus:border-blue-600;
+  }
+
+  .form-input {
+    @apply bg-white border border-gray-500 rounded-md px-3 py-2 placeholder-gray-400 focused-input;
+  }
+
+  .form-checkbox {
+    @apply text-green rounded-sm focused-input;
+  }
+
+  .form-checkbox:checked {
+    background-image: url('/icons/checkbox.svg');
+  }
+
+  .form-select {
+    @apply form-input pr-10 bg-no-repeat focus:outline-none;
+    background-position: right 0.5rem center;
+    background-size: 1.5em;
+    background-image: url('/icons/select-arrow.svg');
+  }
+
+  .form-radio {
+    @apply rounded-full border h-6 w-6 focused-input;
+  }
+
+  .form-radio:checked {
+    background-image: url('/icons/radio.svg');
+  }
+
+  .form-radio:checked:disabled {
+    background-image: url('/icons/radio-disabled.svg');
+  }
+}
+
+/* End of form */
+
 /* Input */
 
 .input {
-  /* Form input comes from tailwind/custom-forms */
   @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
 }
 
@@ -102,15 +144,10 @@ textarea.input {
 /* Select */
 
 .select {
-  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100;
+  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100 focus:border-purple-500;
 }
 
 /* End of Select */
-
-.input:focus,
-.select:focus {
-  @apply border-purple-500;
-}
 
 /* Elm Select*/
 
@@ -296,9 +333,11 @@ textarea.input {
   margin-right: 0.05rem;
 }
 
-.form-error {
-  /* validation message for the field */
-  @apply text-red text-caption uppercase tracking-wide block mt-1;
+@layer utilities {
+  .form-error {
+    /* validation message for the field */
+    @apply text-red text-caption uppercase tracking-wide block mt-1;
+  }
 }
 
 .shake-invalid {
@@ -373,7 +412,7 @@ textarea.input {
 }
 
 .claim-photo-thumb:hover {
-  @apply shadow-outline;
+  @apply ring;
 }
 /* End of Claims */
 

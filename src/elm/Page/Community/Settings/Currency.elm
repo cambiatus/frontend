@@ -429,7 +429,7 @@ view ({ shared } as loggedIn) model =
 
                 RemoteData.Success community ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn title Route.CommunitySettings
+                        [ Page.viewHeader loggedIn title
                         , view_ loggedIn community model
                         ]
     in
@@ -580,8 +580,8 @@ viewGeneralFields ({ t } as translators) community model =
         , onSelect = \_ -> Ignored
         , areOptionsEqual = (==)
         }
-        |> Radio.withOption Token.Mcc (Html.text "MCC")
-        |> Radio.withOption Token.Expiry (Html.text (t "settings.community_currency.expiry"))
+        |> Radio.withOption Token.Mcc (text "MCC")
+        |> Radio.withOption Token.Expiry (text (t "settings.community_currency.expiry"))
         |> Radio.withAttrs [ class "mb-8" ]
         |> Radio.withDisabled True
         |> Radio.toHtml translators

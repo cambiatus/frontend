@@ -113,6 +113,9 @@ update session msg model =
                                     { name = user.name
                                     , account = user.account
                                     , avatar = user.avatar
+                                    , email = user.email
+                                    , bio = user.bio
+                                    , contacts = user.contacts
                                     }
                             in
                             UR.addExt

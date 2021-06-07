@@ -31,13 +31,12 @@ inputWrapperStyles =
     , ( "flex", "1" )
     , ( "flex-direction", "row" )
     , ( "flex-wrap", "wrap" )
-    , ( "overflow", "hidden" )
     ]
 
 
 inputClass : String
 inputClass =
-    "elm-select-input"
+    "elm-select-input input"
 
 
 inputStyles : List ( String, String )
@@ -93,6 +92,7 @@ multiInputItemText =
     , ( "padding-right", ".3rem" )
     , ( "padding-top", ".05rem" )
     , ( "padding-bottom", ".05rem" )
+    , ( "display", "none" )
     ]
 
 

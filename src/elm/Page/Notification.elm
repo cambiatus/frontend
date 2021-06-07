@@ -58,7 +58,7 @@ type Status
 type Payload
     = T TransferData
     | S OrderData
-    | M MintData
+    | M
 
 
 
@@ -75,7 +75,7 @@ view ({ shared } as loggedIn) model =
 
                 Loaded notifications ->
                     div []
-                        [ Page.viewHeader loggedIn (shared.translators.t "notifications.title") Route.Dashboard
+                        [ Page.viewHeader loggedIn (shared.translators.t "notifications.title")
                         , div [ class "container mx-auto px-4 mb-6" ]
                             [ if notifications == [] then
                                 viewEmptyNotifications loggedIn.shared
@@ -212,7 +212,7 @@ viewNotificationMint shared history notification =
     in
     div
         [ class "flex items-start lg:items-center p-4"
-        , onClick (MarkAsRead history.id (M notification))
+        , onClick (MarkAsRead history.id M)
         ]
         [ div [ class "flex-none" ]
             [ case maybeLogo of
@@ -333,7 +333,7 @@ viewAmount amount symbol =
                 "text-red"
     in
     [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-thin mt-3 ml-2 font-sans", class color ]
+    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ]
         [ text <| Eos.symbolToSymbolCodeString symbol ]
     ]
 
@@ -404,7 +404,7 @@ update msg model loggedIn =
                                 |> redirectCmd transfer.community
                             )
 
-                M _ ->
+                M ->
                     model
                         |> UR.init
                         |> UR.addCmd cmd

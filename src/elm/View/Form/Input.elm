@@ -54,8 +54,8 @@ and character counters.
 -}
 
 import Eos
-import Html exposing (Html, div, input, li, span, text, ul)
-import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, value)
+import Html exposing (Html, div, li, span, text, ul)
+import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
 import View.Form
@@ -154,18 +154,17 @@ input options =
                     "input"
 
                 TextArea ->
-                    "form-textarea"
+                    "form-input"
     in
-    Html.div [ class "relative" ]
+    div [ class "relative" ]
         [ inputElement
-            ([ id options.id
-             , onInput options.onInput
-             , class ("w-full " ++ inputClass)
-             , disabled options.disabled
-             , value options.value
-             , placeholder (Maybe.withDefault "" options.placeholder)
-             ]
-                ++ options.extraAttrs
+            (id options.id
+                :: onInput options.onInput
+                :: class ("w-full " ++ inputClass)
+                :: disabled options.disabled
+                :: value options.value
+                :: placeholder (Maybe.withDefault "" options.placeholder)
+                :: options.extraAttrs
             )
             []
         , Maybe.withDefault (text "") options.extraElement
@@ -248,7 +247,7 @@ withCounterType counterType options =
 asNumeric : InputOptions a -> InputOptions a
 asNumeric options =
     options
-        |> withAttrs [ attribute "inputmode" "numeric" ]
+        |> withAttrs [ attribute "inputmode" "numeric", type_ "number" ]
 
 
 

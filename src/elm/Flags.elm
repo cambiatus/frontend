@@ -4,12 +4,12 @@ module Flags exposing
     , Flags
     , decode
     , default
-    , defaultEndpoints
     )
 
+import Eos
 import Eos.Account as Eos
-import Json.Decode as Decode exposing (Decoder, nullable, string)
-import Json.Decode.Pipeline as Decode exposing (optional, required)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
 
 
 type alias Flags =
@@ -27,6 +27,7 @@ type alias Flags =
     , authToken : Maybe String
     , canReadClipboard : Bool
     , useSubdomain : Bool
+    , selectedCommunity : Maybe Eos.Symbol
     }
 
 
@@ -46,6 +47,7 @@ default =
     , authToken = Nothing
     , canReadClipboard = False
     , useSubdomain = True
+    , selectedCommunity = Nothing
     }
 
 
@@ -53,13 +55,13 @@ decode : Decoder Flags
 decode =
     Decode.succeed Flags
         |> required "env" decodeEnvironment
-        |> required "language" string
-        |> Decode.custom
+        |> required "language" Decode.string
+        |> DecodePipeline.custom
             (Decode.succeed
                 (Maybe.map2 (\acc auth -> ( acc, auth )))
-                |> optional "accountName" (nullable Eos.nameDecoder) Nothing
+                |> optional "accountName" (Decode.nullable Eos.nameDecoder) Nothing
                 |> optional "isPinAvailable"
-                    (nullable Decode.bool)
+                    (Decode.nullable Decode.bool)
                     Nothing
             )
         |> required "endpoints" decodeEndpoints
@@ -73,6 +75,7 @@ decode =
         |> required "authToken" (Decode.nullable Decode.string)
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
+        |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
 
 
 type alias Endpoints =
@@ -93,9 +96,9 @@ defaultEndpoints =
 decodeEndpoints : Decoder Endpoints
 decodeEndpoints =
     Decode.succeed Endpoints
-        |> required "eosio" string
-        |> required "api" string
-        |> required "graphql" string
+        |> required "eosio" Decode.string
+        |> required "api" Decode.string
+        |> required "graphql" Decode.string
 
 
 type Environment
@@ -113,4 +116,4 @@ decodeEnvironment =
             else
                 Production
         )
-        string
+        Decode.string

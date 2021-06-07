@@ -322,7 +322,12 @@ update msg model ({ shared } as loggedIn) =
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
                                             , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
-                                            , website = model.websiteInput
+                                            , website =
+                                                if String.startsWith "https://" model.websiteInput || String.startsWith "http://" model.websiteInput then
+                                                    model.websiteInput
+
+                                                else
+                                                    "http://" ++ model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -677,7 +682,7 @@ view ({ shared } as loggedIn) model =
 
                 RemoteData.Success community ->
                     div [ class "bg-white" ]
-                        [ Page.viewHeader loggedIn title Route.CommunitySettings
+                        [ Page.viewHeader loggedIn title
                         , view_ loggedIn community model
                         ]
     in
@@ -948,7 +953,7 @@ symbolPlaceholder symbol amount =
         String.fromInt amount
 
     else
-        String.fromInt amount ++ "." ++ String.join "" (List.repeat precision "0")
+        String.fromInt amount ++ "." ++ String.concat (List.repeat precision "0")
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

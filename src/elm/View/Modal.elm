@@ -30,8 +30,9 @@ and call `toHtml` at the end of the pipeline:
 
 import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class, classList)
-import Html.Events exposing (onClick)
 import Icons
+import Utils exposing (onClickNoBubble)
+import View.Components
 
 
 
@@ -150,18 +151,17 @@ viewModalDetails options =
     in
     div
         [ class "modal fade-in" ]
-        [ div
+        [ View.Components.bgNoScroll
             [ class "modal-bg"
-            , onClick options.closeMsg
+            , onClickNoBubble options.closeMsg
             ]
-            []
         , div
             [ class "modal-content"
             , classList [ ( "modal-content-lg", options.isLarge ) ]
             ]
             [ button
                 [ class "absolute top-0 right-0 mx-4 my-4"
-                , onClick options.closeMsg
+                , onClickNoBubble options.closeMsg
                 ]
                 [ Icons.close "text-gray-400 fill-current"
                 ]

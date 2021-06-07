@@ -3,7 +3,6 @@ module Session.Shared exposing
     , TranslationStatus(..)
     , Translators
     , communityDomain
-    , communitySubdomainParts
     , init
     , langFlag
     , language
@@ -25,7 +24,7 @@ import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
-import I18Next exposing (Translations, initialTranslations, t)
+import I18Next exposing (Translations, initialTranslations)
 import Time exposing (Posix)
 import Url exposing (Url)
 
@@ -48,6 +47,7 @@ type alias Shared =
     , graphqlSecret : String
     , canReadClipboard : Bool
     , useSubdomain : Bool
+    , selectedCommunity : Maybe Eos.Symbol
     }
 
 
@@ -70,6 +70,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , graphqlSecret = flags.graphqlSecret
     , canReadClipboard = flags.canReadClipboard
     , useSubdomain = flags.useSubdomain
+    , selectedCommunity = flags.selectedCommunity
     }
 
 
@@ -78,7 +79,7 @@ type TranslationStatus
     | LoadingTranslationFailed Http.Error
     | LoadedTranslation
     | LoadingAnotherTranslation
-    | LoadingAnotherTranslationFailed Http.Error
+    | LoadingAnotherTranslationFailed
 
 
 
@@ -127,8 +128,10 @@ translationStatus shared =
 url. Example possible outputs:
 
     [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
-    , [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
-    , [ "cambiatus" ] -- Cambiatus community in the prod environment
+
+    [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
+
+    [ "cambiatus" ] -- Cambiatus community in the prod environment
 
 -}
 communitySubdomainParts : Shared -> List String
@@ -184,7 +187,7 @@ toLoadingTranslation shared =
                 LoadedTranslation ->
                     LoadingAnotherTranslation
 
-                LoadingAnotherTranslationFailed _ ->
+                LoadingAnotherTranslationFailed ->
                     LoadingAnotherTranslation
 
                 _ ->
@@ -203,7 +206,7 @@ loadTranslation result shared =
                             LoadingTranslationFailed err
 
                         LoadingAnotherTranslation ->
-                            LoadingAnotherTranslationFailed err
+                            LoadingAnotherTranslationFailed
 
                         _ ->
                             shared.translationsStatus
@@ -275,7 +278,7 @@ viewFullError : Shared -> Http.Error -> msg -> String -> Html msg
 viewFullError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
-        , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]
+        , button [ onClick msg ] [ text (I18Next.t shared.translations "menu.try_again") ]
         ]
 
 
@@ -283,5 +286,5 @@ viewFullGraphqlError : Shared -> Graphql.Http.Error e -> msg -> String -> Html m
 viewFullGraphqlError shared _ msg msgText =
     div [ class "full-page-loading full-spinner-container" ]
         [ p [] [ text msgText ]
-        , button [ onClick msg ] [ text (t shared.translations "menu.try_again") ]
+        , button [ onClick msg ] [ text (I18Next.t shared.translations "menu.try_again") ]
         ]

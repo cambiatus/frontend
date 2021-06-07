@@ -7,7 +7,6 @@ module Session.Guest exposing
     , addAfterLoginRedirect
     , init
     , initLoggingIn
-    , initModel
     , maybeInitWith
     , msgToString
     , subscriptions
@@ -20,6 +19,7 @@ import Auth
 import Browser.Events
 import Browser.Navigation
 import Community
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, header, img, text)
@@ -47,16 +47,7 @@ import View.Feedback as Feedback
 
 init : Shared -> ( Model, Cmd Msg )
 init shared =
-    let
-        subdomainForQuery =
-            Shared.communityDomain shared
-    in
-    ( initModel shared
-    , Api.Graphql.query shared
-        Nothing
-        (Community.communityPreviewQuery subdomainForQuery)
-        CompletedLoadCommunityPreview
-    )
+    ( initModel shared, fetchCommunity shared )
 
 
 initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
@@ -72,6 +63,26 @@ initLoggingIn shared accountName signInMessage =
         (Auth.signIn accountName shared Nothing)
         signInMessage
     )
+
+
+fetchCommunity : Shared -> Cmd Msg
+fetchCommunity shared =
+    if shared.useSubdomain then
+        Api.Graphql.query shared
+            Nothing
+            (Community.communityPreviewQuery (Shared.communityDomain shared))
+            CompletedLoadCommunityPreview
+
+    else
+        let
+            symbol =
+                shared.selectedCommunity
+                    |> Maybe.withDefault Eos.cambiatusSymbol
+        in
+        Api.Graphql.query shared
+            Nothing
+            (Community.communityPreviewSymbolQuery symbol)
+            CompletedLoadCommunityPreview
 
 
 fetchTranslations : String -> Cmd Msg
@@ -253,7 +264,7 @@ viewPageHeader model shared =
                 ]
                 [ Shared.langFlag shared.language
                 , if model.showLanguageNav then
-                    div [ class "flex-grow whitespace-no-wrap" ]
+                    div [ class "flex-grow whitespace-nowrap" ]
                         [ text (String.toUpper model.shared.language) ]
 
                   else
@@ -287,8 +298,7 @@ viewPageHeader model shared =
 
 
 type External
-    = UpdatedGuest Model
-    | LoggedIn Eos.PrivateKey Auth.SignInResponse
+    = LoggedIn Eos.PrivateKey Auth.SignInResponse
     | SetFeedback Feedback.Model
 
 
@@ -367,12 +377,24 @@ update msg ({ shared } as model) =
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addCmd (Browser.Navigation.load invalidCommunityRedirectUrl)
+                |> UR.addCmd
+                    (if shared.useSubdomain then
+                        Browser.Navigation.load invalidCommunityRedirectUrl
+
+                     else
+                        Cmd.none
+                    )
 
         CompletedLoadCommunityPreview (RemoteData.Failure err) ->
             UR.init { model | community = RemoteData.Failure err }
                 |> UR.logGraphqlError msg err
-                |> UR.addCmd (Browser.Navigation.load invalidCommunityRedirectUrl)
+                |> UR.addCmd
+                    (if shared.useSubdomain then
+                        Browser.Navigation.load invalidCommunityRedirectUrl
+
+                     else
+                        Cmd.none
+                    )
 
         CompletedLoadCommunityPreview RemoteData.NotAsked ->
             UR.init { model | community = RemoteData.NotAsked }

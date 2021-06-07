@@ -33,7 +33,7 @@ module View.Form.FileUploader exposing
 -}
 
 import File exposing (File)
-import Html exposing (Attribute, Html, div, img, input, label, span, text)
+import Html exposing (Html, div, img, input, label, span, text)
 import Html.Attributes exposing (accept, class, for, id, multiple, src, style, type_)
 import Html.Events exposing (on)
 import Http
@@ -128,7 +128,7 @@ toHtml translators options =
 -- INTERNAL
 
 
-onFileChange : (List File -> msg) -> Attribute msg
+onFileChange : (List File -> msg) -> Html.Attribute msg
 onFileChange toMsg =
     Decode.list File.decoder
         |> Decode.at [ "target", "files" ]

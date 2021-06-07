@@ -2,8 +2,8 @@ module Api.Graphql exposing (mutation, query)
 
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
+import List.Extra as List
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 
@@ -21,7 +21,28 @@ withAuthToken authToken =
 
 withCommunityDomain : Shared -> Graphql.Http.Request decodesTo -> Graphql.Http.Request decodesTo
 withCommunityDomain shared =
-    Graphql.Http.withHeader "Community-Domain" ("https://" ++ Session.Shared.communityDomain shared)
+    let
+        communityDomain =
+            if shared.useSubdomain then
+                Session.Shared.communityDomain shared
+
+            else if String.endsWith ".cambiatus.io" shared.url.path then
+                let
+                    sharedUrl =
+                        shared.url
+                in
+                { sharedUrl
+                    | path =
+                        String.split "." sharedUrl.path
+                            |> List.updateAt 0 (\_ -> "cambiatus")
+                            |> String.join "."
+                }
+                    |> .path
+
+            else
+                "cambiatus.staging.cambiatus.io"
+    in
+    Graphql.Http.withHeader "Community-Domain" ("https://" ++ communityDomain)
 
 
 query : Shared -> Maybe String -> SelectionSet a RootQuery -> (RemoteData (Graphql.Http.Error a) a -> msg) -> Cmd msg

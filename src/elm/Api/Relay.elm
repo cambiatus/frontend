@@ -1,8 +1,7 @@
-module Api.Relay exposing (Edge, MetadataConnection, PageConnection, PageInfo, PaginationArgs, pageInfoSelectionSet)
+module Api.Relay exposing (Edge, PageConnection, PageInfo, pageInfoSelectionSet)
 
 import Cambiatus.Object
 import Cambiatus.Object.PageInfo
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 
 
@@ -23,20 +22,6 @@ type alias Edge nodeType =
 type alias PageConnection nodeType =
     { edges : Maybe (List (Maybe (Edge nodeType)))
     , pageInfo : PageInfo
-    }
-
-
-type alias MetadataConnection =
-    { totalCount : Maybe Int
-    , fetchedCount : Maybe Int
-    }
-
-
-type alias PaginationArgs =
-    { after : OptionalArgument String
-    , before : OptionalArgument String
-    , first : OptionalArgument Int
-    , last : OptionalArgument Int
     }
 
 

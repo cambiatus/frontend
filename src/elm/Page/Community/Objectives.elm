@@ -2,14 +2,16 @@ module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiv
 
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
-import Community exposing (Model)
+import Community
+import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
+import List.Extra as List
 import Page
-import Profile
+import Profile.Summary
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -33,6 +35,7 @@ init loggedIn =
 type alias Model =
     { status : Status
     , openObjective : Maybe Int
+    , profileSummaries : Dict Int (List Profile.Summary.Model)
     }
 
 
@@ -40,6 +43,7 @@ initModel : Model
 initModel =
     { status = Loading
     , openObjective = Nothing
+    , profileSummaries = Dict.empty
     }
 
 
@@ -66,7 +70,7 @@ view ({ shared } as loggedIn) model =
             case ( loggedIn.selectedCommunity, model.status ) of
                 ( RemoteData.Success community, Loaded ) ->
                     div []
-                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural") Route.Community
+                        [ Page.viewHeader loggedIn (t "community.objectives.title_plural")
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
@@ -80,7 +84,7 @@ view ({ shared } as loggedIn) model =
 
                 ( RemoteData.Success _, Unauthorized ) ->
                     div []
-                        [ Page.viewHeader loggedIn title Route.Dashboard
+                        [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
                             [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]
@@ -224,10 +228,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         text_ s =
             text (shared.translators.t s)
 
-        tr r_id replaces =
-            loggedIn.shared.translators.tr r_id replaces
+        tr rId replaces =
+            loggedIn.shared.translators.tr rId replaces
     in
-    div [ class "flex flex-wrap sm:flex-no-wrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
+    div [ class "flex flex-wrap sm:flex-nowrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
             [ p [ class "text-white" ] [ text action.description ]
@@ -305,11 +309,21 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2 overflow-x-auto" ]
-                            (List.map
-                                (\u ->
-                                    div [ class "mr-4 action-verifier" ]
-                                        [ Profile.view shared loggedIn.accountName u ]
+                        div [ class "flex mr-2 flex-wrap" ]
+                            (List.indexedMap
+                                (\validatorIndex u ->
+                                    case
+                                        Dict.get action.id model.profileSummaries
+                                            |> Maybe.andThen (List.getAt validatorIndex)
+                                    of
+                                        Nothing ->
+                                            text ""
+
+                                        Just validatorSummary ->
+                                            div [ class "mr-4 action-verifier" ]
+                                                [ Profile.Summary.view shared loggedIn.accountName u validatorSummary
+                                                    |> Html.map (GotProfileSummaryMsg action.id validatorIndex)
+                                                ]
                                 )
                                 action.validators
                             )
@@ -336,6 +350,7 @@ type alias UpdateResult =
 type Msg
     = CompletedLoadCommunity Community.Model
     | OpenObjective Int
+    | GotProfileSummaryMsg Int Int Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -357,12 +372,41 @@ update msg model loggedIn =
 
         OpenObjective index ->
             if model.openObjective == Just index then
-                { model | openObjective = Nothing }
+                { model | openObjective = Nothing, profileSummaries = Dict.empty }
                     |> UR.init
 
             else
-                { model | openObjective = Just index }
+                { model
+                    | openObjective = Just index
+                    , profileSummaries =
+                        loggedIn.selectedCommunity
+                            |> RemoteData.toMaybe
+                            |> Maybe.map .objectives
+                            |> Maybe.andThen (List.getAt index)
+                            |> Maybe.map .actions
+                            |> Maybe.withDefault []
+                            |> List.map
+                                (\action ->
+                                    ( action.id
+                                    , List.length action.validators
+                                        |> Profile.Summary.initMany False
+                                    )
+                                )
+                            |> Dict.fromList
+                }
                     |> UR.init
+
+        GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
+            { model
+                | profileSummaries =
+                    Dict.update actionIndex
+                        (Maybe.withDefault []
+                            >> List.updateAt validatorIndex (Profile.Summary.update subMsg)
+                            >> Just
+                        )
+                        model.profileSummaries
+            }
+                |> UR.init
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -383,3 +427,6 @@ msgToString msg =
 
         OpenObjective _ ->
             [ "OpenObjective" ]
+
+        GotProfileSummaryMsg _ _ subMsg ->
+            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

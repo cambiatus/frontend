@@ -27,6 +27,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -58,7 +59,7 @@ initModel account =
 
 type Status
     = Loading
-    | Loaded ProfileClaims
+    | Loaded (List Profile.Summary.Model) ProfileClaims
     | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
 
@@ -81,10 +82,10 @@ view loggedIn model =
                 Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                Loaded profileClaims ->
+                Loaded profileSummaries profileClaims ->
                     div []
-                        [ Page.viewHeader loggedIn pageTitle Route.Dashboard
-                        , viewResults loggedIn profileClaims
+                        [ Page.viewHeader loggedIn pageTitle
+                        , viewResults loggedIn profileSummaries profileClaims
                         , viewClaimVoteModal loggedIn model
                         ]
 
@@ -99,19 +100,19 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Claim.Model -> Html Msg
-viewResults loggedIn claims =
+viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Html Msg
+viewResults loggedIn profileSummaries claims =
     let
-        viewClaim claim =
-            Claim.viewClaimCard loggedIn claim False
-                |> Html.map ClaimMsg
+        viewClaim profileSummary claimIndex claim =
+            Claim.viewClaimCard loggedIn profileSummary claim False
+                |> Html.map (ClaimMsg claimIndex)
     in
     div [ class "container mx-auto px-4 mb-10" ]
         [ if List.length claims > 0 then
             div [ class "flex flex-wrap -mx-2 pt-4" ]
                 (claims
                     |> List.reverse
-                    |> List.map viewClaim
+                    |> List.map3 viewClaim profileSummaries (List.range 0 (List.length profileSummaries))
                 )
 
           else
@@ -126,7 +127,7 @@ viewClaimVoteModal loggedIn model =
             Claim.viewVoteClaimModal
                 loggedIn.shared.translators
                 { voteMsg = VoteClaim
-                , closeMsg = ClaimMsg Claim.CloseClaimModals
+                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
                 , claimId = claimId
                 , isApproving = isApproving
                 , isInProgress = isLoading
@@ -141,7 +142,7 @@ viewClaimVoteModal loggedIn model =
 
         Claim.PhotoModal claimId ->
             Claim.viewPhotoModal loggedIn claimId
-                |> Html.map ClaimMsg
+                |> Html.map (ClaimMsg 0)
 
         Claim.ClaimModal claim ->
             Claim.viewClaimModal loggedIn claim True
@@ -178,7 +179,7 @@ type alias UpdateResult =
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
     | CompletedLoadCommunity Community.Model
-    | ClaimMsg Claim.Msg
+    | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
 
@@ -189,7 +190,12 @@ update msg model loggedIn =
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
                 Just claims ->
-                    { model | status = Loaded (List.reverse claims) }
+                    let
+                        profileSummaries =
+                            List.length claims
+                                |> Profile.Summary.initMany False
+                    in
+                    { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
 
                 Nothing ->
@@ -207,7 +213,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addCmd (profileClaimQuery loggedIn model.accountString community)
 
-        ClaimMsg m ->
+        ClaimMsg claimIndex m ->
             let
                 claimCmd =
                     case m of
@@ -216,14 +222,31 @@ update msg model loggedIn =
 
                         _ ->
                             Cmd.none
+
+                updatedModel =
+                    case ( model.status, m ) of
+                        ( Loaded profileSummaries profileClaims, Claim.GotProfileSummaryMsg subMsg ) ->
+                            { model
+                                | status =
+                                    Loaded
+                                        (List.updateAt claimIndex
+                                            (Profile.Summary.update subMsg)
+                                            profileSummaries
+                                        )
+                                        profileClaims
+                            }
+
+                        _ ->
+                            model
             in
-            Claim.updateClaimModalStatus m model
+            updatedModel
+                |> Claim.updateClaimModalStatus m
                 |> UR.init
                 |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ ->
+                Loaded _ _ ->
                     let
                         newModel =
                             { model
@@ -258,7 +281,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded profileClaims ->
+                Loaded profileSummaries profileClaims ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -276,9 +299,7 @@ update msg model loggedIn =
                                         ++ " "
                                         ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
                             in
-                            { model
-                                | status = Loaded profileClaims
-                            }
+                            { model | status = Loaded profileSummaries profileClaims }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.ProfileClaims model.accountString))
@@ -296,9 +317,9 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.status of
-                Loaded claims ->
+                Loaded profileSummaries claims ->
                     { model
-                        | status = Loaded claims
+                        | status = Loaded profileSummaries claims
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -365,7 +386,7 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        ClaimMsg _ ->
+        ClaimMsg _ _ ->
             [ "ClaimMsg" ]
 
         VoteClaim claimId _ ->

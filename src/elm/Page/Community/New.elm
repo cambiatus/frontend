@@ -11,9 +11,8 @@ module Page.Community.New exposing
 
 import Api
 import Api.Graphql
-import Asset.Icon as Icon
 import Browser.Events as Events
-import Community exposing (Model)
+import Community
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -23,8 +22,8 @@ import Html exposing (Html, button, div, input, label, span, text)
 import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, required, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Http
+import Icons
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
@@ -152,7 +151,7 @@ view ({ shared } as loggedIn) model =
     { title = t "community.create.title"
     , content =
         div [ class "bg-white pb-10" ]
-            [ Page.viewHeader loggedIn (t "community.create.title") Route.Dashboard
+            [ Page.viewHeader loggedIn (t "community.create.title")
             , Html.form
                 [ class "container mx-auto px-4"
                 , onSubmit SubmittedForm
@@ -365,7 +364,7 @@ viewLogo shared isDisabled selected logos =
                         , classList [ ( "disabled", isDisabled ) ]
                         ]
                         [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
-                            [ Icon.imageMultiple "text-white fill-current w-8 h-8" ]
+                            [ Icons.imageMultiple "text-white fill-current w-8 h-8" ]
                         , text (t "community.create.labels.upload_icon")
                         ]
                     ]
@@ -559,7 +558,12 @@ validateModel shared accountName model =
                         , hasObjectives = True
                         , hasKyc = False
                         , hasAutoInvite = model.hasAutoInvite
-                        , website = model.website
+                        , website =
+                            if String.startsWith "https://" model.website || String.startsWith "http://" model.website then
+                                model.website
+
+                            else
+                                "http://" ++ model.website
                         }
                 )
                 symbolValidation
@@ -664,7 +668,7 @@ type Msg
     | SubmittedForm
     | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Encode.Value ( Eos.Symbol, String ))
+    | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
 

@@ -5,7 +5,6 @@ module View.Pin exposing
     , RequiredOptions
     , SubmitStatus(..)
     , init
-    , isValid
     , maybeSubmitCmd
     , msgToString
     , update
