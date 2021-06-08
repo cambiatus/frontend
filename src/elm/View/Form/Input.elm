@@ -1,10 +1,10 @@
 module View.Form.Input exposing
     ( init
-    , withCounter, withElement, withCurrency
-    , withCounterAttrs, withErrorAttrs, withAttrs
+    , withCounter, withCurrency
+    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs
     , withType, withCounterType, asNumeric
     , toHtml
-    , FieldType(..)
+    , FieldType(..), withElements
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
@@ -39,7 +39,7 @@ and character counters.
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withAttrs
+@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs
 
 
 ## Changing types
@@ -91,7 +91,8 @@ init options =
     , translators = options.translators
     , extraAttrs = []
     , counterAttrs = []
-    , extraElement = Nothing
+    , containerAttrs = []
+    , extraElements = []
     , errorAttrs = []
     , fieldType = Text
     , counterType = View.Form.InputCounter.CountLetters
@@ -112,10 +113,15 @@ toHtml options =
                     False
     in
     div
-        [ class "relative"
-        , classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
-        ]
-        [ View.Form.label options.id options.label
+        (class "relative"
+            :: classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
+            :: options.containerAttrs
+        )
+        [ if String.isEmpty options.label then
+            text ""
+
+          else
+            View.Form.label options.id options.label
         , input options
         , case options.maximumCounterValue of
             Just number ->
@@ -127,11 +133,15 @@ toHtml options =
 
             Nothing ->
                 text ""
-        , ul []
-            (options.problems
-                |> Maybe.withDefault []
-                |> List.map (viewFieldProblem options.errorAttrs)
-            )
+        , case options.problems of
+            Nothing ->
+                text ""
+
+            Just problems ->
+                ul []
+                    (problems
+                        |> List.map (viewFieldProblem options.errorAttrs)
+                    )
         ]
 
 
@@ -157,7 +167,7 @@ input options =
                     "form-input"
     in
     div [ class "relative" ]
-        [ inputElement
+        (inputElement
             (id options.id
                 :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
@@ -167,8 +177,8 @@ input options =
                 :: options.extraAttrs
             )
             []
-        , Maybe.withDefault (text "") options.extraElement
-        ]
+            :: options.extraElements
+        )
 
 
 {-| Adds a character counter to your input. This does not limit the amount of characters automatically.
@@ -203,15 +213,22 @@ withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
+{-| Adds attributes to the element that contains everything else
+-}
+withContainerAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withContainerAttrs attrs options =
+    { options | containerAttrs = options.containerAttrs ++ attrs }
+
+
 {-| Adds an element to the input, so we can have elements inside the input
 
 **Note**: the element isn't inside the input by default. You should use the
 `absolute` class, along with other classes you may need to position the element
 
 -}
-withElement : Html a -> InputOptions a -> InputOptions a
-withElement element options =
-    { options | extraElement = Just element }
+withElements : List (Html a) -> InputOptions a -> InputOptions a
+withElements elements options =
+    { options | extraElements = elements }
 
 
 {-| Displays the currency symbol in the input field
@@ -223,7 +240,7 @@ is valid and has the symbol's precision
 withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
 withCurrency symbol options =
     options
-        |> withElement (viewCurrencyElement symbol)
+        |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
 
@@ -277,7 +294,8 @@ type alias InputOptions a =
     , maximumCounterValue : Maybe Int
     , extraAttrs : List (Html.Attribute a)
     , counterAttrs : List (Html.Attribute a)
-    , extraElement : Maybe (Html a)
+    , containerAttrs : List (Html.Attribute a)
+    , extraElements : List (Html a)
     , errorAttrs : List (Html.Attribute a)
     , fieldType : FieldType
     , counterType : View.Form.InputCounter.CounterType

@@ -855,8 +855,8 @@ viewSubdomain shared model =
                 [ maxlength 30
                 , classList [ ( "pr-29", not <| String.isEmpty model.subdomainInput ) ]
                 ]
-            |> Input.withElement
-                (span
+            |> Input.withElements
+                [ span
                     [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
                     , classList
                         [ ( "hidden", String.isEmpty model.subdomainInput )
@@ -864,7 +864,7 @@ viewSubdomain shared model =
                         ]
                     ]
                     [ text ".cambiatus.io" ]
-                )
+                ]
             |> Input.toHtml
         , span [ class "font-bold" ] [ text_ "settings.community_info.url.guidance" ]
         , ul [ class "text-gray-600" ]

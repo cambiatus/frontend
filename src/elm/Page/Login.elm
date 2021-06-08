@@ -215,7 +215,7 @@ viewPassphrase ({ shared } as guest) model =
             |> Input.withCounterType InputCounter.CountWords
             |> Input.withCounterAttrs [ class "text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
-            |> Input.withElement viewPasteButton
+            |> Input.withElements [ viewPasteButton ]
             |> Input.toHtml
         ]
     , div [ class "sf-footer" ]
