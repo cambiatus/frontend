@@ -9,8 +9,8 @@ module Profile.EditKycForm exposing
 
 import Api.Graphql
 import Graphql.Http
-import Html exposing (Html, button, div, form, input, label, option, p, select, text)
-import Html.Attributes exposing (attribute, class, maxlength, placeholder, selected, type_, value)
+import Html exposing (Html, button, div, form, label, option, p, select, text)
+import Html.Attributes exposing (class, maxlength, selected, value)
 import Html.Events exposing (onInput, onSubmit)
 import Kyc exposing (ProfileKyc)
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
@@ -22,6 +22,7 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator, ifBlank, validate)
+import View.Form.Input as Input
 
 
 type Msg
@@ -125,26 +126,20 @@ valToDoc v =
 
 
 view : Translators -> Model -> Html Msg
-view { t } model =
+view ({ t } as translators) model =
     let
         { document, documentNumber, phoneNumber, validationErrors } =
             model
 
-        { docType, placeholderText, maxLength, isValid, title } =
+        { docType, placeholderText, maxLength, title } =
             document
 
-        showProblem field =
-            let
-                isFieldError ( fieldWithError, _ ) =
-                    fieldWithError == field
-            in
-            case List.filter isFieldError validationErrors of
-                h :: _ ->
-                    div [ class "form-error" ]
-                        [ text (Tuple.second h) ]
+        isFieldError field ( fieldWithError, _ ) =
+            fieldWithError == field
 
-                [] ->
-                    text ""
+        problemsForField field =
+            List.filter (isFieldError field) validationErrors
+                |> List.map Tuple.second
     in
     div [ class "md:max-w-sm md:mx-auto py-6" ]
         [ form
@@ -174,36 +169,33 @@ view { t } model =
                         [ text (t "register.form.document.nite.label") ]
                     ]
                 ]
-            , div [ class "mb-6" ]
-                [ label [ class "input-label block" ]
-                    [ text (t title) ]
-                , input
-                    [ type_ "text"
-                    , class "form-input"
-                    , attribute "inputmode" "numeric"
-                    , onInput DocumentNumberEntered
-                    , value documentNumber
-                    , maxlength maxLength
-                    , placeholder (t placeholderText)
-                    ]
-                    []
-                , showProblem DocumentNumber
-                ]
-            , div [ class "mb-10" ]
-                [ label [ class "input-label block" ]
-                    [ text (t "register.form.phone.label") ]
-                , input
-                    [ type_ "tel"
-                    , class "form-input"
-                    , value phoneNumber
-                    , attribute "inputmode" "numeric"
-                    , onInput PhoneNumberEntered
-                    , maxlength 8
-                    , placeholder (t "register.form.phone.placeholder")
-                    ]
-                    []
-                , showProblem PhoneNumber
-                ]
+            , Input.init
+                { label = t title
+                , id = "document_number_field"
+                , onInput = DocumentNumberEntered
+                , disabled = False
+                , value = documentNumber
+                , placeholder = Just (t placeholderText)
+                , problems = Just (problemsForField DocumentNumber)
+                , translators = translators
+                }
+                |> Input.asNumeric
+                |> Input.withAttrs [ maxlength maxLength ]
+                |> Input.toHtml
+            , Input.init
+                { label = t "register.form.phone.label"
+                , id = "phone_number_field"
+                , onInput = PhoneNumberEntered
+                , disabled = False
+                , value = phoneNumber
+                , placeholder = Just (t "register.form.phone.placeholder")
+                , problems = Just (problemsForField PhoneNumber)
+                , translators = translators
+                }
+                |> Input.withType Input.Telephone
+                |> Input.asNumeric
+                |> Input.withAttrs [ maxlength 8 ]
+                |> Input.toHtml
             , div []
                 [ button
                     [ class "button w-full button-primary" ]

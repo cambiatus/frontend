@@ -366,7 +366,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                     }
                     |> Input.withAttrs [ maxlength 255, required True, rows 5 ]
                     |> Input.withCounter 255
-                    |> Input.withType Input.TextArea
+                    |> Input.withInputType Input.TextArea
                     |> Input.toHtml
                 , Select.init (fieldId "trackStock")
                     (t "shop.track_stock_label")
@@ -396,6 +396,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                         , translators = shared.translators
                         }
                         |> Input.asNumeric
+                        |> Input.withType Input.Number
                         |> Input.withAttrs [ required True, Html.Attributes.min "0", Html.Attributes.max "2000" ]
                         |> Input.toHtml
 

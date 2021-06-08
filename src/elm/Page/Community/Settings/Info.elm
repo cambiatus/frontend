@@ -785,7 +785,7 @@ viewDescription shared model =
                 |> Maybe.map List.singleton
         , translators = shared.translators
         }
-        |> Input.withType Input.TextArea
+        |> Input.withInputType Input.TextArea
         |> Input.toHtml
 
 

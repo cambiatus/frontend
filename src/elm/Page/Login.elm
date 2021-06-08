@@ -187,7 +187,7 @@ viewPassphrase ({ shared } as guest) model =
                     |> Just
             , translators = shared.translators
             }
-            |> Input.withType Input.TextArea
+            |> Input.withInputType Input.TextArea
             |> Input.withAttrs
                 [ class "min-w-full block text-base"
                 , classList

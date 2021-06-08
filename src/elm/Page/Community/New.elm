@@ -211,7 +211,7 @@ viewDescription ({ translators } as shared) isDisabled defVal errors =
             , problems = Just (getFieldProblems shared Description errors)
             , translators = translators
             }
-            |> Input.withType Input.TextArea
+            |> Input.withInputType Input.TextArea
             |> Input.withAttrs [ maxlength 255, class "h-40" ]
             |> Input.toHtml
         ]
@@ -386,6 +386,7 @@ viewInviterReward ({ translators } as shared) isDisabled defVal errors =
         }
         |> Input.withAttrs [ maxlength 255 ]
         |> Input.asNumeric
+        |> Input.withType Input.Number
         |> Input.toHtml
 
 
@@ -403,6 +404,7 @@ viewInvitedReward ({ translators } as shared) isDisabled defVal errors =
         }
         |> Input.withAttrs [ maxlength 255, required True ]
         |> Input.asNumeric
+        |> Input.withType Input.Number
         |> Input.toHtml
 
 
@@ -420,6 +422,7 @@ viewMinimumBalance ({ translators } as shared) isDisabled defVal errors =
         }
         |> Input.withAttrs [ maxlength 255, required True ]
         |> Input.asNumeric
+        |> Input.withType Input.Number
         |> Input.toHtml
 
 

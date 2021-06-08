@@ -1,10 +1,10 @@
 module View.Form.Input exposing
     ( init
-    , withCounter, withCurrency
+    , withCounter, withElements, withCurrency
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs
-    , withType, withCounterType, asNumeric
+    , withInputType, withType, withCounterType, asNumeric
     , toHtml
-    , FieldType(..), withElements
+    , FieldType(..), InputType(..)
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
@@ -34,7 +34,7 @@ and character counters.
 
 ## Adding elements
 
-@docs withCounter, withElement, withCurrency
+@docs withCounter, withElements, withCurrency
 
 
 ## Adding attributes
@@ -44,7 +44,7 @@ and character counters.
 
 ## Changing types
 
-@docs withType, withCounterType, asNumeric
+@docs withInputType, withType, withCounterType, asNumeric
 
 
 # Converting to HTML
@@ -94,6 +94,7 @@ init options =
     , containerAttrs = []
     , extraElements = []
     , errorAttrs = []
+    , inputType = Input
     , fieldType = Text
     , counterType = View.Form.InputCounter.CountLetters
     }
@@ -150,21 +151,13 @@ toHtml options =
 input : InputOptions a -> Html a
 input options =
     let
-        inputElement =
-            case options.fieldType of
-                Text ->
-                    Html.input
+        ( inputElement, inputClass ) =
+            case options.inputType of
+                Input ->
+                    ( Html.input, "input" )
 
                 TextArea ->
-                    Html.textarea
-
-        inputClass =
-            case options.fieldType of
-                Text ->
-                    "input"
-
-                TextArea ->
-                    "form-input"
+                    ( Html.textarea, "form-input" )
     in
     div [ class "relative" ]
         (inputElement
@@ -174,6 +167,7 @@ input options =
                 :: disabled options.disabled
                 :: value options.value
                 :: placeholder (Maybe.withDefault "" options.placeholder)
+                :: type_ (fieldTypeToString options.fieldType)
                 :: options.extraAttrs
             )
             []
@@ -247,6 +241,11 @@ withCurrency symbol options =
 
 {-| Determines the type of the input
 -}
+withInputType : InputType -> InputOptions a -> InputOptions a
+withInputType inputType options =
+    { options | inputType = inputType }
+
+
 withType : FieldType -> InputOptions a -> InputOptions a
 withType fieldType options =
     { options | fieldType = fieldType }
@@ -264,7 +263,7 @@ withCounterType counterType options =
 asNumeric : InputOptions a -> InputOptions a
 asNumeric options =
     options
-        |> withAttrs [ attribute "inputmode" "numeric", type_ "number" ]
+        |> withAttrs [ attribute "inputmode" "numeric" ]
 
 
 
@@ -282,6 +281,19 @@ viewCurrencyElement symbol =
         [ text <| Eos.symbolToSymbolCodeString symbol ]
 
 
+fieldTypeToString : FieldType -> String
+fieldTypeToString fieldType =
+    case fieldType of
+        Text ->
+            "text"
+
+        Telephone ->
+            "tel"
+
+        Number ->
+            "number"
+
+
 type alias InputOptions a =
     { label : String
     , id : String
@@ -297,6 +309,7 @@ type alias InputOptions a =
     , containerAttrs : List (Html.Attribute a)
     , extraElements : List (Html a)
     , errorAttrs : List (Html.Attribute a)
+    , inputType : InputType
     , fieldType : FieldType
     , counterType : View.Form.InputCounter.CounterType
     }
@@ -304,6 +317,14 @@ type alias InputOptions a =
 
 {-| All possible input types
 -}
+type InputType
+    = Input
+    | TextArea
+
+
+{-| Different possible type\_s
+-}
 type FieldType
     = Text
-    | TextArea
+    | Telephone
+    | Number
