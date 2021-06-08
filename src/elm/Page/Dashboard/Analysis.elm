@@ -75,16 +75,19 @@ initModel =
 
 type Status
     = Loading
-    | Loaded (List Claim.Model) (List ClaimType) (Maybe Api.Relay.PageInfo)
+      -- | Loaded (List Claim.Model) (List ClaimType) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
-type alias ClaimType =
-    { cardSummary : Profile.Summary.Model
-    , topModalSummary : Profile.Summary.Model
-    , votersSummaries : List Profile.Summary.Model
-    , pendingSummaries : List Profile.Summary.Model
-    }
+
+-- Move to Claim.elm
+-- type alias ClaimType =
+--     { cardSummary : Profile.Summary.Model
+--     , topModalSummary : Profile.Summary.Model
+--     , votersSummaries : List Profile.Summary.Model
+--     , pendingSummaries : List Profile.Summary.Model
+--     }
 
 
 type alias Filter =
@@ -329,17 +332,19 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-type ProfileSummaryUpdate
-    = Card
-    | TopModal
-    | Voters Int
-    | PendingVoters Int
+
+-- type ProfileSummaryUpdate
+--     = Card
+--     | TopModal
+--     | Voters Int
+--     | PendingVoters Int
 
 
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
-    | ClaimMsg Int ProfileSummaryUpdate Claim.Msg
+      -- | ClaimMsg Int ProfileSummaryUpdate Claim.Msg
+    | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)

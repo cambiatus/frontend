@@ -13,11 +13,14 @@ module Claim exposing
     , paginatedToList
     , selectionSet
     , updateClaimModalStatus
-    , viewClaimCard
-    , viewClaimModal
+    ,  viewClaimCard
+       -- , viewClaimModal
+
     , viewPhotoModal
     , viewVoteClaimModal
     )
+
+-- import Route exposing (Route)
 
 import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
@@ -39,7 +42,6 @@ import Icons
 import Json.Encode as Encode
 import Profile
 import Profile.Summary
-import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
@@ -66,9 +68,12 @@ type ModalStatus
     | PhotoModal Model
     | Closed
 
+
+
 --type ClaimModalStatus
 --    = OpenedClaimModal
 --    | ClosedClaimModal
+
 
 type ClaimStatus
     = Approved
@@ -258,8 +263,8 @@ type Msg
     = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
-    | OpenClaimModal
-    --| RouteOpened Route
+      -- | OpenClaimModal
+      --| RouteOpened Route
     | GotProfileSummaryMsg Profile.Summary.Msg
 
 
@@ -275,12 +280,10 @@ updateClaimModalStatus msg model =
         OpenPhotoModal claimId ->
             { model | claimModalStatus = PhotoModal claimId }
 
-        OpenClaimModal ->
-            model
-
+        -- OpenClaimModal ->
+        --     model
         --RouteOpened _ ->
         --    model
-
         GotProfileSummaryMsg _ ->
             model
 
@@ -318,6 +321,7 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
+
             --, Utils.onClickNoBubble (OpenClaimModal claim)
             ]
             [ div
@@ -367,6 +371,7 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
               then
                 button
                     [ class "button button-secondary w-full font-medium mb-2"
+
                     --, Utils.onClickNoBubble (OpenClaimModal claim)
                     ]
                     [ text (t "all_analysis.more_details") ]
@@ -386,6 +391,10 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
                     ]
             ]
         ]
+
+
+
+-- viewClaimModal : LoggedIn.Model -> Profile.Summary.Model -> Profile.Summary.Model -> List Profile.Summary.Model -> Model -> Bool -> Html Msg
 
 
 viewClaimModal : LoggedIn.Model -> Profile.Summary.Model -> Model -> Bool -> Html Msg
