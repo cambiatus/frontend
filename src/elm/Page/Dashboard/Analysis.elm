@@ -168,10 +168,6 @@ view ({ shared } as loggedIn) model =
                                 Claim.viewPhotoModal loggedIn claim
                                     |> Html.map (ClaimMsg 0)
 
-                            Claim.ClaimModal claim ->
-                                Claim.viewClaimModal loggedIn claim True
-                                    |> Html.map ClaimMsg
-
                             _ ->
                                 text ""
                         ]

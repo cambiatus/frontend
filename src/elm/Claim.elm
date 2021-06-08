@@ -64,9 +64,11 @@ type ModalStatus
     = Loading ClaimId Bool
     | VoteConfirmationModal ClaimId Bool
     | PhotoModal Model
-    | ClaimModal Model
     | Closed
 
+type ClaimModalStatus
+    = OpenedClaimModal
+    | ClosedClaimModal
 
 type ClaimStatus
     = Approved
@@ -273,7 +275,7 @@ updateClaimModalStatus msg model =
         OpenPhotoModal claimId ->
             { model | claimModalStatus = PhotoModal claimId }
 
-        OpenClaimModal claimId ->
+        OpenClaimModal _ ->
             { model | claimModalStatus = ClaimModal claimId }
 
         RouteOpened _ ->
@@ -281,15 +283,15 @@ updateClaimModalStatus msg model =
 
         GotProfileSummaryMsg _ ->
             model
+
+
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-
-
 viewClaimCard : LoggedIn.Model -> Profile.Summary.Model -> Model -> Bool -> Html Msg
 viewClaimCard loggedIn profileSummary claim showClaimModal =
     let
-        t =
-            loggedIn.shared.translators.t
+        { t } =
+            loggedIn.shared.translators
 
         date dateTime =
             Just dateTime
@@ -310,10 +312,9 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
 
                     else
                         ( t "all_analysis.pending", "text-black" )
-
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
-        [ viewClaimModal loggedIn claim showClaimModal
+        [ viewClaimModal loggedIn profileSummary claim showClaimModal
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
@@ -364,7 +365,7 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
                     || Action.isClosed claim.action loggedIn.shared.now
                     || Action.isPastDeadline claim.action loggedIn.shared.now
               then
-                a
+                button
                     [ class "button button-secondary w-full font-medium mb-2"
                     , Utils.onClickNoBubble (OpenClaimModal claim)
                     ]
@@ -387,11 +388,11 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
         ]
 
 
-viewClaimModal : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewClaimModal loggedIn claim showClaimModal =
+viewClaimModal : LoggedIn.Model -> Profile.Summary.Model -> Model -> Bool -> Html Msg
+viewClaimModal loggedIn profileSummary claim showClaimModal =
     let
-        t =
-            loggedIn.shared.translators.t
+        { t, tr } =
+            loggedIn.shared.translators
 
         greenTextTitleStyle =
             "uppercase text-green text-xs"
@@ -401,7 +402,7 @@ viewClaimModal loggedIn claim showClaimModal =
 
         photoAndTagName =
             div []
-                [ Profile.viewLarge loggedIn.shared loggedIn.accountName claim.claimer ]
+                [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummary |> Html.map GotProfileSummaryMsg ]
 
         claimDateAndState =
             let
@@ -419,7 +420,11 @@ viewClaimModal loggedIn claim showClaimModal =
                             ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
 
                         Pending ->
-                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+                            if claim.action.isCompleted then
+                                ( t "claim.title_under_review.1", t "community.actions.completed", "text-black" )
+
+                            else
+                                ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
                 claimDate =
                     let
@@ -473,7 +478,7 @@ viewClaimModal loggedIn claim showClaimModal =
                                 (\c ->
                                     if c.isApproved then
                                         div [ class "px-2" ]
-                                            [ Profile.view loggedIn.shared loggedIn.accountName c.validator
+                                            [ Profile.Summary.view loggedIn.shared loggedIn.accountName c.validator profileSummary |> Html.map GotProfileSummaryMsg
                                             ]
 
                                     else
@@ -499,7 +504,7 @@ viewClaimModal loggedIn claim showClaimModal =
                                 (\c ->
                                     if not c.isApproved then
                                         div [ class "px-2" ]
-                                            [ Profile.view loggedIn.shared loggedIn.accountName c.validator
+                                            [ Profile.Summary.view loggedIn.shared loggedIn.accountName c.validator profileSummary |> Html.map GotProfileSummaryMsg
                                             ]
 
                                     else
@@ -527,7 +532,7 @@ viewClaimModal loggedIn claim showClaimModal =
 
                       else
                         div [ class "flex space-x-6" ]
-                            (List.map (\v -> Profile.view loggedIn.shared loggedIn.accountName v) pendingValidators)
+                            (List.map (\v -> Profile.Summary.view loggedIn.shared loggedIn.accountName v profileSummary |> Html.map GotProfileSummaryMsg) pendingValidators)
                     ]
                 ]
 
@@ -602,7 +607,7 @@ viewClaimModal loggedIn claim showClaimModal =
                     ]
 
             else
-                div [] []
+                text ""
     in
     div
         []
