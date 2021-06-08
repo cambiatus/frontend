@@ -75,8 +75,16 @@ initModel =
 
 type Status
     = Loading
-    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List ClaimType) (Maybe Api.Relay.PageInfo)
     | Failed
+
+
+type alias ClaimType =
+    { cardSummary : Profile.Summary.Model
+    , topModalSummary : Profile.Summary.Model
+    , votersSummaries : List Profile.Summary.Model
+    , pendingSummaries : List Profile.Summary.Model
+    }
 
 
 type alias Filter =
@@ -126,7 +134,6 @@ view ({ shared } as loggedIn) model =
                         viewClaim profileSummary claimIndex claim =
                             Claim.viewClaimCard loggedIn profileSummary claim False
                                 |> Html.map (ClaimMsg claimIndex)
-
                     in
                     div []
                         [ Page.viewHeader loggedIn pageTitle
@@ -322,10 +329,17 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
+type ProfileSummaryUpdate
+    = Card
+    | TopModal
+    | Voters Int
+    | PendingVoters Int
+
+
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
-    | ClaimMsg Int Claim.Msg
+    | ClaimMsg Int ProfileSummaryUpdate Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
