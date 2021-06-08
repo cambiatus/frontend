@@ -779,13 +779,6 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         ClaimMsg claimIndex m ->
             let
-                claimCmd =
-                    case m of
-                        Claim.RouteOpened r ->
-                            Route.replaceUrl loggedIn.shared.navKey r
-
-                        _ ->
-                            Cmd.none
 
                 updatedProfileSummaries =
                     case m of
@@ -800,7 +793,6 @@ update msg model ({ shared, accountName } as loggedIn) =
             { model | profileSummaries = updatedProfileSummaries }
                 |> Claim.updateClaimModalStatus m
                 |> UR.init
-                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.analysis of

@@ -66,9 +66,9 @@ type ModalStatus
     | PhotoModal Model
     | Closed
 
-type ClaimModalStatus
-    = OpenedClaimModal
-    | ClosedClaimModal
+--type ClaimModalStatus
+--    = OpenedClaimModal
+--    | ClosedClaimModal
 
 type ClaimStatus
     = Approved
@@ -258,8 +258,8 @@ type Msg
     = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
-    | OpenClaimModal Model
-    | RouteOpened Route
+    | OpenClaimModal
+    --| RouteOpened Route
     | GotProfileSummaryMsg Profile.Summary.Msg
 
 
@@ -275,11 +275,11 @@ updateClaimModalStatus msg model =
         OpenPhotoModal claimId ->
             { model | claimModalStatus = PhotoModal claimId }
 
-        OpenClaimModal _ ->
-            { model | claimModalStatus = ClaimModal claimId }
-
-        RouteOpened _ ->
+        OpenClaimModal ->
             model
+
+        --RouteOpened _ ->
+        --    model
 
         GotProfileSummaryMsg _ ->
             model
@@ -318,7 +318,7 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
         , div
             [ class "flex flex-col p-4 my-2 rounded-lg bg-white hover:shadow cursor-pointer"
             , id ("claim" ++ String.fromInt claim.id)
-            , Utils.onClickNoBubble (OpenClaimModal claim)
+            --, Utils.onClickNoBubble (OpenClaimModal claim)
             ]
             [ div
                 [ class "flex mb-8"
@@ -367,7 +367,7 @@ viewClaimCard loggedIn profileSummary claim showClaimModal =
               then
                 button
                     [ class "button button-secondary w-full font-medium mb-2"
-                    , Utils.onClickNoBubble (OpenClaimModal claim)
+                    --, Utils.onClickNoBubble (OpenClaimModal claim)
                     ]
                     [ text (t "all_analysis.more_details") ]
 
