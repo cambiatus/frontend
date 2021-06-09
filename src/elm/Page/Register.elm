@@ -10,9 +10,9 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
-import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
-import Html.Attributes exposing (checked, class, disabled, id, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onSubmit)
+import Html exposing (Html, a, button, div, img, input, p, span, strong, text)
+import Html.Attributes exposing (class, disabled, id, src, style, type_, value)
+import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
@@ -31,6 +31,7 @@ import UpdateResult as UR
 import Validate
 import View.Feedback as Feedback
 import View.Form
+import View.Form.Checkbox as Checkbox
 
 
 
@@ -436,19 +437,15 @@ viewAccountCreated { t } model keys =
                     ]
                 ]
             , div [ class "sf-footer" ]
-                [ div [ class "my-4" ]
-                    [ label [ class "form-label block" ]
-                        [ input
-                            [ type_ "checkbox"
-                            , class "form-checkbox mr-2 p-1"
-                            , checked model.hasAgreedToSavePassphrase
-                            , onCheck AgreedToSave12Words
-                            ]
-                            []
-                        , text (t "register.account_created.i_saved_words")
-                        , text " 💜"
-                        ]
-                    ]
+                [ Checkbox.init
+                    { description = t "register.account_created.i_saved_words" ++ " 💜"
+                    , id = "agreed_save_passphrase"
+                    , value = model.hasAgreedToSavePassphrase
+                    , disabled = False
+                    , onCheck = AgreedToSave12Words
+                    }
+                    |> Checkbox.withContainerAttrs [ class "my-4" ]
+                    |> Checkbox.toHtml
                 , button
                     [ onClick <|
                         DownloadPdf
