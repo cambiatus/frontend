@@ -81,6 +81,7 @@ mobileView shared loggedInAccount profile model =
                 [ div [ class "pt-14" ]
                     [ viewUserInfo profile ]
                 ]
+            |> Modal.withPreventScrolling View.Components.PreventScrollOnMobile
             |> Modal.toHtml
         ]
 
