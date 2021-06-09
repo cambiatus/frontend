@@ -32,7 +32,7 @@ module View.Form.Checkbox exposing
 
 -}
 
-import Html exposing (Html, input, label, text)
+import Html exposing (Html, input, label)
 import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onCheck)
 
@@ -42,7 +42,7 @@ import Html.Events exposing (onCheck)
 
 
 type alias Options msg =
-    { description : String
+    { description : Html msg
     , id : String
     , value : Bool
     , disabled : Bool
@@ -58,7 +58,7 @@ type alias Options msg =
 {-| Defines the required options to initialize the checkbox
 -}
 type alias InitialOptions msg =
-    { description : String
+    { description : Html msg
     , id : String
     , value : Bool
     , disabled : Bool
@@ -106,5 +106,5 @@ toHtml options =
             , onCheck options.onCheck
             ]
             []
-        , text options.description
+        , options.description
         ]

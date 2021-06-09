@@ -880,7 +880,7 @@ viewInvitation { translators } model =
     div [ class "flex flex-col" ]
         [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
         , View.Toggle.init
-            { label = "settings.community_info.fields.invitation"
+            { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "invitation_toggle"
             , onToggle = ToggledInvitation
             , disabled = False

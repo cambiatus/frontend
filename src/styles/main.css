@@ -75,7 +75,7 @@ body {
   }
 
   .form-checkbox {
-    @apply text-green rounded-sm focused-input;
+    @apply h-5 w-5 text-green rounded-sm focused-input;
   }
 
   .form-checkbox:checked {

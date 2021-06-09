@@ -445,7 +445,7 @@ viewAccountCreated ({ t } as translators) model keys =
                 ]
             , div [ class "sf-footer" ]
                 [ Checkbox.init
-                    { description = t "register.account_created.i_saved_words" ++ " 💜"
+                    { description = text (t "register.account_created.i_saved_words" ++ " 💜")
                     , id = "agreed_save_passphrase"
                     , value = model.hasAgreedToSavePassphrase
                     , disabled = False

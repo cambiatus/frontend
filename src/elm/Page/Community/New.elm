@@ -279,7 +279,7 @@ viewAutoInvite { translators } isDisabled defVal _ =
     div [ class "flex flex-col" ]
         [ View.Form.label "comm-autoinvite-title" (translators.t "settings.community_info.invitation.title")
         , Toggle.init
-            { label = "settings.community_info.fields.invitation"
+            { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "comm-autoinvite"
             , onToggle = ToggledAutoInvite
             , disabled = isDisabled

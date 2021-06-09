@@ -1,8 +1,8 @@
 module View.Toggle exposing
     ( init
-    , withTooltip
+    , withAttrs, withTooltip, withVariant
     , toHtml
-    , withAttrs
+    , Variant(..)
     )
 
 {-| Creates a Cambiatus-style toggle input
@@ -25,7 +25,7 @@ module View.Toggle exposing
 
 # Helpers
 
-@docs withTooltip
+@docs withAttrs, withTooltip, withVariant
 
 
 # Converting to HTML
@@ -46,7 +46,7 @@ import View.Components
 
 
 type alias RequiredOptions msg =
-    { label : String
+    { label : Html msg
     , id : String
     , onToggle : Bool -> msg
     , disabled : Bool
@@ -55,14 +55,20 @@ type alias RequiredOptions msg =
 
 
 type alias Options msg =
-    { label : String
+    { label : Html msg
     , id : String
     , onToggle : Bool -> msg
     , disabled : Bool
     , value : Bool
+    , variant : Variant
     , tooltip : Maybe String
     , extraAttrs : List (Html.Attribute msg)
     }
+
+
+type Variant
+    = Simple
+    | Big
 
 
 {-| Initialize a Toggle with some required options
@@ -74,6 +80,7 @@ init requiredOptions =
     , onToggle = requiredOptions.onToggle
     , disabled = requiredOptions.disabled
     , value = requiredOptions.value
+    , variant = Big
     , tooltip = Nothing
     , extraAttrs = []
     }
@@ -97,6 +104,13 @@ withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
+{-| Selects the variant to be displayed
+-}
+withVariant : Variant -> Options a -> Options a
+withVariant variant options =
+    { options | variant = variant }
+
+
 
 -- TO HTML
 
@@ -108,7 +122,44 @@ not the translated text
 
 -}
 toHtml : Translators -> Options msg -> Html msg
-toHtml ({ t } as translators) options =
+toHtml translators options =
+    case options.variant of
+        Big ->
+            viewBig translators options
+
+        Simple ->
+            viewSimple translators options
+
+
+viewSimple : Translators -> Options msg -> Html msg
+viewSimple translators options =
+    label
+        (class "flex w-full items-center text-sm"
+            :: for options.id
+            :: options.extraAttrs
+        )
+        [ div [ class "form-switch" ]
+            [ input
+                [ type_ "checkbox"
+                , id options.id
+                , name options.id
+                , class "form-switch-checkbox"
+                , checked options.value
+                , onCheck options.onToggle
+                , disabled options.disabled
+                ]
+                []
+            , label [ class "form-switch-label", for options.id ] []
+            ]
+        , div [ class "flex items-center" ]
+            [ options.label
+            , viewTooltip translators options
+            ]
+        ]
+
+
+viewBig : Translators -> Options msg -> Html msg
+viewBig ({ t } as translators) options =
     let
         text_ =
             t >> text
@@ -126,7 +177,7 @@ toHtml ({ t } as translators) options =
             :: options.extraAttrs
         )
         [ div [ class "flex items-center" ]
-            [ text_ options.label
+            [ options.label
             , viewTooltip translators options
             ]
         , div [ class ("flex items-center font-medium lowercase ml-2 " ++ statusColor) ]

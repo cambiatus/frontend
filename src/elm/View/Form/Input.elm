@@ -255,6 +255,8 @@ withInputType inputType options =
     { options | inputType = inputType }
 
 
+{-| Determines the `type_` of the input
+-}
 withType : FieldType -> InputOptions a -> InputOptions a
 withType fieldType options =
     { options | fieldType = fieldType }

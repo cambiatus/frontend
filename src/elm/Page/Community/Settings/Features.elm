@@ -66,11 +66,11 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        translate =
-            loggedIn.shared.translators.t
+        { t } =
+            loggedIn.shared.translators
 
         title =
-            translate "settings.features.title"
+            t "settings.features.title"
 
         content =
             case ( loggedIn.selectedCommunity, model.status ) of
@@ -93,21 +93,21 @@ view loggedIn model =
                             [ class "container divide-y px-4"
                             ]
                             ([ View.Toggle.init
-                                { label = "community.objectives.title_plural"
+                                { label = text (t "community.objectives.title_plural")
                                 , id = "actions-toggle"
                                 , onToggle = ToggleObjectives
                                 , disabled = False
                                 , value = community.hasObjectives
                                 }
                              , View.Toggle.init
-                                { label = "menu.shop"
+                                { label = text (t "menu.shop")
                                 , id = "shop-toggle"
                                 , onToggle = ToggleShop
                                 , disabled = False
                                 , value = community.hasShop
                                 }
                              , View.Toggle.init
-                                { label = "community.kyc.title"
+                                { label = text (t "community.kyc.title")
                                 , id = "kyc-toggle"
                                 , onToggle = \_ -> ToggleKyc
                                 , disabled = True
@@ -126,7 +126,7 @@ view loggedIn model =
                     div []
                         [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
-                            [ text (translate "community.edit.unauthorized") ]
+                            [ text (t "community.edit.unauthorized") ]
                         ]
     in
     { title = title
