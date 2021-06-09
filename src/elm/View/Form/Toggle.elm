@@ -1,4 +1,4 @@
-module View.Toggle exposing
+module View.Form.Toggle exposing
     ( init
     , withAttrs, withTooltip, withVariant
     , toHtml

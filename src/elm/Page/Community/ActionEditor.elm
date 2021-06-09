@@ -59,7 +59,7 @@ import View.Form.Checkbox as Checkbox
 import View.Form.Input as Input
 import View.Form.InputCounter
 import View.Form.Radio as Radio
-import View.Toggle as Toggle
+import View.Form.Toggle as Toggle
 
 
 

@@ -34,7 +34,7 @@ import View.Feedback as Feedback
 import View.Form
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
-import View.Toggle
+import View.Form.Toggle
 
 
 
@@ -879,15 +879,15 @@ viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
         [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
-        , View.Toggle.init
+        , View.Form.Toggle.init
             { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "invitation_toggle"
             , onToggle = ToggledInvitation
             , disabled = False
             , value = not model.hasAutoInvite
             }
-            |> View.Toggle.withAttrs [ class "mt-4" ]
-            |> View.Toggle.toHtml translators
+            |> View.Form.Toggle.withAttrs [ class "mt-4" ]
+            |> View.Form.Toggle.toHtml translators
         , span [ class "font-bold mt-7" ] [ text (translators.t "settings.community_info.invitation.guidance") ]
         , span [ class "text-gray-600" ] [ text (translators.t "settings.community_info.invitation.description") ]
         ]

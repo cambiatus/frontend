@@ -40,7 +40,7 @@ import View.Feedback as Feedback
 import View.Form
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
-import View.Toggle as Toggle
+import View.Form.Toggle as Toggle
 
 
 

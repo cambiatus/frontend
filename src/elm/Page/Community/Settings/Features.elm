@@ -13,7 +13,7 @@ import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Toggle
+import View.Form.Toggle
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -92,32 +92,32 @@ view loggedIn model =
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            ([ View.Toggle.init
+                            ([ View.Form.Toggle.init
                                 { label = text (t "community.objectives.title_plural")
                                 , id = "actions-toggle"
                                 , onToggle = ToggleObjectives
                                 , disabled = False
                                 , value = community.hasObjectives
                                 }
-                             , View.Toggle.init
+                             , View.Form.Toggle.init
                                 { label = text (t "menu.shop")
                                 , id = "shop-toggle"
                                 , onToggle = ToggleShop
                                 , disabled = False
                                 , value = community.hasShop
                                 }
-                             , View.Toggle.init
+                             , View.Form.Toggle.init
                                 { label = text (t "community.kyc.title")
                                 , id = "kyc-toggle"
                                 , onToggle = \_ -> ToggleKyc
                                 , disabled = True
                                 , value = community.hasKyc
                                 }
-                                |> View.Toggle.withTooltip "community.kyc.info"
+                                |> View.Form.Toggle.withTooltip "community.kyc.info"
                              ]
                                 |> List.map
-                                    (View.Toggle.withAttrs [ class "py-6" ]
-                                        >> View.Toggle.toHtml loggedIn.shared.translators
+                                    (View.Form.Toggle.withAttrs [ class "py-6" ]
+                                        >> View.Form.Toggle.toHtml loggedIn.shared.translators
                                     )
                             )
                         ]
