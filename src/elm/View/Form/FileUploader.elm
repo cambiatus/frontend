@@ -1,8 +1,8 @@
 module View.Form.FileUploader exposing
     ( init
-    , withAttrs, withVariant
+    , withAttrs, withVariant, withBackground
     , toHtml
-    , Variant(..)
+    , Background(..), Variant(..)
     )
 
 {-| Creates a Cambiatus-style file uploader that supports pictures
@@ -23,7 +23,7 @@ module View.Form.FileUploader exposing
 
 # Helpers
 
-@docs withAttrs, withVariant
+@docs withAttrs, withVariant, withBackground
 
 
 # Converting to HTML
@@ -57,6 +57,7 @@ type alias Options msg =
     , status : RemoteData Http.Error String
     , extraAttrs : List (Html.Attribute msg)
     , variant : Variant
+    , background : Background
     }
 
 
@@ -79,6 +80,11 @@ type Variant
     | Large
 
 
+type Background
+    = Purple
+    | Gray
+
+
 {-| Initializes a file uploader
 -}
 init : InitialOptions msg -> Options msg
@@ -89,6 +95,7 @@ init options =
     , status = options.status
     , extraAttrs = []
     , variant = Large
+    , background = Purple
     }
 
 
@@ -106,6 +113,11 @@ withAttrs attrs options =
 withVariant : Variant -> Options msg -> Options msg
 withVariant variant options =
     { options | variant = variant }
+
+
+withBackground : Background -> Options msg -> Options msg
+withBackground background options =
+    { options | background = background }
 
 
 
@@ -148,11 +160,21 @@ viewLarge ({ t } as translators) options =
 
                 _ ->
                     []
+
+        ( backgroundColor, foregroundColor, icon ) =
+            case options.background of
+                Purple ->
+                    ( "bg-purple-500", "text-white", Icons.camera "" )
+
+                Gray ->
+                    ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
     in
     div options.extraAttrs
         [ span [ class "input-label" ] [ text (t options.label) ]
         , label
-            (class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            (class "relative w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
+                :: class backgroundColor
+                :: class foregroundColor
                 :: uploadedAttrs
             )
             [ input
@@ -167,15 +189,15 @@ viewLarge ({ t } as translators) options =
             , div []
                 [ case options.status of
                     RemoteData.Loading ->
-                        View.Components.loadingLogoAnimated translators "text-white"
+                        View.Components.loadingLogoAnimated translators ""
 
                     RemoteData.Success _ ->
                         span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera "" ]
 
                     _ ->
-                        div [ class "text-white text-body font-bold text-center" ]
-                            [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
+                        div [ class "text-body font-bold text-center" ]
+                            [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
                             , div [] [ text (t "community.actions.proof.upload_photo_hint") ]
                             ]
                 ]
