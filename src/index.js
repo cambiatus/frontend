@@ -95,25 +95,25 @@ window.customElements.define('dialog-bubble',
 
 window.customElements.define('bg-no-scroll',
   class BgNoScroll extends HTMLElement {
-    constructor () {
-      super()
-      this._preventScrollingClass = 'overflow-hidden'
-    }
-
     connectedCallback () {
-      if (document.body.classList.contains(this._preventScrollingClass)) {
-        return
-      }
+      this._preventScrollingClasses = this.getAttribute('elm-prevent-scroll-class').split(' ')
+      this._preventScrollingClasses.forEach((class_) => {
+        if (document.body.classList.contains(class_)) {
+          return
+        }
 
-      document.body.classList.add(this._preventScrollingClass)
+        document.body.classList.add(class_)
+      })
     }
 
     disconnectedCallback () {
-      if (!document.body.classList.contains(this._preventScrollingClass)) {
-        return
-      }
+      this._preventScrollingClasses.forEach((class_) => {
+        if (!document.body.classList.contains(class_)) {
+          return
+        }
 
-      document.body.classList.remove(this._preventScrollingClass)
+        document.body.classList.remove(class_)
+      })
     }
   }
 )
