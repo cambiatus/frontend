@@ -18,8 +18,8 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
 import Graphql.Http
-import Html exposing (Html, button, div, input, label, span, text)
-import Html.Attributes exposing (accept, class, classList, disabled, for, id, maxlength, minlength, multiple, required, type_)
+import Html exposing (Html, button, div, label, span, text)
+import Html.Attributes exposing (class, classList, disabled, for, maxlength, minlength, required, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Http
 import Icons
@@ -38,6 +38,7 @@ import Utils exposing (decodeEnterKeyDown)
 import View.Components
 import View.Feedback as Feedback
 import View.Form
+import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Toggle as Toggle
 
@@ -347,26 +348,22 @@ viewLogo shared isDisabled selected logos =
     in
     div [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
         (List.indexedMap item logos
-            ++ [ div []
-                    [ input
-                        [ id id_
-                        , class "hidden"
-                        , type_ "file"
-                        , accept "image/*"
-                        , Page.onFileChange (EnteredLogo (List.length logos))
-                        , multiple False
-                        , disabled isDisabled
-                        ]
-                        []
-                    , label
-                        [ for id_
-                        , class ("flex-col text-center cursor-pointer " ++ itemClass)
-                        , classList [ ( "disabled", isDisabled ) ]
-                        ]
-                        [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
-                            [ Icons.imageMultiple "text-white fill-current w-8 h-8" ]
-                        , text (t "community.create.labels.upload_icon")
-                        ]
+            ++ [ FileUploader.init
+                    { label = ""
+                    , id = id_
+                    , onFileInput = EnteredLogo (List.length logos)
+                    , status = RemoteData.NotAsked
+                    }
+                    |> FileUploader.withAttrs [ class "hidden", disabled isDisabled ]
+                    |> FileUploader.toHtml shared.translators
+               , label
+                    [ for id_
+                    , class ("flex-col text-center cursor-pointer " ++ itemClass)
+                    , classList [ ( "disabled", isDisabled ) ]
+                    ]
+                    [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
+                        [ Icons.imageMultiple "text-white fill-current w-8 h-8" ]
+                    , text (t "community.create.labels.upload_icon")
                     ]
                ]
         )
