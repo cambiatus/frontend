@@ -10,8 +10,8 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
-import Html exposing (Html, a, button, div, img, input, p, span, strong, text)
-import Html.Attributes exposing (class, disabled, id, src, style, type_, value)
+import Html exposing (Html, a, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (class, disabled, id, src)
 import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
@@ -32,6 +32,7 @@ import Validate
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Checkbox as Checkbox
+import View.Form.Input as Input
 
 
 
@@ -362,7 +363,7 @@ viewAccountTypeButton title accountType status =
 
 
 viewAccountCreated : Translators -> Model -> AccountKeys -> Html Msg
-viewAccountCreated { t } model keys =
+viewAccountCreated ({ t } as translators) model keys =
     let
         name =
             Eos.nameToString keys.accountName
@@ -417,17 +418,23 @@ viewAccountCreated { t } model keys =
                     , p
                         [ class "pb-2 leading-tight" ]
                         [ span [ class "select-all", id passphraseTextId ] [ text keys.words ]
-                        , input
-                            -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
-                            -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
-                            -- hide it with `display: hidden`), so we hide it using position and opacity.
-                            [ type_ "text"
-                            , class "absolute opacity-0"
-                            , style "left" "-9999em"
-                            , id passphraseInputId
-                            , value keys.words
-                            ]
-                            []
+
+                        -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                        -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                        -- hide it with `display: hidden`), so we hide it using position and opacity.
+                        , Input.init
+                            { label = ""
+                            , id = passphraseInputId
+                            , onInput = \_ -> NoOp
+                            , disabled = False
+                            , value = keys.words
+                            , placeholder = Nothing
+                            , problems = Nothing
+                            , translators = translators
+                            }
+                            |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
+                            |> Input.withContainerAttrs [ class "mb-0" ]
+                            |> Input.toHtml
                         ]
                     , button
                         [ class "button m-auto button-primary button-sm"
