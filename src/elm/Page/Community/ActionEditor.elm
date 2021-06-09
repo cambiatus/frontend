@@ -32,8 +32,8 @@ import DataValidator
         )
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
-import Html.Attributes exposing (checked, class, classList, name, placeholder, rows, type_, value)
+import Html exposing (Html, b, button, div, label, p, span, text, textarea)
+import Html.Attributes exposing (class, classList, placeholder, rows, value)
 import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Json exposing (Value)
@@ -115,7 +115,7 @@ type Verification
     | Manual
         { verifiersValidator : Validator (List Profile.Minimal)
         , verifierRewardValidator : Validator String
-        , minVotesValidator : Validator String
+        , minVotesValidator : Validator Int
         , photoProof : PhotoProof
         , profileSummaries : List Profile.Summary.Model
         }
@@ -212,7 +212,7 @@ editForm form action =
                 let
                     minVotesValidator =
                         defaultMinVotes
-                            |> updateInput (String.fromInt action.verifications)
+                            |> updateInput action.verifications
 
                     verifiersValidator =
                         defaultVerifiersValidator verifiers (getInput minVotesValidator)
@@ -300,20 +300,15 @@ defaultUsagesValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerifiersValidator : List Profile.Minimal -> String -> Validator (List Profile.Minimal)
+defaultVerifiersValidator : List Profile.Minimal -> Int -> Validator (List Profile.Minimal)
 defaultVerifiersValidator verifiers minVerifiersQty =
     let
         limit =
-            case String.toInt minVerifiersQty of
-                Just m ->
-                    if m < minVotesLimit then
-                        minVotesLimit
+            if minVerifiersQty < minVotesLimit then
+                minVotesLimit
 
-                    else
-                        m
-
-                Nothing ->
-                    minVotesLimit
+            else
+                minVerifiersQty
     in
     []
         |> lengthGreaterThanOrEqual limit
@@ -339,12 +334,12 @@ minVotesLimit =
     3
 
 
-defaultMinVotes : Validator String
+defaultMinVotes : Validator Int
 defaultMinVotes =
     []
         |> greaterThanOrEqual (toFloat minVotesLimit)
         |> isOdd
-        |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
+        |> newValidator minVotesLimit (\s -> Just (String.fromInt s)) True
 
 
 validateForm : Form -> Form
@@ -470,7 +465,7 @@ type Msg
     | EnteredUsages String
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
-    | EnteredMinVotes String
+    | EnteredMinVotes Int
     | ToggleValidity
     | ToggleDeadline Bool
     | TogglePhotoProof Bool
@@ -500,7 +495,7 @@ type alias CreateActionAction =
     , deadline : Int
     , usages : String
     , usagesLeft : String
-    , verifications : String
+    , verifications : Int
     , verificationType : String
     , validatorsStr : String
     , isCompleted : Int
@@ -522,7 +517,7 @@ encodeCreateActionAction c =
         , ( "deadline", Encode.int c.deadline )
         , ( "usages", Encode.string c.usages )
         , ( "usages_left", Encode.string c.usagesLeft )
-        , ( "verifications", Encode.string c.verifications )
+        , ( "verifications", Encode.string (String.fromInt c.verifications) )
         , ( "verification_type", Encode.string c.verificationType )
         , ( "validators_str", Encode.string c.validatorsStr )
         , ( "is_completed", Encode.int c.isCompleted )
@@ -1124,7 +1119,7 @@ upsertAction loggedIn community model isoDate =
         minVotes =
             case model.form.verification of
                 Automatic ->
-                    "0"
+                    0
 
                 Manual { minVotesValidator } ->
                     getInput minVotesValidator
@@ -1572,10 +1567,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                             False
             }
             |> Radio.withOption Automatic
-                (span []
-                    [ b [] [ text_ "community.actions.form.automatic" ]
-                    , text_ "community.actions.form.automatic_detail"
-                    ]
+                (\_ ->
+                    span []
+                        [ b [] [ text_ "community.actions.form.automatic" ]
+                        , text_ "community.actions.form.automatic_detail"
+                        ]
                 )
             |> Radio.withOption
                 (Manual
@@ -1586,10 +1582,11 @@ viewVerifications ({ shared } as loggedIn) model community =
                     , profileSummaries = profileSummaries
                     }
                 )
-                (span []
-                    [ b [] [ text_ "community.actions.form.manual" ]
-                    , text_ "community.actions.form.manual_detail"
-                    ]
+                (\_ ->
+                    span []
+                        [ b [] [ text_ "community.actions.form.manual" ]
+                        , text_ "community.actions.form.manual_detail"
+                        ]
                 )
             |> Radio.withVertical True
             |> Radio.toHtml shared.translators
@@ -1606,9 +1603,6 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         { t, tr } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
     case model.form.verification of
         Automatic ->
@@ -1631,17 +1625,40 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
                         _ ->
                             False
+
+                minVotesOptions =
+                    List.map
+                        (\option ->
+                            ( option
+                            , \isActive ->
+                                div
+                                    [ class "rounded-full border w-8 h-8 flex items-center justify-center cursor-pointer"
+                                    , classList
+                                        [ ( "bg-orange-300 border-orange-300 text-white", isActive )
+                                        , ( "hover:border-orange-300 hover:text-orange-500 border-gray-500", not isActive )
+                                        ]
+                                    ]
+                                    [ text (String.fromInt option) ]
+                            )
+                        )
+                        [ 3, 5, 7, 9 ]
             in
             div [ class "mt-6 ml-8 sm:w-2/5" ]
-                [ div [ class "mb-6" ]
-                    [ label [ class "input-label block" ]
-                        [ text_ "community.actions.form.votes_label" ]
-                    , div [ class "space-x-4" ] <|
-                        List.map (viewVotesCount (getInput minVotesValidator)) [ 3, 5, 7, 9 ]
-                    , viewFieldErrors (listErrors shared.translations minVotesValidator)
-                    ]
+                [ Radio.init
+                    { label = t "community.actions.form.votes_label"
+                    , name = "number_of_votes"
+                    , optionToString = String.fromInt
+                    , activeOption = getInput minVotesValidator
+                    , onSelect = EnteredMinVotes
+                    , areOptionsEqual = (==)
+                    }
+                    |> Radio.withRowAttrs [ class "space-x-4" ]
+                    |> Radio.withAttrs [ class "mb-6" ]
+                    |> Radio.withOptions minVotesOptions
+                    |> Radio.withVariant Radio.Simplified
+                    |> Radio.toHtml shared.translators
                 , span [ class "input-label" ]
-                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator ) ]) ]
+                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator |> String.fromInt ) ]) ]
                 , div []
                     [ viewVerifierSelect loggedIn model False
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
@@ -1708,35 +1725,6 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         text ""
                     ]
                 ]
-
-
-viewVotesCount : String -> Int -> Html Msg
-viewVotesCount selectedCount count =
-    let
-        countStr =
-            String.fromInt count
-
-        isChecked =
-            selectedCount == countStr
-    in
-    label
-        [ class "rounded-full relative overflow-hidden inline-block text-center leading-8 w-8"
-        , classList
-            [ ( "bg-orange-300 text-white border-orange-300", isChecked )
-            , ( "hover:border-orange-300 cursor-pointer hover:text-orange-500 border border-grey-500", not isChecked )
-            ]
-        ]
-        [ text countStr
-        , input
-            [ type_ "radio"
-            , class "absolute left-0 opacity-0 cursor-pointer"
-            , name "min_votes"
-            , checked isChecked
-            , onInput EnteredMinVotes
-            , value countStr
-            ]
-            []
-        ]
 
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile.Summary.Model -> List Profile.Minimal -> Html Msg

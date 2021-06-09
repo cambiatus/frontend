@@ -580,8 +580,8 @@ viewGeneralFields ({ t } as translators) community model =
         , onSelect = \_ -> Ignored
         , areOptionsEqual = (==)
         }
-        |> Radio.withOption Token.Mcc (text "MCC")
-        |> Radio.withOption Token.Expiry (text (t "settings.community_currency.expiry"))
+        |> Radio.withOption Token.Mcc (\_ -> text "MCC")
+        |> Radio.withOption Token.Expiry (\_ -> text (t "settings.community_currency.expiry"))
         |> Radio.withAttrs [ class "mb-8" ]
         |> Radio.withDisabled True
         |> Radio.toHtml translators
