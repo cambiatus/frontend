@@ -5,9 +5,9 @@ import Api.Graphql
 import Avatar exposing (Avatar)
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, form, input, span, text, textarea)
-import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_, value)
-import Html.Events exposing (onInput)
+import Html exposing (Html, button, div, form, input, span, text)
+import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_)
+import Html.Events
 import Http
 import Icons
 import Json.Decode
@@ -19,6 +19,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form.Input as Input
 
 
 
@@ -97,6 +98,9 @@ view_ loggedIn model profile =
         { t } =
             loggedIn.shared.translators
 
+        translators =
+            loggedIn.shared.translators
+
         title =
             t "menu.edit" ++ " " ++ ("menu.profile" |> t |> String.toLower)
 
@@ -111,99 +115,90 @@ view_ loggedIn model profile =
                 Nothing ->
                     profile.avatar
 
-        viewFullName =
-            let
-                hasCommunitiesWithKycEnabled =
-                    profile.communities
-                        |> List.any (\c -> c.hasKyc)
-            in
-            if hasCommunitiesWithKycEnabled then
-                viewDisabledInput
-
-            else
-                viewInput
+        isFullNameDisabled =
+            profile.communities |> List.any .hasKyc
     in
     div [ class "bg-white" ]
         [ pageHeader
         , form
             [ class "pt-4 container mx-auto p-4" ]
             [ viewAvatar avatar
-            , viewFullName (t "profile.edit.labels.name") FullName model.fullName
-            , viewInput (t "profile.edit.labels.email") Email model.email
-            , viewBio (t "profile.edit.labels.bio") Bio loggedIn.shared.translators model.bio
-            , viewInput (t "profile.edit.labels.localization") Location model.location
-            , viewInterests model.interest model.interests loggedIn.shared.translators
+            , viewInput translators isFullNameDisabled FullName model.fullName
+            , viewInput translators False Email model.email
+            , viewInput translators False Bio model.bio
+            , viewInput translators False Location model.location
+            , viewInput translators False Interest model.interest
+            , viewInterests model.interests
             , viewButton (t "profile.edit.submit") ClickedSave "save" (RemoteData.isLoading loggedIn.profile)
             ]
         ]
 
 
-viewDisabledInput : String -> Field -> String -> Html Msg
-viewDisabledInput label field currentValue =
-    makeViewInput True label field currentValue
+viewInput : Translators -> Bool -> Field -> String -> Html Msg
+viewInput translators isDisabled field currentValue =
+    let
+        ( label, id, modifications ) =
+            case field of
+                FullName ->
+                    ( "profile.edit.labels.name", "name_input", identity )
+
+                Email ->
+                    ( "profile.edit.labels.email", "email_input", identity )
+
+                Bio ->
+                    ( "profile.edit.labels.bio"
+                    , "bio_input"
+                    , Input.withInputType Input.TextArea
+                        >> Input.withCounter 255
+                        >> Input.withAttrs [ class "h-40 text-sm text-black" ]
+                    )
+
+                Location ->
+                    ( "profile.edit.labels.localization", "location_input", identity )
+
+                Interest ->
+                    ( "profile.edit.labels.interests"
+                    , "interests_field"
+                    , Input.withInputContainerAttrs [ class "flex" ]
+                        >> Input.withElements
+                            [ button
+                                [ class "button-secondary px-4 h-12 align-bottom ml-4"
+                                , onClickPreventDefault AddInterest
+                                ]
+                                [ text <| String.toUpper (translators.t "menu.add") ]
+                            ]
+                    )
+    in
+    Input.init
+        { label = translators.t label
+        , id = id
+        , onInput = OnFieldInput field
+        , disabled = isDisabled
+        , value = currentValue
+        , placeholder = Nothing
+        , problems = Nothing
+        , translators = translators
+        }
+        |> Input.withContainerAttrs [ class "mb-4" ]
+        |> modifications
+        |> Input.toHtml
 
 
-viewInput : String -> Field -> String -> Html Msg
-viewInput label field currentValue =
-    makeViewInput False label field currentValue
-
-
-makeViewInput : Bool -> String -> Field -> String -> Html Msg
-makeViewInput isDisabled label field currentValue =
-    div [ class "mb-4" ]
-        [ Html.label [ class "input-label" ]
-            [ text label ]
-        , input
-            [ class "w-full input rounded-sm"
-            , class <|
-                if isDisabled then
-                    "bg-gray-200 text-gray-700"
-
-                else
-                    ""
-            , disabled isDisabled
-            , onInput (OnFieldInput field)
-            , value currentValue
-            ]
-            []
-        ]
-
-
-viewInterests : String -> List String -> Translators -> Html Msg
-viewInterests interest interests { t } =
-    div [ class "mb-4" ]
-        [ Html.label [ class "input-label" ]
-            [ text (t "profile.edit.labels.interests") ]
-        , div [ class "flex mb-4" ]
-            [ input
-                [ class "w-full input rounded-sm"
-                , onInput (OnFieldInput Interest)
-                , value interest
+viewInterests : List String -> Html Msg
+viewInterests interests =
+    let
+        viewInterest interest =
+            div [ class "bg-green px-3 h-8 rounded-sm text-xs mr-4 mb-1 flex" ]
+                [ span [ class "m-auto mr-3 leading-none text-white uppercase" ] [ text interest ]
+                , button
+                    [ class "m-auto"
+                    , onClickPreventDefault (RemoveInterest interest)
+                    ]
+                    [ Icons.close "w-4 h-4 text-white fill-current" ]
                 ]
-                []
-            , button
-                [ class "button-secondary px-4 h-12 align-bottom ml-4"
-                , onClickPreventDefault AddInterest
-                ]
-                [ text <| String.toUpper (t "menu.add") ]
-            ]
-        , div [ class "flex flex-wrap" ]
-            (interests
-                |> List.map viewInterest
-            )
-        ]
-
-
-viewInterest : String -> Html Msg
-viewInterest interest =
-    div [ class "bg-green px-3 h-8 rounded-sm text-xs mr-4 mb-1 flex" ]
-        [ span [ class "m-auto mr-3 leading-none text-white uppercase" ] [ text interest ]
-        , button
-            [ class "m-auto"
-            , onClickPreventDefault (RemoveInterest interest)
-            ]
-            [ Icons.close "w-4 h-4 text-white fill-current" ]
-        ]
+    in
+    div [ class "flex flex-wrap mb-4" ]
+        (List.map viewInterest interests)
 
 
 onClickPreventDefault : msg -> Html.Attribute msg
@@ -227,29 +222,6 @@ viewButton label msg area isDisabled =
         , disabled isDisabled
         ]
         [ text label
-        ]
-
-
-viewBio : String -> Field -> Translators -> String -> Html Msg
-viewBio lbl field { tr } currentValue =
-    div [ class "mb-4" ]
-        [ Html.label [ class "input-label" ] [ text lbl ]
-        , div [ class "relative" ]
-            [ textarea
-                [ class "w-full input"
-                , onInput (OnFieldInput field)
-                , value currentValue
-                ]
-                []
-            , div [ class "input-label pr-1 text-right text-purple-100 font-bold mt-1 absolute right-0" ]
-                [ text <|
-                    tr
-                        "edit.input_counter"
-                        [ ( "current", String.fromInt <| String.length currentValue )
-                        , ( "max", "255" )
-                        ]
-                ]
-            ]
         ]
 
 
