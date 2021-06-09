@@ -151,13 +151,13 @@ toHtml options =
 input : InputOptions a -> Html a
 input options =
     let
-        ( inputElement, inputClass ) =
+        ( inputElement, inputClass, typeAttr ) =
             case options.inputType of
                 Input ->
-                    ( Html.input, "input" )
+                    ( Html.input, "input", type_ (fieldTypeToString options.fieldType) )
 
                 TextArea ->
-                    ( Html.textarea, "form-input" )
+                    ( Html.textarea, "form-input", class "" )
     in
     div [ class "relative" ]
         (inputElement
@@ -167,7 +167,7 @@ input options =
                 :: disabled options.disabled
                 :: value options.value
                 :: placeholder (Maybe.withDefault "" options.placeholder)
-                :: type_ (fieldTypeToString options.fieldType)
+                :: typeAttr
                 :: options.extraAttrs
             )
             []
@@ -237,6 +237,7 @@ withCurrency symbol options =
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
+        |> withType Number
 
 
 {-| Determines the type of the input
