@@ -2,11 +2,11 @@ module Page.Profile.Editor exposing (Model, Msg, init, msgToString, receiveBroad
 
 import Api
 import Api.Graphql
-import Avatar exposing (Avatar)
+import Avatar
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, form, input, span, text)
-import Html.Attributes exposing (accept, class, disabled, for, id, multiple, style, type_)
+import Html exposing (Html, button, div, form, span, text)
+import Html.Attributes exposing (class, disabled, id, style)
 import Html.Events
 import Http
 import Icons
@@ -19,6 +19,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 
 
@@ -44,7 +45,7 @@ type alias Model =
     , location : String
     , interests : List String
     , interest : String
-    , avatar : Maybe Avatar
+    , avatar : RemoteData Http.Error String
     }
 
 
@@ -56,7 +57,7 @@ initModel =
     , location = ""
     , interests = []
     , interest = ""
-    , avatar = Nothing
+    , avatar = RemoteData.Loading
     }
 
 
@@ -107,14 +108,6 @@ view_ loggedIn model profile =
         pageHeader =
             Page.viewHeader loggedIn title
 
-        avatar =
-            case model.avatar of
-                Just avatar_ ->
-                    avatar_
-
-                Nothing ->
-                    profile.avatar
-
         isFullNameDisabled =
             profile.communities |> List.any .hasKyc
     in
@@ -122,7 +115,7 @@ view_ loggedIn model profile =
         [ pageHeader
         , form
             [ class "pt-4 container mx-auto p-4" ]
-            [ viewAvatar avatar
+            [ viewAvatar translators model.avatar
             , viewInput translators isFullNameDisabled FullName model.fullName
             , viewInput translators False Email model.email
             , viewInput translators False Bio model.bio
@@ -225,27 +218,16 @@ viewButton label msg area isDisabled =
         ]
 
 
-viewAvatar : Avatar -> Html Msg
-viewAvatar url =
-    div
-        [ class "m-auto w-20 relative mb-4" ]
-        [ input
-            [ id "profile-upload-avatar"
-            , class "profile-img-input"
-            , type_ "file"
-            , accept "image/*"
-            , Page.onFileChange EnteredAvatar
-            , multiple False
-            ]
-            []
-        , Html.label
-            [ for "profile-upload-avatar"
-            , class "block cursor-pointer"
-            ]
-            [ Avatar.view url "w-20 h-20"
-            , span [ class "absolute bottom-0 right-0 bg-orange-300 w-8 h-8 p-2 rounded-full" ] [ Icons.camera "" ]
-            ]
-        ]
+viewAvatar : Translators -> RemoteData Http.Error String -> Html Msg
+viewAvatar translators avatar =
+    FileUploader.init
+        { label = ""
+        , id = "profile-upload-avatar"
+        , onFileInput = EnteredAvatar
+        , status = avatar
+        }
+        |> FileUploader.withVariant FileUploader.Small
+        |> FileUploader.toHtml translators
 
 
 
@@ -260,7 +242,7 @@ type Msg
     | ClickedSave
     | GotSaveResult (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | EnteredAvatar (List File)
-    | CompletedAvatarUpload (Result Http.Error Avatar)
+    | CompletedAvatarUpload (Result Http.Error String)
 
 
 type Field
@@ -294,6 +276,13 @@ update msg model loggedIn =
                     , bio = nullable profile.bio
                     , location = nullable profile.localization
                     , interests = profile.interests
+                    , avatar =
+                        case profile.avatar |> Avatar.toMaybeString of
+                            Just url ->
+                                RemoteData.Success url
+
+                            Nothing ->
+                                RemoteData.NotAsked
                 }
 
         OnFieldInput field data ->
@@ -392,7 +381,7 @@ update msg model loggedIn =
         EnteredAvatar (file :: _) ->
             let
                 uploadAvatar file_ =
-                    Api.uploadAvatar loggedIn.shared file_ CompletedAvatarUpload
+                    Api.uploadImage loggedIn.shared file_ CompletedAvatarUpload
             in
             case loggedIn.profile of
                 RemoteData.Success _ ->
@@ -408,10 +397,10 @@ update msg model loggedIn =
             UR.init model
 
         CompletedAvatarUpload (Ok a) ->
-            UR.init { model | avatar = Just a }
+            UR.init { model | avatar = RemoteData.Success a }
 
         CompletedAvatarUpload (Err err) ->
-            UR.init model
+            UR.init { model | avatar = RemoteData.Failure err }
                 |> UR.logHttpError msg err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
@@ -424,7 +413,10 @@ modelToProfile model profile =
         , localization = Just model.location
         , interests = model.interests
         , bio = Just model.bio
-        , avatar = Maybe.withDefault profile.avatar model.avatar
+        , avatar =
+            model.avatar
+                |> RemoteData.map Avatar.fromString
+                |> RemoteData.withDefault profile.avatar
     }
 
 
