@@ -385,7 +385,7 @@ viewInviterReward ({ translators } as shared) isDisabled defVal errors =
         , problems = Just (getFieldProblems shared InviterReward errors)
         , translators = translators
         }
-        |> Input.withAttrs [ maxlength 255 ]
+        |> Input.withAttrs [ maxlength 255, required True ]
         |> Input.asNumeric
         |> Input.toHtml
 
