@@ -255,6 +255,7 @@ viewSubdomain { translators } isDisabled defVal _ =
                 ]
                 [ text ".cambiatus.io" ]
             )
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
