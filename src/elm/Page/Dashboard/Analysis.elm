@@ -21,7 +21,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, li, option, select, span, text, ul)
-import Html.Attributes exposing (class, selected, src, value)
+import Html.Attributes exposing (class, classList, selected, src, value)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -143,7 +143,11 @@ viewContent loggedIn claims profileSummaries pageInfo model =
                 |> Html.map (ClaimMsg claimIndex)
     in
     [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
-        [ viewGoodPracticesCard ]
+        [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
+            [ viewGoodPracticesCard
+            , viewTabSelector
+            ]
+        ]
     , div [ class "container mx-auto px-4 mb-10" ]
         [ viewFilters loggedIn model
         , if List.length claims > 0 then
@@ -189,16 +193,36 @@ viewContent loggedIn claims profileSummaries pageInfo model =
 
 viewGoodPracticesCard : Html msg
 viewGoodPracticesCard =
-    div [ class "container mx-auto px-4" ]
-        [ div [ class "rounded shadow-lg md:w-2/3 mx-auto bg-white" ]
-            [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
-                [ Icons.lamp "mr-2", text "Lembre-se" ]
-            , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
-                [ li [ class "pl-1" ] [ text "Não reivindique a mesma ação mais de uma vez no mesmo dia;" ]
-                , li [ class "pl-1" ] [ text "Reivindique apenas ações que você realmente realizou;" ]
-                , li [ class "pl-1" ] [ text "Conheça as boas práticas da Comunidade" ]
-                ]
+    div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
+        [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
+            [ Icons.lamp "mr-2", text "Lembre-se" ]
+        , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
+            [ li [ class "pl-1" ] [ text "Não reivindique a mesma ação mais de uma vez no mesmo dia;" ]
+            , li [ class "pl-1" ] [ text "Reivindique apenas ações que você realmente realizou;" ]
+            , li [ class "pl-1" ] [ text "Conheça as boas práticas da Comunidade" ]
             ]
+        ]
+
+
+viewTabSelector : Html Msg
+viewTabSelector =
+    let
+        viewTab isActive isLeft label =
+            button
+                [ class "text-center py-3 px-8 w-1/2"
+                , classList
+                    [ ( "bg-orange-300 text-white", isActive )
+                    , ( "bg-gray-100 text-black", not isActive )
+                    , ( "rounded-l-full", isLeft )
+                    , ( "rounded-r-full", not isLeft )
+                    ]
+                , onClick ShowMore -- TODO
+                ]
+                [ text label ]
+    in
+    div [ class "mt-6 md:mt-8 w-full md:w-2/3 xl:w-1/3 flex" ]
+        [ viewTab True True "Waiting to vote (2)"
+        , viewTab False False "Analyzed (15)"
         ]
 
 
