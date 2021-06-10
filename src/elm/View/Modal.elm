@@ -5,6 +5,7 @@ module View.Modal exposing
     , withFooter
     , withHeader
     , withLarge
+    , withPreventScrolling
     )
 
 {-| Modal dialog (popup)
@@ -47,6 +48,7 @@ type alias Options msg =
     , footer : Maybe (List (Html msg))
     , isLarge : Bool
     , isVisible : Bool
+    , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
     }
 
@@ -73,6 +75,7 @@ initWith reqOpts =
         { closeMsg = reqOpts.closeMsg
         , isLarge = False
         , isVisible = reqOpts.isVisible
+        , preventScrolling = View.Components.PreventScrollAlways
         , header = Nothing
         , body = Nothing
         , footer = Nothing
@@ -101,6 +104,11 @@ withFooter footer (Modal options) =
 withLarge : Bool -> Modal msg -> Modal msg
 withLarge large (Modal options) =
     Modal { options | isLarge = large }
+
+
+withPreventScrolling : View.Components.PreventScroll -> Modal msg -> Modal msg
+withPreventScrolling preventScrolling (Modal options) =
+    Modal { options | preventScrolling = preventScrolling }
 
 
 
@@ -155,6 +163,7 @@ viewModalDetails options =
             [ class "modal-bg"
             , onClickNoBubble options.closeMsg
             ]
+            options.preventScrolling
         , div
             [ class "modal-content"
             , classList [ ( "modal-content-lg", options.isLarge ) ]

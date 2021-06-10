@@ -2,7 +2,7 @@ module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
     , tooltip, pdfViewer
-    , bgNoScroll
+    , bgNoScroll, PreventScroll(..)
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll
+@docs bgNoScroll, PreventScroll
 
 -}
 
@@ -122,6 +122,24 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
 
 {-| A node that prevents the body from scrolling
 -}
-bgNoScroll : List (Html.Attribute msg) -> Html msg
-bgNoScroll attrs =
-    node "bg-no-scroll" attrs []
+bgNoScroll : List (Html.Attribute msg) -> PreventScroll -> Html msg
+bgNoScroll attrs preventScroll =
+    let
+        preventScrollClass =
+            case preventScroll of
+                PreventScrollOnMobile ->
+                    "overflow-hidden md:overflow-auto"
+
+                PreventScrollAlways ->
+                    "overflow-hidden"
+    in
+    node "bg-no-scroll"
+        (attribute "elm-prevent-scroll-class" preventScrollClass
+            :: attrs
+        )
+        []
+
+
+type PreventScroll
+    = PreventScrollOnMobile
+    | PreventScrollAlways
