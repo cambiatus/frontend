@@ -42,20 +42,11 @@ import View.Form.Input as Input
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init invitationId ({ shared } as guest) =
     let
-        initialStatus =
-            case invitationId of
-                Just _ ->
-                    Loading
-
-                Nothing ->
-                    FormShowed
-                        (DefaultForm DefaultForm.init)
-
         initialModel =
             { accountKeys = Nothing
             , hasAgreedToSavePassphrase = False
             , isPassphraseCopiedToClipboard = False
-            , status = initialStatus
+            , status = Loading
             , invitationId = invitationId
             , invitation = Nothing
             , country = Nothing
@@ -314,8 +305,8 @@ viewRegistrationForm translators currentForm =
 
 viewAccountTypeSelector : Translators -> Model -> Html Msg
 viewAccountTypeSelector translators model =
-    case ( model.invitation, model.country ) of
-        ( Just _, Just country ) ->
+    case model.country of
+        Just country ->
             div []
                 [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
                 , div [ class "flex space-x-2" ]
@@ -577,17 +568,16 @@ update _ msg model { shared } =
             model |> UR.init
 
         CompletedLoadCommunity community ->
-            if community.hasAutoInvite then
-                UR.init model
+            let
+                canRegister =
+                    community.hasAutoInvite || model.invitationId /= Nothing
+            in
+            if canRegister then
+                loadedCommunity shared model community model.invitation
 
             else
-                case model.invitationId of
-                    Just _ ->
-                        UR.init model
-
-                    Nothing ->
-                        UR.init model
-                            |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
+                UR.init model
+                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
 
         ValidateForm formType ->
             let
@@ -855,29 +845,7 @@ update _ msg model { shared } =
             UR.init model
 
         CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
-            if invitation.community.hasKyc then
-                let
-                    loadCountryData =
-                        Api.Graphql.query
-                            shared
-                            Nothing
-                            (Address.countryQuery "Costa Rica")
-                            CompletedLoadCountry
-                in
-                { model
-                    | status = Loading
-                    , invitation = Just invitation
-                }
-                    |> UR.init
-                    |> UR.addCmd
-                        loadCountryData
-
-            else
-                { model
-                    | status = FormShowed (DefaultForm DefaultForm.init)
-                    , invitation = Just invitation
-                }
-                    |> UR.init
+            loadedCommunity shared model invitation.community (Just invitation)
 
         CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
@@ -908,6 +876,32 @@ update _ msg model { shared } =
 
         CompletedLoadCountry _ ->
             UR.init model
+
+
+loadedCommunity : Shared -> Model -> Community.CommunityPreview -> Maybe Invite -> UpdateResult
+loadedCommunity shared model community maybeInvite =
+    if community.hasKyc then
+        let
+            loadCountryData =
+                Api.Graphql.query
+                    shared
+                    Nothing
+                    (Address.countryQuery "Costa Rica")
+                    CompletedLoadCountry
+        in
+        { model
+            | status = Loading
+            , invitation = maybeInvite
+        }
+            |> UR.init
+            |> UR.addCmd loadCountryData
+
+    else
+        { model
+            | status = FormShowed (DefaultForm DefaultForm.init)
+            , invitation = maybeInvite
+        }
+            |> UR.init
 
 
 type alias SignUpResponse =

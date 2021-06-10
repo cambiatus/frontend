@@ -333,20 +333,17 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
                     |> Input.withCounter 255
                     |> Input.withInputType Input.TextArea
                     |> Input.toHtml
-                , Select.init (fieldId "trackStock")
-                    (t "shop.track_stock_label")
-                    EnteredTrackStock
-                    (case trackStock of
-                        Nothing ->
-                            trackNo
-
-                        Just track ->
-                            track
-                    )
-                    (listErrors shared.translations form.trackStock |> Just)
-                    |> Select.withOption { value = trackNo, label = t "shop.track_stock_no" }
+                , Select.init
+                    { id = fieldId "trackStock"
+                    , label = t "shop.track_stock_label"
+                    , onInput = EnteredTrackStock
+                    , firstOption = { value = trackNo, label = t "shop.track_stock_no" }
+                    , value = trackStock |> Maybe.withDefault trackNo
+                    , valueToString = identity
+                    , disabled = isDisabled
+                    , problems = listErrors shared.translations form.trackStock |> Just
+                    }
                     |> Select.withOption { value = trackYes, label = t "shop.track_stock_yes" }
-                    |> Select.withDisabled isDisabled
                     |> Select.withAttrs [ required True ]
                     |> Select.toHtml
                 , if trackStock == Just trackYes then

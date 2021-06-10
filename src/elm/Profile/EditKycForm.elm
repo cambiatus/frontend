@@ -9,9 +9,9 @@ module Profile.EditKycForm exposing
 
 import Api.Graphql
 import Graphql.Http
-import Html exposing (Html, button, div, form, label, option, p, select, text)
-import Html.Attributes exposing (class, maxlength, selected, value)
-import Html.Events exposing (onInput, onSubmit)
+import Html exposing (Html, button, div, form, p, text)
+import Html.Attributes exposing (class, maxlength)
+import Html.Events exposing (onSubmit)
 import Kyc exposing (ProfileKyc)
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
 import Kyc.CostaRica.Dimex as Dimex
@@ -23,10 +23,11 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Validate exposing (Validator, ifBlank, validate)
 import View.Form.Input as Input
+import View.Form.Select as Select
 
 
 type Msg
-    = DocumentTypeChanged String
+    = DocumentTypeChanged CostaRicaDoc
     | DocumentNumberEntered String
     | PhoneNumberEntered String
     | Submitted Model
@@ -86,7 +87,7 @@ kycValidator { t } documentValidator =
 
 init : Model
 init =
-    { document = valToDoc "cedula_de_identidad"
+    { document = initDoc CedulaDoc
     , documentNumber = ""
     , phoneNumber = ""
     , validationErrors = []
@@ -94,10 +95,10 @@ init =
     }
 
 
-valToDoc : String -> Doc
-valToDoc v =
-    case v of
-        "DIMEX" ->
+initDoc : CostaRicaDoc -> Doc
+initDoc docType =
+    case docType of
+        DimexDoc ->
             { docType = DimexDoc
             , isValid = Dimex.isValid
             , title = "register.form.document.dimex.label"
@@ -106,7 +107,7 @@ valToDoc v =
             , placeholderText = "register.form.document.dimex.placeholder"
             }
 
-        "NITE" ->
+        NiteDoc ->
             { docType = NiteDoc
             , isValid = Nite.isValid
             , title = "register.form.document.nite.label"
@@ -115,7 +116,7 @@ valToDoc v =
             , placeholderText = "register.form.document.nite.placeholder"
             }
 
-        _ ->
+        CedulaDoc ->
             { docType = CedulaDoc
             , isValid = CedulaDeIdentidad.isValid
             , title = "register.form.document.cedula_de_identidad.label"
@@ -123,6 +124,19 @@ valToDoc v =
             , maxLength = 9
             , placeholderText = "register.form.document.cedula_de_identidad.placeholder"
             }
+
+
+docToString : CostaRicaDoc -> String
+docToString docType =
+    case docType of
+        DimexDoc ->
+            "DIMEX"
+
+        NiteDoc ->
+            "NITE"
+
+        CedulaDoc ->
+            "cedula_de_identidad"
 
 
 view : Translators -> Model -> Html Msg
@@ -144,31 +158,21 @@ view ({ t } as translators) model =
     div [ class "md:max-w-sm md:mx-auto py-6" ]
         [ form
             [ onSubmit (Submitted model) ]
-            [ div [ class "mb-6" ]
-                [ label [ class "input-label block" ]
-                    [ text (t "register.form.document.type")
+            [ Select.init
+                { id = "document_type_select"
+                , label = t "register.form.document.type"
+                , onInput = DocumentTypeChanged
+                , firstOption = { value = CedulaDoc, label = t "register.form.document.cedula_de_identidad.label" }
+                , value = docType
+                , valueToString = docToString
+                , disabled = False
+                , problems = Nothing
+                }
+                |> Select.withOptions
+                    [ { value = DimexDoc, label = t "register.form.document.dimex.label" }
+                    , { value = NiteDoc, label = t "register.form.document.nite.label" }
                     ]
-                , select
-                    [ onInput DocumentTypeChanged
-                    , class "form-select"
-                    ]
-                    [ option
-                        [ value "cedula_de_identidad"
-                        , selected (docType == CedulaDoc)
-                        ]
-                        [ text (t "register.form.document.cedula_de_identidad.label") ]
-                    , option
-                        [ value "DIMEX"
-                        , selected (docType == DimexDoc)
-                        ]
-                        [ text (t "register.form.document.dimex.label") ]
-                    , option
-                        [ value "NITE"
-                        , selected (docType == NiteDoc)
-                        ]
-                        [ text (t "register.form.document.nite.label") ]
-                    ]
-                ]
+                |> Select.toHtml
             , Input.init
                 { label = t title
                 , id = "document_number_field"
@@ -212,9 +216,9 @@ update translators model msg =
             translators
     in
     case msg of
-        DocumentTypeChanged val ->
+        DocumentTypeChanged doc ->
             { model
-                | document = valToDoc val
+                | document = initDoc doc
                 , documentNumber = ""
                 , validationErrors = []
             }

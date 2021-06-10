@@ -58,6 +58,7 @@ config =
     , NoInconsistentJsAddressToMsg.rule
     , NoRedundantCons.rule
     , NoFunctionOutsideOfModules.rule "Html.input" [ "View.Form.Input", "View.Form.Toggle", "View.Form.Radio", "View.Form.FileUploader", "View.Form.Checkbox" ]
+    , NoFunctionOutsideOfModules.rule "Html.select" [ "View.Form.Select" ]
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])
