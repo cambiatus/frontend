@@ -63,11 +63,16 @@ window.customElements.define('pdf-viewer',
 
       const notFoundTimeout = window.setTimeout(() => {
         const notFoundImg = document.createElement('img')
-        notFoundImg.src = '/images/not_found.svg'
+        notFoundImg.src = '/icons/pdf.svg'
         setContent(notFoundImg)
+        const bgColor = 'bg-purple-500'
+        this.classList.add(bgColor)
 
         setContent = (node) => {
           this.removeChild(notFoundImg)
+          if (this.classList.contains(bgColor)) {
+            this.classList.remove(bgColor)
+          }
           this.appendChild(node)
         }
       }, 1000 * 3)

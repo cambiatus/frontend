@@ -338,7 +338,7 @@ viewClaimCard { shared, accountName } profileSummary claim =
                         div [ class "claim-photo-thumb" ]
                             [ View.Components.pdfViewer
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)
-                                , class "w-full h-full"
+                                , class "w-full h-full rounded-sm"
                                 ]
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
@@ -405,7 +405,7 @@ viewPhotoModal loggedIn claim =
                     Just url ->
                         div [ class "sm:w-1/2" ]
                             [ View.Components.pdfViewer
-                                [ class "min-h-[100px] max-h-[42vh]" ]
+                                [ class "min-h-[100px] max-h-[42vh] rounded-sm" ]
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Just loggedIn.shared.translators
