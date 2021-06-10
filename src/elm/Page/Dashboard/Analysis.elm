@@ -73,10 +73,29 @@ initModel =
     }
 
 
+type alias LoadedModel =
+    { claims : List Claim.Model
+    , profileSummaries : List Profile.Summary.Model
+    , pageInfo : Maybe Api.Relay.PageInfo
+    , selectedTab : Tab
+    , tabCounts : List ( Tab, Int )
+    }
+
+
 type Status
     = Loading
-    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded LoadedModel
     | Failed
+
+
+type Tab
+    = WaitingToVote
+    | Analyzed
+
+
+allTabs : List Tab
+allTabs =
+    [ WaitingToVote, Analyzed ]
 
 
 type alias Filter =
@@ -121,10 +140,10 @@ view ({ shared } as loggedIn) model =
                 Loading ->
                     Page.fullPageLoading shared
 
-                Loaded claims profileSummaries pageInfo ->
+                Loaded loadedModel ->
                     div []
                         (Page.viewHeader loggedIn pageTitle
-                            :: viewContent loggedIn claims profileSummaries pageInfo model
+                            :: viewContent loggedIn loadedModel model
                         )
 
                 Failed ->
@@ -135,8 +154,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewContent : LoggedIn.Model -> List Claim.Model -> List Profile.Summary.Model -> Maybe Api.Relay.PageInfo -> Model -> List (Html Msg)
-viewContent loggedIn claims profileSummaries pageInfo model =
+viewContent : LoggedIn.Model -> LoadedModel -> Model -> List (Html Msg)
+viewContent loggedIn ({ claims, profileSummaries, pageInfo } as loadedModel) model =
     let
         viewClaim profileSummary claimIndex claim =
             Claim.viewClaimCard loggedIn profileSummary claim
@@ -145,7 +164,7 @@ viewContent loggedIn claims profileSummaries pageInfo model =
     [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
             [ viewGoodPracticesCard
-            , viewTabSelector
+            , viewTabSelector loadedModel
             ]
         ]
     , div [ class "container mx-auto px-4 mb-10" ]
@@ -197,6 +216,7 @@ viewGoodPracticesCard =
         [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
             [ Icons.lamp "mr-2", text "Lembre-se" ]
         , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
+            -- TODO - I18N
             [ li [ class "pl-1" ] [ text "Não reivindique a mesma ação mais de uma vez no mesmo dia;" ]
             , li [ class "pl-1" ] [ text "Reivindique apenas ações que você realmente realizou;" ]
             , li [ class "pl-1" ] [ text "Conheça as boas práticas da Comunidade" ]
@@ -204,26 +224,54 @@ viewGoodPracticesCard =
         ]
 
 
-viewTabSelector : Html Msg
-viewTabSelector =
+viewTabSelector : LoadedModel -> Html Msg
+viewTabSelector loadedModel =
     let
-        viewTab isActive isLeft label =
+        viewTab isLeft isRight tab =
+            let
+                isActive =
+                    tab == loadedModel.selectedTab
+
+                count =
+                    List.filterMap
+                        (\( tab_, tabCount ) ->
+                            if tab_ == tab then
+                                Just (" (" ++ String.fromInt tabCount ++ ")")
+
+                            else
+                                Nothing
+                        )
+                        loadedModel.tabCounts
+                        |> List.head
+                        |> Maybe.withDefault ""
+
+                label =
+                    case tab of
+                        WaitingToVote ->
+                            -- TODO - I18N
+                            "Waiting vote"
+
+                        Analyzed ->
+                            -- TODO - I18N
+                            "Analyzed"
+            in
             button
-                [ class "text-center py-3 px-8 w-1/2"
+                [ class "text-center py-3 px-8 w-1/2 focus:outline-none transition-colors duration-300"
                 , classList
                     [ ( "bg-orange-300 text-white", isActive )
                     , ( "bg-gray-100 text-black", not isActive )
                     , ( "rounded-l-full", isLeft )
-                    , ( "rounded-r-full", not isLeft )
+                    , ( "rounded-r-full", isRight )
                     ]
-                , onClick ShowMore -- TODO
+                , onClick (SelectedTab tab)
                 ]
-                [ text label ]
+                [ text (label ++ count) ]
     in
     div [ class "mt-6 md:mt-8 w-full md:w-2/3 xl:w-1/3 flex" ]
-        [ viewTab True True "Waiting to vote (2)"
-        , viewTab False False "Analyzed (15)"
-        ]
+        (List.indexedMap
+            (\idx -> viewTab (idx == 0) (idx == List.length allTabs - 1))
+            allTabs
+        )
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg
@@ -375,6 +423,7 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectMsg (Select.Msg Profile.Minimal)
+    | SelectedTab Tab
     | OnSelectVerifier (Maybe Profile.Minimal)
     | ShowMore
     | ClearSelectSelection
@@ -394,7 +443,7 @@ update msg model loggedIn =
                         |> Profile.Summary.initMany False
             in
             case model.status of
-                Loaded claims _ _ ->
+                Loaded { claims } ->
                     let
                         newClaims =
                             if model.reloadOnNextQuery then
@@ -405,9 +454,13 @@ update msg model loggedIn =
                     in
                     { model
                         | status =
-                            Loaded newClaims
-                                (initProfileSummaries newClaims)
-                                (Claim.paginatedPageInfo results)
+                            Loaded
+                                { claims = newClaims
+                                , profileSummaries = initProfileSummaries newClaims
+                                , pageInfo = Claim.paginatedPageInfo results
+                                , selectedTab = WaitingToVote
+                                , tabCounts = [] -- TODO
+                                }
                         , reloadOnNextQuery = False
                     }
                         |> UR.init
@@ -415,9 +468,13 @@ update msg model loggedIn =
                 _ ->
                     { model
                         | status =
-                            Loaded (Claim.paginatedToList results)
-                                (initProfileSummaries (Claim.paginatedToList results))
-                                (Claim.paginatedPageInfo results)
+                            Loaded
+                                { claims = Claim.paginatedToList results
+                                , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
+                                , pageInfo = Claim.paginatedPageInfo results
+                                , selectedTab = WaitingToVote
+                                , tabCounts = [] -- TODO
+                                }
                         , reloadOnNextQuery = False
                     }
                         |> UR.init
@@ -445,12 +502,14 @@ update msg model loggedIn =
 
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded claims profileSummaries pageInfo, Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( Loaded ({ profileSummaries } as loadedModel), Claim.GotProfileSummaryMsg subMsg ) ->
                             { model
                                 | status =
-                                    Loaded claims
-                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
-                                        pageInfo
+                                    Loaded
+                                        { loadedModel
+                                            | profileSummaries =
+                                                List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries
+                                        }
                             }
 
                         _ ->
@@ -463,7 +522,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ _ ->
+                Loaded _ ->
                     let
                         newModel =
                             { model
@@ -498,7 +557,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded claims profileSummaries pageInfo ->
+                Loaded ({ claims } as loadedModel) ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -521,9 +580,7 @@ update msg model loggedIn =
                                         (\_ -> claim)
                                         claims
                             in
-                            { model
-                                | status = Loaded updatedClaims profileSummaries pageInfo
-                            }
+                            { model | status = Loaded { loadedModel | claims = updatedClaims } }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
@@ -541,9 +598,9 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.status of
-                Loaded claims profileSummaries pageInfo ->
+                Loaded loadedModel ->
                     { model
-                        | status = Loaded claims profileSummaries pageInfo
+                        | status = Loaded loadedModel
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -560,13 +617,22 @@ update msg model loggedIn =
             UR.init { model | autoCompleteState = updated }
                 |> UR.addCmd cmd
 
+        SelectedTab tab ->
+            case model.status of
+                Loaded loadedModel ->
+                    { model | status = Loaded { loadedModel | selectedTab = tab } }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
         OnSelectVerifier maybeProfile ->
             let
                 oldFilters =
                     model.filters
             in
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ _, RemoteData.Success community ) ->
+                ( Loaded _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -584,7 +650,7 @@ update msg model loggedIn =
 
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ pageInfo, RemoteData.Success community ) ->
+                ( Loaded { pageInfo }, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -599,7 +665,7 @@ update msg model loggedIn =
 
         ClearSelectSelection ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ _, RemoteData.Success community ) ->
+                ( Loaded _, RemoteData.Success community ) ->
                     let
                         oldFilters =
                             model.filters
@@ -865,6 +931,9 @@ msgToString msg =
 
         SelectMsg _ ->
             [ "SelectMsg", "sub" ]
+
+        SelectedTab _ ->
+            [ "SelectedTab" ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]
