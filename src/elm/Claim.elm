@@ -31,8 +31,8 @@ import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, img, label, p, strong, text)
-import Html.Attributes exposing (class, classList, disabled, href, id, src, style, target)
+import Html exposing (Html, a, button, div, label, p, strong, text)
+import Html.Attributes exposing (class, classList, disabled, href, id, target)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -44,6 +44,7 @@ import Session.Shared exposing (Translators)
 import Strftime
 import Time
 import Utils
+import View.Components
 import View.Modal as Modal
 
 
@@ -335,11 +336,14 @@ viewClaimCard { shared, accountName } profileSummary claim =
                 , case claim.proofPhoto of
                     Just url ->
                         div [ class "claim-photo-thumb" ]
-                            [ img
+                            [ View.Components.pdfViewer
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)
-                                , src url
+                                , class "w-full h-full rounded-sm"
                                 ]
-                                []
+                                { url = url
+                                , childClass = "max-w-full max-h-full"
+                                , maybeTranslators = Nothing
+                                }
                             ]
 
                     Nothing ->
@@ -400,17 +404,18 @@ viewPhotoModal loggedIn claim =
                 [ case claim.proofPhoto of
                     Just url ->
                         div [ class "sm:w-1/2" ]
-                            [ img
-                                [ style "max-height" "42vh"
-                                , src url
-                                ]
-                                []
+                            [ View.Components.pdfViewer
+                                [ class "min-h-[100px] max-h-[42vh] rounded-sm" ]
+                                { url = url
+                                , childClass = "max-w-full max-h-full"
+                                , maybeTranslators = Just loggedIn.shared.translators
+                                }
                             , a
                                 [ class "underline inline-block py-1 text-gray"
                                 , href url
                                 , target "_blank"
                                 ]
-                                [ text (t "community.actions.proof.photo_full")
+                                [ text (t "community.actions.proof.upload_full")
                                 , Icons.externalLink "inline-block ml-1 h-3 fill-current"
                                 ]
                             ]
