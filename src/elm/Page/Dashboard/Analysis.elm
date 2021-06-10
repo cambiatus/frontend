@@ -20,7 +20,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, button, div, img, option, select, span, text)
+import Html exposing (Html, button, div, img, li, option, select, span, text, ul)
 import Html.Attributes exposing (class, selected, src, value)
 import Html.Events exposing (onClick)
 import Http
@@ -122,54 +122,10 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading shared
 
                 Loaded claims profileSummaries pageInfo ->
-                    let
-                        viewClaim profileSummary claimIndex claim =
-                            Claim.viewClaimCard loggedIn profileSummary claim
-                                |> Html.map (ClaimMsg claimIndex)
-                    in
                     div []
-                        [ Page.viewHeader loggedIn pageTitle
-                        , div [ class "container mx-auto px-4 mb-10" ]
-                            [ viewFilters loggedIn model
-                            , if List.length claims > 0 then
-                                div []
-                                    [ div [ class "flex flex-wrap -mx-2" ]
-                                        (List.map3 viewClaim
-                                            profileSummaries
-                                            (List.range 0 (List.length claims))
-                                            claims
-                                        )
-                                    , viewPagination loggedIn pageInfo
-                                    ]
-
-                              else
-                                viewEmptyResults loggedIn
-                            ]
-                        , let
-                            viewVoteModal claimId isApproving isLoading =
-                                Claim.viewVoteClaimModal
-                                    loggedIn.shared.translators
-                                    { voteMsg = VoteClaim
-                                    , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
-                                    , claimId = claimId
-                                    , isApproving = isApproving
-                                    , isInProgress = isLoading
-                                    }
-                          in
-                          case model.claimModalStatus of
-                            Claim.VoteConfirmationModal claimId vote ->
-                                viewVoteModal claimId vote False
-
-                            Claim.Loading claimId vote ->
-                                viewVoteModal claimId vote True
-
-                            Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim
-                                    |> Html.map (ClaimMsg 0)
-
-                            _ ->
-                                text ""
-                        ]
+                        (Page.viewHeader loggedIn pageTitle
+                            :: viewContent loggedIn claims profileSummaries pageInfo model
+                        )
 
                 Failed ->
                     Page.fullPageError (t "all_analysis.error") Http.Timeout
@@ -177,6 +133,73 @@ view ({ shared } as loggedIn) model =
     { title = pageTitle
     , content = content
     }
+
+
+viewContent : LoggedIn.Model -> List Claim.Model -> List Profile.Summary.Model -> Maybe Api.Relay.PageInfo -> Model -> List (Html Msg)
+viewContent loggedIn claims profileSummaries pageInfo model =
+    let
+        viewClaim profileSummary claimIndex claim =
+            Claim.viewClaimCard loggedIn profileSummary claim
+                |> Html.map (ClaimMsg claimIndex)
+    in
+    [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
+        [ viewGoodPracticesCard ]
+    , div [ class "container mx-auto px-4 mb-10" ]
+        [ viewFilters loggedIn model
+        , if List.length claims > 0 then
+            div []
+                [ div [ class "flex flex-wrap -mx-2" ]
+                    (List.map3 viewClaim
+                        profileSummaries
+                        (List.range 0 (List.length claims))
+                        claims
+                    )
+                , viewPagination loggedIn pageInfo
+                ]
+
+          else
+            viewEmptyResults loggedIn
+        ]
+    , let
+        viewVoteModal claimId isApproving isLoading =
+            Claim.viewVoteClaimModal
+                loggedIn.shared.translators
+                { voteMsg = VoteClaim
+                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isLoading
+                }
+      in
+      case model.claimModalStatus of
+        Claim.VoteConfirmationModal claimId vote ->
+            viewVoteModal claimId vote False
+
+        Claim.Loading claimId vote ->
+            viewVoteModal claimId vote True
+
+        Claim.PhotoModal claim ->
+            Claim.viewPhotoModal loggedIn claim
+                |> Html.map (ClaimMsg 0)
+
+        _ ->
+            text ""
+    ]
+
+
+viewGoodPracticesCard : Html msg
+viewGoodPracticesCard =
+    div [ class "container mx-auto px-4" ]
+        [ div [ class "rounded shadow-lg md:w-2/3 mx-auto bg-white" ]
+            [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
+                [ Icons.lamp "mr-2", text "Lembre-se" ]
+            , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
+                [ li [ class "pl-1" ] [ text "Não reivindique a mesma ação mais de uma vez no mesmo dia;" ]
+                , li [ class "pl-1" ] [ text "Reivindique apenas ações que você realmente realizou;" ]
+                , li [ class "pl-1" ] [ text "Conheça as boas práticas da Comunidade" ]
+                ]
+            ]
+        ]
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg
