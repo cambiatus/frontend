@@ -19,11 +19,10 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
-import Html exposing (Html, button, div, input, label, p, span, text)
-import Html.Attributes exposing (accept, class, disabled, for, id, maxlength, multiple, required, rows, style, type_, value)
+import Html exposing (Html, button, div, p, span, text)
+import Html.Attributes exposing (class, disabled, id, maxlength, required, rows, value)
 import Html.Events exposing (onClick)
 import Http
-import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Page
@@ -36,6 +35,7 @@ import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import View.Feedback as Feedback
+import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
@@ -102,11 +102,8 @@ type alias FormError =
     Maybe String
 
 
-type ImageStatus
-    = NoImage
-    | Uploading
-    | UploadFailed Http.Error
-    | Uploaded String
+type alias ImageStatus =
+    RemoteData Http.Error String
 
 
 type alias Form =
@@ -130,8 +127,8 @@ trackNo =
     "no"
 
 
-initForm : List String -> Form
-initForm balanceOptions =
+initForm : Form
+initForm =
     let
         image =
             newValidator Nothing identity False []
@@ -223,20 +220,20 @@ view loggedIn model =
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
-                EditingCreate balances imageStatus form ->
-                    viewForm loggedIn balances imageStatus False False Closed form
+                EditingCreate _ imageStatus form ->
+                    viewForm loggedIn imageStatus False False Closed form
 
-                Creating balances imageStatus form ->
-                    viewForm loggedIn balances imageStatus False True Closed form
+                Creating _ imageStatus form ->
+                    viewForm loggedIn imageStatus False True Closed form
 
-                EditingUpdate balances _ imageStatus confirmDelete form ->
-                    viewForm loggedIn balances imageStatus True False confirmDelete form
+                EditingUpdate _ _ imageStatus confirmDelete form ->
+                    viewForm loggedIn imageStatus True False confirmDelete form
 
-                Saving balances _ imageStatus form ->
-                    viewForm loggedIn balances imageStatus True True Closed form
+                Saving _ _ imageStatus form ->
+                    viewForm loggedIn imageStatus True True Closed form
 
-                Deleting balances _ imageStatus form ->
-                    viewForm loggedIn balances imageStatus True True Closed form
+                Deleting _ _ imageStatus form ->
+                    viewForm loggedIn imageStatus True True Closed form
     in
     { title = title
     , content =
@@ -260,37 +257,14 @@ view loggedIn model =
     }
 
 
-viewForm : LoggedIn.Model -> List Balance -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
-viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteModal form =
+viewForm : LoggedIn.Model -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
+viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form =
     let
         t =
             shared.translators.t
 
         fieldId s =
             "shop-editor-" ++ s
-
-        imageStyle =
-            case getInput form.image of
-                Just url ->
-                    style "background-image" ("url(" ++ url ++ ")")
-
-                Nothing ->
-                    style "" ""
-
-        imageView =
-            case imageStatus of
-                Uploading ->
-                    [ div
-                        [ class "spinner" ]
-                        []
-                    ]
-
-                _ ->
-                    [ Icons.addPhoto ""
-                    , span
-                        []
-                        [ text (t "shop.photo_label") ]
-                    ]
 
         trackStock =
             getInput form.trackStock
@@ -323,24 +297,15 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                   else
                     text ""
                 ]
-            , div
-                [ class "shop-editor__image-upload w-full  px-4 mb-10" ]
-                [ input
-                    [ id (fieldId "image")
-                    , class "hidden-img-input"
-                    , type_ "file"
-                    , accept "image/*"
-                    , Page.onFileChange EnteredImage
-                    , multiple False
-                    , disabled isDisabled
-                    ]
-                    []
-                , label
-                    [ for (fieldId "image")
-                    , imageStyle
-                    ]
-                    imageView
-                ]
+            , FileUploader.init
+                { label = ""
+                , id = fieldId "image"
+                , onFileInput = EnteredImage
+                , status = imageStatus
+                }
+                |> FileUploader.withBackground FileUploader.Gray
+                |> FileUploader.withAttrs [ class "px-4 mb-10" ]
+                |> FileUploader.toHtml shared.translators
             , div [ class "px-4 flex flex-col" ]
                 [ Input.init
                     { label = t "shop.what_label"
@@ -366,22 +331,19 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                     }
                     |> Input.withAttrs [ maxlength 255, required True, rows 5 ]
                     |> Input.withCounter 255
-                    |> Input.withType Input.TextArea
+                    |> Input.withInputType Input.TextArea
                     |> Input.toHtml
-                , Select.init (fieldId "trackStock")
-                    (t "shop.track_stock_label")
-                    EnteredTrackStock
-                    (case trackStock of
-                        Nothing ->
-                            trackNo
-
-                        Just track ->
-                            track
-                    )
-                    (listErrors shared.translations form.trackStock |> Just)
-                    |> Select.withOption { value = trackNo, label = t "shop.track_stock_no" }
+                , Select.init
+                    { id = fieldId "trackStock"
+                    , label = t "shop.track_stock_label"
+                    , onInput = EnteredTrackStock
+                    , firstOption = { value = trackNo, label = t "shop.track_stock_no" }
+                    , value = trackStock |> Maybe.withDefault trackNo
+                    , valueToString = identity
+                    , disabled = isDisabled
+                    , problems = listErrors shared.translations form.trackStock |> Just
+                    }
                     |> Select.withOption { value = trackYes, label = t "shop.track_stock_yes" }
-                    |> Select.withDisabled isDisabled
                     |> Select.withAttrs [ required True ]
                     |> Select.toHtml
                 , if trackStock == Just trackYes then
@@ -396,6 +358,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                         , translators = shared.translators
                         }
                         |> Input.asNumeric
+                        |> Input.withType Input.Number
                         |> Input.withAttrs [ required True, Html.Attributes.min "0", Html.Attributes.max "2000" ]
                         |> Input.toHtml
 
@@ -428,7 +391,7 @@ viewForm ({ shared } as loggedIn) balances imageStatus isEdit isDisabled deleteM
                         viewFieldErrors [ err ]
                 , div
                     [ class "flex align-center justify-center mb-10"
-                    , disabled (isDisabled || imageStatus == Uploading)
+                    , disabled (isDisabled || RemoteData.isLoading imageStatus)
                     ]
                     [ button
                         [ class "button button-primary w-full sm:w-40"
@@ -515,15 +478,7 @@ update msg model loggedIn =
         CompletedBalancesLoad (Ok balances) ->
             case model of
                 LoadingBalancesCreate ->
-                    let
-                        balanceOptions =
-                            List.map
-                                (\balance ->
-                                    Eos.symbolToString balance.asset.symbol
-                                )
-                                balances
-                    in
-                    EditingCreate balances NoImage (initForm balanceOptions)
+                    EditingCreate balances RemoteData.NotAsked initForm
                         |> UR.init
 
                 LoadingBalancesUpdate saleId ->
@@ -557,13 +512,6 @@ update msg model loggedIn =
             case ( model, maybeSale ) of
                 ( LoadingSaleUpdate balances, Just sale ) ->
                     let
-                        balanceOptions =
-                            List.map
-                                (\balance ->
-                                    Eos.symbolToString balance.asset.symbol
-                                )
-                                balances
-
                         trackStock =
                             if sale.trackStock then
                                 trackYes
@@ -571,7 +519,7 @@ update msg model loggedIn =
                             else
                                 trackNo
                     in
-                    EditingUpdate balances sale NoImage Closed (initForm balanceOptions)
+                    EditingUpdate balances sale RemoteData.NotAsked Closed initForm
                         |> updateForm
                             (\form ->
                                 { form
@@ -601,7 +549,7 @@ update msg model loggedIn =
         CompletedImageUpload (Ok url) ->
             case model of
                 EditingCreate balances _ form ->
-                    EditingCreate balances (Uploaded url) form
+                    EditingCreate balances (RemoteData.Success url) form
                         |> updateForm
                             (\form_ ->
                                 { form_ | image = updateInput (Just url) form_.image }
@@ -609,7 +557,7 @@ update msg model loggedIn =
                         |> UR.init
 
                 EditingUpdate balances sale _ _ form ->
-                    EditingUpdate balances sale (Uploaded url) Closed form
+                    EditingUpdate balances sale (RemoteData.Success url) Closed form
                         |> updateForm
                             (\form_ ->
                                 { form_ | image = updateInput (Just url) form_.image }
@@ -624,13 +572,13 @@ update msg model loggedIn =
         CompletedImageUpload (Err error) ->
             case model of
                 EditingCreate balances _ form ->
-                    EditingCreate balances (UploadFailed error) form
+                    EditingCreate balances (RemoteData.Failure error) form
                         |> UR.init
                         |> UR.logHttpError msg error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 EditingUpdate balances sale _ _ form ->
-                    EditingUpdate balances sale (UploadFailed error) Closed form
+                    EditingUpdate balances sale (RemoteData.Failure error) Closed form
                         |> UR.init
                         |> UR.logHttpError msg error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
@@ -648,12 +596,12 @@ update msg model loggedIn =
             in
             case model of
                 EditingCreate balances _ form ->
-                    EditingCreate balances Uploading form
+                    EditingCreate balances RemoteData.Loading form
                         |> UR.init
                         |> UR.addCmd uploadImage
 
                 EditingUpdate balances sale _ _ form ->
-                    EditingUpdate balances sale Uploading Closed form
+                    EditingUpdate balances sale RemoteData.Loading Closed form
                         |> UR.init
                         |> UR.addCmd uploadImage
 
@@ -734,11 +682,11 @@ update msg model loggedIn =
                             |> updateForm validateForm
                 in
                 case validatedModel of
-                    EditingCreate balances (Uploaded url) form ->
+                    EditingCreate balances (RemoteData.Success url) form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
-                                (Creating balances (Uploaded url) form)
+                                (Creating balances (RemoteData.Success url) form)
                                 loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
@@ -747,11 +695,11 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingCreate balances (UploadFailed error) form ->
+                    EditingCreate balances (RemoteData.Failure error) form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
-                                (Creating balances (UploadFailed error) form)
+                                (Creating balances (RemoteData.Failure error) form)
                                 loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
@@ -760,11 +708,11 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingCreate balances NoImage form ->
+                    EditingCreate balances RemoteData.NotAsked form ->
                         if isValidForm form then
                             performRequest
                                 ClickedSave
-                                (Creating balances NoImage form)
+                                (Creating balances RemoteData.NotAsked form)
                                 loggedIn
                                 "createsale"
                                 (encodeCreateForm loggedIn form)
@@ -773,13 +721,13 @@ update msg model loggedIn =
                             validatedModel
                                 |> UR.init
 
-                    EditingUpdate balances sale (Uploaded url) _ form ->
+                    EditingUpdate balances sale (RemoteData.Success url) _ form ->
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
                                     performRequest
                                         ClickedSave
-                                        (Saving balances sale (Uploaded url) form)
+                                        (Saving balances sale (RemoteData.Success url) form)
                                         loggedIn
                                         "updatesale"
                                         (encodeUpdateForm sale form community.symbol)
@@ -791,13 +739,13 @@ update msg model loggedIn =
                             _ ->
                                 validatedModel |> UR.init
 
-                    EditingUpdate balances sale (UploadFailed error) _ form ->
+                    EditingUpdate balances sale (RemoteData.Failure error) _ form ->
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
                                     performRequest
                                         ClickedSave
-                                        (Saving balances sale (UploadFailed error) form)
+                                        (Saving balances sale (RemoteData.Failure error) form)
                                         loggedIn
                                         "updatesale"
                                         (encodeUpdateForm sale form community.symbol)
@@ -809,13 +757,13 @@ update msg model loggedIn =
                             _ ->
                                 validatedModel |> UR.init
 
-                    EditingUpdate balances sale NoImage _ form ->
+                    EditingUpdate balances sale RemoteData.NotAsked _ form ->
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
                                 if isValidForm form then
                                     performRequest
                                         ClickedSave
-                                        (Saving balances sale NoImage form)
+                                        (Saving balances sale RemoteData.NotAsked form)
                                         loggedIn
                                         "updatesale"
                                         (encodeUpdateForm sale form community.symbol)
@@ -858,26 +806,26 @@ update msg model loggedIn =
         ClickedDeleteConfirm ->
             if LoggedIn.hasPrivateKey loggedIn then
                 case model of
-                    EditingUpdate balances sale (Uploaded url) _ form ->
+                    EditingUpdate balances sale (RemoteData.Success url) _ form ->
                         performRequest
                             ClickedDeleteConfirm
-                            (Deleting balances sale (Uploaded url) form)
+                            (Deleting balances sale (RemoteData.Success url) form)
                             loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
 
-                    EditingUpdate balances sale (UploadFailed error) _ form ->
+                    EditingUpdate balances sale (RemoteData.Failure error) _ form ->
                         performRequest
                             ClickedDeleteConfirm
-                            (Deleting balances sale (UploadFailed error) form)
+                            (Deleting balances sale (RemoteData.Failure error) form)
                             loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
 
-                    EditingUpdate balances sale NoImage _ form ->
+                    EditingUpdate balances sale RemoteData.NotAsked _ form ->
                         performRequest
                             ClickedDeleteConfirm
-                            (Deleting balances sale NoImage form)
+                            (Deleting balances sale RemoteData.NotAsked form)
                             loggedIn
                             "deletesale"
                             (encodeDeleteForm sale)
@@ -973,7 +921,7 @@ update msg model loggedIn =
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
-performRequest msg status { shared, accountName, selectedCommunity } action data =
+performRequest msg status { shared, accountName } action data =
     status
         |> UR.init
         |> UR.addPort

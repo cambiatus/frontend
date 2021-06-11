@@ -215,7 +215,7 @@ type Msg
     | ClickedDeleteContact ContactType
     | ClosedDeleteModal
     | ConfirmedDeleteContact ContactType
-    | EnteredContactOption String
+    | EnteredContactOption ContactType
     | ClickedSubmit
     | CompletedUpdateContact UpdatedData
     | CompletedDeleteContact UpdatedData
@@ -319,9 +319,7 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         | kind =
                             Single
                                 { contact
-                                    | contactType =
-                                        ContactType.fromString option
-                                            |> Maybe.withDefault defaultContactType
+                                    | contactType = option
                                     , errors = Nothing
                                     , contact = ""
                                 }
@@ -710,29 +708,29 @@ viewInput translators basic =
 
 viewContactTypeSelect : Translators -> ContactType -> Html Msg
 viewContactTypeSelect translators contactType =
-    let
-        contactOptions =
-            List.map
-                (\contactType_ ->
-                    let
-                        asString =
-                            contactTypeToString translators contactType_
-                    in
-                    { value = ContactType.toString contactType_
-                    , label = asString
+    case ContactType.list of
+        [] ->
+            text ""
+
+        first :: rest ->
+            let
+                makeOption contactType_ =
+                    { value = contactType
+                    , label = contactTypeToString translators contactType_
                     }
-                )
-                ContactType.list
-    in
-    List.foldr Select.withOption
-        (Select.init "contact_type"
-            (translators.t "contact_form.contact_type")
-            EnteredContactOption
-            (ContactType.toString contactType)
-            Nothing
-        )
-        contactOptions
-        |> Select.toHtml
+            in
+            Select.init
+                { id = "contact_type"
+                , label = translators.t "contact_form.contact_type"
+                , onInput = EnteredContactOption
+                , firstOption = makeOption first
+                , value = contactType
+                , valueToString = ContactType.toString
+                , disabled = False
+                , problems = Nothing
+                }
+                |> Select.withOptions (List.map makeOption rest)
+                |> Select.toHtml
 
 
 viewFlagsSelect : Translators -> Basic -> Html Msg

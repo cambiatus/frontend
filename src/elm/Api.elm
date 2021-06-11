@@ -2,11 +2,9 @@ module Api exposing
     ( communityInvite
     , getBalances
     , getExpiryOpts
-    , uploadAvatar
     , uploadImage
     )
 
-import Avatar exposing (Avatar)
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
@@ -39,22 +37,6 @@ blockchainUrl { endpoints } paths queryParams =
 
 
 -- METHODS
-
-
-uploadAvatar : Shared -> File -> (Result Http.Error Avatar -> msg) -> Cmd msg
-uploadAvatar shared file toMsg =
-    Http.post
-        { url = backendUrl shared [ "upload" ] []
-        , body =
-            Http.multipartBody
-                [ Http.filePart "file" file ]
-        , expect =
-            Decode.at [ "data" ] Avatar.decode
-                |> Http.expectJson toMsg
-        }
-
-
-
 -- Community
 
 

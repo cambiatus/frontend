@@ -13,7 +13,7 @@ import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Toggle
+import View.Form.Toggle
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -66,11 +66,11 @@ type alias UpdateResult =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
-        translate =
-            loggedIn.shared.translators.t
+        { t } =
+            loggedIn.shared.translators
 
         title =
-            translate "settings.features.title"
+            t "settings.features.title"
 
         content =
             case ( loggedIn.selectedCommunity, model.status ) of
@@ -92,32 +92,32 @@ view loggedIn model =
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            ([ View.Toggle.init
-                                { label = "community.objectives.title_plural"
+                            ([ View.Form.Toggle.init
+                                { label = text (t "community.objectives.title_plural")
                                 , id = "actions-toggle"
                                 , onToggle = ToggleObjectives
                                 , disabled = False
                                 , value = community.hasObjectives
                                 }
-                             , View.Toggle.init
-                                { label = "menu.shop"
+                             , View.Form.Toggle.init
+                                { label = text (t "menu.shop")
                                 , id = "shop-toggle"
                                 , onToggle = ToggleShop
                                 , disabled = False
                                 , value = community.hasShop
                                 }
-                             , View.Toggle.init
-                                { label = "community.kyc.title"
+                             , View.Form.Toggle.init
+                                { label = text (t "community.kyc.title")
                                 , id = "kyc-toggle"
                                 , onToggle = \_ -> ToggleKyc
                                 , disabled = True
                                 , value = community.hasKyc
                                 }
-                                |> View.Toggle.withTooltip "community.kyc.info"
+                                |> View.Form.Toggle.withTooltip "community.kyc.info"
                              ]
                                 |> List.map
-                                    (View.Toggle.withAttrs [ class "py-6" ]
-                                        >> View.Toggle.toHtml loggedIn.shared.translators
+                                    (View.Form.Toggle.withAttrs [ class "py-6" ]
+                                        >> View.Form.Toggle.toHtml loggedIn.shared.translators
                                     )
                             )
                         ]
@@ -126,7 +126,7 @@ view loggedIn model =
                     div []
                         [ Page.viewHeader loggedIn title
                         , div [ class "card" ]
-                            [ text (translate "community.edit.unauthorized") ]
+                            [ text (t "community.edit.unauthorized") ]
                         ]
     in
     { title = title

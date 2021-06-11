@@ -525,10 +525,10 @@ viewInformativeFields ({ t, tr } as translators) community =
                 , translators = translators
                 }
                 |> Input.withAttrs [ class "w-full" ]
-                |> Input.withElement
-                    (span [ class "absolute right-0 inset-y-0 flex items-center pr-3 text-gray-900" ]
+                |> Input.withElements
+                    [ span [ class "absolute right-0 inset-y-0 flex items-center pr-3 text-gray-900" ]
                         [ text (Eos.formatSymbolAmount community.symbol 100) ]
-                    )
+                    ]
                 |> Input.toHtml
             ]
         ]
@@ -580,8 +580,8 @@ viewGeneralFields ({ t } as translators) community model =
         , onSelect = \_ -> Ignored
         , areOptionsEqual = (==)
         }
-        |> Radio.withOption Token.Mcc (text "MCC")
-        |> Radio.withOption Token.Expiry (text (t "settings.community_currency.expiry"))
+        |> Radio.withOption Token.Mcc (\_ -> text "MCC")
+        |> Radio.withOption Token.Expiry (\_ -> text (t "settings.community_currency.expiry"))
         |> Radio.withAttrs [ class "mb-8" ]
         |> Radio.withDisabled True
         |> Radio.toHtml translators
@@ -594,10 +594,10 @@ viewExpiryFields ({ t } as translators) community model =
         withSeconds input =
             input
                 |> Input.withAttrs [ class "pr-20" ]
-                |> Input.withElement
-                    (span [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2" ]
+                |> Input.withElements
+                    [ span [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2" ]
                         [ text (t "settings.community_currency.seconds") ]
-                    )
+                    ]
     in
     [ Input.init
         { label = t "settings.community_currency.natural_expiration_period"
