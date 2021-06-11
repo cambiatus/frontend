@@ -1368,7 +1368,7 @@ viewReward { shared } community form =
         , disabled = False
         , value = getInput form.reward
         , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
-        , problems = listErrors shared.translations form.reward |> Just
+        , problems = Just (listErrors shared.translations form.reward)
         , translators = shared.translators
         }
         |> Input.withContainerAttrs [ class "w-full sm:w-2/5" ]
