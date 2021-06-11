@@ -1,4 +1,12 @@
-module View.Form.Select exposing (disable, enable, init, toHtml, withAttrs, withDisabled, withOption)
+module View.Form.Select exposing
+    ( Option
+    , init
+    , toHtml
+    , withAttrs
+    , withContainerAttrs
+    , withOption
+    , withOptions
+    )
 
 {- | Creates a Cambiatus-style dropdown
 
@@ -11,44 +19,49 @@ module View.Form.Select exposing (disable, enable, init, toHtml, withAttrs, with
 -}
 
 import Html exposing (Html, li, text, ul)
-import Html.Attributes exposing (class, disabled, selected, value)
+import Html.Attributes exposing (class, classList, disabled, selected, value)
 import Html.Events exposing (onInput)
 import View.Form
 
 
-{-| Initializes a Cambiatus-style dropdown
--}
-init : String -> String -> (String -> a) -> String -> Maybe (List String) -> Select a
-init id label onInput value problems =
-    { options = []
-    , onInput = onInput
-    , id = id
-    , label = label
-    , value = value
-    , disabled = False
-    , extraAttrs = []
-    , problems = problems
+type alias RequiredOptions a msg =
+    { id : String
+    , label : String
+    , onInput : a -> msg
+    , firstOption : Option a
+    , value : a
+    , valueToString : a -> String
+    , disabled : Bool
+    , problems : Maybe (List String)
     }
 
 
-disable : Select a -> Select a
-disable select =
-    { select | disabled = True }
+{-| Initializes a Cambiatus-style dropdown
+-}
+init : RequiredOptions a msg -> Select a msg
+init requiredOptions =
+    { options = []
+    , onInput = requiredOptions.onInput
+    , id = requiredOptions.id
+    , label = requiredOptions.label
+    , value = requiredOptions.value
+    , firstOption = requiredOptions.firstOption
+    , valueToString = requiredOptions.valueToString
+    , disabled = requiredOptions.disabled
+    , extraAttrs = []
+    , containerAttrs = []
+    , problems = requiredOptions.problems
+    }
 
 
-enable : Select a -> Select a
-enable select =
-    { select | disabled = False }
-
-
-withDisabled : Bool -> Select a -> Select a
-withDisabled isDisabled select =
-    { select | disabled = isDisabled }
-
-
-withAttrs : List (Html.Attribute a) -> Select a -> Select a
+withAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
 withAttrs extraAttrs select =
     { select | extraAttrs = select.extraAttrs ++ extraAttrs }
+
+
+withContainerAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
+withContainerAttrs attrs select =
+    { select | containerAttrs = select.containerAttrs ++ attrs }
 
 
 {-| Adds a new option field to a dropdown
@@ -56,32 +69,51 @@ withAttrs extraAttrs select =
     View.Form.Select.withOption { value = "brasil", label = "Brasil" } mySelect
 
 -}
-withOption : Option -> Select a -> Select a
+withOption : Option a -> Select a msg -> Select a msg
 withOption option select =
-    let
-        html =
-            Html.option
-                [ value option.value
-                , selected (select.value == option.value)
-                ]
-                [ text option.label ]
-    in
-    { select | options = html :: select.options }
+    { select | options = option :: select.options }
+
+
+{-| Adds multiple options
+-}
+withOptions : List (Option a) -> Select a msg -> Select a msg
+withOptions options select =
+    List.foldr withOption select options
 
 
 {-| Converts a Cambiatus-style dropdown into Html to be used in view code
 -}
-toHtml : Select a -> Html a
+toHtml : Select a msg -> Html msg
 toHtml select =
-    Html.div [ class "mb-10" ]
+    let
+        optionToHtml option =
+            Html.option
+                [ value (select.valueToString option.value)
+                , selected (select.value == option.value)
+                ]
+                [ text option.label ]
+
+        onInput_ inputString =
+            case
+                List.filter (\option -> select.valueToString option.value == inputString) select.options
+                    |> List.head
+            of
+                Nothing ->
+                    select.onInput select.firstOption.value
+
+                Just selectedOption ->
+                    select.onInput selectedOption.value
+    in
+    Html.div (class "mb-10" :: select.containerAttrs)
         [ View.Form.label select.id select.label
         , Html.select
             (class "form-select select w-full"
-                :: onInput select.onInput
+                :: classList [ ( "bg-gray-500", select.disabled ) ]
+                :: onInput onInput_
                 :: disabled select.disabled
                 :: select.extraAttrs
             )
-            select.options
+            (List.map optionToHtml (select.firstOption :: select.options))
         , ul []
             (select.problems
                 |> Maybe.withDefault []
@@ -94,24 +126,27 @@ toHtml select =
 --- INTERNAL
 
 
-type alias Select a =
-    { options : List (Html a)
-    , onInput : String -> a
+type alias Select a msg =
+    { options : List (Option a)
+    , onInput : a -> msg
     , label : String
     , id : String
-    , value : String
+    , value : a
+    , firstOption : Option a
+    , valueToString : a -> String
     , disabled : Bool
-    , extraAttrs : List (Html.Attribute a)
+    , extraAttrs : List (Html.Attribute msg)
+    , containerAttrs : List (Html.Attribute msg)
     , problems : Maybe (List String)
     }
 
 
-type alias Option =
-    { value : String
+type alias Option a =
+    { value : a
     , label : String
     }
 
 
-viewFieldProblem : String -> Html a
+viewFieldProblem : String -> Html msg
 viewFieldProblem problem =
     li [ class "form-error absolute mr-8" ] [ text problem ]

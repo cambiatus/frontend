@@ -1,8 +1,8 @@
 module View.Form.FileUploader exposing
     ( init
-    , withAttrs, withVariant, withFileTypes
+    , withAttrs, withVariant, withBackground, withFileTypes
     , toHtml
-    , FileType(..), Variant(..)
+    , Background(..), FileType(..), Variant(..)
     )
 
 {-| Creates a Cambiatus-style file uploader that supports pictures
@@ -23,7 +23,7 @@ module View.Form.FileUploader exposing
 
 # Helpers
 
-@docs withAttrs, withVariant, withFileTypes
+@docs withAttrs, withVariant, withBackground, withFileTypes
 
 
 # Converting to HTML
@@ -57,6 +57,7 @@ type alias Options msg =
     , status : RemoteData Http.Error String
     , extraAttrs : List (Html.Attribute msg)
     , variant : Variant
+    , background : Background
     , fileTypes : List FileType
     }
 
@@ -80,6 +81,11 @@ type Variant
     | Large
 
 
+type Background
+    = Purple
+    | Gray
+
+
 type FileType
     = Image
     | PDF
@@ -95,6 +101,7 @@ init options =
     , status = options.status
     , extraAttrs = []
     , variant = Large
+    , background = Purple
     , fileTypes = [ Image ]
     }
 
@@ -115,6 +122,11 @@ withAttrs attrs options =
 withVariant : Variant -> Options msg -> Options msg
 withVariant variant options =
     { options | variant = variant }
+
+
+withBackground : Background -> Options msg -> Options msg
+withBackground background options =
+    { options | background = background }
 
 
 {-| Define the file types we can accept
@@ -172,10 +184,22 @@ acceptFileTypes fileTypes =
 
 viewLarge : Translators -> Options msg -> Html msg
 viewLarge ({ t } as translators) options =
+    let
+        ( backgroundColor, foregroundColor, icon ) =
+            case options.background of
+                Purple ->
+                    ( "bg-purple-500", "text-white", Icons.camera "" )
+
+                Gray ->
+                    ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
+    in
     div options.extraAttrs
         [ span [ class "input-label" ] [ text (t options.label) ]
         , label
-            [ class "relative bg-purple-500 w-full h-56 rounded-sm flex justify-center items-center cursor-pointer" ]
+            [ class "relative w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            , class backgroundColor
+            , class foregroundColor
+            ]
             [ input
                 [ id options.id
                 , class "hidden-img-input"
@@ -187,7 +211,7 @@ viewLarge ({ t } as translators) options =
                 []
             , case options.status of
                 RemoteData.Loading ->
-                    View.Components.loadingLogoAnimated translators "text-white"
+                    View.Components.loadingLogoAnimated translators ""
 
                 RemoteData.Success url ->
                     div [ class "w-full h-full flex items-center justify-center" ]
@@ -205,9 +229,9 @@ viewLarge ({ t } as translators) options =
                         ]
 
                 _ ->
-                    div [ class "text-white text-body font-bold text-center" ]
-                        [ div [ class "w-10 mx-auto mb-2" ] [ Icons.camera "" ]
-                        , div [ class "px-4" ] [ text (t "community.actions.proof.upload_hint") ]
+                    div [ class "text-body font-bold text-center" ]
+                        [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
+                        , div [] [ text (t "community.actions.proof.upload_hint") ]
                         ]
             ]
         ]

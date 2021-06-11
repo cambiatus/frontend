@@ -15,6 +15,7 @@ import NoBooleanCase
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoExposingEverything
+import NoFunctionOutsideOfModules
 import NoInconsistentJsAddressToMsg
 import NoInconsistentMsgToString
 import NoLeftPizza
@@ -56,6 +57,8 @@ config =
     , NoInconsistentMsgToString.rule
     , NoInconsistentJsAddressToMsg.rule
     , NoRedundantCons.rule
+    , NoFunctionOutsideOfModules.rule "Html.input" [ "View.Form.Input", "View.Form.Toggle", "View.Form.Radio", "View.Form.FileUploader", "View.Form.Checkbox" ]
+    , NoFunctionOutsideOfModules.rule "Html.select" [ "View.Form.Select" ]
     ]
         -- Ignore generated code
         |> List.map (Rule.ignoreErrorsForDirectories [ "src/elm/Cambiatus", "src/elm/Select" ])

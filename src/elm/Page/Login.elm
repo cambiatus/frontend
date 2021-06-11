@@ -187,7 +187,7 @@ viewPassphrase ({ shared } as guest) model =
                     |> Just
             , translators = shared.translators
             }
-            |> Input.withType Input.TextArea
+            |> Input.withInputType Input.TextArea
             |> Input.withAttrs
                 [ class "min-w-full block text-base"
                 , classList
@@ -215,7 +215,7 @@ viewPassphrase ({ shared } as guest) model =
             |> Input.withCounterType InputCounter.CountWords
             |> Input.withCounterAttrs [ class "text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
-            |> Input.withElement viewPasteButton
+            |> Input.withElements [ viewPasteButton ]
             |> Input.toHtml
         ]
     , div [ class "sf-footer" ]

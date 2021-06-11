@@ -23,8 +23,8 @@ import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, input, p, span, text)
-import Html.Attributes exposing (class, classList, id, src, style, type_, value)
+import Html exposing (Html, a, button, div, img, p, span, text)
+import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -45,6 +45,7 @@ import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
 import View.Feedback as Feedback
+import View.Form.Input as Input
 import View.Modal as Modal
 
 
@@ -298,14 +299,19 @@ viewInvitationModal { shared } model =
                         [ text_ "community.invite.label" ]
                     , p [ class "py-2 md:text-heading text-black" ]
                         [ text (url invitationId) ]
-                    , input
-                        [ type_ "text"
-                        , class "absolute opacity-0"
-                        , style "left" "-9999em"
-                        , id "invitation-id"
-                        , value (url invitationId)
-                        ]
-                        []
+                    , Input.init
+                        { label = ""
+                        , id = "invitation-id"
+                        , onInput = \_ -> NoOp
+                        , disabled = False
+                        , value = url invitationId
+                        , placeholder = Nothing
+                        , problems = Nothing
+                        , translators = shared.translators
+                        }
+                        |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
+                        |> Input.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                        |> Input.toHtml
                     ]
 
         footer =
@@ -684,7 +690,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
@@ -705,6 +712,9 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared, accountName } as loggedIn) =
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             UR.init
                 { model
@@ -1197,6 +1207,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
