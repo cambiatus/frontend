@@ -401,7 +401,7 @@ textarea.input {
 
 /* Claims */
 .claim-photo-thumb {
-  @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;
+  @apply cursor-pointer w-24 h-16 flex items-center justify-center rounded-sm;
 }
 
 .claim-photo-thumb:hover {

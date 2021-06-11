@@ -1363,16 +1363,16 @@ viewReward { shared } community form =
     in
     Input.init
         { label = t "community.actions.form.reward_label"
-        , id = "reward_input"
+        , id = "action_reward_field"
         , onInput = EnteredReward
         , disabled = False
         , value = getInput form.reward
         , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
-        , problems = Just (listErrors shared.translations form.reward)
+        , problems = listErrors shared.translations form.reward |> Just
         , translators = shared.translators
         }
+        |> Input.withContainerAttrs [ class "w-full sm:w-2/5" ]
         |> Input.withCurrency community.symbol
-        |> Input.withContainerAttrs [ class "sm:w-2/5" ]
         |> Input.toHtml
 
 
@@ -1666,12 +1666,12 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     ]
                 , Input.init
                     { label = t "community.actions.form.verifiers_reward_label"
-                    , id = "verifier_reward_input"
+                    , id = "verifiers_reward_field"
                     , onInput = EnteredVerifierReward
                     , disabled = False
                     , value = getInput verifierRewardValidator
                     , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
-                    , problems = Just (listErrors shared.translations verifierRewardValidator)
+                    , problems = listErrors shared.translations verifierRewardValidator |> Just
                     , translators = shared.translators
                     }
                     |> Input.withCurrency community.symbol
@@ -1680,8 +1680,8 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     [ Checkbox.init
                         { description =
                             span []
-                                [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
-                                , text (t "community.actions.form.photo_validation_hint")
+                                [ b [ class "block" ] [ text (t "community.actions.form.proof_validation") ]
+                                , text (t "community.actions.form.proof_validation_hint")
                                 ]
                         , id = "photo_proof_checkbox"
                         , value = isPhotoProofEnabled
