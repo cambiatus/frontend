@@ -1,7 +1,7 @@
 module View.Form.Input exposing
     ( init
     , withCounter, withElement, withCurrency
-    , withCounterAttrs, withErrorAttrs, withAttrs
+    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs
     , withType, withCounterType, asNumeric
     , toHtml
     , FieldType(..)
@@ -39,7 +39,7 @@ and character counters.
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withAttrs
+@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs
 
 
 ## Changing types
@@ -91,6 +91,7 @@ init options =
     , translators = options.translators
     , extraAttrs = []
     , counterAttrs = []
+    , containerAttrs = []
     , extraElement = Nothing
     , errorAttrs = []
     , fieldType = Text
@@ -112,9 +113,10 @@ toHtml options =
                     False
     in
     div
-        [ class "relative"
-        , classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
-        ]
+        (class "relative"
+            :: classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
+            :: options.containerAttrs
+        )
         [ View.Form.label options.id options.label
         , input options
         , case options.maximumCounterValue of
@@ -203,6 +205,13 @@ withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
+{-| Adds attributes to the element that contains everything else
+-}
+withContainerAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withContainerAttrs attrs options =
+    { options | containerAttrs = options.containerAttrs ++ attrs }
+
+
 {-| Adds an element to the input, so we can have elements inside the input
 
 **Note**: the element isn't inside the input by default. You should use the
@@ -277,6 +286,7 @@ type alias InputOptions a =
     , maximumCounterValue : Maybe Int
     , extraAttrs : List (Html.Attribute a)
     , counterAttrs : List (Html.Attribute a)
+    , containerAttrs : List (Html.Attribute a)
     , extraElement : Maybe (Html a)
     , errorAttrs : List (Html.Attribute a)
     , fieldType : FieldType

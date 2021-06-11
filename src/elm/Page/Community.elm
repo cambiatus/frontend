@@ -14,7 +14,7 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, id, src)
+import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
 import Icons
 import Page
@@ -213,6 +213,14 @@ viewObjective loggedIn model metadata index objective =
             else
                 " "
 
+        isDisabled =
+            case loggedIn.claimingAction.status of
+                Action.ClaimInProgress _ _ ->
+                    True
+
+                _ ->
+                    False
+
         actsNButton : List (Html Msg)
         actsNButton =
             objective.actions
@@ -223,6 +231,7 @@ viewObjective loggedIn model metadata index objective =
                             (LoggedIn.isAccount metadata.creator loggedIn)
                             loggedIn.shared.now
                             action
+                            isDisabled
                     )
     in
     if objective.isCompleted then
@@ -344,8 +353,8 @@ msgToString msg =
             [ "ClickedCloseObjective" ]
 
 
-viewAction : Translators -> Bool -> Posix -> Action -> Html Msg
-viewAction translators canEdit date action =
+viewAction : Translators -> Bool -> Posix -> Action -> Bool -> Html Msg
+viewAction translators canEdit date action isDisabled =
     let
         { t, tr } =
             translators
@@ -468,6 +477,8 @@ viewAction translators canEdit date action =
                      else
                         (GotActionMsg << Action.ClaimButtonClicked) action
                     )
+                , disabled isDisabled
+                , classList [ ( "button-disabled", isDisabled ) ]
                 ]
                 [ if action.hasProofPhoto then
                     span [ class "inline-block w-4 align-middle mr-2" ] [ Icons.camera "" ]

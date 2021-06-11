@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
-    , tooltip
+    , tooltip, pdfViewer
     , bgNoScroll, PreventScroll(..)
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip
+@docs tooltip, pdfViewer
 
 
 # Helpers
@@ -86,6 +86,34 @@ tooltip { t } tooltipMessage =
         , div [ class "icon-tooltip-content" ]
             [ text (t tooltipMessage) ]
         ]
+
+
+{-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
+with `url` as `src`. This element automatically shows a loading animation while
+it fetches the pdf. If you pass in `Translators`, there will also be a text
+under the loading animation
+-}
+pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, maybeTranslators : Maybe Translators } -> Html msg
+pdfViewer attrs { url, childClass, maybeTranslators } =
+    let
+        loadingAttributes =
+            case maybeTranslators of
+                Nothing ->
+                    []
+
+                Just { t } ->
+                    [ attribute "elm-loading-title" (t "loading.title")
+                    , attribute "elm-loading-subtitle" (t "loading.subtitle")
+                    ]
+    in
+    node "pdf-viewer"
+        (attribute "elm-url" url
+            :: attribute "elm-child-class" childClass
+            :: class "flex flex-col items-center justify-center"
+            :: loadingAttributes
+            ++ attrs
+        )
+        []
 
 
 
