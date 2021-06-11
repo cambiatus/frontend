@@ -17,7 +17,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, form, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, maxlength)
+import Html.Attributes exposing (class, classList, disabled, maxlength, required)
 import Html.Events exposing (onSubmit)
 import Http
 import Json.Decode as Decode exposing (Value)
@@ -763,6 +763,7 @@ viewName shared model =
                 |> Maybe.map List.singleton
         , translators = shared.translators
         }
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
@@ -854,6 +855,7 @@ viewSubdomain shared model =
             |> Input.withAttrs
                 [ maxlength 30
                 , classList [ ( "pr-29", not <| String.isEmpty model.subdomainInput ) ]
+                , required True
                 ]
             |> Input.withElements
                 [ span
@@ -913,6 +915,7 @@ viewInviterReward { translators } symbol model =
         , translators = translators
         }
         |> Input.withCurrency symbol
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
@@ -936,6 +939,7 @@ viewInvitedReward { translators } symbol model =
         , translators = translators
         }
         |> Input.withCurrency symbol
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
