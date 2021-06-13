@@ -58,6 +58,7 @@ type alias Model =
     , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
+    , selectedTab : Tab
     , filters : Filter
     , filterProfileSummary : Profile.Summary.Model
     }
@@ -69,6 +70,7 @@ initModel =
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
+    , selectedTab = WaitingToVote
     , filters = initFilter
     , filterProfileSummary = Profile.Summary.init False
     }
@@ -78,7 +80,6 @@ type alias LoadedModel =
     { claims : List Claim.Model
     , profileSummaries : List Profile.Summary.Model
     , pageInfo : Maybe Api.Relay.PageInfo
-    , selectedTab : Tab
     , tabCounts : List ( Tab, Int )
     }
 
@@ -155,38 +156,49 @@ view ({ shared } as loggedIn) model =
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading shared
+                    [ Page.fullPageLoading shared ]
 
                 Loaded loadedModel ->
-                    div []
-                        (Page.viewHeader loggedIn pageTitle
-                            :: viewContent loggedIn loadedModel model
-                        )
+                    viewContent loggedIn loadedModel model
 
                 Failed ->
-                    Page.fullPageError (t "all_analysis.error") Http.Timeout
+                    [ div [ class "text-center container mx-auto" ]
+                        [ Page.fullPageError (t "all_analysis.error") Http.Timeout
+                        ]
+                    ]
     in
     { title = pageTitle
-    , content = content
+    , content =
+        div []
+            (Page.viewHeader loggedIn pageTitle
+                :: viewHeaderAndOptions loggedIn model
+                ++ content
+            )
     }
 
 
+viewHeaderAndOptions : LoggedIn.Model -> Model -> List (Html Msg)
+viewHeaderAndOptions loggedIn model =
+    [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
+        [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
+            [ viewGoodPracticesCard
+            , viewTabSelector model
+            ]
+        ]
+    , div [ class "container mx-auto px-4" ]
+        [ viewFilters loggedIn model ]
+    ]
+
+
 viewContent : LoggedIn.Model -> LoadedModel -> Model -> List (Html Msg)
-viewContent loggedIn ({ claims, profileSummaries, pageInfo } as loadedModel) model =
+viewContent loggedIn { claims, profileSummaries, pageInfo } model =
     let
         viewClaim profileSummary claimIndex claim =
             Claim.viewClaimCard loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
     in
-    [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
-        [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-            [ viewGoodPracticesCard
-            , viewTabSelector loadedModel
-            ]
-        ]
-    , div [ class "container mx-auto px-4 mb-10" ]
-        [ viewFilters loggedIn model
-        , if List.length claims > 0 then
+    [ div [ class "container mx-auto px-4 mb-10" ]
+        [ if List.length claims > 0 then
             div []
                 [ div [ class "flex flex-wrap -mx-2" ]
                     (List.map3 viewClaim
@@ -241,26 +253,31 @@ viewGoodPracticesCard =
         ]
 
 
-viewTabSelector : LoadedModel -> Html Msg
-viewTabSelector loadedModel =
+viewTabSelector : Model -> Html Msg
+viewTabSelector model =
     let
         viewTab isLeft isRight tab =
             let
                 isActive =
-                    tab == loadedModel.selectedTab
+                    tab == model.selectedTab
 
                 count =
-                    List.filterMap
-                        (\( tab_, tabCount ) ->
-                            if tab_ == tab then
-                                Just (" (" ++ String.fromInt tabCount ++ ")")
+                    case model.status of
+                        Loaded loadedModel ->
+                            List.filterMap
+                                (\( tab_, tabCount ) ->
+                                    if tab_ == tab then
+                                        Just (" (" ++ String.fromInt tabCount ++ ")")
 
-                            else
-                                Nothing
-                        )
-                        loadedModel.tabCounts
-                        |> List.head
-                        |> Maybe.withDefault ""
+                                    else
+                                        Nothing
+                                )
+                                loadedModel.tabCounts
+                                |> List.head
+                                |> Maybe.withDefault ""
+
+                        _ ->
+                            ""
 
                 label =
                     case tab of
@@ -273,10 +290,10 @@ viewTabSelector loadedModel =
                             "Analyzed"
             in
             button
-                [ class "text-center py-3 px-8 w-1/2 focus:outline-none transition-colors duration-300"
+                [ class "text-center py-3 px-8 w-1/2 focus:outline-none"
                 , classList
-                    [ ( "bg-orange-300 text-white", isActive )
-                    , ( "bg-gray-100 text-black", not isActive )
+                    [ ( "bg-orange-300 text-white cursor-default", isActive )
+                    , ( "bg-gray-100 text-black hover:bg-gray-200", not isActive )
                     , ( "rounded-l-full", isLeft )
                     , ( "rounded-r-full", isRight )
                     ]
@@ -294,68 +311,57 @@ viewTabSelector loadedModel =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
-        { t } =
-            shared.translators
+        filterDirectionIcon =
+            case model.filters.direction of
+                ASC ->
+                    Icons.sortAscending
 
-        text_ s =
-            text (t s)
+                DESC ->
+                    Icons.sortDescending
+
+        viewFilterButton label icon onClickMsg =
+            button
+                [ class "button button-secondary flex-grow-1 justify-between pl-4"
+                , onClick onClickMsg
+                ]
+                [ text (shared.translators.t label)
+                , icon
+                ]
     in
-    div [ class "mt-4 mb-12" ]
-        [ div []
-            [ span [ class "input-label" ]
-                [ text_ "all_analysis.filter.user" ]
-            , case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        selectedUsers =
-                            Maybe.map (\v -> [ v ]) model.filters.profile
-                                |> Maybe.withDefault []
-                    in
-                    div []
-                        [ Html.map SelectMsg
-                            (Select.view
-                                (selectConfiguration shared False)
-                                model.autoCompleteState
-                                community.members
-                                selectedUsers
-                            )
-                        , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
-                        ]
-
-                _ ->
-                    text ""
-            ]
-        , Select.init
-            { id = "status_filter_select"
-            , label = t "all_analysis.filter.status.label"
-            , onInput = SelectStatusFilter
-            , firstOption = { value = All, label = t "all_analysis.all" }
-            , value = model.filters.statusFilter
-            , valueToString = statusFilterToString
-            , disabled = False
-            , problems = Nothing
-            }
-            |> Select.withOptions
-                [ { value = Approved, label = t "all_analysis.approved" }
-                , { value = Rejected, label = t "all_analysis.disapproved" }
-                , { value = Pending, label = t "all_analysis.pending" }
-                ]
-            |> Select.withContainerAttrs [ class "mt-6" ]
-            |> Select.toHtml
-        , div [ class "mt-6" ]
-            [ button
-                [ class "w-full button button-secondary relative"
-                , onClick ToggleSorting
-                ]
-                [ if model.filters.direction == ASC then
-                    text_ "all_analysis.filter.sort.asc"
-
-                  else
-                    text_ "all_analysis.filter.sort.desc"
-                , Icons.sortDirection "absolute right-1"
-                ]
-            ]
+    div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
+        [ viewFilterButton "Filters" (Icons.arrowDown "fill-current") ToggleSorting -- TODO - Fix label
+        , viewFilterButton "Sort by" (filterDirectionIcon "mr-2") ToggleSorting -- TODO - Fix label
         ]
+
+
+
+--         _ ->
+--             text ""
+--     ]
+-- , Select.init
+--     { id = "status_filter_select"
+--     , label = t "all_analysis.filter.status.label"
+--     , onInput = SelectStatusFilter
+--     , firstOption = { value = All, label = t "all_analysis.all" }
+--     , value = model.filters.statusFilter
+--     , valueToString = statusFilterToString
+--     , disabled = False
+--     , problems = Nothing
+--     }
+--     |> Select.withOptions
+--         [ { value = Approved, label = t "all_analysis.approved" }
+--         , { value = Rejected, label = t "all_analysis.disapproved" }
+--         , { value = Pending, label = t "all_analysis.pending" }
+--         ]
+--     |> Select.withContainerAttrs [ class "mt-6" ]
+--     |> Select.toHtml
+-- , div [ class "mt-6" ]
+--     [ button
+--         [ class "w-full button button-secondary relative"
+--         , onClick ToggleSorting
+--         ]
+--         [ if model.filters.direction == ASC then
+--             text_ "all_analysis.filter.sort.asc"
 
 
 viewEmptyResults : LoggedIn.Model -> Html Msg
@@ -450,8 +456,7 @@ update msg model loggedIn =
                                 { claims = newClaims
                                 , profileSummaries = initProfileSummaries newClaims
                                 , pageInfo = Claim.paginatedPageInfo results
-                                , selectedTab = WaitingToVote
-                                , tabCounts = [] -- TODO
+                                , tabCounts = [ ( WaitingToVote, 2 ), ( Analyzed, 15 ) ] -- TODO
                                 }
                         , reloadOnNextQuery = False
                     }
@@ -464,8 +469,7 @@ update msg model loggedIn =
                                 { claims = Claim.paginatedToList results
                                 , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
                                 , pageInfo = Claim.paginatedPageInfo results
-                                , selectedTab = WaitingToVote
-                                , tabCounts = [] -- TODO
+                                , tabCounts = [ ( WaitingToVote, 2 ), ( Analyzed, 15 ) ] -- TODO
                                 }
                         , reloadOnNextQuery = False
                     }
@@ -610,13 +614,9 @@ update msg model loggedIn =
                 |> UR.addCmd cmd
 
         SelectedTab tab ->
-            case model.status of
-                Loaded loadedModel ->
-                    { model | status = Loaded { loadedModel | selectedTab = tab } }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
+            -- TODO - Query again
+            { model | selectedTab = tab }
+                |> UR.init
 
         OnSelectVerifier maybeProfile ->
             let
