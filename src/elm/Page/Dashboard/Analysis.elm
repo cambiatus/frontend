@@ -21,7 +21,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, li, span, text, ul)
-import Html.Attributes exposing (class, classList, src, value)
+import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode exposing (Value)
@@ -62,7 +62,9 @@ type alias Model =
     , selectedTab : Tab
     , showFilterModal : Bool
     , filters : Filter
+    , filtersBeingEdited : Filter
     , filterProfileSummary : Profile.Summary.Model
+    , direction : FilterDirection
     }
 
 
@@ -75,9 +77,11 @@ initModel =
     , selectedTab = WaitingToVote
     , showFilterModal = False
     , filters = initFilter
+    , filtersBeingEdited = initFilter
     , filterProfileSummary =
         Profile.Summary.init False
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+    , direction = DESC
     }
 
 
@@ -102,7 +106,6 @@ allTabs =
 type alias Filter =
     { profile : Maybe Profile.Minimal
     , statusFilter : StatusFilter
-    , direction : FilterDirection
     }
 
 
@@ -113,14 +116,13 @@ type FilterDirection
 
 initFilter : Filter
 initFilter =
-    { profile = Nothing, statusFilter = All, direction = DESC }
+    { profile = Nothing, statusFilter = All }
 
 
 type StatusFilter
     = All
     | Approved
     | Rejected
-    | Pending
 
 
 statusFilterToString : StatusFilter -> String
@@ -134,9 +136,6 @@ statusFilterToString filter =
 
         Rejected ->
             "rejected"
-
-        Pending ->
-            "pending"
 
 
 
@@ -152,22 +151,23 @@ view ({ shared } as loggedIn) model =
         pageTitle =
             t "all_analysis.title"
 
+        viewLoading =
+            div [ class "mb-10" ] [ Page.fullPageLoading shared ]
+
         content =
             case model.status of
                 RemoteData.NotAsked ->
-                    [ Page.fullPageLoading shared ]
+                    [ viewLoading ]
 
                 RemoteData.Loading ->
-                    [ Page.fullPageLoading shared ]
+                    [ viewLoading ]
 
                 RemoteData.Success loadedModel ->
                     viewContent loggedIn loadedModel model
 
                 RemoteData.Failure err ->
-                    -- TODO - Check this
                     [ div [ class "text-center container mx-auto" ]
-                        [ Page.fullPageGraphQLError (t "all_analysis.error") err
-                        ]
+                        [ Page.fullPageGraphQLError (t "all_analysis.error") err ]
                     ]
     in
     { title = pageTitle
@@ -190,7 +190,7 @@ viewHeaderAndOptions loggedIn model =
             ]
         ]
     , div [ class "container mx-auto px-4" ]
-        [ viewFilters loggedIn model ]
+        [ viewFilterAndOrder loggedIn model ]
     ]
 
 
@@ -312,18 +312,18 @@ viewTabSelector model =
         )
 
 
-viewFilters : LoggedIn.Model -> Model -> Html Msg
-viewFilters { shared } model =
+viewFilterAndOrder : LoggedIn.Model -> Model -> Html Msg
+viewFilterAndOrder { shared } model =
     let
         filterDirectionIcon =
-            case model.filters.direction of
+            case model.direction of
                 ASC ->
                     Icons.sortAscending
 
                 DESC ->
                     Icons.sortDescending
 
-        viewFilterButton label icon onClickMsg =
+        viewButton label icon onClickMsg =
             button
                 [ class "button button-secondary flex-grow-1 justify-between pl-4"
                 , onClick onClickMsg
@@ -333,8 +333,8 @@ viewFilters { shared } model =
                 ]
     in
     div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
-        [ viewFilterButton "Filters" (Icons.arrowDown "fill-current") OpenedFilterModal -- TODO - Fix label
-        , viewFilterButton "Sort by" (filterDirectionIcon "mr-2") ToggleSorting -- TODO - Fix label
+        [ viewButton "Filters" (Icons.arrowDown "fill-current") OpenedFilterModal -- TODO - Fix label
+        , viewButton "Sort by" (filterDirectionIcon "mr-2") ToggleSorting -- TODO - Fix label
         ]
 
 
@@ -351,6 +351,14 @@ viewFiltersModal ({ shared } as loggedIn) model =
 
                 Analyzed ->
                     True
+
+        showUserSelect =
+            case model.selectedTab of
+                WaitingToVote ->
+                    True
+
+                Analyzed ->
+                    False
     in
     Modal.initWith
         { closeMsg = ClosedFilterModal
@@ -361,47 +369,51 @@ viewFiltersModal ({ shared } as loggedIn) model =
         |> Modal.withCloseButtonAttrs [ class "mx-5" ]
         -- TODO - I18N
         |> Modal.withBody
-            [ div
-                -- overflow-y-hidden makes it so overflow-x is interpreted as
-                -- auto, so we need a minimal amount of padding for the focus
-                -- ring not to be cropped
-                [ class "px-1"
-                , classList [ ( "overflow-y-hidden", not showFilterSelect ) ]
-                ]
-                (span [ class "input-label" ]
-                    [ text (t "all_analysis.filter.user") ]
-                    :: (case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                let
-                                    selectedUsers =
-                                        Maybe.map (\v -> [ v ]) model.filters.profile
-                                            |> Maybe.withDefault []
+            [ if not showUserSelect then
+                text ""
 
-                                    addRelativeMenuClass =
-                                        if not showFilterSelect && List.isEmpty selectedUsers then
-                                            Select.withMenuClass "!relative"
+              else
+                div
+                    -- overflow-y-hidden makes it so overflow-x is interpreted as
+                    -- auto, so we need a minimal amount of padding for the focus
+                    -- ring not to be cropped
+                    [ class "px-1"
+                    , classList [ ( "overflow-y-hidden", not showFilterSelect ) ]
+                    ]
+                    (span [ class "input-label" ]
+                        [ text (t "all_analysis.filter.user") ]
+                        :: (case loggedIn.selectedCommunity of
+                                RemoteData.Success community ->
+                                    let
+                                        selectedUsers =
+                                            Maybe.map (\v -> [ v ]) model.filtersBeingEdited.profile
+                                                |> Maybe.withDefault []
 
-                                        else
-                                            identity
-                                in
-                                [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
-                                    [ Html.map SelectMsg
-                                        (Select.view
-                                            (selectConfiguration shared False
-                                                |> addRelativeMenuClass
+                                        addRelativeMenuClass =
+                                            if not showFilterSelect && List.isEmpty selectedUsers then
+                                                Select.withMenuClass "!relative"
+
+                                            else
+                                                identity
+                                    in
+                                    [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
+                                        [ Html.map SelectMsg
+                                            (Select.view
+                                                (selectConfiguration shared False
+                                                    |> addRelativeMenuClass
+                                                )
+                                                model.autoCompleteState
+                                                community.members
+                                                selectedUsers
                                             )
-                                            model.autoCompleteState
-                                            community.members
-                                            selectedUsers
-                                        )
-                                    , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
+                                        , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
+                                        ]
                                     ]
-                                ]
 
-                            _ ->
-                                []
-                       )
-                )
+                                _ ->
+                                    []
+                           )
+                    )
             , if not showFilterSelect then
                 text ""
 
@@ -445,7 +457,7 @@ viewEmptyResults { shared } =
             ]
         , div [ class "inline-block text-gray" ]
             [ text_ "all_analysis.empty"
-            , span [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
+            , button [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
             ]
         ]
 
@@ -555,7 +567,7 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing community)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg claimIndex m ->
@@ -686,9 +698,31 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedApplyFilters ->
-            -- TODO
-            { model | showFilterModal = False }
-                |> UR.init
+            if model.filtersBeingEdited == model.filters then
+                { model | showFilterModal = False }
+                    |> UR.init
+
+            else
+                let
+                    newModel =
+                        { model
+                            | showFilterModal = False
+                            , filters = model.filtersBeingEdited
+                            , reloadOnNextQuery = True
+                            , status = RemoteData.Loading
+                        }
+
+                    addFetchCommand =
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing community)
+
+                            _ ->
+                                identity
+                in
+                newModel
+                    |> UR.init
+                    |> addFetchCommand
 
         SelectMsg subMsg ->
             let
@@ -699,16 +733,34 @@ update msg model loggedIn =
                 |> UR.addCmd cmd
 
         SelectedTab tab ->
-            -- TODO - Query again
-            { model | selectedTab = tab }
+            let
+                newModel =
+                    { model
+                        | selectedTab = tab
+                        , filters = initFilter
+                        , filtersBeingEdited = initFilter
+                        , status = RemoteData.Loading
+                        , reloadOnNextQuery = True
+                    }
+
+                addFetchCommand =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing community)
+
+                        _ ->
+                            identity
+            in
+            newModel
                 |> UR.init
+                |> addFetchCommand
 
         OnSelectVerifier maybeProfile ->
             let
                 oldFilters =
-                    model.filters
+                    model.filtersBeingEdited
             in
-            { model | filters = { oldFilters | profile = maybeProfile } }
+            { model | filtersBeingEdited = { oldFilters | profile = maybeProfile } }
                 |> UR.init
 
         ShowMore ->
@@ -721,42 +773,36 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor community)
+                        |> UR.addCmd (fetchAnalysis loggedIn model cursor community)
 
                 _ ->
                     UR.init model
 
         ClearSelectSelection ->
-            case ( model.status, loggedIn.selectedCommunity ) of
-                ( RemoteData.Success _, RemoteData.Success community ) ->
-                    let
-                        oldFilters =
-                            model.filters
-
-                        newModel =
-                            { model
-                                | status = RemoteData.Loading
-                                , filters = { oldFilters | profile = Nothing }
-                                , reloadOnNextQuery = True
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
-
-                _ ->
-                    UR.init model
+            let
+                oldFilters =
+                    model.filtersBeingEdited
+            in
+            { model | filtersBeingEdited = { oldFilters | profile = Nothing } }
+                |> UR.init
 
         SelectStatusFilter statusFilter ->
             let
                 oldFilters =
-                    model.filters
+                    model.filtersBeingEdited
+            in
+            { model | filtersBeingEdited = { oldFilters | statusFilter = statusFilter } }
+                |> UR.init
 
+        ClearFilters ->
+            let
                 newModel =
                     { model
-                        | filters = { oldFilters | statusFilter = statusFilter }
-                        , status = RemoteData.Loading
+                        | filters = initFilter
+                        , filtersBeingEdited = initFilter
+                        , direction = DESC
                         , reloadOnNextQuery = True
+                        , status = RemoteData.Loading
                     }
             in
             newModel
@@ -764,23 +810,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel.filters Nothing community
-
-                        _ ->
-                            Cmd.none
-                    )
-
-        ClearFilters ->
-            { model
-                | filters = initFilter
-                , reloadOnNextQuery = True
-                , status = RemoteData.Loading
-            }
-                |> UR.init
-                |> UR.addCmd
-                    (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            fetchAnalysis loggedIn initFilter Nothing community
+                            fetchAnalysis loggedIn newModel Nothing community
 
                         _ ->
                             Cmd.none
@@ -788,11 +818,8 @@ update msg model loggedIn =
 
         ToggleSorting ->
             let
-                oldFilters =
-                    model.filters
-
                 sortDirection =
-                    if model.filters.direction == ASC then
+                    if model.direction == ASC then
                         DESC
 
                     else
@@ -800,7 +827,7 @@ update msg model loggedIn =
 
                 newModel =
                     { model
-                        | filters = { oldFilters | direction = sortDirection }
+                        | direction = sortDirection
                         , reloadOnNextQuery = True
                         , status = RemoteData.Loading
                     }
@@ -808,7 +835,7 @@ update msg model loggedIn =
                 fetchCmd =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel.filters Nothing community
+                            fetchAnalysis loggedIn newModel Nothing community
 
                         _ ->
                             Cmd.none
@@ -822,11 +849,11 @@ update msg model loggedIn =
                 |> UR.init
 
 
-fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
-fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
+fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Community.Model -> Cmd Msg
+fetchAnalysis { shared, authToken } model maybeCursorAfter community =
     let
         optionalClaimer =
-            case profile of
+            case model.filters.profile of
                 Just p ->
                     Present (Eos.nameToString p.account)
 
@@ -834,7 +861,7 @@ fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCu
                     Absent
 
         optionalStatus =
-            case statusFilter of
+            case model.filters.statusFilter of
                 All ->
                     Absent
 
@@ -844,20 +871,13 @@ fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCu
                 Rejected ->
                     Present "rejected"
 
-                Pending ->
-                    Present "pending"
+        direction =
+            case model.direction of
+                ASC ->
+                    Cambiatus.Enum.Direction.Asc
 
-        filterRecord =
-            { claimer = optionalClaimer
-            , status = optionalStatus
-            , direction =
-                case direction of
-                    ASC ->
-                        Present Cambiatus.Enum.Direction.Asc
-
-                    DESC ->
-                        Present Cambiatus.Enum.Direction.Desc
-            }
+                DESC ->
+                    Cambiatus.Enum.Direction.Desc
 
         required =
             { communityId = Eos.symbolToString community.symbol }
@@ -870,20 +890,43 @@ fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCu
                 else
                     Just (Present s)
 
-        optionals =
-            \opts ->
-                { opts
-                    | first = Present 16
-                    , after =
-                        Maybe.andThen mapFn maybeCursorAfter
-                            |> Maybe.withDefault Absent
-                    , filter = Present filterRecord
-                }
+        query =
+            case model.selectedTab of
+                WaitingToVote ->
+                    let
+                        optionals =
+                            \opts ->
+                                { opts
+                                    | first = Present 16
+                                    , after =
+                                        Maybe.andThen mapFn maybeCursorAfter
+                                            |> Maybe.withDefault Absent
+                                    , filter = Present { direction = Present direction }
+                                }
+                    in
+                    Cambiatus.Query.claimsAnalysis optionals required Claim.claimPaginatedSelectionSet
+
+                Analyzed ->
+                    let
+                        filterRecord =
+                            { claimer = optionalClaimer
+                            , status = optionalStatus
+                            , direction = Present direction
+                            }
+
+                        optionals =
+                            \opts ->
+                                { opts
+                                    | first = Present 16
+                                    , after =
+                                        Maybe.andThen mapFn maybeCursorAfter
+                                            |> Maybe.withDefault Absent
+                                    , filter = Present filterRecord
+                                }
+                    in
+                    Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet
     in
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet)
-        ClaimsLoaded
+    Api.Graphql.query shared (Just authToken) query ClaimsLoaded
 
 
 
