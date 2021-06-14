@@ -414,7 +414,7 @@ withMenuClass : String -> Config msg item -> Config msg item
 withMenuClass classes config =
     let
         fn c =
-            { c | menuClass = classes }
+            { c | menuClass = String.join " " [ c.menuClass, classes ] }
     in
     mapConfig fn config
 

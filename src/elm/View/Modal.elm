@@ -2,8 +2,10 @@ module View.Modal exposing
     ( initWith
     , toHtml
     , withBody
+    , withCloseButtonAttrs
     , withFooter
     , withHeader
+    , withHeaderAttrs
     , withLarge
     , withPreventScrolling
     )
@@ -50,6 +52,8 @@ type alias Options msg =
     , isVisible : Bool
     , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
+    , headerAttrs : List (Html.Attribute msg)
+    , closeButtonAttrs : List (Html.Attribute msg)
     }
 
 
@@ -79,6 +83,8 @@ initWith reqOpts =
         , header = Nothing
         , body = Nothing
         , footer = Nothing
+        , headerAttrs = []
+        , closeButtonAttrs = []
         }
 
 
@@ -111,6 +117,16 @@ withPreventScrolling preventScrolling (Modal options) =
     Modal { options | preventScrolling = preventScrolling }
 
 
+withHeaderAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
+withHeaderAttrs attrs (Modal options) =
+    Modal { options | headerAttrs = options.headerAttrs ++ attrs }
+
+
+withCloseButtonAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
+withCloseButtonAttrs attrs (Modal options) =
+    Modal { options | closeButtonAttrs = options.closeButtonAttrs ++ attrs }
+
+
 
 -- VIEW
 
@@ -130,7 +146,7 @@ viewModalDetails options =
         header =
             case options.header of
                 Just h ->
-                    h3 [ class "modal-header" ]
+                    h3 (class "modal-header" :: options.headerAttrs)
                         [ text h ]
 
                 Nothing ->
@@ -169,9 +185,10 @@ viewModalDetails options =
             , classList [ ( "modal-content-lg", options.isLarge ) ]
             ]
             [ button
-                [ class "absolute top-0 right-0 mx-4 my-4"
-                , onClickNoBubble options.closeMsg
-                ]
+                (class "absolute top-0 right-0 mx-4 my-4"
+                    :: onClickNoBubble options.closeMsg
+                    :: options.closeButtonAttrs
+                )
                 [ Icons.close "text-gray-400 fill-current"
                 ]
             , header

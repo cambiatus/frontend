@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling)
 
 import Avatar
 import Eos.Account as Eos
@@ -21,6 +21,7 @@ import View.Modal as Modal
 type alias Model =
     { isExpanded : Bool
     , isLarge : Bool
+    , preventScrolling : View.Components.PreventScroll
     }
 
 
@@ -28,6 +29,7 @@ init : Bool -> Model
 init isLarge =
     { isExpanded = False
     , isLarge = isLarge
+    , preventScrolling = View.Components.PreventScrollOnMobile
     }
 
 
@@ -60,6 +62,11 @@ update msg model =
             { model | isExpanded = False }
 
 
+withPreventScrolling : View.Components.PreventScroll -> Model -> Model
+withPreventScrolling preventScrolling model =
+    { model | preventScrolling = preventScrolling }
+
+
 
 -- VIEW
 
@@ -81,7 +88,7 @@ mobileView shared loggedInAccount profile model =
                 [ div [ class "pt-14" ]
                     [ viewUserInfo profile ]
                 ]
-            |> Modal.withPreventScrolling View.Components.PreventScrollOnMobile
+            |> Modal.withPreventScrolling model.preventScrolling
             |> Modal.toHtml
         ]
 

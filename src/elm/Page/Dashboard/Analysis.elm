@@ -23,7 +23,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, li, span, text, ul)
 import Html.Attributes exposing (class, classList, src, value)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -38,8 +37,10 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Form.Select as Select
+import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -54,11 +55,12 @@ init loggedIn =
 
 
 type alias Model =
-    { status : Status
+    { status : RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) LoadedModel
     , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , selectedTab : Tab
+    , showFilterModal : Bool
     , filters : Filter
     , filterProfileSummary : Profile.Summary.Model
     }
@@ -66,13 +68,16 @@ type alias Model =
 
 initModel : Model
 initModel =
-    { status = Loading
+    { status = RemoteData.Loading
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , selectedTab = WaitingToVote
+    , showFilterModal = False
     , filters = initFilter
-    , filterProfileSummary = Profile.Summary.init False
+    , filterProfileSummary =
+        Profile.Summary.init False
+            |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
     }
 
 
@@ -82,12 +87,6 @@ type alias LoadedModel =
     , pageInfo : Maybe Api.Relay.PageInfo
     , tabCounts : List ( Tab, Int )
     }
-
-
-type Status
-    = Loading
-    | Loaded LoadedModel
-    | Failed
 
 
 type Tab
@@ -155,15 +154,19 @@ view ({ shared } as loggedIn) model =
 
         content =
             case model.status of
-                Loading ->
+                RemoteData.NotAsked ->
                     [ Page.fullPageLoading shared ]
 
-                Loaded loadedModel ->
+                RemoteData.Loading ->
+                    [ Page.fullPageLoading shared ]
+
+                RemoteData.Success loadedModel ->
                     viewContent loggedIn loadedModel model
 
-                Failed ->
+                RemoteData.Failure err ->
+                    -- TODO - Check this
                     [ div [ class "text-center container mx-auto" ]
-                        [ Page.fullPageError (t "all_analysis.error") Http.Timeout
+                        [ Page.fullPageGraphQLError (t "all_analysis.error") err
                         ]
                     ]
     in
@@ -171,6 +174,7 @@ view ({ shared } as loggedIn) model =
     , content =
         div []
             (Page.viewHeader loggedIn pageTitle
+                :: viewFiltersModal loggedIn model
                 :: viewHeaderAndOptions loggedIn model
                 ++ content
             )
@@ -263,7 +267,7 @@ viewTabSelector model =
 
                 count =
                     case model.status of
-                        Loaded loadedModel ->
+                        RemoteData.Success loadedModel ->
                             List.filterMap
                                 (\( tab_, tabCount ) ->
                                     if tab_ == tab then
@@ -309,7 +313,7 @@ viewTabSelector model =
 
 
 viewFilters : LoggedIn.Model -> Model -> Html Msg
-viewFilters ({ shared } as loggedIn) model =
+viewFilters { shared } model =
     let
         filterDirectionIcon =
             case model.filters.direction of
@@ -329,39 +333,104 @@ viewFilters ({ shared } as loggedIn) model =
                 ]
     in
     div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
-        [ viewFilterButton "Filters" (Icons.arrowDown "fill-current") ToggleSorting -- TODO - Fix label
+        [ viewFilterButton "Filters" (Icons.arrowDown "fill-current") OpenedFilterModal -- TODO - Fix label
         , viewFilterButton "Sort by" (filterDirectionIcon "mr-2") ToggleSorting -- TODO - Fix label
         ]
 
 
+viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
+viewFiltersModal ({ shared } as loggedIn) model =
+    let
+        { t } =
+            shared.translators
 
---         _ ->
---             text ""
---     ]
--- , Select.init
---     { id = "status_filter_select"
---     , label = t "all_analysis.filter.status.label"
---     , onInput = SelectStatusFilter
---     , firstOption = { value = All, label = t "all_analysis.all" }
---     , value = model.filters.statusFilter
---     , valueToString = statusFilterToString
---     , disabled = False
---     , problems = Nothing
---     }
---     |> Select.withOptions
---         [ { value = Approved, label = t "all_analysis.approved" }
---         , { value = Rejected, label = t "all_analysis.disapproved" }
---         , { value = Pending, label = t "all_analysis.pending" }
---         ]
---     |> Select.withContainerAttrs [ class "mt-6" ]
---     |> Select.toHtml
--- , div [ class "mt-6" ]
---     [ button
---         [ class "w-full button button-secondary relative"
---         , onClick ToggleSorting
---         ]
---         [ if model.filters.direction == ASC then
---             text_ "all_analysis.filter.sort.asc"
+        showFilterSelect =
+            case model.selectedTab of
+                WaitingToVote ->
+                    False
+
+                Analyzed ->
+                    True
+    in
+    Modal.initWith
+        { closeMsg = ClosedFilterModal
+        , isVisible = model.showFilterModal
+        }
+        |> Modal.withHeader "Filters"
+        |> Modal.withHeaderAttrs [ class "px-5" ]
+        |> Modal.withCloseButtonAttrs [ class "mx-5" ]
+        -- TODO - I18N
+        |> Modal.withBody
+            [ div
+                -- overflow-y-hidden makes it so overflow-x is interpreted as
+                -- auto, so we need a minimal amount of padding for the focus
+                -- ring not to be cropped
+                [ class "px-1"
+                , classList [ ( "overflow-y-hidden", not showFilterSelect ) ]
+                ]
+                (span [ class "input-label" ]
+                    [ text (t "all_analysis.filter.user") ]
+                    :: (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                let
+                                    selectedUsers =
+                                        Maybe.map (\v -> [ v ]) model.filters.profile
+                                            |> Maybe.withDefault []
+
+                                    addRelativeMenuClass =
+                                        if not showFilterSelect && List.isEmpty selectedUsers then
+                                            Select.withMenuClass "!relative"
+
+                                        else
+                                            identity
+                                in
+                                [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
+                                    [ Html.map SelectMsg
+                                        (Select.view
+                                            (selectConfiguration shared False
+                                                |> addRelativeMenuClass
+                                            )
+                                            model.autoCompleteState
+                                            community.members
+                                            selectedUsers
+                                        )
+                                    , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
+                                    ]
+                                ]
+
+                            _ ->
+                                []
+                       )
+                )
+            , if not showFilterSelect then
+                text ""
+
+              else
+                Select.init
+                    { id = "status_filter_select"
+                    , label = t "all_analysis.filter.status.label"
+                    , onInput = SelectStatusFilter
+                    , firstOption = { value = All, label = t "all_analysis.all" }
+                    , value = model.filters.statusFilter
+                    , valueToString = statusFilterToString
+                    , disabled = False
+                    , problems = Nothing
+                    }
+                    |> Select.withOptions
+                        [ { value = Approved, label = t "all_analysis.approved" }
+                        , { value = Rejected, label = t "all_analysis.disapproved" }
+                        ]
+                    |> Select.withContainerAttrs [ class "mt-6" ]
+                    |> Select.toHtml
+            , div [ class "px-1" ]
+                [ button
+                    [ class "button button-primary w-full"
+                    , onClick ClickedApplyFilters
+                    ]
+                    [ text "Apply" ]
+                ]
+            ]
+        |> Modal.toHtml
 
 
 viewEmptyResults : LoggedIn.Model -> Html Msg
@@ -420,6 +489,9 @@ type Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | OpenedFilterModal
+    | ClosedFilterModal
+    | ClickedApplyFilters
     | SelectMsg (Select.Msg Profile.Minimal)
     | SelectedTab Tab
     | OnSelectVerifier (Maybe Profile.Minimal)
@@ -441,7 +513,7 @@ update msg model loggedIn =
                         |> Profile.Summary.initMany False
             in
             case model.status of
-                Loaded { claims } ->
+                RemoteData.Success { claims } ->
                     let
                         newClaims =
                             if model.reloadOnNextQuery then
@@ -452,7 +524,7 @@ update msg model loggedIn =
                     in
                     { model
                         | status =
-                            Loaded
+                            RemoteData.Success
                                 { claims = newClaims
                                 , profileSummaries = initProfileSummaries newClaims
                                 , pageInfo = Claim.paginatedPageInfo results
@@ -465,7 +537,7 @@ update msg model loggedIn =
                 _ ->
                     { model
                         | status =
-                            Loaded
+                            RemoteData.Success
                                 { claims = Claim.paginatedToList results
                                 , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
                                 , pageInfo = Claim.paginatedPageInfo results
@@ -475,8 +547,8 @@ update msg model loggedIn =
                     }
                         |> UR.init
 
-        ClaimsLoaded (RemoteData.Failure _) ->
-            { model | status = Failed } |> UR.init
+        ClaimsLoaded (RemoteData.Failure err) ->
+            { model | status = RemoteData.Failure err } |> UR.init
 
         ClaimsLoaded _ ->
             UR.init model
@@ -498,10 +570,10 @@ update msg model loggedIn =
 
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded ({ profileSummaries } as loadedModel), Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( RemoteData.Success ({ profileSummaries } as loadedModel), Claim.GotProfileSummaryMsg subMsg ) ->
                             { model
                                 | status =
-                                    Loaded
+                                    RemoteData.Success
                                         { loadedModel
                                             | profileSummaries =
                                                 List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries
@@ -518,7 +590,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ ->
+                RemoteData.Success _ ->
                     let
                         newModel =
                             { model
@@ -553,7 +625,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded ({ claims } as loadedModel) ->
+                RemoteData.Success ({ claims } as loadedModel) ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -576,7 +648,7 @@ update msg model loggedIn =
                                         (\_ -> claim)
                                         claims
                             in
-                            { model | status = Loaded { loadedModel | claims = updatedClaims } }
+                            { model | status = RemoteData.Success { loadedModel | claims = updatedClaims } }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
                                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
@@ -594,9 +666,9 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.status of
-                Loaded loadedModel ->
+                RemoteData.Success loadedModel ->
                     { model
-                        | status = Loaded loadedModel
+                        | status = RemoteData.Success loadedModel
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -604,6 +676,19 @@ update msg model loggedIn =
 
                 _ ->
                     model |> UR.init
+
+        OpenedFilterModal ->
+            { model | showFilterModal = True }
+                |> UR.init
+
+        ClosedFilterModal ->
+            { model | showFilterModal = False }
+                |> UR.init
+
+        ClickedApplyFilters ->
+            -- TODO
+            { model | showFilterModal = False }
+                |> UR.init
 
         SelectMsg subMsg ->
             let
@@ -623,26 +708,12 @@ update msg model loggedIn =
                 oldFilters =
                     model.filters
             in
-            case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _, RemoteData.Success community ) ->
-                    let
-                        newModel =
-                            { model
-                                | status = Loading
-                                , filters = { oldFilters | profile = maybeProfile }
-                                , reloadOnNextQuery = True
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
-
-                _ ->
-                    UR.init model
+            { model | filters = { oldFilters | profile = maybeProfile } }
+                |> UR.init
 
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded { pageInfo }, RemoteData.Success community ) ->
+                ( RemoteData.Success { pageInfo }, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -657,14 +728,14 @@ update msg model loggedIn =
 
         ClearSelectSelection ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _, RemoteData.Success community ) ->
+                ( RemoteData.Success _, RemoteData.Success community ) ->
                     let
                         oldFilters =
                             model.filters
 
                         newModel =
                             { model
-                                | status = Loading
+                                | status = RemoteData.Loading
                                 , filters = { oldFilters | profile = Nothing }
                                 , reloadOnNextQuery = True
                             }
@@ -684,7 +755,7 @@ update msg model loggedIn =
                 newModel =
                     { model
                         | filters = { oldFilters | statusFilter = statusFilter }
-                        , status = Loading
+                        , status = RemoteData.Loading
                         , reloadOnNextQuery = True
                     }
             in
@@ -703,7 +774,7 @@ update msg model loggedIn =
             { model
                 | filters = initFilter
                 , reloadOnNextQuery = True
-                , status = Loading
+                , status = RemoteData.Loading
             }
                 |> UR.init
                 |> UR.addCmd
@@ -731,7 +802,7 @@ update msg model loggedIn =
                     { model
                         | filters = { oldFilters | direction = sortDirection }
                         , reloadOnNextQuery = True
-                        , status = Loading
+                        , status = RemoteData.Loading
                     }
 
                 fetchCmd =
@@ -839,6 +910,7 @@ selectConfiguration shared isDisabled =
             , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
+            |> Select.withMenuClass "max-h-40 overflow-y-auto"
         )
         shared
         isDisabled
@@ -856,8 +928,19 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers 
                     (\p ->
                         div
                             [ class "flex justify-between flex-col m-3 items-center" ]
-                            [ Profile.Summary.view shared loggedIn.accountName p profileSummary
-                                |> Html.map GotProfileSummaryMsg
+                            -- We need `absolute` so we can display the dialog
+                            -- bubble on hover
+                            [ div [ class "absolute" ]
+                                [ Profile.Summary.view shared loggedIn.accountName p profileSummary
+                                    |> Html.map GotProfileSummaryMsg
+                                ]
+
+                            -- We need this invisible Profile.Summary so we know
+                            -- the exact space the above one would take
+                            , div [ class "opacity-0 pointer-events-none" ]
+                                [ Profile.Summary.view shared loggedIn.accountName p profileSummary
+                                    |> Html.map GotProfileSummaryMsg
+                                ]
                             , div
                                 [ onClick ClearSelectSelection
                                 , class "h-6 w-6 flex items-center mt-4"
@@ -920,6 +1003,15 @@ msgToString msg =
 
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
+
+        OpenedFilterModal ->
+            [ "OpenedFilterModal" ]
+
+        ClosedFilterModal ->
+            [ "ClosedFilterModal" ]
+
+        ClickedApplyFilters ->
+            [ "ClickedApplyFilters" ]
 
         SelectMsg _ ->
             [ "SelectMsg", "sub" ]
