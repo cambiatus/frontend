@@ -819,6 +819,12 @@
     "clear_filters": "esborreu els filtres",
     "show_more": "mostra els següents 16 articles",
     "error": "S'ha produït un error en carregar les accions",
+    "good_practices": {
+      "title": "Recordeu si",
+      "once_a_day": "No reivindiqueu la mateixa acció més d'una vegada al mateix dia;",
+      "completed_action": "Reclameu només accions realment realitzades;",
+      "know_good_practices": "Obteniu més informació sobre les bones pràctiques de la Comunitat"
+    },
     "filter": {
       "user": "Usuari",
       "status": {

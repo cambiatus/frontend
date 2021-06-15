@@ -778,6 +778,12 @@
     "clear_filters": "ማጣሪያ አጽዳ",
     "show_more": "የሚቀጥሉትን 16 ዕቃዎችን አሳይ",
     "error": "እርምጃዎችን ሲጫኑ አንድ ነገር ተሳስቷል",
+    "good_practices": {
+      "title": "ያስታውሱ ከሆነ",
+      "once_a_day": "በተመሳሳይ ቀን ከአንድ ጊዜ በላይ ተመሳሳይ እርምጃ አይጠይቁ;",
+      "completed_action": "በትክክል ያከናወኗቸውን እርምጃዎች ብቻ ይጠይቁ;",
+      "know_good_practices": "ስለ ማህበረሰቡ መልካም ልምዶች ይወቁ"
+    },
     "filter": {
       "user": "ተጠቃሚ",
       "status": {

@@ -823,6 +823,12 @@
     "clear_filters": "limpar os filtros",
     "show_more": "Mostrar próximos 16 items",
     "error": "Algo deu errado ao carregar ações",
+    "good_practices": {
+      "title": "Lembre-se",
+      "once_a_day": "Não reivindique a mesma ação mais de uma vez no mesmo dia;",
+      "completed_action": "Reivindique apenas ações que você realmente realizou;",
+      "know_good_practices": "Conheça as boas práticas da Comunidade"
+    },
     "filter": {
       "user": "Usuário",
       "status": {

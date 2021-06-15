@@ -185,7 +185,7 @@ viewHeaderAndOptions : LoggedIn.Model -> Model -> List (Html Msg)
 viewHeaderAndOptions loggedIn model =
     [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-            [ viewGoodPracticesCard
+            [ viewGoodPracticesCard loggedIn.shared
             , viewTabSelector model
             ]
         ]
@@ -243,16 +243,19 @@ viewContent loggedIn { claims, profileSummaries, pageInfo } model =
     ]
 
 
-viewGoodPracticesCard : Html msg
-viewGoodPracticesCard =
+viewGoodPracticesCard : Shared -> Html msg
+viewGoodPracticesCard { translators } =
+    let
+        text_ =
+            translators.t >> text
+    in
     div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
         [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
-            [ Icons.lamp "mr-2", text "Lembre-se" ]
+            [ Icons.lamp "mr-2", text_ "all_analysis.good_practices.title" ]
         , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
-            -- TODO - I18N
-            [ li [ class "pl-1" ] [ text "Não reivindique a mesma ação mais de uma vez no mesmo dia;" ]
-            , li [ class "pl-1" ] [ text "Reivindique apenas ações que você realmente realizou;" ]
-            , li [ class "pl-1" ] [ text "Conheça as boas práticas da Comunidade" ]
+            [ li [ class "pl-1" ] [ text_ "all_analysis.good_practices.once_a_day" ]
+            , li [ class "pl-1" ] [ text_ "all_analysis.good_practices.completed_action" ]
+            , li [ class "pl-1" ] [ text_ "all_analysis.good_practices.know_good_practices" ]
             ]
         ]
 
