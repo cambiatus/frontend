@@ -258,7 +258,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         |> Maybe.map List.singleton
                 , translators = shared.translators
                 }
-                |> Input.withType Input.TextArea
+                |> Input.withInputType Input.TextArea
                 |> Input.withAttrs [ rows 5, maxlength memoMaxLength ]
                 |> Input.withCounter 255
                 |> Input.toHtml

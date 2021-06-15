@@ -1,8 +1,8 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
-    , tooltip
-    , bgNoScroll
+    , tooltip, pdfViewer
+    , bgNoScroll, PreventScroll(..)
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -26,12 +26,12 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip
+@docs tooltip, pdfViewer
 
 
 # Helpers
 
-@docs bgNoScroll
+@docs bgNoScroll, PreventScroll
 
 -}
 
@@ -88,12 +88,58 @@ tooltip { t } tooltipMessage =
         ]
 
 
+{-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
+with `url` as `src`. This element automatically shows a loading animation while
+it fetches the pdf. If you pass in `Translators`, there will also be a text
+under the loading animation
+-}
+pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, maybeTranslators : Maybe Translators } -> Html msg
+pdfViewer attrs { url, childClass, maybeTranslators } =
+    let
+        loadingAttributes =
+            case maybeTranslators of
+                Nothing ->
+                    []
+
+                Just { t } ->
+                    [ attribute "elm-loading-title" (t "loading.title")
+                    , attribute "elm-loading-subtitle" (t "loading.subtitle")
+                    ]
+    in
+    node "pdf-viewer"
+        (attribute "elm-url" url
+            :: attribute "elm-child-class" childClass
+            :: class "flex flex-col items-center justify-center"
+            :: loadingAttributes
+            ++ attrs
+        )
+        []
+
+
 
 -- HELPERS
 
 
 {-| A node that prevents the body from scrolling
 -}
-bgNoScroll : List (Html.Attribute msg) -> Html msg
-bgNoScroll attrs =
-    node "bg-no-scroll" attrs []
+bgNoScroll : List (Html.Attribute msg) -> PreventScroll -> Html msg
+bgNoScroll attrs preventScroll =
+    let
+        preventScrollClass =
+            case preventScroll of
+                PreventScrollOnMobile ->
+                    "overflow-hidden md:overflow-auto"
+
+                PreventScrollAlways ->
+                    "overflow-hidden"
+    in
+    node "bg-no-scroll"
+        (attribute "elm-prevent-scroll-class" preventScrollClass
+            :: attrs
+        )
+        []
+
+
+type PreventScroll
+    = PreventScrollOnMobile
+    | PreventScrollAlways

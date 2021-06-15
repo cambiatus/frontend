@@ -94,7 +94,7 @@ companyTypeToString type_ =
 
 type Msg
     = EnteredDocument String
-    | EnteredType String
+    | EnteredType CompanyType
     | EnteredName String
     | EnteredEmail String
     | EnteredPhone String
@@ -121,18 +121,19 @@ view translators model =
             formTranslationString ++ ".company." ++ companyTypeToString model.companyType
     in
     Html.div []
-        [ viewSelectField (translators.t "register.form.company_type")
-            (companyTypeToString model.companyType)
-            True
-            EnteredType
-            [ { value = companyTypeToString MIPYME
-              , label = translators.t "register.form.company.mipyme.label"
-              }
-            , { value = companyTypeToString Corporation
-              , label = translators.t "register.form.company.gran_empresa.label"
-              }
-            ]
-            (fieldProblems CompanyType model.problems)
+        [ viewSelectField
+            { id = "company_type_select"
+            , label = translators.t "register.form.company_type"
+            , onInput = EnteredType
+            , options =
+                [ { value = MIPYME, label = translators.t "register.form.company.mipyme.label" }
+                , { value = Corporation, label = translators.t "register.form.company.gran_empresa.label" }
+                ]
+            , value = model.companyType
+            , valueToString = companyTypeToString
+            , enabled = True
+            , problems = fieldProblems CompanyType model.problems
+            }
         , View.Form.Input.init
             { id = "document"
             , label = translators.t (companyTranslationString ++ ".label")
@@ -209,24 +210,36 @@ view translators model =
                )
             |> View.Form.Input.withCounter 12
             |> View.Form.Input.toHtml
-        , viewSelectField (translators.t "register.form.state")
-            ""
-            True
-            EnteredState
-            (List.map (\state -> { value = state.name, label = state.name }) model.states)
-            (fieldProblems State model.problems)
-        , viewSelectField (translators.t "register.form.city")
-            ""
-            (model.state /= ( "", "" ))
-            EnteredCity
-            (List.map (\city -> { value = city.name, label = city.name }) model.cities)
-            (fieldProblems City model.problems)
-        , viewSelectField (translators.t "register.form.district")
-            ""
-            (model.city /= ( "", "" ))
-            EnteredDistrict
-            (List.map (\district -> { value = district.name, label = district.name }) model.districts)
-            (fieldProblems District model.problems)
+        , viewSelectField
+            { id = "state_select"
+            , label = translators.t "register.form.state"
+            , onInput = EnteredState
+            , options = List.map (\state -> { value = state.name, label = state.name }) model.states
+            , value = model.state |> Tuple.first
+            , valueToString = identity
+            , enabled = True
+            , problems = fieldProblems State model.problems
+            }
+        , viewSelectField
+            { id = "city_select"
+            , label = translators.t "register.form.city"
+            , onInput = EnteredCity
+            , options = List.map (\city -> { value = city.name, label = city.name }) model.cities
+            , value = model.city |> Tuple.first
+            , valueToString = identity
+            , enabled = model.state /= ( "", "" )
+            , problems = fieldProblems City model.problems
+            }
+        , viewSelectField
+            { id = "discrict_select"
+            , label = translators.t "register.form.district"
+            , onInput = EnteredDistrict
+            , options = List.map (\district -> { value = district.name, label = district.name }) model.districts
+            , value = model.district |> Tuple.first
+            , valueToString = identity
+            , enabled = model.city /= ( "", "" )
+            , problems = fieldProblems District model.problems
+            }
         , View.Form.Input.init
             { id = "street"
             , label = translators.t (formTranslationString ++ ".street.label")
@@ -282,15 +295,7 @@ update translators msg form =
             }
 
         EnteredType type_ ->
-            { form
-                | companyType =
-                    case type_ of
-                        "mipyme" ->
-                            MIPYME
-
-                        _ ->
-                            Corporation
-            }
+            { form | companyType = type_ }
 
         EnteredName str ->
             { form | name = str }

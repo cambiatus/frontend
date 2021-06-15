@@ -1,7 +1,7 @@
 module Avatar exposing
     ( Avatar
-    , decode
     , empty
+    , fromString
     , selectionSet
     , toMaybeString
     , view
@@ -11,7 +11,6 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
 import Html.Attributes exposing (class, src)
 import Icons
-import Json.Decode as Decode exposing (Decoder)
 
 
 
@@ -25,11 +24,6 @@ type Avatar
 empty : Avatar
 empty =
     Avatar Nothing
-
-
-decode : Decoder Avatar
-decode =
-    Decode.map Avatar (Decode.nullable Decode.string)
 
 
 view : Avatar -> String -> Html msg
@@ -62,3 +56,8 @@ selectionSet =
 toMaybeString : Avatar -> Maybe String
 toMaybeString (Avatar s) =
     s
+
+
+fromString : String -> Avatar
+fromString =
+    Just >> Avatar

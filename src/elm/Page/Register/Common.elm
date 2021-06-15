@@ -13,7 +13,7 @@ module Page.Register.Common exposing
 import Address
 import Cambiatus.Scalar exposing (Id(..))
 import Html exposing (Html, div)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (classList)
 import Maybe.Extra as MaybeExtra
 import Regex
 import Session.Shared exposing (Translators)
@@ -21,28 +21,38 @@ import Validate
 import View.Form.Select
 
 
-viewSelectField : String -> String -> Bool -> (String -> msg) -> List { value : String, label : String } -> Maybe (List String) -> Html msg
-viewSelectField label initialValue enabled onInput options problems =
-    let
-        form =
-            View.Form.Select.init "document_select" label onInput initialValue problems
-    in
-    div
-        (if enabled then
-            []
+viewSelectField :
+    { id : String
+    , label : String
+    , onInput : a -> msg
+    , options : List (View.Form.Select.Option a)
+    , value : a
+    , valueToString : a -> String
+    , enabled : Bool
+    , problems : Maybe (List String)
+    }
+    -> Html msg
+viewSelectField options =
+    div [ classList [ ( "hidden", not options.enabled ) ] ]
+        (case List.reverse options.options of
+            [] ->
+                []
 
-         else
-            [ class "hidden" ]
+            first :: rest ->
+                [ View.Form.Select.init
+                    { id = options.id
+                    , label = options.label
+                    , onInput = options.onInput
+                    , firstOption = first
+                    , value = options.value
+                    , valueToString = options.valueToString
+                    , disabled = not options.enabled
+                    , problems = options.problems
+                    }
+                    |> View.Form.Select.withOptions rest
+                    |> View.Form.Select.toHtml
+                ]
         )
-        [ List.foldl View.Form.Select.withOption form options
-            |> (if enabled then
-                    View.Form.Select.enable
-
-                else
-                    View.Form.Select.disable
-               )
-            |> View.Form.Select.toHtml
-        ]
 
 
 type ProblemEvent

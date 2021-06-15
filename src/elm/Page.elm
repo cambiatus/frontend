@@ -10,7 +10,6 @@ module Page exposing
     , jsAddressToMsg
     , logout
     , msgToString
-    , onFileChange
     , subscriptions
     , toShared
     , update
@@ -23,16 +22,13 @@ module Page exposing
 
 import Auth
 import Browser.Navigation as Nav
-import File exposing (File)
 import Flags exposing (Flags)
 import Graphql.Http
-import Html exposing (Attribute, Html, a, div, img, p, text)
+import Html exposing (Html, a, div, img, p, text)
 import Html.Attributes exposing (class, src, title)
-import Html.Events exposing (on)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
-import Json.Decode as Decode
 import Json.Encode exposing (Value)
 import Ports
 import RemoteData exposing (RemoteData)
@@ -135,14 +131,6 @@ viewLoggedIn thisMsg page model content =
 
 
 -- VIEW >> HELPERS
-
-
-onFileChange : (List File -> msg) -> Attribute msg
-onFileChange toMsg =
-    Decode.list File.decoder
-        |> Decode.at [ "target", "files" ]
-        |> Decode.map toMsg
-        |> on "change"
 
 
 viewCardEmpty : List (Html msg) -> Html msg

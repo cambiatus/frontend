@@ -178,7 +178,7 @@ viewField field model ({ t } as translators) =
         }
         |> View.Form.Input.withCounter pinLength
         |> View.Form.Input.withCounterAttrs [ class "text-white" ]
-        |> View.Form.Input.withElement (viewToggleVisibility field model translators)
+        |> View.Form.Input.withElements [ viewToggleVisibility field model translators ]
         |> View.Form.Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
         |> View.Form.Input.withAttrs
             [ class "form-input text-base text-body-black tracking-widest"

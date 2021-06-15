@@ -10,9 +10,9 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
-import Html exposing (Html, a, button, div, img, input, label, p, span, strong, text)
-import Html.Attributes exposing (checked, class, disabled, id, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onSubmit)
+import Html exposing (Html, a, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (class, disabled, id, src)
+import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
@@ -31,6 +31,8 @@ import UpdateResult as UR
 import Validate
 import View.Feedback as Feedback
 import View.Form
+import View.Form.Checkbox as Checkbox
+import View.Form.Input as Input
 
 
 
@@ -40,20 +42,11 @@ import View.Form
 init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init invitationId ({ shared } as guest) =
     let
-        initialStatus =
-            case invitationId of
-                Just _ ->
-                    Loading
-
-                Nothing ->
-                    FormShowed
-                        (DefaultForm DefaultForm.init)
-
         initialModel =
             { accountKeys = Nothing
             , hasAgreedToSavePassphrase = False
             , isPassphraseCopiedToClipboard = False
-            , status = initialStatus
+            , status = Loading
             , invitationId = invitationId
             , invitation = Nothing
             , country = Nothing
@@ -312,8 +305,8 @@ viewRegistrationForm translators currentForm =
 
 viewAccountTypeSelector : Translators -> Model -> Html Msg
 viewAccountTypeSelector translators model =
-    case ( model.invitation, model.country ) of
-        ( Just _, Just country ) ->
+    case model.country of
+        Just country ->
             div []
                 [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
                 , div [ class "flex space-x-2" ]
@@ -361,7 +354,7 @@ viewAccountTypeButton title accountType status =
 
 
 viewAccountCreated : Translators -> Model -> AccountKeys -> Html Msg
-viewAccountCreated { t } model keys =
+viewAccountCreated ({ t } as translators) model keys =
     let
         name =
             Eos.nameToString keys.accountName
@@ -416,17 +409,23 @@ viewAccountCreated { t } model keys =
                     , p
                         [ class "pb-2 leading-tight" ]
                         [ span [ class "select-all", id passphraseTextId ] [ text keys.words ]
-                        , input
-                            -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
-                            -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
-                            -- hide it with `display: hidden`), so we hide it using position and opacity.
-                            [ type_ "text"
-                            , class "absolute opacity-0"
-                            , style "left" "-9999em"
-                            , id passphraseInputId
-                            , value keys.words
-                            ]
-                            []
+
+                        -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
+                        -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
+                        -- hide it with `display: hidden`), so we hide it using position and opacity.
+                        , Input.init
+                            { label = ""
+                            , id = passphraseInputId
+                            , onInput = \_ -> NoOp
+                            , disabled = False
+                            , value = keys.words
+                            , placeholder = Nothing
+                            , problems = Nothing
+                            , translators = translators
+                            }
+                            |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
+                            |> Input.withContainerAttrs [ class "mb-0" ]
+                            |> Input.toHtml
                         ]
                     , button
                         [ class "button m-auto button-primary button-sm"
@@ -436,19 +435,15 @@ viewAccountCreated { t } model keys =
                     ]
                 ]
             , div [ class "sf-footer" ]
-                [ div [ class "my-4" ]
-                    [ label [ class "form-label block" ]
-                        [ input
-                            [ type_ "checkbox"
-                            , class "form-checkbox mr-2 p-1"
-                            , checked model.hasAgreedToSavePassphrase
-                            , onCheck AgreedToSave12Words
-                            ]
-                            []
-                        , text (t "register.account_created.i_saved_words")
-                        , text " 💜"
-                        ]
-                    ]
+                [ Checkbox.init
+                    { description = text (t "register.account_created.i_saved_words" ++ " 💜")
+                    , id = "agreed_save_passphrase"
+                    , value = model.hasAgreedToSavePassphrase
+                    , disabled = False
+                    , onCheck = AgreedToSave12Words
+                    }
+                    |> Checkbox.withContainerAttrs [ class "my-4" ]
+                    |> Checkbox.toHtml
                 , button
                     [ onClick <|
                         DownloadPdf
@@ -573,17 +568,16 @@ update _ msg model { shared } =
             model |> UR.init
 
         CompletedLoadCommunity community ->
-            if community.hasAutoInvite then
-                UR.init model
+            let
+                canRegister =
+                    community.hasAutoInvite || model.invitationId /= Nothing
+            in
+            if canRegister then
+                loadedCommunity shared model community model.invitation
 
             else
-                case model.invitationId of
-                    Just _ ->
-                        UR.init model
-
-                    Nothing ->
-                        UR.init model
-                            |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
+                UR.init model
+                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
 
         ValidateForm formType ->
             let
@@ -851,29 +845,7 @@ update _ msg model { shared } =
             UR.init model
 
         CompletedLoadInvite (RemoteData.Success (Just invitation)) ->
-            if invitation.community.hasKyc then
-                let
-                    loadCountryData =
-                        Api.Graphql.query
-                            shared
-                            Nothing
-                            (Address.countryQuery "Costa Rica")
-                            CompletedLoadCountry
-                in
-                { model
-                    | status = Loading
-                    , invitation = Just invitation
-                }
-                    |> UR.init
-                    |> UR.addCmd
-                        loadCountryData
-
-            else
-                { model
-                    | status = FormShowed (DefaultForm DefaultForm.init)
-                    , invitation = Just invitation
-                }
-                    |> UR.init
+            loadedCommunity shared model invitation.community (Just invitation)
 
         CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | status = NotFound }
@@ -904,6 +876,32 @@ update _ msg model { shared } =
 
         CompletedLoadCountry _ ->
             UR.init model
+
+
+loadedCommunity : Shared -> Model -> Community.CommunityPreview -> Maybe Invite -> UpdateResult
+loadedCommunity shared model community maybeInvite =
+    if community.hasKyc then
+        let
+            loadCountryData =
+                Api.Graphql.query
+                    shared
+                    Nothing
+                    (Address.countryQuery "Costa Rica")
+                    CompletedLoadCountry
+        in
+        { model
+            | status = Loading
+            , invitation = maybeInvite
+        }
+            |> UR.init
+            |> UR.addCmd loadCountryData
+
+    else
+        { model
+            | status = FormShowed (DefaultForm DefaultForm.init)
+            , invitation = maybeInvite
+        }
+            |> UR.init
 
 
 type alias SignUpResponse =

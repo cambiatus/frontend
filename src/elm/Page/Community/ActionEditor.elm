@@ -32,9 +32,9 @@ import DataValidator
         )
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, input, label, p, span, text, textarea)
-import Html.Attributes exposing (checked, class, classList, for, id, name, placeholder, rows, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput)
+import Html exposing (Html, b, button, div, label, p, span, text, textarea)
+import Html.Attributes exposing (class, classList, placeholder, rows, value)
+import Html.Events exposing (onClick, onInput)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
@@ -54,8 +54,12 @@ import Time
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
+import View.Form
+import View.Form.Checkbox as Checkbox
+import View.Form.Input as Input
 import View.Form.InputCounter
-import View.Form.Radio
+import View.Form.Radio as Radio
+import View.Form.Toggle as Toggle
 
 
 
@@ -111,7 +115,7 @@ type Verification
     | Manual
         { verifiersValidator : Validator (List Profile.Minimal)
         , verifierRewardValidator : Validator String
-        , minVotesValidator : Validator String
+        , minVotesValidator : Validator Int
         , photoProof : PhotoProof
         , profileSummaries : List Profile.Summary.Model
         }
@@ -208,7 +212,7 @@ editForm form action =
                 let
                     minVotesValidator =
                         defaultMinVotes
-                            |> updateInput (String.fromInt action.verifications)
+                            |> updateInput action.verifications
 
                     verifiersValidator =
                         defaultVerifiersValidator verifiers (getInput minVotesValidator)
@@ -296,20 +300,15 @@ defaultUsagesValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerifiersValidator : List Profile.Minimal -> String -> Validator (List Profile.Minimal)
+defaultVerifiersValidator : List Profile.Minimal -> Int -> Validator (List Profile.Minimal)
 defaultVerifiersValidator verifiers minVerifiersQty =
     let
         limit =
-            case String.toInt minVerifiersQty of
-                Just m ->
-                    if m < minVotesLimit then
-                        minVotesLimit
+            if minVerifiersQty < minVotesLimit then
+                minVotesLimit
 
-                    else
-                        m
-
-                Nothing ->
-                    minVotesLimit
+            else
+                minVerifiersQty
     in
     []
         |> lengthGreaterThanOrEqual limit
@@ -335,12 +334,12 @@ minVotesLimit =
     3
 
 
-defaultMinVotes : Validator String
+defaultMinVotes : Validator Int
 defaultMinVotes =
     []
         |> greaterThanOrEqual (toFloat minVotesLimit)
         |> isOdd
-        |> newValidator (String.fromInt minVotesLimit) (\s -> Just s) True
+        |> newValidator minVotesLimit (\s -> Just (String.fromInt s)) True
 
 
 validateForm : Form -> Form
@@ -466,7 +465,7 @@ type Msg
     | EnteredUsages String
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
-    | EnteredMinVotes String
+    | EnteredMinVotes Int
     | ToggleValidity
     | ToggleDeadline Bool
     | TogglePhotoProof Bool
@@ -496,7 +495,7 @@ type alias CreateActionAction =
     , deadline : Int
     , usages : String
     , usagesLeft : String
-    , verifications : String
+    , verifications : Int
     , verificationType : String
     , validatorsStr : String
     , isCompleted : Int
@@ -518,7 +517,7 @@ encodeCreateActionAction c =
         , ( "deadline", Encode.int c.deadline )
         , ( "usages", Encode.string c.usages )
         , ( "usages_left", Encode.string c.usagesLeft )
-        , ( "verifications", Encode.string c.verifications )
+        , ( "verifications", Encode.string (String.fromInt c.verifications) )
         , ( "verification_type", Encode.string c.verificationType )
         , ( "validators_str", Encode.string c.validatorsStr )
         , ( "is_completed", Encode.int c.isCompleted )
@@ -1120,7 +1119,7 @@ upsertAction loggedIn community model isoDate =
         minVotes =
             case model.form.verification of
                 Automatic ->
-                    "0"
+                    0
 
                 Manual { minVotesValidator } ->
                     getInput minVotesValidator
@@ -1361,29 +1360,20 @@ viewReward { shared } community form =
     let
         { t } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
-    div [ class "mb-10" ]
-        [ span [ class "input-label" ]
-            [ text_ "community.actions.form.reward_label" ]
-        , div [ class "flex w-full sm:w-2/5 h-12 rounded-sm border border-gray-500" ]
-            [ input
-                [ class "block w-4/5 border-none px-4 py-3 outline-none"
-                , classList [ ( "border-red", hasErrors form.reward ) ]
-                , type_ "number"
-                , placeholder "0.00"
-                , onInput EnteredReward
-                , value (getInput form.reward)
-                ]
-                []
-            , span
-                [ class "w-1/5 flex text-white items-center justify-center bg-indigo-500 text-body uppercase rounded-r-sm" ]
-                [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-            ]
-        , viewFieldErrors (listErrors shared.translations form.reward)
-        ]
+    Input.init
+        { label = t "community.actions.form.reward_label"
+        , id = "action_reward_field"
+        , onInput = EnteredReward
+        , disabled = False
+        , value = getInput form.reward
+        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+        , problems = Just (listErrors shared.translations form.reward)
+        , translators = shared.translators
+        }
+        |> Input.withContainerAttrs [ class "w-full sm:w-2/5" ]
+        |> Input.withCurrency community.symbol
+        |> Input.toHtml
 
 
 viewValidations : LoggedIn.Model -> Model -> Html Msg
@@ -1400,59 +1390,47 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ div []
-                [ p [ class "input-label mb-6" ] [ text_ "community.actions.form.validity_label" ]
-                , div [ class "flex" ]
-                    [ div [ class "form-switch inline-block align-middle" ]
-                        [ input
-                            [ type_ "checkbox"
-                            , id "expiration-toggle"
-                            , name "expiration-toggle"
-                            , class "form-switch-checkbox mr-2"
-                            , checked (model.form.validation /= NoValidation)
-                            , onCheck (\_ -> ToggleValidity)
-                            ]
-                            []
-                        , label [ class "form-switch-label", for "expiration-toggle" ] []
-                        ]
-                    , label [ class "flex text-body text-green", for "expiration-toggle" ]
-                        [ p [ class "mr-1" ]
-                            [ b []
-                                [ if model.form.validation == NoValidation then
-                                    text_ "community.actions.form.validation_off"
-
-                                  else
-                                    text_ "community.actions.form.validation_on"
-                                ]
-                            , if model.form.validation == NoValidation then
-                                text_ "community.actions.form.validation_detail"
+            [ View.Form.label "expiration-toggle" (t "community.actions.form.validity_label")
+            , Toggle.init
+                { label =
+                    p [ class "text-green" ]
+                        [ b []
+                            [ if model.form.validation == NoValidation then
+                                text_ "community.actions.form.validation_off"
 
                               else
-                                text_ "community.actions.form.validation_on_detail"
+                                text_ "community.actions.form.validation_on"
                             ]
+                        , if model.form.validation == NoValidation then
+                            text_ "community.actions.form.validation_detail"
+
+                          else
+                            text_ "community.actions.form.validation_on_detail"
                         ]
-                    ]
-                ]
+                , id = "expiration-toggle"
+                , onToggle = \_ -> ToggleValidity
+                , disabled = True
+                , value = model.form.validation /= NoValidation
+                }
+                |> Toggle.withVariant Toggle.Simple
+                |> Toggle.withAttrs [ class "mt-6" ]
+                |> Toggle.toHtml shared.translators
             ]
         , div
-            [ class "" ]
-            [ div [ class "mb-3 flex flex-row text-body items-bottom" ]
-                [ input
-                    [ id "date"
-                    , type_ "checkbox"
-                    , class "form-checkbox h-5 w-5 mr-2"
-                    , checked (hasDateValidation model.form.validation)
-                    , onCheck ToggleDeadline
-                    ]
-                    []
-                , label
-                    [ for "date", class "flex" ]
-                    [ p [ class "mr-1" ]
+            [ class "mb-6 sm:w-2/5" ]
+            [ Checkbox.init
+                { description =
+                    p []
                         [ b [] [ text_ "community.actions.form.date_validity" ]
                         , text_ "community.actions.form.date_validity_details"
                         ]
-                    ]
-                ]
+                , id = "deadline_checkbox"
+                , value = hasDateValidation model.form.validation
+                , disabled = False
+                , onCheck = ToggleDeadline
+                }
+                |> Checkbox.withContainerAttrs [ class "flex text-body mb-3" ]
+                |> Checkbox.toHtml
             , case model.form.validation of
                 NoValidation ->
                     text ""
@@ -1469,7 +1447,7 @@ viewValidations { shared } model =
                                             | pattern = "##/##/####"
                                             , inputCharacter = '#'
                                         }
-                                        [ class "input w-full sm:w-2/5"
+                                        [ class "input w-full"
                                         , classList [ ( "border-red", hasErrors validation ) ]
                                         , placeholder "mm/dd/yyyy"
                                         ]
@@ -1481,22 +1459,19 @@ viewValidations { shared } model =
 
                         Nothing ->
                             text ""
-            , div [ class "mb-6 flex flex-row text-body items-bottom" ]
-                [ input
-                    [ id "quantity"
-                    , type_ "checkbox"
-                    , class "form-checkbox h-5 w-5 mr-2"
-                    , checked (hasUnitValidation model.form.validation)
-                    , onCheck ToggleUsages
-                    ]
-                    []
-                , label [ for "quantity", class "flex" ]
-                    [ p [ class "mr-1" ]
+            , Checkbox.init
+                { description =
+                    p []
                         [ b [] [ text_ "community.actions.form.quantity_validity" ]
                         , text_ "community.actions.form.quantity_validity_details"
                         ]
-                    ]
-                ]
+                , id = "quantity_checkbox"
+                , value = hasUnitValidation model.form.validation
+                , disabled = False
+                , onCheck = ToggleUsages
+                }
+                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                |> Checkbox.toHtml
             ]
         , case model.form.validation of
             NoValidation ->
@@ -1506,37 +1481,38 @@ viewValidations { shared } model =
                 case usagesValidation of
                     Just validation ->
                         div []
-                            [ span [ class "input-label" ] [ text_ "community.actions.form.quantity_label" ]
-                            , div [ class "mb-10" ]
-                                [ input
-                                    [ type_ "number"
-                                    , class "input w-full sm:w-2/5"
-                                    , classList [ ( "border-red", hasErrors validation ) ]
-                                    , placeholder (t "community.actions.form.usages_placeholder")
-                                    , value (getInput validation)
-                                    , onInput EnteredUsages
-                                    ]
-                                    []
-                                , viewFieldErrors (listErrors shared.translations validation)
-                                ]
+                            [ Input.init
+                                { label = t "community.actions.form.quantity_label"
+                                , id = "quantity_input"
+                                , onInput = EnteredUsages
+                                , disabled = False
+                                , value = getInput validation
+                                , placeholder = Just (t "community.actions.form.usages_placeholder")
+                                , problems = Just (listErrors shared.translations validation)
+                                , translators = shared.translators
+                                }
+                                |> Input.withType Input.Number
+                                |> Input.asNumeric
+                                |> Input.withAttrs [ Html.Attributes.min "0" ]
+                                |> Input.withContainerAttrs [ class "sm:w-2/5" ]
+                                |> Input.toHtml
                             , case model.form.usagesLeft of
                                 Just usagesLeftValidation ->
-                                    div []
-                                        [ span [ class "input-label" ]
-                                            [ text_ "community.actions.form.usages_left_label" ]
-                                        , div
-                                            [ class "mb-10" ]
-                                            [ input
-                                                [ type_ "number"
-                                                , class "input w-full sm:w-2/5"
-                                                , classList [ ( "border-red", hasErrors usagesLeftValidation ) ]
-                                                , value (getInput usagesLeftValidation)
-                                                , onInput EnteredUsagesLeft
-                                                ]
-                                                []
-                                            , viewFieldErrors (listErrors shared.translations usagesLeftValidation)
-                                            ]
-                                        ]
+                                    Input.init
+                                        { label = t "community.actions.form.usages_left_label"
+                                        , id = "usages_left_input"
+                                        , onInput = EnteredUsagesLeft
+                                        , disabled = False
+                                        , value = getInput usagesLeftValidation
+                                        , placeholder = Nothing
+                                        , problems = Just (listErrors shared.translations usagesLeftValidation)
+                                        , translators = shared.translators
+                                        }
+                                        |> Input.withType Input.Number
+                                        |> Input.asNumeric
+                                        |> Input.withAttrs [ Html.Attributes.min "0" ]
+                                        |> Input.withContainerAttrs [ class "sm:w-2/5" ]
+                                        |> Input.toHtml
 
                                 Nothing ->
                                     text ""
@@ -1565,7 +1541,7 @@ viewVerifications ({ shared } as loggedIn) model community =
                 |> Profile.Summary.initMany False
     in
     div [ class "mb-10" ]
-        [ View.Form.Radio.init
+        [ Radio.init
             { label = "community.actions.form.verification_label"
             , name = "verification_radio"
             , optionToString =
@@ -1590,13 +1566,14 @@ viewVerifications ({ shared } as loggedIn) model community =
                         _ ->
                             False
             }
-            |> View.Form.Radio.withOption Automatic
-                (span []
-                    [ b [] [ text_ "community.actions.form.automatic" ]
-                    , text_ "community.actions.form.automatic_detail"
-                    ]
+            |> Radio.withOption Automatic
+                (\_ ->
+                    span []
+                        [ b [] [ text_ "community.actions.form.automatic" ]
+                        , text_ "community.actions.form.automatic_detail"
+                        ]
                 )
-            |> View.Form.Radio.withOption
+            |> Radio.withOption
                 (Manual
                     { verifiersValidator = verifiersValidator
                     , verifierRewardValidator = defaultVerificationReward
@@ -1605,13 +1582,14 @@ viewVerifications ({ shared } as loggedIn) model community =
                     , profileSummaries = profileSummaries
                     }
                 )
-                (span []
-                    [ b [] [ text_ "community.actions.form.manual" ]
-                    , text_ "community.actions.form.manual_detail"
-                    ]
+                (\_ ->
+                    span []
+                        [ b [] [ text_ "community.actions.form.manual" ]
+                        , text_ "community.actions.form.manual_detail"
+                        ]
                 )
-            |> View.Form.Radio.withVertical True
-            |> View.Form.Radio.toHtml shared.translators
+            |> Radio.withVertical True
+            |> Radio.toHtml shared.translators
         , if model.form.verification /= Automatic then
             viewManualVerificationForm loggedIn model community
 
@@ -1625,9 +1603,6 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
     let
         { t, tr } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
     case model.form.verification of
         Automatic ->
@@ -1650,118 +1625,106 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
 
                         _ ->
                             False
+
+                minVotesOptions =
+                    List.map
+                        (\option ->
+                            ( option
+                            , \isActive ->
+                                div
+                                    [ class "rounded-full border w-8 h-8 flex items-center justify-center cursor-pointer"
+                                    , classList
+                                        [ ( "bg-orange-300 border-orange-300 text-white", isActive )
+                                        , ( "hover:border-orange-300 hover:text-orange-500 border-gray-500", not isActive )
+                                        ]
+                                    ]
+                                    [ text (String.fromInt option) ]
+                            )
+                        )
+                        [ 3, 5, 7, 9 ]
             in
             div [ class "mt-6 ml-8 sm:w-2/5" ]
-                [ div [ class "mb-6" ]
-                    [ label [ class "input-label block" ]
-                        [ text_ "community.actions.form.votes_label" ]
-                    , div [ class "space-x-4" ] <|
-                        List.map (viewVotesCount (getInput minVotesValidator)) [ 3, 5, 7, 9 ]
-                    , viewFieldErrors (listErrors shared.translations minVotesValidator)
-                    ]
+                [ Radio.init
+                    { label = t "community.actions.form.votes_label"
+                    , name = "number_of_votes"
+                    , optionToString = String.fromInt
+                    , activeOption = getInput minVotesValidator
+                    , onSelect = EnteredMinVotes
+                    , areOptionsEqual = (==)
+                    }
+                    |> Radio.withRowAttrs [ class "space-x-4" ]
+                    |> Radio.withAttrs [ class "mb-6" ]
+                    |> Radio.withOptions minVotesOptions
+                    |> Radio.withVariant Radio.Simplified
+                    |> Radio.toHtml shared.translators
                 , span [ class "input-label" ]
-                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator ) ]) ]
+                    [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator |> String.fromInt ) ]) ]
                 , div []
                     [ viewVerifierSelect loggedIn model False
                     , viewFieldErrors (listErrors shared.translations verifiersValidator)
                     , viewSelectedVerifiers loggedIn profileSummaries (getInput verifiersValidator)
                     ]
-                , span [ class "input-label" ]
-                    [ text_ "community.actions.form.verifiers_reward_label" ]
-                , div [ class "mb-10" ]
-                    [ div [ class "flex flex-row border rounded-sm" ]
-                        [ input
-                            [ class "input w-4/5 border-none"
-                            , type_ "number"
-                            , placeholder "0.00"
-                            , onInput EnteredVerifierReward
-                            , value (getInput verifierRewardValidator)
-                            ]
-                            []
-                        , span
-                            [ class "w-1/5 flex input-token rounded-r-sm" ]
-                            [ text (Eos.symbolToSymbolCodeString community.symbol) ]
-                        ]
-                    , viewFieldErrors (listErrors shared.translations verifierRewardValidator)
-                    , div [ class "mt-8" ]
-                        [ label [ class "flex text-body block" ]
-                            [ input
-                                [ type_ "checkbox"
-                                , class "form-checkbox h-5 w-5 mr-2"
-                                , checked isPhotoProofEnabled
-                                , onCheck TogglePhotoProof
+                , Input.init
+                    { label = t "community.actions.form.verifiers_reward_label"
+                    , id = "verifiers_reward_field"
+                    , onInput = EnteredVerifierReward
+                    , disabled = False
+                    , value = getInput verifierRewardValidator
+                    , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+                    , problems = listErrors shared.translations verifierRewardValidator |> Just
+                    , translators = shared.translators
+                    }
+                    |> Input.withCurrency community.symbol
+                    |> Input.toHtml
+                , div [ class "mt-8" ]
+                    [ Checkbox.init
+                        { description =
+                            span []
+                                [ b [ class "block" ] [ text (t "community.actions.form.proof_validation") ]
+                                , text (t "community.actions.form.proof_validation_hint")
                                 ]
-                                []
-                            , span []
-                                [ b [ class "block" ] [ text (t "community.actions.form.photo_validation") ]
-                                , text (t "community.actions.form.photo_validation_hint")
-                                ]
-                            ]
-                        , if isPhotoProofEnabled then
-                            div [ class "mt-6" ]
-                                [ label [ class "flex text-body block" ]
-                                    [ input
-                                        [ type_ "checkbox"
-                                        , class "form-checkbox h-5 w-5 mr-2"
-                                        , checked isProofNumberEnabled
-                                        , onCheck TogglePhotoProofNumber
-                                        ]
-                                        []
-                                    , span []
+                        , id = "photo_proof_checkbox"
+                        , value = isPhotoProofEnabled
+                        , disabled = False
+                        , onCheck = TogglePhotoProof
+                        }
+                        |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                        |> Checkbox.toHtml
+                    , if isPhotoProofEnabled then
+                        div [ class "mt-6" ]
+                            [ Checkbox.init
+                                { description =
+                                    span []
                                         [ b [ class "block" ] [ text (t "community.actions.form.verification_code") ]
                                         , text (t "community.actions.form.verification_code_hint")
                                         ]
+                                , id = "verification_code_checkbox"
+                                , value = isProofNumberEnabled
+                                , disabled = False
+                                , onCheck = TogglePhotoProofNumber
+                                }
+                                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                                |> Checkbox.toHtml
+                            , div [ class "mt-6" ]
+                                [ label [ class "input-label" ]
+                                    [ text (t "community.actions.form.verification_instructions") ]
+                                , textarea
+                                    [ class "input textarea-input w-full"
+                                    , classList [ ( "border-red", hasErrors model.form.instructions ) ]
+                                    , rows 5
+                                    , onInput EnteredInstructions
+                                    , value (getInput model.form.instructions)
                                     ]
-                                , div [ class "mt-6" ]
-                                    [ label [ class "input-label" ]
-                                        [ text (t "community.actions.form.verification_instructions") ]
-                                    , textarea
-                                        [ class "input textarea-input w-full"
-                                        , classList [ ( "border-red", hasErrors model.form.instructions ) ]
-                                        , rows 5
-                                        , onInput EnteredInstructions
-                                        , value (getInput model.form.instructions)
-                                        ]
-                                        []
-                                    , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
-                                    , viewFieldErrors (listErrors shared.translations model.form.instructions)
-                                    ]
+                                    []
+                                , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
+                                , viewFieldErrors (listErrors shared.translations model.form.instructions)
                                 ]
+                            ]
 
-                          else
-                            text ""
-                        ]
+                      else
+                        text ""
                     ]
                 ]
-
-
-viewVotesCount : String -> Int -> Html Msg
-viewVotesCount selectedCount count =
-    let
-        countStr =
-            String.fromInt count
-
-        isChecked =
-            selectedCount == countStr
-    in
-    label
-        [ class "rounded-full relative overflow-hidden inline-block text-center leading-8 w-8"
-        , classList
-            [ ( "bg-orange-300 text-white border-orange-300", isChecked )
-            , ( "hover:border-orange-300 cursor-pointer hover:text-orange-500 border border-grey-500", not isChecked )
-            ]
-        ]
-        [ text countStr
-        , input
-            [ type_ "radio"
-            , class "absolute left-0 opacity-0 cursor-pointer"
-            , name "min_votes"
-            , checked isChecked
-            , onInput EnteredMinVotes
-            , value countStr
-            ]
-            []
-        ]
 
 
 viewSelectedVerifiers : LoggedIn.Model -> List Profile.Summary.Model -> List Profile.Minimal -> Html Msg

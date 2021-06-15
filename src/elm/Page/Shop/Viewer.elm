@@ -17,9 +17,9 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, input, label, p, span, text, textarea)
-import Html.Attributes exposing (autocomplete, class, disabled, for, id, placeholder, required, src, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, a, button, div, img, p, text)
+import Html.Attributes exposing (autocomplete, class, disabled, id, required, src)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -34,6 +34,7 @@ import Shop exposing (Product)
 import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form.Input as Input
 
 
 
@@ -155,7 +156,8 @@ type Validation
 
 
 type Msg
-    = CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
+    = Ignored
+    | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy
     | ClickedEdit Product
@@ -176,6 +178,9 @@ update msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
+        Ignored ->
+            UR.init model
+
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             { model | status = LoadedSale maybeSale }
                 |> UR.init
@@ -593,70 +598,59 @@ viewTransferForm { shared } card model =
         tr rId replaces =
             shared.translators.tr rId replaces
     in
-    div [ class "large__card__transfer" ]
-        [ div [ class "large__card__account" ]
-            [ p [ class "large__card__label" ] [ text "User" ]
-            , p [ class "large__card__name" ] [ text accountName ]
+    div []
+        [ div []
+            [ p [] [ text "User" ]
+            , p [] [ text accountName ]
             ]
-        , div [ class "large__card__quant" ]
-            [ div []
-                [ label [ for fieldId.units ]
-                    [ text (t "shop.transfer.units_label") ]
-                , input
-                    [ class "input"
-                    , type_ "number"
-                    , id fieldId.units
-                    , value form.units
-                    , onInput EnteredUnit
-                    , autocomplete False
-                    , required True
-                    , Html.Attributes.min "0"
-                    ]
-                    []
-                , if form.unitValidation == Valid then
-                    text ""
-
-                  else
-                    span [ class "field-error" ]
-                        [ text <| t (getValidationMessage form.unitValidation) ]
-                ]
-            , div []
-                [ label [ for fieldId.price ]
-                    [ text (t "shop.transfer.quantity_label" ++ " (" ++ saleSymbol ++ ")") ]
-                , input
-                    [ class "input"
-                    , type_ "number"
-                    , id fieldId.price
-                    , value form.price
-                    , required True
-                    , disabled True
-                    , Html.Attributes.min "0"
-                    ]
-                    []
-                ]
-            ]
-        , p [ class "large__card__balance" ]
-            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
         , div []
-            [ label [ for fieldId.units ]
-                [ text (t "shop.transfer.memo_label") ]
-            , textarea
-                [ class "input"
-                , id fieldId.memo
-                , value form.memo
-                , onInput EnteredMemo
-                , required True
-                , placeholder (t "shop.transfer.default_memo")
-                , Html.Attributes.min "0"
-                ]
-                []
-            , if form.memoValidation == Valid then
-                text ""
-
-              else
-                span [ class "field-error" ]
-                    [ text <| t (getValidationMessage form.memoValidation) ]
+            [ Input.init
+                { label = t "shop.transfer.units_label"
+                , id = fieldId.units
+                , onInput = EnteredUnit
+                , disabled = False
+                , value = form.units
+                , placeholder = Nothing
+                , problems = getError form.unitValidation
+                , translators = shared.translators
+                }
+                |> Input.asNumeric
+                |> Input.withType Input.Number
+                |> Input.withAttrs
+                    [ autocomplete False
+                    , required True
+                    , Html.Attributes.min "0"
+                    ]
+                |> Input.toHtml
+            , Input.init
+                { label = t "shop.transfer.quantity_label"
+                , id = fieldId.price
+                , onInput = \_ -> Ignored
+                , disabled = True
+                , value = form.price
+                , placeholder = Nothing
+                , problems = Nothing
+                , translators = shared.translators
+                }
+                |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
+                |> Input.withCurrency card.product.symbol
+                |> Input.toHtml
             ]
+        , p []
+            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
+        , Input.init
+            { label = t "shop.transfer.memo_label"
+            , id = fieldId.memo
+            , onInput = EnteredMemo
+            , disabled = False
+            , value = form.memo
+            , placeholder = Just (t "shop.transfer.default_memo")
+            , problems = getError form.memoValidation
+            , translators = shared.translators
+            }
+            |> Input.withInputType Input.TextArea
+            |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
+            |> Input.toHtml
         ]
 
 
@@ -664,31 +658,35 @@ viewTransferForm { shared } card model =
 -- VIEW HELPERS
 
 
-getValidationMessage : Validation -> String
-getValidationMessage validation =
+getError : Validation -> Maybe (List String)
+getError validation =
     case validation of
         Valid ->
-            ""
+            Nothing
 
         Invalid error ->
-            case error of
-                UnitEmpty ->
-                    "shop.transfer.errors.unitEmpty"
+            let
+                translationString =
+                    case error of
+                        UnitEmpty ->
+                            "shop.transfer.errors.unitEmpty"
 
-                UnitTooLow ->
-                    "shop.transfer.errors.unitTooLow"
+                        UnitTooLow ->
+                            "shop.transfer.errors.unitTooLow"
 
-                UnitTooHigh ->
-                    "shop.transfer.errors.unitTooHigh"
+                        UnitTooHigh ->
+                            "shop.transfer.errors.unitTooHigh"
 
-                UnitNotOnlyNumbers ->
-                    "shop.transfer.errors.unitNotOnlyNumbers"
+                        UnitNotOnlyNumbers ->
+                            "shop.transfer.errors.unitNotOnlyNumbers"
 
-                MemoEmpty ->
-                    "shop.transfer.errors.memoEmpty"
+                        MemoEmpty ->
+                            "shop.transfer.errors.memoEmpty"
 
-                MemoTooLong ->
-                    "shop.transfer.errors.memoTooLong"
+                        MemoTooLong ->
+                            "shop.transfer.errors.memoTooLong"
+            in
+            Just [ translationString ]
 
 
 fieldSuffix : String -> String
@@ -759,6 +757,9 @@ isFormValid form =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
         CompletedSaleLoad _ ->
             [ "CompletedSaleLoad" ]
 

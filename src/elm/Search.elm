@@ -23,9 +23,9 @@ import Eos exposing (Symbol)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, h3, img, input, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, disabled, id, minlength, placeholder, required, src, type_, value)
-import Html.Events exposing (onClick, onFocus, onInput, onSubmit)
+import Html exposing (Html, br, button, div, h3, img, li, p, span, strong, text, ul)
+import Html.Attributes exposing (autocomplete, class, minlength, required, src)
+import Html.Events exposing (onClick, onFocus, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
@@ -37,6 +37,7 @@ import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
 import View.Components
+import View.Form.Input as Input
 
 
 
@@ -251,7 +252,7 @@ update shared authToken symbol model msg =
 
 
 viewForm : Translators -> Model -> Html Msg
-viewForm { t } model =
+viewForm ({ t } as translators) model =
     let
         isLoading =
             case model.state of
@@ -303,22 +304,29 @@ viewForm { t } model =
         , onSubmit QuerySubmitted
         ]
         [ div [ class "relative w-full" ]
-            [ input
-                [ type_ "text"
-                , id "searchInput"
-                , autocomplete False
-                , disabled isLoading
-                , minlength 3
-                , required True
-                , class "w-full form-input rounded-full border-0 bg-gray-100 pl-10 m-0"
-                , placeholder (t "menu.search.placeholder")
-                , value model.currentQuery
-                , onFocus InputFocused
-                , onInput CurrentQueryChanged
-                ]
-                []
-            , viewClearSearchIcon
-            , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current" ++ " " ++ iconColor
+            [ Input.init
+                { label = ""
+                , id = "searchInput"
+                , onInput = CurrentQueryChanged
+                , disabled = isLoading
+                , value = model.currentQuery
+                , placeholder = Just (t "menu.search.placeholder")
+                , problems = Nothing
+                , translators = translators
+                }
+                |> Input.withContainerAttrs [ class "!m-0" ]
+                |> Input.withAttrs
+                    [ class "rounded-full bg-gray-100 border-0 pl-10 text-base h-10"
+                    , onFocus InputFocused
+                    , minlength 3
+                    , required True
+                    , autocomplete False
+                    ]
+                |> Input.withElements
+                    [ viewClearSearchIcon
+                    , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current " ++ " " ++ iconColor
+                    ]
+                |> Input.toHtml
             ]
         , viewCancel
         ]

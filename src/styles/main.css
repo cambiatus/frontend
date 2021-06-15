@@ -75,7 +75,7 @@ body {
   }
 
   .form-checkbox {
-    @apply text-green rounded-sm focused-input;
+    @apply h-5 w-5 text-green rounded-sm focused-input;
   }
 
   .form-checkbox:checked {
@@ -408,7 +408,7 @@ textarea.input {
 
 /* Claims */
 .claim-photo-thumb {
-  @apply cursor-pointer w-24 h-16 flex items-center justify-center overflow-hidden rounded-sm;
+  @apply cursor-pointer w-24 h-16 flex items-center justify-center rounded-sm;
 }
 
 .claim-photo-thumb:hover {
@@ -435,55 +435,6 @@ textarea.input {
 /* End of Button Modifiers */
 
 /* Legacy CSS leftover */
-.shop-editor__image-upload {
-  width: 65%;
-}
-
-.shop-editor__image-upload label {
-  height: 150px;
-  background-color: #f8f8f8;
-  text-transform: uppercase;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  border-radius: 8px;
-  cursor: pointer;
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.shop-editor__image-upload label svg {
-  fill: currentColor;
-  height: 50px;
-  width: 50px;
-  margin-bottom: 6px;
-}
-
-.shop-editor__image-upload input:not(:disabled)~label:hover,
-.shop-editor__image-upload input:not(:disabled):focus~label {
-  color: var(--hover-color);
-}
-
-.shop-editor__image-upload input:not(:disabled):active~label {
-  color: var(--active-color);
-}
-
-.shop-editor__image-upload input:disabled~label {
-  cursor: auto;
-  opacity: 0.5;
-}
-
-.shop-editor__image-upload .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid currentColor;
-  border-right-color: transparent;
-}
 
 .hidden-img-input,
 .profile-img-input {

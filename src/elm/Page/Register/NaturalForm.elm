@@ -70,7 +70,7 @@ documentTypeToString document =
 
 type Msg
     = EnteredDocument Int String
-    | EnteredDocumentType String
+    | EnteredDocumentType Document
     | EnteredName String
     | EnteredEmail String
     | EnteredPhone String
@@ -98,21 +98,26 @@ view translators model =
                 |> Maybe.withDefault 10
     in
     Html.div []
-        [ viewSelectField (translators.t "register.form.document.type")
-            (documentTypeToString model.documentType)
-            True
-            EnteredDocumentType
-            [ { value = documentTypeToString DIMEX
-              , label = translators.t "register.form.document.dimex.label"
-              }
-            , { value = documentTypeToString NITE
-              , label = translators.t "register.form.document.nite.label"
-              }
-            , { value = documentTypeToString SSN
-              , label = translators.t "register.form.document.cedula_de_identidad.label"
-              }
-            ]
-            (fieldProblems DocumentType model.problems)
+        [ viewSelectField
+            { id = "document_type_select"
+            , label = translators.t "register.form.document.type"
+            , onInput = EnteredDocumentType
+            , options =
+                [ { value = DIMEX
+                  , label = translators.t "register.form.document.dimex.label"
+                  }
+                , { value = NITE
+                  , label = translators.t "register.form.document.nite.label"
+                  }
+                , { value = SSN
+                  , label = translators.t "register.form.document.cedula_de_identidad.label"
+                  }
+                ]
+            , value = model.documentType
+            , valueToString = documentTypeToString
+            , enabled = True
+            , problems = fieldProblems DocumentType model.problems
+            }
         , View.Form.Input.init
             { id = "document"
             , label = translators.t (documentTranslationString ++ ".label")
@@ -208,16 +213,7 @@ update translators msg model =
 
         EnteredDocumentType documentType ->
             { model
-                | documentType =
-                    case documentType of
-                        "dimex" ->
-                            DIMEX
-
-                        "nite" ->
-                            NITE
-
-                        _ ->
-                            SSN
+                | documentType = documentType
                 , document = ""
             }
 

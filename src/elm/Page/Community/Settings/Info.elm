@@ -17,7 +17,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, form, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled, maxlength)
+import Html.Attributes exposing (class, classList, disabled, maxlength, required)
 import Html.Events exposing (onSubmit)
 import Http
 import Json.Decode as Decode exposing (Value)
@@ -34,7 +34,7 @@ import View.Feedback as Feedback
 import View.Form
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
-import View.Toggle
+import View.Form.Toggle
 
 
 
@@ -763,6 +763,7 @@ viewName shared model =
                 |> Maybe.map List.singleton
         , translators = shared.translators
         }
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
@@ -785,7 +786,7 @@ viewDescription shared model =
                 |> Maybe.map List.singleton
         , translators = shared.translators
         }
-        |> Input.withType Input.TextArea
+        |> Input.withInputType Input.TextArea
         |> Input.toHtml
 
 
@@ -854,9 +855,10 @@ viewSubdomain shared model =
             |> Input.withAttrs
                 [ maxlength 30
                 , classList [ ( "pr-29", not <| String.isEmpty model.subdomainInput ) ]
+                , required True
                 ]
-            |> Input.withElement
-                (span
+            |> Input.withElements
+                [ span
                     [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
                     , classList
                         [ ( "hidden", String.isEmpty model.subdomainInput )
@@ -864,7 +866,7 @@ viewSubdomain shared model =
                         ]
                     ]
                     [ text ".cambiatus.io" ]
-                )
+                ]
             |> Input.toHtml
         , span [ class "font-bold" ] [ text_ "settings.community_info.url.guidance" ]
         , ul [ class "text-gray-600" ]
@@ -879,15 +881,15 @@ viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
         [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
-        , View.Toggle.init
-            { label = "settings.community_info.fields.invitation"
+        , View.Form.Toggle.init
+            { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "invitation_toggle"
             , onToggle = ToggledInvitation
             , disabled = False
             , value = not model.hasAutoInvite
             }
-            |> View.Toggle.withAttrs [ class "mt-4" ]
-            |> View.Toggle.toHtml translators
+            |> View.Form.Toggle.withAttrs [ class "mt-4" ]
+            |> View.Form.Toggle.toHtml translators
         , span [ class "font-bold mt-7" ] [ text (translators.t "settings.community_info.invitation.guidance") ]
         , span [ class "text-gray-600" ] [ text (translators.t "settings.community_info.invitation.description") ]
         ]
@@ -913,6 +915,7 @@ viewInviterReward { translators } symbol model =
         , translators = translators
         }
         |> Input.withCurrency symbol
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
@@ -936,6 +939,7 @@ viewInvitedReward { translators } symbol model =
         , translators = translators
         }
         |> Input.withCurrency symbol
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 

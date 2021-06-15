@@ -748,7 +748,7 @@ statusToRoute status =
                 |> Just
 
         Community _ ->
-            Just Route.CommunitySettings
+            Just Route.Community
 
         CommunityEditor _ ->
             Just Route.NewCommunity

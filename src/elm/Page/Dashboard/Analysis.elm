@@ -20,8 +20,8 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, button, div, img, option, select, span, text)
-import Html.Attributes exposing (class, selected, src, value)
+import Html exposing (Html, button, div, img, span, text)
+import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -39,6 +39,7 @@ import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form.Select as Select
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -101,6 +102,22 @@ type StatusFilter
     | Approved
     | Rejected
     | Pending
+
+
+statusFilterToString : StatusFilter -> String
+statusFilterToString filter =
+    case filter of
+        All ->
+            "all"
+
+        Approved ->
+            "approved"
+
+        Rejected ->
+            "rejected"
+
+        Pending ->
+            "pending"
 
 
 
@@ -182,8 +199,11 @@ view ({ shared } as loggedIn) model =
 viewFilters : LoggedIn.Model -> Model -> Html Msg
 viewFilters ({ shared } as loggedIn) model =
     let
+        { t } =
+            shared.translators
+
         text_ s =
-            text (shared.translators.t s)
+            text (t s)
     in
     div [ class "mt-4 mb-12" ]
         [ div []
@@ -210,51 +230,23 @@ viewFilters ({ shared } as loggedIn) model =
                 _ ->
                     text ""
             ]
-        , div [ class "mt-6" ]
-            [ span [ class "input-label" ] [ text_ "all_analysis.filter.status.label" ]
-            , select
-                [ class "input w-full mb-2 border form-select border-gray-500 rounded-sm"
-                , Html.Events.on "change"
-                    (Decode.map
-                        (\val ->
-                            case val of
-                                "approved" ->
-                                    SelectStatusFilter Approved
-
-                                "rejected" ->
-                                    SelectStatusFilter Rejected
-
-                                "pending" ->
-                                    SelectStatusFilter Pending
-
-                                _ ->
-                                    SelectStatusFilter All
-                        )
-                        Html.Events.targetValue
-                    )
+        , Select.init
+            { id = "status_filter_select"
+            , label = t "all_analysis.filter.status.label"
+            , onInput = SelectStatusFilter
+            , firstOption = { value = All, label = t "all_analysis.all" }
+            , value = model.filters.statusFilter
+            , valueToString = statusFilterToString
+            , disabled = False
+            , problems = Nothing
+            }
+            |> Select.withOptions
+                [ { value = Approved, label = t "all_analysis.approved" }
+                , { value = Rejected, label = t "all_analysis.disapproved" }
+                , { value = Pending, label = t "all_analysis.pending" }
                 ]
-                [ option
-                    [ value ""
-                    , selected (model.filters.statusFilter == All)
-                    ]
-                    [ text_ "all_analysis.all" ]
-                , option
-                    [ value "approved"
-                    , selected (model.filters.statusFilter == Approved)
-                    ]
-                    [ text_ "all_analysis.approved" ]
-                , option
-                    [ value "rejected"
-                    , selected (model.filters.statusFilter == Rejected)
-                    ]
-                    [ text_ "all_analysis.disapproved" ]
-                , option
-                    [ value "pending"
-                    , selected (model.filters.statusFilter == Pending)
-                    ]
-                    [ text_ "all_analysis.pending" ]
-                ]
-            ]
+            |> Select.withContainerAttrs [ class "mt-6" ]
+            |> Select.toHtml
         , div [ class "mt-6" ]
             [ button
                 [ class "w-full button button-secondary relative"
