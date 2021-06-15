@@ -6,7 +6,6 @@ module Claim exposing
     , Model
     , Msg(..)
     , Paginated
-    , ProfileSummaryKind(..)
     , claimPaginatedSelectionSet
     , encodeVerification
     , initClaimType
@@ -14,7 +13,6 @@ module Claim exposing
     , isVotable
     , paginatedPageInfo
     , paginatedToList
-    , pendingValidators
     , selectionSet
     , updateClaimModalStatus
     , updateProfileSummaries

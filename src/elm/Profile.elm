@@ -318,7 +318,7 @@ viewEmpty shared =
             ]
         , div [ class "mt-2" ]
             [ div [ class "flex items-center bg-black rounded-sm p-1" ]
-                [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
+                [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
                     [ text (shared.translators.t "profile.no_one") ]
                 ]
             ]
