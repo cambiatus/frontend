@@ -41,6 +41,7 @@ import View.Components
 import View.Feedback as Feedback
 import View.Form.Select as Select
 import View.Modal as Modal
+import View.TabSelector
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -96,11 +97,6 @@ type alias LoadedModel =
 type Tab
     = WaitingToVote
     | Analyzed
-
-
-allTabs : List Tab
-allTabs =
-    [ WaitingToVote, Analyzed ]
 
 
 type alias Filter =
@@ -245,54 +241,23 @@ viewContent loggedIn { claims, profileSummaries, pageInfo } model =
 viewTabSelector : Shared -> Model -> Html Msg
 viewTabSelector { translators } model =
     let
-        viewTab isLeft isRight tab =
-            let
-                isActive =
-                    tab == model.selectedTab
-
-                count =
-                    case model.status of
-                        RemoteData.Success loadedModel ->
-                            List.filterMap
-                                (\( tab_, tabCount ) ->
-                                    if tab_ == tab then
-                                        Just (" (" ++ String.fromInt tabCount ++ ")")
-
-                                    else
-                                        Nothing
-                                )
-                                loadedModel.tabCounts
-                                |> List.head
-                                |> Maybe.withDefault ""
-
-                        _ ->
-                            ""
-
-                label =
-                    case tab of
-                        WaitingToVote ->
-                            translators.t "all_analysis.tabs.waiting_vote"
-
-                        Analyzed ->
-                            translators.t "all_analysis.tabs.analyzed"
-            in
-            button
-                [ class "text-center py-3 px-8 w-1/2 focus:outline-none"
-                , classList
-                    [ ( "bg-orange-300 text-white cursor-default", isActive )
-                    , ( "bg-gray-100 text-black hover:bg-gray-200", not isActive )
-                    , ( "rounded-l-full", isLeft )
-                    , ( "rounded-r-full", isRight )
-                    ]
-                , onClick (SelectedTab tab)
-                ]
-                [ text (label ++ count) ]
+        count : Tab -> Maybe Int
+        count tab =
+            RemoteData.toMaybe model.status
+                |> Maybe.map .tabCounts
+                |> Maybe.andThen (List.find (\( tab_, _ ) -> tab_ == tab))
+                |> Maybe.map Tuple.second
     in
-    div [ class "w-full md:w-2/3 xl:w-1/3 flex" ]
-        (List.indexedMap
-            (\idx -> viewTab (idx == 0) (idx == List.length allTabs - 1))
-            allTabs
-        )
+    View.TabSelector.init
+        { tabs =
+            [ { tab = WaitingToVote, label = translators.t "all_analysis.tabs.waiting_vote", count = count WaitingToVote }
+            , { tab = Analyzed, label = translators.t "all_analysis.tabs.analyzed", count = count Analyzed }
+            ]
+        , selectedTab = model.selectedTab
+        , onSelectTab = SelectedTab
+        }
+        |> View.TabSelector.withContainerAttrs [ class "w-full md:w-2/3 xl:w-2/5" ]
+        |> View.TabSelector.toHtml
 
 
 viewFilterAndOrder : LoggedIn.Model -> Model -> Html Msg

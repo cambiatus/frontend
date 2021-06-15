@@ -35,6 +35,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.TabSelector
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
@@ -48,6 +49,7 @@ type alias Model =
     { status : Status
     , accountString : String
     , claimModalStatus : Claim.ModalStatus
+    , selectedTab : Tab
     }
 
 
@@ -56,6 +58,7 @@ initModel account =
     { status = Loading
     , accountString = account
     , claimModalStatus = Claim.Closed
+    , selectedTab = WaitingVote
     }
 
 
@@ -64,6 +67,11 @@ type Status
     | Loaded (List Profile.Summary.Model) ProfileClaims
     | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
+
+
+type Tab
+    = WaitingVote
+    | Analyzed
 
 
 
@@ -79,33 +87,52 @@ view loggedIn model =
         pageTitle =
             t "profile.claims.title"
 
+        maybeClaims =
+            case model.status of
+                Loaded _ profileClaims ->
+                    Just profileClaims
+
+                _ ->
+                    Nothing
+
         content =
             case model.status of
                 Loading ->
-                    Page.fullPageLoading loggedIn.shared
+                    [ Page.fullPageLoading loggedIn.shared ]
 
                 Loaded profileSummaries profileClaims ->
-                    div []
-                        [ Page.viewHeader loggedIn pageTitle
-                        , div
-                            [ class "bg-white pt-5 md:pt-6 pb-6" ]
-                            [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-                                [ viewGoodPracticesCard loggedIn.shared
-                                ]
-                            ]
-                        , viewResults loggedIn profileSummaries profileClaims
-                        , viewClaimVoteModal loggedIn model
-                        ]
+                    [ viewResults loggedIn profileSummaries profileClaims model
+                    , viewClaimVoteModal loggedIn model
+                    ]
 
                 NotFound ->
-                    Page.fullPageNotFound
+                    [ Page.fullPageNotFound
                         (t "profile.claims.not_found.title")
                         (t "profile.claims.not_found.subtitle")
+                    ]
 
                 Failed e ->
-                    Page.fullPageGraphQLError pageTitle e
+                    [ Page.fullPageGraphQLError pageTitle e ]
     in
-    { title = pageTitle, content = content }
+    { title = pageTitle
+    , content =
+        div []
+            (Page.viewHeader loggedIn pageTitle
+                :: viewHeaderAndOptions loggedIn.shared maybeClaims model
+                :: content
+            )
+    }
+
+
+viewHeaderAndOptions : Shared -> Maybe (List Claim.Model) -> Model -> Html Msg
+viewHeaderAndOptions shared maybeClaims model =
+    div
+        [ class "bg-white pt-5 md:pt-6 pb-6" ]
+        [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
+            [ viewGoodPracticesCard shared
+            , viewTabSelector shared maybeClaims model
+            ]
+        ]
 
 
 viewGoodPracticesCard : Shared -> Html msg
@@ -125,8 +152,38 @@ viewGoodPracticesCard { translators } =
         ]
 
 
-viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Html Msg
-viewResults loggedIn profileSummaries claims =
+viewTabSelector : Shared -> Maybe (List Claim.Model) -> Model -> Html Msg
+viewTabSelector ({ translators } as shared) maybeClaims model =
+    let
+        tabCount : Tab -> Maybe Int
+        tabCount tab =
+            maybeClaims
+                |> Maybe.map (\claims -> claimsToShow shared claims tab |> List.length)
+    in
+    View.TabSelector.init
+        { tabs =
+            [ { tab = WaitingVote, label = translators.t "all_analysis.tabs.waiting_vote", count = tabCount WaitingVote }
+            , { tab = Analyzed, label = translators.t "all_analysis.tabs.analyzed", count = tabCount Analyzed }
+            ]
+        , selectedTab = model.selectedTab
+        , onSelectTab = SelectedTab
+        }
+        |> View.TabSelector.withContainerAttrs [ class "w-full md:w-2/3 xl:w-2/5 mt-6 lg:mt-8" ]
+        |> View.TabSelector.toHtml
+
+
+claimsToShow : Shared -> List Claim.Model -> Tab -> List Claim.Model
+claimsToShow shared claims tab =
+    case tab of
+        WaitingVote ->
+            List.filter (Claim.isOpenForVotes shared.now) claims
+
+        Analyzed ->
+            List.filter (not << Claim.isOpenForVotes shared.now) claims
+
+
+viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Model -> Html Msg
+viewResults loggedIn profileSummaries claims model =
     let
         viewClaim profileSummary claimIndex claim =
             Claim.viewClaimCard loggedIn profileSummary claim
@@ -135,7 +192,7 @@ viewResults loggedIn profileSummaries claims =
     div [ class "container mx-auto px-4 mb-10" ]
         [ if List.length claims > 0 then
             div [ class "flex flex-wrap -mx-2 pt-4" ]
-                (claims
+                (claimsToShow loggedIn.shared claims model.selectedTab
                     |> List.reverse
                     |> List.map3 viewClaim profileSummaries (List.range 0 (List.length profileSummaries))
                 )
@@ -203,6 +260,7 @@ type Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | SelectedTab Tab
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -349,6 +407,10 @@ update msg model loggedIn =
                 _ ->
                     model |> UR.init
 
+        SelectedTab tab ->
+            { model | selectedTab = tab }
+                |> UR.init
+
 
 profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
 profileClaimQuery { shared, authToken } accountName community =
@@ -415,3 +477,6 @@ msgToString msg =
 
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
+
+        SelectedTab _ ->
+            [ "SelectedTab" ]

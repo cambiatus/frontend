@@ -7,6 +7,7 @@ module Claim exposing
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
+    , isOpenForVotes
     , isValidated
     , isVotable
     , paginatedPageInfo
@@ -101,6 +102,22 @@ isVotable claim accountName now =
         && not (isValidated claim accountName)
         && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
+
+
+isOpenForVotes : Time.Posix -> Model -> Bool
+isOpenForVotes now claim =
+    let
+        isOpen =
+            case claim.status of
+                Pending ->
+                    True
+
+                _ ->
+                    False
+    in
+    not (Action.isClosed claim.action now)
+        && not claim.action.isCompleted
+        && isOpen
 
 
 encodeVerification : ClaimId -> Eos.Name -> Bool -> Encode.Value
