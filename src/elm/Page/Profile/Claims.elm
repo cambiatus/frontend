@@ -21,8 +21,9 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, div, img, li, text, ul)
+import Html exposing (Html, button, div, img, li, text, ul)
 import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -50,6 +51,7 @@ type alias Model =
     , accountString : String
     , claimModalStatus : Claim.ModalStatus
     , selectedTab : Tab
+    , orderDirection : OrderDirection
     }
 
 
@@ -59,6 +61,7 @@ initModel account =
     , accountString = account
     , claimModalStatus = Claim.Closed
     , selectedTab = WaitingVote
+    , orderDirection = Desc
     }
 
 
@@ -72,6 +75,11 @@ type Status
 type Tab
     = WaitingVote
     | Analyzed
+
+
+type OrderDirection
+    = Asc
+    | Desc
 
 
 
@@ -119,20 +127,23 @@ view loggedIn model =
         div []
             (Page.viewHeader loggedIn pageTitle
                 :: viewHeaderAndOptions loggedIn.shared maybeClaims model
-                :: content
+                ++ content
             )
     }
 
 
-viewHeaderAndOptions : Shared -> Maybe (List Claim.Model) -> Model -> Html Msg
+viewHeaderAndOptions : Shared -> Maybe (List Claim.Model) -> Model -> List (Html Msg)
 viewHeaderAndOptions shared maybeClaims model =
-    div
+    [ div
         [ class "bg-white pt-5 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
             [ viewGoodPracticesCard shared
             , viewTabSelector shared maybeClaims model
             ]
         ]
+    , div [ class "container mx-auto px-4" ]
+        [ viewFilterAndOrder shared model ]
+    ]
 
 
 viewGoodPracticesCard : Shared -> Html msg
@@ -172,6 +183,32 @@ viewTabSelector ({ translators } as shared) maybeClaims model =
         |> View.TabSelector.toHtml
 
 
+viewFilterAndOrder : Shared -> Model -> Html Msg
+viewFilterAndOrder shared model =
+    let
+        ( filterDirectionIcon, filterDirectionLabel ) =
+            case model.orderDirection of
+                Asc ->
+                    ( Icons.sortAscending, "all_analysis.filter.sort.asc" )
+
+                Desc ->
+                    ( Icons.sortDescending, "all_analysis.filter.sort.desc" )
+
+        viewButton label icon onClickMsg =
+            button
+                [ class "button button-secondary flex-grow-1 justify-between pl-4"
+                , onClick onClickMsg
+                ]
+                [ text (shared.translators.t label)
+                , icon
+                ]
+    in
+    div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
+        [ viewButton "all_analysis.filter.title" (Icons.arrowDown "fill-current") OpenedFilterModal
+        , viewButton filterDirectionLabel (filterDirectionIcon "mr-2") ToggledSorting
+        ]
+
+
 claimsToShow : Shared -> List Claim.Model -> Tab -> List Claim.Model
 claimsToShow shared claims tab =
     case tab of
@@ -188,12 +225,20 @@ viewResults loggedIn profileSummaries claims model =
         viewClaim profileSummary claimIndex claim =
             Claim.viewClaimCard loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
+
+        orderFunction =
+            case model.orderDirection of
+                Desc ->
+                    List.reverse
+
+                Asc ->
+                    identity
     in
     div [ class "container mx-auto px-4 mb-10" ]
         [ if List.length claims > 0 then
             div [ class "flex flex-wrap -mx-2 pt-4" ]
                 (claimsToShow loggedIn.shared claims model.selectedTab
-                    |> List.reverse
+                    |> orderFunction
                     |> List.map3 viewClaim profileSummaries (List.range 0 (List.length profileSummaries))
                 )
 
@@ -261,6 +306,8 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectedTab Tab
+    | OpenedFilterModal
+    | ToggledSorting
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -411,6 +458,23 @@ update msg model loggedIn =
             { model | selectedTab = tab }
                 |> UR.init
 
+        OpenedFilterModal ->
+            -- TODO
+            model |> UR.init
+
+        ToggledSorting ->
+            let
+                newDirection =
+                    case model.orderDirection of
+                        Asc ->
+                            Desc
+
+                        Desc ->
+                            Asc
+            in
+            { model | orderDirection = newDirection }
+                |> UR.init
+
 
 profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
 profileClaimQuery { shared, authToken } accountName community =
@@ -480,3 +544,9 @@ msgToString msg =
 
         SelectedTab _ ->
             [ "SelectedTab" ]
+
+        OpenedFilterModal ->
+            [ "OpenedFilterModal" ]
+
+        ToggledSorting ->
+            [ "ToggledSorting" ]
