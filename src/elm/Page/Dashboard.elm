@@ -34,7 +34,6 @@ import List.Extra as List
 import Page
 import Profile
 import Profile.Contact as Contact
-import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -71,7 +70,7 @@ type alias Model =
     { balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , analysisFilter : Direction
-    , profileSummaries : List Profile.Summary.Model
+    , profileSummaries : List Claim.ClaimType
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , contactModel : Contact.Model
@@ -452,11 +451,11 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> Profile.Summary.Model -> Int -> ClaimStatus -> Html Msg
-viewAnalysis loggedIn profileSummary claimIndex claimStatus =
+viewAnalysis : LoggedIn.Model -> Claim.ClaimType -> Int -> ClaimStatus -> Html Msg
+viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn profileSummary claim False
+            Claim.viewClaimCard loggedIn profileSummaries claim
                 |> Html.map (ClaimMsg claimIndex)
 
         ClaimLoading _ ->
@@ -469,7 +468,7 @@ viewAnalysis loggedIn profileSummary claimIndex claimStatus =
             text ""
 
         ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn profileSummary claim False
+            Claim.viewClaimCard loggedIn profileSummaries claim
                 |> Html.map (ClaimMsg claimIndex)
 
 
@@ -739,8 +738,8 @@ update msg model ({ shared, accountName } as loggedIn) =
                     List.map ClaimLoaded (Claim.paginatedToList claims)
 
                 initProfileSummaries cs =
-                    List.length cs
-                        |> Profile.Summary.initMany False
+                    List.map (unwrapClaimStatus >> Claim.initClaimType) cs
+
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->
@@ -782,10 +781,8 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 updatedProfileSummaries =
                     case m of
-                        Claim.GotProfileSummaryMsg subMsg ->
-                            List.updateAt claimIndex
-                                (Profile.Summary.update subMsg)
-                                model.profileSummaries
+                        Claim.GotExternalMsg subMsg ->
+                            (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) model.profileSummaries)
 
                         _ ->
                             model.profileSummaries

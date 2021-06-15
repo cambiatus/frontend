@@ -27,7 +27,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -59,7 +58,7 @@ initModel account =
 
 type Status
     = Loading
-    | Loaded (List Profile.Summary.Model) ProfileClaims
+    | Loaded (List Claim.ClaimType) ProfileClaims
     | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
 
@@ -100,11 +99,11 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Html Msg
+viewResults : LoggedIn.Model -> List Claim.ClaimType -> List Claim.Model -> Html Msg
 viewResults loggedIn profileSummaries claims =
     let
         viewClaim profileSummary claimIndex claim =
-            Claim.viewClaimCard loggedIn profileSummary claim False
+            Claim.viewClaimCard loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
     in
     div [ class "container mx-auto px-4 mb-10" ]
@@ -188,8 +187,7 @@ update msg model loggedIn =
                 Just claims ->
                     let
                         profileSummaries =
-                            List.length claims
-                                |> Profile.Summary.initMany False
+                            List.map Claim.initClaimType claims
                     in
                     { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
@@ -213,14 +211,11 @@ update msg model loggedIn =
             let
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded profileSummaries profileClaims, Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( Loaded profileSummaries profileClaims, Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
                                     Loaded
-                                        (List.updateAt claimIndex
-                                            (Profile.Summary.update subMsg)
-                                            profileSummaries
-                                        )
+                                        (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries)
                                         profileClaims
                             }
 

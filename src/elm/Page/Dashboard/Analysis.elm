@@ -75,19 +75,8 @@ initModel =
 
 type Status
     = Loading
-      -- | Loaded (List Claim.Model) (List ClaimType) (Maybe Api.Relay.PageInfo)
-    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List Claim.ClaimType) (Maybe Api.Relay.PageInfo)
     | Failed
-
-
-
--- Move to Claim.elm
--- type alias ClaimType =
---     { cardSummary : Profile.Summary.Model
---     , topModalSummary : Profile.Summary.Model
---     , votersSummaries : List Profile.Summary.Model
---     , pendingSummaries : List Profile.Summary.Model
---     }
 
 
 type alias Filter =
@@ -135,7 +124,7 @@ view ({ shared } as loggedIn) model =
                 Loaded claims profileSummaries pageInfo ->
                     let
                         viewClaim profileSummary claimIndex claim =
-                            Claim.viewClaimCard loggedIn profileSummary claim False
+                            Claim.viewClaimCard loggedIn profileSummary claim
                                 |> Html.map (ClaimMsg claimIndex)
                     in
                     div []
@@ -333,17 +322,9 @@ type alias UpdateResult =
 
 
 
--- type ProfileSummaryUpdate
---     = Card
---     | TopModal
---     | Voters Int
---     | PendingVoters Int
-
-
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
-      -- | ClaimMsg Int ProfileSummaryUpdate Claim.Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
@@ -363,8 +344,8 @@ update msg model loggedIn =
         ClaimsLoaded (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
-                    List.length claims
-                        |> Profile.Summary.initMany False
+                    List.map Claim.initClaimType claims
+
             in
             case model.status of
                 Loaded claims _ _ ->
@@ -410,11 +391,11 @@ update msg model loggedIn =
             let
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded claims profileSummaries pageInfo, Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( Loaded claims profileSummaries pageInfo, Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
                                     Loaded claims
-                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
+                                        (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries)
                                         pageInfo
                             }
 
