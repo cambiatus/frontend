@@ -823,15 +823,20 @@
       "completed_action": "Only claim actions you have actually completed;",
       "know_good_practices": "Know the Community's good practices"
     },
+    "tabs": {
+      "waiting_vote": "Waiting vote",
+      "analyzed": "Analyzed"
+    },
     "filter": {
+      "title": "Filters",
       "user": "User",
       "status": {
         "label": "Action state",
         "pending_review": "Under Review (my vote is pending)"
       },
       "sort": {
-        "asc": "Ordering ascending",
-        "desc": "Ordering descending"
+        "asc": "Sort ASC",
+        "desc": "Sort DESC"
       }
     }
   },

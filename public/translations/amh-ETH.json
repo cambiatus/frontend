@@ -784,7 +784,12 @@
       "completed_action": "በትክክል ያከናወኗቸውን እርምጃዎች ብቻ ይጠይቁ;",
       "know_good_practices": "ስለ ማህበረሰቡ መልካም ልምዶች ይወቁ"
     },
+    "tabs": {
+      "waiting_vote": "ድምጽ በመጠበቅ ላይ",
+      "analyzed": "ተተንትኗል"
+    },
     "filter": {
+      "title": "ማጣሪያዎች",
       "user": "ተጠቃሚ",
       "status": {
         "label": "የተግባር ሁኔታ",

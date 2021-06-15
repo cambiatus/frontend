@@ -829,15 +829,20 @@
       "completed_action": "Reivindique apenas ações que você realmente realizou;",
       "know_good_practices": "Conheça as boas práticas da Comunidade"
     },
+    "tabs": {
+      "waiting_vote": "Esperando voto",
+      "analyzed": "Analizadas"
+    },
     "filter": {
+      "title": "Filtros",
       "user": "Usuário",
       "status": {
         "label": "Estado da ação",
         "pending_review": "Sob análise (meu voto está pendente)"
       },
       "sort": {
-        "asc": "Ordenação ascendente",
-        "desc": "Ordenação descendente"
+        "asc": "Ordenação ASC",
+        "desc": "Ordenação DESC"
       }
     }
   },

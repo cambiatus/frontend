@@ -825,15 +825,20 @@
       "completed_action": "Reclameu només accions realment realitzades;",
       "know_good_practices": "Obteniu més informació sobre les bones pràctiques de la Comunitat"
     },
+    "tabs": {
+      "waiting_vote": "Vot en espera",
+      "analyzed": "Analitzat"
+    },
     "filter": {
+      "title": "Filtres",
       "user": "Usuari",
       "status": {
         "label": "Estat de l’acció",
         "pending_review": "En revisió (el meu vot està pendent)"
       },
       "sort": {
-        "asc": "Ordenació ascendent",
-        "desc": "Ordenant descendent"
+        "asc": "Ordenació ASC",
+        "desc": "Ordenant DESC"
       }
     }
   },

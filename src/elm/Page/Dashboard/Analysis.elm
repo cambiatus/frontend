@@ -186,7 +186,7 @@ viewHeaderAndOptions loggedIn model =
     [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
             [ viewGoodPracticesCard loggedIn.shared
-            , viewTabSelector model
+            , viewTabSelector loggedIn.shared model
             ]
         ]
     , div [ class "container mx-auto px-4" ]
@@ -260,8 +260,8 @@ viewGoodPracticesCard { translators } =
         ]
 
 
-viewTabSelector : Model -> Html Msg
-viewTabSelector model =
+viewTabSelector : Shared -> Model -> Html Msg
+viewTabSelector { translators } model =
     let
         viewTab isLeft isRight tab =
             let
@@ -289,12 +289,10 @@ viewTabSelector model =
                 label =
                     case tab of
                         WaitingToVote ->
-                            -- TODO - I18N
-                            "Waiting vote"
+                            translators.t "all_analysis.tabs.waiting_vote"
 
                         Analyzed ->
-                            -- TODO - I18N
-                            "Analyzed"
+                            translators.t "all_analysis.tabs.analyzed"
             in
             button
                 [ class "text-center py-3 px-8 w-1/2 focus:outline-none"
@@ -318,13 +316,13 @@ viewTabSelector model =
 viewFilterAndOrder : LoggedIn.Model -> Model -> Html Msg
 viewFilterAndOrder { shared } model =
     let
-        filterDirectionIcon =
+        ( filterDirectionIcon, filterDirectionLabel ) =
             case model.direction of
                 ASC ->
-                    Icons.sortAscending
+                    ( Icons.sortAscending, "all_analysis.filter.sort.asc" )
 
                 DESC ->
-                    Icons.sortDescending
+                    ( Icons.sortDescending, "all_analysis.filter.sort.desc" )
 
         viewButton label icon onClickMsg =
             button
@@ -336,8 +334,8 @@ viewFilterAndOrder { shared } model =
                 ]
     in
     div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
-        [ viewButton "Filters" (Icons.arrowDown "fill-current") OpenedFilterModal -- TODO - Fix label
-        , viewButton "Sort by" (filterDirectionIcon "mr-2") ToggleSorting -- TODO - Fix label
+        [ viewButton "all_analysis.filter.title" (Icons.arrowDown "fill-current") OpenedFilterModal
+        , viewButton filterDirectionLabel (filterDirectionIcon "mr-2") ToggleSorting
         ]
 
 
