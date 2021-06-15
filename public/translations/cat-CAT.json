@@ -832,6 +832,7 @@
     "filter": {
       "title": "Filtres",
       "user": "Usuari",
+      "apply": "Aplicar",
       "status": {
         "label": "Estat de l’acció",
         "pending_review": "En revisió (el meu vot està pendent)"

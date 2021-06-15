@@ -365,10 +365,9 @@ viewFiltersModal ({ shared } as loggedIn) model =
         { closeMsg = ClosedFilterModal
         , isVisible = model.showFilterModal
         }
-        |> Modal.withHeader "Filters"
+        |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withHeaderAttrs [ class "px-5" ]
         |> Modal.withCloseButtonAttrs [ class "mx-5" ]
-        -- TODO - I18N
         |> Modal.withBody
             [ if not showUserSelect then
                 text ""
@@ -433,14 +432,17 @@ viewFiltersModal ({ shared } as loggedIn) model =
                         [ { value = Approved, label = t "all_analysis.approved" }
                         , { value = Rejected, label = t "all_analysis.disapproved" }
                         ]
-                    |> Select.withContainerAttrs [ class "mt-6" ]
+                    |> Select.withContainerAttrs
+                        [ class "px-1 mt-1"
+                        , classList [ ( "mt-6", showUserSelect ) ]
+                        ]
                     |> Select.toHtml
             , div [ class "px-1" ]
                 [ button
                     [ class "button button-primary w-full"
                     , onClick ClickedApplyFilters
                     ]
-                    [ text "Apply" ]
+                    [ text (t "all_analysis.filter.apply") ]
                 ]
             ]
         |> Modal.toHtml
@@ -541,7 +543,9 @@ update msg model loggedIn =
                                 { claims = newClaims
                                 , profileSummaries = initProfileSummaries newClaims
                                 , pageInfo = Claim.paginatedPageInfo results
-                                , tabCounts = [ ( WaitingToVote, 2 ), ( Analyzed, 15 ) ] -- TODO
+
+                                -- TODO - Use tabCounts from backend
+                                , tabCounts = []
                                 }
                         , reloadOnNextQuery = False
                     }
@@ -554,7 +558,9 @@ update msg model loggedIn =
                                 { claims = Claim.paginatedToList results
                                 , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
                                 , pageInfo = Claim.paginatedPageInfo results
-                                , tabCounts = [ ( WaitingToVote, 2 ), ( Analyzed, 15 ) ] -- TODO
+
+                                -- TODO - Use tabCounts from backend
+                                , tabCounts = []
                                 }
                         , reloadOnNextQuery = False
                     }

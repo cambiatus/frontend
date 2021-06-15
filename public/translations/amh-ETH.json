@@ -791,6 +791,7 @@
     "filter": {
       "title": "ማጣሪያዎች",
       "user": "ተጠቃሚ",
+      "apply": "ያመልክቱ",
       "status": {
         "label": "የተግባር ሁኔታ",
         "pending_review": "እየተየ ነዉ(ምርጫዬ ዘገየ)"

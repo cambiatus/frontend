@@ -830,6 +830,7 @@
     "filter": {
       "title": "Filters",
       "user": "User",
+      "apply": "Apply",
       "status": {
         "label": "Action state",
         "pending_review": "Under Review (my vote is pending)"

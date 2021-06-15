@@ -831,7 +831,8 @@
     },
     "filter": {
       "title": "Filtros",
-      "user": "Usario",
+      "user": "Usuario",
+      "apply": "Aplicar",
       "status": {
         "label": "estado de acción",
         "pending_review": "Bajo revisión (mi voto está pendiente)"
