@@ -21,8 +21,9 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, div, img, text)
+import Html exposing (Html, div, img, li, text, ul)
 import Html.Attributes exposing (class, src)
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
@@ -31,6 +32,7 @@ import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
 
@@ -85,6 +87,12 @@ view loggedIn model =
                 Loaded profileSummaries profileClaims ->
                     div []
                         [ Page.viewHeader loggedIn pageTitle
+                        , div
+                            [ class "bg-white pt-5 md:pt-6 pb-6" ]
+                            [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
+                                [ viewGoodPracticesCard loggedIn.shared
+                                ]
+                            ]
                         , viewResults loggedIn profileSummaries profileClaims
                         , viewClaimVoteModal loggedIn model
                         ]
@@ -98,6 +106,23 @@ view loggedIn model =
                     Page.fullPageGraphQLError pageTitle e
     in
     { title = pageTitle, content = content }
+
+
+viewGoodPracticesCard : Shared -> Html msg
+viewGoodPracticesCard { translators } =
+    let
+        text_ =
+            translators.t >> text
+    in
+    div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
+        [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
+            [ Icons.lamp "mr-2", text_ "profile.claims.good_practices.title" ]
+        , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
+            [ li [ class "pl-1" ] [ text_ "profile.claims.good_practices.once_a_day" ]
+            , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.completed_action" ]
+            , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.know_good_practices" ]
+            ]
+        ]
 
 
 viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Html Msg

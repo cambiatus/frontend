@@ -183,10 +183,9 @@ view ({ shared } as loggedIn) model =
 
 viewHeaderAndOptions : LoggedIn.Model -> Model -> List (Html Msg)
 viewHeaderAndOptions loggedIn model =
-    [ div [ class "bg-white pt-4 md:pt-6 pb-6" ]
-        [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-            [ viewGoodPracticesCard loggedIn.shared
-            , viewTabSelector loggedIn.shared model
+    [ div [ class "bg-white py-4" ]
+        [ div [ class "container mx-auto px-4 flex justify-center" ]
+            [ viewTabSelector loggedIn.shared model
             ]
         ]
     , div [ class "container mx-auto px-4" ]
@@ -243,23 +242,6 @@ viewContent loggedIn { claims, profileSummaries, pageInfo } model =
     ]
 
 
-viewGoodPracticesCard : Shared -> Html msg
-viewGoodPracticesCard { translators } =
-    let
-        text_ =
-            translators.t >> text
-    in
-    div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
-        [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
-            [ Icons.lamp "mr-2", text_ "all_analysis.good_practices.title" ]
-        , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
-            [ li [ class "pl-1" ] [ text_ "all_analysis.good_practices.once_a_day" ]
-            , li [ class "pl-1" ] [ text_ "all_analysis.good_practices.completed_action" ]
-            , li [ class "pl-1" ] [ text_ "all_analysis.good_practices.know_good_practices" ]
-            ]
-        ]
-
-
 viewTabSelector : Shared -> Model -> Html Msg
 viewTabSelector { translators } model =
     let
@@ -306,7 +288,7 @@ viewTabSelector { translators } model =
                 ]
                 [ text (label ++ count) ]
     in
-    div [ class "mt-6 md:mt-8 w-full md:w-2/3 xl:w-1/3 flex" ]
+    div [ class "w-full md:w-2/3 xl:w-1/3 flex" ]
         (List.indexedMap
             (\idx -> viewTab (idx == 0) (idx == List.length allTabs - 1))
             allTabs
