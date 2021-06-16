@@ -1294,7 +1294,7 @@ setCommunity community ({ shared } as model) =
 
     else if community.hasAutoInvite then
         ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
-        , Cmd.batch [ Route.pushUrl shared.navKey Route.Join, storeCommunityCmd ]
+        , Cmd.batch [ Route.pushUrl shared.navKey (Route.Join (List.head model.routeHistory)), storeCommunityCmd ]
         )
 
     else

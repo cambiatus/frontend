@@ -840,8 +840,8 @@ statusToRoute status =
         Invite subModel ->
             Just (Route.Invite subModel.invitationId)
 
-        Join _ ->
-            Just Route.Join
+        Join subModel ->
+            Just (Route.Join subModel.maybeRedirect)
 
         Transfer subModel ->
             Just (Route.Transfer subModel.maybeTo)
@@ -973,8 +973,11 @@ changeRouteTo maybeRoute model =
                         Cmd.none
 
                       else
-                        Route.replaceUrl shared.navKey Route.Join
+                        Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
+
+        -- longersymbol - no auto invite
+        -- testanothertwo - yes auto invite
     in
     case maybeRoute of
         Nothing ->
@@ -1148,8 +1151,8 @@ changeRouteTo maybeRoute model =
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 
-        Just Route.Join ->
-            Join.init session
+        Just (Route.Join maybeRedirect) ->
+            Join.init session maybeRedirect
                 |> updateStatusWith Join GotJoinMsg model
 
         Just (Route.Transfer maybeTo) ->

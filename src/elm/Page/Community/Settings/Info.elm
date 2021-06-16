@@ -322,12 +322,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
                                             , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
-                                            , website =
-                                                if String.startsWith "https://" model.websiteInput || String.startsWith "http://" model.websiteInput then
-                                                    model.websiteInput
-
-                                                else
-                                                    "http://" ++ model.websiteInput
+                                            , website = addProtocolToUrlString model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -548,7 +543,10 @@ validateDescription model =
 
 addProtocolToUrlString : String -> String
 addProtocolToUrlString url =
-    if String.startsWith "https://" url || String.startsWith "http://" url then
+    if String.isEmpty url then
+        ""
+
+    else if String.startsWith "https://" url || String.startsWith "http://" url then
         url
 
     else

@@ -547,7 +547,7 @@ getSignUpFields form =
 
 
 update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
-update _ msg model { shared } =
+update _ msg model { shared, afterLoginRedirect } =
     let
         { t } =
             shared.translators
@@ -577,7 +577,7 @@ update _ msg model { shared } =
 
             else
                 UR.init model
-                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
+                    |> UR.addCmd (Route.pushUrl shared.navKey (Route.Join afterLoginRedirect))
 
         ValidateForm formType ->
             let
