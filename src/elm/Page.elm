@@ -277,7 +277,7 @@ update msg session =
 
         ( SignedIn (RemoteData.Failure error), Guest guest ) ->
             UR.init session
-                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.afterLoginRedirect))
+                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
                 |> UR.logGraphqlError msg error
 
         ( _, _ ) ->
@@ -307,7 +307,7 @@ logout { shared } =
     in
     ( Guest { guest | shared = { shared | maybeAccount = Nothing } }
     , Cmd.batch
-        [ Route.replaceUrl shared.navKey (Route.Login Nothing)
+        [ Route.replaceUrl shared.navKey (Route.Login Nothing Nothing)
         , Cmd.map GotGuestMsg guestCmd
         ]
     )

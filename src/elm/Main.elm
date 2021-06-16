@@ -729,8 +729,8 @@ hideFeedback model =
             { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
-statusToRoute : Status -> Maybe Route
-statusToRoute status =
+statusToRoute : Status -> Session -> Maybe Route
+statusToRoute status session =
     case status of
         Redirect ->
             Nothing
@@ -797,7 +797,16 @@ statusToRoute status =
             Just Route.Dashboard
 
         Login maybeRedirect _ ->
-            Just (Route.Login maybeRedirect)
+            let
+                maybeInvitation =
+                    case session of
+                        Page.LoggedIn _ ->
+                            Nothing
+
+                        Page.Guest guest ->
+                            guest.maybeInvitation
+            in
+            Just (Route.Login maybeInvitation maybeRedirect)
 
         Profile _ ->
             Just Route.Profile
@@ -840,8 +849,8 @@ statusToRoute status =
         Invite subModel ->
             Just (Route.Invite subModel.invitationId)
 
-        Join _ ->
-            Just Route.Join
+        Join subModel ->
+            Just (Route.Join subModel.maybeRedirect)
 
         Transfer subModel ->
             Just (Route.Transfer subModel.maybeTo)
@@ -888,10 +897,19 @@ changeRouteTo maybeRoute model =
             Maybe.map addRedirect maybeRedirect
                 |> Maybe.withDefault model
 
-        withGuest init_ update_ maybeRedirect =
+        addMaybeInvitation maybeInvitation model_ =
+            case model_.session of
+                Page.LoggedIn _ ->
+                    model_
+
+                Page.Guest guest ->
+                    { model_ | session = { guest | maybeInvitation = maybeInvitation } |> Page.Guest }
+
+        withGuest init_ update_ maybeInvitation maybeRedirect =
             let
                 model_ =
                     afterLoginRedirect maybeRedirect
+                        |> addMaybeInvitation maybeInvitation
 
                 fn =
                     init_
@@ -916,7 +934,7 @@ changeRouteTo maybeRoute model =
                     )
 
         addRouteToHistory status loggedIn =
-            case statusToRoute status of
+            case statusToRoute status (Page.LoggedIn loggedIn) of
                 Nothing ->
                     loggedIn
 
@@ -973,7 +991,7 @@ changeRouteTo maybeRoute model =
                         Cmd.none
 
                       else
-                        Route.replaceUrl shared.navKey Route.Join
+                        Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
     in
     case maybeRoute of
@@ -996,12 +1014,14 @@ changeRouteTo maybeRoute model =
             withGuest
                 (Register.init invitation)
                 (updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg)
+                invitation
                 maybeRedirect
 
-        Just (Route.Login maybeRedirect) ->
+        Just (Route.Login maybeInvitation maybeRedirect) ->
             withGuest
                 Login.init
                 (updateStatusWith (Login maybeRedirect) GotLoginMsg)
+                maybeInvitation
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
@@ -1148,8 +1168,8 @@ changeRouteTo maybeRoute model =
             Invite.init session invitationId
                 |> updateStatusWith Invite GotInviteMsg model
 
-        Just Route.Join ->
-            Join.init session
+        Just (Route.Join maybeRedirect) ->
+            Join.init session maybeRedirect
                 |> updateStatusWith Join GotJoinMsg model
 
         Just (Route.Transfer maybeTo) ->

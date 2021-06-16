@@ -166,7 +166,7 @@ view ({ shared } as guest) model =
                                     False
                     in
                     if community.hasAutoInvite || hasInvite then
-                        viewCreateAccount shared.translators model
+                        viewCreateAccount guest model
 
                     else
                         Page.fullPageLoading shared
@@ -185,9 +185,12 @@ view ({ shared } as guest) model =
     }
 
 
-viewCreateAccount : Translators -> Model -> Html Msg
-viewCreateAccount translators model =
+viewCreateAccount : Guest.Model -> Model -> Html Msg
+viewCreateAccount guest model =
     let
+        { translators } =
+            guest.shared
+
         formClasses =
             "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
 
@@ -213,7 +216,7 @@ viewCreateAccount translators model =
             AccountTypeSelectorShowed ->
                 div [ class formClasses ]
                     [ viewAccountTypeSelector translators model
-                    , viewFooterDisabled translators
+                    , viewFooter translators False guest
                     ]
 
             FormShowed formModel ->
@@ -224,7 +227,7 @@ viewCreateAccount translators model =
                     [ viewAccountTypeSelector translators model
                     , div [ class "sf-content" ]
                         [ viewRegistrationForm translators formModel ]
-                    , viewFooterEnabled translators
+                    , viewFooter translators True guest
                     ]
 
             AccountCreated ->
@@ -244,18 +247,8 @@ viewCreateAccount translators model =
         ]
 
 
-viewFooterEnabled : Translators -> Html msg
-viewFooterEnabled translators =
-    viewFooter translators True
-
-
-viewFooterDisabled : Translators -> Html msg
-viewFooterDisabled translators =
-    viewFooter translators False
-
-
-viewFooter : Translators -> Bool -> Html msg
-viewFooter { t } isSubmitEnabled =
+viewFooter : Translators -> Bool -> Guest.Model -> Html msg
+viewFooter { t } isSubmitEnabled guest =
     let
         viewSubmitButton =
             button
@@ -276,7 +269,7 @@ viewFooter { t } isSubmitEnabled =
             [ text (t "register.login")
             , a
                 [ class "underline text-orange-300"
-                , Route.href (Route.Login Nothing)
+                , Route.href (Route.Login guest.maybeInvitation guest.afterLoginRedirect)
                 ]
                 [ text (t "register.authLink") ]
             ]
@@ -547,7 +540,7 @@ getSignUpFields form =
 
 
 update : InvitationId -> Msg -> Model -> Guest.Model -> UpdateResult
-update _ msg model { shared } =
+update _ msg model ({ shared } as guest) =
     let
         { t } =
             shared.translators
@@ -577,7 +570,7 @@ update _ msg model { shared } =
 
             else
                 UR.init model
-                    |> UR.addCmd (Route.pushUrl shared.navKey Route.Join)
+                    |> UR.addCmd (Route.pushUrl shared.navKey (Route.Join guest.afterLoginRedirect))
 
         ValidateForm formType ->
             let
@@ -818,7 +811,7 @@ update _ msg model { shared } =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl shared.navKey (Route.Login Nothing))
+                    (Route.replaceUrl shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
 
         CompletedSignUp (RemoteData.Success resp) ->
             case resp of
