@@ -797,7 +797,8 @@ statusToRoute status =
             Just Route.Dashboard
 
         Login maybeRedirect _ ->
-            Just (Route.Login maybeRedirect)
+            -- TODO
+            Just (Route.Login Nothing maybeRedirect)
 
         Profile _ ->
             Just Route.Profile
@@ -888,10 +889,19 @@ changeRouteTo maybeRoute model =
             Maybe.map addRedirect maybeRedirect
                 |> Maybe.withDefault model
 
-        withGuest init_ update_ maybeRedirect =
+        addMaybeInvitation maybeInvitation model_ =
+            case model_.session of
+                Page.LoggedIn _ ->
+                    model_
+
+                Page.Guest guest ->
+                    { model_ | session = { guest | maybeInvitation = maybeInvitation } |> Page.Guest }
+
+        withGuest init_ update_ maybeInvitation maybeRedirect =
             let
                 model_ =
                     afterLoginRedirect maybeRedirect
+                        |> addMaybeInvitation maybeInvitation
 
                 fn =
                     init_
@@ -999,12 +1009,14 @@ changeRouteTo maybeRoute model =
             withGuest
                 (Register.init invitation)
                 (updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg)
+                invitation
                 maybeRedirect
 
-        Just (Route.Login maybeRedirect) ->
+        Just (Route.Login maybeInvitation maybeRedirect) ->
             withGuest
                 Login.init
                 (updateStatusWith (Login maybeRedirect) GotLoginMsg)
+                maybeInvitation
                 maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->

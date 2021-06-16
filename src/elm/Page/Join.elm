@@ -237,7 +237,7 @@ view_ isGuest ({ translators } as shared) community model =
                                 [ text (translators.t "community.join.only_invited") ]
                             , a
                                 [ class "button button-primary w-full mt-4"
-                                , Route.href (Route.Login model.maybeRedirect)
+                                , Route.href (Route.Login Nothing model.maybeRedirect)
                                 ]
                                 [ text (translators.t "community.join.already_member") ]
                             ]

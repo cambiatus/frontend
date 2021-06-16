@@ -25,7 +25,7 @@ type Route
     = Root
     | ComingSoon
     | Register (Maybe String) (Maybe Route)
-    | Login (Maybe Route)
+    | Login (Maybe String) (Maybe Route)
     | Logout
     | Notification
     | ProfileEditor
@@ -78,7 +78,14 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Login
+        , Url.map (Just >> Login)
+            (s "login"
+                </> string
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
+        , Url.map (Login Nothing)
             (s "login"
                 <?> Query.map
                         (parseRedirect url)
@@ -329,8 +336,13 @@ routeToString route =
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 
-                Login maybeRedirect ->
+                Login Nothing maybeRedirect ->
                     ( [ "login" ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
+
+                Login (Just invitation) maybeRedirect ->
+                    ( [ "login", invitation ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 

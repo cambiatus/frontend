@@ -267,7 +267,7 @@ viewPin { shared } model =
 
 viewIllustration : String -> Html msg
 viewIllustration fileName =
-    img [ class "h-40 mx-auto mt-8 mb-7", src ("images/" ++ fileName) ] []
+    img [ class "h-40 mx-auto mt-8 mb-7", src ("/images/" ++ fileName) ] []
 
 
 
@@ -482,7 +482,7 @@ updateWithPassphrase msg model { shared } =
 
 
 updateWithPin : PinMsg -> PinModel -> Guest.Model -> PinUpdateResult
-updateWithPin msg model { shared } =
+updateWithPin msg model ({ shared } as guest) =
     case msg of
         PinIgnored ->
             UR.init model
@@ -506,7 +506,7 @@ updateWithPin msg model { shared } =
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
-                        (Auth.signIn accountName shared Nothing)
+                        (Auth.signIn accountName shared guest.maybeInvitation)
                         (GotSignInResult privateKey)
                     )
 
