@@ -128,13 +128,8 @@ viewModalDetails : Options msg -> Html msg
 viewModalDetails options =
     let
         header =
-            case options.header of
-                Just h ->
-                    h3 [ class "modal-header" ]
-                        [ text h ]
-
-                Nothing ->
-                    text ""
+            h3 [ class "modal-header" ]
+                [ text (Maybe.withDefault "" options.header) ]
 
         body =
             case options.body of
