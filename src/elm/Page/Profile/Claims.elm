@@ -22,8 +22,9 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, img, li, text, ul)
-import Html.Attributes exposing (class, src)
+import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
+import Html.Keyed
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -36,6 +37,8 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
+import View.Form.Select as Select
+import View.Modal as Modal
 import View.TabSelector
 
 
@@ -52,6 +55,9 @@ type alias Model =
     , claimModalStatus : Claim.ModalStatus
     , selectedTab : Tab
     , orderDirection : OrderDirection
+    , showFiltersModal : Bool
+    , currentStatusFilter : StatusFilter
+    , editingStatusFilter : StatusFilter
     }
 
 
@@ -62,6 +68,9 @@ initModel account =
     , claimModalStatus = Claim.Closed
     , selectedTab = WaitingVote
     , orderDirection = Desc
+    , showFiltersModal = False
+    , currentStatusFilter = All
+    , editingStatusFilter = All
     }
 
 
@@ -80,6 +89,13 @@ type Tab
 type OrderDirection
     = Asc
     | Desc
+
+
+type StatusFilter
+    = All
+    | Approved
+    | Disapproved
+    | Completed
 
 
 
@@ -126,6 +142,7 @@ view loggedIn model =
     , content =
         div []
             (Page.viewHeader loggedIn pageTitle
+                :: viewFiltersModal loggedIn.shared model
                 :: viewHeaderAndOptions loggedIn.shared maybeClaims model
                 ++ content
             )
@@ -169,7 +186,7 @@ viewTabSelector ({ translators } as shared) maybeClaims model =
         tabCount : Tab -> Maybe Int
         tabCount tab =
             maybeClaims
-                |> Maybe.map (\claims -> claimsToShow shared claims tab |> List.length)
+                |> Maybe.map (\claims -> claimsToShow shared claims All tab |> List.length)
     in
     View.TabSelector.init
         { tabs =
@@ -202,29 +219,117 @@ viewFilterAndOrder shared model =
                 [ text (shared.translators.t label)
                 , icon
                 ]
+
+        showFilters =
+            case model.selectedTab of
+                WaitingVote ->
+                    False
+
+                Analyzed ->
+                    True
     in
-    div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
-        [ viewButton "all_analysis.filter.title" (Icons.arrowDown "fill-current") OpenedFilterModal
+    div
+        [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4"
+        , classList [ ( "sm:w-1/2 md:w-2/6 xl:w-1/6", not showFilters ) ]
+        ]
+        [ if showFilters then
+            viewButton "all_analysis.filter.title" (Icons.arrowDown "fill-current") OpenedFilterModal
+
+          else
+            text ""
         , viewButton filterDirectionLabel (filterDirectionIcon "mr-2") ToggledSorting
         ]
 
 
-claimsToShow : Shared -> List Claim.Model -> Tab -> List Claim.Model
-claimsToShow shared claims tab =
+viewFiltersModal : Shared -> Model -> Html Msg
+viewFiltersModal shared model =
+    let
+        { t } =
+            shared.translators
+
+        statusFilterToString statusFilter =
+            case statusFilter of
+                All ->
+                    "all"
+
+                Approved ->
+                    "approved"
+
+                Disapproved ->
+                    "disapproved"
+
+                Completed ->
+                    "completed"
+    in
+    Modal.initWith
+        { closeMsg = OpenedFilterModal
+        , isVisible = model.showFiltersModal
+        }
+        |> Modal.withHeader (t "all_analysis.filter.title")
+        |> Modal.withBody
+            [ Select.init
+                { id = "status_filter_select"
+                , label = t "all_analysis.filter.status.label"
+                , onInput = SelectedStatusFilter
+                , firstOption = { value = All, label = t "all_analysis.all" }
+                , value = model.editingStatusFilter
+                , valueToString = statusFilterToString
+                , disabled = False
+                , problems = Nothing
+                }
+                |> Select.withOptions
+                    [ { value = Approved, label = t "all_analysis.approved" }
+                    , { value = Disapproved, label = t "all_analysis.disapproved" }
+                    , { value = Completed, label = t "community.actions.completed" }
+                    ]
+                |> Select.toHtml
+            , button
+                [ class "button button-primary w-full"
+                , onClick ClickedApplyFilters
+                ]
+                [ text (t "all_analysis.filter.apply") ]
+            ]
+        |> Modal.toHtml
+
+
+claimsToShow : Shared -> List Claim.Model -> StatusFilter -> Tab -> List Claim.Model
+claimsToShow shared claims statusFilter tab =
     case tab of
         WaitingVote ->
             List.filter (Claim.isOpenForVotes shared.now) claims
 
         Analyzed ->
-            List.filter (not << Claim.isOpenForVotes shared.now) claims
+            let
+                satisfiesFilter claim =
+                    case statusFilter of
+                        All ->
+                            True
+
+                        Approved ->
+                            claim.status == Claim.Approved
+
+                        Disapproved ->
+                            claim.status == Claim.Rejected
+
+                        Completed ->
+                            claim.status == Claim.Pending
+            in
+            List.filter
+                (\claim ->
+                    not (Claim.isOpenForVotes shared.now claim)
+                        && satisfiesFilter claim
+                )
+                claims
 
 
 viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Model -> Html Msg
 viewResults loggedIn profileSummaries claims model =
     let
         viewClaim profileSummary claimIndex claim =
-            Claim.viewClaimCard loggedIn profileSummary claim
+            ( String.fromInt claim.id
+            , Claim.viewClaimCard loggedIn profileSummary claim
                 |> Html.map (ClaimMsg claimIndex)
+            )
 
         orderFunction =
             case model.orderDirection of
@@ -233,13 +338,18 @@ viewResults loggedIn profileSummaries claims model =
 
                 Asc ->
                     identity
+
+        claimsList =
+            claimsToShow loggedIn.shared claims model.currentStatusFilter model.selectedTab
     in
     div [ class "container mx-auto px-4 mb-10" ]
-        [ if List.length claims > 0 then
-            div [ class "flex flex-wrap -mx-2 pt-4" ]
-                (claimsToShow loggedIn.shared claims model.selectedTab
+        [ if List.length claimsList > 0 then
+            Html.Keyed.ul [ class "flex flex-wrap -mx-2 pt-4" ]
+                (claimsList
                     |> orderFunction
-                    |> List.map3 viewClaim profileSummaries (List.range 0 (List.length profileSummaries))
+                    |> List.map3 viewClaim
+                        profileSummaries
+                        (List.range 0 (List.length profileSummaries))
                 )
 
           else
@@ -308,6 +418,8 @@ type Msg
     | SelectedTab Tab
     | OpenedFilterModal
     | ToggledSorting
+    | SelectedStatusFilter StatusFilter
+    | ClickedApplyFilters
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -459,8 +571,8 @@ update msg model loggedIn =
                 |> UR.init
 
         OpenedFilterModal ->
-            -- TODO
-            model |> UR.init
+            { model | showFiltersModal = True }
+                |> UR.init
 
         ToggledSorting ->
             let
@@ -473,6 +585,17 @@ update msg model loggedIn =
                             Asc
             in
             { model | orderDirection = newDirection }
+                |> UR.init
+
+        SelectedStatusFilter statusFilter ->
+            { model | editingStatusFilter = statusFilter }
+                |> UR.init
+
+        ClickedApplyFilters ->
+            { model
+                | currentStatusFilter = model.editingStatusFilter
+                , showFiltersModal = False
+            }
                 |> UR.init
 
 
@@ -550,3 +673,9 @@ msgToString msg =
 
         ToggledSorting ->
             [ "ToggledSorting" ]
+
+        SelectedStatusFilter _ ->
+            [ "SelectedStatusFilter" ]
+
+        ClickedApplyFilters ->
+            [ "ClickedApplyFilters" ]

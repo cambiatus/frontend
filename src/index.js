@@ -26,6 +26,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 window.customElements.define('pdf-viewer',
   class PdfViewer extends HTMLElement {
     connectedCallback () {
+      if (this.hasChildNodes()) return
+
       const url = this.getAttribute('elm-url')
       const childClass = this.getAttribute('elm-child-class')
 
