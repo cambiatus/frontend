@@ -262,7 +262,7 @@ viewFiltersModal shared model =
                     "completed"
     in
     Modal.initWith
-        { closeMsg = OpenedFilterModal
+        { closeMsg = ClosedFilterModal
         , isVisible = model.showFiltersModal
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
@@ -417,6 +417,7 @@ type Msg
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | SelectedTab Tab
     | OpenedFilterModal
+    | ClosedFilterModal
     | ToggledSorting
     | SelectedStatusFilter StatusFilter
     | ClickedApplyFilters
@@ -574,6 +575,10 @@ update msg model loggedIn =
             { model | showFiltersModal = True }
                 |> UR.init
 
+        ClosedFilterModal ->
+            { model | showFiltersModal = False }
+                |> UR.init
+
         ToggledSorting ->
             let
                 newDirection =
@@ -670,6 +675,9 @@ msgToString msg =
 
         OpenedFilterModal ->
             [ "OpenedFilterModal" ]
+
+        ClosedFilterModal ->
+            [ "ClosedFilterModal" ]
 
         ToggledSorting ->
             [ "ToggledSorting" ]
