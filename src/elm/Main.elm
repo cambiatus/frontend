@@ -729,8 +729,8 @@ hideFeedback model =
             { model | session = Page.Guest { guest | feedback = Feedback.Hidden } }
 
 
-statusToRoute : Status -> Maybe Route
-statusToRoute status =
+statusToRoute : Status -> Session -> Maybe Route
+statusToRoute status session =
     case status of
         Redirect ->
             Nothing
@@ -797,8 +797,16 @@ statusToRoute status =
             Just Route.Dashboard
 
         Login maybeRedirect _ ->
-            -- TODO
-            Just (Route.Login Nothing maybeRedirect)
+            let
+                maybeInvitation =
+                    case session of
+                        Page.LoggedIn _ ->
+                            Nothing
+
+                        Page.Guest guest ->
+                            guest.maybeInvitation
+            in
+            Just (Route.Login maybeInvitation maybeRedirect)
 
         Profile _ ->
             Just Route.Profile
@@ -926,7 +934,7 @@ changeRouteTo maybeRoute model =
                     )
 
         addRouteToHistory status loggedIn =
-            case statusToRoute status of
+            case statusToRoute status (Page.LoggedIn loggedIn) of
                 Nothing ->
                     loggedIn
 
