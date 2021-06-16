@@ -166,7 +166,7 @@ view ({ shared } as guest) model =
                                     False
                     in
                     if community.hasAutoInvite || hasInvite then
-                        viewCreateAccount shared.translators model
+                        viewCreateAccount shared.translators guest.afterLoginRedirect model
 
                     else
                         Page.fullPageLoading shared
@@ -185,8 +185,8 @@ view ({ shared } as guest) model =
     }
 
 
-viewCreateAccount : Translators -> Model -> Html Msg
-viewCreateAccount translators model =
+viewCreateAccount : Translators -> Maybe Route.Route -> Model -> Html Msg
+viewCreateAccount translators maybeRedirect model =
     let
         formClasses =
             "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
@@ -213,7 +213,7 @@ viewCreateAccount translators model =
             AccountTypeSelectorShowed ->
                 div [ class formClasses ]
                     [ viewAccountTypeSelector translators model
-                    , viewFooterDisabled translators
+                    , viewFooter translators False maybeRedirect
                     ]
 
             FormShowed formModel ->
@@ -224,7 +224,7 @@ viewCreateAccount translators model =
                     [ viewAccountTypeSelector translators model
                     , div [ class "sf-content" ]
                         [ viewRegistrationForm translators formModel ]
-                    , viewFooterEnabled translators
+                    , viewFooter translators True maybeRedirect
                     ]
 
             AccountCreated ->
@@ -244,18 +244,8 @@ viewCreateAccount translators model =
         ]
 
 
-viewFooterEnabled : Translators -> Html msg
-viewFooterEnabled translators =
-    viewFooter translators True
-
-
-viewFooterDisabled : Translators -> Html msg
-viewFooterDisabled translators =
-    viewFooter translators False
-
-
-viewFooter : Translators -> Bool -> Html msg
-viewFooter { t } isSubmitEnabled =
+viewFooter : Translators -> Bool -> Maybe Route.Route -> Html msg
+viewFooter { t } isSubmitEnabled maybeRedirect =
     let
         viewSubmitButton =
             button
@@ -276,7 +266,7 @@ viewFooter { t } isSubmitEnabled =
             [ text (t "register.login")
             , a
                 [ class "underline text-orange-300"
-                , Route.href (Route.Login Nothing)
+                , Route.href (Route.Login maybeRedirect)
                 ]
                 [ text (t "register.authLink") ]
             ]
@@ -818,7 +808,7 @@ update _ msg model { shared, afterLoginRedirect } =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Route.replaceUrl shared.navKey (Route.Login Nothing))
+                    (Route.replaceUrl shared.navKey (Route.Login afterLoginRedirect))
 
         CompletedSignUp (RemoteData.Success resp) ->
             case resp of
