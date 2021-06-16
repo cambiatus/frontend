@@ -856,7 +856,7 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
-    "claimed_on": "Reclamado En",
+    "claimed_on": "Reclamado en {{claim_date}}",
     "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "approved_by": "Aprobado por",

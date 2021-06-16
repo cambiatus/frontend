@@ -815,7 +815,7 @@
       "objective": "ተጠባቂ ዉጤት",
       "action": "ተግባር",
       "claimer": "የተጠየቀዉ",
-      "claimed_on": "የሚል ጥያቄ አቅርቧል",
+      "claimed_on": "የሚል ጥያቄ አቅርቧል {{claim_date}}",
       "date": "የተጠየቀበት ቀን",
       "claimer_reward": "የተጠቃሚ ሽልማት",
       "your_reward": "የእርሶ ሽልማት",

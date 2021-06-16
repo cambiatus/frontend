@@ -856,7 +856,7 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "claimed_on": "Reclamat El",
+    "claimed_on": "Reclamat el {{claim_date}}",
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",

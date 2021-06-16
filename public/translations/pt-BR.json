@@ -861,7 +861,7 @@
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
-    "claimed_on": "Reivindicado Em",
+    "claimed_on": "Reivindicado em {{claim_date}}",
     "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",

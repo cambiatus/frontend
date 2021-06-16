@@ -854,7 +854,7 @@
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
-    "claimed_on": "Claimed On",
+    "claimed_on": "Claimed on {{claim_date}}",
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
