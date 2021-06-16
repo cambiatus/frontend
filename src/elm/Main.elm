@@ -993,9 +993,6 @@ changeRouteTo maybeRoute model =
                       else
                         Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
-
-        -- longersymbol - no auto invite
-        -- testanothertwo - yes auto invite
     in
     case maybeRoute of
         Nothing ->
