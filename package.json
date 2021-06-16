@@ -10,6 +10,7 @@
     "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
     "start": "standard && GRAPHQL_SECRET=gAK2_Fdjyy8 node scripts/start.js",
     "review": "elm-review",
+    "check-format": "elm-format ./ --validate",
     "make": "elm make",
     "repl": "elm repl",
     "reactor": "elm reactor",
@@ -19,7 +20,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-review...\" && yarn review"
+      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review"
     }
   },
   "standard": {
