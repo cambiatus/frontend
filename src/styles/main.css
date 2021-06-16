@@ -228,7 +228,6 @@ textarea.input {
 
 .modal-content {
   @apply bg-white rounded-t-lg absolute bottom-0 w-full;
-  top: 4rem;
 }
 
 .modal-content-lg {
@@ -242,7 +241,7 @@ textarea.input {
 .modal-body {
   @apply p-4 pt-0 text-body overflow-y-auto;
   min-height: 4rem;
-  max-height: 80vh;
+  max-height: 60vh;
 }
 
 .modal-body-lg {
@@ -261,15 +260,9 @@ textarea.input {
   @apply button button-primary w-full;
 }
 
-@screen sm {
+@screen md {
   .modal-content {
-    @apply max-w-3xl top-modal relative mx-auto rounded-lg;
-  }
-
-  .modal-body {
-    @apply p-4 pt-0 text-body overflow-y-auto;
-    min-height: 4rem;
-    max-height: 60vh;
+    @apply max-w-3xl top-modal z-10 bottom-auto left-1/4 mx-auto rounded-lg;
   }
 
   .modal-body-lg {

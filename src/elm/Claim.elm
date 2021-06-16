@@ -115,6 +115,7 @@ isVotable claim accountName now =
         && not (Action.isClosed claim.action now)
         && not claim.action.isCompleted
 
+
 pendingValidators : Model -> List Profile.Minimal
 pendingValidators claim =
     List.filter
@@ -264,6 +265,7 @@ paginatedPageInfo maybePaginated =
 
 -- CLAIM CARD
 
+
 type alias ClaimType =
     { cardSummary : Profile.Summary.Model
     , topModalSummary : Profile.Summary.Model
@@ -271,6 +273,7 @@ type alias ClaimType =
     , pendingSummaries : List Profile.Summary.Model
     , showClaimModal : Bool
     }
+
 
 initClaimType : Model -> ClaimType
 initClaimType claim =
@@ -285,11 +288,13 @@ initClaimType claim =
     , showClaimModal = False
     }
 
+
 type ProfileSummaryKind
     = CardSummary
     | TopModalSummary
     | VotersSummaries Int
     | PendingSummaries Int
+
 
 type alias VoteClaimModalOptions msg =
     { voteMsg : ClaimId -> Bool -> msg
@@ -306,6 +311,7 @@ type Msg
     | OpenPhotoModal Model
       --| RouteOpened Route
     | GotExternalMsg ExternalMsg
+
 
 type ExternalMsg
     = OpenClaimModal
@@ -328,8 +334,10 @@ updateClaimModalStatus msg model =
         GotExternalMsg _ ->
             model
 
-        --RouteOpened _ ->
-        --    model
+
+
+--RouteOpened _ ->
+--    model
 
 
 updateProfileSummaries : ExternalMsg -> ClaimType -> ClaimType
@@ -337,9 +345,11 @@ updateProfileSummaries externalMsg claimType =
     case externalMsg of
         OpenClaimModal ->
             { claimType | showClaimModal = True }
+
         CloseClaimModal ->
             { claimType | showClaimModal = False }
-        GotProfileSummaryMsg profileSummaryKind subMsg  ->
+
+        GotProfileSummaryMsg profileSummaryKind subMsg ->
             case profileSummaryKind of
                 CardSummary ->
                     { claimType | cardSummary = Profile.Summary.update subMsg claimType.cardSummary }
@@ -348,10 +358,11 @@ updateProfileSummaries externalMsg claimType =
                     { claimType | topModalSummary = Profile.Summary.update subMsg claimType.topModalSummary }
 
                 VotersSummaries index ->
-                    { claimType | votersSummaries = (List.updateAt index (Profile.Summary.update subMsg) claimType.votersSummaries)}
+                    { claimType | votersSummaries = List.updateAt index (Profile.Summary.update subMsg) claimType.votersSummaries }
 
                 PendingSummaries index ->
-                    { claimType | pendingSummaries = (List.updateAt index (Profile.Summary.update subMsg) claimType.pendingSummaries)}
+                    { claimType | pendingSummaries = List.updateAt index (Profile.Summary.update subMsg) claimType.pendingSummaries }
+
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
@@ -399,7 +410,7 @@ viewClaimCard loggedIn profileSummaries claim =
                 ]
                 [ div [ class "flex items-center justify-center" ]
                     [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummaries.cardSummary
-                        |> Html.map ((GotProfileSummaryMsg CardSummary) >> GotExternalMsg)
+                        |> Html.map (GotProfileSummaryMsg CardSummary >> GotExternalMsg)
                     ]
                 , case claim.proofPhoto of
                     Just url ->
@@ -459,7 +470,6 @@ viewClaimCard loggedIn profileSummaries claim =
         ]
 
 
-
 viewClaimModal : LoggedIn.Model -> ClaimType -> Model -> Html Msg
 viewClaimModal { shared, accountName } profileSummaries claim =
     let
@@ -473,8 +483,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             "block mt-6 h-32 space-y-4"
 
         photoAndTagName =
-            div []
-                [ Profile.Summary.view shared accountName claim.claimer profileSummaries.topModalSummary |> Html.map (GotProfileSummaryMsg TopModalSummary >> GotExternalMsg)  ]
+            div [ class "relative z-10" ]
+                [ Profile.Summary.view shared accountName claim.claimer profileSummaries.topModalSummary |> Html.map (GotProfileSummaryMsg TopModalSummary >> GotExternalMsg) ]
 
         claimDateAndState =
             let
@@ -499,14 +509,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
                 claimDate =
-                    let
-                        claimedOn =
-                            t "claim.claimed_on"
-
-                        dateTime =
-                            date claim.createdAt
-                    in
-                    claimedOn ++ " " ++ dateTime
+                    tr "claim.claimed_on" [ ( "claim_date", date claim.createdAt ) ]
             in
             div [ class "block" ]
                 [ p [ class "text-xs uppercase" ] [ text claimDate ]
@@ -520,16 +523,21 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             let
                 rewardTxtStyle =
                     "my-2 font-bold text-lg"
+
+                makeAsset float =
+                    { amount = float
+                    , symbol = claim.action.objective.community.symbol
+                    }
             in
             div
                 [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-16" ]
                 [ div
                     []
-                    [ p [ class rewardTxtStyle ] [ text (String.fromFloat claim.action.reward) ]
+                    [ p [ class rewardTxtStyle ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
                     , p [ class greenTextTitleStyle ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
-                    [ p [ class rewardTxtStyle ] [ text (String.fromFloat claim.action.verifierReward) ]
+                    [ p [ class rewardTxtStyle ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
                     , p [ class greenTextTitleStyle ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]
@@ -538,46 +546,52 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             div
                 [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.approved_by") ]
-                , div [ class "overflow-x-auto"]
-                  [ if List.isEmpty claim.checks then
-                      div [ class "flex mb-10 " ]
-                          [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
-                          ]
+                , div []
+                    [ if List.isEmpty claim.checks then
+                        div [ class "flex mb-10 " ]
+                            [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+                            ]
 
-                    else
-                      div [ class "flex overflow-x-auto -mx-2 pt-2" ]
-                          (List.map3
-                              (\profileSummary index c ->
-                                  if c.isApproved then
-                                      div [ class "px-2" ]
-                                          [ Profile.Summary.view shared accountName c.validator profileSummary
-                                              |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
-                                          ]
+                      else
+                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                            (List.map3
+                                (\profileSummary index c ->
+                                    if c.isApproved then
+                                        div [ class "px-2 relative z-10" ]
+                                            [ div [ class "absolute" ]
+                                                [ Profile.Summary.view shared accountName c.validator profileSummary
+                                                    |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
+                                                ]
+                                            ]
 
-                                  else
-                                      text ""
-                              )
-                              profileSummaries.votersSummaries
-                              (List.range 0 (List.length profileSummaries.votersSummaries))
-                              claim.checks
-                          )
-                  ]
+                                    else
+                                        text ""
+                                )
+                                profileSummaries.votersSummaries
+                                (List.range 0 (List.length profileSummaries.votersSummaries))
+                                claim.checks
+                            )
+                    ]
                 ]
 
         disapprovedBy =
             div
                 [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.disapproved_by") ]
-                , div [ class "overflow-x-auto" ]
+                , div []
                     [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                        div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+                        div [ class "flex mb-10 " ]
+                            [ div
+                                [ class "pt-2" ]
+                                [ Profile.viewEmpty shared ]
+                            ]
 
                       else
-                        div [ class "flex overflow-x-auto -mx-2 pt-2" ]
+                        div [ class "flex flex-wrap -mx-2 pt-2" ]
                             (List.map3
                                 (\profileSummary index c ->
                                     if not c.isApproved then
-                                        div [ class "px-2" ]
+                                        div [ class "px-2 relative" ]
                                             [ Profile.Summary.view shared accountName c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
@@ -589,25 +603,31 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 (List.range 0 (List.length profileSummaries.votersSummaries))
                                 claim.checks
                             )
-                    ]]
+                    ]
+                ]
 
         pendingVote =
             div
                 [ class claimVerifiersList ]
                 [ p [ class greenTextTitleStyle ] [ text (t "claim.pending_vote") ]
-                , div [ class "overflow-x-auto pt-2" ]
+                , div []
                     [ if List.length claim.checks == claim.action.verifications then
-                        div [ class "flex" ]
-                            [ Profile.viewEmpty shared
+                        div
+                            [ class "flex mb-10" ]
+                            [ div
+                                [ class "pt-2" ]
+                                [ Profile.viewEmpty shared ]
                             ]
 
                       else
-                        div [ class "flex overflow-x-auto space-x-6" ]
+                        div [ class "flex flex-wrap space-x-6" ]
                             (pendingValidators claim
                                 |> List.map3
                                     (\profileSummary index v ->
-                                        Profile.Summary.view shared accountName v profileSummary
-                                            |> Html.map (GotProfileSummaryMsg (PendingSummaries index) >> GotExternalMsg)
+                                        div [ class "px-2" ]
+                                            [ Profile.Summary.view shared accountName v profileSummary
+                                                |> Html.map (GotProfileSummaryMsg (PendingSummaries index) >> GotExternalMsg)
+                                            ]
                                     )
                                     profileSummaries.pendingSummaries
                                     (List.range 0 (List.length profileSummaries.pendingSummaries))
@@ -640,14 +660,14 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 [ p [ class "text-xs text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
                                 , p [ class "text-base font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]
-                            , div []
-                                [ img
-                                    [ class "z-0 rounded-md my-4 w-full"
-                                    , style "height" "200px"
-                                    , src url
-                                    ]
-                                    []
+                            , View.Components.pdfViewer
+                                [ Utils.onClickNoBubble (OpenPhotoModal claim)
+                                , class "w-full h-full min-h-48 rounded-sm bg-gray-300"
                                 ]
+                                { url = url
+                                , childClass = "max-w-full max-h-full"
+                                , maybeTranslators = Nothing
+                                }
                             ]
 
                     Nothing ->
