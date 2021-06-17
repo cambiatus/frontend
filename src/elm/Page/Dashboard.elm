@@ -841,7 +841,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn newModel msg
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
                 _ ->
                     model

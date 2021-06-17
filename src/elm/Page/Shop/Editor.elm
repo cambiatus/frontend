@@ -675,115 +675,113 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedSave ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                let
-                    validatedModel =
-                        model
-                            |> updateForm validateForm
-                in
-                case validatedModel of
-                    EditingCreate balances (RemoteData.Success url) form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Creating balances (RemoteData.Success url) form)
-                                loggedIn
-                                "createsale"
-                                (encodeCreateForm loggedIn form)
+            let
+                validatedModel =
+                    model
+                        |> updateForm validateForm
+            in
+            case validatedModel of
+                EditingCreate balances (RemoteData.Success url) form ->
+                    if isValidForm form then
+                        performRequest
+                            ClickedSave
+                            (Creating balances (RemoteData.Success url) form)
+                            loggedIn
+                            "createsale"
+                            (encodeCreateForm loggedIn form)
+                            |> LoggedIn.withAuthentication loggedIn model msg
 
-                        else
-                            validatedModel
-                                |> UR.init
-
-                    EditingCreate balances (RemoteData.Failure error) form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Creating balances (RemoteData.Failure error) form)
-                                loggedIn
-                                "createsale"
-                                (encodeCreateForm loggedIn form)
-
-                        else
-                            validatedModel
-                                |> UR.init
-
-                    EditingCreate balances RemoteData.NotAsked form ->
-                        if isValidForm form then
-                            performRequest
-                                ClickedSave
-                                (Creating balances RemoteData.NotAsked form)
-                                loggedIn
-                                "createsale"
-                                (encodeCreateForm loggedIn form)
-
-                        else
-                            validatedModel
-                                |> UR.init
-
-                    EditingUpdate balances sale (RemoteData.Success url) _ form ->
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                if isValidForm form then
-                                    performRequest
-                                        ClickedSave
-                                        (Saving balances sale (RemoteData.Success url) form)
-                                        loggedIn
-                                        "updatesale"
-                                        (encodeUpdateForm sale form community.symbol)
-
-                                else
-                                    validatedModel
-                                        |> UR.init
-
-                            _ ->
-                                validatedModel |> UR.init
-
-                    EditingUpdate balances sale (RemoteData.Failure error) _ form ->
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                if isValidForm form then
-                                    performRequest
-                                        ClickedSave
-                                        (Saving balances sale (RemoteData.Failure error) form)
-                                        loggedIn
-                                        "updatesale"
-                                        (encodeUpdateForm sale form community.symbol)
-
-                                else
-                                    validatedModel
-                                        |> UR.init
-
-                            _ ->
-                                validatedModel |> UR.init
-
-                    EditingUpdate balances sale RemoteData.NotAsked _ form ->
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                if isValidForm form then
-                                    performRequest
-                                        ClickedSave
-                                        (Saving balances sale RemoteData.NotAsked form)
-                                        loggedIn
-                                        "updatesale"
-                                        (encodeUpdateForm sale form community.symbol)
-
-                                else
-                                    validatedModel
-                                        |> UR.init
-
-                            _ ->
-                                validatedModel |> UR.init
-
-                    _ ->
+                    else
                         validatedModel
                             |> UR.init
-                            |> UR.logImpossible msg []
 
-            else
-                model
-                    |> UR.init
-                    |> UR.addExt (RequiredAuthentication (Just ClickedSave))
+                EditingCreate balances (RemoteData.Failure error) form ->
+                    if isValidForm form then
+                        performRequest
+                            ClickedSave
+                            (Creating balances (RemoteData.Failure error) form)
+                            loggedIn
+                            "createsale"
+                            (encodeCreateForm loggedIn form)
+                            |> LoggedIn.withAuthentication loggedIn model msg
+
+                    else
+                        validatedModel
+                            |> UR.init
+
+                EditingCreate balances RemoteData.NotAsked form ->
+                    if isValidForm form then
+                        performRequest
+                            ClickedSave
+                            (Creating balances RemoteData.NotAsked form)
+                            loggedIn
+                            "createsale"
+                            (encodeCreateForm loggedIn form)
+                            |> LoggedIn.withAuthentication loggedIn model msg
+
+                    else
+                        validatedModel
+                            |> UR.init
+
+                EditingUpdate balances sale (RemoteData.Success url) _ form ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            if isValidForm form then
+                                performRequest
+                                    ClickedSave
+                                    (Saving balances sale (RemoteData.Success url) form)
+                                    loggedIn
+                                    "updatesale"
+                                    (encodeUpdateForm sale form community.symbol)
+                                    |> LoggedIn.withAuthentication loggedIn model msg
+
+                            else
+                                validatedModel
+                                    |> UR.init
+
+                        _ ->
+                            validatedModel |> UR.init
+
+                EditingUpdate balances sale (RemoteData.Failure error) _ form ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            if isValidForm form then
+                                performRequest
+                                    ClickedSave
+                                    (Saving balances sale (RemoteData.Failure error) form)
+                                    loggedIn
+                                    "updatesale"
+                                    (encodeUpdateForm sale form community.symbol)
+
+                            else
+                                validatedModel
+                                    |> UR.init
+
+                        _ ->
+                            validatedModel |> UR.init
+
+                EditingUpdate balances sale RemoteData.NotAsked _ form ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            if isValidForm form then
+                                performRequest
+                                    ClickedSave
+                                    (Saving balances sale RemoteData.NotAsked form)
+                                    loggedIn
+                                    "updatesale"
+                                    (encodeUpdateForm sale form community.symbol)
+
+                            else
+                                validatedModel
+                                    |> UR.init
+
+                        _ ->
+                            validatedModel |> UR.init
+
+                _ ->
+                    validatedModel
+                        |> UR.init
+                        |> UR.logImpossible msg []
 
         ClickedDelete ->
             case model of
@@ -804,41 +802,38 @@ update msg model loggedIn =
                     UR.init model
 
         ClickedDeleteConfirm ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                case model of
-                    EditingUpdate balances sale (RemoteData.Success url) _ form ->
-                        performRequest
-                            ClickedDeleteConfirm
-                            (Deleting balances sale (RemoteData.Success url) form)
-                            loggedIn
-                            "deletesale"
-                            (encodeDeleteForm sale)
+            case model of
+                EditingUpdate balances sale (RemoteData.Success url) _ form ->
+                    performRequest
+                        ClickedDeleteConfirm
+                        (Deleting balances sale (RemoteData.Success url) form)
+                        loggedIn
+                        "deletesale"
+                        (encodeDeleteForm sale)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
-                    EditingUpdate balances sale (RemoteData.Failure error) _ form ->
-                        performRequest
-                            ClickedDeleteConfirm
-                            (Deleting balances sale (RemoteData.Failure error) form)
-                            loggedIn
-                            "deletesale"
-                            (encodeDeleteForm sale)
+                EditingUpdate balances sale (RemoteData.Failure error) _ form ->
+                    performRequest
+                        ClickedDeleteConfirm
+                        (Deleting balances sale (RemoteData.Failure error) form)
+                        loggedIn
+                        "deletesale"
+                        (encodeDeleteForm sale)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
-                    EditingUpdate balances sale RemoteData.NotAsked _ form ->
-                        performRequest
-                            ClickedDeleteConfirm
-                            (Deleting balances sale RemoteData.NotAsked form)
-                            loggedIn
-                            "deletesale"
-                            (encodeDeleteForm sale)
+                EditingUpdate balances sale RemoteData.NotAsked _ form ->
+                    performRequest
+                        ClickedDeleteConfirm
+                        (Deleting balances sale RemoteData.NotAsked form)
+                        loggedIn
+                        "deletesale"
+                        (encodeDeleteForm sale)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
-                    _ ->
-                        model
-                            |> UR.init
-                            |> UR.logImpossible msg []
-
-            else
-                model
-                    |> UR.init
-                    |> UR.addExt (RequiredAuthentication (Just ClickedDeleteConfirm))
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg []
 
         GotSaveResponse (Ok _) ->
             UR.init model

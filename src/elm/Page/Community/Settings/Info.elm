@@ -253,12 +253,11 @@ update msg model ({ shared } as loggedIn) =
 
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case
-                ( LoggedIn.hasPrivateKey loggedIn
-                , isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
+                ( isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
                 , loggedIn.selectedCommunity
                 )
             of
-                ( True, True, RemoteData.Success community ) ->
+                ( True, RemoteData.Success community ) ->
                     let
                         authorization =
                             { actor = loggedIn.accountName
@@ -343,10 +342,7 @@ update msg model ({ shared } as loggedIn) =
                                 Nothing ->
                                     Cmd.none
                             )
-
-                ( False, True, RemoteData.Success _ ) ->
-                    UR.init model
-                        |> UR.addExt (Just ClickedSave |> LoggedIn.RequiredAuthentication)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
                 _ ->
                     UR.init model

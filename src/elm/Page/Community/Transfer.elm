@@ -485,8 +485,8 @@ update msg model ({ shared } as loggedIn) =
                     model |> UR.init
 
         PushTransaction ->
-            case ( model.transferStatus, LoggedIn.hasPrivateKey loggedIn, loggedIn.selectedCommunity ) of
-                ( CreatingSubscription form, True, RemoteData.Success community ) ->
+            case ( model.transferStatus, loggedIn.selectedCommunity ) of
+                ( CreatingSubscription form, RemoteData.Success community ) ->
                     let
                         account =
                             Maybe.map .account form.selectedProfile
@@ -520,13 +520,7 @@ update msg model ({ shared } as loggedIn) =
                                       }
                                     ]
                             }
-
-                ( CreatingSubscription _, False, _ ) ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just PushTransaction
-                                |> RequiredAuthentication
-                            )
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
                 _ ->
                     onlyLogImpossible []

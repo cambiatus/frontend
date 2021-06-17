@@ -482,22 +482,18 @@ update msg model loggedIn =
                         _ ->
                             newModel
             in
-            if LoggedIn.hasPrivateKey loggedIn then
-                case ( loggedIn.selectedCommunity, model.status ) of
-                    ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
-                        save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
+                    save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
-                    ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
-                        save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
+                    save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
-                    _ ->
-                        newModel
-                            |> UR.logImpossible msg []
-
-            else
-                newModel
-                    |> UR.addExt
-                        (Just ClickedSaveObjective |> RequiredAuthentication)
+                _ ->
+                    newModel
+                        |> UR.logImpossible msg []
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model

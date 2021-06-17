@@ -162,11 +162,13 @@ update msg model loggedIn =
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
+                |> LoggedIn.withAuthentication loggedIn model msg
 
         ToggleObjectives state ->
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
+                |> LoggedIn.withAuthentication loggedIn model msg
 
         ToggleKyc ->
             model
@@ -209,25 +211,13 @@ saveFeaturePort ({ shared } as loggedIn) feature status state =
             { actor = loggedIn.accountName
             , permissionName = Eos.Account.samplePermission
             }
-
-        function =
-            case feature of
-                Shop ->
-                    ToggleShop
-
-                Objectives ->
-                    ToggleObjectives
     in
     case ( loggedIn.selectedCommunity, status ) of
         ( RemoteData.Success community, Authorized ) ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                UR.addPort (saveFeature feature state authorization loggedIn community)
-
-            else
-                UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
+            UR.addPort (saveFeature feature state authorization loggedIn community)
 
         ( _, Authorized ) ->
-            UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
+            identity
 
         ( _, Loading ) ->
             UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))

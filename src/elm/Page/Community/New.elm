@@ -767,34 +767,27 @@ update msg model loggedIn =
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case validateModel loggedIn.shared loggedIn.accountName model of
                 Ok ( createCommunityData, createTokenData ) ->
-                    if LoggedIn.hasPrivateKey loggedIn then
-                        let
-                            subscriptionDoc =
-                                Community.newCommunitySubscription createCommunityData.cmmAsset.symbol
-                                    |> Graphql.Document.serializeSubscription
-                        in
-                        { model | isDisabled = True }
-                            |> UR.init
-                            |> UR.addPort
-                                { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
-                                , responseData =
-                                    Encode.object
-                                        [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
-                                        , ( "createTokenData", Token.encodeCreateTokenData createTokenData )
-                                        ]
-                                , data =
-                                    Encode.object
-                                        [ ( "name", Encode.string "subscribeToNewCommunity" )
-                                        , ( "subscription", Encode.string subscriptionDoc )
-                                        ]
-                                }
-
-                    else
-                        UR.init model
-                            |> UR.addExt
-                                (Just SubmittedForm
-                                    |> RequiredAuthentication
-                                )
+                    let
+                        subscriptionDoc =
+                            Community.newCommunitySubscription createCommunityData.cmmAsset.symbol
+                                |> Graphql.Document.serializeSubscription
+                    in
+                    { model | isDisabled = True }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
+                            , responseData =
+                                Encode.object
+                                    [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
+                                    , ( "createTokenData", Token.encodeCreateTokenData createTokenData )
+                                    ]
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "subscribeToNewCommunity" )
+                                    , ( "subscription", Encode.string subscriptionDoc )
+                                    ]
+                            }
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
                 Err withError ->
                     UR.init withError

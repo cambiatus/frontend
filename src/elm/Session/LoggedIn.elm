@@ -724,7 +724,7 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
-    | RequiredAuthentication (Maybe msg)
+    | RequiredAuthentication msg
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
@@ -828,10 +828,10 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource TimeResource ->
             { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
-        RequiredAuthentication maybeMsg ->
+        RequiredAuthentication afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
-                , afterAuthMsg = maybeMsg
+                , afterAuthMsg = Just afterAuthMsg
             }
 
         ShowFeedback status message ->
@@ -1218,6 +1218,10 @@ handleActionMsg ({ shared } as model) actionMsg =
             UR.init model
 
 
+{-| Checks if we already have the user's private key loaded. If it does, returns
+`successfulUR`. If it doesn't, requires authentication and fires the `subMsg`
+again
+-}
 withAuthentication :
     Model
     -> subModel
@@ -1230,7 +1234,7 @@ withAuthentication loggedIn subModel subMsg successfulUR =
 
     else
         UR.init subModel
-            |> UR.addExt (Just subMsg |> RequiredAuthentication)
+            |> UR.addExt (RequiredAuthentication subMsg)
 
 
 isCommunityMember : Model -> Bool

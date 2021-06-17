@@ -1038,16 +1038,8 @@ update msg model ({ shared } as loggedIn) =
             in
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    if LoggedIn.hasPrivateKey loggedIn then
-                        upsertAction loggedIn community newModel isoDate
-
-                    else
-                        newModel
-                            |> UR.init
-                            |> UR.addExt
-                                (Just (SaveAction isoDate)
-                                    |> RequiredAuthentication
-                                )
+                    upsertAction loggedIn community newModel isoDate
+                        |> LoggedIn.withAuthentication loggedIn model msg
 
                 _ ->
                     UR.init newModel

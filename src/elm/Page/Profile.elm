@@ -684,47 +684,35 @@ update msg model loggedIn =
                     UR.init model
 
         ClickedChangePin ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                UR.init { model | isNewPinModalVisible = True }
-                    |> UR.addCmd
-                        (Dom.focus "pinInput"
-                            |> Task.attempt (\_ -> Ignored)
-                        )
-
-            else
-                UR.init model
-                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
-                    |> UR.addCmd
-                        (Dom.focus "pinInput"
-                            |> Task.attempt (\_ -> Ignored)
-                        )
+            UR.init { model | isNewPinModalVisible = True }
+                |> UR.addCmd
+                    (Dom.focus "pinInput"
+                        |> Task.attempt (\_ -> Ignored)
+                    )
+                |> LoggedIn.withAuthentication loggedIn model msg
 
         ChangePinSubmitted newPin ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                let
-                    currentPin =
-                        case model.currentPin of
-                            Just pin ->
-                                pin
+            let
+                currentPin =
+                    case model.currentPin of
+                        Just pin ->
+                            pin
 
-                            Nothing ->
-                                loggedIn.auth.pinModel.pin
-                in
-                UR.init model
-                    |> UR.addPort
-                        { responseAddress = PinChanged
-                        , responseData = Encode.null
-                        , data =
-                            Encode.object
-                                [ ( "name", Encode.string "changePin" )
-                                , ( "currentPin", Encode.string currentPin )
-                                , ( "newPin", Encode.string newPin )
-                                ]
-                        }
-
-            else
-                UR.init model
-                    |> UR.addExt (Just ClickedChangePin |> RequiredAuthentication)
+                        Nothing ->
+                            loggedIn.auth.pinModel.pin
+            in
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = PinChanged
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "changePin" )
+                            , ( "currentPin", Encode.string currentPin )
+                            , ( "newPin", Encode.string newPin )
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn model msg
 
         GotPinMsg subMsg ->
             let
@@ -746,22 +734,10 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback Feedback.Success (t "profile.pin.successMsg"))
 
         ClickedViewPrivateKeyAuth ->
-            case LoggedIn.maybePrivateKey loggedIn of
-                Nothing ->
-                    UR.init model
-                        |> UR.addExt
-                            (Just ClickedViewPrivateKeyAuth
-                                |> RequiredAuthentication
-                            )
-                        |> UR.addCmd
-                            (Dom.focus "pinInput"
-                                |> Task.attempt (\_ -> Ignored)
-                            )
-
-                Just _ ->
-                    model
-                        |> UR.init
-                        |> downloadPdfPort loggedIn.auth.pinModel.pin
+            model
+                |> UR.init
+                |> downloadPdfPort loggedIn.auth.pinModel.pin
+                |> LoggedIn.withAuthentication loggedIn model msg
 
         DownloadPdf pin ->
             model

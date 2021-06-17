@@ -120,17 +120,10 @@ update msg model ({ shared } as loggedIn) =
                 RemoteData.Success community ->
                     case validateModel community.symbol model of
                         Ok ( validUpdateTokenData, validExpiryOptsData ) ->
-                            if LoggedIn.hasPrivateKey loggedIn then
-                                { model | isLoading = True }
-                                    |> UR.init
-                                    |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
-
-                            else
-                                UR.init model
-                                    |> UR.addExt
-                                        (Just ClickedSubmit
-                                            |> LoggedIn.RequiredAuthentication
-                                        )
+                            { model | isLoading = True }
+                                |> UR.init
+                                |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
+                                |> LoggedIn.withAuthentication loggedIn model msg
 
                         Err withError ->
                             UR.init withError
