@@ -483,6 +483,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
         viewProfileSummary profile_ profileSummary_ =
             profileSummary_
                 |> Profile.Summary.withRelativeSelector ".modal-content"
+                |> Profile.Summary.withScrollSelector ".modal-body"
                 |> Profile.Summary.view shared accountName profile_
 
         photoAndTagName =

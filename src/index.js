@@ -124,8 +124,7 @@ window.customElements.define('dialog-bubble',
       this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
       this._defaultPointClasses = 'absolute transform -z-10'
 
-      // window.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
-      // window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
+      window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
     }
 
     connectedCallback () {
@@ -135,8 +134,16 @@ window.customElements.define('dialog-bubble',
       pointElement.className = 'w-8 h-8 bg-white transform -rotate-45 rounded-sm'
 
       const relativeSelector = this.getAttribute('elm-relative-selector')
-
       this._relativeElement = relativeSelector ? document.querySelector(relativeSelector) : null
+
+      const scrollSelector = this.getAttribute('elm-scroll-selector')
+      this._scrollSelector = scrollSelector ? document.querySelector(scrollSelector) : null
+
+      if (this._scrollSelector !== null) {
+        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true})
+      } else {
+        window.addEventListener('scroll', () => { this.setPosition() })
+      }
 
       point.appendChild(pointElement)
 

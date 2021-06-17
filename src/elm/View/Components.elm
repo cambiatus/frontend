@@ -66,16 +66,18 @@ loadingLogoAnimatedFluid =
 -- CONTAINERS
 
 
-dialogBubble : { class_ : String, relativeSelector : Maybe String } -> List (Html msg) -> Html msg
-dialogBubble { class_, relativeSelector } elements =
+dialogBubble :
+    { class_ : String
+    , relativeSelector : Maybe String
+    , scrollSelector : Maybe String
+    }
+    -> List (Html msg)
+    -> Html msg
+dialogBubble { class_, relativeSelector, scrollSelector } elements =
     node "dialog-bubble"
         [ attribute "elm-class" class_
-        , case relativeSelector of
-            Nothing ->
-                class ""
-
-            Just selector ->
-                attribute "elm-relative-selector" selector
+        , optionalAttr "elm-relative-selector" relativeSelector
+        , optionalAttr "elm-scroll-selector" scrollSelector
         ]
         elements
 
@@ -148,3 +150,17 @@ bgNoScroll attrs preventScroll =
 type PreventScroll
     = PreventScrollOnMobile
     | PreventScrollAlways
+
+
+
+-- INTERNALS
+
+
+optionalAttr : String -> Maybe String -> Html.Attribute msg
+optionalAttr attr maybeAttr =
+    case maybeAttr of
+        Nothing ->
+            class ""
+
+        Just attrValue ->
+            attribute attr attrValue
