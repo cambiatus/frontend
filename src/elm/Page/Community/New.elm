@@ -672,6 +672,7 @@ type Msg
     | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
     | Redirect Community.CreateCommunityData
     | PressedEnter Bool
+    | ClosedAuthModal
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -789,8 +790,7 @@ update msg model loggedIn =
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 Err withError ->
                     UR.init withError
@@ -881,6 +881,10 @@ update msg model loggedIn =
 
             else
                 UR.init model
+
+        ClosedAuthModal ->
+            { model | isDisabled = False }
+                |> UR.init
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -987,3 +991,6 @@ msgToString msg =
 
         PressedEnter _ ->
             [ "PressedEnter" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]

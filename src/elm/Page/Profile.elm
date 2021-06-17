@@ -691,8 +691,7 @@ update msg model loggedIn =
                     )
                 |> LoggedIn.withAuthentication loggedIn
                     model
-                    -- TODO - Check this
-                    { successMsg = msg, errorMsg = msg }
+                    { successMsg = msg, errorMsg = Ignored }
 
         ChangePinSubmitted newPin ->
             let
@@ -717,8 +716,7 @@ update msg model loggedIn =
                     }
                 |> LoggedIn.withAuthentication loggedIn
                     model
-                    -- TODO - Check this
-                    { successMsg = msg, errorMsg = msg }
+                    { successMsg = msg, errorMsg = Ignored }
 
         GotPinMsg subMsg ->
             let
@@ -745,8 +743,7 @@ update msg model loggedIn =
                 |> downloadPdfPort loggedIn.auth.pinModel.pin
                 |> LoggedIn.withAuthentication loggedIn
                     model
-                    -- TODO - Check this
-                    { successMsg = msg, errorMsg = msg }
+                    { successMsg = msg, errorMsg = Ignored }
 
         DownloadPdf pin ->
             model

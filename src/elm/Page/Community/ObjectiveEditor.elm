@@ -103,6 +103,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedCompleteObjective
@@ -385,6 +386,13 @@ update msg model loggedIn =
                 { model | status = Unauthorized }
                     |> UR.init
 
+        ClosedAuthModal ->
+            { model
+                | isMarkAsCompletedConfirmationModalLoading = False
+                , showMarkAsCompletedConfirmationModal = False
+            }
+                |> UR.init
+
         EnteredDescription val ->
             UR.init model
                 |> updateObjective msg (\o -> { o | description = val })
@@ -405,6 +413,9 @@ update msg model loggedIn =
                                 (completeObjectiveSelectionSet id)
                                 GotCompleteObjectiveResponse
                             )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init model
@@ -487,15 +498,13 @@ update msg model loggedIn =
                     save objForm Nothing (Eos.getSymbolPrecision community.symbol)
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
                     save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     newModel
@@ -554,6 +563,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]

@@ -157,6 +157,7 @@ type Validation
 
 type Msg
     = Ignored
+    | ClosedAuthModal
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy
@@ -179,6 +180,9 @@ update msg model loggedIn =
     in
     case msg of
         Ignored ->
+            UR.init model
+
+        ClosedAuthModal ->
             UR.init model
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
@@ -301,8 +305,7 @@ update msg model loggedIn =
                         }
                     |> LoggedIn.withAuthentication loggedIn
                         model
-                        -- TODO - Check this
-                        { successMsg = msg, errorMsg = msg }
+                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
             else
                 { model | form = validatedForm }
@@ -757,6 +760,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         CompletedSaleLoad _ ->
             [ "CompletedSaleLoad" ]

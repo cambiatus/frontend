@@ -92,6 +92,7 @@ init loggedIn =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
@@ -139,6 +140,10 @@ update msg model ({ shared } as loggedIn) =
                 , isLoading = False
                 , websiteInput = Maybe.withDefault "" community.website
             }
+                |> UR.init
+
+        ClosedAuthModal ->
+            { model | isLoading = False }
                 |> UR.init
 
         EnteredLogo (file :: _) ->
@@ -344,8 +349,7 @@ update msg model ({ shared } as loggedIn) =
                             )
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init model
@@ -992,6 +996,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredLogo _ ->
             [ "EnteredLogo" ]

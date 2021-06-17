@@ -454,6 +454,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -597,6 +598,10 @@ update msg model ({ shared } as loggedIn) =
             else
                 { model | status = Unauthorized }
                     |> UR.init
+
+        ClosedAuthModal ->
+            { model | form = { oldForm | saveStatus = NotAsked } }
+                |> UR.init
 
         OnSelectVerifier maybeProfile ->
             let
@@ -1041,8 +1046,7 @@ update msg model ({ shared } as loggedIn) =
                     upsertAction loggedIn community newModel isoDate
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init newModel
@@ -1860,6 +1864,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]

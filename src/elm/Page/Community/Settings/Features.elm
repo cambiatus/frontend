@@ -53,6 +53,7 @@ type Feature
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc
@@ -158,14 +159,16 @@ update msg model loggedIn =
                     , hasKyc = community.hasKyc
                 }
 
+        ClosedAuthModal ->
+            UR.init model
+
         ToggleShop state ->
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
                 |> LoggedIn.withAuthentication loggedIn
                     model
-                    -- TODO - Check this
-                    { successMsg = msg, errorMsg = msg }
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleObjectives state ->
             { model | hasObjectives = state }
@@ -173,8 +176,7 @@ update msg model loggedIn =
                 |> saveFeaturePort loggedIn Objectives model.status state
                 |> LoggedIn.withAuthentication loggedIn
                     model
-                    -- TODO - Check this
-                    { successMsg = msg, errorMsg = msg }
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleKyc ->
             model
@@ -308,6 +310,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         ToggleShop _ ->
             [ "ToggleShop" ]

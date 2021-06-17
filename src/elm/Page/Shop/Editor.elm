@@ -466,6 +466,7 @@ type Msg
     | GotSaveResponse (Result Value String)
     | GotDeleteResponse (Result Value String)
     | PressedEnter Bool
+    | ClosedAuthModal
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -691,8 +692,7 @@ update msg model loggedIn =
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
                                 model
-                                -- TODO - Check this
-                                { successMsg = msg, errorMsg = msg }
+                                { successMsg = msg, errorMsg = ClosedAuthModal }
 
                     else
                         validatedModel
@@ -708,8 +708,7 @@ update msg model loggedIn =
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
                                 model
-                                -- TODO - Check this
-                                { successMsg = msg, errorMsg = msg }
+                                { successMsg = msg, errorMsg = ClosedAuthModal }
 
                     else
                         validatedModel
@@ -725,8 +724,7 @@ update msg model loggedIn =
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
                                 model
-                                -- TODO - Check this
-                                { successMsg = msg, errorMsg = msg }
+                                { successMsg = msg, errorMsg = ClosedAuthModal }
 
                     else
                         validatedModel
@@ -744,8 +742,7 @@ update msg model loggedIn =
                                     (encodeUpdateForm sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
                                         model
-                                        -- TODO - Check this
-                                        { successMsg = msg, errorMsg = msg }
+                                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
                             else
                                 validatedModel
@@ -764,6 +761,9 @@ update msg model loggedIn =
                                     loggedIn
                                     "updatesale"
                                     (encodeUpdateForm sale form community.symbol)
+                                    |> LoggedIn.withAuthentication loggedIn
+                                        model
+                                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
                             else
                                 validatedModel
@@ -782,6 +782,9 @@ update msg model loggedIn =
                                     loggedIn
                                     "updatesale"
                                     (encodeUpdateForm sale form community.symbol)
+                                    |> LoggedIn.withAuthentication loggedIn
+                                        model
+                                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
                             else
                                 validatedModel
@@ -824,8 +827,7 @@ update msg model loggedIn =
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 EditingUpdate balances sale (RemoteData.Failure error) _ form ->
                     performRequest
@@ -836,8 +838,7 @@ update msg model loggedIn =
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 EditingUpdate balances sale RemoteData.NotAsked _ form ->
                     performRequest
@@ -848,8 +849,7 @@ update msg model loggedIn =
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -934,6 +934,15 @@ update msg model loggedIn =
 
             else
                 UR.init model
+
+        ClosedAuthModal ->
+            case model of
+                EditingUpdate balances sale imageStatus _ form ->
+                    EditingUpdate balances sale imageStatus Closed form
+                        |> UR.init
+
+                _ ->
+                    UR.init model
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
@@ -1221,3 +1230,6 @@ msgToString msg =
 
         PressedEnter _ ->
             [ "PressedEnter" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]

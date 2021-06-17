@@ -69,6 +69,7 @@ init loggedIn =
 
 type Msg
     = Ignored
+    | ClosedAuthModal
     | EnteredMinimumBalance String
     | EnteredMaximumSupply String
     | EnteredNaturalExpirationPeriod String
@@ -89,6 +90,10 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         Ignored ->
             UR.init model
+
+        ClosedAuthModal ->
+            { model | isLoading = False }
+                |> UR.init
 
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
@@ -125,8 +130,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
                                 |> LoggedIn.withAuthentication loggedIn
                                     model
-                                    -- TODO - Check this
-                                    { successMsg = msg, errorMsg = msg }
+                                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
                         Err withError ->
                             UR.init withError
@@ -680,6 +684,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredMinimumBalance _ ->
             [ "EnteredMinimumBalance" ]

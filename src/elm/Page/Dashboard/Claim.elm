@@ -460,6 +460,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimLoaded (RemoteData (Graphql.Http.Error Claim.Model) Claim.Model)
+    | ClosedAuthModal
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
@@ -519,6 +520,10 @@ update msg model loggedIn =
         ClaimLoaded _ ->
             UR.init model
 
+        ClosedAuthModal ->
+            { model | claimModalStatus = Claim.Closed }
+                |> UR.init
+
         ClaimMsg m ->
             Claim.updateClaimModalStatus m model
                 |> UR.init
@@ -550,8 +555,7 @@ update msg model loggedIn =
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -673,6 +677,9 @@ msgToString msg =
     case msg of
         ClaimLoaded r ->
             [ "ClaimLoaded", UR.remoteDataToString r ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]

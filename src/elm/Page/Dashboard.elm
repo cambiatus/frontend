@@ -691,6 +691,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
@@ -714,6 +715,10 @@ update msg model ({ shared, accountName } as loggedIn) =
     case msg of
         NoOp ->
             UR.init model
+
+        ClosedAuthModal ->
+            { model | claimModalStatus = Claim.Closed }
+                |> UR.init
 
         CompletedLoadCommunity community ->
             UR.init
@@ -843,8 +848,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -1208,6 +1212,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

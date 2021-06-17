@@ -315,6 +315,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
@@ -372,6 +373,10 @@ update msg model loggedIn =
 
         ClaimsLoaded _ ->
             UR.init model
+
+        ClosedAuthModal ->
+            { model | claimModalStatus = Claim.Closed }
+                |> UR.init
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -433,8 +438,7 @@ update msg model loggedIn =
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model
-                            -- TODO - Check this
-                            { successMsg = msg, errorMsg = msg }
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -794,6 +798,9 @@ msgToString msg =
     case msg of
         ClaimsLoaded r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
