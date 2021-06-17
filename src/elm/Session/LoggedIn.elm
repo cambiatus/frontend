@@ -19,6 +19,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
+    , withAuthentication
     )
 
 import Action
@@ -1215,6 +1216,21 @@ handleActionMsg ({ shared } as model) actionMsg =
 
         _ ->
             UR.init model
+
+
+withAuthentication :
+    Model
+    -> subModel
+    -> subMsg
+    -> UR.UpdateResult subModel subMsg (External subMsg)
+    -> UR.UpdateResult subModel subMsg (External subMsg)
+withAuthentication loggedIn subModel subMsg successfulUR =
+    if hasPrivateKey loggedIn then
+        successfulUR
+
+    else
+        UR.init subModel
+            |> UR.addExt (Just subMsg |> RequiredAuthentication)
 
 
 isCommunityMember : Model -> Bool
