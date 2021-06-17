@@ -140,7 +140,7 @@ window.customElements.define('dialog-bubble',
       this._scrollSelector = scrollSelector ? document.querySelector(scrollSelector) : null
 
       if (this._scrollSelector !== null) {
-        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true})
+        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
       } else {
         window.addEventListener('scroll', () => { this.setPosition() })
       }

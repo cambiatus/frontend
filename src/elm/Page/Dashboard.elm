@@ -749,7 +749,6 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 initProfileSummaries cs =
                     List.map (unwrapClaimStatus >> Claim.initClaimType) cs
-
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->
@@ -788,11 +787,10 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         ClaimMsg claimIndex m ->
             let
-
                 updatedProfileSummaries =
                     case m of
                         Claim.GotExternalMsg subMsg ->
-                            (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) model.profileSummaries)
+                            List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) model.profileSummaries
 
                         _ ->
                             model.profileSummaries

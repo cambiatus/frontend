@@ -313,7 +313,6 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-
 type Msg
     = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
@@ -337,7 +336,6 @@ update msg model loggedIn =
             let
                 initProfileSummaries claims =
                     List.map Claim.initClaimType claims
-
             in
             case model.status of
                 Loaded claims _ _ ->
