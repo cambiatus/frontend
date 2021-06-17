@@ -162,13 +162,19 @@ update msg model loggedIn =
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
-                |> LoggedIn.withAuthentication loggedIn model msg
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    -- TODO - Check this
+                    { successMsg = msg, errorMsg = msg }
 
         ToggleObjectives state ->
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
-                |> LoggedIn.withAuthentication loggedIn model msg
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    -- TODO - Check this
+                    { successMsg = msg, errorMsg = msg }
 
         ToggleKyc ->
             model

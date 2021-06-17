@@ -339,6 +339,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | OnSelect (Maybe Profile.Minimal)
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
@@ -378,6 +379,21 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         CompletedLoadCommunity community ->
             UR.init { model | transferStatus = getProfile model.maybeTo community }
+
+        ClosedAuthModal ->
+            let
+                form =
+                    case model.transferStatus of
+                        EditingTransfer form_ ->
+                            form_
+
+                        CreatingSubscription form_ ->
+                            form_
+
+                        SendingTransfer form_ ->
+                            form_
+            in
+            UR.init { model | transferStatus = EditingTransfer form }
 
         OnSelect maybeProfile ->
             case model.transferStatus of
@@ -520,7 +536,9 @@ update msg model ({ shared } as loggedIn) =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     onlyLogImpossible []
@@ -639,6 +657,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         OnSelect _ ->
             [ "OnSelect" ]

@@ -787,7 +787,10 @@ update msg model loggedIn =
                                     , ( "subscription", Encode.string subscriptionDoc )
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 Err withError ->
                     UR.init withError

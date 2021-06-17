@@ -485,11 +485,17 @@ update msg model loggedIn =
             case ( loggedIn.selectedCommunity, model.status ) of
                 ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
                     save objForm Nothing (Eos.getSymbolPrecision community.symbol)
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
                     save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 _ ->
                     newModel

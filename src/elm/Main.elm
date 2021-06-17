@@ -137,7 +137,7 @@ subscriptions model =
 
 type alias Model =
     { session : Session
-    , afterAuthMsg : Maybe Msg
+    , afterAuthMsg : Maybe { successMsg : Msg, errorMsg : Msg }
     , status : Status
     }
 
@@ -304,7 +304,15 @@ update msg model =
                                         ( m, Cmd.none )
 
                                     Just aMsg ->
-                                        update aMsg { m | afterAuthMsg = Nothing }
+                                        update aMsg.successMsg { m | afterAuthMsg = Nothing }
+
+                            Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
+                                case m.afterAuthMsg of
+                                    Nothing ->
+                                        ( m, Cmd.none )
+
+                                    Just aMsg ->
+                                        update aMsg.errorMsg { m | afterAuthMsg = Nothing }
 
                             Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
                                 ( m, broadcast broadcastMsg m.status )
@@ -689,7 +697,12 @@ updateLoggedInUResult toStatus toMsg model uResult =
                     in
                     ( { m
                         | session = Page.LoggedIn updateResult.model
-                        , afterAuthMsg = Maybe.map toMsg updateResult.afterAuthMsg
+                        , afterAuthMsg =
+                            Maybe.map
+                                (\{ successMsg, errorMsg } ->
+                                    { successMsg = toMsg successMsg, errorMsg = toMsg errorMsg }
+                                )
+                                updateResult.afterAuthMsg
                       }
                     , Cmd.map toMsg updateResult.externalCmd
                         :: Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd

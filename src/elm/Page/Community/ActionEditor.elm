@@ -1039,7 +1039,10 @@ update msg model ({ shared } as loggedIn) =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     upsertAction loggedIn community newModel isoDate
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 _ ->
                     UR.init newModel

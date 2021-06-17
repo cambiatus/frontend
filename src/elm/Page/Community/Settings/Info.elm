@@ -342,7 +342,10 @@ update msg model ({ shared } as loggedIn) =
                                 Nothing ->
                                     Cmd.none
                             )
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 _ ->
                     UR.init model

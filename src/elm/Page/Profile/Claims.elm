@@ -265,7 +265,10 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 _ ->
                     model

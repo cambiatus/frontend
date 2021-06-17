@@ -123,7 +123,10 @@ update msg model ({ shared } as loggedIn) =
                             { model | isLoading = True }
                                 |> UR.init
                                 |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
-                                |> LoggedIn.withAuthentication loggedIn model msg
+                                |> LoggedIn.withAuthentication loggedIn
+                                    model
+                                    -- TODO - Check this
+                                    { successMsg = msg, errorMsg = msg }
 
                         Err withError ->
                             UR.init withError

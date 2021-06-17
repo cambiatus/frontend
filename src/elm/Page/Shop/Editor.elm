@@ -689,7 +689,10 @@ update msg model loggedIn =
                             loggedIn
                             "createsale"
                             (encodeCreateForm loggedIn form)
-                            |> LoggedIn.withAuthentication loggedIn model msg
+                            |> LoggedIn.withAuthentication loggedIn
+                                model
+                                -- TODO - Check this
+                                { successMsg = msg, errorMsg = msg }
 
                     else
                         validatedModel
@@ -703,7 +706,10 @@ update msg model loggedIn =
                             loggedIn
                             "createsale"
                             (encodeCreateForm loggedIn form)
-                            |> LoggedIn.withAuthentication loggedIn model msg
+                            |> LoggedIn.withAuthentication loggedIn
+                                model
+                                -- TODO - Check this
+                                { successMsg = msg, errorMsg = msg }
 
                     else
                         validatedModel
@@ -717,7 +723,10 @@ update msg model loggedIn =
                             loggedIn
                             "createsale"
                             (encodeCreateForm loggedIn form)
-                            |> LoggedIn.withAuthentication loggedIn model msg
+                            |> LoggedIn.withAuthentication loggedIn
+                                model
+                                -- TODO - Check this
+                                { successMsg = msg, errorMsg = msg }
 
                     else
                         validatedModel
@@ -733,7 +742,10 @@ update msg model loggedIn =
                                     loggedIn
                                     "updatesale"
                                     (encodeUpdateForm sale form community.symbol)
-                                    |> LoggedIn.withAuthentication loggedIn model msg
+                                    |> LoggedIn.withAuthentication loggedIn
+                                        model
+                                        -- TODO - Check this
+                                        { successMsg = msg, errorMsg = msg }
 
                             else
                                 validatedModel
@@ -810,7 +822,10 @@ update msg model loggedIn =
                         loggedIn
                         "deletesale"
                         (encodeDeleteForm sale)
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 EditingUpdate balances sale (RemoteData.Failure error) _ form ->
                     performRequest
@@ -819,7 +834,10 @@ update msg model loggedIn =
                         loggedIn
                         "deletesale"
                         (encodeDeleteForm sale)
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 EditingUpdate balances sale RemoteData.NotAsked _ form ->
                     performRequest
@@ -828,7 +846,10 @@ update msg model loggedIn =
                         loggedIn
                         "deletesale"
                         (encodeDeleteForm sale)
-                        |> LoggedIn.withAuthentication loggedIn model msg
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            -- TODO - Check this
+                            { successMsg = msg, errorMsg = msg }
 
                 _ ->
                     model

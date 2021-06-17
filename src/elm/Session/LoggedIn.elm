@@ -724,7 +724,7 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
-    | RequiredAuthentication msg
+    | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
@@ -743,7 +743,7 @@ updateExternal :
         , cmd : Cmd Msg
         , externalCmd : Cmd msg
         , broadcastMsg : Maybe BroadcastMsg
-        , afterAuthMsg : Maybe msg
+        , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
         }
 updateExternal externalMsg ({ shared } as model) =
     let
@@ -849,6 +849,7 @@ type alias UpdateResult =
 -}
 type ExternalMsg
     = AuthenticationSucceed
+    | AuthenticationFailed
     | Broadcast BroadcastMsg
 
 
@@ -1067,6 +1068,7 @@ update msg model =
 
         ClosedAuthModal ->
             UR.init closeAllModals
+                |> UR.addExt AuthenticationFailed
 
         GotAuthMsg authMsg ->
             Auth.update authMsg shared model.auth
@@ -1225,7 +1227,7 @@ again
 withAuthentication :
     Model
     -> subModel
-    -> subMsg
+    -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
 withAuthentication loggedIn subModel subMsg successfulUR =

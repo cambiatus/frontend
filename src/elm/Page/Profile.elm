@@ -689,7 +689,10 @@ update msg model loggedIn =
                     (Dom.focus "pinInput"
                         |> Task.attempt (\_ -> Ignored)
                     )
-                |> LoggedIn.withAuthentication loggedIn model msg
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    -- TODO - Check this
+                    { successMsg = msg, errorMsg = msg }
 
         ChangePinSubmitted newPin ->
             let
@@ -712,7 +715,10 @@ update msg model loggedIn =
                             , ( "newPin", Encode.string newPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn model msg
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    -- TODO - Check this
+                    { successMsg = msg, errorMsg = msg }
 
         GotPinMsg subMsg ->
             let
@@ -737,7 +743,10 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> downloadPdfPort loggedIn.auth.pinModel.pin
-                |> LoggedIn.withAuthentication loggedIn model msg
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    -- TODO - Check this
+                    { successMsg = msg, errorMsg = msg }
 
         DownloadPdf pin ->
             model
