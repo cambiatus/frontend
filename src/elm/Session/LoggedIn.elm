@@ -6,7 +6,6 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
-    , hasPrivateKey
     , init
     , initLogin
     , isAccount
