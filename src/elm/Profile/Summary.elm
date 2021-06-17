@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withRelativeSelector)
 
 import Avatar
 import Eos.Account as Eos
@@ -21,6 +21,7 @@ import View.Modal as Modal
 type alias Model =
     { isExpanded : Bool
     , isLarge : Bool
+    , relativeSelector : Maybe String
     }
 
 
@@ -28,6 +29,7 @@ init : Bool -> Model
 init isLarge =
     { isExpanded = False
     , isLarge = isLarge
+    , relativeSelector = Nothing
     }
 
 
@@ -62,6 +64,11 @@ update msg model =
 
 
 -- VIEW
+
+
+withRelativeSelector : String -> Model -> Model
+withRelativeSelector relativeSelector model =
+    { model | relativeSelector = Just relativeSelector }
 
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
@@ -123,10 +130,10 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 a (Route.href route :: attrs)
     in
     div [ class "flex flex-col items-center" ]
-        [ div [ class ("rounded-full relative " ++ size) ]
+        [ div [ class ("rounded-full " ++ size) ]
             [ container [] [ Avatar.view profile.avatar size ]
             , if not isMobile && model.isExpanded then
-                View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
+                View.Components.dialogBubble { class_ = "w-120", relativeSelector = model.relativeSelector }
                     [ viewUserInfo profile ]
 
               else

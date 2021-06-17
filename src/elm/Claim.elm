@@ -408,10 +408,8 @@ viewClaimCard loggedIn profileSummaries claim =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ div [ class "flex items-center justify-center" ]
-                    [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummaries.cardSummary
-                        |> Html.map (GotProfileSummaryMsg CardSummary >> GotExternalMsg)
-                    ]
+                [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummaries.cardSummary
+                    |> Html.map (GotProfileSummaryMsg CardSummary >> GotExternalMsg)
                 , case claim.proofPhoto of
                     Just url ->
                         div [ class "claim-photo-thumb" ]
@@ -482,9 +480,14 @@ viewClaimModal { shared, accountName } profileSummaries claim =
         claimVerifiersList =
             "block mt-6 h-32 space-y-4"
 
+        viewProfileSummary profile_ profileSummary_ =
+            profileSummary_
+                |> Profile.Summary.withRelativeSelector ".modal-content"
+                |> Profile.Summary.view shared accountName profile_
+
         photoAndTagName =
-            div [ class "relative z-10" ]
-                [ Profile.Summary.view shared accountName claim.claimer profileSummaries.topModalSummary |> Html.map (GotProfileSummaryMsg TopModalSummary >> GotExternalMsg) ]
+            viewProfileSummary claim.claimer profileSummaries.topModalSummary
+                |> Html.map (GotProfileSummaryMsg TopModalSummary >> GotExternalMsg)
 
         claimDateAndState =
             let
@@ -557,11 +560,9 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             (List.map3
                                 (\profileSummary index c ->
                                     if c.isApproved then
-                                        div [ class "px-2 relative z-10" ]
-                                            [ div [ class "absolute" ]
-                                                [ Profile.Summary.view shared accountName c.validator profileSummary
-                                                    |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
-                                                ]
+                                        div [ class "px-2" ]
+                                            [ viewProfileSummary c.validator profileSummary
+                                                |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
 
                                     else
@@ -591,8 +592,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             (List.map3
                                 (\profileSummary index c ->
                                     if not c.isApproved then
-                                        div [ class "px-2 relative" ]
-                                            [ Profile.Summary.view shared accountName c.validator profileSummary
+                                        div [ class "px-2" ]
+                                            [ viewProfileSummary c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
 
@@ -625,7 +626,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 |> List.map3
                                     (\profileSummary index v ->
                                         div [ class "px-2" ]
-                                            [ Profile.Summary.view shared accountName v profileSummary
+                                            [ viewProfileSummary v profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (PendingSummaries index) >> GotExternalMsg)
                                             ]
                                     )

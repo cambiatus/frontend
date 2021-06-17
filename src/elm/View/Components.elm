@@ -66,11 +66,16 @@ loadingLogoAnimatedFluid =
 -- CONTAINERS
 
 
-dialogBubble : { class_ : String, minWidth : Int } -> List (Html msg) -> Html msg
-dialogBubble { class_, minWidth } elements =
+dialogBubble : { class_ : String, relativeSelector : Maybe String } -> List (Html msg) -> Html msg
+dialogBubble { class_, relativeSelector } elements =
     node "dialog-bubble"
-        [ attribute "elm-min-width" (String.fromInt minWidth)
-        , attribute "elm-class" class_
+        [ attribute "elm-class" class_
+        , case relativeSelector of
+            Nothing ->
+                class ""
+
+            Just selector ->
+                attribute "elm-relative-selector" selector
         ]
         elements
 
