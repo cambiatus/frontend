@@ -1145,7 +1145,11 @@ update msg model =
                     else
                         let
                             ( newModel, cmd ) =
-                                selectCommunity model newCommunity Route.Dashboard
+                                selectCommunity model
+                                    newCommunity
+                                    (List.head model.routeHistory
+                                        |> Maybe.withDefault Route.Dashboard
+                                    )
                         in
                         UR.init { newModel | showCommunitySelector = False }
                             |> UR.addCmd cmd
