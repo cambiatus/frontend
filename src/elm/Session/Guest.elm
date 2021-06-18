@@ -333,8 +333,11 @@ update msg ({ shared } as model) =
                 { currentUrl | host = "cambiatus.staging.localhost" }
                     |> Url.toString
 
+            else if String.endsWith "demo.cambiatus.io" (Url.toString currentUrl) then
+                "https://www.cambiatus.com/welcome-demo"
+
             else
-                "https://cambiatus.com"
+                "https://www.cambiatus.com/welcome"
     in
     case msg of
         CompletedLoadTranslation lang (Ok transl) ->
