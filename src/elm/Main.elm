@@ -765,8 +765,8 @@ statusToRoute status session =
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
-        CommunitySelector _ ->
-            Just Route.CommunitySelector
+        CommunitySelector subModel ->
+            Just (Route.CommunitySelector subModel.maybeRedirect)
 
         Objectives _ ->
             Just Route.Objectives
@@ -1099,10 +1099,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
-        Just Route.CommunitySelector ->
-            CommunitySelector.init
+        Just (Route.CommunitySelector maybeRedirect) ->
+            CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
-                |> withLoggedIn Route.CommunitySelector
+                |> withLoggedIn (Route.CommunitySelector maybeRedirect)
 
         Just Route.NewCommunity ->
             CommunityEditor.init

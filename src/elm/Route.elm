@@ -42,7 +42,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
-    | CommunitySelector
+    | CommunitySelector (Maybe Route)
     | Objectives
     | NewObjective
     | EditObjective Int
@@ -107,7 +107,13 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
-        , Url.map CommunitySelector (s "community" </> s "selector")
+        , Url.map CommunitySelector
+            (s "community"
+                </> s "selector"
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -391,8 +397,10 @@ routeToString route =
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
 
-                CommunitySelector ->
-                    ( [ "community", "selector" ], [] )
+                CommunitySelector maybeRedirect ->
+                    ( [ "community", "selector" ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

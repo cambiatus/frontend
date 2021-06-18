@@ -16,12 +16,12 @@ import Session.Shared exposing (Shared)
 
 
 type alias Model =
-    {}
+    { maybeRedirect : Maybe Route.Route }
 
 
-init : LoggedIn.Model -> ( Model, Cmd msg )
-init _ =
-    ( {}
+init : Maybe Route.Route -> LoggedIn.Model -> ( Model, Cmd msg )
+init maybeRedirect _ =
+    ( { maybeRedirect = maybeRedirect }
     , Cmd.none
     )
 
@@ -32,7 +32,7 @@ init _ =
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html msg }
-view loggedIn _ =
+view loggedIn model =
     let
         title =
             "Select community"
@@ -49,15 +49,15 @@ view loggedIn _ =
                     Page.fullPageGraphQLError title err
 
                 RemoteData.Success profile ->
-                    view_ loggedIn.shared profile
+                    view_ loggedIn.shared model profile
     in
     { title = title
     , content = content
     }
 
 
-view_ : Shared -> Profile.Model -> Html msg
-view_ shared profile =
+view_ : Shared -> Model -> Profile.Model -> Html msg
+view_ shared model profile =
     div [ class "flex-grow flex flex-col" ]
         [ div [ class "flex flex-col items-center" ]
             [ img [ src "/images/map.svg" ] []
@@ -66,16 +66,16 @@ view_ shared profile =
             ]
         , div [ class "bg-white flex-grow mt-8" ]
             [ div [ class "container mx-auto px-4 divide-y divide-solid divide-gray-500" ]
-                (List.map (viewCommunity shared) profile.communities)
+                (List.map (viewCommunity shared model) profile.communities)
             ]
         ]
 
 
-viewCommunity : Shared -> Profile.CommunityInfo -> Html msg
-viewCommunity shared community =
+viewCommunity : Shared -> Model -> Profile.CommunityInfo -> Html msg
+viewCommunity shared model community =
     a
         [ class "flex justify-between items-center py-6 text-black hover:text-orange-300"
-        , Route.externalHref shared community Route.Dashboard
+        , Route.externalHref shared community (model.maybeRedirect |> Maybe.withDefault Route.Dashboard)
         ]
         [ div [ class "flex items-center" ]
             [ img
