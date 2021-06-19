@@ -1006,7 +1006,7 @@ update msg model =
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
+                |> UR.addCmd (Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)))
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             let
@@ -1019,7 +1019,7 @@ update msg model =
                         identity
 
                     else
-                        UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
+                        UR.addCmd (Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)))
                    )
 
         CompletedLoadCommunity RemoteData.NotAsked ->
@@ -1145,7 +1145,11 @@ update msg model =
                     else
                         let
                             ( newModel, cmd ) =
-                                selectCommunity model newCommunity Route.Dashboard
+                                selectCommunity model
+                                    newCommunity
+                                    (List.head model.routeHistory
+                                        |> Maybe.withDefault Route.Dashboard
+                                    )
                         in
                         UR.init { newModel | showCommunitySelector = False }
                             |> UR.addCmd cmd
@@ -1299,7 +1303,7 @@ setCommunity community ({ shared } as model) =
 
     else
         ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
-        , Cmd.batch [ Route.pushUrl shared.navKey Route.CommunitySelector, storeCommunityCmd ]
+        , Cmd.batch [ Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)), storeCommunityCmd ]
         )
 
 
