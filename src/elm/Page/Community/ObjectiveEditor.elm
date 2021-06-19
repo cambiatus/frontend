@@ -103,6 +103,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedCompleteObjective
@@ -385,6 +386,13 @@ update msg model loggedIn =
                 { model | status = Unauthorized }
                     |> UR.init
 
+        ClosedAuthModal ->
+            { model
+                | isMarkAsCompletedConfirmationModalLoading = False
+                , showMarkAsCompletedConfirmationModal = False
+            }
+                |> UR.init
+
         EnteredDescription val ->
             UR.init model
                 |> updateObjective msg (\o -> { o | description = val })
@@ -405,6 +413,9 @@ update msg model loggedIn =
                                 (completeObjectiveSelectionSet id)
                                 GotCompleteObjectiveResponse
                             )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init model
@@ -482,22 +493,22 @@ update msg model loggedIn =
                         _ ->
                             newModel
             in
-            if LoggedIn.hasPrivateKey loggedIn then
-                case ( loggedIn.selectedCommunity, model.status ) of
-                    ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
-                        save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+            case ( loggedIn.selectedCommunity, model.status ) of
+                ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
+                    save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                    ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
-                        save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
+                    save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                    _ ->
-                        newModel
-                            |> UR.logImpossible msg []
-
-            else
-                newModel
-                    |> UR.addExt
-                        (Just ClickedSaveObjective |> RequiredAuthentication)
+                _ ->
+                    newModel
+                        |> UR.logImpossible msg []
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
@@ -552,6 +563,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredDescription _ ->
             [ "EnteredDescription" ]

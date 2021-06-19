@@ -454,6 +454,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -597,6 +598,10 @@ update msg model ({ shared } as loggedIn) =
             else
                 { model | status = Unauthorized }
                     |> UR.init
+
+        ClosedAuthModal ->
+            { model | form = { oldForm | saveStatus = NotAsked } }
+                |> UR.init
 
         OnSelectVerifier maybeProfile ->
             let
@@ -1038,16 +1043,10 @@ update msg model ({ shared } as loggedIn) =
             in
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    if LoggedIn.hasPrivateKey loggedIn then
-                        upsertAction loggedIn community newModel isoDate
-
-                    else
-                        newModel
-                            |> UR.init
-                            |> UR.addExt
-                                (Just (SaveAction isoDate)
-                                    |> RequiredAuthentication
-                                )
+                    upsertAction loggedIn community newModel isoDate
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init newModel
@@ -1865,6 +1864,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]

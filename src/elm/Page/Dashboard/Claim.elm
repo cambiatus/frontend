@@ -460,6 +460,7 @@ type alias UpdateResult =
 
 type Msg
     = ClaimLoaded (RemoteData (Graphql.Http.Error Claim.Model) Claim.Model)
+    | ClosedAuthModal
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult (Result (Maybe Value) String)
     | ClaimMsg Claim.Msg
@@ -519,6 +520,10 @@ update msg model loggedIn =
         ClaimLoaded _ ->
             UR.init model
 
+        ClosedAuthModal ->
+            { model | claimModalStatus = Claim.Closed }
+                |> UR.init
+
         ClaimMsg m ->
             Claim.updateClaimModalStatus m model
                 |> UR.init
@@ -532,27 +537,25 @@ update msg model loggedIn =
                                 | claimModalStatus = Claim.Loading claimId vote
                             }
                     in
-                    if LoggedIn.hasPrivateKey loggedIn then
-                        UR.init newModel
-                            |> UR.addPort
-                                { responseAddress = msg
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "verifyclaim"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data = Claim.encodeVerification claimId loggedIn.accountName vote
-                                          }
-                                        ]
-                                }
-
-                    else
-                        UR.init newModel
-                            |> UR.addExt (Just (VoteClaim claimId vote) |> LoggedIn.RequiredAuthentication)
+                    UR.init newModel
+                        |> UR.addPort
+                            { responseAddress = msg
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "verifyclaim"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      }
+                                    ]
+                            }
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -674,6 +677,9 @@ msgToString msg =
     case msg of
         ClaimLoaded r ->
             [ "ClaimLoaded", UR.remoteDataToString r ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         VoteClaim claimId _ ->
             [ "VoteClaim", String.fromInt claimId ]
