@@ -333,7 +333,7 @@ update msg ({ shared } as model) =
                 { currentUrl | host = "cambiatus.staging.localhost" }
                     |> Url.toString
 
-            else if String.endsWith "demo.cambiatus.io" (Url.toString currentUrl) then
+            else if String.endsWith "demo.cambiatus.io" currentUrl.host then
                 "https://www.cambiatus.com/welcome-demo"
 
             else
