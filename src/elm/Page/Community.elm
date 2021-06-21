@@ -137,7 +137,7 @@ viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
 viewCommunityStats { t, tr } community model =
     let
         card attrs =
-            div (class "bg-white rounded p-4 flex flex-col justify-center" :: attrs)
+            div (class "bg-white rounded p-4" :: attrs)
 
         hasCurrentSupply =
             RemoteData.isSuccess model.communityCurrentSupply
@@ -160,7 +160,7 @@ viewCommunityStats { t, tr } community model =
         [ case model.communityCurrentSupply of
             RemoteData.Success currentSupply ->
                 card
-                    [ class "col-span-2 flex flex-row justify-start items-center px-6 py-5 bg-green text-white"
+                    [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white"
                     , classList [ ( "md:col-span-4", not hasMinBalance ) ]
                     ]
                     [ Icons.coin "mr-6"
@@ -180,7 +180,7 @@ viewCommunityStats { t, tr } community model =
         , case community.minBalance of
             Just minBalance ->
                 card
-                    [ class "col-span-2 flex flex-row justify-start items-center px-6 py-5"
+                    [ class "col-span-2 flex items-center px-6 py-5"
                     , classList [ ( "md:col-span-4", not hasCurrentSupply ) ]
                     ]
                     [ Icons.coin "mr-6"
@@ -193,18 +193,21 @@ viewCommunityStats { t, tr } community model =
 
             Nothing ->
                 text ""
-        , card [ class "row-span-2 justify-start relative overflow-hidden" ]
+        , card [ class "row-span-2 relative overflow-hidden" ]
             [ p [ class "w-full font-bold text-green text-3xl" ]
                 [ text <| String.fromInt community.memberCount ]
             , p [ class "text-gray-900 text-sm" ]
                 [ text <| t "community.index.members" ]
             , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
             ]
-        , card []
-            [ p [ class "w-full font-bold text-green text-3xl" ]
-                [ text <| String.fromInt community.claimCount ]
-            , p [ class "text-gray-900 text-sm" ]
-                [ text <| t "community.index.claims" ]
+        , card [ class "grid grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 items-center" ]
+            [ div [ class "col-span-2 lg:col-span-4 xl:col-span-5" ]
+                [ p [ class "w-full font-bold text-green text-3xl" ]
+                    [ text <| String.fromInt community.claimCount ]
+                , p [ class "text-gray-900 text-sm" ]
+                    [ text <| t "community.index.claims" ]
+                ]
+            , Icons.flag "fill-current text-orange-500 w-full md:w-2/3 md:mx-auto"
             ]
         , card [ class "col-span-2 row-span-2 relative overflow-hidden flex flex-col justify-center" ]
             [ p [ class "w-full font-bold text-green text-3xl" ]
@@ -218,11 +221,14 @@ viewCommunityStats { t, tr } community model =
                 [ text <| t "community.index.orders" ]
             , img [ class "absolute right-0 h-full pt-10 md:pt-6", src "/images/booth.svg" ] []
             ]
-        , card []
-            [ p [ class "w-full font-bold text-green text-3xl" ]
-                [ text <| String.fromInt community.transferCount ]
-            , p [ class " text-gray-900 text-sm" ]
-                [ text <| t "community.index.transfers" ]
+        , card [ class "grid grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 items-center" ]
+            [ div [ class "col-span-2 lg:col-span-4 xl:col-span-5" ]
+                [ p [ class "w-full font-bold text-green text-3xl" ]
+                    [ text <| String.fromInt community.transferCount ]
+                , p [ class " text-gray-900 text-sm" ]
+                    [ text <| t "community.index.transfers" ]
+                ]
+            , Icons.arrowsLeft "w-full"
             ]
         ]
 
