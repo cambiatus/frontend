@@ -74,12 +74,6 @@ type ModalStatus
     | Closed
 
 
-
---type ClaimModalStatus
---    = OpenedClaimModal
---    | ClosedClaimModal
-
-
 type ClaimStatus
     = Approved
     | Rejected
@@ -474,11 +468,22 @@ viewClaimModal { shared, accountName } profileSummaries claim =
         { t, tr } =
             shared.translators
 
-        greenTextTitleStyle =
+        greenTextTitleClass =
             "uppercase text-green text-xs"
 
-        claimVerifiersList =
-            "block mt-6 h-32 space-y-4"
+        claimVerifiersSectionClass =
+            "block my-6 h-auto space-y-4"
+
+        claimVerifiersProfileListContainerClass =
+            "grid grid-cols-3 md:flex md:flex-wrap md:space-x-6 py-2"
+
+        claimVerifiersFewerProfiles =
+            "flex flex-wrap space-x-6"
+
+        profileSummaryEmpty =
+            div [ class claimVerifiersFewerProfiles ]
+                [ div [ class "mb-10" ] [ Profile.viewEmpty shared ]
+                ]
 
         viewProfileSummary profile_ profileSummary_ =
             profileSummary_
@@ -486,11 +491,11 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 |> Profile.Summary.withScrollSelector ".modal-body"
                 |> Profile.Summary.view shared accountName profile_
 
-        photoAndTagName =
+        viewClaimerProfileSummary =
             viewProfileSummary claim.claimer profileSummaries.topModalSummary
                 |> Html.map (GotProfileSummaryMsg TopModalSummary >> GotExternalMsg)
 
-        claimDateAndState =
+        viewClaimDateAndState =
             let
                 date datetime =
                     Just datetime
@@ -523,9 +528,9 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 , div [ class textColor ] [ text claimStatus ]
                 ]
 
-        rewardInfo =
+        viewRewardInfo =
             let
-                rewardTxtStyle =
+                rewardTxtClass =
                     "my-2 font-bold text-lg"
 
                 makeAsset float =
@@ -537,31 +542,37 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-16" ]
                 [ div
                     []
-                    [ p [ class rewardTxtStyle ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
-                    , p [ class greenTextTitleStyle ] [ text (t "community.actions.reward") ]
+                    [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
+                    , p [ class greenTextTitleClass ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
-                    [ p [ class rewardTxtStyle ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
-                    , p [ class greenTextTitleStyle ] [ text (t "claim.analyst_reward") ]
+                    [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
+                    , p [ class greenTextTitleClass ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]
 
-        approvedBy =
+        viewApprovedByProfileSummaryList =
+            let
+                cls =
+                    if List.length claim.checks > 3 then
+                        claimVerifiersProfileListContainerClass
+
+                    else
+                        claimVerifiersFewerProfiles
+            in
             div
-                [ class claimVerifiersList ]
-                [ p [ class greenTextTitleStyle ] [ text (t "claim.approved_by") ]
+                [ class claimVerifiersSectionClass ]
+                [ p [ class greenTextTitleClass ] [ text (t "claim.approved_by") ]
                 , div []
                     [ if List.isEmpty claim.checks then
-                        div [ class "flex mb-10 " ]
-                            [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
-                            ]
+                        profileSummaryEmpty
 
                       else
-                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        div [ class cls ]
                             (List.map3
                                 (\profileSummary index c ->
                                     if c.isApproved then
-                                        div [ class "px-2" ]
+                                        div [ class "mb-4" ]
                                             [ viewProfileSummary c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
@@ -576,24 +587,28 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     ]
                 ]
 
-        disapprovedBy =
+        viewDisapprovedByProfileSummaryList =
+            let
+                cls =
+                    if List.length claim.checks > 3 then
+                        claimVerifiersProfileListContainerClass
+
+                    else
+                        claimVerifiersFewerProfiles
+            in
             div
-                [ class claimVerifiersList ]
-                [ p [ class greenTextTitleStyle ] [ text (t "claim.disapproved_by") ]
+                [ class claimVerifiersSectionClass ]
+                [ p [ class greenTextTitleClass ] [ text (t "claim.disapproved_by") ]
                 , div []
                     [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                        div [ class "flex mb-10 " ]
-                            [ div
-                                [ class "pt-2" ]
-                                [ Profile.viewEmpty shared ]
-                            ]
+                        profileSummaryEmpty
 
                       else
-                        div [ class "flex flex-wrap -mx-2 pt-2" ]
+                        div [ class cls ]
                             (List.map3
                                 (\profileSummary index c ->
                                     if not c.isApproved then
-                                        div [ class "px-2" ]
+                                        div [ class "mb-4" ]
                                             [ viewProfileSummary c.validator profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (VotersSummaries index) >> GotExternalMsg)
                                             ]
@@ -608,25 +623,28 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     ]
                 ]
 
-        pendingVote =
+        viewPendingVotersProfileSummaryList =
+            let
+                cls =
+                    if List.length profileSummaries.pendingSummaries > 3 then
+                        claimVerifiersProfileListContainerClass
+
+                    else
+                        claimVerifiersFewerProfiles
+            in
             div
-                [ class claimVerifiersList ]
-                [ p [ class greenTextTitleStyle ] [ text (t "claim.pending_vote") ]
+                [ class claimVerifiersSectionClass ]
+                [ p [ class greenTextTitleClass ] [ text (t "claim.pending_vote") ]
                 , div []
                     [ if List.length claim.checks == claim.action.verifications then
-                        div
-                            [ class "flex mb-10" ]
-                            [ div
-                                [ class "pt-2" ]
-                                [ Profile.viewEmpty shared ]
-                            ]
+                        profileSummaryEmpty
 
                       else
-                        div [ class "flex flex-wrap space-x-6" ]
+                        div [ class cls ]
                             (pendingValidators claim
                                 |> List.map3
                                     (\profileSummary index v ->
-                                        div [ class "px-2" ]
+                                        div [ class "mb-4" ]
                                             [ viewProfileSummary v profileSummary
                                                 |> Html.map (GotProfileSummaryMsg (PendingSummaries index) >> GotExternalMsg)
                                             ]
@@ -637,7 +655,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     ]
                 ]
 
-        actionDetail =
+        viewActionDetails =
             let
                 proofCode =
                     case claim.proofCode of
@@ -649,7 +667,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class "block mt-6" ]
-                [ p [ class greenTextTitleStyle ] [ text (t "claim.action") ]
+                [ p [ class greenTextTitleClass ] [ text (t "claim.action") ]
                 , p [ class "text-left mt-2 text-lg w-full" ] [ text claim.action.description ]
                 , case claim.proofPhoto of
                     Just url ->
@@ -678,18 +696,18 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         header =
             div [ class "flex mt-16 space-x-8 justify-center" ]
-                [ photoAndTagName
-                , claimDateAndState
+                [ viewClaimerProfileSummary
+                , viewClaimDateAndState
                 ]
 
         body =
             div
                 [ class "block" ]
-                [ rewardInfo
-                , approvedBy
-                , disapprovedBy
-                , pendingVote
-                , actionDetail
+                [ viewRewardInfo
+                , viewApprovedByProfileSummaryList
+                , viewDisapprovedByProfileSummaryList
+                , viewPendingVotersProfileSummaryList
+                , viewActionDetails
                 ]
 
         footer =
