@@ -361,13 +361,7 @@ imageMultiple class_ =
 
 coin : String -> Html msg
 coin class_ =
-    svg
-        [ width "30"
-        , height "43"
-        , viewBox "0 0 30 43"
-        , fill "none" -- TODO
-        , class class_
-        ]
+    svg [ width "30", height "43", viewBox "0 0 30 43", fill "none", class class_ ]
         [ Svg.path [ d "M30 21.1577C30 32.8414 23.284 42.3154 15 42.3154C6.71602 42.3154 0 32.8414 0 21.1577C0 9.47402 6.71602 -2.09352e-08 15 -2.09352e-08C23.284 -2.09352e-08 30 9.47402 30 21.1577Z", fill "#FFD200" ] []
         , Svg.path [ d "M24.4496 21.1577C24.4496 28.5224 20.2169 34.4911 14.9977 34.4911C9.77845 34.4911 5.54567 28.5224 5.54567 21.1577C5.54567 13.7929 9.77845 7.82425 14.9977 7.82425C20.2169 7.82425 24.4496 13.7929 24.4496 21.1577Z", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
         , Svg.path [ d "M4.31065 6.43094C5.08605 7.5261 6.46263 9.46776 8.15574 11.859", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
