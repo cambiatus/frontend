@@ -165,7 +165,7 @@ viewCommunityStats { t, tr } community model =
                     ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl" ] [ text (String.fromFloat currentSupply) ]
+                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount community.symbol currentSupply) ]
                         , p [ class "text-sm" ]
                             [ text
                                 (tr "community.index.amount_in_circulation"
@@ -185,7 +185,7 @@ viewCommunityStats { t, tr } community model =
                     ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl text-green" ] [ text (String.fromFloat minBalance) ]
+                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount community.symbol minBalance) ]
                         , p [ class "text-sm text-gray-900" ]
                             [ text (t "community.index.minimum_balance") ]
                         ]
