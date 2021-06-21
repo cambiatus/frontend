@@ -394,11 +394,11 @@
         "created_by": "የተፈጠረዉ በ {{account_name}}",
         "amount_in_circulation": "{{currency_name}} በመዘዋወር ላይ",
         "minimum_balance": "በአንድ ተጠቃሚ የሚፈቀደው አነስተኛ ሚዛን",
-        "members": "አባለት",
+        "members": "ንቁ ተጠቃሚዎች",
         "claims": "የይገባኛል ጥያቄዎች",
-        "products": "አቅርቦቶች",
-        "orders": "ትዕዛዞች",
-        "transfers": "የተለለፈዉ መጠን"
+        "products": "የሱቅ ሽያጭ",
+        "orders": "የሱቅ ግዢዎች",
+        "transfers": "ግብይቶች"
       },
       "invite": {
         "title": "ጓደኛን ጋብዝ",

@@ -436,11 +436,11 @@
       "created_by": "Creada por {{account_name}}",
       "amount_in_circulation": "{{currency_name}} en circulación",
       "minimum_balance": "Saldo mínimo permitido por usuario",
-      "members": "Miembros",
+      "members": "Usuarios activos",
       "claims": "Reivindicaciones",
-      "products": "Ofertas",
-      "orders": "Pedidos",
-      "transfers": "Transferencias"
+      "products": "Ventas de la tienda",
+      "orders": "Compras en la tienda",
+      "transfers": "Transacciónes"
     },
     "invite": {
       "title": "Invita a un amigo",

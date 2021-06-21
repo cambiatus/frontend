@@ -432,11 +432,11 @@
       "created_by": "Created by {{account_name}}",
       "amount_in_circulation": "{{currency_name}} in circulation",
       "minimum_balance": "Minimum balance allowed per user",
-      "members": "Members",
+      "members": "Active users",
       "claims": "Claims",
-      "products": "Offers",
-      "orders": "Orders",
-      "transfers": "Transfers"
+      "products": "Shop sales",
+      "orders": "Shop purchases",
+      "transfers": "Transactions"
     },
     "invite": {
       "title": "Invite your friends",

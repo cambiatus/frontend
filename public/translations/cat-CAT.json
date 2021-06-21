@@ -436,11 +436,11 @@
       "created_by": "Creada per {{account_name}}",
       "amount_in_circulation": "{{currency_name}} en circulació",
       "minimum_balance": "Saldo mínim permès per usuari",
-      "members": "Afiliació",
+      "members": "Usuaris actius",
       "claims": "Reclamacions",
-      "products": "Ofertes",
-      "orders": "Comandes",
-      "transfers": "Transferències"
+      "products": "Venda de botigues",
+      "orders": "Compra de botigues",
+      "transfers": "Transaccions"
     },
     "invite": {
       "title": "Convida als teus amics",
