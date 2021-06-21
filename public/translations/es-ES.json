@@ -874,7 +874,8 @@
       "message_approve": "Realmente desea aprobar este reclamo?",
       "primary_disapprove": "sí, desaprobar",
       "primary_approve": "sí, aprobar",
-      "secondary": "no, cancelar"
+      "secondary": "no, cancelar",
+      "view_details": "Ver Detalles"
     }
   },
   "transfer_result": {

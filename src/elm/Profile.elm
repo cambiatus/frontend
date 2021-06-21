@@ -312,8 +312,7 @@ viewEmpty shared =
     div
         []
         [ p
-            [ class "uppercase text-gray-900 text-caption"
-            ]
+            [ class "uppercase text-gray-900 text-caption" ]
             [ text (shared.translators.t "profile.no_one") ]
         ]
 

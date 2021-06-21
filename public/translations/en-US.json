@@ -872,7 +872,8 @@
       "message_approve": "Do you really want to approve this action?",
       "primary_disapprove": "yes, disapprove",
       "primary_approve": "yes, approve",
-      "secondary": "no, cancel"
+      "secondary": "no, cancel",
+      "view_details": "View Details"
     }
   },
   "transfer_result": {

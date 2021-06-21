@@ -876,7 +876,8 @@
       "message_approve": "Você realmente deseja aprovar esta reivindicação?",
       "primary_disapprove": "sim, reprovar",
       "primary_approve": "sim, aprovar",
-      "secondary": "não, cancelar"
+      "secondary": "não, cancelar",
+      "view_details": "Ver Detalhes"
     }
   },
   "transfer_result": {

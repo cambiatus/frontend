@@ -874,7 +874,8 @@
       "message_approve": "Realment voleu aprovar aquesta reclamació?",
       "primary_disapprove": "sí, desaproveu",
       "primary_approve": "sí, aprova",
-      "secondary": "no, cancel·la"
+      "secondary": "no, cancel·la",
+      "view_details": "Veure Detalls"
     }
   },
   "transfer_result": {

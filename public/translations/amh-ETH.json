@@ -833,7 +833,8 @@
         "message_approve": "ይህንን ተግባር ለማጸደቅ ይፈልጋሉ?",
         "primary_disapprove": "አዎ, አይጽደቅ",
         "primary_approve": "አዎ, ይጽደቅ",
-        "secondary": "አይደለም,ተዉ "
+        "secondary": "አይደለም,ተዉ ",
+        "view_details": "ዝርዝሮችን ይመልከቱ"
       }
     },
     "transfer_result": {

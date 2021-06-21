@@ -238,7 +238,7 @@ addContactModal shared ({ contactModel } as model) =
             , p [ class "text-caption text-center uppercase my-4" ]
                 [ text_ "contact_modal.footer" ]
             ]
-        |> Modal.withLarge True
+        |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
 
 

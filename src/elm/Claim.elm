@@ -16,14 +16,11 @@ module Claim exposing
     , selectionSet
     , updateClaimModalStatus
     , updateProfileSummaries
-    ,  viewClaimCard
-       -- , viewClaimModal
-
+    , viewClaimCard
+    , viewClaimModal
     , viewPhotoModal
     , viewVoteClaimModal
     )
-
--- import Route exposing (Route)
 
 import Action exposing (Action)
 import Api.Relay exposing (Edge, PageConnection)
@@ -46,6 +43,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Profile
 import Profile.Summary
+import Route exposing (Route)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
@@ -303,7 +301,6 @@ type Msg
     = OpenVoteModal ClaimId Bool
     | CloseClaimModals
     | OpenPhotoModal Model
-      --| RouteOpened Route
     | GotExternalMsg ExternalMsg
 
 
@@ -327,11 +324,6 @@ updateClaimModalStatus msg model =
 
         GotExternalMsg _ ->
             model
-
-
-
---RouteOpened _ ->
---    model
 
 
 updateProfileSummaries : ExternalMsg -> ClaimType -> ClaimType
@@ -695,7 +687,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ]
 
         header =
-            div [ class "flex mt-16 space-x-8 justify-center" ]
+            div [ class "flex mt-12 space-x-8 justify-center" ]
                 [ viewClaimerProfileSummary
                 , viewClaimDateAndState
                 ]
@@ -711,18 +703,35 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ]
 
         footer =
+            let
+                claimRoute =
+                    Route.Claim
+                        claim.action.objective.id
+                        claim.action.id
+                        claim.id
+            in
             if isVotable claim accountName shared.now then
-                div [ class "flex justify-between space-x-4 mt-8 object-bottom" ]
-                    [ button
-                        [ class "button button-danger"
-                        , onClick (OpenVoteModal claim.id False)
+                div [ class "block" ]
+                    [ div [ class "flex justify-between space-x-4 mt-4 object-bottom" ]
+                        [ button
+                            [ class "button button-danger"
+                            , onClick (OpenVoteModal claim.id False)
+                            ]
+                            [ text (t "dashboard.reject") ]
+                        , button
+                            [ class "button button-primary"
+                            , onClick (OpenVoteModal claim.id True)
+                            ]
+                            [ text (t "dashboard.verify") ]
                         ]
-                        [ text (t "dashboard.reject") ]
-                    , button
-                        [ class "button button-primary"
-                        , onClick (OpenVoteModal claim.id True)
+                    , a
+                        [ class "button button-primary mt-4 w-full"
+                        , target "_blank"
+                        , Route.href claimRoute
                         ]
-                        [ text (t "dashboard.verify") ]
+                        [ text (t "claim.modal.view_details")
+                        , Icons.externalLink "inline-block ml-4 h-3 fill-current"
+                        ]
                     ]
 
             else
@@ -743,6 +752,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     ]
                 ]
             |> Modal.withFooter [ footer ]
+            |> Modal.withSize Modal.Large
             |> Modal.toHtml
         ]
 
