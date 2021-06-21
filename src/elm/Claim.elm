@@ -17,7 +17,6 @@ module Claim exposing
     , updateClaimModalStatus
     , updateProfileSummaries
     , viewClaimCard
-    , viewClaimModal
     , viewPhotoModal
     , viewVoteClaimModal
     )
@@ -43,7 +42,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Profile
 import Profile.Summary
-import Route exposing (Route)
+import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import Strftime
