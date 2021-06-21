@@ -135,80 +135,94 @@ view loggedIn model =
 
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
 viewCommunityStats { t, tr } community model =
-    div [ class "flex flex-wrap px-4 container mb-6" ]
-        [ div [ class "flex flex-col w-full md:flex-row" ]
-            [ case model.communityCurrentSupply of
-                RemoteData.Success currentSupply ->
-                    div [ class "w-full flex items-center mb-4 px-6 py-5 bg-green rounded text-white md:w-1/2 md:mr-2" ]
-                        [ Icons.coin "mr-6"
-                        , div []
-                            [ p [ class "font-bold text-3xl" ] [ text (String.fromFloat currentSupply) ]
-                            , p [ class "text-sm" ]
-                                [ text
-                                    (tr "community.index.amount_in_circulation"
-                                        [ ( "currency_name", Eos.symbolToSymbolCodeString community.symbol ) ]
-                                    )
-                                ]
-                            ]
-                        ]
+    let
+        card attrs =
+            div (class "bg-white rounded p-4 flex flex-col justify-center" :: attrs)
 
-                _ ->
-                    text ""
-            , case community.minBalance of
-                Just minBalance ->
-                    div [ class "w-full flex items-center mb-4 px-6 py-5 bg-white rounded md:w-1/2" ]
-                        [ Icons.coin "mr-6"
-                        , div []
-                            [ p [ class "font-bold text-3xl text-green" ] [ text (String.fromFloat minBalance) ]
-                            , p [ class "text-sm text-gray-900" ]
-                                [ text (t "community.index.minimum_balance") ]
-                            ]
-                        ]
+        hasCurrentSupply =
+            RemoteData.isSuccess model.communityCurrentSupply
+
+        hasMinBalance =
+            case community.minBalance of
+                Just _ ->
+                    True
 
                 Nothing ->
-                    text ""
+                    False
+    in
+    div
+        [ class "container mx-auto px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
+        , classList
+            [ ( "grid-rows-5", not hasCurrentSupply || not hasMinBalance )
+            , ( "grid-rows-4", not hasCurrentSupply && not hasMinBalance )
             ]
-        , div [ class "flex w-full lg:w-1/2 mb-4" ]
-            [ div [ class "flex-grow" ]
-                [ div
-                    [ class "min-w-40 h-full relative bg-white rounded p-4 overflow-hidden" ]
-                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                        [ text <| String.fromInt community.memberCount ]
-                    , p [ class "text-gray-900 text-sm" ]
-                        [ text <| t "community.index.members" ]
-                    , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
+        ]
+        [ case model.communityCurrentSupply of
+            RemoteData.Success currentSupply ->
+                card
+                    [ class "col-span-2 flex flex-row justify-start items-center px-6 py-5 bg-green text-white"
+                    , classList [ ( "md:col-span-4", not hasMinBalance ) ]
                     ]
-                ]
-            , div [ class "flex flex-col h-full space-y-2 w-40 pl-2 mb-6 lg:mr-2" ]
-                [ div [ class "h-1/2 bg-white rounded px-4 py-2" ]
-                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                        [ text <| String.fromInt community.claimCount ]
-                    , p [ class "text-gray-900 text-sm" ]
-                        [ text <| t "community.index.claims" ]
+                    [ Icons.coin "mr-6"
+                    , div []
+                        [ p [ class "font-bold text-3xl" ] [ text (String.fromFloat currentSupply) ]
+                        , p [ class "text-sm" ]
+                            [ text
+                                (tr "community.index.amount_in_circulation"
+                                    [ ( "currency_name", Eos.symbolToSymbolCodeString community.symbol ) ]
+                                )
+                            ]
+                        ]
                     ]
-                , div [ class "h-1/2 bg-white rounded px-4 py-2" ]
-                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                        [ text <| String.fromInt community.transferCount ]
-                    , p [ class " text-gray-900 text-sm" ]
-                        [ text <| t "community.index.transfers" ]
+
+            _ ->
+                text ""
+        , case community.minBalance of
+            Just minBalance ->
+                card
+                    [ class "col-span-2 flex flex-row justify-start items-center px-6 py-5"
+                    , classList [ ( "md:col-span-4", not hasCurrentSupply ) ]
                     ]
-                ]
+                    [ Icons.coin "mr-6"
+                    , div []
+                        [ p [ class "font-bold text-3xl text-green" ] [ text (String.fromFloat minBalance) ]
+                        , p [ class "text-sm text-gray-900" ]
+                            [ text (t "community.index.minimum_balance") ]
+                        ]
+                    ]
+
+            Nothing ->
+                text ""
+        , card [ class "row-span-2 justify-start relative overflow-hidden" ]
+            [ p [ class "w-full font-bold text-green text-3xl" ]
+                [ text <| String.fromInt community.memberCount ]
+            , p [ class "text-gray-900 text-sm" ]
+                [ text <| t "community.index.members" ]
+            , img [ class "absolute bottom-0 right-0", src "/images/girl-playing-guitar.svg" ] []
             ]
-        , div [ class "w-full lg:w-1/2 h-48" ]
-            [ div [ class "" ]
-                [ div [ class "w-full relative bg-white rounded p-4 h-48 overflow-hidden" ]
-                    [ p [ class "w-full font-bold text-green text-3xl" ]
-                        [ text <| String.fromInt community.productCount ]
-                    , p [ class " text-gray-900 text-sm" ]
-                        [ text <| t "community.index.products" ]
-                    , p
-                        [ class "w-full font-bold text-green text-3xl mt-4" ]
-                        [ text <| String.fromInt community.orderCount ]
-                    , p [ class " text-gray-900 text-sm" ]
-                        [ text <| t "community.index.orders" ]
-                    , img [ class "absolute right-0 bottom-0", src "/images/booth.svg" ] []
-                    ]
-                ]
+        , card []
+            [ p [ class "w-full font-bold text-green text-3xl" ]
+                [ text <| String.fromInt community.claimCount ]
+            , p [ class "text-gray-900 text-sm" ]
+                [ text <| t "community.index.claims" ]
+            ]
+        , card [ class "col-span-2 row-span-2 relative overflow-hidden flex flex-col justify-center" ]
+            [ p [ class "w-full font-bold text-green text-3xl" ]
+                [ text <| String.fromInt community.productCount ]
+            , p [ class " text-gray-900 text-sm" ]
+                [ text <| t "community.index.products" ]
+            , p
+                [ class "w-full font-bold text-green text-3xl mt-4" ]
+                [ text <| String.fromInt community.orderCount ]
+            , p [ class " text-gray-900 text-sm" ]
+                [ text <| t "community.index.orders" ]
+            , img [ class "absolute right-0 h-full pt-10 md:pt-6", src "/images/booth.svg" ] []
+            ]
+        , card []
+            [ p [ class "w-full font-bold text-green text-3xl" ]
+                [ text <| String.fromInt community.transferCount ]
+            , p [ class " text-gray-900 text-sm" ]
+                [ text <| t "community.index.transfers" ]
             ]
         ]
 
