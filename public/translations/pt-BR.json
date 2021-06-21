@@ -438,6 +438,8 @@
     },
     "index": {
       "created_by": "Criado por {{account_name}}",
+      "amount_in_circulation": "{{currency_name}} em circulação",
+      "minimum_balance": "Saldo mínimo por usuário",
       "members": "Membros",
       "claims": "Reivindicações",
       "products": "Ofertas",

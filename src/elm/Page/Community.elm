@@ -3,12 +3,13 @@ module Page.Community exposing
     , Msg
     , init
     , msgToString
-    , subscriptions
+    , receiveBroadcast
     , update
     , view
     )
 
 import Action exposing (Action)
+import Api
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
@@ -16,9 +17,10 @@ import Eos
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
+import Http
 import Icons
 import Page
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import Strftime
@@ -41,16 +43,9 @@ init loggedIn =
 
 initModel : LoggedIn.Model -> Model
 initModel _ =
-    { openObjectiveId = Nothing }
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+    { openObjectiveId = Nothing
+    , communityCurrentSupply = RemoteData.Loading
+    }
 
 
 
@@ -58,7 +53,9 @@ subscriptions _ =
 
 
 type alias Model =
-    { openObjectiveId : Maybe Int }
+    { openObjectiveId : Maybe Int
+    , communityCurrentSupply : RemoteData Http.Error Float
+    }
 
 
 
@@ -123,7 +120,7 @@ view loggedIn model =
 
                               else
                                 text ""
-                            , viewCommunityStats loggedIn.shared.translators community
+                            , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
     in
@@ -136,13 +133,45 @@ view loggedIn model =
     }
 
 
-viewCommunityStats : Translators -> Community.Model -> Html msg
-viewCommunityStats { t } community =
+viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
+viewCommunityStats { t, tr } community model =
     div [ class "flex flex-wrap px-4 container mb-6" ]
-        [ div [ class "flex w-full lg:w-1/2 h-48 mb-4" ]
+        [ div [ class "flex flex-col w-full md:flex-row" ]
+            [ case model.communityCurrentSupply of
+                RemoteData.Success currentSupply ->
+                    div [ class "w-full flex items-center mr-2 mb-4 px-6 py-5 bg-green rounded text-white md:w-1/2" ]
+                        [ Icons.coin "mr-6"
+                        , div []
+                            [ p [ class "font-medium text-3xl" ] [ text (String.fromFloat currentSupply) ]
+                            , p [ class "font-light text-sm" ]
+                                [ text
+                                    (tr "community.index.amount_in_circulation"
+                                        [ ( "currency_name", Eos.symbolToSymbolCodeString community.symbol ) ]
+                                    )
+                                ]
+                            ]
+                        ]
+
+                _ ->
+                    text ""
+            , case community.minBalance of
+                Just minBalance ->
+                    div [ class "w-full flex items-center mr-2 mb-4 px-6 py-5 bg-white rounded md:w-1/2" ]
+                        [ Icons.coin "mr-6"
+                        , div []
+                            [ p [ class "font-medium text-3xl text-green" ] [ text (String.fromFloat minBalance) ]
+                            , p [ class "font-light text-sm text-gray-900" ]
+                                [ text (t "community.index.minimum_balance") ]
+                            ]
+                        ]
+
+                Nothing ->
+                    text ""
+            ]
+        , div [ class "flex w-full lg:w-1/2 h-48 mb-4" ]
             [ div [ class "flex-grow" ]
                 [ div
-                    [ class " min-w-40 h-48 relative bg-white rounded-lg p-4 overflow-hidden" ]
+                    [ class "min-w-40 h-48 relative bg-white rounded p-4 overflow-hidden" ]
                     [ p [ class "w-full font-bold text-green text-3xl" ]
                         [ text <| String.fromInt community.memberCount ]
                     , p [ class " text-gray-700 text-sm" ]
@@ -152,13 +181,13 @@ viewCommunityStats { t } community =
                 ]
             , div [ class "px-2 mb-6" ]
                 [ div [ class "flex flex-col w-40" ]
-                    [ div [ class "w-40 h-24 bg-white rounded-lg px-4 py-2 mb-4" ]
+                    [ div [ class "w-40 h-24 bg-white rounded px-4 py-2 mb-4" ]
                         [ p [ class "w-full font-bold text-green text-3xl" ]
                             [ text <| String.fromInt community.claimCount ]
                         , p [ class " text-gray-700 text-sm" ]
                             [ text <| t "community.index.claims" ]
                         ]
-                    , div [ class "w-40 h-20 bg-white rounded-lg px-4 py-2" ]
+                    , div [ class "w-40 h-20 bg-white rounded px-4 py-2" ]
                         [ p [ class "w-full font-bold text-green text-3xl" ]
                             [ text <| String.fromInt community.transferCount ]
                         , p [ class " text-gray-700 text-sm" ]
@@ -169,7 +198,7 @@ viewCommunityStats { t } community =
             ]
         , div [ class "w-full lg:w-1/2 h-48" ]
             [ div [ class "" ]
-                [ div [ class "w-full relative bg-white rounded-lg p-4 h-48 overflow-hidden" ]
+                [ div [ class "w-full relative bg-white rounded p-4 h-48 overflow-hidden" ]
                     [ p [ class "w-full font-bold text-green text-3xl" ]
                         [ text <| String.fromInt community.productCount ]
                     , p [ class " text-gray-700 text-sm" ]
@@ -291,6 +320,8 @@ type alias UpdateResult =
 type Msg
     = NoOp
     | RequestedReloadCommunity
+    | CompletedLoadCommunity Community.Model
+    | GotCommunitySupply (Result Http.Error Eos.Asset)
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -306,6 +337,19 @@ update msg model loggedIn =
         RequestedReloadCommunity ->
             UR.init model
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd (Api.getSupply loggedIn.shared community.symbol GotCommunitySupply)
+
+        GotCommunitySupply (Ok supply) ->
+            { model | communityCurrentSupply = RemoteData.Success supply.amount }
+                |> UR.init
+
+        GotCommunitySupply (Err err) ->
+            { model | communityCurrentSupply = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logHttpError msg err
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -343,6 +387,12 @@ msgToString msg =
         RequestedReloadCommunity ->
             [ "RequestedReloadCommunity" ]
 
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
+        GotCommunitySupply r ->
+            [ "GotCommunitySupply", UR.resultToString r ]
+
         GotActionMsg _ ->
             [ "GotActionMsg" ]
 
@@ -351,6 +401,16 @@ msgToString msg =
 
         ClickedCloseObjective ->
             [ "ClickedCloseObjective" ]
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 viewAction : Translators -> Bool -> Posix -> Action -> Bool -> Html Msg

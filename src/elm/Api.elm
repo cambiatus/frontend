@@ -2,6 +2,7 @@ module Api exposing
     ( communityInvite
     , getBalances
     , getExpiryOpts
+    , getSupply
     , uploadImage
     )
 
@@ -103,6 +104,30 @@ getExpiryOpts shared symbol toMsg =
             Decode.field "rows"
                 (Decode.list Token.expiryOptsDataDecoder
                     |> Decode.map (List.filter (.currency >> (==) symbol) >> List.head)
+                )
+                |> Http.expectJson toMsg
+        }
+
+
+getSupply : Shared -> Eos.Symbol -> (Result Http.Error Eos.Asset -> msg) -> Cmd msg
+getSupply shared symbol toMsg =
+    let
+        query =
+            { code = shared.contracts.token
+            , scope = Eos.symbolToSymbolCodeString symbol
+            , table = "stat"
+            , limit = 1
+            }
+    in
+    Http.post
+        { url = blockchainUrl shared [ "chain", "get_table_rows" ] []
+        , body =
+            Eos.encodeTableQuery query
+                |> Http.jsonBody
+        , expect =
+            Decode.field "rows"
+                (Decode.index 0
+                    (Decode.field "supply" Eos.decodeAsset)
                 )
                 |> Http.expectJson toMsg
         }

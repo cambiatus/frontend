@@ -434,6 +434,8 @@
     },
     "index": {
       "created_by": "Creada per {{account_name}}",
+      "amount_in_circulation": "{{currency_name}} en circulació",
+      "minimum_balance": "Saldo mínim permès per usuari",
       "members": "Afiliació",
       "claims": "Reclamacions",
       "products": "Ofertes",

@@ -430,6 +430,8 @@
     },
     "index": {
       "created_by": "Created by {{account_name}}",
+      "amount_in_circulation": "{{currency_name}} in circulation",
+      "minimum_balance": "Minimum balance allowed per user",
       "members": "Members",
       "claims": "Claims",
       "products": "Offers",

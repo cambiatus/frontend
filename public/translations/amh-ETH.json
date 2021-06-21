@@ -392,6 +392,8 @@
       },
       "index": {
         "created_by": "የተፈጠረዉ በ {{account_name}}",
+        "amount_in_circulation": "{{currency_name}} በመዘዋወር ላይ",
+        "minimum_balance": "በአንድ ተጠቃሚ የሚፈቀደው አነስተኛ ሚዛን",
         "members": "አባለት",
         "claims": "የይገባኛል ጥያቄዎች",
         "products": "አቅርቦቶች",
