@@ -19,7 +19,7 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
@@ -806,13 +806,21 @@ update msg model loggedIn =
 fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Community.Model -> Cmd Msg
 fetchAnalysis { shared, authToken } model maybeCursorAfter community =
     let
-        optionalClaimer =
-            case model.filters.profile of
-                Just p ->
-                    Present (Eos.nameToString p.account)
-
+        cursorAfter =
+            case maybeCursorAfter of
                 Nothing ->
                     Absent
+
+                Just "" ->
+                    Absent
+
+                Just cursor ->
+                    Present cursor
+
+        optionalClaimer =
+            model.filters.profile
+                |> Maybe.map (.account >> Eos.nameToString)
+                |> OptionalArgument.fromMaybe
 
         optionalStatus =
             case model.filters.statusFilter of
@@ -833,52 +841,30 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter community =
                 DESC ->
                     Cambiatus.Enum.Direction.Desc
 
+        filterRecord =
+            { claimer = optionalClaimer
+            , status = optionalStatus
+            , direction = Present direction
+            }
+
+        optionals =
+            \opts ->
+                { opts
+                    | first = Present 16
+                    , after = cursorAfter
+                    , filter = Present filterRecord
+                }
+
         required =
             { communityId = Eos.symbolToString community.symbol }
-
-        mapFn =
-            \s ->
-                if String.isEmpty s then
-                    Nothing
-
-                else
-                    Just (Present s)
 
         query =
             case model.selectedTab of
                 WaitingToVote ->
-                    let
-                        optionals =
-                            \opts ->
-                                { opts
-                                    | first = Present 16
-                                    , after =
-                                        Maybe.andThen mapFn maybeCursorAfter
-                                            |> Maybe.withDefault Absent
-                                    , filter = Present { direction = Present direction }
-                                }
-                    in
-                    Cambiatus.Query.claimsAnalysis optionals required Claim.claimPaginatedSelectionSet
+                    Cambiatus.Query.pendingClaims optionals required Claim.claimPaginatedSelectionSet
 
                 Analyzed ->
-                    let
-                        filterRecord =
-                            { claimer = optionalClaimer
-                            , status = optionalStatus
-                            , direction = Present direction
-                            }
-
-                        optionals =
-                            \opts ->
-                                { opts
-                                    | first = Present 16
-                                    , after =
-                                        Maybe.andThen mapFn maybeCursorAfter
-                                            |> Maybe.withDefault Absent
-                                    , filter = Present filterRecord
-                                }
-                    in
-                    Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet
+                    Cambiatus.Query.analyzedClaims optionals required Claim.claimPaginatedSelectionSet
     in
     Api.Graphql.query shared (Just authToken) query ClaimsLoaded
 

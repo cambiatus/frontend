@@ -136,72 +136,6 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
-buildClaimAnalysisFilter :
-    (ClaimAnalysisFilterOptionalFields -> ClaimAnalysisFilterOptionalFields)
-    -> ClaimAnalysisFilter
-buildClaimAnalysisFilter fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { direction = Absent }
-    in
-    { direction = optionals.direction }
-
-
-type alias ClaimAnalysisFilterOptionalFields =
-    { direction : OptionalArgument Cambiatus.Enum.Direction.Direction }
-
-
-{-| Type for the ClaimAnalysisFilter input object.
--}
-type alias ClaimAnalysisFilter =
-    { direction : OptionalArgument Cambiatus.Enum.Direction.Direction }
-
-
-{-| Encode a ClaimAnalysisFilter into a value that can be used as an argument.
--}
-encodeClaimAnalysisFilter : ClaimAnalysisFilter -> Value
-encodeClaimAnalysisFilter input =
-    Encode.maybeObject
-        [ ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ) ]
-
-
-buildClaimAnalysisHistoryFilter :
-    (ClaimAnalysisHistoryFilterOptionalFields -> ClaimAnalysisHistoryFilterOptionalFields)
-    -> ClaimAnalysisHistoryFilter
-buildClaimAnalysisHistoryFilter fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { claimer = Absent, direction = Absent, status = Absent }
-    in
-    { claimer = optionals.claimer, direction = optionals.direction, status = optionals.status }
-
-
-type alias ClaimAnalysisHistoryFilterOptionalFields =
-    { claimer : OptionalArgument String
-    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
-    , status : OptionalArgument String
-    }
-
-
-{-| Type for the ClaimAnalysisHistoryFilter input object.
--}
-type alias ClaimAnalysisHistoryFilter =
-    { claimer : OptionalArgument String
-    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
-    , status : OptionalArgument String
-    }
-
-
-{-| Encode a ClaimAnalysisHistoryFilter into a value that can be used as an argument.
--}
-encodeClaimAnalysisHistoryFilter : ClaimAnalysisHistoryFilter -> Value
-encodeClaimAnalysisHistoryFilter input =
-    Encode.maybeObject
-        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
-
-
 buildClaimInput :
     ClaimInputRequiredFields
     -> ClaimInput
@@ -225,6 +159,42 @@ encodeClaimInput : ClaimInput -> Value
 encodeClaimInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
+
+
+buildClaimsFilter :
+    (ClaimsFilterOptionalFields -> ClaimsFilterOptionalFields)
+    -> ClaimsFilter
+buildClaimsFilter fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { claimer = Absent, direction = Absent, status = Absent }
+    in
+    { claimer = optionals.claimer, direction = optionals.direction, status = optionals.status }
+
+
+type alias ClaimsFilterOptionalFields =
+    { claimer : OptionalArgument String
+    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , status : OptionalArgument String
+    }
+
+
+{-| Type for the ClaimsFilter input object.
+-}
+type alias ClaimsFilter =
+    { claimer : OptionalArgument String
+    , direction : OptionalArgument Cambiatus.Enum.Direction.Direction
+    , status : OptionalArgument String
+    }
+
+
+{-| Encode a ClaimsFilter into a value that can be used as an argument.
+-}
+encodeClaimsFilter : ClaimsFilter -> Value
+encodeClaimsFilter input =
+    Encode.maybeObject
+        [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
 buildCompleteObjectiveInput :

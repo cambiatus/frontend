@@ -19,6 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+count : SelectionSet (Maybe Int) Cambiatus.Object.ClaimConnection
+count =
+    Object.selectionForField "(Maybe Int)" "count" [] (Decode.int |> Decode.nullable)
+
+
 edges :
     SelectionSet decodesTo Cambiatus.Object.ClaimEdge
     -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.ClaimConnection

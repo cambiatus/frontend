@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Cambiatus.Enum.Direction
+import Cambiatus.InputObject
 import Cambiatus.Query
 import Claim
 import Community exposing (Balance)
@@ -1087,31 +1088,34 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
                             Nothing ->
                                 Present 4
                     , after =
-                        Maybe.andThen
-                            (\s ->
-                                if String.isEmpty s then
-                                    Nothing
+                        case maybeCursor of
+                            Nothing ->
+                                Absent
 
-                                else
-                                    Just (Present s)
-                            )
-                            maybeCursor
-                            |> Maybe.withDefault Absent
+                            Just "" ->
+                                Absent
+
+                            Just cursor ->
+                                Present cursor
                     , filter =
-                        Present
-                            { direction =
-                                case direction of
-                                    ASC ->
-                                        Present Cambiatus.Enum.Direction.Asc
+                        (\claimsFilter ->
+                            { claimsFilter
+                                | direction =
+                                    case direction of
+                                        ASC ->
+                                            Present Cambiatus.Enum.Direction.Asc
 
-                                    DESC ->
-                                        Present Cambiatus.Enum.Direction.Desc
+                                        DESC ->
+                                            Present Cambiatus.Enum.Direction.Desc
                             }
+                        )
+                            |> Cambiatus.InputObject.buildClaimsFilter
+                            |> Present
                 }
     in
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.claimsAnalysis optionalArguments arg Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.pendingClaims optionalArguments arg Claim.claimPaginatedSelectionSet)
         ClaimsLoaded
 
 
