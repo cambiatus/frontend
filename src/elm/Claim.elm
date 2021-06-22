@@ -20,7 +20,7 @@ module Claim exposing
     )
 
 import Action exposing (Action)
-import Api.Relay as Relay exposing (Edge)
+import Api.Relay as Relay
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
 import Cambiatus.Object.Check as Check
@@ -163,9 +163,9 @@ claimPaginatedSelectionSet =
         |> with Cambiatus.Object.ClaimConnection.count
 
 
-claimEdgeSelectionSet : SelectionSet (Edge Model) Cambiatus.Object.ClaimEdge
+claimEdgeSelectionSet : SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
 claimEdgeSelectionSet =
-    SelectionSet.succeed Edge
+    SelectionSet.succeed Relay.Edge
         |> with Cambiatus.Object.ClaimEdge.cursor
         |> with (Cambiatus.Object.ClaimEdge.node selectionSet)
 
@@ -219,19 +219,19 @@ checkSelectionSet =
 paginatedToList : Maybe Paginated -> List Model
 paginatedToList maybeObj =
     let
-        toMaybeEdges : Maybe Paginated -> Maybe (List (Maybe (Edge Model)))
+        toMaybeEdges : Maybe Paginated -> Maybe (List (Maybe (Relay.Edge Model)))
         toMaybeEdges maybeConn =
             Maybe.andThen
                 (\a -> a.edges)
                 maybeConn
 
-        toEdges : Maybe (List (Maybe (Edge Model))) -> List (Maybe (Edge Model))
+        toEdges : Maybe (List (Maybe (Relay.Edge Model))) -> List (Maybe (Relay.Edge Model))
         toEdges maybeEdges =
             Maybe.withDefault
                 []
                 maybeEdges
 
-        toMaybeNodes : List (Maybe (Edge Model)) -> List (Maybe Model)
+        toMaybeNodes : List (Maybe (Relay.Edge Model)) -> List (Maybe Model)
         toMaybeNodes edges =
             List.map
                 (\a ->
