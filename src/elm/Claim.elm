@@ -20,7 +20,7 @@ module Claim exposing
     )
 
 import Action exposing (Action)
-import Api.Relay exposing (Edge, PageConnection)
+import Api.Relay as Relay exposing (Edge)
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
 import Cambiatus.Object.Check as Check
@@ -149,14 +149,18 @@ encodeVerification claimId validator vote =
 
 
 type alias Paginated =
-    PageConnection Model
+    { edges : Maybe (List (Maybe (Relay.Edge Model)))
+    , pageInfo : Relay.PageInfo
+    , count : Maybe Int
+    }
 
 
 claimPaginatedSelectionSet : SelectionSet Paginated Cambiatus.Object.ClaimConnection
 claimPaginatedSelectionSet =
-    SelectionSet.succeed PageConnection
+    SelectionSet.succeed Paginated
         |> with (Cambiatus.Object.ClaimConnection.edges claimEdgeSelectionSet)
-        |> with (Cambiatus.Object.ClaimConnection.pageInfo Api.Relay.pageInfoSelectionSet)
+        |> with (Cambiatus.Object.ClaimConnection.pageInfo Relay.pageInfoSelectionSet)
+        |> with Cambiatus.Object.ClaimConnection.count
 
 
 claimEdgeSelectionSet : SelectionSet (Edge Model) Cambiatus.Object.ClaimEdge
@@ -248,7 +252,7 @@ paginatedToList maybeObj =
         |> toNodes
 
 
-paginatedPageInfo : Maybe Paginated -> Maybe Api.Relay.PageInfo
+paginatedPageInfo : Maybe Paginated -> Maybe Relay.PageInfo
 paginatedPageInfo maybePaginated =
     Maybe.map
         (\a -> a.pageInfo)

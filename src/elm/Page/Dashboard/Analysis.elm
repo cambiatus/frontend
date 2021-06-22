@@ -66,6 +66,7 @@ type alias Model =
     , filtersBeingEdited : Filter
     , filterProfileSummary : Profile.Summary.Model
     , direction : FilterDirection
+    , tabCounts : TabCounts
     }
 
 
@@ -83,6 +84,7 @@ initModel =
         Profile.Summary.init False
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
     , direction = DESC
+    , tabCounts = { waitingToVote = Nothing, analyzed = Nothing }
     }
 
 
@@ -90,8 +92,11 @@ type alias LoadedModel =
     { claims : List Claim.Model
     , profileSummaries : List Profile.Summary.Model
     , pageInfo : Maybe Api.Relay.PageInfo
-    , tabCounts : List ( Tab, Int )
     }
+
+
+type alias TabCounts =
+    { waitingToVote : Maybe Int, analyzed : Maybe Int }
 
 
 type Tab
@@ -243,10 +248,12 @@ viewTabSelector { translators } model =
     let
         count : Tab -> Maybe Int
         count tab =
-            RemoteData.toMaybe model.status
-                |> Maybe.map .tabCounts
-                |> Maybe.andThen (List.find (\( tab_, _ ) -> tab_ == tab))
-                |> Maybe.map Tuple.second
+            case tab of
+                WaitingToVote ->
+                    model.tabCounts.waitingToVote
+
+                Analyzed ->
+                    model.tabCounts.analyzed
     in
     View.TabSelector.init
         { tabs =
@@ -446,7 +453,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    = ClaimsLoaded Tab (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
@@ -468,60 +475,78 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        ClaimsLoaded (RemoteData.Success results) ->
+        ClaimsLoaded tab (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
                     List.length claims
                         |> Profile.Summary.initMany False
-            in
-            case model.status of
-                RemoteData.Success { claims } ->
+
+                oldTabCounts =
+                    model.tabCounts
+
+                newTabCounts =
                     let
-                        newClaims =
-                            if model.reloadOnNextQuery then
-                                Claim.paginatedToList results
-
-                            else
-                                claims ++ Claim.paginatedToList results
+                        newTabCount =
+                            results
+                                |> Maybe.andThen .count
                     in
-                    { model
-                        | status =
-                            RemoteData.Success
-                                { claims = newClaims
-                                , profileSummaries = initProfileSummaries newClaims
-                                , pageInfo = Claim.paginatedPageInfo results
+                    case tab of
+                        WaitingToVote ->
+                            { oldTabCounts | waitingToVote = newTabCount }
 
-                                -- TODO - Use tabCounts from backend
-                                , tabCounts = []
-                                }
-                        , reloadOnNextQuery = False
-                    }
-                        |> UR.init
+                        Analyzed ->
+                            { oldTabCounts | analyzed = newTabCount }
+            in
+            if tab /= model.selectedTab then
+                { model | tabCounts = newTabCounts }
+                    |> UR.init
 
-                _ ->
-                    { model
-                        | status =
-                            RemoteData.Success
-                                { claims = Claim.paginatedToList results
-                                , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
-                                , pageInfo = Claim.paginatedPageInfo results
+            else
+                case model.status of
+                    RemoteData.Success { claims } ->
+                        let
+                            newClaims =
+                                if model.reloadOnNextQuery then
+                                    Claim.paginatedToList results
 
-                                -- TODO - Use tabCounts from backend
-                                , tabCounts = []
-                                }
-                        , reloadOnNextQuery = False
-                    }
-                        |> UR.init
+                                else
+                                    claims ++ Claim.paginatedToList results
+                        in
+                        { model
+                            | status =
+                                RemoteData.Success
+                                    { claims = newClaims
+                                    , profileSummaries = initProfileSummaries newClaims
+                                    , pageInfo = Claim.paginatedPageInfo results
+                                    }
+                            , tabCounts = newTabCounts
+                            , reloadOnNextQuery = False
+                        }
+                            |> UR.init
 
-        ClaimsLoaded (RemoteData.Failure err) ->
+                    _ ->
+                        { model
+                            | status =
+                                RemoteData.Success
+                                    { claims = Claim.paginatedToList results
+                                    , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
+                                    , pageInfo = Claim.paginatedPageInfo results
+                                    }
+                            , tabCounts = newTabCounts
+                            , reloadOnNextQuery = False
+                        }
+                            |> UR.init
+
+        ClaimsLoaded _ (RemoteData.Failure err) ->
             { model | status = RemoteData.Failure err } |> UR.init
 
-        ClaimsLoaded _ ->
+        ClaimsLoaded _ _ ->
             UR.init model
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing community)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg claimIndex m ->
@@ -669,7 +694,7 @@ update msg model loggedIn =
                     addFetchCommand =
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
-                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing community)
+                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community)
 
                             _ ->
                                 identity
@@ -700,7 +725,7 @@ update msg model loggedIn =
                 addFetchCommand =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing community)
+                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community)
 
                         _ ->
                             identity
@@ -727,7 +752,7 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model cursor community)
+                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community)
 
                 _ ->
                     UR.init model
@@ -764,7 +789,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community
 
                         _ ->
                             Cmd.none
@@ -789,7 +814,7 @@ update msg model loggedIn =
                 fetchCmd =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community
 
                         _ ->
                             Cmd.none
@@ -803,8 +828,8 @@ update msg model loggedIn =
                 |> UR.init
 
 
-fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Community.Model -> Cmd Msg
-fetchAnalysis { shared, authToken } model maybeCursorAfter community =
+fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Community.Model -> Cmd Msg
+fetchAnalysis { shared, authToken } model maybeCursorAfter tab community =
     let
         cursorAfter =
             case maybeCursorAfter of
@@ -859,14 +884,14 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter community =
             { communityId = Eos.symbolToString community.symbol }
 
         query =
-            case model.selectedTab of
+            case tab of
                 WaitingToVote ->
                     Cambiatus.Query.pendingClaims optionals required Claim.claimPaginatedSelectionSet
 
                 Analyzed ->
                     Cambiatus.Query.analyzedClaims optionals required Claim.claimPaginatedSelectionSet
     in
-    Api.Graphql.query shared (Just authToken) query ClaimsLoaded
+    Api.Graphql.query shared (Just authToken) query (ClaimsLoaded tab)
 
 
 
@@ -972,7 +997,7 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        ClaimsLoaded r ->
+        ClaimsLoaded _ r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 
         CompletedLoadCommunity _ ->
