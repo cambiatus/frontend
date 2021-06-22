@@ -69,6 +69,7 @@ init loggedIn =
 
 type Msg
     = Ignored
+    | ClosedAuthModal
     | EnteredMinimumBalance String
     | EnteredMaximumSupply String
     | EnteredNaturalExpirationPeriod String
@@ -89,6 +90,10 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         Ignored ->
             UR.init model
+
+        ClosedAuthModal ->
+            { model | isLoading = False }
+                |> UR.init
 
         EnteredMinimumBalance minimumBalance ->
             { model | minimumBalance = minimumBalance }
@@ -120,17 +125,12 @@ update msg model ({ shared } as loggedIn) =
                 RemoteData.Success community ->
                     case validateModel community.symbol model of
                         Ok ( validUpdateTokenData, validExpiryOptsData ) ->
-                            if LoggedIn.hasPrivateKey loggedIn then
-                                { model | isLoading = True }
-                                    |> UR.init
-                                    |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
-
-                            else
-                                UR.init model
-                                    |> UR.addExt
-                                        (Just ClickedSubmit
-                                            |> LoggedIn.RequiredAuthentication
-                                        )
+                            { model | isLoading = True }
+                                |> UR.init
+                                |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
+                                |> LoggedIn.withAuthentication loggedIn
+                                    model
+                                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
                         Err withError ->
                             UR.init withError
@@ -684,6 +684,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredMinimumBalance _ ->
             [ "EnteredMinimumBalance" ]

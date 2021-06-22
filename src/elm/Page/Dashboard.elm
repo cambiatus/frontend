@@ -692,6 +692,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
+    | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
@@ -715,6 +716,10 @@ update msg model ({ shared, accountName } as loggedIn) =
     case msg of
         NoOp ->
             UR.init model
+
+        ClosedAuthModal ->
+            { model | claimModalStatus = Claim.Closed }
+                |> UR.init
 
         CompletedLoadCommunity community ->
             UR.init
@@ -826,27 +831,25 @@ update msg model ({ shared, accountName } as loggedIn) =
                                 , claimModalStatus = Claim.Closed
                             }
                     in
-                    if LoggedIn.hasPrivateKey loggedIn then
-                        UR.init newModel
-                            |> UR.addPort
-                                { responseAddress = msg
-                                , responseData = Encode.null
-                                , data =
-                                    Eos.encodeTransaction
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "verifyclaim"
-                                          , authorization =
-                                                { actor = loggedIn.accountName
-                                                , permissionName = Eos.samplePermission
-                                                }
-                                          , data = Claim.encodeVerification claimId loggedIn.accountName vote
-                                          }
-                                        ]
-                                }
-
-                    else
-                        UR.init newModel
-                            |> UR.addExt (Just (VoteClaim claimId vote) |> LoggedIn.RequiredAuthentication)
+                    UR.init newModel
+                        |> UR.addPort
+                            { responseAddress = msg
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "verifyclaim"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      }
+                                    ]
+                            }
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     model
@@ -1213,6 +1216,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

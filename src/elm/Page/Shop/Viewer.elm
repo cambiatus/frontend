@@ -157,6 +157,7 @@ type Validation
 
 type Msg
     = Ignored
+    | ClosedAuthModal
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy
@@ -179,6 +180,9 @@ update msg model loggedIn =
     in
     case msg of
         Ignored ->
+            UR.init model
+
+        ClosedAuthModal ->
             UR.init model
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
@@ -243,68 +247,65 @@ update msg model loggedIn =
                     validateForm sale model.form
             in
             if isFormValid validatedForm then
-                if LoggedIn.hasPrivateKey loggedIn then
-                    let
-                        authorization =
-                            { actor = loggedIn.accountName
-                            , permissionName = Eos.samplePermission
-                            }
+                let
+                    authorization =
+                        { actor = loggedIn.accountName
+                        , permissionName = Eos.samplePermission
+                        }
 
-                        requiredUnits =
-                            case String.toInt model.form.units of
-                                Just rU ->
-                                    rU
+                    requiredUnits =
+                        case String.toInt model.form.units of
+                            Just rU ->
+                                rU
 
-                                Nothing ->
-                                    1
+                            Nothing ->
+                                1
 
-                        value =
-                            { amount = sale.price * toFloat requiredUnits
-                            , symbol = sale.symbol
-                            }
+                    value =
+                        { amount = sale.price * toFloat requiredUnits
+                        , symbol = sale.symbol
+                        }
 
-                        unitPrice =
-                            { amount = sale.price
-                            , symbol = sale.symbol
-                            }
-                    in
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedTransfer sale
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.token
-                                      , name = "transfer"
-                                      , authorization = authorization
-                                      , data =
-                                            { from = loggedIn.accountName
-                                            , to = sale.creatorId
-                                            , value = value
-                                            , memo = model.form.memo
-                                            }
-                                                |> Transfer.encodeEosActionData
-                                      }
-                                    , { accountName = loggedIn.shared.contracts.community
-                                      , name = "transfersale"
-                                      , authorization = authorization
-                                      , data =
-                                            { id = sale.id
-                                            , from = loggedIn.accountName
-                                            , to = sale.creatorId
-                                            , quantity = unitPrice
-                                            , units = requiredUnits
-                                            }
-                                                |> Shop.encodeTransferSale
-                                      }
-                                    ]
-                            }
-
-                else
-                    model
-                        |> UR.init
-                        |> UR.addExt (Just (ClickedTransfer sale) |> RequiredAuthentication)
+                    unitPrice =
+                        { amount = sale.price
+                        , symbol = sale.symbol
+                        }
+                in
+                model
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = ClickedTransfer sale
+                        , responseData = Encode.null
+                        , data =
+                            Eos.encodeTransaction
+                                [ { accountName = loggedIn.shared.contracts.token
+                                  , name = "transfer"
+                                  , authorization = authorization
+                                  , data =
+                                        { from = loggedIn.accountName
+                                        , to = sale.creatorId
+                                        , value = value
+                                        , memo = model.form.memo
+                                        }
+                                            |> Transfer.encodeEosActionData
+                                  }
+                                , { accountName = loggedIn.shared.contracts.community
+                                  , name = "transfersale"
+                                  , authorization = authorization
+                                  , data =
+                                        { id = sale.id
+                                        , from = loggedIn.accountName
+                                        , to = sale.creatorId
+                                        , quantity = unitPrice
+                                        , units = requiredUnits
+                                        }
+                                            |> Shop.encodeTransferSale
+                                  }
+                                ]
+                        }
+                    |> LoggedIn.withAuthentication loggedIn
+                        model
+                        { successMsg = msg, errorMsg = ClosedAuthModal }
 
             else
                 { model | form = validatedForm }
@@ -759,6 +760,9 @@ msgToString msg =
     case msg of
         Ignored ->
             [ "Ignored" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         CompletedSaleLoad _ ->
             [ "CompletedSaleLoad" ]

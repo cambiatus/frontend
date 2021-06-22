@@ -25,7 +25,7 @@ type Route
     = Root
     | ComingSoon
     | Register (Maybe String) (Maybe Route)
-    | Login (Maybe Route)
+    | Login (Maybe String) (Maybe Route)
     | Logout
     | Notification
     | ProfileEditor
@@ -42,7 +42,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
-    | CommunitySelector
+    | CommunitySelector (Maybe Route)
     | Objectives
     | NewObjective
     | EditObjective Int
@@ -55,7 +55,7 @@ type Route
     | ViewSale String
     | ViewTransfer Int
     | Invite String
-    | Join
+    | Join (Maybe Route)
     | Transfer (Maybe String)
     | Analysis
 
@@ -78,7 +78,14 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Login
+        , Url.map (Just >> Login)
+            (s "login"
+                </> string
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
+        , Url.map (Login Nothing)
             (s "login"
                 <?> Query.map
                         (parseRedirect url)
@@ -100,7 +107,13 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
-        , Url.map CommunitySelector (s "community" </> s "selector")
+        , Url.map CommunitySelector
+            (s "community"
+                </> s "selector"
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -124,7 +137,12 @@ parser url =
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
-        , Url.map Join (s "join")
+        , Url.map Join
+            (s "join"
+                <?> Query.map
+                        (parseRedirect url)
+                        (Query.string "redirect")
+            )
         , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
@@ -324,8 +342,13 @@ routeToString route =
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 
-                Login maybeRedirect ->
+                Login Nothing maybeRedirect ->
                     ( [ "login" ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
+
+                Login (Just invitation) maybeRedirect ->
+                    ( [ "login", invitation ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 
@@ -374,8 +397,10 @@ routeToString route =
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
 
-                CommunitySelector ->
-                    ( [ "community", "selector" ], [] )
+                CommunitySelector maybeRedirect ->
+                    ( [ "community", "selector" ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
@@ -430,8 +455,10 @@ routeToString route =
                 Invite invitationId ->
                     ( [ "invite", invitationId ], [] )
 
-                Join ->
-                    ( [ "join" ], [] )
+                Join maybeRedirect ->
+                    ( [ "join" ]
+                    , queryBuilder routeToString maybeRedirect "redirect"
+                    )
 
                 Transfer maybeTo ->
                     ( [ "community"

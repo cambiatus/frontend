@@ -715,7 +715,7 @@ viewContactTypeSelect translators contactType =
         first :: rest ->
             let
                 makeOption contactType_ =
-                    { value = contactType
+                    { value = contactType_
                     , label = contactTypeToString translators contactType_
                     }
             in

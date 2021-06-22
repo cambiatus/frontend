@@ -23,12 +23,12 @@ import View.Feedback as Feedback
 
 
 type alias Model =
-    {}
+    { maybeRedirect : Maybe Route.Route }
 
 
-init : Page.Session -> ( Model, Cmd Msg )
-init session =
-    ( {}
+init : Page.Session -> Maybe Route.Route -> ( Model, Cmd Msg )
+init session maybeRedirect =
+    ( { maybeRedirect = maybeRedirect }
     , case session of
         Page.Guest _ ->
             Cmd.none
@@ -60,7 +60,7 @@ update session msg model =
                 Page.Guest guest ->
                     UR.init model
                         |> UR.addCmd
-                            (Route.pushUrl guest.shared.navKey (Route.Register Nothing (Just Route.Dashboard)))
+                            (Route.pushUrl guest.shared.navKey (Route.Register Nothing model.maybeRedirect))
 
                 Page.LoggedIn loggedIn ->
                     UR.init model
@@ -83,15 +83,18 @@ update session msg model =
                             List.map .account community.members
                                 |> List.member loggedIn.accountName
 
-                        redirectToDashboard =
+                        redirectToApp =
                             if isMember then
-                                UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
+                                model.maybeRedirect
+                                    |> Maybe.withDefault Route.Dashboard
+                                    |> Route.pushUrl loggedIn.shared.navKey
+                                    |> UR.addCmd
 
                             else
                                 identity
                     in
                     UR.init model
-                        |> redirectToDashboard
+                        |> redirectToApp
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { token, user })) ->
             let
@@ -134,7 +137,11 @@ update session msg model =
                 |> UR.init
                 |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                 |> addCommunity
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Dashboard)
+                |> UR.addCmd
+                    (model.maybeRedirect
+                        |> Maybe.withDefault Route.Dashboard
+                        |> Route.replaceUrl loggedIn.shared.navKey
+                    )
 
         CompletedSignIn loggedIn (RemoteData.Failure error) ->
             model
@@ -151,7 +158,7 @@ update session msg model =
 
 
 view : Page.Session -> Model -> { title : String, content : Html Msg }
-view session _ =
+view session model =
     let
         { translators } =
             Page.toShared session
@@ -180,10 +187,10 @@ view session _ =
         content =
             case session of
                 Page.Guest guest ->
-                    viewAsGuest title guest
+                    viewAsGuest title guest model
 
                 Page.LoggedIn loggedIn ->
-                    viewAsLoggedIn title loggedIn
+                    viewAsLoggedIn title loggedIn model
     in
     { title = title
     , content = content
@@ -201,8 +208,8 @@ type alias GenericCommunity community =
     }
 
 
-view_ : Bool -> Shared -> GenericCommunity community -> Html Msg
-view_ isGuest ({ translators } as shared) community =
+view_ : Bool -> Shared -> GenericCommunity community -> Model -> Html Msg
+view_ isGuest ({ translators } as shared) community model =
     div
         [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 md:p-0"
         , classList [ ( "w-1/2", not isGuest ) ]
@@ -230,7 +237,7 @@ view_ isGuest ({ translators } as shared) community =
                                 [ text (translators.t "community.join.only_invited") ]
                             , a
                                 [ class "button button-primary w-full mt-4"
-                                , Route.href (Route.Login Nothing)
+                                , Route.href (Route.Login Nothing model.maybeRedirect)
                                 ]
                                 [ text (translators.t "community.join.already_member") ]
                             ]
@@ -258,11 +265,11 @@ viewLoading shared =
         [ View.Components.loadingLogoAnimated shared.translators "" ]
 
 
-viewAsGuest : String -> Guest.Model -> Html Msg
-viewAsGuest title guest =
+viewAsGuest : String -> Guest.Model -> Model -> Html Msg
+viewAsGuest title guest model =
     case guest.community of
         RemoteData.Success communityPreview ->
-            view_ True guest.shared communityPreview
+            view_ True guest.shared communityPreview model
 
         RemoteData.Failure err ->
             Page.fullPageGraphQLError title err
@@ -271,13 +278,13 @@ viewAsGuest title guest =
             viewLoading guest.shared
 
 
-viewAsLoggedIn : String -> LoggedIn.Model -> Html Msg
-viewAsLoggedIn title loggedIn =
+viewAsLoggedIn : String -> LoggedIn.Model -> Model -> Html Msg
+viewAsLoggedIn title loggedIn model =
     case loggedIn.selectedCommunity of
         RemoteData.Success community ->
             div [ class "flex-grow flex" ]
                 [ Community.communityPreviewImage True loggedIn.shared community
-                , view_ False loggedIn.shared community
+                , view_ False loggedIn.shared community model
                 ]
 
         RemoteData.Failure err ->

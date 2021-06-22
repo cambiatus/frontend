@@ -92,6 +92,7 @@ init loggedIn =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
@@ -139,6 +140,10 @@ update msg model ({ shared } as loggedIn) =
                 , isLoading = False
                 , websiteInput = Maybe.withDefault "" community.website
             }
+                |> UR.init
+
+        ClosedAuthModal ->
+            { model | isLoading = False }
                 |> UR.init
 
         EnteredLogo (file :: _) ->
@@ -253,12 +258,11 @@ update msg model ({ shared } as loggedIn) =
 
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case
-                ( LoggedIn.hasPrivateKey loggedIn
-                , isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
+                ( isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
                 , loggedIn.selectedCommunity
                 )
             of
-                ( True, True, RemoteData.Success community ) ->
+                ( True, RemoteData.Success community ) ->
                     let
                         authorization =
                             { actor = loggedIn.accountName
@@ -322,12 +326,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
                                             , hasAutoInvite = Eos.boolToEosBool model.hasAutoInvite
-                                            , website =
-                                                if String.startsWith "https://" model.websiteInput || String.startsWith "http://" model.websiteInput then
-                                                    model.websiteInput
-
-                                                else
-                                                    "http://" ++ model.websiteInput
+                                            , website = addProtocolToUrlString model.websiteInput
                                             }
                                                 |> Community.encodeUpdateData
                                       }
@@ -348,10 +347,9 @@ update msg model ({ shared } as loggedIn) =
                                 Nothing ->
                                     Cmd.none
                             )
-
-                ( False, True, RemoteData.Success _ ) ->
-                    UR.init model
-                        |> UR.addExt (Just ClickedSave |> LoggedIn.RequiredAuthentication)
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
                     UR.init model
@@ -548,7 +546,10 @@ validateDescription model =
 
 addProtocolToUrlString : String -> String
 addProtocolToUrlString url =
-    if String.startsWith "https://" url || String.startsWith "http://" url then
+    if String.isEmpty url then
+        ""
+
+    else if String.startsWith "https://" url || String.startsWith "http://" url then
         url
 
     else
@@ -995,6 +996,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         EnteredLogo _ ->
             [ "EnteredLogo" ]

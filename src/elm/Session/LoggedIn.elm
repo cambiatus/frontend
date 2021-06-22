@@ -6,7 +6,6 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
-    , hasPrivateKey
     , init
     , initLogin
     , isAccount
@@ -19,6 +18,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
+    , withAuthentication
     )
 
 import Action
@@ -723,7 +723,7 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
-    | RequiredAuthentication (Maybe msg)
+    | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
@@ -742,7 +742,7 @@ updateExternal :
         , cmd : Cmd Msg
         , externalCmd : Cmd msg
         , broadcastMsg : Maybe BroadcastMsg
-        , afterAuthMsg : Maybe msg
+        , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
         }
 updateExternal externalMsg ({ shared } as model) =
     let
@@ -827,10 +827,10 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource TimeResource ->
             { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
-        RequiredAuthentication maybeMsg ->
+        RequiredAuthentication afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
-                , afterAuthMsg = maybeMsg
+                , afterAuthMsg = Just afterAuthMsg
             }
 
         ShowFeedback status message ->
@@ -848,6 +848,7 @@ type alias UpdateResult =
 -}
 type ExternalMsg
     = AuthenticationSucceed
+    | AuthenticationFailed
     | Broadcast BroadcastMsg
 
 
@@ -1006,7 +1007,7 @@ update msg model =
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
             UR.init model
-                |> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
+                |> UR.addCmd (Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)))
 
         CompletedLoadCommunity (RemoteData.Failure e) ->
             let
@@ -1019,7 +1020,7 @@ update msg model =
                         identity
 
                     else
-                        UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySelector)
+                        UR.addCmd (Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)))
                    )
 
         CompletedLoadCommunity RemoteData.NotAsked ->
@@ -1066,6 +1067,7 @@ update msg model =
 
         ClosedAuthModal ->
             UR.init closeAllModals
+                |> UR.addExt AuthenticationFailed
 
         GotAuthMsg authMsg ->
             Auth.update authMsg shared model.auth
@@ -1145,7 +1147,11 @@ update msg model =
                     else
                         let
                             ( newModel, cmd ) =
-                                selectCommunity model newCommunity Route.Dashboard
+                                selectCommunity model
+                                    newCommunity
+                                    (List.head model.routeHistory
+                                        |> Maybe.withDefault Route.Dashboard
+                                    )
                         in
                         UR.init { newModel | showCommunitySelector = False }
                             |> UR.addCmd cmd
@@ -1215,6 +1221,25 @@ handleActionMsg ({ shared } as model) actionMsg =
 
         _ ->
             UR.init model
+
+
+{-| Checks if we already have the user's private key loaded. If it does, returns
+`successfulUR`. If it doesn't, requires authentication and fires the `subMsg`
+again
+-}
+withAuthentication :
+    Model
+    -> subModel
+    -> { successMsg : subMsg, errorMsg : subMsg }
+    -> UR.UpdateResult subModel subMsg (External subMsg)
+    -> UR.UpdateResult subModel subMsg (External subMsg)
+withAuthentication loggedIn subModel subMsg successfulUR =
+    if hasPrivateKey loggedIn then
+        successfulUR
+
+    else
+        UR.init subModel
+            |> UR.addExt (RequiredAuthentication subMsg)
 
 
 isCommunityMember : Model -> Bool
@@ -1294,12 +1319,12 @@ setCommunity community ({ shared } as model) =
 
     else if community.hasAutoInvite then
         ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
-        , Cmd.batch [ Route.pushUrl shared.navKey Route.Join, storeCommunityCmd ]
+        , Cmd.batch [ Route.pushUrl shared.navKey (Route.Join (List.head model.routeHistory)), storeCommunityCmd ]
         )
 
     else
         ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
-        , Cmd.batch [ Route.pushUrl shared.navKey Route.CommunitySelector, storeCommunityCmd ]
+        , Cmd.batch [ Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)), storeCommunityCmd ]
         )
 
 

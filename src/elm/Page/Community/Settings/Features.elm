@@ -53,6 +53,7 @@ type Feature
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | ClosedAuthModal
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc
@@ -158,15 +159,24 @@ update msg model loggedIn =
                     , hasKyc = community.hasKyc
                 }
 
+        ClosedAuthModal ->
+            UR.init model
+
         ToggleShop state ->
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleObjectives state ->
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleKyc ->
             model
@@ -209,25 +219,13 @@ saveFeaturePort ({ shared } as loggedIn) feature status state =
             { actor = loggedIn.accountName
             , permissionName = Eos.Account.samplePermission
             }
-
-        function =
-            case feature of
-                Shop ->
-                    ToggleShop
-
-                Objectives ->
-                    ToggleObjectives
     in
     case ( loggedIn.selectedCommunity, status ) of
         ( RemoteData.Success community, Authorized ) ->
-            if LoggedIn.hasPrivateKey loggedIn then
-                UR.addPort (saveFeature feature state authorization loggedIn community)
-
-            else
-                UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
+            UR.addPort (saveFeature feature state authorization loggedIn community)
 
         ( _, Authorized ) ->
-            UR.addExt (Just (function state) |> LoggedIn.RequiredAuthentication)
+            identity
 
         ( _, Loading ) ->
             UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
@@ -312,6 +310,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ClosedAuthModal ->
+            [ "ClosedAuthModal" ]
 
         ToggleShop _ ->
             [ "ToggleShop" ]

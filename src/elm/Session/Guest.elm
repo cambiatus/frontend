@@ -99,6 +99,7 @@ type alias Model =
     { shared : Shared
     , showLanguageNav : Bool
     , afterLoginRedirect : Maybe Route
+    , maybeInvitation : Maybe String
     , community : RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) Community.CommunityPreview
     , isLoggingIn : Bool
     , feedback : Feedback.Model
@@ -110,6 +111,7 @@ initModel shared =
     { shared = shared
     , showLanguageNav = False
     , afterLoginRedirect = Nothing
+    , maybeInvitation = Nothing
     , community = RemoteData.Loading
     , isLoggingIn = False
     , feedback = Feedback.Hidden
@@ -241,7 +243,7 @@ viewPageHeader model shared =
     in
     header
         [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
-        [ a [ Route.href (Route.Login Nothing) ]
+        [ a [ Route.href (Route.Login model.maybeInvitation model.afterLoginRedirect) ]
             [ case model.community of
                 RemoteData.Loading ->
                     loadingSpinner
@@ -331,8 +333,11 @@ update msg ({ shared } as model) =
                 { currentUrl | host = "cambiatus.staging.localhost" }
                     |> Url.toString
 
+            else if String.endsWith "demo.cambiatus.io" currentUrl.host then
+                "https://www.cambiatus.com/welcome-demo"
+
             else
-                "https://cambiatus.com"
+                "https://www.cambiatus.com/welcome"
     in
     case msg of
         CompletedLoadTranslation lang (Ok transl) ->
