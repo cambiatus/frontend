@@ -6,6 +6,7 @@ import Kyc.CostaRica.CedulaDeIdentidad
 import Random
 import Shrink
 import Test exposing (..)
+import TestUtils
 
 
 all : Test
@@ -49,24 +50,17 @@ cedulaDeIdentidadFuzzer =
 cedulaDeIdentidadGenerator : Random.Generator String
 cedulaDeIdentidadGenerator =
     let
-        nonZeroDigitGenerator =
-            Random.int 1 9
-                |> Random.map String.fromInt
-
-        digitGenerator =
-            Random.int 0 9
-                |> Random.map String.fromInt
-
         maybeDashGenerator =
-            Random.uniform "" [ "-" ]
-
-        appendGenerators : Random.Generator String -> Random.Generator String -> Random.Generator String
-        appendGenerators secondGenerator firstGenerator =
-            firstGenerator
-                |> Random.andThen (\first -> Random.map (\second -> first ++ second) secondGenerator)
+            TestUtils.generateEither "" "-"
     in
-    nonZeroDigitGenerator
-        |> appendGenerators maybeDashGenerator
-        |> appendGenerators (Random.list 4 digitGenerator |> Random.map String.concat)
-        |> appendGenerators maybeDashGenerator
-        |> appendGenerators (Random.list 4 digitGenerator |> Random.map String.concat)
+    TestUtils.nonZeroDigitGenerator
+        |> TestUtils.appendGenerators maybeDashGenerator
+        |> TestUtils.appendGenerators
+            (Random.list 4 TestUtils.digitGenerator
+                |> Random.map String.concat
+            )
+        |> TestUtils.appendGenerators maybeDashGenerator
+        |> TestUtils.appendGenerators
+            (Random.list 4 TestUtils.digitGenerator
+                |> Random.map String.concat
+            )
