@@ -76,7 +76,7 @@ initModel =
 
 type Status
     = Loading
-    | Loaded (List Claim.Model) (List Claim.ClaimType) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List Claim.ClaimProfileSummaries) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -335,7 +335,7 @@ update msg model loggedIn =
         ClaimsLoaded (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
-                    List.map Claim.initClaimType claims
+                    List.map Claim.initClaimProfileSummaries claims
             in
             case model.status of
                 Loaded claims _ _ ->

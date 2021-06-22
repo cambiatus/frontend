@@ -71,7 +71,7 @@ type alias Model =
     { balance : RemoteData Http.Error (Maybe Balance)
     , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
     , analysisFilter : Direction
-    , profileSummaries : List Claim.ClaimType
+    , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , contactModel : Contact.Model
@@ -457,7 +457,7 @@ viewVoteConfirmationModal loggedIn { claimModalStatus } =
             text ""
 
 
-viewAnalysis : LoggedIn.Model -> Claim.ClaimType -> Int -> ClaimStatus -> Html Msg
+viewAnalysis : LoggedIn.Model -> Claim.ClaimProfileSummaries -> Int -> ClaimStatus -> Html Msg
 viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
     case claimStatus of
         ClaimLoaded claim ->
@@ -748,7 +748,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     List.map ClaimLoaded (Claim.paginatedToList claims)
 
                 initProfileSummaries cs =
-                    List.map (unwrapClaimStatus >> Claim.initClaimType) cs
+                    List.map (unwrapClaimStatus >> Claim.initClaimProfileSummaries) cs
             in
             case model.analysis of
                 LoadedGraphql existingClaims _ ->

@@ -1,14 +1,14 @@
 module Claim exposing
     ( ClaimId
+    , ClaimProfileSummaries
     , ClaimStatus(..)
-    , ClaimType
     , ModalStatus(..)
     , Model
     , Msg(..)
     , Paginated
     , claimPaginatedSelectionSet
     , encodeVerification
-    , initClaimType
+    , initClaimProfileSummaries
     , isValidated
     , isVotable
     , paginatedPageInfo
@@ -257,7 +257,7 @@ paginatedPageInfo maybePaginated =
 -- CLAIM CARD
 
 
-type alias ClaimType =
+type alias ClaimProfileSummaries =
     { cardSummary : Profile.Summary.Model
     , topModalSummary : Profile.Summary.Model
     , votersSummaries : List Profile.Summary.Model
@@ -266,8 +266,8 @@ type alias ClaimType =
     }
 
 
-initClaimType : Model -> ClaimType
-initClaimType claim =
+initClaimProfileSummaries : Model -> ClaimProfileSummaries
+initClaimProfileSummaries claim =
     { cardSummary = Profile.Summary.init False
     , topModalSummary = Profile.Summary.init True
     , votersSummaries =
@@ -325,33 +325,33 @@ updateClaimModalStatus msg model =
             model
 
 
-updateProfileSummaries : ExternalMsg -> ClaimType -> ClaimType
-updateProfileSummaries externalMsg claimType =
+updateProfileSummaries : ExternalMsg -> ClaimProfileSummaries -> ClaimProfileSummaries
+updateProfileSummaries externalMsg claimProfileSummaries =
     case externalMsg of
         OpenClaimModal ->
-            { claimType | showClaimModal = True }
+            { claimProfileSummaries | showClaimModal = True }
 
         CloseClaimModal ->
-            { claimType | showClaimModal = False }
+            { claimProfileSummaries | showClaimModal = False }
 
         GotProfileSummaryMsg profileSummaryKind subMsg ->
             case profileSummaryKind of
                 CardSummary ->
-                    { claimType | cardSummary = Profile.Summary.update subMsg claimType.cardSummary }
+                    { claimProfileSummaries | cardSummary = Profile.Summary.update subMsg claimProfileSummaries.cardSummary }
 
                 TopModalSummary ->
-                    { claimType | topModalSummary = Profile.Summary.update subMsg claimType.topModalSummary }
+                    { claimProfileSummaries | topModalSummary = Profile.Summary.update subMsg claimProfileSummaries.topModalSummary }
 
                 VotersSummaries index ->
-                    { claimType | votersSummaries = List.updateAt index (Profile.Summary.update subMsg) claimType.votersSummaries }
+                    { claimProfileSummaries | votersSummaries = List.updateAt index (Profile.Summary.update subMsg) claimProfileSummaries.votersSummaries }
 
                 PendingSummaries index ->
-                    { claimType | pendingSummaries = List.updateAt index (Profile.Summary.update subMsg) claimType.pendingSummaries }
+                    { claimProfileSummaries | pendingSummaries = List.updateAt index (Profile.Summary.update subMsg) claimProfileSummaries.pendingSummaries }
 
 
 {-| Claim card with a short claim overview. Used on Dashboard and Analysis pages.
 -}
-viewClaimCard : LoggedIn.Model -> ClaimType -> Model -> Html Msg
+viewClaimCard : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimCard loggedIn profileSummaries claim =
     let
         { t } =
@@ -453,7 +453,7 @@ viewClaimCard loggedIn profileSummaries claim =
         ]
 
 
-viewClaimModal : LoggedIn.Model -> ClaimType -> Model -> Html Msg
+viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimModal { shared, accountName } profileSummaries claim =
     let
         { t, tr } =

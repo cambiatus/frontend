@@ -58,7 +58,7 @@ initModel account =
 
 type Status
     = Loading
-    | Loaded (List Claim.ClaimType) ProfileClaims
+    | Loaded (List Claim.ClaimProfileSummaries) ProfileClaims
     | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
 
@@ -99,7 +99,7 @@ view loggedIn model =
     { title = pageTitle, content = content }
 
 
-viewResults : LoggedIn.Model -> List Claim.ClaimType -> List Claim.Model -> Html Msg
+viewResults : LoggedIn.Model -> List Claim.ClaimProfileSummaries -> List Claim.Model -> Html Msg
 viewResults loggedIn profileSummaries claims =
     let
         viewClaim profileSummary claimIndex claim =
@@ -187,7 +187,7 @@ update msg model loggedIn =
                 Just claims ->
                     let
                         profileSummaries =
-                            List.map Claim.initClaimType claims
+                            List.map Claim.initClaimProfileSummaries claims
                     in
                     { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
