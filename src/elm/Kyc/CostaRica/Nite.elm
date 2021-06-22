@@ -11,7 +11,7 @@ import Regex exposing (Regex)
 
 validNumber : Regex
 validNumber =
-    Regex.fromString "[1-9]{1}\\d{9}"
+    Regex.fromString "^[1-9]{1}\\d{9}$"
         |> Maybe.withDefault Regex.never
 
 

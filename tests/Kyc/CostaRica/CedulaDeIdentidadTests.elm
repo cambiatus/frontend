@@ -38,6 +38,11 @@ isValid =
                     "1234-56789"
                         |> Kyc.CostaRica.CedulaDeIdentidad.isValid
                         |> Expect.false "Expected to have fewer digits"
+            , test "With invalid digits" <|
+                \() ->
+                    "abcde1-1234-5678abcde"
+                        |> Kyc.CostaRica.CedulaDeIdentidad.isValid
+                        |> Expect.false "Expected to only contain valid characters"
             ]
         ]
 

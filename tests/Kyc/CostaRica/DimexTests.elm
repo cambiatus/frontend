@@ -38,6 +38,11 @@ isValid =
                     "1234567890123"
                         |> Kyc.CostaRica.Dimex.isValid
                         |> Expect.false "Expected to have fewer digits"
+            , test "With invalid digits" <|
+                \() ->
+                    "abcde12345678901abcde"
+                        |> Kyc.CostaRica.Dimex.isValid
+                        |> Expect.false "Expected to only contain valid characters"
             ]
         ]
 
