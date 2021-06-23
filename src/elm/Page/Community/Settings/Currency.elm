@@ -79,6 +79,7 @@ type Msg
     | GotSubmitResponse (Result Encode.Value Token.UpdateTokenData)
     | CompletedLoadCommunity Community.Model
     | CompletedLoadExpiryOpts (Result Http.Error (Maybe Token.ExpiryOptsData))
+    | CompletedLoadToken (Result Http.Error Token.Model)
 
 
 type alias UpdateResult =
@@ -166,18 +167,6 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logDebugValue msg val
 
         CompletedLoadCommunity community ->
-            let
-                tokenType =
-                    community.tokenType |> Maybe.withDefault Token.Mcc
-
-                fetchExpiryOptsData =
-                    case tokenType of
-                        Token.Mcc ->
-                            identity
-
-                        Token.Expiry ->
-                            UR.addCmd (Api.getExpiryOpts shared community.symbol CompletedLoadExpiryOpts)
-            in
             { model
                 | minimumBalance =
                     Maybe.map String.fromFloat community.minBalance
@@ -185,17 +174,48 @@ update msg model ({ shared } as loggedIn) =
                 , maximumSupply =
                     Maybe.map String.fromFloat community.maxSupply
                         |> Maybe.withDefault "21000000"
-                , tokenType = tokenType
-                , isLoading =
-                    case tokenType of
-                        Token.Mcc ->
-                            False
-
-                        Token.Expiry ->
-                            True
+                , isLoading = True
             }
                 |> UR.init
-                |> fetchExpiryOptsData
+                |> UR.addCmd (Token.getToken shared community.symbol CompletedLoadToken)
+
+        CompletedLoadToken (Ok token) ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        fetchExpiryOptsData =
+                            case token.type_ of
+                                Token.Mcc ->
+                                    identity
+
+                                Token.Expiry ->
+                                    UR.addCmd (Token.getExpiryOpts shared community.symbol CompletedLoadExpiryOpts)
+                    in
+                    { model
+                        | isLoading =
+                            case token.type_ of
+                                Token.Mcc ->
+                                    False
+
+                                Token.Expiry ->
+                                    True
+                        , tokenType = token.type_
+                    }
+                        |> UR.init
+                        |> fetchExpiryOptsData
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NoCommunity" ]
+
+        CompletedLoadToken (Err err) ->
+            { model | isLoading = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (shared.translators.t "settings.community_currency.token_error")
+                    )
 
         CompletedLoadExpiryOpts (Ok (Just expiryOptsData)) ->
             { model
@@ -714,3 +734,6 @@ msgToString msg =
 
         CompletedLoadExpiryOpts r ->
             [ "CompletedLoadExpiryOpts", UR.resultToString r ]
+
+        CompletedLoadToken r ->
+            [ "CompletedLoadToken", UR.resultToString r ]

@@ -929,6 +929,7 @@
         "juridical_expiration_period": "የሕግ ሰው ማብቂያ ጊዜ",
         "renovation_amount": "የማደስ መጠን",
         "expiryopts_not_found": "የምልክትዎ ጊዜ ማብቂያ አማራጮችን ማግኘት አልቻልንም",
+        "token_error": "የማስመሰያውን ውሂብ ማምጣት ላይ የሆነ ችግር ተፈጥሯል",
         "seconds": "ሰከንዶች"
       },
       "actions": {

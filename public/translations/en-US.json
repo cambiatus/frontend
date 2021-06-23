@@ -968,6 +968,7 @@
       "juridical_expiration_period": "Juridical person expiration period",
       "renovation_amount": "Renovation amount",
       "expiryopts_not_found": "We couldn't find the expiry options for your token",
+      "token_error": "Something went wrong fetching the token data",
       "seconds": "seconds"
     },
     "actions": {

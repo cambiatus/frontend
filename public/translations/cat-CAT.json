@@ -970,6 +970,7 @@
       "juridical_expiration_period": "Període de caducitat de la persona jurídica",
       "renovation_amount": "Import de la renovació",
       "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "token_error": "S'ha produït un error en obtenir les dades del testimoni",
       "seconds": "segons"
     },
     "actions": {

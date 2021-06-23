@@ -9,7 +9,6 @@ module Page.Community exposing
     )
 
 import Action exposing (Action)
-import Api
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
@@ -26,6 +25,7 @@ import Session.Shared exposing (Translators)
 import Strftime
 import Task
 import Time exposing (Posix, posixToMillis)
+import Token
 import UpdateResult as UR
 import Utils
 
@@ -44,7 +44,7 @@ init loggedIn =
 initModel : LoggedIn.Model -> Model
 initModel _ =
     { openObjectiveId = Nothing
-    , communityCurrentSupply = RemoteData.Loading
+    , tokenInfo = RemoteData.Loading
     }
 
 
@@ -54,7 +54,7 @@ initModel _ =
 
 type alias Model =
     { openObjectiveId : Maybe Int
-    , communityCurrentSupply : RemoteData Http.Error Float
+    , tokenInfo : RemoteData Http.Error Token.Model
     }
 
 
@@ -139,33 +139,19 @@ viewCommunityStats { t, tr } community model =
         card attrs =
             div (class "bg-white rounded p-4" :: attrs)
 
-        hasCurrentSupply =
-            RemoteData.isSuccess model.communityCurrentSupply
-
-        hasMinBalance =
-            case community.minBalance of
-                Just _ ->
-                    True
-
-                Nothing ->
-                    False
+        hasTokenInfo =
+            RemoteData.isSuccess model.tokenInfo
     in
     div
         [ class "container mx-auto px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
-        , classList
-            [ ( "grid-rows-5", not hasCurrentSupply || not hasMinBalance )
-            , ( "grid-rows-4", not hasCurrentSupply && not hasMinBalance )
-            ]
+        , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
-        [ case model.communityCurrentSupply of
-            RemoteData.Success currentSupply ->
-                card
-                    [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white"
-                    , classList [ ( "md:col-span-4", not hasMinBalance ) ]
-                    ]
+        [ case model.tokenInfo of
+            RemoteData.Success { supply } ->
+                card [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount community.symbol currentSupply) ]
+                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount supply.symbol supply.amount) ]
                         , p [ class "text-sm" ]
                             [ text
                                 (tr "community.index.amount_in_circulation"
@@ -177,21 +163,18 @@ viewCommunityStats { t, tr } community model =
 
             _ ->
                 text ""
-        , case community.minBalance of
-            Just minBalance ->
-                card
-                    [ class "col-span-2 flex items-center px-6 py-5"
-                    , classList [ ( "md:col-span-4", not hasCurrentSupply ) ]
-                    ]
+        , case model.tokenInfo of
+            RemoteData.Success { minBalance } ->
+                card [ class "col-span-2 flex items-center px-6 py-5" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount community.symbol minBalance) ]
+                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount minBalance.symbol minBalance.amount) ]
                         , p [ class "text-sm text-gray-900" ]
                             [ text (t "community.index.minimum_balance") ]
                         ]
                     ]
 
-            Nothing ->
+            _ ->
                 text ""
         , card [ class "row-span-2 relative overflow-hidden" ]
             [ p [ class "w-full font-bold text-green text-3xl" ]
@@ -339,7 +322,7 @@ type Msg
     = NoOp
     | RequestedReloadCommunity
     | CompletedLoadCommunity Community.Model
-    | GotCommunitySupply (Result Http.Error Eos.Asset)
+    | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -358,14 +341,14 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (Api.getSupply loggedIn.shared community.symbol GotCommunitySupply)
+                |> UR.addCmd (Token.getToken loggedIn.shared community.symbol GotTokenInfo)
 
-        GotCommunitySupply (Ok supply) ->
-            { model | communityCurrentSupply = RemoteData.Success supply.amount }
+        GotTokenInfo (Ok tokenInfo) ->
+            { model | tokenInfo = RemoteData.Success tokenInfo }
                 |> UR.init
 
-        GotCommunitySupply (Err err) ->
-            { model | communityCurrentSupply = RemoteData.Failure err }
+        GotTokenInfo (Err err) ->
+            { model | tokenInfo = RemoteData.Failure err }
                 |> UR.init
                 |> UR.logHttpError msg err
 
@@ -408,7 +391,7 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        GotCommunitySupply r ->
+        GotTokenInfo r ->
             [ "GotCommunitySupply", UR.resultToString r ]
 
         GotActionMsg _ ->
