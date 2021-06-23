@@ -477,8 +477,12 @@ update msg model loggedIn =
             in
             case model.status of
                 Loaded claims profileSummaries pageInfo ->
+                    let
+                        updateShowClaimModal profileSummary =
+                            { profileSummary | showClaimModal = False }
+                    in
                     { model
-                        | status = Loaded claims profileSummaries pageInfo
+                        | status = Loaded claims (List.map updateShowClaimModal profileSummaries) pageInfo
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init

@@ -891,7 +891,14 @@ update msg model ({ shared, accountName } as loggedIn) =
             in
             case model.analysis of
                 LoadedGraphql claims pageInfo ->
-                    { model | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo }
+                    let
+                        updateShowClaimModal profileSummary =
+                            { profileSummary | showClaimModal = False }
+                    in
+                    { model
+                        | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo
+                        , profileSummaries = List.map updateShowClaimModal model.profileSummaries
+                    }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
