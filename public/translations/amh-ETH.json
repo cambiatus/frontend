@@ -392,11 +392,13 @@
       },
       "index": {
         "created_by": "የተፈጠረዉ በ {{account_name}}",
-        "members": "አባለት",
+        "amount_in_circulation": "{{currency_name}} በመዘዋወር ላይ",
+        "minimum_balance": "በአንድ ተጠቃሚ የሚፈቀደው አነስተኛ ሚዛን",
+        "members": "ንቁ ተጠቃሚዎች",
         "claims": "የይገባኛል ጥያቄዎች",
-        "products": "አቅርቦቶች",
-        "orders": "ትዕዛዞች",
-        "transfers": "የተለለፈዉ መጠን"
+        "products": "የሱቅ ሽያጭ",
+        "orders": "የሱቅ ግዢዎች",
+        "transfers": "ግብይቶች"
       },
       "invite": {
         "title": "ጓደኛን ጋብዝ",
@@ -927,6 +929,7 @@
         "juridical_expiration_period": "የሕግ ሰው ማብቂያ ጊዜ",
         "renovation_amount": "የማደስ መጠን",
         "expiryopts_not_found": "የምልክትዎ ጊዜ ማብቂያ አማራጮችን ማግኘት አልቻልንም",
+        "token_error": "የማስመሰያውን ውሂብ ማምጣት ላይ የሆነ ችግር ተፈጥሯል",
         "seconds": "ሰከንዶች"
       },
       "actions": {

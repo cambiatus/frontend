@@ -110,10 +110,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            Community subModel ->
-                CommunityPage.subscriptions subModel
-                    |> Sub.map GotCommunityMsg
-
             CommunityEditor subModel ->
                 CommunityEditor.subscriptions subModel
                     |> Sub.map GotCommunityEditorMsg
@@ -533,6 +529,10 @@ broadcast broadcastMessage status =
                 Objectives _ ->
                     Objectives.receiveBroadcast broadcastMessage
                         |> Maybe.map GotObjectivesMsg
+
+                Community _ ->
+                    CommunityPage.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunityMsg
 
                 CommunitySettingsFeatures _ ->
                     CommunitySettingsFeatures.receiveBroadcast broadcastMessage

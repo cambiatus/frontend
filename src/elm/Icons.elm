@@ -2,12 +2,14 @@ module Icons exposing
     ( accountCircle
     , addPhoto
     , arrowDown
+    , arrowsLeft
     , back
     , camera
     , claims
     , clearInput
     , clock
     , close
+    , coin
     , dashboard
     , edit
     , exclamation
@@ -33,7 +35,7 @@ module Icons exposing
 
 import Html exposing (Html)
 import Svg exposing (Svg, g, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, d, fill, fillRule, height, id, stroke, strokeLinecap, strokeLinejoin, strokeWidth, style, viewBox, width)
+import Svg.Attributes exposing (class, clipPath, clipRule, d, fill, fillRule, height, id, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, viewBox, width)
 
 
 dashboard : String -> Svg msg
@@ -97,6 +99,14 @@ arrowDown : String -> Svg msg
 arrowDown class_ =
     svg [ width "32", height "32", viewBox "0 0 32 32", class class_ ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M16 30C23.732 30 30 23.732 30 16C30 8.26801 23.732 2 16 2C8.26801 2 2 8.26801 2 16C2 23.732 8.26801 30 16 30Z", fill "white" ] [], Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M14.9881 19.8182C15.0302 19.8496 15.0749 19.8773 15.1217 19.9009C15.1713 19.9401 15.2246 19.9742 15.2808 20.0028C15.3388 20.0213 15.3985 20.0341 15.459 20.0409C15.5747 20.0793 15.6997 20.0793 15.8154 20.0409C15.8759 20.0341 15.9356 20.0213 15.9935 20.0028C16.0498 19.9742 16.1031 19.9401 16.1526 19.9009C16.1995 19.8773 16.2442 19.8496 16.2863 19.8182L21.059 14.7273C21.4113 14.3414 21.3878 13.7439 21.0064 13.3869C20.6249 13.0298 20.0272 13.0458 19.6654 13.4228L15.5863 17.7691L11.5072 13.4228C11.1454 13.0458 10.5477 13.0298 10.1662 13.3869C9.78469 13.7439 9.76124 14.3414 10.1135 14.7273L14.9881 19.8182Z" ] [] ]
+
+
+arrowsLeft : String -> Svg msg
+arrowsLeft class_ =
+    svg [ width "16", height "13", viewBox "0 0 16 13", class class_ ]
+        [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M9.28599 6.65694C9.2545 6.61262 9.22672 6.56553 9.20296 6.51619C9.1637 6.46402 9.12946 6.40789 9.10076 6.34863C9.08212 6.28756 9.06928 6.22469 9.06244 6.16096C9.02395 6.03911 9.02395 5.90748 9.06244 5.78563C9.06928 5.7219 9.08212 5.65904 9.10076 5.59797C9.12946 5.5387 9.1637 5.48258 9.20296 5.43041C9.22672 5.38106 9.2545 5.33397 9.28599 5.28966L14.3959 0.262882C14.7833 -0.108181 15.3829 -0.0834743 15.7414 0.318314C16.0998 0.720102 16.0837 1.34961 15.7053 1.7307L11.3427 6.02692L15.7053 10.3231C16.0837 10.7042 16.0998 11.3337 15.7414 11.7355C15.3829 12.1373 14.7833 12.162 14.3959 11.791L9.28599 6.65694Z", fill "#FFD200" ] []
+        , Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M0.252425 6.65694C0.220929 6.61262 0.193147 6.56553 0.169389 6.51619C0.130127 6.46402 0.0958935 6.40789 0.0671904 6.34863C0.0485459 6.28756 0.0357085 6.22469 0.0288661 6.16096C-0.00962203 6.03911 -0.00962203 5.90748 0.0288661 5.78563C0.0357085 5.7219 0.0485459 5.65904 0.0671904 5.59797C0.0958935 5.5387 0.130127 5.48258 0.169389 5.43041C0.193147 5.38106 0.220929 5.33397 0.252425 5.28966L5.36234 0.262882C5.74968 -0.108181 6.34937 -0.0834743 6.70779 0.318314C7.06622 0.720102 7.05016 1.34961 6.67175 1.7307L2.30916 6.02692L6.67175 10.3231C7.05016 10.7042 7.06622 11.3337 6.70779 11.7355C6.34937 12.1373 5.74968 12.162 5.36234 11.791L0.252425 6.65694Z", fill "#FFD200" ] []
+        ]
 
 
 back : String -> Svg msg
@@ -347,3 +357,15 @@ imageMultiple : String -> Html msg
 imageMultiple class_ =
     svg [ viewBox "0 0 24 24", class class_ ]
         [ Svg.path [ d "M22,16V4A2,2 0 0,0 20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16M11,12L13.03,14.71L16,11L20,16H8M2,6V20A2,2 0 0,0 4,22H18V20H4V6" ] [] ]
+
+
+coin : String -> Html msg
+coin class_ =
+    svg [ width "30", height "43", viewBox "0 0 30 43", fill "none", class class_ ]
+        [ Svg.path [ d "M30 21.1577C30 32.8414 23.284 42.3154 15 42.3154C6.71602 42.3154 0 32.8414 0 21.1577C0 9.47402 6.71602 -2.09352e-08 15 -2.09352e-08C23.284 -2.09352e-08 30 9.47402 30 21.1577Z", fill "#FFD200" ] []
+        , Svg.path [ d "M24.4496 21.1577C24.4496 28.5224 20.2169 34.4911 14.9977 34.4911C9.77845 34.4911 5.54567 28.5224 5.54567 21.1577C5.54567 13.7929 9.77845 7.82425 14.9977 7.82425C20.2169 7.82425 24.4496 13.7929 24.4496 21.1577Z", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
+        , Svg.path [ d "M4.31065 6.43094C5.08605 7.5261 6.46263 9.46776 8.15574 11.859", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
+        , Svg.path [ d "M21.5914 30.8027C23.417 33.3774 24.8402 35.3868 25.4929 36.3062", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
+        , Svg.path [ d "M4.22958 36.0008C4.99517 34.9207 6.42818 32.9012 8.20717 30.3894", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
+        , Svg.path [ d "M21.6439 11.4425C23.3713 9.00598 24.7332 7.08441 25.4129 6.12488", stroke "#228C98", strokeWidth "0.33", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] []
+        ]

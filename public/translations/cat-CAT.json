@@ -434,11 +434,13 @@
     },
     "index": {
       "created_by": "Creada per {{account_name}}",
-      "members": "Afiliació",
+      "amount_in_circulation": "{{currency_name}} en circulació",
+      "minimum_balance": "Saldo mínim permès per usuari",
+      "members": "Usuaris actius",
       "claims": "Reclamacions",
-      "products": "Ofertes",
-      "orders": "Comandes",
-      "transfers": "Transferències"
+      "products": "Venda de botigues",
+      "orders": "Compra de botigues",
+      "transfers": "Transaccions"
     },
     "invite": {
       "title": "Convida als teus amics",
@@ -968,6 +970,7 @@
       "juridical_expiration_period": "Període de caducitat de la persona jurídica",
       "renovation_amount": "Import de la renovació",
       "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "token_error": "S'ha produït un error en obtenir les dades del testimoni",
       "seconds": "segons"
     },
     "actions": {

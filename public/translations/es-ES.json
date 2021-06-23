@@ -434,11 +434,13 @@
     },
     "index": {
       "created_by": "Creada por {{account_name}}",
-      "members": "Miembros",
+      "amount_in_circulation": "{{currency_name}} en circulación",
+      "minimum_balance": "Saldo mínimo permitido por usuario",
+      "members": "Usuarios activos",
       "claims": "Reivindicaciones",
-      "products": "Ofertas",
-      "orders": "Pedidos",
-      "transfers": "Transferencias"
+      "products": "Ventas de la tienda",
+      "orders": "Compras en la tienda",
+      "transfers": "Transacciónes"
     },
     "invite": {
       "title": "Invita a un amigo",
@@ -968,6 +970,7 @@
       "juridical_expiration_period": "Plazo de caducidad persona jurídica",
       "renovation_amount": "Monto de la renovación",
       "expiryopts_not_found": "No pudimos encontrar las opciones de vencimiento para su token",
+      "token_error": "Se produjo un error al obtener los datos del token",
       "seconds": "segundos"
     },
     "actions": {

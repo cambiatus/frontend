@@ -430,11 +430,13 @@
     },
     "index": {
       "created_by": "Created by {{account_name}}",
-      "members": "Members",
+      "amount_in_circulation": "{{currency_name}} in circulation",
+      "minimum_balance": "Minimum balance allowed per user",
+      "members": "Active users",
       "claims": "Claims",
-      "products": "Offers",
-      "orders": "Orders",
-      "transfers": "Transfers"
+      "products": "Shop sales",
+      "orders": "Shop purchases",
+      "transfers": "Transactions"
     },
     "invite": {
       "title": "Invite your friends",
@@ -966,6 +968,7 @@
       "juridical_expiration_period": "Juridical person expiration period",
       "renovation_amount": "Renovation amount",
       "expiryopts_not_found": "We couldn't find the expiry options for your token",
+      "token_error": "Something went wrong fetching the token data",
       "seconds": "seconds"
     },
     "actions": {
