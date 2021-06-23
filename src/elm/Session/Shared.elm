@@ -134,13 +134,13 @@ url. Example possible outputs:
     [ "cambiatus" ] -- Cambiatus community in the prod environment
 
 -}
-communitySubdomainParts : Shared -> List String
-communitySubdomainParts shared =
+communitySubdomainParts : Url -> Environment -> List String
+communitySubdomainParts url environment =
     let
         allParts =
-            shared.url.host |> String.split "."
+            url.host |> String.split "."
     in
-    case shared.environment of
+    case environment of
         Flags.Development ->
             case allParts of
                 [] ->
@@ -151,6 +151,9 @@ communitySubdomainParts shared =
 
                 subdomain :: "localhost" :: _ ->
                     [ subdomain, "staging" ]
+
+                subdomain :: "cambiatus" :: _ ->
+                    [ subdomain ]
 
                 subdomain :: env :: _ ->
                     [ subdomain, env ]
@@ -170,9 +173,20 @@ communitySubdomainParts shared =
                     [ subdomain, env ]
 
 
-communityDomain : Shared -> String
+{-| Returns the full `subdomain` of a community based on the current url
+
+Note: it takes an extensible record just so we can test it. The reason we can't
+pass in the entire `Shared` is because we can't create one without a `Nav.Key`
+(as stated in an [issue](https://github.com/elm-explorations/test/issues/24) on
+the `elm-explorations/test` repo)
+
+-}
+communityDomain : { shared | url : Url, environment : Environment } -> String
 communityDomain shared =
-    String.join "." (communitySubdomainParts shared ++ [ "cambiatus", "io" ])
+    String.join "."
+        (communitySubdomainParts shared.url shared.environment
+            ++ [ "cambiatus", "io" ]
+        )
 
 
 
