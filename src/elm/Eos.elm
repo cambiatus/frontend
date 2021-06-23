@@ -106,30 +106,8 @@ type alias Asset =
 
 
 assetToString : Asset -> String
-assetToString ({ symbol } as asset) =
-    let
-        amountString =
-            String.fromFloat asset.amount
-
-        value =
-            case String.split "." amountString of
-                [ _, _ ] ->
-                    amountString
-
-                [ _ ] ->
-                    case getSymbolPrecision symbol of
-                        0 ->
-                            amountString
-
-                        p ->
-                            amountString
-                                ++ "."
-                                ++ (List.repeat p "0" |> String.concat)
-
-                _ ->
-                    ""
-    in
-    value
+assetToString asset =
+    formatSymbolAmount asset.symbol asset.amount
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
 

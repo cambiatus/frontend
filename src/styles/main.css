@@ -230,7 +230,7 @@ textarea.input {
   @apply bg-white rounded-t-lg absolute bottom-0 w-full;
 }
 
-.modal-content-lg {
+.modal-content-full {
   @apply rounded-t-none top-0 overflow-auto;
 }
 
@@ -245,6 +245,12 @@ textarea.input {
 }
 
 .modal-body-lg {
+  @apply p-4 pt-0 text-body overflow-y-auto;
+  min-height: 4rem;
+  max-height: 70vh;
+}
+
+.modal-body-full {
   max-height: unset;
 }
 
@@ -262,10 +268,16 @@ textarea.input {
 
 @screen md {
   .modal-content {
-    @apply max-w-3xl top-modal relative mx-auto rounded-lg;
+    @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform -translate-x-1/2 mx-auto rounded-lg;
   }
 
   .modal-body-lg {
+    @apply px-4 py-0 text-body overflow-y-auto;
+    min-height: 4rem;
+    max-height: 60vh;
+  }
+
+  .modal-body-full {
     max-height: 80vh;
   }
 

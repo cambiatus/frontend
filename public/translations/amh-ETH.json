@@ -817,11 +817,14 @@
       "objective": "ተጠባቂ ዉጤት",
       "action": "ተግባር",
       "claimer": "የተጠየቀዉ",
+      "claimed_on": "የሚል ጥያቄ አቅርቧል {{claim_date}}",
       "date": "የተጠየቀበት ቀን",
       "claimer_reward": "የተጠቃሚ ሽልማት",
       "your_reward": "የእርሶ ሽልማት",
+      "analyst_reward": "ተንታኝ ሽልማት",
       "approved_by": "የጸደቀዉ በ",
       "disapproved_by": "ያልጸደቀዉ በ",
+      "pending_vote": "ድምጽ በመጠባበቅ ላይ",
       "disapprove": "አታጽድቅ",
       "approve": "አጸድቅ",
       "no_results_found": "ምላሽ አልተገኘም",
@@ -832,7 +835,8 @@
         "message_approve": "ይህንን ተግባር ለማጸደቅ ይፈልጋሉ?",
         "primary_disapprove": "አዎ, አይጽደቅ",
         "primary_approve": "አዎ, ይጽደቅ",
-        "secondary": "አይደለም,ተዉ "
+        "secondary": "አይደለም,ተዉ ",
+        "view_details": "ዝርዝሮችን ይመልከቱ"
       }
     },
     "transfer_result": {

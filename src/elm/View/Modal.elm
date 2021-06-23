@@ -1,11 +1,12 @@
 module View.Modal exposing
-    ( initWith
+    ( ModalSize(..)
+    , initWith
     , toHtml
     , withBody
     , withFooter
     , withHeader
-    , withLarge
     , withPreventScrolling
+    , withSize
     )
 
 {-| Modal dialog (popup)
@@ -30,7 +31,7 @@ and call `toHtml` at the end of the pipeline:
 -}
 
 import Html exposing (Html, button, div, h3, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class)
 import Icons
 import Utils exposing (onClickNoBubble)
 import View.Components
@@ -46,10 +47,10 @@ type alias Options msg =
     { header : Maybe String
     , body : Maybe (List (Html msg))
     , footer : Maybe (List (Html msg))
-    , isLarge : Bool
     , isVisible : Bool
     , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
+    , size : ModalSize
     }
 
 
@@ -59,6 +60,14 @@ type alias RequiredOptions msg =
     { closeMsg : msg
     , isVisible : Bool
     }
+
+
+{-| Sizing type
+-}
+type ModalSize
+    = Large
+    | FullScreen
+    | Default
 
 
 
@@ -73,12 +82,12 @@ initWith : RequiredOptions msg -> Modal msg
 initWith reqOpts =
     Modal
         { closeMsg = reqOpts.closeMsg
-        , isLarge = False
         , isVisible = reqOpts.isVisible
         , preventScrolling = View.Components.PreventScrollAlways
         , header = Nothing
         , body = Nothing
         , footer = Nothing
+        , size = Default
         }
 
 
@@ -101,14 +110,14 @@ withFooter footer (Modal options) =
     Modal { options | footer = Just footer }
 
 
-withLarge : Bool -> Modal msg -> Modal msg
-withLarge large (Modal options) =
-    Modal { options | isLarge = large }
-
-
 withPreventScrolling : View.Components.PreventScroll -> Modal msg -> Modal msg
 withPreventScrolling preventScrolling (Modal options) =
     Modal { options | preventScrolling = preventScrolling }
+
+
+withSize : ModalSize -> Modal msg -> Modal msg
+withSize size (Modal options) =
+    Modal { options | size = size }
 
 
 
@@ -128,22 +137,27 @@ viewModalDetails : Options msg -> Html msg
 viewModalDetails options =
     let
         header =
-            case options.header of
-                Just h ->
-                    h3 [ class "modal-header" ]
-                        [ text h ]
-
-                Nothing ->
-                    text ""
+            h3 [ class "modal-header" ]
+                [ text (Maybe.withDefault "" options.header) ]
 
         body =
             case options.body of
                 Just b ->
-                    div
-                        [ class "modal-body"
-                        , classList [ ( "modal-body-lg", options.isLarge ) ]
-                        ]
-                        b
+                    case options.size of
+                        Default ->
+                            div
+                                [ class "modal-body" ]
+                                b
+
+                        Large ->
+                            div
+                                [ class "modal-body-lg" ]
+                                b
+
+                        FullScreen ->
+                            div
+                                [ class "modal-body modal-body-full" ]
+                                b
 
                 Nothing ->
                     text ""
@@ -156,6 +170,17 @@ viewModalDetails options =
 
                 Nothing ->
                     text ""
+
+        content =
+            case options.size of
+                Default ->
+                    "modal-content"
+
+                Large ->
+                    "modal-content"
+
+                FullScreen ->
+                    "modal-content modal-content-full"
     in
     div
         [ class "modal fade-in" ]
@@ -165,8 +190,7 @@ viewModalDetails options =
             ]
             options.preventScrolling
         , div
-            [ class "modal-content"
-            , classList [ ( "modal-content-lg", options.isLarge ) ]
+            [ class content
             ]
             [ button
                 [ class "absolute top-0 right-0 mx-4 my-4"
