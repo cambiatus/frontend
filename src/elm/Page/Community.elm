@@ -392,7 +392,7 @@ msgToString msg =
             [ "CompletedLoadCommunity" ]
 
         GotTokenInfo r ->
-            [ "GotCommunitySupply", UR.resultToString r ]
+            [ "GotTokenInfo", UR.resultToString r ]
 
         GotActionMsg _ ->
             [ "GotActionMsg" ]

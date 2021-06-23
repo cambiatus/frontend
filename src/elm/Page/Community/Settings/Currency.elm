@@ -9,7 +9,6 @@ module Page.Community.Settings.Currency exposing
     , view
     )
 
-import Api
 import Community
 import Eos
 import Eos.Account as Eos

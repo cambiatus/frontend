@@ -8,25 +8,20 @@ module Token exposing
     , encodeCreateTokenData
     , encodeExpiryOpts
     , encodeUpdateTokenData
-    , expiryOptsDataDecoder
     , getExpiryOpts
     , getToken
-    , tokenTypeSelectionSet
     , tokenTypeToString
     , updateTokenDataDecoder
     )
 
 import Api
-import Cambiatus.Object
-import Cambiatus.Object.Community as Community
 import Eos
 import Eos.Account as Eos
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 
 
 
@@ -159,16 +154,6 @@ expiryOptsDataDecoder =
 
 
 
--- GRAPHQL
-
-
-tokenTypeSelectionSet : SelectionSet (Maybe TokenType) Cambiatus.Object.Community
-tokenTypeSelectionSet =
-    Community.type_
-        |> SelectionSet.map (Maybe.andThen tokenTypeFromString)
-
-
-
 -- HTTP
 
 
@@ -212,16 +197,3 @@ tokenTypeToString tokenType =
 
         Expiry ->
             "expiry"
-
-
-tokenTypeFromString : String -> Maybe TokenType
-tokenTypeFromString stringTokenType =
-    case stringTokenType of
-        "mcc" ->
-            Just Mcc
-
-        "expiry" ->
-            Just Expiry
-
-        _ ->
-            Nothing
