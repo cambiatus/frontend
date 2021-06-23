@@ -21,7 +21,7 @@ isValid =
             \niteFuzz ->
                 Kyc.CostaRica.Nite.isValid niteFuzz
                     |> Expect.true "Expected nite to be valid"
-        , describe "Rejects invalid `String`s" <|
+        , describe "Rejects invalid `String`s"
             [ test "Starting with `0`" <|
                 \() ->
                     "0123456789"
