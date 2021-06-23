@@ -854,11 +854,14 @@
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
+    "claimed_on": "Claimed on {{claim_date}}",
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
+    "analyst_reward": "Analyst Reward",
     "approved_by": "Approved by",
     "disapproved_by": "Disapproved by",
+    "pending_vote": "Pending Vote",
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
@@ -869,7 +872,8 @@
       "message_approve": "Do you really want to approve this action?",
       "primary_disapprove": "yes, disapprove",
       "primary_approve": "yes, approve",
-      "secondary": "no, cancel"
+      "secondary": "no, cancel",
+      "view_details": "View Details"
     }
   },
   "transfer_result": {
