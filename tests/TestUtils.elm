@@ -1,17 +1,28 @@
 module TestUtils exposing
-    ( appendGenerators
+    ( actionFuzzer
+    , appendGenerators
     , cambiatusUrlFuzzer
     , digitGenerator
-    , generateEither
     , nonZeroDigitGenerator
     , randomListWithRandomLength
+    , timeFuzzer
     )
 
+import Action
+import Avatar
+import Cambiatus.Enum.VerificationType as VerificationType
+import Cambiatus.Scalar
+import Eos
+import Eos.Account as Eos
 import Fuzz
+import Iso8601
+import Profile
 import Random
 import Random.Char
+import Random.Extra
 import Random.String
 import Shrink
+import Time
 import Url
 
 
@@ -19,8 +30,8 @@ import Url
 -- RANDOM GENERATORS
 
 
-randomAndMap : Random.Generator a -> Random.Generator (a -> c) -> Random.Generator c
-randomAndMap =
+withRandom : Random.Generator a -> Random.Generator (a -> c) -> Random.Generator c
+withRandom =
     Random.map2 (|>)
 
 
@@ -36,9 +47,9 @@ digitGenerator =
         |> Random.map String.fromInt
 
 
-generateEither : a -> a -> Random.Generator a
-generateEither first second =
-    Random.uniform first [ second ]
+maybeGenerate : Random.Generator a -> Random.Generator (Maybe a)
+maybeGenerate generator =
+    Random.Extra.maybe Random.Extra.bool generator
 
 
 randomListWithRandomLength : Int -> Int -> Random.Generator a -> Random.Generator (List a)
@@ -58,28 +69,42 @@ stringGenerator =
     Random.String.string 255 Random.Char.english
 
 
-cambiatusUrlGenerator : Maybe String -> Random.Generator Url.Url
-cambiatusUrlGenerator maybeAuthority =
+timeGenerator : Random.Generator Time.Posix
+timeGenerator =
+    Random.int 0 Random.maxInt
+        |> Random.map Time.millisToPosix
+
+
+dateTimeGenerator : Random.Generator Cambiatus.Scalar.DateTime
+dateTimeGenerator =
+    timeGenerator
+        |> Random.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
+
+
+stringWithRandomLengthGenerator : Int -> Int -> Random.Generator String
+stringWithRandomLengthGenerator minLength maxLength =
+    Random.Char.english
+        |> randomListWithRandomLength minLength maxLength
+        |> Random.map String.fromList
+
+
+urlGenerator : List String -> Random.Generator Url.Url
+urlGenerator allowedAuthorities =
     let
         protocolGenerator =
-            generateEither Url.Http Url.Https
+            Random.Extra.choice Url.Http Url.Https
 
         host =
-            case maybeAuthority of
-                Nothing ->
+            case allowedAuthorities of
+                [] ->
+                    stringGenerator
+                        |> Random.map (\randomString -> randomString ++ ".")
+                        |> appendGenerators stringGenerator
+
+                firstAuthority :: rest ->
                     stringGenerator
                         |> appendGenerators
-                            (Random.uniform ".cambiatus.io"
-                                [ ".demo.cambiatus.io"
-                                , ".staging.cambiatus.io"
-                                , ".localhost"
-                                , ".staging.localhost"
-                                ]
-                            )
-
-                Just authority ->
-                    stringGenerator
-                        |> appendGenerators (Random.constant authority)
+                            (Random.uniform firstAuthority rest)
 
         pathGenerator =
             randomListWithRandomLength 0 5 stringGenerator
@@ -109,12 +134,12 @@ cambiatusUrlGenerator maybeAuthority =
                 |> Random.andThen identity
     in
     Random.constant Url.Url
-        |> randomAndMap protocolGenerator
-        |> randomAndMap host
-        |> randomAndMap (Random.constant Nothing)
-        |> randomAndMap pathGenerator
-        |> randomAndMap queryGenerator
-        |> randomAndMap fragmentGenerator
+        |> withRandom protocolGenerator
+        |> withRandom host
+        |> withRandom (Random.constant Nothing)
+        |> withRandom pathGenerator
+        |> withRandom queryGenerator
+        |> withRandom fragmentGenerator
         |> Random.map
             (\url ->
                 if String.endsWith "localhost" url.host then
@@ -123,6 +148,88 @@ cambiatusUrlGenerator maybeAuthority =
                 else
                     { url | port_ = Nothing }
             )
+
+
+cambiatusUrlGenerator : Maybe String -> Random.Generator Url.Url
+cambiatusUrlGenerator maybeAuthority =
+    let
+        allowedAuthorities =
+            case maybeAuthority of
+                Nothing ->
+                    [ ".cambiatus.io"
+                    , ".demo.cambiatus.io"
+                    , ".staging.cambiatus.io"
+                    , ".localhost"
+                    , ".staging.localhost"
+                    ]
+
+                Just authority ->
+                    [ authority ]
+    in
+    urlGenerator allowedAuthorities
+
+
+symbolGenerator : Random.Generator Eos.Symbol
+symbolGenerator =
+    digitGenerator
+        |> appendGenerators (stringWithRandomLengthGenerator Eos.minSymbolLength Eos.maxSymbolLength)
+        |> Random.map (Eos.symbolFromString >> Maybe.withDefault Eos.cambiatusSymbol)
+
+
+nameGenerator : Random.Generator Eos.Name
+nameGenerator =
+    stringWithRandomLengthGenerator 12 12
+        |> Random.map Eos.stringToName
+
+
+avatarGenerator : Random.Generator Avatar.Avatar
+avatarGenerator =
+    Random.Extra.choices (Random.constant Avatar.empty)
+        [ stringGenerator |> Random.map Avatar.fromString ]
+
+
+minimalProfileGenerator : Random.Generator Profile.Minimal
+minimalProfileGenerator =
+    Random.constant Profile.Minimal
+        |> withRandom (maybeGenerate stringGenerator)
+        |> withRandom nameGenerator
+        |> withRandom avatarGenerator
+        -- TODO
+        |> withRandom (maybeGenerate stringGenerator)
+        |> withRandom (maybeGenerate stringGenerator)
+        -- TODO
+        |> withRandom (Random.constant [])
+
+
+actionObjectiveGenerator : Random.Generator Action.Objective
+actionObjectiveGenerator =
+    Random.constant Action.Objective
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom stringGenerator
+        |> withRandom (symbolGenerator |> Random.map (\symbol -> { symbol = symbol }))
+        |> withRandom Random.Extra.bool
+
+
+actionGenerator : Random.Generator Action.Action
+actionGenerator =
+    Random.constant Action.Action
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom stringGenerator
+        |> withRandom actionObjectiveGenerator
+        |> withRandom (Random.float 0 1000)
+        |> withRandom (Random.float 0 1000)
+        |> withRandom nameGenerator
+        |> withRandom (randomListWithRandomLength 3 20 minimalProfileGenerator)
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom (maybeGenerate dateTimeGenerator)
+        |> withRandom (Random.Extra.choice VerificationType.Automatic VerificationType.Claimable)
+        |> withRandom (Random.uniform 3 [ 5, 7, 9 ])
+        |> withRandom Random.Extra.bool
+        |> withRandom Random.Extra.bool
+        |> withRandom Random.Extra.bool
+        |> withRandom (maybeGenerate stringGenerator)
+        |> withRandom (maybeGenerate (Random.int 0 Random.maxInt))
 
 
 
@@ -139,6 +246,11 @@ urlShrinker url =
         |> Shrink.andMap (Shrink.maybe Shrink.string url.fragment)
 
 
+timeShrinker : Shrink.Shrinker Time.Posix
+timeShrinker =
+    Shrink.convert Time.millisToPosix Time.posixToMillis Shrink.int
+
+
 
 -- FUZZERS
 
@@ -146,3 +258,13 @@ urlShrinker url =
 cambiatusUrlFuzzer : Maybe String -> Fuzz.Fuzzer Url.Url
 cambiatusUrlFuzzer maybeAuthority =
     Fuzz.custom (cambiatusUrlGenerator maybeAuthority) urlShrinker
+
+
+actionFuzzer : Fuzz.Fuzzer Action.Action
+actionFuzzer =
+    Fuzz.custom actionGenerator Shrink.noShrink
+
+
+timeFuzzer : Fuzz.Fuzzer Time.Posix
+timeFuzzer =
+    Fuzz.custom timeGenerator timeShrinker

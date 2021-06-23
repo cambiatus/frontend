@@ -14,7 +14,7 @@ all =
 
 
 
--- COMMUNITY SUBDOMAIN PARTS
+-- COMMUNITY DOMAIN
 
 
 communityDomain : Test
