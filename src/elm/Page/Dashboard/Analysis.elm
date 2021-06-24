@@ -31,7 +31,6 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -102,14 +101,6 @@ type alias TabCounts =
 type Tab
     = WaitingToVote
     | Analyzed
-
-
-
--- TODO
--- type Status
---     = Loading
---     | Loaded (List Claim.Model) (List Claim.ClaimProfileSummaries) (Maybe Api.Relay.PageInfo)
---     | Failed
 
 
 type alias Filter =
@@ -430,8 +421,7 @@ viewPagination { shared } maybePageInfo =
             div [ class "flex justify-center" ]
                 [ if pageInfo.hasNextPage then
                     button
-                        [ Route.href Route.Analysis
-                        , class "button button-primary uppercase w-full"
+                        [ class "button button-primary uppercase w-full"
                         , onClick ShowMore
                         ]
                         [ text_ "all_analysis.show_more" ]
@@ -549,8 +539,8 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community)
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community.symbol)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community.symbol)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg claimIndex m ->
@@ -622,20 +612,31 @@ update msg model loggedIn =
                     case maybeClaim of
                         Just claim ->
                             let
+                                symbol =
+                                    claim.action.objective.community.symbol
+
                                 value =
-                                    String.fromFloat claim.action.verifierReward
-                                        ++ " "
-                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+                                    Eos.assetToString
+                                        { amount = claim.action.verifierReward
+                                        , symbol = symbol
+                                        }
 
                                 updatedClaims =
-                                    List.updateIf (\c -> c.id == claim.id)
-                                        (\_ -> claim)
-                                        claims
+                                    List.filter (\c -> c.id /= claim.id) claims
+
+                                updateCount operator maybeCount =
+                                    Maybe.map (\count -> operator count 1) maybeCount
                             in
-                            { model | status = RemoteData.Success { loadedModel | claims = updatedClaims } }
+                            { model
+                                | status = RemoteData.Success { loadedModel | claims = updatedClaims }
+                                , tabCounts =
+                                    { waitingToVote = updateCount (-) model.tabCounts.waitingToVote
+                                    , analyzed = updateCount (+) model.tabCounts.analyzed
+                                    }
+                                , claimModalStatus = Claim.Closed
+                            }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
 
                         Nothing ->
                             model
@@ -691,7 +692,7 @@ update msg model loggedIn =
                     addFetchCommand =
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
-                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community)
+                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol)
 
                             _ ->
                                 identity
@@ -722,7 +723,7 @@ update msg model loggedIn =
                 addFetchCommand =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community)
+                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community.symbol)
 
                         _ ->
                             identity
@@ -749,7 +750,7 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community)
+                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community.symbol)
 
                 _ ->
                     UR.init model
@@ -786,7 +787,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
 
                         _ ->
                             Cmd.none
@@ -811,7 +812,7 @@ update msg model loggedIn =
                 fetchCmd =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
 
                         _ ->
                             Cmd.none
@@ -825,8 +826,8 @@ update msg model loggedIn =
                 |> UR.init
 
 
-fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Community.Model -> Cmd Msg
-fetchAnalysis { shared, authToken } model maybeCursorAfter tab community =
+fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
+fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
     let
         cursorAfter =
             case maybeCursorAfter of
@@ -878,7 +879,7 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter tab community =
                 }
 
         required =
-            { communityId = Eos.symbolToString community.symbol }
+            { communityId = Eos.symbolToString symbol }
 
         query =
             case tab of

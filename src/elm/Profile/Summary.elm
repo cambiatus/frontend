@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withRelativeSelector, withScrollSelector, withPreventScrolling)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling, withRelativeSelector, withScrollSelector)
 
 import Avatar
 import Eos.Account as Eos

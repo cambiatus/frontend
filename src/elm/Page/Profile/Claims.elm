@@ -31,7 +31,6 @@ import Json.Encode as Encode
 import List.Extra as List
 import Page
 import RemoteData exposing (RemoteData)
-import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
@@ -453,7 +452,7 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community)
+                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community.symbol)
 
         ClaimMsg claimIndex m ->
             let
@@ -509,7 +508,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded profileSummaries profileClaims ->
+                Loaded _ profileClaims ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -522,15 +521,22 @@ update msg model loggedIn =
                     case maybeClaim of
                         Just claim ->
                             let
+                                symbol =
+                                    claim.action.objective.community.symbol
+
                                 value =
-                                    String.fromFloat claim.action.verifierReward
-                                        ++ " "
-                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+                                    Eos.assetToString
+                                        { amount = claim.action.verifierReward
+                                        , symbol = symbol
+                                        }
                             in
-                            { model | status = Loaded profileSummaries profileClaims }
+                            { model
+                                | status = Loading
+                                , claimModalStatus = Claim.Closed
+                            }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.ProfileClaims model.accountString))
+                                |> UR.addCmd (profileClaimQuery loggedIn model.accountString symbol)
 
                         Nothing ->
                             model
@@ -597,11 +603,11 @@ update msg model loggedIn =
                 |> UR.init
 
 
-profileClaimQuery : LoggedIn.Model -> String -> Community.Model -> Cmd Msg
-profileClaimQuery { shared, authToken } accountName community =
+profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> Cmd Msg
+profileClaimQuery { shared, authToken } accountName symbol =
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.user { account = accountName } (selectionSet community.symbol))
+        (Cambiatus.Query.user { account = accountName } (selectionSet symbol))
         ClaimsLoaded
 
 

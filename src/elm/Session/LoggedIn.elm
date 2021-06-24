@@ -330,6 +330,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     { closeMsg = ClosedAuthModal
                     , isVisible = model.showAuthModal
                     }
+                    |> Modal.withHeader (shared.translators.t "auth.login.modalFormTitle")
                     |> Modal.withBody
                         (Auth.view shared model.auth
                             |> List.map (Html.map GotAuthMsg)

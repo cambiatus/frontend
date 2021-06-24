@@ -37,7 +37,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, text)
+import Html exposing (Html, p, text)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
@@ -149,15 +149,8 @@ view shared model =
         { t } =
             shared.translators
     in
-    [ div []
-        [ p
-            [ class "modal-header px-0"
-            ]
-            [ text <| t "auth.login.modalFormTitle"
-            ]
-        , p [ class "text-sm" ]
-            [ text <| t "auth.login.enterPinToContinue" ]
-        ]
+    [ p [ class "text-sm" ]
+        [ text <| t "auth.login.enterPinToContinue" ]
     , Pin.view shared.translators model.pinModel
         |> Html.map GotPinMsg
     ]
