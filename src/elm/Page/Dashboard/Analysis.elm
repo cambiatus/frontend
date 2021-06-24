@@ -90,7 +90,7 @@ initModel =
 
 type alias LoadedModel =
     { claims : List Claim.Model
-    , profileSummaries : List Profile.Summary.Model
+    , profileSummaries : List Claim.ClaimProfileSummaries
     , pageInfo : Maybe Api.Relay.PageInfo
     }
 
@@ -102,6 +102,14 @@ type alias TabCounts =
 type Tab
     = WaitingToVote
     | Analyzed
+
+
+
+-- TODO
+-- type Status
+--     = Loading
+--     | Loaded (List Claim.Model) (List Claim.ClaimProfileSummaries) (Maybe Api.Relay.PageInfo)
+--     | Failed
 
 
 type alias Filter =
@@ -479,8 +487,7 @@ update msg model loggedIn =
         ClaimsLoaded tab (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
-                    List.length claims
-                        |> Profile.Summary.initMany False
+                    List.map Claim.initClaimProfileSummaries claims
 
                 oldTabCounts =
                     model.tabCounts
@@ -556,23 +563,15 @@ update msg model loggedIn =
 
         ClaimMsg claimIndex m ->
             let
-                claimCmd =
-                    case m of
-                        Claim.RouteOpened r ->
-                            Route.replaceUrl loggedIn.shared.navKey r
-
-                        _ ->
-                            Cmd.none
-
                 updatedModel =
                     case ( model.status, m ) of
-                        ( RemoteData.Success ({ profileSummaries } as loadedModel), Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( RemoteData.Success ({ profileSummaries } as loadedModel), Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
                                     RemoteData.Success
                                         { loadedModel
                                             | profileSummaries =
-                                                List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries
+                                                List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries
                                         }
                             }
 
@@ -582,7 +581,6 @@ update msg model loggedIn =
             updatedModel
                 |> Claim.updateClaimModalStatus m
                 |> UR.init
-                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
@@ -661,8 +659,12 @@ update msg model loggedIn =
             in
             case model.status of
                 RemoteData.Success loadedModel ->
+                    let
+                        hideClaimModal profileSummary =
+                            { profileSummary | showClaimModal = False }
+                    in
                     { model
-                        | status = RemoteData.Success loadedModel
+                        | status = RemoteData.Success { loadedModel | profileSummaries = List.map hideClaimModal loadedModel.profileSummaries }
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init

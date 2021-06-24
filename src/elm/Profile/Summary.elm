@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withRelativeSelector, withScrollSelector, withPreventScrolling)
 
 import Avatar
 import Eos.Account as Eos
@@ -22,6 +22,8 @@ type alias Model =
     { isExpanded : Bool
     , isLarge : Bool
     , preventScrolling : View.Components.PreventScroll
+    , relativeSelector : Maybe String
+    , scrollSelector : Maybe String
     }
 
 
@@ -30,6 +32,8 @@ init isLarge =
     { isExpanded = False
     , isLarge = isLarge
     , preventScrolling = View.Components.PreventScrollOnMobile
+    , relativeSelector = Nothing
+    , scrollSelector = Nothing
     }
 
 
@@ -69,6 +73,16 @@ withPreventScrolling preventScrolling model =
 
 
 -- VIEW
+
+
+withRelativeSelector : String -> Model -> Model
+withRelativeSelector relativeSelector model =
+    { model | relativeSelector = Just relativeSelector }
+
+
+withScrollSelector : String -> Model -> Model
+withScrollSelector scrollSelector model =
+    { model | scrollSelector = Just scrollSelector }
 
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
@@ -130,10 +144,14 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 a (Route.href route :: attrs)
     in
     div [ class "flex flex-col items-center" ]
-        [ div [ class ("rounded-full relative " ++ size) ]
+        [ div [ class ("rounded-full " ++ size) ]
             [ container [] [ Avatar.view profile.avatar size ]
             , if not isMobile && model.isExpanded then
-                View.Components.dialogBubble { class_ = "min-w-100", minWidth = 400 }
+                View.Components.dialogBubble
+                    { class_ = "w-120"
+                    , relativeSelector = model.relativeSelector
+                    , scrollSelector = model.scrollSelector
+                    }
                     [ viewUserInfo profile ]
 
               else

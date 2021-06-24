@@ -30,7 +30,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -76,7 +75,7 @@ initModel account =
 
 type Status
     = Loading
-    | Loaded (List Profile.Summary.Model) ProfileClaims
+    | Loaded (List Claim.ClaimProfileSummaries) ProfileClaims
     | NotFound
     | Failed (Graphql.Http.Error (Maybe ProfileClaims))
 
@@ -322,7 +321,7 @@ claimsToShow shared claims statusFilter tab =
                 claims
 
 
-viewResults : LoggedIn.Model -> List Profile.Summary.Model -> List Claim.Model -> Model -> Html Msg
+viewResults : LoggedIn.Model -> List Claim.ClaimProfileSummaries -> List Claim.Model -> Model -> Html Msg
 viewResults loggedIn profileSummaries claims model =
     let
         viewClaim profileSummary claimIndex claim =
@@ -432,8 +431,7 @@ update msg model loggedIn =
                 Just claims ->
                     let
                         profileSummaries =
-                            List.length claims
-                                |> Profile.Summary.initMany False
+                            List.map Claim.initClaimProfileSummaries claims
                     in
                     { model | status = Loaded profileSummaries (List.reverse claims) }
                         |> UR.init
@@ -459,24 +457,13 @@ update msg model loggedIn =
 
         ClaimMsg claimIndex m ->
             let
-                claimCmd =
-                    case m of
-                        Claim.RouteOpened r ->
-                            Route.replaceUrl loggedIn.shared.navKey r
-
-                        _ ->
-                            Cmd.none
-
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded profileSummaries profileClaims, Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( Loaded profileSummaries profileClaims, Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
                                     Loaded
-                                        (List.updateAt claimIndex
-                                            (Profile.Summary.update subMsg)
-                                            profileSummaries
-                                        )
+                                        (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries)
                                         profileClaims
                             }
 
@@ -486,7 +473,6 @@ update msg model loggedIn =
             updatedModel
                 |> Claim.updateClaimModalStatus m
                 |> UR.init
-                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
@@ -560,8 +546,12 @@ update msg model loggedIn =
             in
             case model.status of
                 Loaded profileSummaries claims ->
+                    let
+                        updateShowClaimModal profileSummary =
+                            { profileSummary | showClaimModal = False }
+                    in
                     { model
-                        | status = Loaded profileSummaries claims
+                        | status = Loaded (List.map updateShowClaimModal profileSummaries) claims
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init

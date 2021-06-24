@@ -54,7 +54,6 @@ import Json.Encode as Encode exposing (Value)
 import Profile
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
-import Token
 import Utils
 
 
@@ -88,7 +87,6 @@ type alias Model =
     , invitedReward : Float
     , minBalance : Maybe Float
     , maxSupply : Maybe Float
-    , tokenType : Maybe Token.TokenType
     , memberCount : Int
     , actionCount : Int
     , claimCount : Int
@@ -135,7 +133,6 @@ communitySelectionSet =
         |> with Community.invitedReward
         |> with Community.minBalance
         |> with Community.maxSupply
-        |> with Token.tokenTypeSelectionSet
         |> with Community.memberCount
         |> with Community.actionCount
         |> with Community.claimCount

@@ -142,8 +142,8 @@ module.exports = {
       maxHeight: {
         '108': '27rem'
       },
-      minWidth: {
-        '100': '25rem'
+      minHeight: {
+        '48': '12rem'
       },
       lineHeight: {
         caption: 0.75
@@ -161,7 +161,8 @@ module.exports = {
         'full': '100%'
       },
       width: {
-        form: '45.625rem'
+        form: '45.625rem',
+        '120': '30rem'
       },
       opacity: {
         '10': '0.1',

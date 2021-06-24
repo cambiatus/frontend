@@ -1,7 +1,7 @@
 module Api exposing
     ( communityInvite
     , getBalances
-    , getExpiryOpts
+    , getFromBlockchain
     , uploadImage
     )
 
@@ -13,7 +13,6 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Session.Shared exposing (Shared)
-import Token
 import Url.Builder exposing (QueryParameter)
 
 
@@ -28,11 +27,24 @@ backendUrl { endpoints } paths queryParams =
         queryParams
 
 
+
+-- BLOCKCHAIN
+
+
 blockchainUrl : Shared -> List String -> List QueryParameter -> String
 blockchainUrl { endpoints } paths queryParams =
     Url.Builder.crossOrigin endpoints.eosio
         ("v1" :: paths)
         queryParams
+
+
+getFromBlockchain : Shared -> Eos.TableQuery -> Decode.Decoder a -> (Result Http.Error a -> msg) -> Cmd msg
+getFromBlockchain shared query decoder toMsg =
+    Http.post
+        { url = blockchainUrl shared [ "chain", "get_table_rows" ] []
+        , body = Eos.encodeTableQuery query |> Http.jsonBody
+        , expect = Http.expectJson toMsg decoder
+        }
 
 
 
@@ -78,31 +90,5 @@ communityInvite shared symbol inviter toMsg =
                 |> Http.jsonBody
         , expect =
             Decode.at [ "data", "id" ] Decode.string
-                |> Http.expectJson toMsg
-        }
-
-
-
--- Token
-
-
-getExpiryOpts : Shared -> Eos.Symbol -> (Result Http.Error (Maybe Token.ExpiryOptsData) -> msg) -> Cmd msg
-getExpiryOpts shared symbol toMsg =
-    let
-        query =
-            { code = shared.contracts.token
-            , scope = shared.contracts.token
-            , table = "expiryopts"
-            , limit = 1000
-            }
-    in
-    Http.post
-        { url = blockchainUrl shared [ "chain", "get_table_rows" ] []
-        , body = Eos.encodeTableQuery query |> Http.jsonBody
-        , expect =
-            Decode.field "rows"
-                (Decode.list Token.expiryOptsDataDecoder
-                    |> Decode.map (List.filter (.currency >> (==) symbol) >> List.head)
-                )
                 |> Http.expectJson toMsg
         }

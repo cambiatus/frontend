@@ -32,6 +32,7 @@ import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Utils
 
 
 
@@ -105,37 +106,17 @@ type alias Asset =
 
 
 assetToString : Asset -> String
-assetToString ({ symbol } as asset) =
-    let
-        amountString =
-            String.fromFloat asset.amount
-
-        value =
-            case String.split "." amountString of
-                [ _, _ ] ->
-                    amountString
-
-                [ _ ] ->
-                    case getSymbolPrecision symbol of
-                        0 ->
-                            amountString
-
-                        p ->
-                            amountString
-                                ++ "."
-                                ++ (List.repeat p "0" |> String.concat)
-
-                _ ->
-                    ""
-    in
-    value
+assetToString asset =
+    formatSymbolAmount asset.symbol asset.amount
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
 
 
 encodeAsset : Asset -> Value
 encodeAsset asset =
-    assetToString asset
+    String.fromFloat asset.amount
+        ++ " "
+        ++ symbolToSymbolCodeString asset.symbol
         |> Encode.string
 
 
@@ -255,29 +236,7 @@ symbolToString (Symbol symbol precision) =
 
 formatSymbolAmount : Symbol -> Float -> String
 formatSymbolAmount (Symbol _ precision) amount =
-    let
-        separator =
-            "."
-    in
-    case String.fromFloat amount |> String.split separator of
-        [] ->
-            -- Impossible
-            String.fromFloat amount
-
-        [ withoutSeparator ] ->
-            if precision == 0 then
-                withoutSeparator
-
-            else
-                withoutSeparator ++ separator ++ String.repeat precision "0"
-
-        beforeSeparator :: afterSeparator :: _ ->
-            beforeSeparator
-                ++ separator
-                ++ (afterSeparator
-                        ++ String.repeat (precision - String.length afterSeparator) "0"
-                        |> String.left precision
-                   )
+    Utils.formatFloat amount precision
 
 
 symbolToSymbolCodeString : Symbol -> String
