@@ -328,20 +328,12 @@ viewFiltersModal ({ shared } as loggedIn) model =
         , isVisible = model.showFilterModal
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
-        |> Modal.withHeaderAttrs [ class "px-5" ]
-        |> Modal.withCloseButtonAttrs [ class "mx-5" ]
         |> Modal.withBody
             [ if not showUserSelect then
                 text ""
 
               else
-                div
-                    -- overflow-y-hidden makes it so overflow-x is interpreted as
-                    -- auto, so we need a minimal amount of padding for the focus
-                    -- ring not to be cropped
-                    [ class "px-1"
-                    , classList [ ( "overflow-y-hidden", not showFilterSelect ) ]
-                    ]
+                div []
                     (span [ class "input-label" ]
                         [ text (t "all_analysis.filter.user") ]
                         :: (case loggedIn.selectedCommunity of
@@ -395,11 +387,11 @@ viewFiltersModal ({ shared } as loggedIn) model =
                         , { value = Rejected, label = t "all_analysis.disapproved" }
                         ]
                     |> Select.withContainerAttrs
-                        [ class "px-1 mt-1"
+                        [ class "mt-1"
                         , classList [ ( "mt-6", showUserSelect ) ]
                         ]
                     |> Select.toHtml
-            , div [ class "px-1" ]
+            , div []
                 [ button
                     [ class "button button-primary w-full"
                     , onClick ClickedApplyFilters
@@ -941,19 +933,11 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers 
                     (\p ->
                         div
                             [ class "flex justify-between flex-col m-3 items-center" ]
-                            -- We need `absolute` so we can display the dialog
-                            -- bubble on hover
-                            [ div [ class "absolute" ]
-                                [ Profile.Summary.view shared loggedIn.accountName p profileSummary
-                                    |> Html.map GotProfileSummaryMsg
-                                ]
-
-                            -- We need this invisible Profile.Summary so we know
-                            -- the exact space the above one would take
-                            , div [ class "opacity-0 pointer-events-none" ]
-                                [ Profile.Summary.view shared loggedIn.accountName p profileSummary
-                                    |> Html.map GotProfileSummaryMsg
-                                ]
+                            [ profileSummary
+                                |> Profile.Summary.withRelativeSelector ".modal-content"
+                                |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.view shared loggedIn.accountName p
+                                |> Html.map GotProfileSummaryMsg
                             , div
                                 [ onClick ClearSelectSelection
                                 , class "h-6 w-6 flex items-center mt-4"

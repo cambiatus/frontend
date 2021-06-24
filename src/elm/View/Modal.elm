@@ -3,10 +3,8 @@ module View.Modal exposing
     , initWith
     , toHtml
     , withBody
-    , withCloseButtonAttrs
     , withFooter
     , withHeader
-    , withHeaderAttrs
     , withPreventScrolling
     , withSize
     )
@@ -52,8 +50,6 @@ type alias Options msg =
     , isVisible : Bool
     , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
-    , headerAttrs : List (Html.Attribute msg)
-    , closeButtonAttrs : List (Html.Attribute msg)
     , size : ModalSize
     }
 
@@ -91,8 +87,6 @@ initWith reqOpts =
         , header = Nothing
         , body = Nothing
         , footer = Nothing
-        , headerAttrs = []
-        , closeButtonAttrs = []
         , size = Default
         }
 
@@ -121,16 +115,6 @@ withPreventScrolling preventScrolling (Modal options) =
     Modal { options | preventScrolling = preventScrolling }
 
 
-withHeaderAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
-withHeaderAttrs attrs (Modal options) =
-    Modal { options | headerAttrs = options.headerAttrs ++ attrs }
-
-
-withCloseButtonAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
-withCloseButtonAttrs attrs (Modal options) =
-    Modal { options | closeButtonAttrs = options.closeButtonAttrs ++ attrs }
-
-
 withSize : ModalSize -> Modal msg -> Modal msg
 withSize size (Modal options) =
     Modal { options | size = size }
@@ -153,7 +137,7 @@ viewModalDetails : Options msg -> Html msg
 viewModalDetails options =
     let
         header =
-            h3 (class "modal-header" :: options.headerAttrs)
+            h3 [ class "modal-header" ]
                 [ text (Maybe.withDefault "" options.header) ]
 
         body =
@@ -209,10 +193,9 @@ viewModalDetails options =
             [ class content
             ]
             [ button
-                (class "absolute top-0 right-0 mx-4 my-4"
-                    :: onClickNoBubble options.closeMsg
-                    :: options.closeButtonAttrs
-                )
+                [ class "absolute top-0 right-0 mx-4 my-4"
+                , onClickNoBubble options.closeMsg
+                ]
                 [ Icons.close "text-gray-400 fill-current"
                 ]
             , header

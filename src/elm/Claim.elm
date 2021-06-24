@@ -499,8 +499,9 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         viewProfileSummary profile_ profileSummary_ =
             profileSummary_
+                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
                 |> Profile.Summary.withRelativeSelector ".modal-content"
-                |> Profile.Summary.withScrollSelector ".modal-body"
+                |> Profile.Summary.withScrollSelector ".modal-body-lg"
                 |> Profile.Summary.view shared accountName profile_
 
         viewClaimerProfileSummary =
