@@ -305,14 +305,6 @@ viewFiltersModal ({ shared } as loggedIn) model =
 
                 Analyzed ->
                     True
-
-        showUserSelect =
-            case model.selectedTab of
-                WaitingToVote ->
-                    True
-
-                Analyzed ->
-                    False
     in
     Modal.initWith
         { closeMsg = ClosedFilterModal
@@ -320,45 +312,41 @@ viewFiltersModal ({ shared } as loggedIn) model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ if not showUserSelect then
-                text ""
+            [ div []
+                (span [ class "input-label" ]
+                    [ text (t "all_analysis.filter.user") ]
+                    :: (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                let
+                                    selectedUsers =
+                                        Maybe.map (\v -> [ v ]) model.filtersBeingEdited.profile
+                                            |> Maybe.withDefault []
 
-              else
-                div []
-                    (span [ class "input-label" ]
-                        [ text (t "all_analysis.filter.user") ]
-                        :: (case loggedIn.selectedCommunity of
-                                RemoteData.Success community ->
-                                    let
-                                        selectedUsers =
-                                            Maybe.map (\v -> [ v ]) model.filtersBeingEdited.profile
-                                                |> Maybe.withDefault []
+                                    addRelativeMenuClass =
+                                        if not showFilterSelect && List.isEmpty selectedUsers then
+                                            Select.withMenuClass "!relative"
 
-                                        addRelativeMenuClass =
-                                            if not showFilterSelect && List.isEmpty selectedUsers then
-                                                Select.withMenuClass "!relative"
-
-                                            else
-                                                identity
-                                    in
-                                    [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
-                                        [ Html.map SelectMsg
-                                            (Select.view
-                                                (selectConfiguration shared False
-                                                    |> addRelativeMenuClass
-                                                )
-                                                model.autoCompleteState
-                                                community.members
-                                                selectedUsers
+                                        else
+                                            identity
+                                in
+                                [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
+                                    [ Html.map SelectMsg
+                                        (Select.view
+                                            (selectConfiguration shared False
+                                                |> addRelativeMenuClass
                                             )
-                                        , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
-                                        ]
+                                            model.autoCompleteState
+                                            community.members
+                                            selectedUsers
+                                        )
+                                    , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
                                     ]
+                                ]
 
-                                _ ->
-                                    []
-                           )
-                    )
+                            _ ->
+                                []
+                       )
+                )
             , if not showFilterSelect then
                 text ""
 
@@ -377,10 +365,7 @@ viewFiltersModal ({ shared } as loggedIn) model =
                         [ { value = Approved, label = t "all_analysis.approved" }
                         , { value = Rejected, label = t "all_analysis.disapproved" }
                         ]
-                    |> Select.withContainerAttrs
-                        [ class "mt-1"
-                        , classList [ ( "mt-6", showUserSelect ) ]
-                        ]
+                    |> Select.withContainerAttrs [ class "mt-6" ]
                     |> Select.toHtml
             , div []
                 [ button
