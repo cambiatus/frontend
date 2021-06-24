@@ -855,6 +855,7 @@ viewDescription shared model =
         , translators = shared.translators
         }
         |> Input.withInputType Input.TextArea
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
