@@ -4,6 +4,7 @@ import Expect
 import Fuzz
 import Kyc.CostaRica.CedulaDeIdentidad
 import Random
+import Random.Extra
 import Shrink
 import Test exposing (..)
 import TestUtils
@@ -56,7 +57,7 @@ cedulaDeIdentidadGenerator : Random.Generator String
 cedulaDeIdentidadGenerator =
     let
         maybeDashGenerator =
-            TestUtils.generateEither "" "-"
+            Random.Extra.choice "" "-"
     in
     TestUtils.nonZeroDigitGenerator
         |> TestUtils.appendGenerators maybeDashGenerator

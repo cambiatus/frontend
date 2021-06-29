@@ -4,6 +4,7 @@ import Expect
 import Fuzz
 import Kyc.CostaRica.Phone
 import Random
+import Random.Extra
 import Shrink
 import Test exposing (..)
 import TestUtils
@@ -56,5 +57,5 @@ phoneGenerator : Random.Generator String
 phoneGenerator =
     TestUtils.nonZeroDigitGenerator
         |> TestUtils.appendGenerators (Random.list 3 TestUtils.digitGenerator |> Random.map String.concat)
-        |> TestUtils.appendGenerators (TestUtils.generateEither "" "-")
+        |> TestUtils.appendGenerators (Random.Extra.choice "" "-")
         |> TestUtils.appendGenerators (Random.list 4 TestUtils.digitGenerator |> Random.map String.concat)

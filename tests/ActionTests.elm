@@ -11,7 +11,9 @@ import Utils
 all : Test
 all =
     describe "Action"
-        [ isPastDeadline ]
+        [ isPastDeadline
+        , isClosed
+        ]
 
 
 
@@ -21,7 +23,7 @@ all =
 isPastDeadline : Test
 isPastDeadline =
     describe "isPastDeadline"
-        [ fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "test" <|
+        [ fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "random action and time" <|
             \fuzzAction fuzzTime ->
                 case fuzzAction.deadline of
                     Just _ ->
@@ -31,4 +33,19 @@ isPastDeadline =
                     Nothing ->
                         Action.isPastDeadline fuzzAction fuzzTime
                             |> Expect.false "Expected action to not be considered past deadline"
+        ]
+
+
+
+-- IS CLOSED
+
+
+isClosed : Test
+isClosed =
+    describe "isClosed"
+        [ fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "random action and time" <|
+            \fuzzAction fuzzTime ->
+                Action.isPastDeadline fuzzAction fuzzTime
+                    || (fuzzAction.usages > 0 && fuzzAction.usagesLeft == 0)
+                    |> Expect.equal (Action.isClosed fuzzAction fuzzTime)
         ]
