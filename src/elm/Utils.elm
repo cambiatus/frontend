@@ -91,7 +91,10 @@ formatFloat number decimalCases useSeparator =
             else
                 let
                     paddedSeparator =
-                        String.left decimalCases afterSeparator ++ String.repeat (decimalCases - String.length afterSeparator) "0"
+                        String.left decimalCases afterSeparator
+                            ++ String.repeat
+                                (max 0 (decimalCases - String.length afterSeparator))
+                                "0"
                 in
                 String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
 
@@ -99,10 +102,7 @@ formatFloat number decimalCases useSeparator =
 decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
-        |> Decode.andThen
-            (\ms ->
-                Decode.succeed <| Time.millisToPosix ms
-            )
+        |> Decode.map Time.millisToPosix
 
 
 decodeEnterKeyDown : Decode.Decoder Bool
@@ -112,10 +112,7 @@ decodeEnterKeyDown =
             code == "Enter"
     in
     Decode.field "key" Decode.string
-        |> Decode.andThen
-            (\cd ->
-                Decode.succeed <| isEnter cd
-            )
+        |> Decode.map isEnter
 
 
 {-| Click event listener that stops propagation, but doesn't prevent default

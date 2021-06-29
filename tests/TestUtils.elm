@@ -8,6 +8,7 @@ module TestUtils exposing
     , createTokenDataFuzzer
     , digitGenerator
     , expiryOptsDataFuzzer
+    , maybeDateTimeFuzzer
     , nameFuzzer
     , nonZeroDigitGenerator
     , randomListWithRandomLength
@@ -466,3 +467,8 @@ createTokenDataFuzzer =
 expiryOptsDataFuzzer : Fuzz.Fuzzer Token.ExpiryOptsData
 expiryOptsDataFuzzer =
     Fuzz.custom expiryOptsDataGenerator Shrink.noShrink
+
+
+maybeDateTimeFuzzer : Fuzz.Fuzzer (Maybe Cambiatus.Scalar.DateTime)
+maybeDateTimeFuzzer =
+    Fuzz.custom (maybeGenerate dateTimeGenerator) Shrink.noShrink
