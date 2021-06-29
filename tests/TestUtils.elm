@@ -188,14 +188,21 @@ avatarGenerator =
         [ stringGenerator |> Random.map Avatar.fromString ]
 
 
+emailGenerator : Random.Generator String
+emailGenerator =
+    stringGenerator
+        |> appendGenerators (Random.constant "@")
+        |> appendGenerators stringGenerator
+        |> appendGenerators (Random.constant ".com")
+
+
 minimalProfileGenerator : Random.Generator Profile.Minimal
 minimalProfileGenerator =
     Random.constant Profile.Minimal
         |> withRandom (maybeGenerate stringGenerator)
         |> withRandom nameGenerator
         |> withRandom avatarGenerator
-        -- TODO
-        |> withRandom (maybeGenerate stringGenerator)
+        |> withRandom (maybeGenerate emailGenerator)
         |> withRandom (maybeGenerate stringGenerator)
         -- TODO
         |> withRandom (Random.constant [])
