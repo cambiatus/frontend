@@ -22,18 +22,16 @@ all =
 
 isPastDeadline : Test
 isPastDeadline =
-    describe "isPastDeadline"
-        [ fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "random action and time" <|
-            \fuzzAction fuzzTime ->
-                case fuzzAction.deadline of
-                    Just _ ->
-                        Action.isPastDeadline fuzzAction fuzzTime
-                            |> Expect.equal (Time.posixToMillis fuzzTime > Time.posixToMillis (Utils.posixDateTime fuzzAction.deadline))
+    fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "isPastDeadline" <|
+        \fuzzAction fuzzTime ->
+            case fuzzAction.deadline of
+                Just _ ->
+                    Action.isPastDeadline fuzzAction fuzzTime
+                        |> Expect.equal (Time.posixToMillis fuzzTime > Time.posixToMillis (Utils.posixDateTime fuzzAction.deadline))
 
-                    Nothing ->
-                        Action.isPastDeadline fuzzAction fuzzTime
-                            |> Expect.false "Expected action to not be considered past deadline"
-        ]
+                Nothing ->
+                    Action.isPastDeadline fuzzAction fuzzTime
+                        |> Expect.false "Expected action to not be considered past deadline"
 
 
 
@@ -42,10 +40,8 @@ isPastDeadline =
 
 isClosed : Test
 isClosed =
-    describe "isClosed"
-        [ fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "random action and time" <|
-            \fuzzAction fuzzTime ->
-                Action.isPastDeadline fuzzAction fuzzTime
-                    || (fuzzAction.usages > 0 && fuzzAction.usagesLeft == 0)
-                    |> Expect.equal (Action.isClosed fuzzAction fuzzTime)
-        ]
+    fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "isClosed" <|
+        \fuzzAction fuzzTime ->
+            Action.isPastDeadline fuzzAction fuzzTime
+                || (fuzzAction.usages > 0 && fuzzAction.usagesLeft == 0)
+                |> Expect.equal (Action.isClosed fuzzAction fuzzTime)

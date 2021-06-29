@@ -1,6 +1,7 @@
 module TestUtils exposing
     ( actionFuzzer
     , appendGenerators
+    , avatarFuzzer
     , cambiatusUrlFuzzer
     , digitGenerator
     , nonZeroDigitGenerator
@@ -258,6 +259,21 @@ timeShrinker =
     Shrink.convert Time.millisToPosix Time.posixToMillis Shrink.int
 
 
+avatarShrinker : Shrink.Shrinker Avatar.Avatar
+avatarShrinker =
+    Shrink.convert
+        (\maybeString ->
+            case maybeString of
+                Nothing ->
+                    Avatar.empty
+
+                Just string ->
+                    Avatar.fromString string
+        )
+        Avatar.toMaybeString
+        (Shrink.maybe Shrink.string)
+
+
 
 -- FUZZERS
 
@@ -275,3 +291,8 @@ actionFuzzer =
 timeFuzzer : Fuzz.Fuzzer Time.Posix
 timeFuzzer =
     Fuzz.custom timeGenerator timeShrinker
+
+
+avatarFuzzer : Fuzz.Fuzzer Avatar.Avatar
+avatarFuzzer =
+    Fuzz.custom avatarGenerator avatarShrinker
