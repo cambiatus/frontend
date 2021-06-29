@@ -430,11 +430,13 @@
     },
     "index": {
       "created_by": "Created by {{account_name}}",
-      "members": "Members",
+      "amount_in_circulation": "{{currency_name}} in circulation",
+      "minimum_balance": "Minimum balance allowed per user",
+      "members": "Active users",
       "claims": "Claims",
-      "products": "Offers",
-      "orders": "Orders",
-      "transfers": "Transfers"
+      "products": "Shop sales",
+      "orders": "Shop purchases",
+      "transfers": "Transactions"
     },
     "invite": {
       "title": "Invite your friends",
@@ -854,11 +856,14 @@
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
+    "claimed_on": "Claimed on {{claim_date}}",
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",
+    "analyst_reward": "Analyst Reward",
     "approved_by": "Approved by",
     "disapproved_by": "Disapproved by",
+    "pending_vote": "Pending Vote",
     "disapprove": "Disapprove",
     "approve": "Approve",
     "no_results_found": "No results found",
@@ -869,7 +874,8 @@
       "message_approve": "Do you really want to approve this action?",
       "primary_disapprove": "yes, disapprove",
       "primary_approve": "yes, approve",
-      "secondary": "no, cancel"
+      "secondary": "no, cancel",
+      "view_details": "View Details"
     }
   },
   "transfer_result": {
@@ -962,6 +968,7 @@
       "juridical_expiration_period": "Juridical person expiration period",
       "renovation_amount": "Renovation amount",
       "expiryopts_not_found": "We couldn't find the expiry options for your token",
+      "token_error": "Something went wrong fetching the token data",
       "seconds": "seconds"
     },
     "actions": {

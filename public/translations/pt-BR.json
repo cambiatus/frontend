@@ -438,11 +438,13 @@
     },
     "index": {
       "created_by": "Criado por {{account_name}}",
-      "members": "Membros",
+      "amount_in_circulation": "{{currency_name}} em circulação",
+      "minimum_balance": "Saldo mínimo por usuário",
+      "members": "Usuários ativos",
       "claims": "Reivindicações",
-      "products": "Ofertas",
-      "orders": "Pedidos",
-      "transfers": "Transferências"
+      "products": "Vendas na loja",
+      "orders": "Compras na loja",
+      "transfers": "Transações"
     },
     "invite": {
       "title": "Convide um amigo",
@@ -853,6 +855,7 @@
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
     "pending": "Pendente",
     "disapproved_by": "Reprovado por",
+    "pending_vote": "Votação Pendente",
     "approved_by": "Aprovado por",
     "reward": "Você ganhou: {{value}}",
     "sub_wait_1": "Aguarde, esta reivindicação está sendo analisada por outros usuários.",
@@ -860,9 +863,11 @@
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
+    "claimed_on": "Reivindicado em {{claim_date}}",
     "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",
+    "analyst_reward": "Recompensa do Analista",
     "disapprove": "Reprovar",
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
@@ -873,7 +878,8 @@
       "message_approve": "Você realmente deseja aprovar esta reivindicação?",
       "primary_disapprove": "sim, reprovar",
       "primary_approve": "sim, aprovar",
-      "secondary": "não, cancelar"
+      "secondary": "não, cancelar",
+      "view_details": "Ver Detalhes"
     }
   },
   "transfer_result": {
@@ -966,6 +972,7 @@
       "juridical_expiration_period": "Prazo de expiração de pessoa jurídica",
       "renovation_amount": "Valor de renovação",
       "expiryopts_not_found": "Não foi possível encontrar as opções de expiração para seu token",
+      "token_error": "Algo de errado aconteceu ao buscar as informações do token",
       "seconds": "segundos"
     },
     "actions": {

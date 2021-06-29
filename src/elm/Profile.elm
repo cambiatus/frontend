@@ -309,19 +309,11 @@ viewProfileName shared loggedInAccount profile =
 
 viewEmpty : Shared -> Html msg
 viewEmpty shared =
-    div [ class "flex flex-col items-center" ]
-        [ div [ class "w-10 h-10 rounded-full" ]
-            [ div
-                [ class "profile-avatar w-10 h-10"
-                ]
-                []
-            ]
-        , div [ class "mt-2" ]
-            [ div [ class "flex items-center bg-black rounded-sm p-1" ]
-                [ p [ class "mx-2 pt-caption uppercase font-medium text-white text-caption" ]
-                    [ text (shared.translators.t "profile.no_one") ]
-                ]
-            ]
+    div
+        []
+        [ p
+            [ class "uppercase text-gray-900 text-caption" ]
+            [ text (shared.translators.t "profile.no_one") ]
         ]
 
 

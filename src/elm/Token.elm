@@ -1,30 +1,40 @@
 module Token exposing
     ( CreateTokenData
     , ExpiryOptsData
+    , Model
     , TokenType(..)
     , UpdateTokenData
     , createTokenDataDecoder
     , encodeCreateTokenData
     , encodeExpiryOpts
     , encodeUpdateTokenData
-    , expiryOptsDataDecoder
-    , tokenTypeSelectionSet
+    , getExpiryOpts
+    , getToken
     , tokenTypeToString
     , updateTokenDataDecoder
     )
 
-import Cambiatus.Object
-import Cambiatus.Object.Community as Community
+import Api
 import Eos
 import Eos.Account as Eos
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
+import Session.Shared exposing (Shared)
 
 
 
 -- TYPES
+
+
+type alias Model =
+    { supply : Eos.Asset
+    , maxSupply : Eos.Asset
+    , minBalance : Eos.Asset
+    , issuer : Eos.Name
+    , type_ : TokenType
+    }
 
 
 type alias CreateTokenData =
@@ -56,6 +66,16 @@ type TokenType
 
 
 -- ENCODING AND DECODING
+
+
+decoder : Decoder Model
+decoder =
+    Decode.succeed Model
+        |> required "supply" Eos.decodeAsset
+        |> required "max_supply" Eos.decodeAsset
+        |> required "min_balance" Eos.decodeAsset
+        |> required "issuer" Eos.nameDecoder
+        |> required "type" tokenTypeDecoder
 
 
 encodeUpdateTokenData : UpdateTokenData -> Value
@@ -134,13 +154,35 @@ expiryOptsDataDecoder =
 
 
 
--- GRAPHQL
+-- HTTP
 
 
-tokenTypeSelectionSet : SelectionSet (Maybe TokenType) Cambiatus.Object.Community
-tokenTypeSelectionSet =
-    Community.type_
-        |> SelectionSet.map (Maybe.andThen tokenTypeFromString)
+getToken : Shared -> Eos.Symbol -> (Result Http.Error Model -> msg) -> Cmd msg
+getToken shared symbol toMsg =
+    Api.getFromBlockchain shared
+        { code = shared.contracts.token
+        , scope = Eos.symbolToSymbolCodeString symbol
+        , table = "stat"
+        , limit = 1
+        }
+        (Decode.field "rows" (Decode.index 0 decoder))
+        toMsg
+
+
+getExpiryOpts : Shared -> Eos.Symbol -> (Result Http.Error (Maybe ExpiryOptsData) -> msg) -> Cmd msg
+getExpiryOpts shared symbol toMsg =
+    Api.getFromBlockchain shared
+        { code = shared.contracts.token
+        , scope = shared.contracts.token
+        , table = "expiryopts"
+        , limit = 1000
+        }
+        (Decode.field "rows"
+            (Decode.list expiryOptsDataDecoder
+                |> Decode.map (List.filter (.currency >> (==) symbol) >> List.head)
+            )
+        )
+        toMsg
 
 
 
@@ -155,16 +197,3 @@ tokenTypeToString tokenType =
 
         Expiry ->
             "expiry"
-
-
-tokenTypeFromString : String -> Maybe TokenType
-tokenTypeFromString stringTokenType =
-    case stringTokenType of
-        "mcc" ->
-            Just Mcc
-
-        "expiry" ->
-            Just Expiry
-
-        _ ->
-            Nothing

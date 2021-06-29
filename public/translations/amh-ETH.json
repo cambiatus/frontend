@@ -392,11 +392,13 @@
       },
       "index": {
         "created_by": "የተፈጠረዉ በ {{account_name}}",
-        "members": "አባለት",
+        "amount_in_circulation": "{{currency_name}} በመዘዋወር ላይ",
+        "minimum_balance": "በአንድ ተጠቃሚ የሚፈቀደው አነስተኛ ሚዛን",
+        "members": "ንቁ ተጠቃሚዎች",
         "claims": "የይገባኛል ጥያቄዎች",
-        "products": "አቅርቦቶች",
-        "orders": "ትዕዛዞች",
-        "transfers": "የተለለፈዉ መጠን"
+        "products": "የሱቅ ሽያጭ",
+        "orders": "የሱቅ ግዢዎች",
+        "transfers": "ግብይቶች"
       },
       "invite": {
         "title": "ጓደኛን ጋብዝ",
@@ -815,11 +817,14 @@
       "objective": "ተጠባቂ ዉጤት",
       "action": "ተግባር",
       "claimer": "የተጠየቀዉ",
+      "claimed_on": "የሚል ጥያቄ አቅርቧል {{claim_date}}",
       "date": "የተጠየቀበት ቀን",
       "claimer_reward": "የተጠቃሚ ሽልማት",
       "your_reward": "የእርሶ ሽልማት",
+      "analyst_reward": "ተንታኝ ሽልማት",
       "approved_by": "የጸደቀዉ በ",
       "disapproved_by": "ያልጸደቀዉ በ",
+      "pending_vote": "ድምጽ በመጠባበቅ ላይ",
       "disapprove": "አታጽድቅ",
       "approve": "አጸድቅ",
       "no_results_found": "ምላሽ አልተገኘም",
@@ -830,7 +835,8 @@
         "message_approve": "ይህንን ተግባር ለማጸደቅ ይፈልጋሉ?",
         "primary_disapprove": "አዎ, አይጽደቅ",
         "primary_approve": "አዎ, ይጽደቅ",
-        "secondary": "አይደለም,ተዉ "
+        "secondary": "አይደለም,ተዉ ",
+        "view_details": "ዝርዝሮችን ይመልከቱ"
       }
     },
     "transfer_result": {
@@ -923,6 +929,7 @@
         "juridical_expiration_period": "የሕግ ሰው ማብቂያ ጊዜ",
         "renovation_amount": "የማደስ መጠን",
         "expiryopts_not_found": "የምልክትዎ ጊዜ ማብቂያ አማራጮችን ማግኘት አልቻልንም",
+        "token_error": "የማስመሰያውን ውሂብ ማምጣት ላይ የሆነ ችግር ተፈጥሯል",
         "seconds": "ሰከንዶች"
       },
       "actions": {

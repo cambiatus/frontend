@@ -434,11 +434,13 @@
     },
     "index": {
       "created_by": "Creada per {{account_name}}",
-      "members": "Afiliació",
+      "amount_in_circulation": "{{currency_name}} en circulació",
+      "minimum_balance": "Saldo mínim permès per usuari",
+      "members": "Usuaris actius",
       "claims": "Reclamacions",
-      "products": "Ofertes",
-      "orders": "Comandes",
-      "transfers": "Transferències"
+      "products": "Venda de botigues",
+      "orders": "Compra de botigues",
+      "transfers": "Transaccions"
     },
     "invite": {
       "title": "Convida als teus amics",
@@ -856,11 +858,14 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
+    "claimed_on": "Reclamat el {{claim_date}}",
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",
+    "analyst_reward": "Recompensa D’analista",
     "approved_by": "Aprovat per",
     "disapproved_by": "Desaprovat per",
+    "pending_vote": "Vot Pendent",
     "disapprove": "Desaprovar",
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
@@ -871,7 +876,8 @@
       "message_approve": "Realment voleu aprovar aquesta reclamació?",
       "primary_disapprove": "sí, desaproveu",
       "primary_approve": "sí, aprova",
-      "secondary": "no, cancel·la"
+      "secondary": "no, cancel·la",
+      "view_details": "Veure Detalls"
     }
   },
   "transfer_result": {
@@ -964,6 +970,7 @@
       "juridical_expiration_period": "Període de caducitat de la persona jurídica",
       "renovation_amount": "Import de la renovació",
       "expiryopts_not_found": "No hem pogut trobar les opcions de caducitat del vostre testimoni",
+      "token_error": "S'ha produït un error en obtenir les dades del testimoni",
       "seconds": "segons"
     },
     "actions": {

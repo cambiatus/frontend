@@ -76,7 +76,7 @@ initModel =
 
 type Status
     = Loading
-    | Loaded (List Claim.Model) (List Profile.Summary.Model) (Maybe Api.Relay.PageInfo)
+    | Loaded (List Claim.Model) (List Claim.ClaimProfileSummaries) (Maybe Api.Relay.PageInfo)
     | Failed
 
 
@@ -336,8 +336,7 @@ update msg model loggedIn =
         ClaimsLoaded (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
-                    List.length claims
-                        |> Profile.Summary.initMany False
+                    List.map Claim.initClaimProfileSummaries claims
             in
             case model.status of
                 Loaded claims _ _ ->
@@ -385,21 +384,13 @@ update msg model loggedIn =
 
         ClaimMsg claimIndex m ->
             let
-                claimCmd =
-                    case m of
-                        Claim.RouteOpened r ->
-                            Route.replaceUrl loggedIn.shared.navKey r
-
-                        _ ->
-                            Cmd.none
-
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded claims profileSummaries pageInfo, Claim.GotProfileSummaryMsg subMsg ) ->
+                        ( Loaded claims profileSummaries pageInfo, Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
                                     Loaded claims
-                                        (List.updateAt claimIndex (Profile.Summary.update subMsg) profileSummaries)
+                                        (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries)
                                         pageInfo
                             }
 
@@ -409,7 +400,6 @@ update msg model loggedIn =
             updatedModel
                 |> Claim.updateClaimModalStatus m
                 |> UR.init
-                |> UR.addCmd claimCmd
 
         VoteClaim claimId vote ->
             case model.status of
@@ -490,8 +480,12 @@ update msg model loggedIn =
             in
             case model.status of
                 Loaded claims profileSummaries pageInfo ->
+                    let
+                        updateShowClaimModal profileSummary =
+                            { profileSummary | showClaimModal = False }
+                    in
                     { model
-                        | status = Loaded claims profileSummaries pageInfo
+                        | status = Loaded claims (List.map updateShowClaimModal profileSummaries) pageInfo
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init

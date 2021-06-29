@@ -434,11 +434,13 @@
     },
     "index": {
       "created_by": "Creada por {{account_name}}",
-      "members": "Miembros",
+      "amount_in_circulation": "{{currency_name}} en circulación",
+      "minimum_balance": "Saldo mínimo permitido por usuario",
+      "members": "Usuarios activos",
       "claims": "Reivindicaciones",
-      "products": "Ofertas",
-      "orders": "Pedidos",
-      "transfers": "Transferencias"
+      "products": "Ventas de la tienda",
+      "orders": "Compras en la tienda",
+      "transfers": "Transacciónes"
     },
     "invite": {
       "title": "Invita a un amigo",
@@ -856,11 +858,14 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
+    "claimed_on": "Reclamado en {{claim_date}}",
     "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "approved_by": "Aprobado por",
     "disapproved_by": "Rechazado por",
+    "pending_vote": "Pendiente de Votación",
     "your_reward": "Su recompensa",
+    "analyst_reward": "Recompensa del Analista",
     "disapprove": "Desaprobar",
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
@@ -871,7 +876,8 @@
       "message_approve": "Realmente desea aprobar este reclamo?",
       "primary_disapprove": "sí, desaprobar",
       "primary_approve": "sí, aprobar",
-      "secondary": "no, cancelar"
+      "secondary": "no, cancelar",
+      "view_details": "Ver Detalles"
     }
   },
   "transfer_result": {
@@ -964,6 +970,7 @@
       "juridical_expiration_period": "Plazo de caducidad persona jurídica",
       "renovation_amount": "Monto de la renovación",
       "expiryopts_not_found": "No pudimos encontrar las opciones de vencimiento para su token",
+      "token_error": "Se produjo un error al obtener los datos del token",
       "seconds": "segundos"
     },
     "actions": {
