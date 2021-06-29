@@ -4,7 +4,7 @@ import Avatar
 import Expect
 import Fuzz
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 
 
 all : Test
@@ -20,7 +20,7 @@ all =
 convertingToAndFromString : Test
 convertingToAndFromString =
     describe "converting to and from string"
-        [ fuzz TestUtils.avatarFuzzer "converting to maybeString and comparing fromString should be the same" <|
+        [ fuzz Fuzz.avatar "converting to maybeString and comparing fromString should be the same" <|
             \fuzzAvatar ->
                 case Avatar.toMaybeString fuzzAvatar of
                     Nothing ->

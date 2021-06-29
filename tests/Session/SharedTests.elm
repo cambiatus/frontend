@@ -4,7 +4,7 @@ import Expect
 import Flags
 import Session.Shared as Shared
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 import Url
 
 
@@ -43,7 +43,7 @@ communityDomainOnProduction =
     in
     describe "when environment is production"
         [ describe "when on production"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -58,7 +58,7 @@ communityDomainOnProduction =
                         |> Expect.equal "somecommunity.cambiatus.io"
             ]
         , describe "when on demo"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".demo.cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -73,7 +73,7 @@ communityDomainOnProduction =
                         |> Expect.equal "somecommunity.demo.cambiatus.io"
             ]
         , describe "when on staging"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".staging.cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -108,7 +108,7 @@ communityDomainOnDevelopment =
     in
     describe "when environment is development"
         [ describe "when on production"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -123,7 +123,7 @@ communityDomainOnDevelopment =
                         |> Expect.equal "somecommunity.cambiatus.io"
             ]
         , describe "when on demo"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".demo.cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -138,7 +138,7 @@ communityDomainOnDevelopment =
                         |> Expect.equal "somecommunity.demo.cambiatus.io"
             ]
         , describe "when on staging"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".staging.cambiatus.io"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io"))
                 "returns url.host"
               <|
                 \urlFuzz ->
@@ -153,7 +153,7 @@ communityDomainOnDevelopment =
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         , describe "when on localhost"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".localhost"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".localhost"))
                 "replaces localhost for staging"
               <|
                 \urlFuzz ->
@@ -168,7 +168,7 @@ communityDomainOnDevelopment =
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         , describe "when on staging.localhost"
-            [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".staging.localhost"))
+            [ fuzz (Fuzz.cambiatusUrl (Just ".staging.localhost"))
                 "replaces staging.localhost for staging"
               <|
                 \urlFuzz ->

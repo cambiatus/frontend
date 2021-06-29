@@ -5,7 +5,7 @@ import Expect
 import Fuzz
 import Iso8601
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 import Time
 import Utils
 
@@ -24,7 +24,7 @@ all =
 
 posixDateTime : Test
 posixDateTime =
-    fuzz TestUtils.maybeDateTimeFuzzer "posixDateTime" <|
+    fuzz Fuzz.maybeDateTime "posixDateTime" <|
         \fuzzMaybeDateTime ->
             case fuzzMaybeDateTime of
                 Nothing ->

@@ -3,7 +3,7 @@ module Session.GuestTests exposing (all)
 import Expect
 import Session.Guest as Guest
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 import Url
 
 
@@ -22,7 +22,7 @@ invalidCommunityRedirectUrl =
     describe "invalidCommunityRedirectUrl"
         [ describe "when useSubdomain is `True`"
             [ describe "when on production"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io"))
                     "Returns welcome page"
                   <|
                     \urlFuzz ->
@@ -30,7 +30,7 @@ invalidCommunityRedirectUrl =
                             |> Expect.equal (Just "https://www.cambiatus.com/welcome")
                 ]
             , describe "when on demo"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".demo.cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io"))
                     "Returns demo welcome page"
                   <|
                     \urlFuzz ->
@@ -38,7 +38,7 @@ invalidCommunityRedirectUrl =
                             |> Expect.equal (Just "https://www.cambiatus.com/welcome-demo")
                 ]
             , describe "when on staging"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".staging.cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io"))
                     "Returns cambiatus community on staging"
                   <|
                     \urlFuzz ->
@@ -50,7 +50,7 @@ invalidCommunityRedirectUrl =
                                 )
                 ]
             , describe "when on localhost"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".localhost"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".localhost"))
                     "Returns cambiatus community on staging"
                   <|
                     \urlFuzz ->
@@ -64,7 +64,7 @@ invalidCommunityRedirectUrl =
             ]
         , describe "when useSubdomain is `False`"
             [ describe "when on production"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io"))
                     "doesn't redirect"
                   <|
                     \urlFuzz ->
@@ -72,7 +72,7 @@ invalidCommunityRedirectUrl =
                             |> Expect.equal Nothing
                 ]
             , describe "when on demo"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".demo.cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io"))
                     "doesn't redirect"
                   <|
                     \urlFuzz ->
@@ -80,7 +80,7 @@ invalidCommunityRedirectUrl =
                             |> Expect.equal Nothing
                 ]
             , describe "when on staging"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".staging.cambiatus.io"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io"))
                     "doesn't redirect"
                   <|
                     \urlFuzz ->
@@ -88,7 +88,7 @@ invalidCommunityRedirectUrl =
                             |> Expect.equal Nothing
                 ]
             , describe "when on localhost"
-                [ fuzz (TestUtils.cambiatusUrlFuzzer (Just ".localhost"))
+                [ fuzz (Fuzz.cambiatusUrl (Just ".localhost"))
                     "doesn't redirect"
                   <|
                     \urlFuzz ->

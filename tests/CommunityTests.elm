@@ -9,7 +9,7 @@ import Graphql.Http.GraphqlError
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 
 
 all : Test
@@ -25,7 +25,7 @@ all =
 createCommunityData : Test
 createCommunityData =
     describe "CreateCommunityData"
-        [ fuzz TestUtils.createCommunityDataInputFuzzer "CreateCommunityDataInput creates correct CreateCommunityData" <|
+        [ fuzz Fuzz.createCommunityDataInput "CreateCommunityDataInput creates correct CreateCommunityData" <|
             \fuzzCreateCommunityDataInput ->
                 { cmmAsset = { amount = 0, symbol = fuzzCreateCommunityDataInput.symbol }
                 , creator = fuzzCreateCommunityDataInput.accountName
@@ -42,7 +42,7 @@ createCommunityData =
                 , website = fuzzCreateCommunityDataInput.website
                 }
                     |> Expect.equal (Community.createCommunityData fuzzCreateCommunityDataInput)
-        , fuzz TestUtils.createCommunityDataInputFuzzer "Encoding and decoding is a no-op" <|
+        , fuzz Fuzz.createCommunityDataInput "Encoding and decoding is a no-op" <|
             \fuzzCreateCommunityDataInput ->
                 fuzzCreateCommunityDataInput
                     |> Community.createCommunityData

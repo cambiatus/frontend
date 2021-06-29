@@ -1,12 +1,9 @@
 module Kyc.CostaRica.NiteTests exposing (all)
 
 import Expect
-import Fuzz
 import Kyc.CostaRica.Nite
-import Random
-import Shrink
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 
 
 all : Test
@@ -17,7 +14,7 @@ all =
 isValid : Test
 isValid =
     describe "isValid"
-        [ fuzz niteFuzzer "Accepts valid `String`s" <|
+        [ fuzz Fuzz.nite "Accepts valid `String`s" <|
             \niteFuzz ->
                 Kyc.CostaRica.Nite.isValid niteFuzz
                     |> Expect.true "Expected nite to be valid"
@@ -44,19 +41,3 @@ isValid =
                         |> Expect.false "Expected to only contain valid characters"
             ]
         ]
-
-
-niteFuzzer : Fuzz.Fuzzer String
-niteFuzzer =
-    Fuzz.custom niteGenerator Shrink.string
-
-
-niteGenerator : Random.Generator String
-niteGenerator =
-    let
-        tailDigits =
-            Random.list 9 TestUtils.digitGenerator
-                |> Random.map String.concat
-    in
-    TestUtils.nonZeroDigitGenerator
-        |> TestUtils.appendGenerators tailDigits

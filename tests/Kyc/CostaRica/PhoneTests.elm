@@ -1,13 +1,9 @@
 module Kyc.CostaRica.PhoneTests exposing (all)
 
 import Expect
-import Fuzz
 import Kyc.CostaRica.Phone
-import Random
-import Random.Extra
-import Shrink
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 
 
 all : Test
@@ -19,7 +15,7 @@ all =
 isValid : Test
 isValid =
     describe "isValid"
-        [ fuzz phoneFuzzer "Accepts valid `String`s" <|
+        [ fuzz Fuzz.phone "Accepts valid `String`s" <|
             \phoneFuzz ->
                 Kyc.CostaRica.Phone.isValid phoneFuzz
                     |> Expect.true "Expected dimex to be valid"
@@ -46,16 +42,3 @@ isValid =
                         |> Expect.false "Expected to only contain valid characters"
             ]
         ]
-
-
-phoneFuzzer : Fuzz.Fuzzer String
-phoneFuzzer =
-    Fuzz.custom phoneGenerator Shrink.string
-
-
-phoneGenerator : Random.Generator String
-phoneGenerator =
-    TestUtils.nonZeroDigitGenerator
-        |> TestUtils.appendGenerators (Random.list 3 TestUtils.digitGenerator |> Random.map String.concat)
-        |> TestUtils.appendGenerators (Random.Extra.choice "" "-")
-        |> TestUtils.appendGenerators (Random.list 4 TestUtils.digitGenerator |> Random.map String.concat)

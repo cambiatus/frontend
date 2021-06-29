@@ -3,7 +3,7 @@ module TokenTests exposing (all)
 import Expect
 import Json.Decode as Decode
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 import Token
 
 
@@ -23,7 +23,7 @@ all =
 updateTokenData : Test
 updateTokenData =
     describe "UpdateTokenData"
-        [ fuzz TestUtils.updateTokenDataFuzzer "encoding and decoding is a no-op" <|
+        [ fuzz Fuzz.updateTokenData "encoding and decoding is a no-op" <|
             \fuzzUpdateTokenData ->
                 fuzzUpdateTokenData
                     |> Token.encodeUpdateTokenData
@@ -39,7 +39,7 @@ updateTokenData =
 createTokenData : Test
 createTokenData =
     describe "CreateTokenData"
-        [ fuzz TestUtils.createTokenDataFuzzer "encoding and decoding is a no-op" <|
+        [ fuzz Fuzz.createTokenData "encoding and decoding is a no-op" <|
             \fuzzCreateTokenData ->
                 fuzzCreateTokenData
                     |> Token.encodeCreateTokenData
@@ -55,7 +55,7 @@ createTokenData =
 expiryOptsData : Test
 expiryOptsData =
     describe "ExpiryOptsData"
-        [ fuzz TestUtils.expiryOptsDataFuzzer "encoding and decoding is a no-op" <|
+        [ fuzz Fuzz.expiryOptsData "encoding and decoding is a no-op" <|
             \fuzzExpiryOptsData ->
                 fuzzExpiryOptsData
                     |> Token.encodeExpiryOpts

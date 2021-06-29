@@ -3,7 +3,7 @@ module ActionTests exposing (all)
 import Action
 import Expect
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 import Time
 import Utils
 
@@ -22,7 +22,7 @@ all =
 
 isPastDeadline : Test
 isPastDeadline =
-    fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "isPastDeadline" <|
+    fuzz2 Fuzz.action Fuzz.time "isPastDeadline" <|
         \fuzzAction fuzzTime ->
             case fuzzAction.deadline of
                 Just _ ->
@@ -40,7 +40,7 @@ isPastDeadline =
 
 isClosed : Test
 isClosed =
-    fuzz2 TestUtils.actionFuzzer TestUtils.timeFuzzer "isClosed" <|
+    fuzz2 Fuzz.action Fuzz.time "isClosed" <|
         \fuzzAction fuzzTime ->
             Action.isPastDeadline fuzzAction fuzzTime
                 || (fuzzAction.usages > 0 && fuzzAction.usagesLeft == 0)

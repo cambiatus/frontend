@@ -1,12 +1,9 @@
 module Kyc.CostaRica.DimexTests exposing (all)
 
 import Expect
-import Fuzz
 import Kyc.CostaRica.Dimex
-import Random
-import Shrink
 import Test exposing (..)
-import TestUtils
+import TestHelpers.Fuzz as Fuzz
 
 
 all : Test
@@ -18,7 +15,7 @@ all =
 isValid : Test
 isValid =
     describe "isValid"
-        [ fuzz dimexFuzzer "Accepts valid `String`s" <|
+        [ fuzz Fuzz.dimex "Accepts valid `String`s" <|
             \dimexFuzz ->
                 Kyc.CostaRica.Dimex.isValid dimexFuzz
                     |> Expect.true "Expected dimex to be valid"
@@ -45,20 +42,3 @@ isValid =
                         |> Expect.false "Expected to only contain valid characters"
             ]
         ]
-
-
-dimexFuzzer : Fuzz.Fuzzer String
-dimexFuzzer =
-    Fuzz.custom dimexGenerator Shrink.string
-
-
-dimexGenerator : Random.Generator String
-dimexGenerator =
-    let
-        tailDigits =
-            TestUtils.digitGenerator
-                |> TestUtils.randomListWithRandomLength 10 11
-                |> Random.map String.concat
-    in
-    TestUtils.nonZeroDigitGenerator
-        |> TestUtils.appendGenerators tailDigits
