@@ -32,6 +32,31 @@ import Time
 import Url
 
 
+capFloatWithSymbol : Eos.Symbol -> Float -> Float
+capFloatWithSymbol symbol value =
+    let
+        maxLength =
+            String.fromFloat value
+                |> String.split "."
+                |> (\parts ->
+                        case List.head parts of
+                            Nothing ->
+                                String.fromFloat value
+
+                            Just firstPart ->
+                                firstPart
+                   )
+                |> String.length
+                -- Add separator
+                |> (+) 1
+                |> (+) (Eos.getSymbolPrecision symbol)
+    in
+    String.fromFloat value
+        |> String.left maxLength
+        |> String.toFloat
+        |> Maybe.withDefault value
+
+
 
 -- RANDOM GENERATORS
 
@@ -284,13 +309,20 @@ createCommunityDataInputGenerator =
         |> withRandom stringGenerator
         |> withRandom stringGenerator
         |> withRandom (cambiatusUrlGenerator Nothing |> Random.map Url.toString)
-        |> withRandom (Random.float 0 10)
-        |> withRandom (Random.float 0 10)
+        |> withRandom (Random.float 0 1000)
+        |> withRandom (Random.float 0 1000)
         |> withRandom Random.Extra.bool
         |> withRandom Random.Extra.bool
         |> withRandom Random.Extra.bool
         |> withRandom Random.Extra.bool
         |> withRandom (urlGenerator [] |> Random.map Url.toString)
+        |> Random.map
+            (\input ->
+                { input
+                    | invitedReward = capFloatWithSymbol input.symbol input.invitedReward
+                    , inviterReward = capFloatWithSymbol input.symbol input.inviterReward
+                }
+            )
 
 
 

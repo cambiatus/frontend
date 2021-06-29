@@ -384,8 +384,8 @@ createCommunityDataDecoder =
         |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
-        |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
+        |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
         |> required "auto_invite" Eos.eosBoolDecoder
         |> required "website" Decode.string
