@@ -3,7 +3,9 @@ module TestUtils exposing
     , appendGenerators
     , avatarFuzzer
     , cambiatusUrlFuzzer
+    , claimFuzzer
     , digitGenerator
+    , nameFuzzer
     , nonZeroDigitGenerator
     , randomListWithRandomLength
     , timeFuzzer
@@ -13,6 +15,7 @@ import Action
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar
+import Claim
 import Eos
 import Eos.Account as Eos
 import Fuzz
@@ -240,6 +243,35 @@ actionGenerator =
         |> withRandom (maybeGenerate (Random.int 0 Random.maxInt))
 
 
+claimGenerator : Random.Generator Claim.Model
+claimGenerator =
+    let
+        checkGenerator : Random.Generator Claim.Check
+        checkGenerator =
+            Random.constant Claim.Check
+                |> withRandom Random.Extra.bool
+                |> withRandom minimalProfileGenerator
+    in
+    Random.constant Claim.Model
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom (Random.uniform Claim.Approved [ Claim.Rejected, Claim.Pending ])
+        |> withRandom minimalProfileGenerator
+        |> withRandom actionGenerator
+        |> withRandom (randomListWithRandomLength 3 20 checkGenerator)
+        |> withRandom dateTimeGenerator
+        |> withRandom (maybeGenerate stringGenerator)
+        |> withRandom (maybeGenerate stringGenerator)
+        |> Random.map
+            (\claim ->
+                { claim
+                    | checks =
+                        List.map2 (\check validator -> { check | validator = validator })
+                            claim.checks
+                            claim.action.validators
+                }
+            )
+
+
 
 -- SHRINKERS
 
@@ -274,6 +306,11 @@ avatarShrinker =
         (Shrink.maybe Shrink.string)
 
 
+nameShrinker : Shrink.Shrinker Eos.Name
+nameShrinker =
+    Shrink.convert Eos.stringToName Eos.nameToString Shrink.string
+
+
 
 -- FUZZERS
 
@@ -296,3 +333,13 @@ timeFuzzer =
 avatarFuzzer : Fuzz.Fuzzer Avatar.Avatar
 avatarFuzzer =
     Fuzz.custom avatarGenerator avatarShrinker
+
+
+claimFuzzer : Fuzz.Fuzzer Claim.Model
+claimFuzzer =
+    Fuzz.custom claimGenerator Shrink.noShrink
+
+
+nameFuzzer : Fuzz.Fuzzer Eos.Name
+nameFuzzer =
+    Fuzz.custom nameGenerator nameShrinker
