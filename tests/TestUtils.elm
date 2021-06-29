@@ -5,11 +5,14 @@ module TestUtils exposing
     , cambiatusUrlFuzzer
     , claimFuzzer
     , createCommunityDataInputFuzzer
+    , createTokenDataFuzzer
     , digitGenerator
+    , expiryOptsDataFuzzer
     , nameFuzzer
     , nonZeroDigitGenerator
     , randomListWithRandomLength
     , timeFuzzer
+    , updateTokenDataFuzzer
     )
 
 import Action
@@ -29,6 +32,7 @@ import Random.Extra
 import Random.String
 import Shrink
 import Time
+import Token
 import Url
 
 
@@ -325,6 +329,52 @@ createCommunityDataInputGenerator =
             )
 
 
+updateTokenDataGenerator : Random.Generator Token.UpdateTokenData
+updateTokenDataGenerator =
+    Random.constant
+        (\maxSupply minBalance symbol ->
+            { maxSupply = { amount = capFloatWithSymbol symbol maxSupply, symbol = symbol }
+            , minBalance = { amount = capFloatWithSymbol symbol minBalance, symbol = symbol }
+            }
+        )
+        |> withRandom (Random.float 0 1000)
+        |> withRandom (Random.float -1000 1000)
+        |> withRandom symbolGenerator
+
+
+createTokenDataGenerator : Random.Generator Token.CreateTokenData
+createTokenDataGenerator =
+    Random.constant
+        (\creator maxSupply minBalance symbol tokenType ->
+            { creator = creator
+            , maxSupply = { amount = capFloatWithSymbol symbol maxSupply, symbol = symbol }
+            , minBalance = { amount = capFloatWithSymbol symbol minBalance, symbol = symbol }
+            , tokenType = tokenType
+            }
+        )
+        |> withRandom nameGenerator
+        |> withRandom (Random.float 0 1000)
+        |> withRandom (Random.float -1000 1000)
+        |> withRandom symbolGenerator
+        |> withRandom (Random.Extra.choice Token.Mcc Token.Expiry)
+
+
+expiryOptsDataGenerator : Random.Generator Token.ExpiryOptsData
+expiryOptsDataGenerator =
+    Random.constant
+        (\symbol naturalExpiration juridicalExpiration renovationAmount ->
+            { currency = symbol
+            , naturalExpirationPeriod = naturalExpiration
+            , juridicalExpirationPeriod = juridicalExpiration
+            , renovationAmount = { amount = capFloatWithSymbol symbol renovationAmount, symbol = symbol }
+            }
+        )
+        |> withRandom symbolGenerator
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom (Random.int 0 Random.maxInt)
+        |> withRandom (Random.float 0 1000)
+
+
 
 -- SHRINKERS
 
@@ -401,3 +451,18 @@ nameFuzzer =
 createCommunityDataInputFuzzer : Fuzz.Fuzzer Community.CreateCommunityDataInput
 createCommunityDataInputFuzzer =
     Fuzz.custom createCommunityDataInputGenerator Shrink.noShrink
+
+
+updateTokenDataFuzzer : Fuzz.Fuzzer Token.UpdateTokenData
+updateTokenDataFuzzer =
+    Fuzz.custom updateTokenDataGenerator Shrink.noShrink
+
+
+createTokenDataFuzzer : Fuzz.Fuzzer Token.CreateTokenData
+createTokenDataFuzzer =
+    Fuzz.custom createTokenDataGenerator Shrink.noShrink
+
+
+expiryOptsDataFuzzer : Fuzz.Fuzzer Token.ExpiryOptsData
+expiryOptsDataFuzzer =
+    Fuzz.custom expiryOptsDataGenerator Shrink.noShrink
