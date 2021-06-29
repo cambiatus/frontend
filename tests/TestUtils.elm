@@ -4,6 +4,7 @@ module TestUtils exposing
     , avatarFuzzer
     , cambiatusUrlFuzzer
     , claimFuzzer
+    , createCommunityDataInputFuzzer
     , digitGenerator
     , nameFuzzer
     , nonZeroDigitGenerator
@@ -16,6 +17,7 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar
 import Claim
+import Community
 import Eos
 import Eos.Account as Eos
 import Fuzz
@@ -70,7 +72,7 @@ appendGenerators secondGenerator firstGenerator =
 
 stringGenerator : Random.Generator String
 stringGenerator =
-    Random.String.string 255 Random.Char.english
+    Random.String.string 15 Random.Char.english
 
 
 timeGenerator : Random.Generator Time.Posix
@@ -176,6 +178,7 @@ cambiatusUrlGenerator maybeAuthority =
 symbolGenerator : Random.Generator Eos.Symbol
 symbolGenerator =
     digitGenerator
+        |> appendGenerators (Random.constant ",")
         |> appendGenerators (stringWithRandomLengthGenerator Eos.minSymbolLength Eos.maxSymbolLength)
         |> Random.map (Eos.symbolFromString >> Maybe.withDefault Eos.cambiatusSymbol)
 
@@ -272,6 +275,24 @@ claimGenerator =
             )
 
 
+createCommunityDataInputGenerator : Random.Generator Community.CreateCommunityDataInput
+createCommunityDataInputGenerator =
+    Random.constant Community.CreateCommunityDataInput
+        |> withRandom nameGenerator
+        |> withRandom symbolGenerator
+        |> withRandom (urlGenerator [] |> Random.map Url.toString)
+        |> withRandom stringGenerator
+        |> withRandom stringGenerator
+        |> withRandom (cambiatusUrlGenerator Nothing |> Random.map Url.toString)
+        |> withRandom (Random.float 0 10)
+        |> withRandom (Random.float 0 10)
+        |> withRandom Random.Extra.bool
+        |> withRandom Random.Extra.bool
+        |> withRandom Random.Extra.bool
+        |> withRandom Random.Extra.bool
+        |> withRandom (urlGenerator [] |> Random.map Url.toString)
+
+
 
 -- SHRINKERS
 
@@ -343,3 +364,8 @@ claimFuzzer =
 nameFuzzer : Fuzz.Fuzzer Eos.Name
 nameFuzzer =
     Fuzz.custom nameGenerator nameShrinker
+
+
+createCommunityDataInputFuzzer : Fuzz.Fuzzer Community.CreateCommunityDataInput
+createCommunityDataInputFuzzer =
+    Fuzz.custom createCommunityDataInputGenerator Shrink.noShrink

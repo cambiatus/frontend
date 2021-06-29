@@ -2,6 +2,7 @@ module Community exposing
     ( Balance
     , CommunityPreview
     , CreateCommunityData
+    , CreateCommunityDataInput
     , Invite
     , Metadata
     , Model
@@ -312,7 +313,7 @@ type alias CreateCommunityData =
     }
 
 
-createCommunityData :
+type alias CreateCommunityDataInput =
     { accountName : Eos.Name
     , symbol : Eos.Symbol
     , logoUrl : String
@@ -327,7 +328,9 @@ createCommunityData :
     , hasAutoInvite : Bool
     , website : String
     }
-    -> CreateCommunityData
+
+
+createCommunityData : CreateCommunityDataInput -> CreateCommunityData
 createCommunityData params =
     { cmmAsset =
         { amount = 0
@@ -362,13 +365,13 @@ encodeCreateCommunityData c =
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
+        , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
-        , ( "subdomain", Encode.string c.subdomain )
         , ( "website", Encode.string c.website )
         ]
 
