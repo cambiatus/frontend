@@ -1,5 +1,6 @@
 module Claim exposing
-    ( ClaimId
+    ( Check
+    , ClaimId
     , ClaimProfileSummaries
     , ClaimStatus(..)
     , ModalStatus(..)

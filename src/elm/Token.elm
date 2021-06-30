@@ -8,6 +8,7 @@ module Token exposing
     , encodeCreateTokenData
     , encodeExpiryOpts
     , encodeUpdateTokenData
+    , expiryOptsDataDecoder
     , getExpiryOpts
     , getToken
     , tokenTypeToString

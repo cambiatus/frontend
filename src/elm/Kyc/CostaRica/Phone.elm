@@ -8,7 +8,7 @@ Here we validate only digits without a country code: XXXX-XXXX or XXXXXXXX.
 -}
 validPhone : Regex
 validPhone =
-    Regex.fromString "[1-9]{1}\\d{3}-?\\d{4}"
+    Regex.fromString "^[1-9]{1}\\d{3}-?\\d{4}$"
         |> Maybe.withDefault Regex.never
 
 

@@ -114,7 +114,7 @@ assetToString asset =
 
 encodeAsset : Asset -> Value
 encodeAsset asset =
-    String.fromFloat asset.amount
+    Utils.formatFloat asset.amount (getSymbolPrecision asset.symbol) False
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
         |> Encode.string
@@ -236,7 +236,7 @@ symbolToString (Symbol symbol precision) =
 
 formatSymbolAmount : Symbol -> Float -> String
 formatSymbolAmount (Symbol _ precision) amount =
-    Utils.formatFloat amount precision
+    Utils.formatFloat amount precision True
 
 
 symbolToSymbolCodeString : Symbol -> String

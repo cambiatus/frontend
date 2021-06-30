@@ -2,6 +2,7 @@ module Community exposing
     ( Balance
     , CommunityPreview
     , CreateCommunityData
+    , CreateCommunityDataInput
     , Invite
     , Metadata
     , Model
@@ -309,7 +310,7 @@ type alias CreateCommunityData =
     }
 
 
-createCommunityData :
+type alias CreateCommunityDataInput =
     { accountName : Eos.Name
     , symbol : Eos.Symbol
     , logoUrl : String
@@ -324,7 +325,9 @@ createCommunityData :
     , hasAutoInvite : Bool
     , website : String
     }
-    -> CreateCommunityData
+
+
+createCommunityData : CreateCommunityDataInput -> CreateCommunityData
 createCommunityData params =
     { cmmAsset =
         { amount = 0
@@ -359,13 +362,13 @@ encodeCreateCommunityData c =
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
         , ( "description", Encode.string c.description )
+        , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
         , ( "has_objectives", Eos.encodeEosBool c.hasObjectives )
         , ( "has_shop", Eos.encodeEosBool c.hasShop )
         , ( "has_kyc", Eos.encodeEosBool c.hasKyc )
         , ( "auto_invite", Eos.encodeEosBool c.hasAutoInvite )
-        , ( "subdomain", Encode.string c.subdomain )
         , ( "website", Encode.string c.website )
         ]
 
@@ -381,8 +384,8 @@ createCommunityDataDecoder =
         |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
-        |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_shop" Eos.eosBoolDecoder
+        |> required "has_objectives" Eos.eosBoolDecoder
         |> required "has_kyc" Eos.eosBoolDecoder
         |> required "auto_invite" Eos.eosBoolDecoder
         |> required "website" Decode.string
