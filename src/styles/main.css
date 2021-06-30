@@ -260,7 +260,16 @@ textarea.input {
 
 @screen md {
   .modal-content {
-    @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform -translate-x-1/2 mx-auto rounded-lg;
+    @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform mx-auto rounded-lg;
+    /* Using -translate-y-1/2 and -translate-x-1/2 doesn't work because they
+    overwrite each other, so we just set the variables tailwind uses */
+    --tw-translate-x: -50%;
+  }
+
+  .modal-content-lg,
+  .modal-content-full {
+    @apply top-1/2;
+    --tw-translate-y: -50%;
   }
 
   .modal-body-lg {

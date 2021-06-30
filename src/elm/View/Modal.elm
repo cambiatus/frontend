@@ -177,7 +177,7 @@ viewModalDetails options =
                     "modal-content"
 
                 Large ->
-                    "modal-content"
+                    "modal-content modal-content-lg"
 
                 FullScreen ->
                     "modal-content modal-content-full"
