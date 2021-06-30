@@ -36,36 +36,53 @@ posixDateTime maybedt =
 {-| Format a float to separate thousands, and use `,` as a separator for
 decimals
 -}
-formatFloat : Float -> Int -> String
-formatFloat number decimalCases =
+formatFloat : Float -> Int -> Bool -> String
+formatFloat number decimalCases useSeparator =
     let
         addThousandsSeparator : String -> String
         addThousandsSeparator floatWithoutSeparator =
-            let
-                sign =
-                    String.filter (not << Char.isDigit) floatWithoutSeparator
-            in
-            floatWithoutSeparator
-                |> String.filter Char.isDigit
-                |> String.foldr
-                    (\currChar ( currCount, currString ) ->
-                        if currCount == 3 then
-                            ( 1, currChar :: '.' :: currString )
+            if not useSeparator then
+                floatWithoutSeparator
 
-                        else
-                            ( currCount + 1, currChar :: currString )
-                    )
-                    ( 0, [] )
-                |> Tuple.second
-                |> String.fromList
-                |> (\withThousands -> sign ++ withThousands)
+            else
+                let
+                    sign =
+                        String.filter (not << Char.isDigit) floatWithoutSeparator
+                in
+                floatWithoutSeparator
+                    |> String.filter Char.isDigit
+                    |> String.foldr
+                        (\currChar ( currCount, currString ) ->
+                            if currCount == 3 then
+                                ( 1, currChar :: '.' :: currString )
+
+                            else
+                                ( currCount + 1, currChar :: currString )
+                        )
+                        ( 0, [] )
+                    |> Tuple.second
+                    |> String.fromList
+                    |> (\withThousands -> sign ++ withThousands)
+
+        newSeparator =
+            if useSeparator then
+                ","
+
+            else
+                "."
     in
     case String.fromFloat number |> String.split "." of
         [] ->
             String.fromFloat number
 
         [ withoutSeparator ] ->
-            addThousandsSeparator withoutSeparator
+            if decimalCases <= 0 then
+                addThousandsSeparator withoutSeparator
+
+            else
+                addThousandsSeparator withoutSeparator
+                    ++ newSeparator
+                    ++ String.repeat decimalCases "0"
 
         beforeSeparator :: afterSeparator :: _ ->
             if decimalCases <= 0 then
@@ -74,18 +91,18 @@ formatFloat number decimalCases =
             else
                 let
                     paddedSeparator =
-                        String.left decimalCases afterSeparator ++ String.repeat (decimalCases - String.length afterSeparator) "0"
+                        String.left decimalCases afterSeparator
+                            ++ String.repeat
+                                (max 0 (decimalCases - String.length afterSeparator))
+                                "0"
                 in
-                String.join "," [ addThousandsSeparator beforeSeparator, paddedSeparator ]
+                String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
 
 
 decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
-        |> Decode.andThen
-            (\ms ->
-                Decode.succeed <| Time.millisToPosix ms
-            )
+        |> Decode.map Time.millisToPosix
 
 
 decodeEnterKeyDown : Decode.Decoder Bool
@@ -95,10 +112,7 @@ decodeEnterKeyDown =
             code == "Enter"
     in
     Decode.field "key" Decode.string
-        |> Decode.andThen
-            (\cd ->
-                Decode.succeed <| isEnter cd
-            )
+        |> Decode.map isEnter
 
 
 {-| Click event listener that stops propagation, but doesn't prevent default

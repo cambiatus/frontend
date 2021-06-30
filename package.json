@@ -14,19 +14,24 @@
     "make": "elm make",
     "repl": "elm repl",
     "reactor": "elm reactor",
-    "test": "npx elm-test",
+    "test": "elm-test",
     "generate-graphql": "npx elm-graphql https://staging.cambiatus.io/api/graph --base Cambiatus --output src/elm",
     "postinstall": "cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public"
   },
   "husky": {
     "hooks": {
-      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review"
+      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review && echo \"Checking Elm with elm-test\" && yarn test"
     }
   },
   "standard": {
-    "plugins": ["html"],
+    "plugins": [
+      "html"
+    ],
     "parser": "babel-eslint",
-    "ignore": ["docker/env-config.js", "scripts/"]
+    "ignore": [
+      "docker/env-config.js",
+      "scripts/"
+    ]
   },
   "devDependencies": {
     "@babel/cli": "7.2.3",
@@ -82,7 +87,7 @@
     "elm-asset-webpack-loader": "^1.1.1",
     "elm-format": "^0.8.3",
     "elm-review": "^2.3.2",
-    "elm-test": "^0.19.1",
+    "elm-test": "^0.19.1-revision7",
     "elm-webpack-loader": "^6.0.1",
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",

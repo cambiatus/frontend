@@ -26,6 +26,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: "Check elm-test"
+        run: yarn test
+
       - name: Build asset
         run: yarn build
 

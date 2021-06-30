@@ -7,6 +7,7 @@ module Session.Guest exposing
     , addAfterLoginRedirect
     , init
     , initLoggingIn
+    , invalidCommunityRedirectUrl
     , maybeInitWith
     , msgToString
     , subscriptions
@@ -327,17 +328,6 @@ update msg ({ shared } as model) =
     let
         currentUrl =
             shared.url
-
-        invalidCommunityRedirectUrl =
-            if String.contains "localhost:" (Url.toString currentUrl) && shared.useSubdomain then
-                { currentUrl | host = "cambiatus.staging.localhost" }
-                    |> Url.toString
-
-            else if String.endsWith "demo.cambiatus.io" currentUrl.host then
-                "https://www.cambiatus.com/welcome-demo"
-
-            else
-                "https://www.cambiatus.com/welcome"
     in
     case msg of
         CompletedLoadTranslation lang (Ok transl) ->
@@ -383,22 +373,24 @@ update msg ({ shared } as model) =
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
                 |> UR.addCmd
-                    (if shared.useSubdomain then
-                        Browser.Navigation.load invalidCommunityRedirectUrl
+                    (case invalidCommunityRedirectUrl currentUrl shared.useSubdomain of
+                        Nothing ->
+                            Cmd.none
 
-                     else
-                        Cmd.none
+                        Just redirectUrl ->
+                            Browser.Navigation.load redirectUrl
                     )
 
         CompletedLoadCommunityPreview (RemoteData.Failure err) ->
             UR.init { model | community = RemoteData.Failure err }
                 |> UR.logGraphqlError msg err
                 |> UR.addCmd
-                    (if shared.useSubdomain then
-                        Browser.Navigation.load invalidCommunityRedirectUrl
+                    (case invalidCommunityRedirectUrl currentUrl shared.useSubdomain of
+                        Nothing ->
+                            Cmd.none
 
-                     else
-                        Cmd.none
+                        Just redirectUrl ->
+                            Browser.Navigation.load redirectUrl
                     )
 
         CompletedLoadCommunityPreview RemoteData.NotAsked ->
@@ -410,6 +402,29 @@ update msg ({ shared } as model) =
         GotFeedbackMsg subMsg ->
             { model | feedback = Feedback.update subMsg model.feedback }
                 |> UR.init
+
+
+invalidCommunityRedirectUrl : Url.Url -> Bool -> Maybe String
+invalidCommunityRedirectUrl currentUrl useSubdomain =
+    if useSubdomain then
+        if String.contains "localhost:" (Url.toString currentUrl) then
+            { currentUrl | host = "cambiatus.staging.localhost" }
+                |> Url.toString
+                |> Just
+
+        else if String.endsWith "staging.cambiatus.io" currentUrl.host then
+            { currentUrl | host = "cambiatus.staging.cambiatus.io" }
+                |> Url.toString
+                |> Just
+
+        else if String.endsWith "demo.cambiatus.io" currentUrl.host then
+            Just "https://www.cambiatus.com/welcome-demo"
+
+        else
+            Just "https://www.cambiatus.com/welcome"
+
+    else
+        Nothing
 
 
 

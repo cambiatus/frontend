@@ -2,8 +2,10 @@ module Action exposing
     ( Action
     , ActionFeedback(..)
     , ClaimingActionStatus(..)
+    , Community
     , Model
     , Msg(..)
+    , Objective
     , Proof(..)
     , isClosed
     , isPastDeadline

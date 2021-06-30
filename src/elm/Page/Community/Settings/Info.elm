@@ -11,6 +11,7 @@ module Page.Community.Settings.Info exposing
 
 import Api
 import Api.Graphql
+import Browser.Dom
 import Community
 import Eos
 import Eos.Account as Eos
@@ -91,7 +92,8 @@ init loggedIn =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = Ignored
+    | CompletedLoadCommunity Community.Model
     | ClosedAuthModal
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
@@ -117,6 +119,9 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared } as loggedIn) =
     case msg of
+        Ignored ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             { model
                 | logo = RemoteData.Success community.logo
@@ -254,7 +259,39 @@ update msg model ({ shared } as loggedIn) =
                             )
 
             else
-                UR.init model
+                let
+                    invalidModel =
+                        validateModel maybeCommunity model
+
+                    focusErrorField =
+                        case
+                            List.filterMap
+                                (\( errorList, errorField ) ->
+                                    if errorList model |> List.isEmpty then
+                                        Nothing
+
+                                    else
+                                        Just errorField
+                                )
+                                [ ( .nameErrors, NameField )
+                                , ( .descriptionErrors, DescriptionField )
+                                , ( .websiteErrors, WebsiteField )
+                                , ( .subdomainErrors, SubdomainField )
+                                , ( .inviterRewardErrors, InviterRewardField )
+                                , ( .invitedRewardErrors, InvitedRewardField )
+                                ]
+                                |> List.head
+                        of
+                            Nothing ->
+                                Cmd.none
+
+                            Just errorField ->
+                                Browser.Dom.focus (fieldId errorField)
+                                    |> Task.attempt (\_ -> Ignored)
+                in
+                invalidModel
+                    |> UR.init
+                    |> UR.addCmd focusErrorField
 
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case
@@ -469,6 +506,8 @@ type Field
     | DescriptionField
     | WebsiteField
     | SubdomainField
+    | InviterRewardField
+    | InvitedRewardField
 
 
 error : Field -> String -> String
@@ -487,8 +526,36 @@ error field key =
 
                 SubdomainField ->
                     "url"
+
+                InviterRewardField ->
+                    "inviter_reward"
+
+                InvitedRewardField ->
+                    "invited_reward"
     in
     String.join "." [ "settings.community_info.errors", fieldString, key ]
+
+
+fieldId : Field -> String
+fieldId field =
+    case field of
+        NameField ->
+            "community_name_input"
+
+        DescriptionField ->
+            "community_description_input"
+
+        WebsiteField ->
+            "community_website_input"
+
+        SubdomainField ->
+            "community_url_input"
+
+        InviterRewardField ->
+            "inviter_reward_input"
+
+        InvitedRewardField ->
+            "invited_reward_input"
 
 
 isModelValid : Maybe Community.Model -> Model -> Bool
@@ -753,7 +820,7 @@ viewName shared model =
     in
     Input.init
         { label = t "settings.community_info.fields.name"
-        , id = "community_name_input"
+        , id = fieldId NameField
         , onInput = EnteredName
         , disabled = model.isLoading
         , value = model.nameInput
@@ -776,7 +843,7 @@ viewDescription shared model =
     in
     Input.init
         { label = t "settings.community_info.fields.description"
-        , id = "community_description_input"
+        , id = fieldId DescriptionField
         , onInput = EnteredDescription
         , disabled = model.isLoading
         , value = model.descriptionInput
@@ -788,6 +855,7 @@ viewDescription shared model =
         , translators = shared.translators
         }
         |> Input.withInputType Input.TextArea
+        |> Input.withAttrs [ required True ]
         |> Input.toHtml
 
 
@@ -799,7 +867,7 @@ viewWebsite shared model =
     in
     Input.init
         { label = t "settings.community_info.fields.website"
-        , id = "community_website_input"
+        , id = fieldId WebsiteField
         , onInput = EnteredWebsite
         , disabled = model.isLoading
         , value = model.websiteInput
@@ -841,7 +909,7 @@ viewSubdomain shared model =
     div [ class "border-b border-gray-500 pb-4" ]
         [ Input.init
             { label = t "settings.community_info.url.title"
-            , id = "community_url_input"
+            , id = fieldId SubdomainField
             , onInput = EnteredSubdomain
             , disabled = model.isLoading
             , value = model.subdomainInput
@@ -904,7 +972,7 @@ viewInviterReward { translators } symbol model =
     in
     Input.init
         { label = t "community.create.labels.inviter_reward"
-        , id = "inviter_reward_input"
+        , id = fieldId InviterRewardField
         , onInput = EnteredInviterReward
         , disabled = model.isLoading
         , value = model.inviterRewardInput
@@ -928,7 +996,7 @@ viewInvitedReward { translators } symbol model =
     in
     Input.init
         { label = t "community.create.labels.invited_reward"
-        , id = "invited_reward_input"
+        , id = fieldId InvitedRewardField
         , onInput = EnteredInvitedReward
         , disabled = model.isLoading
         , value = model.invitedRewardInput
@@ -994,6 +1062,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
