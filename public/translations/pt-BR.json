@@ -844,8 +844,8 @@
         "pending_review": "Sob análise (meu voto está pendente)"
       },
       "sort": {
-        "asc": "Ordenação ASC",
-        "desc": "Ordenação DESC"
+        "asc": "ASC",
+        "desc": "DESC"
       }
     }
   },

@@ -840,8 +840,8 @@
         "pending_review": "En revisió (el meu vot està pendent)"
       },
       "sort": {
-        "asc": "Ordenació ASC",
-        "desc": "Ordenant DESC"
+        "asc": "ASC",
+        "desc": "DESC"
       }
     }
   },

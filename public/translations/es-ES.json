@@ -840,8 +840,8 @@
         "pending_review": "Bajo revisión (mi voto está pendiente)"
       },
       "sort": {
-        "asc": "Orden ASC",
-        "desc": "Orden DESC"
+        "asc": "ASC",
+        "desc": "DESC"
       }
     }
   },

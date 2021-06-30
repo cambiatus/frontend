@@ -40,7 +40,7 @@ module View.TabSelector exposing
 
 -}
 
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 
@@ -129,13 +129,12 @@ viewTab position tabSelector tab =
         isActive =
             tab.tab == tabSelector.selectedTab
 
-        count =
+        maybeCount =
             tab.count
-                |> Maybe.map (\c -> " (" ++ String.fromInt c ++ ")")
-                |> Maybe.withDefault ""
+                |> Maybe.map (\c -> "(" ++ String.fromInt c ++ ")")
     in
     button
-        [ class "text-center py-3 px-8 w-1/2 focus:outline-none"
+        [ class "text-center py-3 px-8 w-1/2 focus:outline-none flex flex-col items-center justify-center sm:flex-row"
         , classList
             [ ( "bg-orange-300 text-white cursor-default", isActive )
             , ( "bg-gray-100 text-black hover:bg-gray-200", not isActive )
@@ -144,7 +143,15 @@ viewTab position tabSelector tab =
             ]
         , onClick (tabSelector.onSelectTab tab.tab)
         ]
-        [ text (tab.label ++ count) ]
+        (case maybeCount of
+            Nothing ->
+                [ text tab.label ]
+
+            Just count ->
+                [ text tab.label
+                , span [ class "sm:ml-1" ] [ text count ]
+                ]
+        )
 
 
 type Position
