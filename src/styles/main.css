@@ -227,7 +227,7 @@ textarea.input {
 }
 
 .modal-header {
-  @apply w-full font-medium text-heading p-4 pb-2;
+  @apply w-full font-medium text-heading p-4 pb-2 flex justify-center;
 }
 
 .modal-body {
