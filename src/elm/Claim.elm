@@ -724,40 +724,42 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 , viewActionDetails
                 ]
 
+        claimRoute =
+            Route.Claim
+                claim.action.objective.id
+                claim.action.id
+                claim.id
+
+        claimDetailsButton =
+            a
+                [ class "button button-primary w-full"
+                , target "_blank"
+                , Route.href claimRoute
+                ]
+                [ text (t "claim.modal.view_details")
+                , Icons.externalLink "inline-block ml-4 h-3 fill-current"
+                ]
+
         footer =
-            let
-                claimRoute =
-                    Route.Claim
-                        claim.action.objective.id
-                        claim.action.id
-                        claim.id
-            in
-            if isVotable claim accountName shared.now then
-                div [ class "block" ]
-                    [ div [ class "flex justify-between space-x-4 mt-4 object-bottom" ]
+            div [ class "block w-1/2 mx-auto space-y-4" ]
+                [ if isVotable claim accountName shared.now then
+                    div [ class "flex space-x-4" ]
                         [ button
-                            [ class "button button-danger"
+                            [ class "w-full button button-danger"
                             , onClick (OpenVoteModal claim.id False)
                             ]
                             [ text (t "dashboard.reject") ]
                         , button
-                            [ class "button button-primary"
+                            [ class "w-full button button-primary"
                             , onClick (OpenVoteModal claim.id True)
                             ]
                             [ text (t "dashboard.verify") ]
                         ]
-                    , a
-                        [ class "button button-primary mt-4 w-full"
-                        , target "_blank"
-                        , Route.href claimRoute
-                        ]
-                        [ text (t "claim.modal.view_details")
-                        , Icons.externalLink "inline-block ml-4 h-3 fill-current"
-                        ]
-                    ]
 
-            else
-                text ""
+                  else
+                    text ""
+                , claimDetailsButton
+                ]
     in
     div
         []
