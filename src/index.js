@@ -26,6 +26,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 window.customElements.define('pdf-viewer',
   class PdfViewer extends HTMLElement {
     connectedCallback () {
+      if (this.hasChildNodes()) return
+
       const url = this.getAttribute('elm-url')
       const childClass = this.getAttribute('elm-child-class')
 
@@ -205,10 +207,15 @@ window.customElements.define('dialog-bubble',
 
 window.customElements.define('bg-no-scroll',
   class BgNoScroll extends HTMLElement {
+    constructor () {
+      super()
+      this._classesHandledByOthers = []
+    }
     connectedCallback () {
       this._preventScrollingClasses = this.getAttribute('elm-prevent-scroll-class').split(' ')
       this._preventScrollingClasses.forEach((class_) => {
         if (document.body.classList.contains(class_)) {
+          this._classesHandledByOthers.push(class_)
           return
         }
 
@@ -218,7 +225,7 @@ window.customElements.define('bg-no-scroll',
 
     disconnectedCallback () {
       this._preventScrollingClasses.forEach((class_) => {
-        if (!document.body.classList.contains(class_)) {
+        if (this._classesHandledByOthers.includes(class_) || !document.body.classList.contains(class_)) {
           return
         }
 

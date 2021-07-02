@@ -10,6 +10,7 @@ module Claim exposing
     , claimPaginatedSelectionSet
     , encodeVerification
     , initClaimProfileSummaries
+    , isOpenForVotes
     , isValidated
     , isVotable
     , paginatedPageInfo
@@ -23,7 +24,7 @@ module Claim exposing
     )
 
 import Action exposing (Action)
-import Api.Relay exposing (Edge, PageConnection)
+import Api.Relay as Relay
 import Cambiatus.Enum.ClaimStatus as ClaimStatus
 import Cambiatus.Object
 import Cambiatus.Object.Check as Check
@@ -108,6 +109,22 @@ isVotable claim accountName now =
         && not claim.action.isCompleted
 
 
+isOpenForVotes : Time.Posix -> Model -> Bool
+isOpenForVotes now claim =
+    let
+        isOpen =
+            case claim.status of
+                Pending ->
+                    True
+
+                _ ->
+                    False
+    in
+    not (Action.isClosed claim.action now)
+        && not claim.action.isCompleted
+        && isOpen
+
+
 pendingValidators : Model -> List Profile.Minimal
 pendingValidators claim =
     List.filter
@@ -148,19 +165,23 @@ encodeVerification claimId validator vote =
 
 
 type alias Paginated =
-    PageConnection Model
+    { edges : Maybe (List (Maybe (Relay.Edge Model)))
+    , pageInfo : Relay.PageInfo
+    , count : Maybe Int
+    }
 
 
 claimPaginatedSelectionSet : SelectionSet Paginated Cambiatus.Object.ClaimConnection
 claimPaginatedSelectionSet =
-    SelectionSet.succeed PageConnection
+    SelectionSet.succeed Paginated
         |> with (Cambiatus.Object.ClaimConnection.edges claimEdgeSelectionSet)
-        |> with (Cambiatus.Object.ClaimConnection.pageInfo Api.Relay.pageInfoSelectionSet)
+        |> with (Cambiatus.Object.ClaimConnection.pageInfo Relay.pageInfoSelectionSet)
+        |> with Cambiatus.Object.ClaimConnection.count
 
 
-claimEdgeSelectionSet : SelectionSet (Edge Model) Cambiatus.Object.ClaimEdge
+claimEdgeSelectionSet : SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
 claimEdgeSelectionSet =
-    SelectionSet.succeed Edge
+    SelectionSet.succeed Relay.Edge
         |> with Cambiatus.Object.ClaimEdge.cursor
         |> with (Cambiatus.Object.ClaimEdge.node selectionSet)
 
@@ -214,19 +235,19 @@ checkSelectionSet =
 paginatedToList : Maybe Paginated -> List Model
 paginatedToList maybeObj =
     let
-        toMaybeEdges : Maybe Paginated -> Maybe (List (Maybe (Edge Model)))
+        toMaybeEdges : Maybe Paginated -> Maybe (List (Maybe (Relay.Edge Model)))
         toMaybeEdges maybeConn =
             Maybe.andThen
                 (\a -> a.edges)
                 maybeConn
 
-        toEdges : Maybe (List (Maybe (Edge Model))) -> List (Maybe (Edge Model))
+        toEdges : Maybe (List (Maybe (Relay.Edge Model))) -> List (Maybe (Relay.Edge Model))
         toEdges maybeEdges =
             Maybe.withDefault
                 []
                 maybeEdges
 
-        toMaybeNodes : List (Maybe (Edge Model)) -> List (Maybe Model)
+        toMaybeNodes : List (Maybe (Relay.Edge Model)) -> List (Maybe Model)
         toMaybeNodes edges =
             List.map
                 (\a ->
@@ -247,7 +268,7 @@ paginatedToList maybeObj =
         |> toNodes
 
 
-paginatedPageInfo : Maybe Paginated -> Maybe Api.Relay.PageInfo
+paginatedPageInfo : Maybe Paginated -> Maybe Relay.PageInfo
 paginatedPageInfo maybePaginated =
     Maybe.map
         (\a -> a.pageInfo)
@@ -479,8 +500,9 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         viewProfileSummary profile_ profileSummary_ =
             profileSummary_
+                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
                 |> Profile.Summary.withRelativeSelector ".modal-content"
-                |> Profile.Summary.withScrollSelector ".modal-body"
+                |> Profile.Summary.withScrollSelector ".modal-body-lg"
                 |> Profile.Summary.view shared accountName profile_
 
         viewClaimerProfileSummary =
@@ -702,40 +724,42 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 , viewActionDetails
                 ]
 
+        claimRoute =
+            Route.Claim
+                claim.action.objective.id
+                claim.action.id
+                claim.id
+
+        claimDetailsButton =
+            a
+                [ class "button button-primary w-full"
+                , target "_blank"
+                , Route.href claimRoute
+                ]
+                [ text (t "claim.modal.view_details")
+                , Icons.externalLink "inline-block ml-4 h-3 fill-current"
+                ]
+
         footer =
-            let
-                claimRoute =
-                    Route.Claim
-                        claim.action.objective.id
-                        claim.action.id
-                        claim.id
-            in
-            if isVotable claim accountName shared.now then
-                div [ class "block" ]
-                    [ div [ class "flex justify-between space-x-4 mt-4 object-bottom" ]
+            div [ class "block w-1/2 mx-auto space-y-4" ]
+                [ if isVotable claim accountName shared.now then
+                    div [ class "flex space-x-4" ]
                         [ button
-                            [ class "button button-danger"
+                            [ class "w-full button button-danger"
                             , onClick (OpenVoteModal claim.id False)
                             ]
                             [ text (t "dashboard.reject") ]
                         , button
-                            [ class "button button-primary"
+                            [ class "w-full button button-primary"
                             , onClick (OpenVoteModal claim.id True)
                             ]
                             [ text (t "dashboard.verify") ]
                         ]
-                    , a
-                        [ class "button button-primary mt-4 w-full"
-                        , target "_blank"
-                        , Route.href claimRoute
-                        ]
-                        [ text (t "claim.modal.view_details")
-                        , Icons.externalLink "inline-block ml-4 h-3 fill-current"
-                        ]
-                    ]
 
-            else
-                text ""
+                  else
+                    text ""
+                , claimDetailsButton
+                ]
     in
     div
         []

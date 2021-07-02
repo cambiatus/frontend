@@ -137,8 +137,21 @@ viewModalDetails : Options msg -> Html msg
 viewModalDetails options =
     let
         header =
-            h3 [ class "modal-header" ]
-                [ text (Maybe.withDefault "" options.header) ]
+            div [ class "modal-header" ]
+                [ case options.header of
+                    Just headerText ->
+                        h3 []
+                            [ text headerText ]
+
+                    Nothing ->
+                        text ""
+                , button
+                    [ class "ml-auto"
+                    , onClickNoBubble options.closeMsg
+                    ]
+                    [ Icons.close "text-gray-400 fill-current"
+                    ]
+                ]
 
         body =
             case options.body of
@@ -177,7 +190,7 @@ viewModalDetails options =
                     "modal-content"
 
                 Large ->
-                    "modal-content"
+                    "modal-content modal-content-lg"
 
                 FullScreen ->
                     "modal-content modal-content-full"
@@ -192,13 +205,7 @@ viewModalDetails options =
         , div
             [ class content
             ]
-            [ button
-                [ class "absolute top-0 right-0 mx-4 my-4"
-                , onClickNoBubble options.closeMsg
-                ]
-                [ Icons.close "text-gray-400 fill-current"
-                ]
-            , header
+            [ header
             , body
             , footer
             ]

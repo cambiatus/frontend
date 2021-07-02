@@ -19,11 +19,10 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, button, div, img, span, text)
-import Html.Attributes exposing (class, src)
+import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -32,14 +31,16 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Form.Select as Select
+import View.Modal as Modal
+import View.TabSelector
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -54,36 +55,57 @@ init loggedIn =
 
 
 type alias Model =
-    { status : Status
+    { status : RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) LoadedModel
     , claimModalStatus : Claim.ModalStatus
     , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
+    , selectedTab : Tab
+    , showFilterModal : Bool
     , filters : Filter
+    , filtersBeingEdited : Filter
     , filterProfileSummary : Profile.Summary.Model
+    , direction : FilterDirection
+    , tabCounts : TabCounts
     }
 
 
 initModel : Model
 initModel =
-    { status = Loading
+    { status = RemoteData.Loading
     , claimModalStatus = Claim.Closed
     , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
+    , selectedTab = WaitingToVote
+    , showFilterModal = False
     , filters = initFilter
-    , filterProfileSummary = Profile.Summary.init False
+    , filtersBeingEdited = initFilter
+    , filterProfileSummary =
+        Profile.Summary.init False
+            |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+    , direction = DESC
+    , tabCounts = { waitingToVote = Nothing, analyzed = Nothing }
     }
 
 
-type Status
-    = Loading
-    | Loaded (List Claim.Model) (List Claim.ClaimProfileSummaries) (Maybe Api.Relay.PageInfo)
-    | Failed
+type alias LoadedModel =
+    { claims : List Claim.Model
+    , profileSummaries : List Claim.ClaimProfileSummaries
+    , pageInfo : Maybe Api.Relay.PageInfo
+    }
+
+
+type alias TabCounts =
+    { waitingToVote : Maybe Int, analyzed : Maybe Int }
+
+
+type Tab
+    = WaitingToVote
+    | Analyzed
 
 
 type alias Filter =
     { profile : Maybe Profile.Minimal
     , statusFilter : StatusFilter
-    , direction : FilterDirection
     }
 
 
@@ -94,14 +116,13 @@ type FilterDirection
 
 initFilter : Filter
 initFilter =
-    { profile = Nothing, statusFilter = All, direction = DESC }
+    { profile = Nothing, statusFilter = All }
 
 
 type StatusFilter
     = All
     | Approved
     | Rejected
-    | Pending
 
 
 statusFilterToString : StatusFilter -> String
@@ -115,9 +136,6 @@ statusFilterToString filter =
 
         Rejected ->
             "rejected"
-
-        Pending ->
-            "pending"
 
 
 
@@ -133,134 +151,231 @@ view ({ shared } as loggedIn) model =
         pageTitle =
             t "all_analysis.title"
 
+        viewLoading =
+            div [ class "mb-10" ] [ Page.fullPageLoading shared ]
+
         content =
             case model.status of
-                Loading ->
-                    Page.fullPageLoading shared
+                RemoteData.NotAsked ->
+                    [ viewLoading ]
 
-                Loaded claims profileSummaries pageInfo ->
-                    let
-                        viewClaim profileSummary claimIndex claim =
-                            Claim.viewClaimCard loggedIn profileSummary claim
-                                |> Html.map (ClaimMsg claimIndex)
-                    in
-                    div []
-                        [ Page.viewHeader loggedIn pageTitle
-                        , div [ class "container mx-auto px-4 mb-10" ]
-                            [ viewFilters loggedIn model
-                            , if List.length claims > 0 then
-                                div []
-                                    [ div [ class "flex flex-wrap -mx-2" ]
-                                        (List.map3 viewClaim
-                                            profileSummaries
-                                            (List.range 0 (List.length claims))
-                                            claims
-                                        )
-                                    , viewPagination loggedIn pageInfo
-                                    ]
+                RemoteData.Loading ->
+                    [ viewLoading ]
 
-                              else
-                                viewEmptyResults loggedIn
-                            ]
-                        , let
-                            viewVoteModal claimId isApproving isLoading =
-                                Claim.viewVoteClaimModal
-                                    loggedIn.shared.translators
-                                    { voteMsg = VoteClaim
-                                    , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
-                                    , claimId = claimId
-                                    , isApproving = isApproving
-                                    , isInProgress = isLoading
-                                    }
-                          in
-                          case model.claimModalStatus of
-                            Claim.VoteConfirmationModal claimId vote ->
-                                viewVoteModal claimId vote False
+                RemoteData.Success loadedModel ->
+                    viewContent loggedIn loadedModel model
 
-                            Claim.Loading claimId vote ->
-                                viewVoteModal claimId vote True
-
-                            Claim.PhotoModal claim ->
-                                Claim.viewPhotoModal loggedIn claim
-                                    |> Html.map (ClaimMsg 0)
-
-                            _ ->
-                                text ""
-                        ]
-
-                Failed ->
-                    Page.fullPageError (t "all_analysis.error") Http.Timeout
+                RemoteData.Failure err ->
+                    [ div [ class "text-center container mx-auto" ]
+                        [ Page.fullPageGraphQLError (t "all_analysis.error") err ]
+                    ]
     in
     { title = pageTitle
-    , content = content
+    , content =
+        div []
+            (Page.viewHeader loggedIn pageTitle
+                :: viewFiltersModal loggedIn model
+                :: viewHeaderAndOptions loggedIn model
+                ++ content
+            )
     }
 
 
-viewFilters : LoggedIn.Model -> Model -> Html Msg
-viewFilters ({ shared } as loggedIn) model =
+viewHeaderAndOptions : LoggedIn.Model -> Model -> List (Html Msg)
+viewHeaderAndOptions loggedIn model =
+    [ div [ class "bg-white py-4" ]
+        [ div [ class "container mx-auto px-4 flex justify-center" ]
+            [ viewTabSelector loggedIn.shared model
+            ]
+        ]
+    , div [ class "container mx-auto px-4" ]
+        [ viewFilterAndOrder loggedIn model ]
+    ]
+
+
+viewContent : LoggedIn.Model -> LoadedModel -> Model -> List (Html Msg)
+viewContent loggedIn { claims, profileSummaries, pageInfo } model =
+    let
+        viewClaim profileSummary claimIndex claim =
+            Claim.viewClaimCard loggedIn profileSummary claim
+                |> Html.map (ClaimMsg claimIndex)
+    in
+    [ div [ class "container mx-auto px-4 mb-10" ]
+        [ if List.length claims > 0 then
+            div []
+                [ div [ class "flex flex-wrap -mx-2" ]
+                    (List.map3 viewClaim
+                        profileSummaries
+                        (List.range 0 (List.length claims))
+                        claims
+                    )
+                , viewPagination loggedIn pageInfo
+                ]
+
+          else
+            viewEmptyResults loggedIn
+        ]
+    , let
+        viewVoteModal claimId isApproving isLoading =
+            Claim.viewVoteClaimModal
+                loggedIn.shared.translators
+                { voteMsg = VoteClaim
+                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
+                , claimId = claimId
+                , isApproving = isApproving
+                , isInProgress = isLoading
+                }
+      in
+      case model.claimModalStatus of
+        Claim.VoteConfirmationModal claimId vote ->
+            viewVoteModal claimId vote False
+
+        Claim.Loading claimId vote ->
+            viewVoteModal claimId vote True
+
+        Claim.PhotoModal claim ->
+            Claim.viewPhotoModal loggedIn claim
+                |> Html.map (ClaimMsg 0)
+
+        _ ->
+            text ""
+    ]
+
+
+viewTabSelector : Shared -> Model -> Html Msg
+viewTabSelector { translators } model =
+    let
+        count : Tab -> Maybe Int
+        count tab =
+            case tab of
+                WaitingToVote ->
+                    model.tabCounts.waitingToVote
+
+                Analyzed ->
+                    model.tabCounts.analyzed
+    in
+    View.TabSelector.init
+        { tabs =
+            [ { tab = WaitingToVote, label = translators.t "all_analysis.tabs.waiting_vote", count = count WaitingToVote }
+            , { tab = Analyzed, label = translators.t "all_analysis.tabs.analyzed", count = count Analyzed }
+            ]
+        , selectedTab = model.selectedTab
+        , onSelectTab = SelectedTab
+        }
+        |> View.TabSelector.withContainerAttrs [ class "w-full md:w-2/3 xl:w-2/5" ]
+        |> View.TabSelector.toHtml
+
+
+viewFilterAndOrder : LoggedIn.Model -> Model -> Html Msg
+viewFilterAndOrder { shared } model =
+    let
+        ( filterDirectionIcon, filterDirectionLabel ) =
+            case model.direction of
+                ASC ->
+                    ( Icons.sortAscending, "all_analysis.filter.sort.asc" )
+
+                DESC ->
+                    ( Icons.sortDescending, "all_analysis.filter.sort.desc" )
+
+        viewButton label icon onClickMsg =
+            button
+                [ class "button button-secondary flex-grow-1 justify-between pl-4"
+                , onClick onClickMsg
+                ]
+                [ text (shared.translators.t label)
+                , icon
+                ]
+    in
+    div [ class "w-full md:w-2/3 xl:w-1/3 mx-auto mt-4 mb-6 flex space-x-4" ]
+        [ viewButton "all_analysis.filter.title" (Icons.arrowDown "fill-current") OpenedFilterModal
+        , viewButton filterDirectionLabel (filterDirectionIcon "mr-2") ToggleSorting
+        ]
+
+
+viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
+viewFiltersModal ({ shared } as loggedIn) model =
     let
         { t } =
             shared.translators
 
-        text_ s =
-            text (t s)
+        showFilterSelect =
+            case model.selectedTab of
+                WaitingToVote ->
+                    False
+
+                Analyzed ->
+                    True
     in
-    div [ class "mt-4 mb-12" ]
-        [ div []
-            [ span [ class "input-label" ]
-                [ text_ "all_analysis.filter.user" ]
-            , case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        selectedUsers =
-                            Maybe.map (\v -> [ v ]) model.filters.profile
-                                |> Maybe.withDefault []
-                    in
-                    div []
-                        [ Html.map SelectMsg
-                            (Select.view
-                                (selectConfiguration shared False)
-                                model.autoCompleteState
-                                community.members
-                                selectedUsers
-                            )
-                        , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
+    Modal.initWith
+        { closeMsg = ClosedFilterModal
+        , isVisible = model.showFilterModal
+        }
+        |> Modal.withHeader (t "all_analysis.filter.title")
+        |> Modal.withBody
+            [ div []
+                (span [ class "input-label" ]
+                    [ text (t "all_analysis.filter.user") ]
+                    :: (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                let
+                                    selectedUsers =
+                                        Maybe.map (\v -> [ v ]) model.filtersBeingEdited.profile
+                                            |> Maybe.withDefault []
+
+                                    addRelativeMenuClass =
+                                        if not showFilterSelect && List.isEmpty selectedUsers then
+                                            Select.withMenuClass "!relative"
+
+                                        else
+                                            identity
+                                in
+                                [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
+                                    [ Html.map SelectMsg
+                                        (Select.view
+                                            (selectConfiguration shared False
+                                                |> addRelativeMenuClass
+                                            )
+                                            model.autoCompleteState
+                                            community.members
+                                            selectedUsers
+                                        )
+                                    , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
+                                    ]
+                                ]
+
+                            _ ->
+                                []
+                       )
+                )
+            , if not showFilterSelect then
+                text ""
+
+              else
+                Select.init
+                    { id = "status_filter_select"
+                    , label = t "all_analysis.filter.status.label"
+                    , onInput = SelectStatusFilter
+                    , firstOption = { value = All, label = t "all_analysis.all" }
+                    , value = model.filters.statusFilter
+                    , valueToString = statusFilterToString
+                    , disabled = False
+                    , problems = Nothing
+                    }
+                    |> Select.withOptions
+                        [ { value = Approved, label = t "all_analysis.approved" }
+                        , { value = Rejected, label = t "all_analysis.disapproved" }
                         ]
-
-                _ ->
-                    text ""
-            ]
-        , Select.init
-            { id = "status_filter_select"
-            , label = t "all_analysis.filter.status.label"
-            , onInput = SelectStatusFilter
-            , firstOption = { value = All, label = t "all_analysis.all" }
-            , value = model.filters.statusFilter
-            , valueToString = statusFilterToString
-            , disabled = False
-            , problems = Nothing
-            }
-            |> Select.withOptions
-                [ { value = Approved, label = t "all_analysis.approved" }
-                , { value = Rejected, label = t "all_analysis.disapproved" }
-                , { value = Pending, label = t "all_analysis.pending" }
-                ]
-            |> Select.withContainerAttrs [ class "mt-6" ]
-            |> Select.toHtml
-        , div [ class "mt-6" ]
-            [ button
-                [ class "w-full button button-secondary relative"
-                , onClick ToggleSorting
-                ]
-                [ if model.filters.direction == ASC then
-                    text_ "all_analysis.filter.sort.asc"
-
-                  else
-                    text_ "all_analysis.filter.sort.desc"
-                , Icons.sortDirection "absolute right-1"
+                    |> Select.withContainerAttrs [ class "mt-6" ]
+                    |> Select.toHtml
+            , div []
+                [ button
+                    [ class "button button-primary w-full"
+                    , onClick ClickedApplyFilters
+                    ]
+                    [ text (t "all_analysis.filter.apply") ]
                 ]
             ]
-        ]
+        |> Modal.toHtml
 
 
 viewEmptyResults : LoggedIn.Model -> Html Msg
@@ -275,7 +390,7 @@ viewEmptyResults { shared } =
             ]
         , div [ class "inline-block text-gray" ]
             [ text_ "all_analysis.empty"
-            , span [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
+            , button [ class "underline text-orange-500", onClick ClearFilters ] [ text_ "all_analysis.clear_filters" ]
             ]
         ]
 
@@ -291,8 +406,7 @@ viewPagination { shared } maybePageInfo =
             div [ class "flex justify-center" ]
                 [ if pageInfo.hasNextPage then
                     button
-                        [ Route.href Route.Analysis
-                        , class "button button-primary uppercase w-full"
+                        [ class "button button-primary uppercase w-full"
                         , onClick ShowMore
                         ]
                         [ text_ "all_analysis.show_more" ]
@@ -314,13 +428,17 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    = ClaimsLoaded Tab (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | OpenedFilterModal
+    | ClosedFilterModal
+    | ClickedApplyFilters
     | SelectMsg (Select.Msg Profile.Minimal)
+    | SelectedTab Tab
     | OnSelectVerifier (Maybe Profile.Minimal)
     | ShowMore
     | ClearSelectSelection
@@ -333,44 +451,71 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        ClaimsLoaded (RemoteData.Success results) ->
+        ClaimsLoaded tab (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
                     List.map Claim.initClaimProfileSummaries claims
-            in
-            case model.status of
-                Loaded claims _ _ ->
+
+                oldTabCounts =
+                    model.tabCounts
+
+                newTabCounts =
                     let
-                        newClaims =
-                            if model.reloadOnNextQuery then
-                                Claim.paginatedToList results
-
-                            else
-                                claims ++ Claim.paginatedToList results
+                        newTabCount =
+                            results
+                                |> Maybe.andThen .count
                     in
-                    { model
-                        | status =
-                            Loaded newClaims
-                                (initProfileSummaries newClaims)
-                                (Claim.paginatedPageInfo results)
-                        , reloadOnNextQuery = False
-                    }
-                        |> UR.init
+                    case tab of
+                        WaitingToVote ->
+                            { oldTabCounts | waitingToVote = newTabCount }
 
-                _ ->
-                    { model
-                        | status =
-                            Loaded (Claim.paginatedToList results)
-                                (initProfileSummaries (Claim.paginatedToList results))
-                                (Claim.paginatedPageInfo results)
-                        , reloadOnNextQuery = False
-                    }
-                        |> UR.init
+                        Analyzed ->
+                            { oldTabCounts | analyzed = newTabCount }
+            in
+            if tab /= model.selectedTab then
+                { model | tabCounts = newTabCounts }
+                    |> UR.init
 
-        ClaimsLoaded (RemoteData.Failure _) ->
-            { model | status = Failed } |> UR.init
+            else
+                case model.status of
+                    RemoteData.Success { claims } ->
+                        let
+                            newClaims =
+                                if model.reloadOnNextQuery then
+                                    Claim.paginatedToList results
 
-        ClaimsLoaded _ ->
+                                else
+                                    claims ++ Claim.paginatedToList results
+                        in
+                        { model
+                            | status =
+                                RemoteData.Success
+                                    { claims = newClaims
+                                    , profileSummaries = initProfileSummaries newClaims
+                                    , pageInfo = Claim.paginatedPageInfo results
+                                    }
+                            , tabCounts = newTabCounts
+                            , reloadOnNextQuery = False
+                        }
+                            |> UR.init
+
+                    _ ->
+                        { model
+                            | status =
+                                RemoteData.Success
+                                    { claims = Claim.paginatedToList results
+                                    , profileSummaries = initProfileSummaries (Claim.paginatedToList results)
+                                    , pageInfo = Claim.paginatedPageInfo results
+                                    }
+                            , tabCounts = newTabCounts
+                            , reloadOnNextQuery = False
+                        }
+                            |> UR.init
+
+        ClaimsLoaded _ (RemoteData.Failure err) ->
+            { model | status = RemoteData.Failure err } |> UR.init
+
+        ClaimsLoaded _ _ ->
             UR.init model
 
         ClosedAuthModal ->
@@ -379,19 +524,22 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model.filters Nothing community)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community.symbol)
+                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community.symbol)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg claimIndex m ->
             let
                 updatedModel =
                     case ( model.status, m ) of
-                        ( Loaded claims profileSummaries pageInfo, Claim.GotExternalMsg subMsg ) ->
+                        ( RemoteData.Success ({ profileSummaries } as loadedModel), Claim.GotExternalMsg subMsg ) ->
                             { model
                                 | status =
-                                    Loaded claims
-                                        (List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries)
-                                        pageInfo
+                                    RemoteData.Success
+                                        { loadedModel
+                                            | profileSummaries =
+                                                List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) profileSummaries
+                                        }
                             }
 
                         _ ->
@@ -403,7 +551,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.status of
-                Loaded _ _ _ ->
+                RemoteData.Success _ ->
                     let
                         newModel =
                             { model
@@ -436,7 +584,7 @@ update msg model loggedIn =
 
         GotVoteResult claimId (Ok _) ->
             case model.status of
-                Loaded claims profileSummaries pageInfo ->
+                RemoteData.Success ({ claims } as loadedModel) ->
                     let
                         maybeClaim : Maybe Claim.Model
                         maybeClaim =
@@ -449,22 +597,31 @@ update msg model loggedIn =
                     case maybeClaim of
                         Just claim ->
                             let
+                                symbol =
+                                    claim.action.objective.community.symbol
+
                                 value =
-                                    String.fromFloat claim.action.verifierReward
-                                        ++ " "
-                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
+                                    Eos.assetToString
+                                        { amount = claim.action.verifierReward
+                                        , symbol = symbol
+                                        }
 
                                 updatedClaims =
-                                    List.updateIf (\c -> c.id == claim.id)
-                                        (\_ -> claim)
-                                        claims
+                                    List.filter (\c -> c.id /= claim.id) claims
+
+                                updateCount operator maybeCount =
+                                    Maybe.map (\count -> operator count 1) maybeCount
                             in
                             { model
-                                | status = Loaded updatedClaims profileSummaries pageInfo
+                                | status = RemoteData.Success { loadedModel | claims = updatedClaims }
+                                , tabCounts =
+                                    { waitingToVote = updateCount (-) model.tabCounts.waitingToVote
+                                    , analyzed = updateCount (+) model.tabCounts.analyzed
+                                    }
+                                , claimModalStatus = Claim.Closed
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Analysis)
 
                         Nothing ->
                             model
@@ -479,13 +636,13 @@ update msg model loggedIn =
                     EosError.parseClaimError loggedIn.shared.translators eosErrorString
             in
             case model.status of
-                Loaded claims profileSummaries pageInfo ->
+                RemoteData.Success loadedModel ->
                     let
-                        updateShowClaimModal profileSummary =
+                        hideClaimModal profileSummary =
                             { profileSummary | showClaimModal = False }
                     in
                     { model
-                        | status = Loaded claims (List.map updateShowClaimModal profileSummaries) pageInfo
+                        | status = RemoteData.Success { loadedModel | profileSummaries = List.map hideClaimModal loadedModel.profileSummaries }
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
@@ -493,6 +650,41 @@ update msg model loggedIn =
 
                 _ ->
                     model |> UR.init
+
+        OpenedFilterModal ->
+            { model | showFilterModal = True }
+                |> UR.init
+
+        ClosedFilterModal ->
+            { model | showFilterModal = False }
+                |> UR.init
+
+        ClickedApplyFilters ->
+            if model.filtersBeingEdited == model.filters then
+                { model | showFilterModal = False }
+                    |> UR.init
+
+            else
+                let
+                    newModel =
+                        { model
+                            | showFilterModal = False
+                            , filters = model.filtersBeingEdited
+                            , reloadOnNextQuery = True
+                            , status = RemoteData.Loading
+                        }
+
+                    addFetchCommand =
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol)
+
+                            _ ->
+                                identity
+                in
+                newModel
+                    |> UR.init
+                    |> addFetchCommand
 
         SelectMsg subMsg ->
             let
@@ -502,31 +694,40 @@ update msg model loggedIn =
             UR.init { model | autoCompleteState = updated }
                 |> UR.addCmd cmd
 
+        SelectedTab tab ->
+            let
+                newModel =
+                    { model
+                        | selectedTab = tab
+                        , filters = initFilter
+                        , filtersBeingEdited = initFilter
+                        , status = RemoteData.Loading
+                        , reloadOnNextQuery = True
+                    }
+
+                addFetchCommand =
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community.symbol)
+
+                        _ ->
+                            identity
+            in
+            newModel
+                |> UR.init
+                |> addFetchCommand
+
         OnSelectVerifier maybeProfile ->
             let
                 oldFilters =
-                    model.filters
+                    model.filtersBeingEdited
             in
-            case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ _, RemoteData.Success community ) ->
-                    let
-                        newModel =
-                            { model
-                                | status = Loading
-                                , filters = { oldFilters | profile = maybeProfile }
-                                , reloadOnNextQuery = True
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
-
-                _ ->
-                    UR.init model
+            { model | filtersBeingEdited = { oldFilters | profile = maybeProfile } }
+                |> UR.init
 
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ pageInfo, RemoteData.Success community ) ->
+                ( RemoteData.Success { pageInfo }, RemoteData.Success community ) ->
                     let
                         cursor : Maybe String
                         cursor =
@@ -534,42 +735,36 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model.filters cursor community)
+                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community.symbol)
 
                 _ ->
                     UR.init model
 
         ClearSelectSelection ->
-            case ( model.status, loggedIn.selectedCommunity ) of
-                ( Loaded _ _ _, RemoteData.Success community ) ->
-                    let
-                        oldFilters =
-                            model.filters
-
-                        newModel =
-                            { model
-                                | status = Loading
-                                , filters = { oldFilters | profile = Nothing }
-                                , reloadOnNextQuery = True
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn newModel.filters Nothing community)
-
-                _ ->
-                    UR.init model
+            let
+                oldFilters =
+                    model.filtersBeingEdited
+            in
+            { model | filtersBeingEdited = { oldFilters | profile = Nothing } }
+                |> UR.init
 
         SelectStatusFilter statusFilter ->
             let
                 oldFilters =
-                    model.filters
+                    model.filtersBeingEdited
+            in
+            { model | filtersBeingEdited = { oldFilters | statusFilter = statusFilter } }
+                |> UR.init
 
+        ClearFilters ->
+            let
                 newModel =
                     { model
-                        | filters = { oldFilters | statusFilter = statusFilter }
-                        , status = Loading
+                        | filters = initFilter
+                        , filtersBeingEdited = initFilter
+                        , direction = DESC
                         , reloadOnNextQuery = True
+                        , status = RemoteData.Loading
                     }
             in
             newModel
@@ -577,23 +772,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel.filters Nothing community
-
-                        _ ->
-                            Cmd.none
-                    )
-
-        ClearFilters ->
-            { model
-                | filters = initFilter
-                , reloadOnNextQuery = True
-                , status = Loading
-            }
-                |> UR.init
-                |> UR.addCmd
-                    (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            fetchAnalysis loggedIn initFilter Nothing community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
 
                         _ ->
                             Cmd.none
@@ -601,11 +780,8 @@ update msg model loggedIn =
 
         ToggleSorting ->
             let
-                oldFilters =
-                    model.filters
-
                 sortDirection =
-                    if model.filters.direction == ASC then
+                    if model.direction == ASC then
                         DESC
 
                     else
@@ -613,15 +789,15 @@ update msg model loggedIn =
 
                 newModel =
                     { model
-                        | filters = { oldFilters | direction = sortDirection }
+                        | direction = sortDirection
                         , reloadOnNextQuery = True
-                        , status = Loading
+                        , status = RemoteData.Loading
                     }
 
                 fetchCmd =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel.filters Nothing community
+                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
 
                         _ ->
                             Cmd.none
@@ -635,19 +811,27 @@ update msg model loggedIn =
                 |> UR.init
 
 
-fetchAnalysis : LoggedIn.Model -> Filter -> Maybe String -> Community.Model -> Cmd Msg
-fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCursorAfter community =
+fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
+fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
     let
-        optionalClaimer =
-            case profile of
-                Just p ->
-                    Present (Eos.nameToString p.account)
-
+        cursorAfter =
+            case maybeCursorAfter of
                 Nothing ->
                     Absent
 
+                Just "" ->
+                    Absent
+
+                Just cursor ->
+                    Present cursor
+
+        optionalClaimer =
+            model.filters.profile
+                |> Maybe.map (.account >> Eos.nameToString)
+                |> OptionalArgument.fromMaybe
+
         optionalStatus =
-            case statusFilter of
+            case model.filters.statusFilter of
                 All ->
                     Absent
 
@@ -657,46 +841,40 @@ fetchAnalysis { shared, authToken } { profile, statusFilter, direction } maybeCu
                 Rejected ->
                     Present "rejected"
 
-                Pending ->
-                    Present "pending"
+        direction =
+            case model.direction of
+                ASC ->
+                    Cambiatus.Enum.Direction.Asc
+
+                DESC ->
+                    Cambiatus.Enum.Direction.Desc
 
         filterRecord =
             { claimer = optionalClaimer
             , status = optionalStatus
-            , direction =
-                case direction of
-                    ASC ->
-                        Present Cambiatus.Enum.Direction.Asc
-
-                    DESC ->
-                        Present Cambiatus.Enum.Direction.Desc
+            , direction = Present direction
             }
-
-        required =
-            { communityId = Eos.symbolToString community.symbol }
-
-        mapFn =
-            \s ->
-                if String.isEmpty s then
-                    Nothing
-
-                else
-                    Just (Present s)
 
         optionals =
             \opts ->
                 { opts
                     | first = Present 16
-                    , after =
-                        Maybe.andThen mapFn maybeCursorAfter
-                            |> Maybe.withDefault Absent
+                    , after = cursorAfter
                     , filter = Present filterRecord
                 }
+
+        required =
+            { communityId = Eos.symbolToString symbol }
+
+        query =
+            case tab of
+                WaitingToVote ->
+                    Cambiatus.Query.pendingClaims optionals required Claim.claimPaginatedSelectionSet
+
+                Analyzed ->
+                    Cambiatus.Query.analyzedClaims optionals required Claim.claimPaginatedSelectionSet
     in
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.claimsAnalysisHistory optionals required Claim.claimPaginatedSelectionSet)
-        ClaimsLoaded
+    Api.Graphql.query shared (Just authToken) query (ClaimsLoaded tab)
 
 
 
@@ -723,6 +901,7 @@ selectConfiguration shared isDisabled =
             , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
+            |> Select.withMenuClass "max-h-40 overflow-y-auto"
         )
         shared
         isDisabled
@@ -740,7 +919,10 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers 
                     (\p ->
                         div
                             [ class "flex justify-between flex-col m-3 items-center" ]
-                            [ Profile.Summary.view shared loggedIn.accountName p profileSummary
+                            [ profileSummary
+                                |> Profile.Summary.withRelativeSelector ".modal-content"
+                                |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.view shared loggedIn.accountName p
                                 |> Html.map GotProfileSummaryMsg
                             , div
                                 [ onClick ClearSelectSelection
@@ -790,7 +972,7 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        ClaimsLoaded r ->
+        ClaimsLoaded _ r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 
         ClosedAuthModal ->
@@ -808,8 +990,20 @@ msgToString msg =
         GotVoteResult _ r ->
             [ "GotVoteResult", UR.resultToString r ]
 
+        OpenedFilterModal ->
+            [ "OpenedFilterModal" ]
+
+        ClosedFilterModal ->
+            [ "ClosedFilterModal" ]
+
+        ClickedApplyFilters ->
+            [ "ClickedApplyFilters" ]
+
         SelectMsg _ ->
             [ "SelectMsg", "sub" ]
+
+        SelectedTab _ ->
+            [ "SelectedTab" ]
 
         OnSelectVerifier _ ->
             [ "OnSelectVerifier" ]

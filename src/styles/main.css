@@ -11,7 +11,7 @@
 /* Typography */
 body {
   background-color: #f6f6f6;
-  font-family: 'Nunito', 'Lato', 'San Fransico', 'Helvetica', 'Verdana', sans-serif;
+  font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
   color: var(--black);
 }
 
@@ -33,19 +33,11 @@ body {
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white text-body rounded-super font-medium;
-  }
-
-  .button-primary:hover {
-    @apply bg-orange-100;
+    @apply bg-orange-300 text-white text-body rounded-super font-medium hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border font-medium;
-  }
-
-  .button-secondary:hover {
-    @apply border-orange-300;
+    @apply bg-white text-orange-300 rounded-full border font-medium hover:border-orange-300 focus:border-orange-300 focus:outline-none;
   }
 
   .button-sm {
@@ -235,7 +227,7 @@ textarea.input {
 }
 
 .modal-header {
-  @apply w-full font-medium text-heading p-4 pb-2;
+  @apply w-full font-medium text-heading p-4 pb-2 flex justify-center;
 }
 
 .modal-body {
@@ -268,7 +260,16 @@ textarea.input {
 
 @screen md {
   .modal-content {
-    @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform -translate-x-1/2 mx-auto rounded-lg;
+    @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform mx-auto rounded-lg;
+    /* Using -translate-y-1/2 and -translate-x-1/2 doesn't work because they
+    overwrite each other, so we just set the variables tailwind uses */
+    --tw-translate-x: -50%;
+  }
+
+  .modal-content-lg,
+  .modal-content-full {
+    @apply top-1/2;
+    --tw-translate-y: -50%;
   }
 
   .modal-body-lg {
