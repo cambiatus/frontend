@@ -1,5 +1,6 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Action
 import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
@@ -16,6 +17,7 @@ import Html.Events exposing (onClick, onInput)
 import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import List.Extra as List
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -73,7 +75,7 @@ type Status
 
 type EditStatus
     = NewObjective ObjectiveForm
-    | EditObjective Int ObjectiveForm
+    | EditObjective Community.Objective ObjectiveForm
 
 
 type SaveStatus
@@ -107,8 +109,9 @@ type Msg
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedCompleteObjective
-    | AcceptedCompleteObjective
     | DeniedCompleteObjective
+    | AcceptedCompleteObjective
+    | GotCompleteActionsResponse Int (Result Value String)
     | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
 
@@ -303,26 +306,12 @@ completeObjectiveSelectionSet objectiveId =
         objectiveSelectionSet
 
 
-loadObjectiveForm : Community.Model -> Int -> ObjectiveForm
-loadObjectiveForm community objectiveId =
-    let
-        maybeObjective =
-            List.filterMap
-                (\o ->
-                    if o.id == objectiveId then
-                        Just (ObjectiveForm o.description NotAsked o.isCompleted)
-
-                    else
-                        Nothing
-                )
-                community.objectives
-    in
-    case maybeObjective of
-        [ x ] ->
-            x
-
-        _ ->
-            initObjectiveForm
+loadObjectiveForm : Community.Objective -> ObjectiveForm
+loadObjectiveForm objective =
+    { description = objective.description
+    , save = NotAsked
+    , isCompleted = objective.isCompleted
+    }
 
 
 updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
@@ -363,20 +352,19 @@ update msg model loggedIn =
             if community.creator == loggedIn.accountName then
                 case model.objectiveId of
                     Just objectiveId ->
-                        if List.any (\o -> o.id == objectiveId) community.objectives then
-                            { model
-                                | status =
-                                    Authorized
-                                        (EditObjective
-                                            objectiveId
-                                            (loadObjectiveForm community objectiveId)
-                                        )
-                            }
-                                |> UR.init
+                        case List.find (\o -> o.id == objectiveId) community.objectives of
+                            Just objective ->
+                                { model
+                                    | status =
+                                        loadObjectiveForm objective
+                                            |> EditObjective objective
+                                            |> Authorized
+                                }
+                                    |> UR.init
 
-                        else
-                            { model | status = NotFound }
-                                |> UR.init
+                            Nothing ->
+                                { model | status = NotFound }
+                                    |> UR.init
 
                     Nothing ->
                         { model | status = Authorized (NewObjective initObjectiveForm) }
@@ -401,28 +389,64 @@ update msg model loggedIn =
             { model | showMarkAsCompletedConfirmationModal = True }
                 |> UR.init
 
+        DeniedCompleteObjective ->
+            { model | showMarkAsCompletedConfirmationModal = False }
+                |> UR.init
+
         AcceptedCompleteObjective ->
             case model.status of
-                Authorized (EditObjective id _) ->
+                Authorized (EditObjective objective _) ->
+                    let
+                        completeAction : Action.Action -> Eos.Action
+                        completeAction action =
+                            { action | isCompleted = True }
+                                |> Action.updateAction loggedIn.accountName loggedIn.shared
+
+                        addCmdOrPort =
+                            if List.all .isCompleted objective.actions then
+                                UR.addCmd
+                                    (Api.Graphql.mutation
+                                        loggedIn.shared
+                                        (Just loggedIn.authToken)
+                                        (completeObjectiveSelectionSet objective.id)
+                                        GotCompleteObjectiveResponse
+                                    )
+
+                            else
+                                UR.addPort
+                                    { responseAddress = AcceptedCompleteObjective
+                                    , responseData = Encode.int objective.id
+                                    , data =
+                                        objective.actions
+                                            |> List.map completeAction
+                                            |> Eos.encodeTransaction
+                                    }
+                                    >> LoggedIn.withAuthentication loggedIn
+                                        model
+                                        { successMsg = msg, errorMsg = ClosedAuthModal }
+                    in
                     { model | isMarkAsCompletedConfirmationModalLoading = True }
                         |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation
-                                loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (completeObjectiveSelectionSet id)
-                                GotCompleteObjectiveResponse
-                            )
-                        |> LoggedIn.withAuthentication loggedIn
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> addCmdOrPort
 
                 _ ->
                     UR.init model
 
-        DeniedCompleteObjective ->
-            { model | showMarkAsCompletedConfirmationModal = False }
+        GotCompleteActionsResponse objectiveId (Ok _) ->
+            model
                 |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.mutation
+                        loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (completeObjectiveSelectionSet objectiveId)
+                        GotCompleteObjectiveResponse
+                    )
+
+        GotCompleteActionsResponse _ (Err err) ->
+            -- TODO
+            UR.init model
+                |> UR.logDebugValue msg err
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
@@ -441,67 +465,56 @@ update msg model loggedIn =
                 newModel =
                     UR.init model
                         |> updateObjective msg (\o -> { o | save = Saving })
-
-                save form isEdit _ =
-                    case ( loggedIn.selectedCommunity, isEdit ) of
-                        ( RemoteData.Success _, Just objectiveId ) ->
-                            newModel
-                                |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective
-                                    , responseData = Encode.null
-                                    , data =
-                                        Eos.encodeTransaction
-                                            [ { accountName = loggedIn.shared.contracts.community
-                                              , name = "updobjective"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data =
-                                                    { objectiveId = objectiveId
-                                                    , description = form.description
-                                                    , editor = loggedIn.accountName
-                                                    }
-                                                        |> Community.encodeUpdateObjectiveAction
-                                              }
-                                            ]
-                                    }
-
-                        ( RemoteData.Success community, Nothing ) ->
-                            newModel
-                                |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective
-                                    , responseData = Encode.null
-                                    , data =
-                                        Eos.encodeTransaction
-                                            [ { accountName = loggedIn.shared.contracts.community
-                                              , name = "newobjective"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data =
-                                                    { asset = Eos.Asset 0 community.symbol
-                                                    , description = form.description
-                                                    , creator = loggedIn.accountName
-                                                    }
-                                                        |> Community.encodeCreateObjectiveAction
-                                              }
-                                            ]
-                                    }
-
-                        _ ->
-                            newModel
             in
             case ( loggedIn.selectedCommunity, model.status ) of
                 ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
-                    save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+                    newModel
+                        |> UR.addPort
+                            { responseAddress = ClickedSaveObjective
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "newobjective"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { asset = Eos.Asset 0 community.symbol
+                                            , description = objForm.description
+                                            , creator = loggedIn.accountName
+                                            }
+                                                |> Community.encodeCreateObjectiveAction
+                                      }
+                                    ]
+                            }
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
-                    save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                ( RemoteData.Success _, Authorized (EditObjective objective objForm) ) ->
+                    newModel
+                        |> UR.addPort
+                            { responseAddress = ClickedSaveObjective
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "updobjective"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { objectiveId = objective.id
+                                            , description = objForm.description
+                                            , editor = loggedIn.accountName
+                                            }
+                                                |> Community.encodeUpdateObjectiveAction
+                                      }
+                                    ]
+                            }
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -554,6 +567,21 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveObjectiveResponse)
                 |> Result.withDefault Nothing
 
+        "AcceptedCompleteObjective" :: [] ->
+            val
+                |> Decode.decodeValue
+                    (Decode.map2
+                        GotCompleteActionsResponse
+                        (Decode.field "addressData" Decode.int)
+                        (Decode.oneOf
+                            [ Decode.field "transactionId" Decode.string
+                                |> Decode.map Ok
+                            , Decode.succeed (Err val)
+                            ]
+                        )
+                    )
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -576,11 +604,14 @@ msgToString msg =
         ClickedCompleteObjective ->
             [ "ClickedCompleteObjective" ]
 
+        DeniedCompleteObjective ->
+            [ "DeniedCompleteObjective" ]
+
         AcceptedCompleteObjective ->
             [ "AcceptedCompleteObjective" ]
 
-        DeniedCompleteObjective ->
-            [ "DeniedCompleteObjective" ]
+        GotCompleteActionsResponse _ r ->
+            [ "GotCompleteActionsResponse", UR.resultToString r ]
 
         GotCompleteObjectiveResponse r ->
             [ "GotCompleteObjectiveResponse", UR.remoteDataToString r ]
