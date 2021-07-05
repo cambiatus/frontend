@@ -29,6 +29,7 @@ import View.Modal as Modal
 
 
 
+-- TODO - Change what's shown when saving actions and objective
 -- INIT
 
 
@@ -111,7 +112,7 @@ type Msg
     | ClickedCompleteObjective
     | DeniedCompleteObjective
     | AcceptedCompleteObjective
-    | GotCompleteActionsResponse Int (Result Value String)
+    | GotCompleteActionsResponse (Result Value Int)
     | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
 
@@ -432,7 +433,7 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        GotCompleteActionsResponse objectiveId (Ok _) ->
+        GotCompleteActionsResponse (Ok objectiveId) ->
             model
                 |> UR.init
                 |> UR.addCmd
@@ -443,10 +444,14 @@ update msg model loggedIn =
                         GotCompleteObjectiveResponse
                     )
 
-        GotCompleteActionsResponse _ (Err err) ->
-            -- TODO
-            UR.init model
+        GotCompleteActionsResponse (Err err) ->
+            { model
+                | isMarkAsCompletedConfirmationModalLoading = False
+                , showMarkAsCompletedConfirmationModal = False
+            }
+                |> UR.init
                 |> UR.logDebugValue msg err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "community.objectives.editor.error_marking_as_complete"))
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
@@ -570,16 +575,13 @@ jsAddressToMsg addr val =
         "AcceptedCompleteObjective" :: [] ->
             val
                 |> Decode.decodeValue
-                    (Decode.map2
-                        GotCompleteActionsResponse
-                        (Decode.field "addressData" Decode.int)
-                        (Decode.oneOf
-                            [ Decode.field "transactionId" Decode.string
-                                |> Decode.map Ok
-                            , Decode.succeed (Err val)
-                            ]
-                        )
+                    (Decode.oneOf
+                        [ Decode.field "addressData" Decode.int
+                            |> Decode.map Ok
+                        , Decode.succeed (Err val)
+                        ]
                     )
+                |> Result.map GotCompleteActionsResponse
                 |> Result.toMaybe
 
         _ ->
@@ -610,7 +612,7 @@ msgToString msg =
         AcceptedCompleteObjective ->
             [ "AcceptedCompleteObjective" ]
 
-        GotCompleteActionsResponse _ r ->
+        GotCompleteActionsResponse r ->
             [ "GotCompleteActionsResponse", UR.resultToString r ]
 
         GotCompleteObjectiveResponse r ->
