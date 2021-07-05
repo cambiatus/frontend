@@ -660,58 +660,62 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
 -- INTEROP
 
 
-updateAction : Eos.Name -> Shared -> Action -> Eos.Action
-updateAction accountName shared action =
+encode : Action -> Encode.Value
+encode action =
     let
         makeAsset : Float -> Eos.Asset
         makeAsset amount =
             { symbol = action.objective.community.symbol, amount = amount }
     in
+    Encode.object
+        [ ( "action_id", Encode.int action.id )
+        , ( "objective_id", Encode.int action.objective.id )
+        , ( "description", Encode.string action.description )
+        , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
+        , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
+        , ( "deadline"
+          , case action.deadline of
+                Nothing ->
+                    Encode.int 0
+
+                Just (Cambiatus.Scalar.DateTime dateTimeString) ->
+                    Iso8601.toTime dateTimeString
+                        |> Result.map Time.posixToMillis
+                        |> Result.withDefault 0
+                        |> Encode.int
+          )
+        , ( "usages", Encode.int action.usages )
+        , ( "usages_left", Encode.int action.usagesLeft )
+        , ( "verifications", Encode.int action.verifications )
+        , ( "verification_type"
+          , action.verificationType
+                |> VerificationType.toString
+                |> String.toLower
+                |> Encode.string
+          )
+        , ( "validators_str"
+          , action.validators
+                |> List.map (\v -> Eos.nameToString v.account)
+                |> String.join "-"
+                |> Encode.string
+          )
+        , ( "is_completed", Eos.encodeEosBool (Eos.boolToEosBool action.isCompleted) )
+        , ( "creator", Eos.encodeName action.creator )
+        , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
+        , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
+        , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
+        ]
+
+
+updateAction : Eos.Name -> Shared -> Action -> Eos.Action
+updateAction accountName shared action =
     { accountName = shared.contracts.community
     , name = "upsertaction"
     , authorization =
         { actor = accountName
         , permissionName = Eos.samplePermission
         }
-    , data =
-        Encode.object
-            [ ( "action_id", Encode.int action.id )
-            , ( "objective_id", Encode.int action.objective.id )
-            , ( "description", Encode.string action.description )
-            , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
-            , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
-            , ( "deadline"
-              , case action.deadline of
-                    Nothing ->
-                        Encode.int 0
-
-                    Just (Cambiatus.Scalar.DateTime dateTimeString) ->
-                        Iso8601.toTime dateTimeString
-                            |> Result.map Time.posixToMillis
-                            |> Result.withDefault 0
-                            |> Encode.int
-              )
-            , ( "usages", Encode.int action.usages )
-            , ( "usages_left", Encode.int action.usagesLeft )
-            , ( "verifications", Encode.int action.verifications )
-            , ( "verification_type"
-              , action.verificationType
-                    |> VerificationType.toString
-                    |> String.toLower
-                    |> Encode.string
-              )
-            , ( "validators_str"
-              , action.validators
-                    |> List.map (\v -> Eos.nameToString v.account)
-                    |> String.join "-"
-                    |> Encode.string
-              )
-            , ( "is_completed", Eos.encodeEosBool (Eos.boolToEosBool action.isCompleted) )
-            , ( "creator", Eos.encodeName action.creator )
-            , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
-            , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
-            , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
-            ]
+    , data = encode action
     }
 
 
