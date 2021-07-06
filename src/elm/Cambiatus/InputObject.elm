@@ -6,6 +6,7 @@ module Cambiatus.InputObject exposing (..)
 
 import Cambiatus.Enum.ContactType
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.TransferDirectionValue
 import Cambiatus.Enum.VerificationType
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -457,6 +458,79 @@ encodeReadNotificationInput : ReadNotificationInput -> Value
 encodeReadNotificationInput input =
     Encode.maybeObject
         [ ( "id", Encode.int input.id |> Just ) ]
+
+
+buildTransferDirection :
+    TransferDirectionRequiredFields
+    -> (TransferDirectionOptionalFields -> TransferDirectionOptionalFields)
+    -> TransferDirection
+buildTransferDirection required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { otherAccount = Absent }
+    in
+    { direction = required.direction, otherAccount = optionals.otherAccount }
+
+
+type alias TransferDirectionRequiredFields =
+    { direction : Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue }
+
+
+type alias TransferDirectionOptionalFields =
+    { otherAccount : OptionalArgument String }
+
+
+{-| Type for the TransferDirection input object.
+-}
+type alias TransferDirection =
+    { direction : Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue
+    , otherAccount : OptionalArgument String
+    }
+
+
+{-| Encode a TransferDirection into a value that can be used as an argument.
+-}
+encodeTransferDirection : TransferDirection -> Value
+encodeTransferDirection input =
+    Encode.maybeObject
+        [ ( "direction", Encode.enum Cambiatus.Enum.TransferDirectionValue.toString input.direction |> Just ), ( "otherAccount", Encode.string |> Encode.optional input.otherAccount ) ]
+
+
+buildTransferFilter :
+    (TransferFilterOptionalFields -> TransferFilterOptionalFields)
+    -> TransferFilter
+buildTransferFilter fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { communityId = Absent, date = Absent, direction = Absent }
+    in
+    { communityId = optionals.communityId, date = optionals.date, direction = optionals.direction }
+
+
+type alias TransferFilterOptionalFields =
+    { communityId : OptionalArgument String
+    , date : OptionalArgument Cambiatus.ScalarCodecs.Date
+    , direction : OptionalArgument TransferDirection
+    }
+
+
+{-| Type for the TransferFilter input object.
+-}
+type alias TransferFilter =
+    { communityId : OptionalArgument String
+    , date : OptionalArgument Cambiatus.ScalarCodecs.Date
+    , direction : OptionalArgument TransferDirection
+    }
+
+
+{-| Encode a TransferFilter into a value that can be used as an argument.
+-}
+encodeTransferFilter : TransferFilter -> Value
+encodeTransferFilter input =
+    Encode.maybeObject
+        [ ( "communityId", Encode.string |> Encode.optional input.communityId ), ( "date", (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDate) |> Encode.optional input.date ), ( "direction", encodeTransferDirection |> Encode.optional input.direction ) ]
 
 
 buildTransferSucceedInput :
