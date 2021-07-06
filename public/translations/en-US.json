@@ -497,7 +497,7 @@
         "completion_text": "All actions related to this objective will be completed",
         "modal": {
           "title": "Mark objective as complete",
-          "body": "Marking the objective as complete cannot be undone. Actions from this objective will no longer be available for analysis. Do you really want to mark this objective as complete?",
+          "body": "Marking the objective as complete cannot be undone. Actions from this objective will also be marked as complete, and will no longer be available for analysis. Do you really want to mark this objective as complete?",
           "confirm": "Yes",
           "cancel": "No"
         }

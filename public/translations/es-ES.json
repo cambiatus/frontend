@@ -501,7 +501,7 @@
         "completion_text": "Se completarán todas las acciones relacionadas con este objetivo",
         "modal": {
           "title": "Marcar objetivo como completo",
-          "body": "Marcar el objetivo como completo no se puede deshacer. Las acciones de este objetivo ya no estarán disponibles para su análisis. ¿De verdad quieres marcar este objetivo como completo?",
+          "body": "Marcar el objetivo como completo no se puede deshacer. Las acciones de este objetivo también se marcarán como completadas y ya no estarán disponibles para su análisis. ¿De verdad quieres marcar este objetivo como completo?",
           "confirm": "Sí",
           "cancel": "No"
         }

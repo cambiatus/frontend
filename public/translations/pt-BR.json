@@ -505,7 +505,7 @@
         "completion_text": "Todas as ações relacionadas a esse objetivo serão completadas",
         "modal": {
           "title": "Marcar objetivo como completo",
-          "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
+          "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo também serão marcadas como completas, e não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
           "confirm": "Sim",
           "cancel": "Não"
         }

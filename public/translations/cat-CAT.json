@@ -501,7 +501,7 @@
         "completion_text": "Es completaran totes les accions relacionades amb aquest objectiu",
         "modal": {
           "title": "Marca l'objectiu com a complet",
-          "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
+          "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu també es marcaran com a completes i ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
           "confirm": "Sí",
           "cancel": "No"
         }
