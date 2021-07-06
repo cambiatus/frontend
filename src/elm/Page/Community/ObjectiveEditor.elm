@@ -12,9 +12,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, style, type_, value)
 import Html.Events exposing (onClick, onInput)
-import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -22,14 +21,14 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
 
 
 
--- TODO - Change what's shown when saving actions and objective
 -- INIT
 
 
@@ -82,7 +81,14 @@ type EditingStatus
     = Editing
     | SavingEdit
     | RequestingConfirmation
-    | CompletingActions { progress : Int, left : Int, errorIds : List Int }
+    | CompletingActions CompletionStatus
+
+
+type alias CompletionStatus =
+    { progress : Int
+    , total : Int
+    , errorIds : List Int
+    }
 
 
 type alias ObjectiveForm =
@@ -176,6 +182,12 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (t "community.objectives.title")
                         , viewForm loggedIn editStatus
                         , viewMarkAsCompletedConfirmationModal shared.translators model
+                        , case editStatus of
+                            EditingObjective _ _ (CompletingActions completionStatus) ->
+                                viewCompletion shared completionStatus
+
+                            _ ->
+                                text ""
                         ]
     in
     { title = title
@@ -299,6 +311,45 @@ viewMarkAsCompletedConfirmationModal { t } model =
                 [ text (t "community.objectives.editor.modal.confirm") ]
             ]
         |> Modal.toHtml
+
+
+viewCompletion : Shared -> CompletionStatus -> Html Msg
+viewCompletion shared { progress, total } =
+    let
+        progressWidth =
+            String.fromFloat (toFloat progress / toFloat total)
+    in
+    div [ class "fixed inset-0 z-50" ]
+        [ View.Components.bgNoScroll [ class "fixed inset-0 bg-black opacity-50" ]
+            View.Components.PreventScrollAlways
+        , div [ class "fixed inset-x-0 top-modal max-w-sm mx-auto mx-auto px-4 text-center text-white" ]
+            [ View.Components.loadingLogoWithCustomText shared.translators
+                "community.objectives.editor.completion_text"
+                "px-8"
+            , div [ class "bg-white py-4 rounded-lg mt-4" ]
+                [ span [ class "text-black uppercase font-light text-xs" ]
+                    [ text
+                        (shared.translators.tr
+                            "community.objectives.editor.completed_progress"
+                            [ ( "progress", String.fromInt progress )
+                            , ( "total", String.fromInt total )
+                            ]
+                        )
+                    ]
+                , div [ class "h-2 relative flex mx-8 mt-2 bg-gray-900 rounded-full overflow-hidden" ]
+                    [ div
+                        [ class "bg-green w-full transition-transform origin-left"
+                        , if progress /= total then
+                            style "transform" ("scaleX(" ++ progressWidth ++ ")")
+
+                          else
+                            class ""
+                        ]
+                        []
+                    ]
+                ]
+            ]
+        ]
 
 
 
@@ -483,7 +534,7 @@ update msg model loggedIn =
                     { model
                         | status =
                             { progress = List.filter .isCompleted objective.actions |> List.length
-                            , left = List.length objective.actions
+                            , total = List.length objective.actions
                             , errorIds = []
                             }
                                 |> CompletingActions
@@ -502,7 +553,7 @@ update msg model loggedIn =
                 Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
                     let
                         completeObjective =
-                            if completionStatus.progress + 1 == completionStatus.left then
+                            if completionStatus.progress + 1 == completionStatus.total then
                                 Api.Graphql.mutation
                                     loggedIn.shared
                                     (Just loggedIn.authToken)
