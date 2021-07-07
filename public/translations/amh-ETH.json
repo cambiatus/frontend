@@ -332,7 +332,8 @@
     }
   },
   "transfer": {
-    "last_title": "በቅረብ የተላለፈ",
+    "timeline_my": "የእኔ",
+    "timeline": "የጊዜ ሰሌዳ",
     "loading_error": "የተላለፈዉን ሲፈለግ የሆነ ችግር ተፈጥሯል.",
     "no_transfers_yet": "እስከአሁን ምንም አልተላለፈም.",
     "info": "{{from}} ተላልፏል {{value}} ለ {{to}}",

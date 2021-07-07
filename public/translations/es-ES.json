@@ -374,7 +374,8 @@
     }
   },
   "transfer": {
-    "last_title": "Últimas transferencias",
+    "timeline_my": "Mi",
+    "timeline": "cronología",
     "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
     "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",

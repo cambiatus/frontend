@@ -492,8 +492,17 @@ viewTransfers loggedIn model =
     in
     div [ class "mt-4 bg-white" ]
         [ div [ class "container mx-auto p-4" ]
-            [ div [ class "text-2xl text-indigo-500 mr-2 font-medium mb-4" ]
-                [ text <| t "transfer.last_title"
+            [ div [ class "flex justify-between" ]
+                [ div [ class "text-heading" ]
+                    [ span [ class "text-gray-900" ] [ text <| t "transfer.timeline_my" ++ " " ]
+                    , span [ class "text-indigo-500 font-bold" ] [ text <| t "transfer.timeline" ]
+                    ]
+
+                -- TODO
+                , button [ class "flex text-heading text-indigo-500" ]
+                    [ text "all"
+                    , Icons.arrowDown "fill-current"
+                    ]
                 ]
             , case model.transfers of
                 LoadingGraphql ->

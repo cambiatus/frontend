@@ -374,7 +374,8 @@
     }
   },
   "transfer": {
-    "last_title": "Darreres transferències ",
+    "timeline_my": "La meva",
+    "timeline": "cronologia",
     "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",

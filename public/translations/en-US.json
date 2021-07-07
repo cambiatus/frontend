@@ -370,7 +370,8 @@
     }
   },
   "transfer": {
-    "last_title": "Last Transfers",
+    "timeline_my": "My",
+    "timeline": "timeline",
     "loading_error": "Something went wrong while fetching transfers.",
     "no_transfers_yet": "No transfers yet.",
     "info": "{{from}} transferred {{value}} to {{to}}",
