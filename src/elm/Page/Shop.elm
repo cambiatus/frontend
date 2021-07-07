@@ -16,7 +16,7 @@ import Community exposing (Balance)
 import Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
-import Html.Attributes exposing (class, classList, src, value)
+import Html.Attributes exposing (class, classList, id, src, value)
 import Html.Events exposing (on, onClick)
 import Html.Lazy as Lazy
 import Http
@@ -295,6 +295,9 @@ viewCard model ({ shared } as loggedIn) index card =
 
             else
                 card.product.title
+
+        profileSummaryId =
+            "shop-item-card-" ++ String.fromInt card.product.id
     in
     a
         [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
@@ -335,10 +338,17 @@ viewCard model ({ shared } as loggedIn) index card =
         , div
             [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white"
             ]
-            [ div [ class "w-full relative bg-gray-500 rounded-t-lg" ]
+            [ div
+                [ class "w-full relative bg-gray-500 rounded-t-lg"
+                ]
                 [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
-                , div [ class "absolute right-1 bottom-1 " ]
-                    [ Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator card.profileSummary
+                , div
+                    [ class "absolute right-1 bottom-1"
+                    , id profileSummaryId
+                    ]
+                    [ card.profileSummary
+                        |> Profile.Summary.withRelativeSelector ("#" ++ profileSummaryId)
+                        |> Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator
                         |> Html.map (GotProfileSummaryMsg index card.isAvailable)
                     ]
                 ]

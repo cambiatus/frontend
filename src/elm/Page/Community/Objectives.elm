@@ -6,7 +6,7 @@ import Community
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra as List
@@ -320,8 +320,22 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                             text ""
 
                                         Just validatorSummary ->
-                                            div [ class "mr-4 action-verifier" ]
-                                                [ Profile.Summary.view shared loggedIn.accountName u validatorSummary
+                                            let
+                                                validatorId =
+                                                    "validator-"
+                                                        ++ String.fromInt objectiveId
+                                                        ++ "-"
+                                                        ++ String.fromInt action.id
+                                                        ++ "-"
+                                                        ++ String.fromInt validatorIndex
+                                            in
+                                            div
+                                                [ class "mr-4 action-verifier relative"
+                                                , id validatorId
+                                                ]
+                                                [ validatorSummary
+                                                    |> Profile.Summary.withRelativeSelector ("#" ++ validatorId)
+                                                    |> Profile.Summary.view shared loggedIn.accountName u
                                                     |> Html.map (GotProfileSummaryMsg action.id validatorIndex)
                                                 ]
                                 )
