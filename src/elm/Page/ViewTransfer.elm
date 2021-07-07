@@ -164,13 +164,12 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
-            [ div [ class "w-full px-4 bg-gray-100 py-6 my-8 md:px-20" ]
-                [ Transfer.viewCard loggedIn
-                    transfer
-                    direction
-                    profileSummaries
-                    GotProfileSummaryMsg
-                ]
+            [ Transfer.viewCard loggedIn
+                transfer
+                direction
+                profileSummaries
+                GotProfileSummaryMsg
+                [ class "w-full px-4 bg-gray-100 py-6 my-8 md:px-20" ]
             , div [ class "w-full mb-10 px-4" ]
                 [ viewDetail (t "transfer_result.date") date
                 , case transfer.memo of
@@ -259,22 +258,10 @@ update msg model user =
         GotProfileSummaryMsg isLeft subMsg ->
             case model.status of
                 Loaded maybeTransfer direction profileSummaries ->
-                    let
-                        subUpdate =
-                            Profile.Summary.update subMsg
-
-                        updatedSummaries =
-                            if isLeft then
-                                { profileSummaries | left = subUpdate profileSummaries.left }
-
-                            else
-                                { profileSummaries | right = subUpdate profileSummaries.right }
-                    in
                     { model
                         | status =
-                            Loaded maybeTransfer
-                                direction
-                                updatedSummaries
+                            Transfer.updateProfileSummaries profileSummaries isLeft subMsg
+                                |> Loaded maybeTransfer direction
                     }
                         |> UR.init
 

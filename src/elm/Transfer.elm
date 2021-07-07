@@ -10,6 +10,7 @@ module Transfer exposing
     , transferQuery
     , transferSucceedSubscription
     , transfersUserQuery
+    , updateProfileSummaries
     , viewCard
     )
 
@@ -29,7 +30,7 @@ import Eos exposing (symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, span, text)
+import Html exposing (Html, a, div, span, text)
 import Html.Attributes exposing (class)
 import Icons
 import Json.Encode as Encode exposing (Value)
@@ -227,14 +228,24 @@ type alias ProfileSummaries =
     }
 
 
+updateProfileSummaries : ProfileSummaries -> Bool -> Profile.Summary.Msg -> ProfileSummaries
+updateProfileSummaries profileSummaries isLeft profileSummaryMsg =
+    if isLeft then
+        { profileSummaries | left = Profile.Summary.update profileSummaryMsg profileSummaries.left }
+
+    else
+        { profileSummaries | right = Profile.Summary.update profileSummaryMsg profileSummaries.right }
+
+
 viewCard :
     LoggedIn.Model
     -> Transfer
     -> TransferDirectionValue
     -> ProfileSummaries
     -> (Bool -> Profile.Summary.Msg -> msg)
+    -> List (Html.Attribute msg)
     -> Html msg
-viewCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg =
+viewCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg attrs =
     let
         { t } =
             loggedIn.shared.translators
@@ -254,9 +265,12 @@ viewCard loggedIn transfer transferDirection profileSummaries profileSummaryToMs
             Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
                 |> Html.map (profileSummaryToMsg (profile == leftProfile))
     in
-    div [ class "flex justify-between items-center" ]
+    div
+        (class "grid grid-cols-5 place-items-center"
+            :: attrs
+        )
         [ viewSummary leftProfile profileSummaries.left
-        , div [ class "flex items-center space-x-2 md:space-x-3" ]
+        , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
             [ Icons.arrowDown arrowClass
             , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
                 [ span [ class "text-gray-900 text-caption uppercase" ]

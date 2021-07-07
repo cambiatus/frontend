@@ -21,8 +21,6 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
-import FormatNumber
-import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
@@ -36,6 +34,7 @@ import List.Extra as List
 import Page
 import Profile
 import Profile.Contact as Contact
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -75,7 +74,7 @@ type alias Model =
     , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
     , transfersDirection : Maybe TransferDirectionValue
-    , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Transfer.ProfileSummaries ))
     , contactModel : Contact.Model
     , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
@@ -169,14 +168,16 @@ view ({ shared, accountName } as loggedIn) model =
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
-                    div [ class "container mx-auto px-4 mb-10" ]
-                        [ viewHeader loggedIn community isCommunityAdmin
-                        , viewBalance loggedIn model balance
-                        , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                            viewAnalysisList loggedIn model
+                    div [ class "mb-10" ]
+                        [ div [ class "container mx-auto px-4" ]
+                            [ viewHeader loggedIn community isCommunityAdmin
+                            , viewBalance loggedIn model balance
+                            , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
+                                viewAnalysisList loggedIn model
 
-                          else
-                            text ""
+                              else
+                                text ""
+                            ]
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
@@ -487,94 +488,55 @@ viewTransfers loggedIn model =
         t =
             loggedIn.shared.translators.t
     in
-    div [ class "mt-4" ]
-        [ div [ class "text-2xl text-indigo-500 mr-2 font-medium mb-4" ]
-            [ text <| t "transfer.last_title"
-            ]
-        , case model.transfers of
-            LoadingGraphql ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "menu.loading") ]
-                    ]
-
-            FailedGraphql _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.loading_error") ]
-                    ]
-
-            LoadedGraphql [] _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.no_transfers_yet") ]
-                    ]
-
-            LoadedGraphql transfers _ ->
-                div [ class "rounded-lg bg-white" ]
-                    (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
-        ]
-
-
-viewTransfer : LoggedIn.Model -> Transfer -> Html msg
-viewTransfer ({ shared } as loggedIn) transfer =
-    let
-        isReceive =
-            loggedIn.accountName == transfer.to.account
-
-        amount =
-            if isReceive then
-                transfer.value
-
-            else
-                transfer.value * -1
-
-        description =
-            if isReceive then
-                [ ( "user", Eos.nameToString transfer.from.account )
-                , ( "amount", String.fromFloat transfer.value )
+    div [ class "mt-4 bg-white" ]
+        [ div [ class "container mx-auto p-4" ]
+            [ div [ class "text-2xl text-indigo-500 mr-2 font-medium mb-4" ]
+                [ text <| t "transfer.last_title"
                 ]
-                    |> shared.translators.tr "notifications.transfer.receive"
+            , case model.transfers of
+                LoadingGraphql ->
+                    Page.viewCardEmpty
+                        [ div [ class "text-gray-900 text-sm" ]
+                            [ text (t "menu.loading") ]
+                        ]
 
-            else
-                [ ( "user", Eos.nameToString transfer.to.account )
-                , ( "amount", String.fromFloat transfer.value )
-                ]
-                    |> shared.translators.tr "notifications.transfer.sent"
-    in
-    a
-        [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
-        , Route.externalHref shared transfer.community (Route.ViewTransfer transfer.id)
-        ]
-        [ div [ class "flex-col flex-grow-1 pl-4" ]
-            [ p
-                [ class "text-black text-sm leading-relaxed" ]
-                [ text description ]
-            , p
-                [ class "text-gray-900 text-caption uppercase" ]
-                [ text (Maybe.withDefault "" transfer.memo) ]
+                FailedGraphql _ ->
+                    Page.viewCardEmpty
+                        [ div [ class "text-gray-900 text-sm" ]
+                            [ text (t "transfer.loading_error") ]
+                        ]
+
+                LoadedGraphql [] _ ->
+                    Page.viewCardEmpty
+                        [ div [ class "text-gray-900 text-sm" ]
+                            [ text (t "transfer.no_transfers_yet") ]
+                        ]
+
+                LoadedGraphql transfers _ ->
+                    div [ class "divide-y" ]
+                        (List.map
+                            (\( transfer, profileSummaries ) ->
+                                let
+                                    direction =
+                                        if transfer.to.account == loggedIn.accountName then
+                                            TransferDirectionValue.Receiving
+
+                                        else
+                                            TransferDirectionValue.Sending
+                                in
+                                Transfer.viewCard loggedIn
+                                    transfer
+                                    direction
+                                    profileSummaries
+                                    (GotTransferCardProfileSummaryMsg transfer.id)
+                                    [ class "py-4 cursor-pointer hover:bg-gray-100"
+                                    , onClick (ClickedTransferCard transfer.id)
+                                    ]
+                            )
+                            transfers
+                        )
             ]
-        , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.community.symbol))
         ]
-
-
-viewAmount : Float -> String -> List (Html msg)
-viewAmount amount symbol =
-    let
-        amountText =
-            FormatNumber.format usLocale amount
-
-        color =
-            if amount > 0 then
-                "text-green"
-
-            else
-                "text-red"
-    in
-    [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ] [ text symbol ]
-    ]
 
 
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
@@ -702,6 +664,8 @@ type Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | GotTransferCardProfileSummaryMsg Int Bool Profile.Summary.Msg
+    | ClickedTransferCard Int
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -783,7 +747,19 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init model
 
         CompletedLoadUserTransfers (RemoteData.Success maybeTransfers) ->
-            { model | transfers = LoadedGraphql (Transfer.getTransfers maybeTransfers) Nothing }
+            { model
+                | transfers =
+                    Transfer.getTransfers maybeTransfers
+                        |> List.map
+                            (\transfer ->
+                                ( transfer
+                                , { left = Profile.Summary.init False
+                                  , right = Profile.Summary.init False
+                                  }
+                                )
+                            )
+                        |> (\transfers -> LoadedGraphql transfers Nothing)
+            }
                 |> UR.init
 
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
@@ -911,6 +887,38 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 _ ->
                     model |> UR.init
+
+        GotTransferCardProfileSummaryMsg transferId isLeft subMsg ->
+            case model.transfers of
+                LoadedGraphql transfers pageInfo ->
+                    let
+                        newTransfers =
+                            transfers
+                                |> List.updateIf
+                                    (\( transfer, _ ) -> transfer.id == transferId)
+                                    (\( transfer, profileSummaries ) ->
+                                        ( transfer
+                                        , Transfer.updateProfileSummaries profileSummaries
+                                            isLeft
+                                            subMsg
+                                        )
+                                    )
+                    in
+                    { model
+                        | transfers =
+                            LoadedGraphql newTransfers
+                                pageInfo
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+
+        ClickedTransferCard transferId ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.pushUrl shared.navKey (Route.ViewTransfer transferId))
 
         CreateInvite ->
             case model.balance of
@@ -1256,6 +1264,12 @@ msgToString msg =
 
         GotVoteResult _ result ->
             [ "GotVoteResult", UR.resultToString result ]
+
+        GotTransferCardProfileSummaryMsg _ _ _ ->
+            [ "GotTransferCardProfileSummaryMsg" ]
+
+        ClickedTransferCard _ ->
+            [ "ClickedTransferCard" ]
 
         CreateInvite ->
             [ "CreateInvite" ]
