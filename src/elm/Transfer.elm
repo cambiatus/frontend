@@ -1,6 +1,7 @@
 module Transfer exposing
     ( ConnectionTransfer
     , EdgeTransfer
+    , ProfileSummaries
     , QueryTransfers
     , Transfer
     , encodeEosActionData
@@ -9,9 +10,11 @@ module Transfer exposing
     , transferQuery
     , transferSucceedSubscription
     , transfersUserQuery
+    , viewCard
     )
 
 import Api.Relay exposing (Edge, PageConnection, pageInfoSelectionSet)
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Object
 import Cambiatus.Object.Community
 import Cambiatus.Object.Subdomain
@@ -26,8 +29,13 @@ import Eos exposing (symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, div, span, text)
+import Html.Attributes exposing (class)
+import Icons
 import Json.Encode as Encode exposing (Value)
 import Profile
+import Profile.Summary
+import Session.LoggedIn as LoggedIn
 
 
 type alias Transfer =
@@ -207,3 +215,73 @@ transferSucceedSubscription symbol fromAccount toAccount =
             }
     in
     Subscription.transfersucceed args transferItemSelectionSet
+
+
+
+-- VIEWS
+
+
+type alias ProfileSummaries =
+    { left : Profile.Summary.Model
+    , right : Profile.Summary.Model
+    }
+
+
+viewCard :
+    LoggedIn.Model
+    -> Transfer
+    -> TransferDirectionValue
+    -> ProfileSummaries
+    -> (Bool -> Profile.Summary.Msg -> msg)
+    -> Html msg
+viewCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        ( leftProfile, rightProfile, rotateClass ) =
+            case transferDirection of
+                TransferDirectionValue.Receiving ->
+                    ( transfer.to, transfer.from, "rotate-90" )
+
+                TransferDirectionValue.Sending ->
+                    ( transfer.from, transfer.to, "-rotate-90" )
+
+        arrowClass =
+            "fill-current text-green " ++ rotateClass
+
+        viewSummary profile summary =
+            Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
+                |> Html.map (profileSummaryToMsg (profile == leftProfile))
+    in
+    div [ class "flex justify-between items-center" ]
+        [ viewSummary leftProfile profileSummaries.left
+        , div [ class "flex items-center space-x-2 md:space-x-3" ]
+            [ Icons.arrowDown arrowClass
+            , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
+                [ span [ class "text-gray-900 text-caption uppercase" ]
+                    [ text <|
+                        case transferDirection of
+                            TransferDirectionValue.Receiving ->
+                                t "transfer_result.received"
+
+                            TransferDirectionValue.Sending ->
+                                t "transfer_result.transferred"
+                    ]
+                , div [ class "flex text-green" ]
+                    [ span [ class "font-medium text-heading" ]
+                        [ transfer.value
+                            |> Eos.formatSymbolAmount transfer.community.symbol
+                            |> text
+                        ]
+                    , span [ class "text-caption ml-2 mb-2 self-end" ]
+                        [ transfer.community.symbol
+                            |> Eos.symbolToSymbolCodeString
+                            |> text
+                        ]
+                    ]
+                ]
+            , Icons.arrowDown arrowClass
+            ]
+        , viewSummary rightProfile profileSummaries.right
+        ]

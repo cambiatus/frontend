@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
 import Cambiatus.Query
 import Claim
@@ -23,7 +24,7 @@ import Eos.EosError as EosError
 import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
@@ -54,11 +55,10 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, accountName, authToken } as loggedIn) =
+init loggedIn =
     ( initModel
     , Cmd.batch
-        [ fetchTransfers shared accountName authToken
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
         ]
     )
@@ -74,6 +74,7 @@ type alias Model =
     , analysisFilter : Direction
     , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
+    , transfersDirection : Maybe TransferDirectionValue
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
     , contactModel : Contact.Model
     , showContactModal : Bool
@@ -90,6 +91,7 @@ initModel =
     , analysisFilter = initAnalysisFilter
     , profileSummaries = []
     , lastSocket = ""
+    , transfersDirection = Nothing
     , transfers = LoadingGraphql
     , contactModel = Contact.initSingle
     , showContactModal = False
@@ -728,6 +730,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
+                |> UR.addCmd (fetchTransfers loggedIn community model)
 
         CompletedLoadProfile profile ->
             let
@@ -1054,14 +1057,30 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : Shared -> Eos.Name -> String -> Cmd Msg
-fetchTransfers shared accountName authToken =
-    Api.Graphql.query shared
-        (Just authToken)
+fetchTransfers : LoggedIn.Model -> Community.Model -> Model -> Cmd Msg
+fetchTransfers loggedIn community model =
+    Api.Graphql.query loggedIn.shared
+        (Just loggedIn.authToken)
         (Transfer.transfersUserQuery
-            accountName
+            loggedIn.accountName
             (\args ->
-                { args | first = Present 10 }
+                { args
+                    | first = Present 10
+                    , filter =
+                        Present
+                            { communityId = Present (Eos.symbolToString community.symbol)
+                            , date = Absent
+                            , direction =
+                                model.transfersDirection
+                                    |> Maybe.map
+                                        (\direction ->
+                                            { direction = direction
+                                            , otherAccount = Absent
+                                            }
+                                        )
+                                    |> OptionalArgument.fromMaybe
+                            }
+                }
             )
         )
         CompletedLoadUserTransfers

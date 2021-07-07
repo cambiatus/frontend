@@ -164,6 +164,9 @@ module.exports = {
         form: '45.625rem',
         '120': '30rem'
       },
+      minWidth: {
+        '30': '7.5rem'
+      },
       opacity: {
         '10': '0.1',
         '60': '0.6'
