@@ -44,6 +44,8 @@ import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
+import Utils
+import View.Components
 import View.Feedback as Feedback
 import View.Form.Input as Input
 import View.Modal as Modal
@@ -514,26 +516,45 @@ viewTransfers loggedIn model =
 
                 LoadedGraphql transfers _ ->
                     div [ class "divide-y" ]
-                        (List.map
-                            (\( transfer, profileSummaries ) ->
-                                let
-                                    direction =
-                                        if transfer.to.account == loggedIn.accountName then
-                                            TransferDirectionValue.Receiving
+                        (transfers
+                            |> List.groupWhile
+                                (\( t1, _ ) ( t2, _ ) ->
+                                    Utils.areSameDay loggedIn.shared.timezone
+                                        (Utils.fromDateTime t1.blockTime)
+                                        (Utils.fromDateTime t2.blockTime)
+                                )
+                            |> List.map
+                                (\( ( t1, _ ) as first, rest ) ->
+                                    div [ class "py-4" ]
+                                        [ View.Components.dateViewer
+                                            [ class "uppercase text-caption text-black tracking-wider" ]
+                                            identity
+                                            loggedIn.shared
+                                            (Utils.fromDateTime t1.blockTime)
+                                        , div [ class "divide-y" ]
+                                            (List.map
+                                                (\( transfer, profileSummaries ) ->
+                                                    let
+                                                        direction =
+                                                            if transfer.to.account == loggedIn.accountName then
+                                                                TransferDirectionValue.Receiving
 
-                                        else
-                                            TransferDirectionValue.Sending
-                                in
-                                Transfer.viewCard loggedIn
-                                    transfer
-                                    direction
-                                    profileSummaries
-                                    (GotTransferCardProfileSummaryMsg transfer.id)
-                                    [ class "py-4 cursor-pointer hover:bg-gray-100"
-                                    , onClick (ClickedTransferCard transfer.id)
-                                    ]
-                            )
-                            transfers
+                                                            else
+                                                                TransferDirectionValue.Sending
+                                                    in
+                                                    Transfer.viewCard loggedIn
+                                                        transfer
+                                                        direction
+                                                        profileSummaries
+                                                        (GotTransferCardProfileSummaryMsg transfer.id)
+                                                        [ class "py-4 cursor-pointer hover:bg-gray-100"
+                                                        , onClick (ClickedTransferCard transfer.id)
+                                                        ]
+                                                )
+                                                (first :: rest)
+                                            )
+                                        ]
+                                )
                         )
             ]
         ]

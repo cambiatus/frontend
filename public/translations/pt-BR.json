@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Voltar",
+  "dates": {
+    "today": "Hoje",
+    "yesterday": "Ontem"
+  },
   "loading": {
     "title": "Aguarde um instante",
     "subtitle": "Estamos processando sua solicitação"
@@ -875,7 +879,9 @@
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
-    "claimed_on": "Reivindicado em {{claim_date}}",
+    "claimed_today": "Reivindicado hoje",
+    "claimed_yesterday": "Reivindicado ontem",
+    "claimed_on": "Reivindicado em {{date}}",
     "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",

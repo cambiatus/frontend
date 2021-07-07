@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "dates": {
+    "today": "Avui",
+    "yesterday": "Ahir"
+  },
   "loading": {
     "title": "Espera un moment",
     "subtitle": "Estem processant la vostra sol·licitud"
@@ -870,7 +874,9 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "claimed_on": "Reclamat el {{claim_date}}",
+    "claimed_today": "Reclamat avui",
+    "claimed_yesterday": "Reclamat ahir",
+    "claimed_on": "Reclamat el {{date}}",
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",

@@ -13,7 +13,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
-import Time
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
@@ -158,9 +157,9 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                 |> String.toUpper
 
         date =
-            Just transfer.blockTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
+            transfer.blockTime
+                |> Utils.fromDateTime
+                |> Strftime.format "%d %b %Y" shared.timezone
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]

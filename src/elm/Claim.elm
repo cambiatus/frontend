@@ -47,7 +47,6 @@ import Profile.Summary
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
-import Strftime
 import Time
 import Utils
 import View.Components
@@ -379,11 +378,6 @@ viewClaimCard loggedIn profileSummaries claim =
         { t } =
             loggedIn.shared.translators
 
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
         ( claimStatus, textColor ) =
             case claim.status of
                 Approved ->
@@ -441,9 +435,10 @@ viewClaimCard loggedIn profileSummaries claim =
             , div [ class "mb-6" ]
                 [ p [ class "text-body overflow-ellipsis overflow-hidden" ]
                     [ text claim.action.description ]
-                , p
-                    [ class "text-gray-900 text-caption uppercase" ]
-                    [ text (date claim.createdAt) ]
+                , View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
+                    identity
+                    loggedIn.shared
+                    (Utils.fromDateTime claim.createdAt)
                 ]
             , if
                 isValidated claim loggedIn.accountName
@@ -511,11 +506,6 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         viewClaimDateAndState =
             let
-                date datetime =
-                    Just datetime
-                        |> Utils.posixDateTime
-                        |> Strftime.format "%d %b %Y" Time.utc
-
                 ( claimStatusPhrase, claimStatus, textColor ) =
                     case claim.status of
                         Approved ->
@@ -530,12 +520,18 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
                             else
                                 ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
-
-                claimDate =
-                    tr "claim.claimed_on" [ ( "claim_date", date claim.createdAt ) ]
             in
             div [ class "block" ]
-                [ p [ class "text-xs uppercase" ] [ text claimDate ]
+                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                    (\translations ->
+                        { translations
+                            | today = t "claim.claimed_today"
+                            , yesterday = t "claim.claimed_yesterday"
+                            , other = t "claim.claimed_on"
+                        }
+                    )
+                    shared
+                    (Utils.fromDateTime claim.createdAt)
                 , label [ class "text-2xl font-bold" ]
                     [ text claimStatusPhrase
                     ]

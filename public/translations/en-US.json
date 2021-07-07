@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Back",
+  "dates": {
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
   "loading": {
     "title": "Wait a moment",
     "subtitle": "We are processing your request"
@@ -868,7 +872,9 @@
     "objective": "Objective",
     "action": "Action",
     "claimer": "Claimed by",
-    "claimed_on": "Claimed on {{claim_date}}",
+    "claimed_today": "Claimed today",
+    "claimed_yesterday": "Claimed yesterday",
+    "claimed_on": "Claimed on {{date}}",
     "date": "Claim Date",
     "claimer_reward": "User reward",
     "your_reward": "Your reward",

@@ -3,6 +3,7 @@ module View.Components exposing
     , dialogBubble
     , tooltip, pdfViewer
     , bgNoScroll, PreventScroll(..)
+    , dateViewer
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -38,7 +39,10 @@ state or configuration, such as loading indicators and containers
 import Html exposing (Html, div, img, node, p, span, text)
 import Html.Attributes exposing (attribute, class, src)
 import Icons
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
+import Time
+import Translation
+import Utils
 
 
 
@@ -123,6 +127,63 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
         []
 
 
+type alias DateTranslations =
+    { today : String
+    , yesterday : String
+    , other : String
+    }
+
+
+{-| A helper to display dates. Supports providing your own translated strings
+for when the date is today or yesterday
+
+    dateViewer []
+        (\translations ->
+            { translations
+                | today = t "claim.claimed_today"
+                , yesterday = t "claim.claimed_yesterday"
+                , other = "claim.claimed_on"
+            }
+        )
+        shared
+        claim.claimDate
+
+The `other` key on the translations record needs a `{{date}}` somewhere in the
+string so we can replace it on JS
+
+-}
+dateViewer :
+    List (Html.Attribute msg)
+    -> (DateTranslations -> DateTranslations)
+    -> Shared
+    -> Time.Posix
+    -> Html msg
+dateViewer attrs fillInTranslations shared time =
+    let
+        yesterday =
+            Utils.previousDay shared.now
+
+        translations =
+            fillInTranslations
+                { today = shared.translators.t "dates.today"
+                , yesterday = shared.translators.t "dates.yesterday"
+                , other = "{{date}}"
+                }
+    in
+    if Utils.areSameDay shared.timezone shared.now time then
+        span attrs [ text translations.today ]
+
+    else if Utils.areSameDay shared.timezone shared.now yesterday then
+        span attrs [ text translations.yesterday ]
+
+    else
+        dateFormatter attrs
+            { language = shared.language
+            , date = time
+            , translationString = translations.other
+            }
+
+
 
 -- HELPERS
 
@@ -164,3 +225,17 @@ optionalAttr attr maybeAttr =
 
         Just attrValue ->
             attribute attr attrValue
+
+
+dateFormatter :
+    List (Html.Attribute msg)
+    -> { language : Translation.Language, date : Time.Posix, translationString : String }
+    -> Html msg
+dateFormatter attrs { language, date, translationString } =
+    node "date-formatter"
+        (attribute "elm-locale" (Translation.languageToLocale language)
+            :: attribute "elm-date" (date |> Time.posixToMillis |> String.fromInt)
+            :: attribute "elm-translation" translationString
+            :: attrs
+        )
+        []

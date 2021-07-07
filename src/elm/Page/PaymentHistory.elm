@@ -788,8 +788,8 @@ viewTransfer shared payment =
             Eos.Account.nameToString payer.account
 
         time =
-            Utils.posixDateTime (Just payment.blockTime)
-                |> Strftime.format "%d %b %Y, %H:%M" Time.utc
+            Utils.fromMaybeDateTime (Just payment.blockTime)
+                |> Strftime.format "%d %b %Y, %H:%M" shared.timezone
 
         avatarImg =
             Avatar.view payer.avatar "max-w-full max-h-full"
