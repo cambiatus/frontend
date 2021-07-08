@@ -4,7 +4,6 @@ module Page.Shop.Viewer exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , subscriptions
     , update
     , view
     )
@@ -18,7 +17,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
-import Html.Attributes exposing (autocomplete, class, disabled, id, required, src)
+import Html.Attributes exposing (autocomplete, class, disabled, required, src)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Value)
@@ -28,9 +27,10 @@ import Page exposing (Session(..))
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
-import Shop exposing (Product)
+import Session.Guest as Guest
+import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Translators)
+import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -41,65 +41,52 @@ import View.Form.Input as Input
 -- INIT
 
 
-init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
-init { shared, accountName, authToken } saleId =
-    let
-        currentStatus =
-            initStatus saleId
+init : Session -> Int -> ( Model, Cmd Msg )
+init session saleId =
+    case session of
+        Page.LoggedIn { shared, authToken, accountName } ->
+            ( AsLoggedIn
+                { status = RemoteData.Loading
+                , viewing = ViewingCard
+                , form = initForm (Page.toShared session |> .translators)
+                , balances = []
+                }
+            , Cmd.batch
+                [ Api.Graphql.query shared
+                    (Just authToken)
+                    (Shop.productQuery saleId)
+                    CompletedSaleLoad
+                , Api.getBalances shared accountName CompletedLoadBalances
+                ]
+                |> Cmd.map AsLoggedInMsg
+            )
 
-        model =
-            { status = currentStatus
-            , viewing = ViewingCard
-            , form = initForm shared.translators
-            , balances = []
-            }
-    in
-    ( model
-    , Cmd.batch
-        [ initCmd shared currentStatus authToken
-        , Api.getBalances shared accountName CompletedLoadBalances
-        ]
-    )
-
-
-initStatus : String -> Status
-initStatus saleId =
-    case String.toInt saleId of
-        Just sId ->
-            LoadingSale sId
-
-        Nothing ->
-            InvalidId saleId
-
-
-initCmd : Shared -> Status -> String -> Cmd Msg
-initCmd shared status authToken =
-    case status of
-        LoadingSale id ->
-            Api.Graphql.query shared
-                (Just authToken)
-                (Shop.productQuery id)
-                CompletedSaleLoad
-
-        _ ->
-            Cmd.none
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+        Page.Guest guest ->
+            ( AsGuest { productPreview = RemoteData.Loading }
+            , Api.Graphql.query guest.shared
+                Nothing
+                (Shop.productPreviewQuery saleId)
+                CompletedSalePreviewLoad
+                |> Cmd.map AsGuestMsg
+            )
 
 
 
 -- MODEL
 
 
-type alias Model =
-    { status : Status
+type Model
+    = AsGuest GuestModel
+    | AsLoggedIn LoggedInModel
+
+
+type alias GuestModel =
+    { productPreview : RemoteData (Graphql.Http.Error (Maybe Shop.ProductPreview)) Shop.ProductPreview
+    }
+
+
+type alias LoggedInModel =
+    { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
     , viewing : ViewState
     , form : Form
     , balances : List Balance
@@ -130,13 +117,6 @@ type ViewState
     | EditingTransfer
 
 
-type Status
-    = LoadingSale Int
-    | InvalidId String
-    | LoadingFailed (Graphql.Http.Error (Maybe Product))
-    | LoadedSale (Maybe Product)
-
-
 type FormError
     = UnitEmpty
     | UnitTooLow
@@ -156,6 +136,15 @@ type Validation
 
 
 type Msg
+    = AsGuestMsg GuestMsg
+    | AsLoggedInMsg LoggedInMsg
+
+
+type GuestMsg
+    = CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error (Maybe ProductPreview)) (Maybe ProductPreview))
+
+
+type LoggedInMsg
     = Ignored
     | ClosedAuthModal
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
@@ -169,11 +158,60 @@ type Msg
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (Page.External Msg)
 
 
-update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+type alias GuestUpdateResult =
+    UR.UpdateResult GuestModel GuestMsg Guest.External
+
+
+type alias LoggedInUpdateResult =
+    UR.UpdateResult LoggedInModel LoggedInMsg (LoggedIn.External LoggedInMsg)
+
+
+update : Msg -> Model -> Session -> UpdateResult
+update msg model session =
+    case ( msg, model, session ) of
+        ( AsGuestMsg subMsg, AsGuest subModel, Page.Guest guest ) ->
+            updateAsGuest subMsg subModel guest
+                |> UR.map AsGuest AsGuestMsg (Page.GuestExternal >> UR.addExt)
+
+        ( AsLoggedInMsg subMsg, AsLoggedIn subModel, Page.LoggedIn loggedIn ) ->
+            updateAsLoggedIn subMsg subModel loggedIn
+                |> UR.map AsLoggedIn
+                    AsLoggedInMsg
+                    (LoggedIn.mapExternal AsLoggedInMsg >> Page.LoggedInExternal >> UR.addExt)
+
+        _ ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg [ "InvalidMsg" ]
+
+
+updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
+updateAsGuest msg model _ =
+    case msg of
+        CompletedSalePreviewLoad (RemoteData.Success (Just productPreview)) ->
+            { model | productPreview = RemoteData.Success productPreview }
+                |> UR.init
+
+        CompletedSalePreviewLoad (RemoteData.Success Nothing) ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg [ "NoSaleFound" ]
+
+        CompletedSalePreviewLoad (RemoteData.Failure err) ->
+            { model | productPreview = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logGraphqlError msg err
+
+        _ ->
+            model
+                |> UR.init
+
+
+updateAsLoggedIn : LoggedInMsg -> LoggedInModel -> LoggedIn.Model -> LoggedInUpdateResult
+updateAsLoggedIn msg model loggedIn =
     let
         { t } =
             loggedIn.shared.translators
@@ -186,16 +224,25 @@ update msg model loggedIn =
             UR.init model
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
-            { model | status = LoadedSale maybeSale }
-                |> UR.init
+            case maybeSale of
+                Nothing ->
+                    model
+                        |> UR.init
+                        -- If there isn't a sale with the given id, the backend
+                        -- returns an error
+                        |> UR.logImpossible msg [ "NoSaleFound" ]
+
+                Just sale ->
+                    { model | status = RemoteData.Success sale }
+                        |> UR.init
 
         GotTransferResult (Ok _) ->
             case model.status of
-                LoadedSale _ ->
+                RemoteData.Success _ ->
                     model
                         |> UR.init
                         |> UR.addExt
-                            (ShowFeedback Feedback.Success (t "shop.transfer.success"))
+                            (LoggedIn.ShowFeedback Feedback.Success (t "shop.transfer.success"))
                         |> UR.addCmd
                             (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
@@ -208,19 +255,13 @@ update msg model loggedIn =
                 errorMessage =
                     EosError.parseTransferError loggedIn.shared.translators eosErrorString
             in
-            case model.status of
-                LoadedSale _ ->
-                    model
-                        |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
-
-                _ ->
-                    model
-                        |> UR.init
+            model
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
         CompletedSaleLoad (RemoteData.Failure err) ->
-            { model | status = LoadingFailed err }
+            { model | status = RemoteData.Failure err }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -313,7 +354,7 @@ update msg model loggedIn =
 
         EnteredUnit u ->
             case model.status of
-                LoadedSale (Just saleItem) ->
+                RemoteData.Success saleItem ->
                     let
                         newPrice =
                             case String.toFloat u of
@@ -376,87 +417,120 @@ cardFromSale sale =
     }
 
 
-view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn model =
+view : Page.Session -> Model -> { title : String, content : Html Msg }
+view session model =
     let
         { t } =
-            loggedIn.shared.translators
+            (Page.toShared session).translators
 
         shopTitle =
             t "shop.title"
 
         title =
-            case model.status of
-                LoadedSale maybeSale ->
-                    case maybeSale of
-                        Just sale ->
+            case model of
+                AsLoggedIn { status } ->
+                    case status of
+                        RemoteData.Success sale ->
                             sale.title ++ " - " ++ shopTitle
 
-                        Nothing ->
+                        _ ->
                             shopTitle
 
-                _ ->
-                    shopTitle
+                AsGuest { productPreview } ->
+                    case productPreview of
+                        RemoteData.Success sale ->
+                            sale.title ++ " - " ++ shopTitle
+
+                        _ ->
+                            shopTitle
 
         content =
-            case model.status of
-                LoadingSale _ ->
-                    div []
-                        [ Page.viewHeader loggedIn ""
-                        , Page.fullPageLoading loggedIn.shared
-                        ]
+            case ( model, session ) of
+                ( AsGuest _, Page.Guest _ ) ->
+                    div [] [ text "Test" ]
+                        |> Html.map AsGuestMsg
 
-                InvalidId invalidId ->
-                    div [ class "container mx-auto px-4" ]
-                        [ Page.viewHeader loggedIn ""
-                        , div []
-                            [ text (invalidId ++ " is not a valid Sale Id") ]
-                        ]
+                ( AsLoggedIn model_, Page.LoggedIn loggedIn ) ->
+                    case RemoteData.map .hasShop loggedIn.selectedCommunity of
+                        RemoteData.Success False ->
+                            Page.fullPageNotFound
+                                (t "error.pageNotFound")
+                                (t "shop.disabled.description")
 
-                LoadingFailed e ->
-                    Page.fullPageGraphQLError (t "shop.title") e
+                        RemoteData.Loading ->
+                            Page.fullPageLoading loggedIn.shared
 
-                LoadedSale maybeSale ->
-                    case maybeSale of
-                        Just sale ->
-                            let
-                                cardData =
-                                    cardFromSale sale
-                            in
-                            div []
-                                [ Page.viewHeader loggedIn cardData.product.title
-                                , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model ]
-                                ]
+                        RemoteData.NotAsked ->
+                            Page.fullPageLoading loggedIn.shared
 
-                        Nothing ->
-                            div [ class "container mx-auto px-4" ]
-                                [ div []
-                                    [ text "Could not load the sale" ]
-                                ]
+                        RemoteData.Failure e ->
+                            Page.fullPageGraphQLError (t "community.error_loading") e
+
+                        RemoteData.Success True ->
+                            case model_.status of
+                                RemoteData.Loading ->
+                                    div []
+                                        [ Page.viewHeader loggedIn ""
+                                        , Page.fullPageLoading loggedIn.shared
+                                        ]
+
+                                RemoteData.NotAsked ->
+                                    div []
+                                        [ Page.viewHeader loggedIn ""
+                                        , Page.fullPageLoading loggedIn.shared
+                                        ]
+
+                                RemoteData.Failure e ->
+                                    Page.fullPageGraphQLError (t "shop.title") e
+
+                                RemoteData.Success sale ->
+                                    let
+                                        cardData =
+                                            cardFromSale sale
+                                    in
+                                    div []
+                                        [ Page.viewHeader loggedIn cardData.product.title
+                                        , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model_ ]
+                                        , if model_.viewing == ViewingCard then
+                                            text ""
+
+                                          else
+                                            viewTransferForm loggedIn cardData model_
+                                        ]
+                                        |> Html.map AsLoggedInMsg
+
+                _ ->
+                    Page.fullPageError (t "shop.title") Http.Timeout
     in
     { title = title
-    , content =
-        case RemoteData.map .hasShop loggedIn.selectedCommunity of
-            RemoteData.Success True ->
-                content
-
-            RemoteData.Success False ->
-                Page.fullPageNotFound
-                    (t "error.pageNotFound")
-                    (t "shop.disabled.description")
-
-            RemoteData.Loading ->
-                Page.fullPageLoading loggedIn.shared
-
-            RemoteData.NotAsked ->
-                Page.fullPageLoading loggedIn.shared
-
-            RemoteData.Failure e ->
-                Page.fullPageGraphQLError (t "community.error_loading") e
+    , content = content
     }
 
 
-viewCard : LoggedIn.Model -> Card -> Model -> Html Msg
+viewProductImg : Maybe String -> Html msg
+viewProductImg maybeImgUrl =
+    let
+        imageUrl =
+            case maybeImgUrl of
+                Nothing ->
+                    "/icons/shop-placeholder0.svg"
+
+                Just "" ->
+                    "/icons/shop-placeholder0.svg"
+
+                Just imgUrl ->
+                    imgUrl
+    in
+    div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
+        [ img
+            [ src imageUrl
+            , class "object-contain w-full h-64"
+            ]
+            []
+        ]
+
+
+viewCard : LoggedIn.Model -> Card -> LoggedInModel -> Html LoggedInMsg
 viewCard ({ shared } as loggedIn) card model =
     let
         cmmBalance =
@@ -480,13 +554,7 @@ viewCard ({ shared } as loggedIn) card model =
             shared.translators.tr rId replaces
     in
     div [ class "flex flex-wrap" ]
-        [ div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
-            [ img
-                [ src (Maybe.withDefault "" card.product.image)
-                , class "object-scale-down w-full h-64"
-                ]
-                []
-            ]
+        [ viewProductImg card.product.image
         , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
             [ div [ class "font-medium text-3xl w-full" ] [ text card.product.title ]
             , div [ class "text-gray w-full md:text-sm" ] [ text card.product.description ]
@@ -563,7 +631,7 @@ viewCard ({ shared } as loggedIn) card model =
         ]
 
 
-viewTransferForm : LoggedIn.Model -> Card -> Model -> Html Msg
+viewTransferForm : LoggedIn.Model -> Card -> LoggedInModel -> Html LoggedInMsg
 viewTransferForm { shared } card model =
     let
         accountName =
@@ -758,6 +826,23 @@ isFormValid form =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        AsGuestMsg subMsg ->
+            guestMsgToString subMsg
+
+        AsLoggedInMsg subMsg ->
+            loggedInMsgToString subMsg
+
+
+guestMsgToString : GuestMsg -> List String
+guestMsgToString msg =
+    case msg of
+        CompletedSalePreviewLoad r ->
+            [ "CompletedSalePreviewLoad", UR.remoteDataToString r ]
+
+
+loggedInMsgToString : LoggedInMsg -> List String
+loggedInMsgToString msg =
+    case msg of
         Ignored ->
             [ "Ignored" ]
 
@@ -802,7 +887,7 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << GotTransferResult)
+                |> Result.map (Just << AsLoggedInMsg << GotTransferResult)
                 |> Result.withDefault Nothing
 
         _ ->

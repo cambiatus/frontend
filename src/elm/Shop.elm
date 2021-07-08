@@ -2,7 +2,9 @@ module Shop exposing
     ( Filter(..)
     , Product
     , ProductId
+    , ProductPreview
     , encodeTransferSale
+    , productPreviewQuery
     , productQuery
     , productsQuery
     )
@@ -10,6 +12,7 @@ module Shop exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Product
+import Cambiatus.Object.ProductPreview
 import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
@@ -36,6 +39,17 @@ type alias Product =
     , units : Int
     , trackStock : Bool
     , creator : ShopProfile
+    }
+
+
+type alias ProductPreview =
+    { communityId : String
+    , creatorId : String
+    , description : String
+    , id : Int
+    , image : Maybe String
+    , price : Float
+    , title : String
     }
 
 
@@ -101,6 +115,18 @@ productSelection =
         |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
 
 
+productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
+productPreviewSelectionSet =
+    SelectionSet.succeed ProductPreview
+        |> with Cambiatus.Object.ProductPreview.communityId
+        |> with Cambiatus.Object.ProductPreview.creatorId
+        |> with Cambiatus.Object.ProductPreview.description
+        |> with Cambiatus.Object.ProductPreview.id
+        |> with Cambiatus.Object.ProductPreview.image
+        |> with Cambiatus.Object.ProductPreview.price
+        |> with Cambiatus.Object.ProductPreview.title
+
+
 shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.User
 shopProfileSelectionSet =
     SelectionSet.succeed ShopProfile
@@ -118,6 +144,11 @@ shopProfileSelectionSet =
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
 productQuery saleId =
     Query.product { id = saleId } productSelection
+
+
+productPreviewQuery : Int -> SelectionSet (Maybe ProductPreview) RootQuery
+productPreviewQuery productId =
+    Query.productPreview { id = productId } productPreviewSelectionSet
 
 
 productsQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Product) RootQuery
