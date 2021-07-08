@@ -570,6 +570,10 @@ broadcast broadcastMessage status =
                     Join.receiveBroadcast broadcastMessage
                         |> Maybe.map GotJoinMsg
 
+                PaymentHistory _ ->
+                    PaymentHistory.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotPaymentHistoryMsg
+
                 _ ->
                     Nothing
     in

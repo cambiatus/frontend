@@ -36,6 +36,8 @@ import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
+import Task
+import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
@@ -61,7 +63,8 @@ init flags navKey url =
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
 
         ( Just ( accountName, _ ), Nothing ) ->
             let
@@ -71,7 +74,8 @@ init flags navKey url =
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
                 |> UR.addCmd signedInCmd
 
         ( Nothing, _ ) ->
@@ -81,13 +85,20 @@ init flags navKey url =
             in
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
 
 
-fetchTranslations : Shared -> String -> Cmd Msg
-fetchTranslations _ language =
+fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
+
+
+fetchTimezone : Cmd Msg
+fetchTimezone =
+    Time.here
+        |> Task.attempt GotTimezone
 
 
 
@@ -219,7 +230,8 @@ type ExternalMsg
 
 
 type Msg
-    = CompletedLoadTranslation String (Result Http.Error Translations)
+    = CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    | GotTimezone (Result () Time.Zone)
     | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
@@ -232,13 +244,21 @@ update msg session =
             Shared.loadTranslation (Ok ( lang, transl ))
                 |> updateShared session
                 |> UR.init
-                |> UR.addCmd (Ports.storeLanguage lang)
+                |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
 
         ( CompletedLoadTranslation _ (Err err), _ ) ->
             Shared.loadTranslation (Err err)
                 |> updateShared session
                 |> UR.init
                 |> UR.logHttpError msg err
+
+        ( GotTimezone (Ok zone), _ ) ->
+            (\shared -> { shared | timezone = zone })
+                |> updateShared session
+                |> UR.init
+
+        ( GotTimezone (Err ()), _ ) ->
+            UR.init session
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel
@@ -343,6 +363,9 @@ msgToString msg =
     case msg of
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
+
+        GotTimezone r ->
+            [ "GotTimezone", UR.resultToString r ]
 
         SignedIn r ->
             [ "SignedIn", UR.remoteDataToString r ]

@@ -288,7 +288,7 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
 viewProfileNameTag shared loggedInAccount profile =
     div [ class "flex items-center bg-black rounded-label p-1" ]
-        [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
+        [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption text-center" ]
             [ viewProfileName shared loggedInAccount profile ]
         ]
 

@@ -6,7 +6,7 @@ import Community
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra as List
@@ -15,10 +15,10 @@ import Profile.Summary
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Strftime
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -120,7 +120,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
 
 
 viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model community index objective =
+viewObjective ({ shared } as loggedIn) model _ index objective =
     let
         isOpen : Bool
         isOpen =
@@ -205,12 +205,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         posixDeadline : Posix
         posixDeadline =
             action.deadline
-                |> Utils.posixDateTime
-
-        deadlineStr : String
-        deadlineStr =
-            posixDeadline
-                |> Strftime.format "%d %B %Y" Time.utc
+                |> Utils.fromMaybeDateTime
 
         pastDeadline =
             Action.isPastDeadline action shared.now
@@ -276,13 +271,16 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    p
-                                        [ classList
+                                    View.Components.dateViewer
+                                        [ class "capitalize"
+                                        , classList
                                             [ ( "text-red", pastDeadline )
                                             , ( "text-white", not pastDeadline )
                                             ]
                                         ]
-                                        [ text deadlineStr ]
+                                        identity
+                                        shared
+                                        posixDeadline
 
                                 Nothing ->
                                     text ""
@@ -320,8 +318,22 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                             text ""
 
                                         Just validatorSummary ->
-                                            div [ class "mr-4 action-verifier" ]
-                                                [ Profile.Summary.view shared loggedIn.accountName u validatorSummary
+                                            let
+                                                validatorId =
+                                                    "validator-"
+                                                        ++ String.fromInt objectiveId
+                                                        ++ "-"
+                                                        ++ String.fromInt action.id
+                                                        ++ "-"
+                                                        ++ String.fromInt validatorIndex
+                                            in
+                                            div
+                                                [ class "mr-4 action-verifier relative"
+                                                , id validatorId
+                                                ]
+                                                [ validatorSummary
+                                                    |> Profile.Summary.withRelativeSelector ("#" ++ validatorId)
+                                                    |> Profile.Summary.view shared loggedIn.accountName u
                                                     |> Html.map (GotProfileSummaryMsg action.id validatorIndex)
                                                 ]
                                 )

@@ -19,6 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+count : SelectionSet (Maybe Int) Cambiatus.Object.TransferConnection
+count =
+    Object.selectionForField "(Maybe Int)" "count" [] (Decode.int |> Decode.nullable)
+
+
 edges :
     SelectionSet decodesTo Cambiatus.Object.TransferEdge
     -> SelectionSet (Maybe (List (Maybe decodesTo))) Cambiatus.Object.TransferConnection
@@ -26,18 +31,8 @@ edges object_ =
     Object.selectionForCompositeField "edges" [] object_ (identity >> Decode.nullable >> Decode.list >> Decode.nullable)
 
 
-fetchedCount : SelectionSet (Maybe Int) Cambiatus.Object.TransferConnection
-fetchedCount =
-    Object.selectionForField "(Maybe Int)" "fetchedCount" [] (Decode.int |> Decode.nullable)
-
-
 pageInfo :
     SelectionSet decodesTo Cambiatus.Object.PageInfo
     -> SelectionSet decodesTo Cambiatus.Object.TransferConnection
 pageInfo object_ =
     Object.selectionForCompositeField "pageInfo" [] object_ identity
-
-
-totalCount : SelectionSet (Maybe Int) Cambiatus.Object.TransferConnection
-totalCount =
-    Object.selectionForField "(Maybe Int)" "totalCount" [] (Decode.int |> Decode.nullable)

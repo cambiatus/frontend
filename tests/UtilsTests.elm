@@ -13,33 +13,64 @@ import Utils
 all : Test
 all =
     describe "Utils"
-        [ posixDateTime
+        [ fromMaybeDateTime
+        , areSameDay
         , formatFloat
         ]
 
 
 
--- POSIX DATE TIME
+-- FROM MAYBE DATE TIME
 
 
-posixDateTime : Test
-posixDateTime =
+fromMaybeDateTime : Test
+fromMaybeDateTime =
     fuzz Fuzz.maybeDateTime "posixDateTime" <|
         \fuzzMaybeDateTime ->
             case fuzzMaybeDateTime of
                 Nothing ->
                     Time.millisToPosix 0
-                        |> Expect.equal (Utils.posixDateTime fuzzMaybeDateTime)
+                        |> Expect.equal (Utils.fromMaybeDateTime fuzzMaybeDateTime)
 
                 Just (DateTime fuzzDateTime) ->
                     case Iso8601.toTime fuzzDateTime of
                         Ok fuzzPosix ->
                             fuzzPosix
-                                |> Expect.equal (Utils.posixDateTime fuzzMaybeDateTime)
+                                |> Expect.equal (Utils.fromMaybeDateTime fuzzMaybeDateTime)
 
                         Err _ ->
                             Time.millisToPosix 0
-                                |> Expect.equal (Utils.posixDateTime fuzzMaybeDateTime)
+                                |> Expect.equal (Utils.fromMaybeDateTime fuzzMaybeDateTime)
+
+
+
+-- ARE SAME DAY
+
+
+areSameDay : Test
+areSameDay =
+    describe "areSameDay"
+        [ test "same instant" <|
+            \() ->
+                Utils.areSameDay Time.utc (Time.millisToPosix 1000) (Time.millisToPosix 1000)
+                    |> Expect.true "Expected to be the same day"
+        , test "one hour difference on the same day" <|
+            \() ->
+                Utils.areSameDay Time.utc (Time.millisToPosix 1625683508000) (Time.millisToPosix 1625676308000)
+                    |> Expect.true "Expected to be the same day"
+        , test "start and end of day" <|
+            \() ->
+                Utils.areSameDay Time.utc (Time.millisToPosix 1625616010000) (Time.millisToPosix 1625702399000)
+                    |> Expect.true "Expected to be the same day"
+        , test "23:59h and 00:01h" <|
+            \() ->
+                Utils.areSameDay Time.utc (Time.millisToPosix 1625615999000) (Time.millisToPosix 1625616060000)
+                    |> Expect.false "Expected to not be the same day"
+        , test "one day difference" <|
+            \() ->
+                Utils.areSameDay Time.utc (Time.millisToPosix 1625683508000) (Time.millisToPosix 1625597108000)
+                    |> Expect.false "Expected to not be the same day"
+        ]
 
 
 

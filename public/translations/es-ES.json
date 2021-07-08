@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Volver",
+  "dates": {
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
   "loading": {
     "title": "Espera un momento",
     "subtitle": "Estamos procesando su petición"
@@ -370,7 +374,8 @@
     }
   },
   "transfer": {
-    "last_title": "Últimas transferencias",
+    "timeline_my": "Mi",
+    "timeline": "cronología",
     "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
     "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",
@@ -870,7 +875,9 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
-    "claimed_on": "Reclamado en {{claim_date}}",
+    "claimed_today": "Reclamado hoy",
+    "claimed_yesterday": "Reclamado ayer",
+    "claimed_on": "Reclamado en {{date}}",
     "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "approved_by": "Aprobado por",

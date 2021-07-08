@@ -5,7 +5,6 @@ module Session.Shared exposing
     , communityDomain
     , init
     , langFlag
-    , language
     , loadTranslation
     , toLoadingTranslation
     , translationStatus
@@ -26,12 +25,13 @@ import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
 import Time exposing (Posix)
+import Translation
 import Url exposing (Url)
 
 
 type alias Shared =
     { navKey : Nav.Key
-    , language : String
+    , language : Translation.Language
     , translations : Translations
     , translators : Translators
     , translationsStatus : TranslationStatus
@@ -41,6 +41,7 @@ type alias Shared =
     , logo : String
     , logoMobile : String
     , now : Posix
+    , timezone : Time.Zone
     , allowCommunityCreation : Bool
     , url : Url
     , contracts : { token : String, community : String }
@@ -54,7 +55,18 @@ type alias Shared =
 init : Flags -> Nav.Key -> Url -> Shared
 init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
     { navKey = navKey
-    , language = flags.language
+    , language =
+        -- We need to try parsing with `fromLanguageCode` first for
+        -- backwards-compatiblity. In some time, we should switch to just trying
+        -- with `languageFromLocale`
+        case flags.language |> Translation.languageFromLanguageCode of
+            Just lang ->
+                lang
+
+            Nothing ->
+                flags.language
+                    |> Translation.languageFromLocale
+                    |> Maybe.withDefault Translation.defaultLanguage
     , translations = initialTranslations
     , translators = makeTranslators initialTranslations
     , translationsStatus = LoadingTranslation
@@ -64,6 +76,7 @@ init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContr
     , logo = flags.logo
     , logoMobile = flags.logoMobile
     , now = Time.millisToPosix flags.now
+    , timezone = Time.utc
     , allowCommunityCreation = allowCommunityCreation
     , url = url
     , contracts = { token = tokenContract, community = communityContract }
@@ -112,11 +125,6 @@ makeTranslators translations =
 
 
 -- INFO
-
-
-language : Shared -> String
-language shared =
-    shared.language
 
 
 translationStatus : Shared -> TranslationStatus
@@ -209,7 +217,7 @@ toLoadingTranslation shared =
     }
 
 
-loadTranslation : Result Http.Error ( String, Translations ) -> Shared -> Shared
+loadTranslation : Result Http.Error ( Translation.Language, Translations ) -> Shared -> Shared
 loadTranslation result shared =
     case result of
         Err err ->
@@ -226,9 +234,9 @@ loadTranslation result shared =
                             shared.translationsStatus
             }
 
-        Ok ( language_, translations ) ->
+        Ok ( language, translations ) ->
             { shared
-                | language = language_
+                | language = language
                 , translations = translations
                 , translators = makeTranslators translations
                 , translationsStatus = LoadedTranslation
@@ -239,41 +247,42 @@ loadTranslation result shared =
 -- VIEW
 
 
-viewLanguageItems : Shared -> (String -> msg) -> List (Html msg)
+viewLanguageItems : Shared -> (Translation.Language -> msg) -> List (Html msg)
 viewLanguageItems shared toMsg =
-    [ "en", "pt-br", "es", "cat", "amh" ]
-        |> List.filter (\l -> not (String.startsWith l shared.language))
-        |> List.sort
+    Translation.allLanguages
+        |> List.filter (\l -> l /= shared.language)
+        |> List.sortBy Translation.languageToLocale
         |> List.map
             (\lang ->
                 button
-                    [ class "flex px-4 py-2 text-gray justify-between items-center text-xs"
+                    [ class "flex px-4 py-2 text-gray justify-between items-center text-xs uppercase"
                     , onClick (toMsg lang)
                     ]
                     [ langFlag lang
-                    , text (String.toUpper lang)
+                    , text (Translation.languageToLanguageCode lang)
                     ]
             )
 
 
-langFlag : String -> Html msg
-langFlag st =
+langFlag : Translation.Language -> Html msg
+langFlag language =
     let
         iconLink =
-            if String.startsWith "cat" st then
-                "/icons/flag-catalan.svg"
+            case language of
+                Translation.English ->
+                    "/icons/flag-usa.svg"
 
-            else if String.startsWith "p" st then
-                "/icons/flag-brazil.svg"
+                Translation.Portuguese ->
+                    "/icons/flag-brazil.svg"
 
-            else if String.startsWith "es" st then
-                "/icons/flag-spain.svg"
+                Translation.Spanish ->
+                    "/icons/flag-spain.svg"
 
-            else if String.startsWith "amh" st then
-                "/icons/flag-ethiopia.svg"
+                Translation.Catalan ->
+                    "/icons/flag-catalan.svg"
 
-            else
-                "/icons/flag-usa.svg"
+                Translation.Amharic ->
+                    "/icons/flag-ethiopia.svg"
     in
     img
         [ class "object-cover rounded-full w-6 h-6 lang-flag mr-2"

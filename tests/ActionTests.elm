@@ -27,7 +27,7 @@ isPastDeadline =
             case fuzzAction.deadline of
                 Just _ ->
                     Action.isPastDeadline fuzzAction fuzzTime
-                        |> Expect.equal (Time.posixToMillis fuzzTime > Time.posixToMillis (Utils.posixDateTime fuzzAction.deadline))
+                        |> Expect.equal (Time.posixToMillis fuzzTime > Time.posixToMillis (Utils.fromMaybeDateTime fuzzAction.deadline))
 
                 Nothing ->
                     Action.isPastDeadline fuzzAction fuzzTime

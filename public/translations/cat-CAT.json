@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "dates": {
+    "today": "Avui",
+    "yesterday": "Ahir"
+  },
   "loading": {
     "title": "Espera un moment",
     "subtitle": "Estem processant la vostra sol·licitud"
@@ -370,7 +374,8 @@
     }
   },
   "transfer": {
-    "last_title": "Darreres transferències ",
+    "timeline_my": "La meva",
+    "timeline": "cronologia",
     "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",
@@ -870,7 +875,9 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "claimed_on": "Reclamat el {{claim_date}}",
+    "claimed_today": "Reclamat avui",
+    "claimed_yesterday": "Reclamat ahir",
+    "claimed_on": "Reclamat el {{date}}",
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",

@@ -231,6 +231,20 @@ product requiredArgs object_ =
     Object.selectionForCompositeField "product" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
+type alias ProductPreviewRequiredArguments =
+    { id : Int }
+
+
+{-| Public product query, mainly used to preview a sale
+-}
+productPreview :
+    ProductPreviewRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.ProductPreview
+    -> SelectionSet (Maybe decodesTo) RootQuery
+productPreview requiredArgs object_ =
+    Object.selectionForCompositeField "productPreview" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+
+
 type alias ProductsOptionalArguments =
     { filters : OptionalArgument Cambiatus.InputObject.ProductsFilterInput }
 

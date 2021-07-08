@@ -21,7 +21,6 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Strftime
-import Time
 import UpdateResult as UR
 import Utils
 import View.Components
@@ -316,9 +315,8 @@ viewDetails { shared } model claim =
                     , p [ class "pt-2" ]
                         [ text
                             (claim.createdAt
-                                |> Just
-                                |> Utils.posixDateTime
-                                |> Strftime.format "%d %b %Y %H:%M" Time.utc
+                                |> Utils.fromDateTime
+                                |> Strftime.format "%d %b %Y %H:%M" shared.timezone
                             )
                         ]
                     ]

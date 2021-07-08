@@ -1,28 +1,138 @@
-module Translation exposing (get)
+module Translation exposing
+    ( Language(..)
+    , allLanguages
+    , defaultLanguage
+    , get
+    , languageFromLanguageCode
+    , languageFromLocale
+    , languageToLanguageCode
+    , languageToLocale
+    )
 
 import Http
 import I18Next exposing (Translations)
 import Url.Builder
 
 
-get : String -> (Result Http.Error Translations -> msg) -> Cmd msg
+type Language
+    = English
+    | Portuguese
+    | Spanish
+    | Catalan
+    | Amharic
+
+
+languageFromLanguageCode : String -> Maybe Language
+languageFromLanguageCode locale =
+    case String.toLower locale of
+        "en-us" ->
+            Just English
+
+        "pt-br" ->
+            Just Portuguese
+
+        "es" ->
+            Just Spanish
+
+        "cat" ->
+            Just Catalan
+
+        "amh" ->
+            Just Amharic
+
+        _ ->
+            Nothing
+
+
+languageToLanguageCode : Language -> String
+languageToLanguageCode language =
+    case language of
+        English ->
+            "en-US"
+
+        Portuguese ->
+            "pt-br"
+
+        Spanish ->
+            "es"
+
+        Catalan ->
+            "cat"
+
+        Amharic ->
+            "amh"
+
+
+languageToLocale : Language -> String
+languageToLocale language =
+    case language of
+        English ->
+            "en-us"
+
+        Portuguese ->
+            "pt-br"
+
+        Spanish ->
+            "es-es"
+
+        Catalan ->
+            "ca-es"
+
+        Amharic ->
+            "am-et"
+
+
+languageFromLocale : String -> Maybe Language
+languageFromLocale locale =
+    case String.toLower locale of
+        "en-us" ->
+            Just English
+
+        "pt-br" ->
+            Just Portuguese
+
+        "es-es" ->
+            Just Spanish
+
+        "ca-es" ->
+            Just Catalan
+
+        "am-et" ->
+            Just Amharic
+
+        _ ->
+            Nothing
+
+
+allLanguages : List Language
+allLanguages =
+    [ English, Portuguese, Spanish, Catalan, Amharic ]
+
+
+defaultLanguage : Language
+defaultLanguage =
+    English
+
+
+get : Language -> (Result Http.Error Translations -> msg) -> Cmd msg
 get language toMsg =
     let
         translation =
-            if String.startsWith "es" language then
-                "es-ES.json"
+            case language of
+                English ->
+                    "en-US.json"
 
-            else if String.startsWith "pt" language then
-                "pt-BR.json"
+                Portuguese ->
+                    "pt-BR.json"
 
-            else if String.startsWith "cat" language then
-                "cat-CAT.json"
+                Spanish ->
+                    "es-ES.json"
 
-            else if String.startsWith "amh" language then
-                "amh-ETH.json"
+                Catalan ->
+                    "cat-CAT.json"
 
-            else
-                "en-US.json"
+                Amharic ->
+                    "amh-ETH.json"
     in
     Http.get
         { url = Url.Builder.absolute [ "translations", translation ] []

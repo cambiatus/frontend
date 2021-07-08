@@ -790,7 +790,7 @@ isPastDeadline : Action -> Time.Posix -> Bool
 isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            Time.posixToMillis now > Time.posixToMillis (Utils.posixDateTime action.deadline)
+            Time.posixToMillis now > Time.posixToMillis (Utils.fromMaybeDateTime action.deadline)
 
         Nothing ->
             False
