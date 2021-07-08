@@ -485,7 +485,6 @@ eos = Eos(config.eosOptions)
 // SET META INFORMATION
 
 app.ports.setMetaInformationPort.subscribe((metaInformation) => {
-  console.log(metaInformation)
   const { description, ...rest } = metaInformation
   const setMeta = (property, key, content) => {
     let metaTag = document.head.querySelector(`[${property}="${key}"]`)

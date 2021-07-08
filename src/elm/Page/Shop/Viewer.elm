@@ -65,7 +65,7 @@ init session saleId =
 
         Page.Guest guest ->
             ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
-            , Guest.maybeInitWith CompletedLoadCommunityPreview .community guest
+            , Guest.maybeInitWith (\_ -> CompletedLoadCommunityPreview) .community guest
                 |> Cmd.map AsGuestMsg
             )
 
@@ -146,7 +146,7 @@ type Msg
 
 
 type GuestMsg
-    = CompletedLoadCommunityPreview Community.CommunityPreview
+    = CompletedLoadCommunityPreview
     | CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error (Maybe ProductPreview)) (Maybe ProductPreview))
 
 
@@ -197,7 +197,7 @@ update msg model session =
 updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
 updateAsGuest msg model guest =
     case msg of
-        CompletedLoadCommunityPreview _ ->
+        CompletedLoadCommunityPreview ->
             -- This is so we can display the community's logo on preview links
             model
                 |> UR.init
@@ -948,12 +948,10 @@ isFormValid form =
 
 
 receiveGuestBroadcast : Guest.BroadcastMsg -> Maybe Msg
-receiveGuestBroadcast broadcastMsg =
-    case broadcastMsg of
-        Guest.CommunityLoaded communityPreview ->
-            CompletedLoadCommunityPreview communityPreview
-                |> AsGuestMsg
-                |> Just
+receiveGuestBroadcast (Guest.CommunityLoaded _) =
+    CompletedLoadCommunityPreview
+        |> AsGuestMsg
+        |> Just
 
 
 msgToString : Msg -> List String
@@ -969,7 +967,7 @@ msgToString msg =
 guestMsgToString : GuestMsg -> List String
 guestMsgToString msg =
     case msg of
-        CompletedLoadCommunityPreview _ ->
+        CompletedLoadCommunityPreview ->
             [ "CompletedLoadCommunityPreview" ]
 
         CompletedSalePreviewLoad r ->

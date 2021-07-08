@@ -8,7 +8,6 @@ port module Ports exposing
     , javascriptOutCmd
     , mapAddress
     , setMetaInformation
-    , setMetaInformationPort
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -86,7 +85,7 @@ setMetaInformation metaInformation =
         |> setMetaInformationPort
 
 
-port setMetaInformationPort : Encode.Value -> Cmd msg
+port setMetaInformationPort : Value -> Cmd msg
 
 
 port storeLanguage : String -> Cmd msg
