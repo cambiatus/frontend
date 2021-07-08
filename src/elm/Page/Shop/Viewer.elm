@@ -4,6 +4,7 @@ module Page.Shop.Viewer exposing
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveGuestBroadcast
     , update
     , view
     )
@@ -24,6 +25,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
+import Ports
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
@@ -62,11 +64,8 @@ init session saleId =
             )
 
         Page.Guest guest ->
-            ( AsGuest { productPreview = RemoteData.Loading }
-            , Api.Graphql.query guest.shared
-                Nothing
-                (Shop.productPreviewQuery saleId)
-                CompletedSalePreviewLoad
+            ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
+            , Guest.maybeInitWith CompletedLoadCommunityPreview .community guest
                 |> Cmd.map AsGuestMsg
             )
 
@@ -81,7 +80,8 @@ type Model
 
 
 type alias GuestModel =
-    { productPreview : RemoteData (Graphql.Http.Error (Maybe ProductPreview)) ProductPreview
+    { saleId : Int
+    , productPreview : RemoteData (Graphql.Http.Error (Maybe ProductPreview)) ProductPreview
     }
 
 
@@ -146,7 +146,8 @@ type Msg
 
 
 type GuestMsg
-    = CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error (Maybe ProductPreview)) (Maybe ProductPreview))
+    = CompletedLoadCommunityPreview Community.CommunityPreview
+    | CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error (Maybe ProductPreview)) (Maybe ProductPreview))
 
 
 type LoggedInMsg
@@ -194,11 +195,70 @@ update msg model session =
 
 
 updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
-updateAsGuest msg model _ =
+updateAsGuest msg model guest =
     case msg of
-        CompletedSalePreviewLoad (RemoteData.Success (Just productPreview)) ->
-            { model | productPreview = RemoteData.Success productPreview }
+        CompletedLoadCommunityPreview _ ->
+            -- This is so we can display the community's logo on preview links
+            model
                 |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.query guest.shared
+                        Nothing
+                        (Shop.productPreviewQuery model.saleId)
+                        CompletedSalePreviewLoad
+                    )
+
+        CompletedSalePreviewLoad (RemoteData.Success (Just productPreview)) ->
+            let
+                maybeProductImage =
+                    productPreview.image
+                        |> Maybe.andThen
+                            (\img ->
+                                if img == "" then
+                                    Nothing
+
+                                else
+                                    Just img
+                            )
+            in
+            case guest.community of
+                RemoteData.Success community ->
+                    { model | productPreview = RemoteData.Success productPreview }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Ports.setMetaInformation
+                                { description =
+                                    guest.shared.translators.tr "shop.preview_text"
+                                        [ ( "user"
+                                          , productPreview.creator.name
+                                                |> Maybe.withDefault (productPreview.creator.account |> Eos.nameToString)
+                                          )
+                                        , ( "product", productPreview.title )
+                                        , ( "community", community.name )
+                                        ]
+                                        ++ "\n"
+                                        ++ productPreview.description
+                                , title = productPreview.title ++ " | Cambiatus"
+                                , image =
+                                    case maybeProductImage of
+                                        Just img ->
+                                            img
+
+                                        Nothing ->
+                                            case guest.community of
+                                                RemoteData.Success communityPreview ->
+                                                    communityPreview.logo
+
+                                                _ ->
+                                                    guest.shared.logoMobile
+                                , locale = guest.shared.language
+                                }
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NoCommunity" ]
 
         CompletedSalePreviewLoad (RemoteData.Success Nothing) ->
             model
@@ -210,7 +270,11 @@ updateAsGuest msg model _ =
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
-        _ ->
+        CompletedSalePreviewLoad RemoteData.NotAsked ->
+            model
+                |> UR.init
+
+        CompletedSalePreviewLoad RemoteData.Loading ->
             model
                 |> UR.init
 
@@ -883,6 +947,15 @@ isFormValid form =
 -- UTILS
 
 
+receiveGuestBroadcast : Guest.BroadcastMsg -> Maybe Msg
+receiveGuestBroadcast broadcastMsg =
+    case broadcastMsg of
+        Guest.CommunityLoaded communityPreview ->
+            CompletedLoadCommunityPreview communityPreview
+                |> AsGuestMsg
+                |> Just
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -896,6 +969,9 @@ msgToString msg =
 guestMsgToString : GuestMsg -> List String
 guestMsgToString msg =
     case msg of
+        CompletedLoadCommunityPreview _ ->
+            [ "CompletedLoadCommunityPreview" ]
+
         CompletedSalePreviewLoad r ->
             [ "CompletedSalePreviewLoad", UR.remoteDataToString r ]
 

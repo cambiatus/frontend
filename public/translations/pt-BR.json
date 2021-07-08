@@ -730,6 +730,7 @@
     "buy": "Comprar",
     "edit": "Editar minha oferta",
     "sold_by": "Vendido por",
+    "preview_text": "{{user}} está vendendo {{product}} na comunidade {{community}} na Cambiatus:",
     "transfer": {
       "units_label": "Quantas unidades você quer?",
       "quantity_label": "Valor",

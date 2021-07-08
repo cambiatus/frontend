@@ -485,6 +485,10 @@ broadcastGuest broadcastMessage status =
                     Register.receiveBroadcast broadcastMessage
                         |> Maybe.map GotRegisterMsg
 
+                ShopViewer _ _ ->
+                    ShopViewer.receiveGuestBroadcast broadcastMessage
+                        |> Maybe.map GotShopViewerMsg
+
                 _ ->
                     Nothing
     in

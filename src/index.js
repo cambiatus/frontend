@@ -482,6 +482,35 @@ app.ports.logDebug.subscribe(debugLog)
 
 eos = Eos(config.eosOptions)
 
+// SET META INFORMATION
+
+app.ports.setMetaInformationPort.subscribe((metaInformation) => {
+  console.log(metaInformation)
+  const { description, ...rest } = metaInformation
+  const setMeta = (property, key, content) => {
+    let metaTag = document.head.querySelector(`[${property}="${key}"]`)
+    if (metaTag === null) {
+      metaTag = document.createElement('meta')
+      document.head.appendChild(metaTag)
+    }
+    metaTag.setAttribute(property, key)
+    metaTag.setAttribute('content', content)
+  }
+
+  setMeta('name', 'twitter:card', 'summary')
+  setMeta('name', 'twitter:site', '@_cambiatus')
+  setMeta('name', 'description', description)
+  setMeta('property', 'og:description', description)
+  setMeta('property', 'og:type', 'website')
+  setMeta('property', 'og:url', window.location.href)
+
+  for (const metaKey in rest) {
+    if (Object.hasOwnProperty.call(rest, metaKey)) {
+      setMeta('property', metaKey, rest[metaKey])
+    }
+  }
+})
+
 // STORE LANGUAGE
 
 app.ports.storeLanguage.subscribe(storeLanguage)

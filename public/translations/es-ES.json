@@ -725,6 +725,7 @@
     "buy": "Comprar",
     "edit": "Editar mi oferta",
     "sold_by": "Vendido por",
+    "preview_text": "{{user}} vende {{product}} en la comunidad {{community}} en Cambiatus:",
     "transfer": {
       "units_label": "¿Cuántas unidades quiere comprar?",
       "quantity_label": "Valor",
