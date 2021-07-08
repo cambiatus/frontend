@@ -12,10 +12,10 @@ import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Strftime
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 
@@ -155,11 +155,6 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
         t str =
             shared.translators.t str
                 |> String.toUpper
-
-        date =
-            transfer.blockTime
-                |> Utils.fromDateTime
-                |> Strftime.format "%d %b %Y" shared.timezone
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
@@ -170,11 +165,16 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                 GotProfileSummaryMsg
                 [ class "w-full px-4 bg-gray-100 py-6 my-8 md:px-20" ]
             , div [ class "w-full mb-10 px-4" ]
-                [ viewDetail (t "transfer_result.date") date
+                [ viewDetail (t "transfer_result.date")
+                    (View.Components.dateViewer []
+                        identity
+                        shared
+                        (Utils.fromDateTime transfer.blockTime)
+                    )
                 , case transfer.memo of
                     Just memo ->
                         if String.length memo > 0 then
-                            viewDetail (t "transfer_result.message") memo
+                            viewDetail (t "transfer_result.message") (text memo)
 
                         else
                             text ""
@@ -188,13 +188,13 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
         ]
 
 
-viewDetail : String -> String -> Html Msg
+viewDetail : String -> Html Msg -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
         [ h5 [ class "input-label mb-2" ]
             [ text title ]
         , p [ class "text-body" ]
-            [ text content ]
+            [ content ]
         ]
 
 
@@ -230,7 +230,6 @@ update msg model user =
     case msg of
         CompletedTransferLoad (RemoteData.Success transfer) ->
             let
-                -- find out state either transferred or received
                 direction =
                     findDirection transfer user
 
