@@ -88,12 +88,12 @@ type alias Model =
 initModel : Model
 initModel =
     { balance = RemoteData.NotAsked
-    , analysis = LoadingGraphql
+    , analysis = LoadingGraphql Nothing
     , analysisFilter = initAnalysisFilter
     , profileSummaries = []
     , lastSocket = ""
     , transfersDirection = Nothing
-    , transfers = LoadingGraphql
+    , transfers = LoadingGraphql Nothing
     , contactModel = Contact.initSingle
     , showContactModal = False
     , inviteModalStatus = InviteModalClosed
@@ -108,7 +108,7 @@ initAnalysisFilter =
 
 
 type GraphqlStatus err a
-    = LoadingGraphql
+    = LoadingGraphql (Maybe a)
     | LoadedGraphql a (Maybe Api.Relay.PageInfo)
     | FailedGraphql (Graphql.Http.Error err)
 
@@ -379,7 +379,7 @@ viewAnalysisList loggedIn model =
                 claims
     in
     case model.analysis of
-        LoadingGraphql ->
+        LoadingGraphql _ ->
             Page.fullPageLoading loggedIn.shared
 
         LoadedGraphql claims _ ->
@@ -505,7 +505,7 @@ viewTransfers loggedIn model =
                     ]
                 ]
             , case model.transfers of
-                LoadingGraphql ->
+                LoadingGraphql Nothing ->
                     Page.viewCardEmpty
                         [ div [ class "text-gray-900 text-sm" ]
                             [ text (t "menu.loading") ]
@@ -523,49 +523,84 @@ viewTransfers loggedIn model =
                             [ text (t "transfer.no_transfers_yet") ]
                         ]
 
-                LoadedGraphql transfers _ ->
-                    div [ class "divide-y" ]
-                        (transfers
-                            |> List.groupWhile
-                                (\( t1, _ ) ( t2, _ ) ->
-                                    Utils.areSameDay loggedIn.shared.timezone
-                                        (Utils.fromDateTime t1.blockTime)
-                                        (Utils.fromDateTime t2.blockTime)
-                                )
-                            |> List.map
-                                (\( ( t1, _ ) as first, rest ) ->
-                                    div [ class "py-4" ]
-                                        [ View.Components.dateViewer
-                                            [ class "uppercase text-caption text-black tracking-wider" ]
-                                            identity
-                                            loggedIn.shared
-                                            (Utils.fromDateTime t1.blockTime)
-                                        , div [ class "divide-y" ]
-                                            (List.map
-                                                (\( transfer, profileSummaries ) ->
-                                                    let
-                                                        direction =
-                                                            if transfer.to.account == loggedIn.accountName then
-                                                                TransferDirectionValue.Receiving
+                LoadingGraphql (Just existingTransfers) ->
+                    div []
+                        [ viewTransferList loggedIn existingTransfers Nothing
+                        , View.Components.loadingLogoAnimated loggedIn.shared.translators ""
+                        ]
 
-                                                            else
-                                                                TransferDirectionValue.Sending
-                                                    in
-                                                    Transfer.viewCard loggedIn
-                                                        transfer
-                                                        direction
-                                                        profileSummaries
-                                                        (GotTransferCardProfileSummaryMsg transfer.id)
-                                                        [ class "py-4 cursor-pointer hover:bg-gray-100"
-                                                        , onClick (ClickedTransferCard transfer.id)
-                                                        ]
-                                                )
-                                                (first :: rest)
-                                            )
-                                        ]
-                                )
-                        )
+                LoadedGraphql transfers maybePageInfo ->
+                    viewTransferList loggedIn transfers maybePageInfo
             ]
+        ]
+
+
+viewTransferList :
+    LoggedIn.Model
+    -> List ( Transfer, Transfer.ProfileSummaries )
+    -> Maybe Api.Relay.PageInfo
+    -> Html Msg
+viewTransferList loggedIn transfers maybePageInfo =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
+    div []
+        [ div [ class "divide-y" ]
+            (transfers
+                |> List.groupWhile
+                    (\( t1, _ ) ( t2, _ ) ->
+                        Utils.areSameDay loggedIn.shared.timezone
+                            (Utils.fromDateTime t1.blockTime)
+                            (Utils.fromDateTime t2.blockTime)
+                    )
+                |> List.map
+                    (\( ( t1, _ ) as first, rest ) ->
+                        div [ class "py-4" ]
+                            [ View.Components.dateViewer
+                                [ class "uppercase text-caption text-black tracking-wider" ]
+                                identity
+                                loggedIn.shared
+                                (Utils.fromDateTime t1.blockTime)
+                            , div [ class "divide-y" ]
+                                (List.map
+                                    (\( transfer, profileSummaries ) ->
+                                        let
+                                            direction =
+                                                if transfer.to.account == loggedIn.accountName then
+                                                    TransferDirectionValue.Receiving
+
+                                                else
+                                                    TransferDirectionValue.Sending
+                                        in
+                                        Transfer.viewCard loggedIn
+                                            transfer
+                                            direction
+                                            profileSummaries
+                                            (GotTransferCardProfileSummaryMsg transfer.id)
+                                            [ class "py-4 cursor-pointer hover:bg-gray-100"
+                                            , onClick (ClickedTransferCard transfer.id)
+                                            ]
+                                    )
+                                    (first :: rest)
+                                )
+                            ]
+                    )
+            )
+        , case maybePageInfo of
+            Just pageInfo ->
+                if pageInfo.hasNextPage then
+                    button
+                        [ class "button button-primary w-full"
+                        , onClick ClickedShowMoreTransfers
+                        ]
+                        [ text <| t "payment_history.more" ]
+
+                else
+                    text ""
+
+            Nothing ->
+                text ""
         ]
 
 
@@ -696,6 +731,7 @@ type Msg
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | GotTransferCardProfileSummaryMsg Int Bool Profile.Summary.Msg
     | ClickedTransferCard Int
+    | ClickedShowMoreTransfers
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -720,11 +756,11 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init
                 { model
                     | balance = RemoteData.Loading
-                    , analysis = LoadingGraphql
+                    , analysis = LoadingGraphql Nothing
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
-                |> UR.addCmd (fetchTransfers loggedIn community model)
+                |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
 
         CompletedLoadProfile profile ->
             let
@@ -777,6 +813,25 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init model
 
         CompletedLoadUserTransfers (RemoteData.Success maybeTransfers) ->
+            let
+                maybePageInfo : Maybe Api.Relay.PageInfo
+                maybePageInfo =
+                    maybeTransfers
+                        |> Maybe.andThen .transfers
+                        |> Maybe.map .pageInfo
+
+                previousTransfers : List ( Transfer, Transfer.ProfileSummaries )
+                previousTransfers =
+                    case model.transfers of
+                        LoadedGraphql previousTransfers_ _ ->
+                            previousTransfers_
+
+                        LoadingGraphql (Just previousTransfers_) ->
+                            previousTransfers_
+
+                        _ ->
+                            []
+            in
             { model
                 | transfers =
                     Transfer.getTransfers maybeTransfers
@@ -788,7 +843,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                                   }
                                 )
                             )
-                        |> (\transfers -> LoadedGraphql transfers Nothing)
+                        |> (\transfers -> LoadedGraphql (previousTransfers ++ transfers) maybePageInfo)
             }
                 |> UR.init
 
@@ -950,6 +1005,22 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl shared.navKey (Route.ViewTransfer transferId))
 
+        ClickedShowMoreTransfers ->
+            case ( model.transfers, loggedIn.selectedCommunity ) of
+                ( LoadedGraphql transfers maybePageInfo, RemoteData.Success community ) ->
+                    let
+                        maybeCursor : Maybe String
+                        maybeCursor =
+                            Maybe.andThen .endCursor maybePageInfo
+                    in
+                    { model | transfers = LoadingGraphql (Just transfers) }
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor model)
+
+                _ ->
+                    model
+                        |> UR.init
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1054,7 +1125,7 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                                 DESC ->
                                     ASC
-                        , analysis = LoadingGraphql
+                        , analysis = LoadingGraphql Nothing
                     }
 
                 fetchCmd =
@@ -1095,8 +1166,8 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Model -> Cmd Msg
-fetchTransfers loggedIn community model =
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> Cmd Msg
+fetchTransfers loggedIn community maybeCursor model =
     Api.Graphql.query loggedIn.shared
         (Just loggedIn.authToken)
         (Transfer.transfersUserQuery
@@ -1104,6 +1175,7 @@ fetchTransfers loggedIn community model =
             (\args ->
                 { args
                     | first = Present 10
+                    , after = OptionalArgument.fromMaybe maybeCursor
                     , filter =
                         Present
                             { communityId = Present (Eos.symbolToString community.symbol)
@@ -1300,6 +1372,9 @@ msgToString msg =
 
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
+
+        ClickedShowMoreTransfers ->
+            [ "ClickedShowMoreTransfers" ]
 
         CreateInvite ->
             [ "CreateInvite" ]
