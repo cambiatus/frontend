@@ -3,6 +3,7 @@ module Shop exposing
     , Product
     , ProductId
     , ProductPreview
+    , ShopProfile
     , encodeTransferSale
     , productPreviewQuery
     , productQuery
@@ -43,8 +44,8 @@ type alias Product =
 
 
 type alias ProductPreview =
-    { communityId : String
-    , creatorId : String
+    { symbol : Symbol
+    , creator : ShopProfile
     , description : String
     , id : Int
     , image : Maybe String
@@ -118,13 +119,27 @@ productSelection =
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
 productPreviewSelectionSet =
     SelectionSet.succeed ProductPreview
-        |> with Cambiatus.Object.ProductPreview.communityId
-        |> with Cambiatus.Object.ProductPreview.creatorId
+        |> with (Eos.symbolSelectionSet Cambiatus.Object.ProductPreview.communityId)
+        |> with
+            (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
+                |> SelectionSet.map productPreviewProfile
+            )
         |> with Cambiatus.Object.ProductPreview.description
         |> with Cambiatus.Object.ProductPreview.id
         |> with Cambiatus.Object.ProductPreview.image
         |> with Cambiatus.Object.ProductPreview.price
         |> with Cambiatus.Object.ProductPreview.title
+
+
+productPreviewProfile : Eos.Name -> ShopProfile
+productPreviewProfile accountName =
+    { account = accountName
+    , name = accountName |> Eos.nameToString |> Just
+    , avatar = Avatar.empty
+    , email = Nothing
+    , bio = Nothing
+    , contacts = []
+    }
 
 
 shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.User

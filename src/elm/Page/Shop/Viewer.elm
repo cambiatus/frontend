@@ -29,7 +29,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared)
 import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
@@ -48,7 +48,7 @@ init session saleId =
             ( AsLoggedIn
                 { status = RemoteData.Loading
                 , viewing = ViewingCard
-                , form = initForm (Page.toShared session |> .translators)
+                , form = initForm
                 , balances = []
                 }
             , Cmd.batch
@@ -81,7 +81,7 @@ type Model
 
 
 type alias GuestModel =
-    { productPreview : RemoteData (Graphql.Http.Error (Maybe Shop.ProductPreview)) Shop.ProductPreview
+    { productPreview : RemoteData (Graphql.Http.Error (Maybe ProductPreview)) ProductPreview
     }
 
 
@@ -102,11 +102,16 @@ type alias Form =
     }
 
 
-initForm : Translators -> Form
-initForm { t } =
+defaultMemoKey : String
+defaultMemoKey =
+    "shop.transfer.default_memo"
+
+
+initForm : Form
+initForm =
     { price = ""
     , units = ""
-    , memo = t "shop.transfer.default_memo"
+    , memo = defaultMemoKey
     , unitValidation = Valid
     , memoValidation = Valid
     }
@@ -404,20 +409,7 @@ updateAsLoggedIn msg model loggedIn =
 -- VIEW
 
 
-type alias Card =
-    { product : Product
-    , rate : Maybe Int
-    }
-
-
-cardFromSale : Product -> Card
-cardFromSale sale =
-    { product = sale
-    , rate = Nothing
-    }
-
-
-view : Page.Session -> Model -> { title : String, content : Html Msg }
+view : Session -> Model -> { title : String, content : Html Msg }
 view session model =
     let
         { t } =
@@ -444,11 +436,39 @@ view session model =
                         _ ->
                             shopTitle
 
+        contentContainer children =
+            div [ class "container mx-auto" ]
+                [ div [ class "flex flex-wrap" ]
+                    children
+                ]
+
+        cardContainer =
+            div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
+
         content =
             case ( model, session ) of
-                ( AsGuest _, Page.Guest _ ) ->
-                    div [] [ text "Test" ]
-                        |> Html.map AsGuestMsg
+                ( AsGuest model_, Page.Guest guest ) ->
+                    case model_.productPreview of
+                        RemoteData.Success sale ->
+                            contentContainer
+                                [ viewProductImg sale.image
+                                , cardContainer
+                                    (viewCard guest.shared
+                                        Nothing
+                                        sale
+                                        (viewGuestButton guest.shared sale)
+                                        Nothing
+                                    )
+                                ]
+
+                        RemoteData.Failure err ->
+                            Page.fullPageGraphQLError (t "shop.title") err
+
+                        RemoteData.Loading ->
+                            Page.fullPageLoading guest.shared
+
+                        RemoteData.NotAsked ->
+                            Page.fullPageLoading guest.shared
 
                 ( AsLoggedIn model_, Page.LoggedIn loggedIn ) ->
                     case RemoteData.map .hasShop loggedIn.selectedCommunity of
@@ -485,17 +505,36 @@ view session model =
 
                                 RemoteData.Success sale ->
                                     let
-                                        cardData =
-                                            cardFromSale sale
+                                        maybeBalance =
+                                            LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
+                                                |> Maybe.map .asset
+
+                                        card =
+                                            viewCard
+                                                loggedIn.shared
+                                                (Just loggedIn.accountName)
+                                                sale
+                                                (viewLoggedInButton loggedIn model_ sale)
+                                                maybeBalance
+
+                                        transferForm =
+                                            if model_.viewing == ViewingCard then
+                                                []
+
+                                            else
+                                                [ viewTransferForm loggedIn sale model_ ]
                                     in
                                     div []
-                                        [ Page.viewHeader loggedIn cardData.product.title
-                                        , div [ class "container mx-auto" ] [ viewCard loggedIn cardData model_ ]
-                                        , if model_.viewing == ViewingCard then
-                                            text ""
-
-                                          else
-                                            viewTransferForm loggedIn cardData model_
+                                        [ Page.viewHeader loggedIn sale.title
+                                        , contentContainer
+                                            [ viewProductImg sale.image
+                                            , cardContainer
+                                                ([ card
+                                                 , transferForm
+                                                 ]
+                                                    |> List.concat
+                                                )
+                                            ]
                                         ]
                                         |> Html.map AsLoggedInMsg
 
@@ -530,112 +569,128 @@ viewProductImg maybeImgUrl =
         ]
 
 
-viewCard : LoggedIn.Model -> Card -> LoggedInModel -> Html LoggedInMsg
-viewCard ({ shared } as loggedIn) card model =
+viewCard :
+    Shared
+    -> Maybe Eos.Name
+    ->
+        { product
+            | title : String
+            , description : String
+            , symbol : Eos.Symbol
+            , price : Float
+            , creator : Shop.ShopProfile
+        }
+    -> Html msg
+    -> Maybe Eos.Asset
+    -> List (Html msg)
+viewCard shared maybeCurrentName sale buttonView maybeAsset =
     let
-        cmmBalance =
-            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
-
-        balance =
-            case cmmBalance of
-                Just b ->
-                    b.asset.amount
-
-                Nothing ->
-                    0.0
-
-        currBalance =
-            String.fromFloat balance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
-
         text_ str =
             text (shared.translators.t str)
 
-        tr rId replaces =
-            shared.translators.tr rId replaces
+        currentName =
+            maybeCurrentName
+                |> Maybe.withDefault (Eos.stringToName "")
     in
-    div [ class "flex flex-wrap" ]
-        [ viewProductImg card.product.image
-        , div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
-            [ div [ class "font-medium text-3xl w-full" ] [ text card.product.title ]
-            , div [ class "text-gray w-full md:text-sm" ] [ text card.product.description ]
-            , div [ class "w-full flex items-center text-sm" ]
-                [ div [ class "mr-4" ] [ Avatar.view card.product.creator.avatar "h-10 w-10" ]
-                , text_ "shop.sold_by"
-                , a
-                    [ class "font-bold ml-1"
-                    , Route.href (Route.ProfilePublic <| Eos.nameToString card.product.creator.account)
-                    ]
-                    [ Profile.viewProfileName shared loggedIn.accountName card.product.creator ]
-                ]
-            , div [ class "flex flex-wrap w-full justify-between items-center" ]
-                [ div [ class "" ]
-                    [ div [ class "flex items-center" ]
-                        [ div [ class "text-2xl text-green font-medium" ]
-                            [ text (String.fromFloat card.product.price) ]
-                        , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
-                            [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
-                        ]
-                    , div [ class "flex" ]
-                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
-                            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
-                        ]
-                    ]
-                , div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
-                    [ if card.product.creatorId == loggedIn.accountName then
-                        div [ class "flex md:justify-end" ]
-                            [ button
-                                [ class "button button-primary w-full px-4"
-                                , onClick (ClickedEdit card.product)
-                                ]
-                                [ text_ "shop.edit" ]
-                            ]
-
-                      else if card.product.units <= 0 && card.product.trackStock then
-                        div [ class "flex -mx-2 md:justify-end" ]
-                            [ button
-                                [ disabled True
-                                , class "button button-disabled mx-auto"
-                                ]
-                                [ text_ "shop.out_of_stock" ]
-                            ]
-
-                      else if model.viewing == EditingTransfer then
-                        div [ class "flex md:justify-end" ]
-                            [ button
-                                [ class "button button-primary"
-                                , onClick (ClickedTransfer card.product)
-                                ]
-                                [ text_ "shop.transfer.submit" ]
-                            ]
-
-                      else
-                        div [ class "flex -mx-2 md:justify-end" ]
-                            [ button
-                                [ class "button button-primary w-full sm:w-40 mx-auto"
-                                , onClick ClickedBuy
-                                ]
-                                [ text_ "shop.buy" ]
-                            ]
-                    ]
-                ]
-            , div
-                [ class "w-full flex" ]
-                [ if model.viewing == ViewingCard then
-                    div []
-                        []
-
-                  else
-                    viewTransferForm loggedIn card model
-                ]
+    [ div [ class "font-medium text-3xl w-full" ] [ text sale.title ]
+    , div [ class "text-gray w-full md:text-sm" ] [ text sale.description ]
+    , div [ class "w-full flex items-center text-sm" ]
+        [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
+        , text_ "shop.sold_by"
+        , a
+            [ class "font-bold ml-1"
+            , Route.href (Route.ProfilePublic <| Eos.nameToString sale.creator.account)
             ]
+            [ Profile.viewProfileName shared currentName sale.creator ]
+        ]
+    , div [ class "flex flex-wrap w-full justify-between items-center" ]
+        [ div []
+            [ div [ class "flex items-center" ]
+                [ div [ class "text-2xl text-green font-medium" ]
+                    [ text (String.fromFloat sale.price) ]
+                , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
+                    [ text (Eos.symbolToSymbolCodeString sale.symbol) ]
+                ]
+            , case maybeAsset of
+                Nothing ->
+                    text ""
+
+                Just asset ->
+                    div [ class "flex" ]
+                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
+                            [ text
+                                (shared.translators.tr
+                                    "account.my_wallet.your_current_balance"
+                                    [ ( "balance", Eos.assetToString asset ) ]
+                                )
+                            ]
+                        ]
+            ]
+        , div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
+            [ buttonView ]
+        ]
+    ]
+
+
+viewGuestButton : Shared -> ProductPreview -> Html msg
+viewGuestButton { translators } sale =
+    a
+        [ Route.href (Route.Login Nothing (Just (Route.ViewSale sale.id)))
+        , class "button button-primary"
+        ]
+        [ text <| translators.t "shop.buy" ]
+
+
+viewLoggedInButton : LoggedIn.Model -> LoggedInModel -> Product -> Html LoggedInMsg
+viewLoggedInButton loggedIn model sale =
+    let
+        text_ =
+            text << loggedIn.shared.translators.t
+    in
+    div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
+        [ if sale.creator.account == loggedIn.accountName then
+            div [ class "flex md:justify-end" ]
+                [ button
+                    [ class "button button-primary w-full px-4"
+                    , onClick (ClickedEdit sale)
+                    ]
+                    [ text_ "shop.edit" ]
+                ]
+
+          else if sale.units <= 0 && sale.trackStock then
+            div [ class "flex -mx-2 md:justify-end" ]
+                [ button
+                    [ disabled True
+                    , class "button button-disabled mx-auto"
+                    ]
+                    [ text_ "shop.out_of_stock" ]
+                ]
+
+          else if model.viewing == EditingTransfer then
+            div [ class "flex md:justify-end" ]
+                [ button
+                    [ class "button button-primary"
+                    , onClick (ClickedTransfer sale)
+                    ]
+                    [ text_ "shop.transfer.submit" ]
+                ]
+
+          else
+            div [ class "flex -mx-2 md:justify-end" ]
+                [ button
+                    [ class "button button-primary w-full sm:w-40 mx-auto"
+                    , onClick ClickedBuy
+                    ]
+                    [ text_ "shop.buy" ]
+                ]
         ]
 
 
-viewTransferForm : LoggedIn.Model -> Card -> LoggedInModel -> Html LoggedInMsg
-viewTransferForm { shared } card model =
+viewTransferForm : LoggedIn.Model -> Product -> LoggedInModel -> Html LoggedInMsg
+viewTransferForm { shared } sale model =
     let
         accountName =
-            Eos.nameToString card.product.creatorId
+            Eos.nameToString sale.creator.account
 
         form =
             model.form
@@ -644,10 +699,10 @@ viewTransferForm { shared } card model =
             shared.translators.t
 
         saleSymbol =
-            Eos.symbolToSymbolCodeString card.product.symbol
+            Eos.symbolToSymbolCodeString sale.symbol
 
         maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
+            LE.find (\bal -> bal.asset.symbol == sale.symbol) model.balances
 
         symbolBalance =
             case maybeBal of
@@ -702,7 +757,7 @@ viewTransferForm { shared } card model =
                 , translators = shared.translators
                 }
                 |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
-                |> Input.withCurrency card.product.symbol
+                |> Input.withCurrency sale.symbol
                 |> Input.toHtml
             ]
         , p []
@@ -712,8 +767,13 @@ viewTransferForm { shared } card model =
             , id = fieldId.memo
             , onInput = EnteredMemo
             , disabled = False
-            , value = form.memo
-            , placeholder = Just (t "shop.transfer.default_memo")
+            , value =
+                if form.memo == defaultMemoKey then
+                    t form.memo
+
+                else
+                    form.memo
+            , placeholder = Just (t defaultMemoKey)
             , problems = getError form.memoValidation
             , translators = shared.translators
             }
@@ -827,10 +887,10 @@ msgToString : Msg -> List String
 msgToString msg =
     case msg of
         AsGuestMsg subMsg ->
-            guestMsgToString subMsg
+            "AsGuestMsg" :: guestMsgToString subMsg
 
         AsLoggedInMsg subMsg ->
-            loggedInMsgToString subMsg
+            "AsLoggedInMsg" :: loggedInMsgToString subMsg
 
 
 guestMsgToString : GuestMsg -> List String
@@ -877,6 +937,17 @@ loggedInMsgToString msg =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "AsLoggedInMsg" :: rAddress ->
+            Maybe.map AsLoggedInMsg
+                (jsAddressToLoggedInMsg rAddress val)
+
+        _ ->
+            Nothing
+
+
+jsAddressToLoggedInMsg : List String -> Value -> Maybe LoggedInMsg
+jsAddressToLoggedInMsg addr val =
+    case addr of
         [ "ClickedTransfer" ] ->
             Decode.decodeValue
                 (Decode.oneOf
@@ -887,7 +958,7 @@ jsAddressToMsg addr val =
                     ]
                 )
                 val
-                |> Result.map (Just << AsLoggedInMsg << GotTransferResult)
+                |> Result.map (Just << GotTransferResult)
                 |> Result.withDefault Nothing
 
         _ ->
