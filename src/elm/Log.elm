@@ -29,6 +29,7 @@ type Kind
     | GraphqlHttpError Graphql.Http.HttpError
     | GraphqlErrors (List Graphql.Http.GraphqlError.GraphqlError)
     | DebugValue Value
+    | Generic String
 
 
 type Log msg
@@ -98,6 +99,10 @@ send toStrs (Log a) =
             , val
             )
                 |> logDebug
+
+        Generic err ->
+            ( "[Generic Error] " ++ err, toStrs a.msg |> String.join "." )
+                |> logError
 
 
 impossible : String -> Cmd msg

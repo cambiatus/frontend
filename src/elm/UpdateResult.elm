@@ -10,6 +10,7 @@ module UpdateResult exposing
     , logGraphqlError
     , logHttpError
     , logImpossible
+    , logString
     , map
     , mapModel
     , remoteDataToString
@@ -238,6 +239,15 @@ logDebugValue : msg -> Value -> UpdateResult m msg eMsg -> UpdateResult m msg eM
 logDebugValue msg val uResult =
     addLog
         (Log.log { msg = msg, kind = Log.DebugValue val })
+        uResult
+
+
+{-| Logs a String to the development console in the development environment or
+does an Incident report in production
+-}
+logString : msg -> String -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logString msg val uResult =
+    addLog (Log.log { msg = msg, kind = Log.Generic val })
         uResult
 
 

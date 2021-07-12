@@ -18,6 +18,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
+import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -87,7 +88,7 @@ type EditingStatus
 type alias CompletionStatus =
     { progress : Int
     , total : Int
-    , errorIds : List Int
+    , errors : List { tries : Int, actionId : Int }
     }
 
 
@@ -501,21 +502,10 @@ update msg model loggedIn =
             case model.status of
                 Authorized (EditingObjective objective form RequestingConfirmation) ->
                     let
-                        completeAction : Action.Action -> Eos.Action
-                        completeAction action =
-                            { action | isCompleted = True }
-                                |> Action.updateAction loggedIn.accountName loggedIn.shared
-
                         addCmdOrPort uResult =
                             if List.all .isCompleted objective.actions then
                                 uResult
-                                    |> UR.addCmd
-                                        (Api.Graphql.mutation
-                                            loggedIn.shared
-                                            (Just loggedIn.authToken)
-                                            (completeObjectiveSelectionSet objective.id)
-                                            GotCompleteObjectiveResponse
-                                        )
+                                    |> UR.addCmd (completeObjective loggedIn objective)
 
                             else
                                 objective.actions
@@ -523,14 +513,7 @@ update msg model loggedIn =
                                     |> List.foldr
                                         (\action currUResult ->
                                             currUResult
-                                                |> UR.addPort
-                                                    { responseAddress = AcceptedCompleteObjective
-                                                    , responseData = Encode.int action.id
-                                                    , data =
-                                                        completeAction action
-                                                            |> List.singleton
-                                                            |> Eos.encodeTransaction
-                                                    }
+                                                |> UR.addPort (completeAction loggedIn action)
                                         )
                                         uResult
                                     |> LoggedIn.withAuthentication loggedIn
@@ -541,7 +524,7 @@ update msg model loggedIn =
                         | status =
                             { progress = List.filter .isCompleted objective.actions |> List.length
                             , total = List.length objective.actions
-                            , errorIds = []
+                            , errors = []
                             }
                                 |> CompletingActions
                                 |> EditingObjective objective form
@@ -558,26 +541,18 @@ update msg model loggedIn =
             case model.status of
                 Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
                     let
-                        completeObjective =
-                            if completionStatus.progress + 1 == completionStatus.total then
-                                Api.Graphql.mutation
-                                    loggedIn.shared
-                                    (Just loggedIn.authToken)
-                                    (completeObjectiveSelectionSet objective.id)
-                                    GotCompleteObjectiveResponse
-
-                            else
-                                Cmd.none
+                        newCompletionStatus =
+                            { completionStatus | progress = completionStatus.progress + 1 }
                     in
                     { model
                         | status =
-                            { completionStatus | progress = completionStatus.progress + 1 }
+                            newCompletionStatus
                                 |> CompletingActions
                                 |> EditingObjective objective form
                                 |> Authorized
                     }
                         |> UR.init
-                        |> UR.addCmd completeObjective
+                        |> completeObjectiveOr loggedIn newCompletionStatus objective identity
 
                 _ ->
                     model
@@ -587,14 +562,74 @@ update msg model loggedIn =
         GotCompleteActionResponse (Err actionId) ->
             case model.status of
                 Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
-                    { model
-                        | status =
-                            { completionStatus | errorIds = actionId :: completionStatus.errorIds }
-                                |> CompletingActions
-                                |> EditingObjective objective form
-                                |> Authorized
-                    }
-                        |> UR.init
+                    let
+                        maxRetries =
+                            2
+
+                        currentRetries =
+                            completionStatus.errors
+                                |> List.find (\error -> error.actionId == actionId)
+                                |> Maybe.map .tries
+                                |> Maybe.withDefault 0
+
+                        newErrors =
+                            if List.any (\error -> error.actionId == actionId) completionStatus.errors then
+                                List.updateIf
+                                    (\error -> error.actionId == actionId)
+                                    (\error -> { error | tries = error.tries + 1 })
+                                    completionStatus.errors
+
+                            else
+                                { tries = 1, actionId = actionId }
+                                    :: completionStatus.errors
+                    in
+                    if currentRetries >= maxRetries then
+                        -- If we can't do it in `maxRetries` tries, consider it
+                        -- towards progress and log it
+                        { model
+                            | status =
+                                { completionStatus
+                                    | progress = completionStatus.progress + 1
+                                    , errors = newErrors
+                                }
+                                    |> CompletingActions
+                                    |> EditingObjective objective form
+                                    |> Authorized
+                        }
+                            |> UR.init
+                            |> UR.logString msg
+                                ("Action id "
+                                    ++ String.fromInt actionId
+                                    ++ " could not be completed with objective"
+                                )
+
+                    else
+                        case objective.actions |> List.find (\action -> action.id == actionId) of
+                            Nothing ->
+                                model
+                                    |> UR.init
+                                    |> UR.logImpossible msg [ "NoAction" ]
+
+                            Just action ->
+                                let
+                                    newCompletionStatus =
+                                        { completionStatus
+                                            | errors =
+                                                newErrors
+                                        }
+                                in
+                                { model
+                                    | status =
+                                        newCompletionStatus
+                                            |> CompletingActions
+                                            |> EditingObjective objective form
+                                            |> Authorized
+                                }
+                                    |> UR.init
+                                    |> completeObjectiveOr loggedIn
+                                        newCompletionStatus
+                                        objective
+                                        (UR.addPort (completeAction loggedIn action))
 
                 _ ->
                     model
@@ -715,6 +750,42 @@ update msg model loggedIn =
 
 
 -- UTILS
+
+
+completeAction : LoggedIn.Model -> Action.Action -> Ports.JavascriptOutModel Msg
+completeAction loggedIn action =
+    { action | isCompleted = True }
+        |> Action.updateAction loggedIn.accountName loggedIn.shared
+        |> (\completedAction ->
+                { responseAddress = AcceptedCompleteObjective
+                , responseData = Encode.int action.id
+                , data = Eos.encodeTransaction [ completedAction ]
+                }
+           )
+
+
+completeObjective : LoggedIn.Model -> Community.Objective -> Cmd Msg
+completeObjective loggedIn objective =
+    Api.Graphql.mutation
+        loggedIn.shared
+        (Just loggedIn.authToken)
+        (completeObjectiveSelectionSet objective.id)
+        GotCompleteObjectiveResponse
+
+
+completeObjectiveOr :
+    LoggedIn.Model
+    -> CompletionStatus
+    -> Community.Objective
+    -> (UpdateResult -> UpdateResult)
+    -> (UpdateResult -> UpdateResult)
+completeObjectiveOr loggedIn completionStatus objective alternative =
+    if completionStatus.progress >= completionStatus.total then
+        completeObjective loggedIn objective
+            |> UR.addCmd
+
+    else
+        alternative
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
