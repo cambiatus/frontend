@@ -639,6 +639,7 @@ update msg model loggedIn =
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Objectives)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "community.objectives.editor.completed_success"))
 
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
             UR.init model
