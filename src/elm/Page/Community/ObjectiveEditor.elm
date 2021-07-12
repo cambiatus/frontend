@@ -584,19 +584,24 @@ update msg model loggedIn =
                                     :: completionStatus.errors
                     in
                     if currentRetries >= maxRetries then
-                        -- If we can't do it in `maxRetries` tries, consider it
-                        -- towards progress and log it
-                        { model
-                            | status =
+                        let
+                            newCompletionStatus =
                                 { completionStatus
                                     | progress = completionStatus.progress + 1
                                     , errors = newErrors
                                 }
+                        in
+                        -- If we can't do it in `maxRetries` tries, consider it
+                        -- towards progress and log it
+                        { model
+                            | status =
+                                newCompletionStatus
                                     |> CompletingActions
                                     |> EditingObjective objective form
                                     |> Authorized
                         }
                             |> UR.init
+                            |> completeObjectiveOr loggedIn newCompletionStatus objective identity
                             |> UR.logString msg
                                 ("Action id "
                                     ++ String.fromInt actionId
