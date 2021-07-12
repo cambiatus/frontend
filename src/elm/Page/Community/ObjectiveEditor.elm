@@ -319,36 +319,42 @@ viewCompletion shared { progress, total } =
         progressWidth =
             String.fromFloat (toFloat progress / toFloat total)
     in
+    viewModal
+        [ View.Components.loadingLogoWithCustomText shared.translators
+            "community.objectives.editor.completion_text"
+            ""
+        , div [ class "mb-10 mt-6" ]
+            [ span [ class "text-black uppercase font-light text-xs" ]
+                [ text
+                    (shared.translators.tr
+                        "community.objectives.editor.completed_progress"
+                        [ ( "progress", String.fromInt progress )
+                        , ( "total", String.fromInt total )
+                        ]
+                    )
+                ]
+            , div [ class "h-2 relative flex mt-2 bg-gray-900 rounded-full overflow-hidden" ]
+                [ div
+                    [ class "bg-green w-full transition-transform origin-left"
+                    , if progress /= total then
+                        style "transform" ("scaleX(" ++ progressWidth ++ ")")
+
+                      else
+                        class ""
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
+viewModal : List (Html Msg) -> Html Msg
+viewModal body =
     div [ class "fixed inset-0 z-50" ]
         [ View.Components.bgNoScroll [ class "fixed inset-0 bg-black opacity-50" ]
             View.Components.PreventScrollAlways
-        , div [ class "fixed inset-x-0 top-modal max-w-sm mx-auto mx-auto px-4 text-center text-white" ]
-            [ View.Components.loadingLogoWithCustomText shared.translators
-                "community.objectives.editor.completion_text"
-                "px-8"
-            , div [ class "bg-white py-4 rounded-lg mt-4" ]
-                [ span [ class "text-black uppercase font-light text-xs" ]
-                    [ text
-                        (shared.translators.tr
-                            "community.objectives.editor.completed_progress"
-                            [ ( "progress", String.fromInt progress )
-                            , ( "total", String.fromInt total )
-                            ]
-                        )
-                    ]
-                , div [ class "h-2 relative flex mx-8 mt-2 bg-gray-900 rounded-full overflow-hidden" ]
-                    [ div
-                        [ class "bg-green w-full transition-transform origin-left"
-                        , if progress /= total then
-                            style "transform" ("scaleX(" ++ progressWidth ++ ")")
-
-                          else
-                            class ""
-                        ]
-                        []
-                    ]
-                ]
-            ]
+        , div [ class "fixed top-modal inset-x-4 mx-auto max-w-sm px-8 pt-2 text-center bg-white rounded-lg" ]
+            body
         ]
 
 
