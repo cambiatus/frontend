@@ -741,7 +741,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ]
 
         footer =
-            div [ class "block w-1/2 mx-auto space-y-4" ]
+            div [ class "block w-full mt-2 sm:w-1/2 sm:mx-auto space-y-4" ]
                 [ if isVotable claim accountName shared.now then
                     div [ class "flex space-x-4" ]
                         [ button
