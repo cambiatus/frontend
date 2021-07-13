@@ -3,6 +3,7 @@ module View.Components exposing
     , dialogBubble
     , tooltip, pdfViewer
     , bgNoScroll, PreventScroll(..)
+    , loadingLogoWithCustomText
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -46,11 +47,16 @@ import Session.Shared exposing (Translators)
 
 
 loadingLogoAnimated : Translators -> String -> Html msg
-loadingLogoAnimated { t } class_ =
+loadingLogoAnimated translators class_ =
+    loadingLogoWithCustomText translators "loading.subtitle" class_
+
+
+loadingLogoWithCustomText : Translators -> String -> String -> Html msg
+loadingLogoWithCustomText { t } customTextKey class_ =
     div [ class ("w-full text-center " ++ class_) ]
         [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
         , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
-        , p [ class "text-sm" ] [ text <| t "loading.subtitle" ]
+        , p [ class "text-sm" ] [ text <| t customTextKey ]
         ]
 
 

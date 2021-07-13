@@ -16,6 +16,7 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Strftime
+import Task
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
@@ -24,7 +25,10 @@ import Utils
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+    , Cmd.batch
+        [ Task.succeed RequestedReloadCommunity |> Task.perform identity
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        ]
     )
 
 
@@ -349,6 +353,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | RequestedReloadCommunity
     | OpenObjective Int
     | GotProfileSummaryMsg Int Int Profile.Summary.Msg
 
@@ -369,6 +374,10 @@ update msg model loggedIn =
                         else
                             Unauthorized
                 }
+
+        RequestedReloadCommunity ->
+            UR.init model
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         OpenObjective index ->
             if model.openObjective == Just index then
@@ -424,6 +433,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        RequestedReloadCommunity ->
+            [ "RequestedReloadCommunity" ]
 
         OpenObjective _ ->
             [ "OpenObjective" ]

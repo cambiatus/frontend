@@ -491,8 +491,8 @@ type alias CreateActionAction =
     { actionId : ActionId
     , objectiveId : ObjectiveId
     , description : String
-    , reward : String
-    , verifierReward : String
+    , reward : Eos.Asset
+    , verifierReward : Eos.Asset
     , deadline : Int
     , usages : String
     , usagesLeft : String
@@ -513,8 +513,8 @@ encodeCreateActionAction c =
         [ ( "action_id", Encode.int c.actionId )
         , ( "objective_id", Encode.int c.objectiveId )
         , ( "description", Encode.string c.description )
-        , ( "reward", Encode.string c.reward )
-        , ( "verifier_reward", Encode.string c.verifierReward )
+        , ( "reward", Eos.encodeAsset c.reward )
+        , ( "verifier_reward", Eos.encodeAsset c.verifierReward )
         , ( "deadline", Encode.int c.deadline )
         , ( "usages", Encode.string c.usages )
         , ( "usages_left", Encode.string c.usagesLeft )
@@ -1093,11 +1093,10 @@ upsertAction loggedIn community model isoDate =
         verifierReward =
             case model.form.verification of
                 Automatic ->
-                    Eos.Asset 0.0 community.symbol |> Eos.assetToString
+                    Eos.Asset 0.0 community.symbol
 
                 Manual { verifierRewardValidator } ->
                     Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
-                        |> Eos.assetToString
 
         usages =
             case model.form.validation of
@@ -1191,7 +1190,7 @@ upsertAction loggedIn community model isoDate =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = getInput model.form.description
-                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol |> Eos.assetToString
+                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
                             , verifierReward = verifierReward
                             , deadline = isoDate
                             , usages = usages
