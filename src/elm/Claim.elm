@@ -491,6 +491,13 @@ viewVotingProgress shared completionStatus =
 
         votingLeft =
             completionStatus.verifications - completionStatus.approved - completionStatus.disapproved
+
+        voteNumberTitleConditional compStatus =
+            if compStatus == 1 then
+                text (t "claim.vote")
+
+            else
+                text (t "claim.votes")
     in
     div
         [ class "flex flex-col mb-6" ]
@@ -502,14 +509,14 @@ viewVotingProgress shared completionStatus =
               else
                 p
                     [ class "text-green", style "width" (String.fromFloat approvedWidth ++ "%") ]
-                    [ text "Approved" ]
+                    [ text (t "claim.approved") ]
             , if completionStatus.disapproved == 0 then
                 text ""
 
               else
                 p
                     [ class "text-red", style "width" (String.fromFloat disapprovedWidth ++ "%") ]
-                    [ text "Disapproved"
+                    [ text (t "claim.disapproved")
                     ]
             , if votingLeft == 0 then
                 text ""
@@ -517,9 +524,9 @@ viewVotingProgress shared completionStatus =
               else
                 p
                     [ class "w-full text-right text-gray-600" ]
-                    [ text "Left" ]
+                    [ text (t "claim.pending") ]
             ]
-        , div [ class "w-full h-2 bg-gray-500 flex rounded-full" ]
+        , div [ class "w-full h-2 bg-gray-500 flex rounded-full my-2" ]
             [ div
                 [ class "flex rounded-full overflow-hidden h-2"
                 , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
@@ -543,11 +550,7 @@ viewVotingProgress shared completionStatus =
                         [ text (String.fromInt completionStatus.approved ++ " ")
                         ]
                     , span [ class "text-green" ]
-                        [ if completionStatus.approved == 1 then
-                            text "vote"
-
-                          else
-                            text "votes"
+                        [ voteNumberTitleConditional completionStatus.approved
                         ]
                     ]
             , if completionStatus.disapproved == 0 then
@@ -560,12 +563,7 @@ viewVotingProgress shared completionStatus =
                         [ text (String.fromInt completionStatus.disapproved ++ " ")
                         ]
                     , span [ class "text-red" ]
-                        [ if completionStatus.disapproved == 1 then
-                            text "vote "
-
-                          else
-                            text "votes "
-                        ]
+                        [ voteNumberTitleConditional completionStatus.disapproved ]
                     ]
             , if votingLeft == 0 then
                 text ""
@@ -577,12 +575,7 @@ viewVotingProgress shared completionStatus =
                         [ text (String.fromInt votingLeft ++ " ")
                         ]
                     , span [ class "text-gray-600" ]
-                        [ if votingLeft == 1 then
-                            text "vote "
-
-                          else
-                            text "votes "
-                        ]
+                        [ voteNumberTitleConditional votingLeft ]
                     ]
             ]
         ]
