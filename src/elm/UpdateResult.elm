@@ -5,12 +5,12 @@ module UpdateResult exposing
     , addMsg
     , addPort
     , init
+    , logContractError
     , logDebugValue
     , logDecodeError
     , logGraphqlError
     , logHttpError
     , logImpossible
-    , logString
     , map
     , mapModel
     , remoteDataToString
@@ -245,9 +245,9 @@ logDebugValue msg val uResult =
 {-| Logs a String to the development console in the development environment or
 does an Incident report in production
 -}
-logString : msg -> String -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logString msg val uResult =
-    addLog (Log.log { msg = msg, kind = Log.Generic val })
+logContractError : msg -> String -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logContractError msg val uResult =
+    addLog (Log.log { msg = msg, kind = Log.ContractError val })
         uResult
 
 

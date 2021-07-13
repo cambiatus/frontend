@@ -602,7 +602,7 @@ update msg model loggedIn =
                         }
                             |> UR.init
                             |> completeObjectiveOr loggedIn newCompletionStatus objective identity
-                            |> UR.logString msg
+                            |> UR.logContractError msg
                                 ("Action id "
                                     ++ String.fromInt actionId
                                     ++ " could not be completed with objective"

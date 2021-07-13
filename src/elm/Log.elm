@@ -29,7 +29,7 @@ type Kind
     | GraphqlHttpError Graphql.Http.HttpError
     | GraphqlErrors (List Graphql.Http.GraphqlError.GraphqlError)
     | DebugValue Value
-    | Generic String
+    | ContractError String
 
 
 type Log msg
@@ -100,8 +100,8 @@ send toStrs (Log a) =
             )
                 |> logDebug
 
-        Generic err ->
-            ( "[Generic Error] " ++ err, toStrs a.msg |> String.join "." )
+        ContractError err ->
+            ( "[Contract Error] " ++ err ++ "\n", toStrs a.msg |> String.join "." )
                 |> logError
 
 
