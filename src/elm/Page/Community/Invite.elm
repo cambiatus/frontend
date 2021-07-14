@@ -522,11 +522,25 @@ update session msg model =
                             , hasActions = community.hasObjectives
                             , hasKyc = community.hasKyc
                             }
+
+                        navKey =
+                            Page.toShared session
+                                |> .navKey
+
+                        redirectRoute =
+                            case session of
+                                LoggedIn _ ->
+                                    Route.Dashboard
+
+                                Guest guest ->
+                                    guest.afterLoginRedirect
+                                        |> Maybe.withDefault Route.Dashboard
                     in
                     model
                         |> UR.init
                         |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                         |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
+                        |> UR.addCmd (Route.pushUrl navKey redirectRoute)
 
                 Nothing ->
                     model
