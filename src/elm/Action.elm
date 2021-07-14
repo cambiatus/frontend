@@ -14,12 +14,13 @@ module Action exposing
     , selectionSet
     , subscriptions
     , update
+    , updateAction
     , viewClaimConfirmation
     , viewClaimWithProofs
     , viewSearchActions
     )
 
-import Cambiatus.Enum.VerificationType exposing (VerificationType)
+import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Community
@@ -34,6 +35,7 @@ import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Ports
@@ -656,6 +658,59 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
 
 
 -- INTEROP
+
+
+encode : Action -> Encode.Value
+encode action =
+    let
+        makeAsset : Float -> Eos.Asset
+        makeAsset amount =
+            { symbol = action.objective.community.symbol, amount = amount }
+    in
+    Encode.object
+        [ ( "action_id", Encode.int action.id )
+        , ( "objective_id", Encode.int action.objective.id )
+        , ( "description", Encode.string action.description )
+        , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
+        , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
+        , ( "deadline"
+          , Utils.fromMaybeDateTime action.deadline
+                |> Time.posixToMillis
+                |> Encode.int
+          )
+        , ( "usages", Encode.int action.usages )
+        , ( "usages_left", Encode.int action.usagesLeft )
+        , ( "verifications", Encode.int action.verifications )
+        , ( "verification_type"
+          , action.verificationType
+                |> VerificationType.toString
+                |> String.toLower
+                |> Encode.string
+          )
+        , ( "validators_str"
+          , action.validators
+                |> List.map (\v -> Eos.nameToString v.account)
+                |> String.join "-"
+                |> Encode.string
+          )
+        , ( "is_completed", Eos.encodeEosBool (Eos.boolToEosBool action.isCompleted) )
+        , ( "creator", Eos.encodeName action.creator )
+        , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
+        , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
+        , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
+        ]
+
+
+updateAction : Eos.Name -> Shared -> Action -> Eos.Action
+updateAction accountName shared action =
+    { accountName = shared.contracts.community
+    , name = "upsertaction"
+    , authorization =
+        { actor = accountName
+        , permissionName = Eos.samplePermission
+        }
+    , data = encode action
+    }
 
 
 claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
