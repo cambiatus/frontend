@@ -134,3 +134,11 @@
 .elm-datepicker--other-month.elm-datepicker--picked {
   color: white;
 }
+
+.elm-datepicker--container.relative-table .elm-datepicker--picker {
+  @apply relative;
+}
+
+.elm-datepicker--container.relative-table .elm-datepicker--table {
+  @apply w-full;
+}

@@ -16,8 +16,11 @@ import Cambiatus.Enum.Direction
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
 import Cambiatus.Query
+import Cambiatus.Scalar
 import Claim
 import Community exposing (Balance)
+import Date
+import DatePicker
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -37,9 +40,11 @@ import Profile.Contact as Contact
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
+import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
+import Simple.Fuzzy
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
@@ -47,7 +52,9 @@ import Url
 import Utils
 import View.Components
 import View.Feedback as Feedback
+import View.Form
 import View.Form.Input as Input
+import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -57,7 +64,7 @@ import View.Modal as Modal
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( initModel
+    ( initModel loggedIn.shared
     , Cmd.batch
         [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
@@ -75,8 +82,15 @@ type alias Model =
     , analysisFilter : Direction
     , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
-    , transfersDirection : Maybe TransferDirectionValue
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Transfer.ProfileSummaries ))
+    , transfersFilters : TransfersFilters
+    , transfersFiltersBeingEdited :
+        { datePicker : DatePicker.DatePicker
+        , otherAccountInput : String
+        , otherAccountState : Select.State
+        , filters : TransfersFilters
+        }
+    , showTransferFiltersModal : Bool
     , contactModel : Contact.Model
     , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
@@ -85,15 +99,22 @@ type alias Model =
     }
 
 
-initModel : Model
-initModel =
+initModel : Shared -> Model
+initModel shared =
     { balance = RemoteData.NotAsked
     , analysis = LoadingGraphql Nothing
     , analysisFilter = initAnalysisFilter
     , profileSummaries = []
     , lastSocket = ""
-    , transfersDirection = Nothing
     , transfers = LoadingGraphql Nothing
+    , transfersFilters = initTransfersFilters
+    , transfersFiltersBeingEdited =
+        { datePicker = DatePicker.initFromDate (Date.fromPosix shared.timezone shared.now)
+        , otherAccountInput = ""
+        , otherAccountState = Select.newState "other-account-select"
+        , filters = initTransfersFilters
+        }
+    , showTransferFiltersModal = False
     , contactModel = Contact.initSingle
     , showContactModal = False
     , inviteModalStatus = InviteModalClosed
@@ -105,6 +126,21 @@ initModel =
 initAnalysisFilter : Direction
 initAnalysisFilter =
     DESC
+
+
+initTransfersFilters : TransfersFilters
+initTransfersFilters =
+    { date = Nothing
+    , direction = Nothing
+    , otherUser = Nothing
+    }
+
+
+type alias TransfersFilters =
+    { date : Maybe Date.Date
+    , direction : Maybe TransferDirectionValue
+    , otherUser : Maybe Profile.Minimal
+    }
 
 
 type GraphqlStatus err a
@@ -183,6 +219,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
+                        , viewTransferFilters shared community.members model
                         ]
 
                 ( RemoteData.Success _, _ ) ->
@@ -499,7 +536,10 @@ viewTransfers loggedIn model =
                     ]
 
                 -- TODO
-                , button [ class "flex text-heading text-indigo-500" ]
+                , button
+                    [ class "flex text-heading text-indigo-500"
+                    , onClick ClickedOpenTransferFilters
+                    ]
                     [ text "all"
                     , Icons.arrowDown "fill-current"
                     ]
@@ -602,6 +642,129 @@ viewTransferList loggedIn transfers maybePageInfo =
             Nothing ->
                 text ""
         ]
+
+
+datePickerSettings : Shared -> DatePicker.Settings
+datePickerSettings shared =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+    in
+    { defaultSettings
+        | changeYear = DatePicker.off
+        , placeholder = shared.translators.t "payment_history.pick_date"
+        , inputClassList = [ ( "input w-full", True ) ]
+        , containerClassList = [ ( "relative-table", True ) ]
+        , dateFormatter = Date.format "E, d MMM y"
+    }
+
+
+selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
+selectConfiguration shared =
+    let
+        toLabel =
+            .account >> Eos.nameToString
+
+        filter minChars query items =
+            if String.length query < minChars then
+                Nothing
+
+            else
+                items
+                    |> Simple.Fuzzy.filter toLabel query
+                    |> Just
+    in
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = SelectedTransfersFiltersOtherAccount
+            , toLabel = toLabel
+            , filter = filter 2
+            }
+            |> Select.withMenuClass "max-h-44 overflow-y-auto !relative"
+        )
+        shared
+        False
+
+
+viewTransferFilters : Shared -> List Profile.Minimal -> Model -> Html Msg
+viewTransferFilters shared users model =
+    let
+        { t } =
+            shared.translators
+    in
+    Modal.initWith
+        { closeMsg = ClosedTransferFilters
+        , isVisible = model.showTransferFiltersModal
+        }
+        |> Modal.withHeader (t "all_analysis.filter.title")
+        |> Modal.withBody
+            -- TODO - I18N
+            ([ [ span [ class "input-label" ] [ text "Transaction date" ]
+               , div [ class "relative w-full" ]
+                    [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
+                        (datePickerSettings shared)
+                        model.transfersFiltersBeingEdited.datePicker
+                        |> Html.map TransfersFiltersDatePickerMsg
+                    ]
+               ]
+             , [ Select.init
+                    { id = "direction-selector"
+
+                    -- TODO - I18N
+                    , label = "Direction"
+                    , onInput = SelectedTransfersDirection
+
+                    -- TODO - I18N
+                    , firstOption = { value = Nothing, label = "Both" }
+                    , value = model.transfersFiltersBeingEdited.filters.direction
+                    , valueToString =
+                        Maybe.map TransferDirectionValue.toString
+                            >> Maybe.withDefault "Both"
+                    , disabled = False
+                    , problems = Nothing
+                    }
+                    -- TODO - I18N
+                    |> Select.withOption { value = Just TransferDirectionValue.Receiving, label = "Receiving" }
+                    |> Select.withOption { value = Just TransferDirectionValue.Sending, label = "Sending" }
+                    |> Select.withContainerAttrs [ class "mt-10" ]
+                    |> Select.toHtml
+               ]
+             , case model.transfersFiltersBeingEdited.filters.direction of
+                Nothing ->
+                    []
+
+                Just direction ->
+                    let
+                        -- TODO - I18N
+                        labelText =
+                            case direction of
+                                TransferDirectionValue.Receiving ->
+                                    "User who sent"
+
+                                TransferDirectionValue.Sending ->
+                                    "User who received"
+                    in
+                    [ View.Form.label "other-account-select" labelText
+                    , model.transfersFiltersBeingEdited.filters.otherUser
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                        |> Select.view (selectConfiguration shared)
+                            model.transfersFiltersBeingEdited.otherAccountState
+                            users
+                        |> Html.map TransfersFiltersOtherAccountSelectMsg
+                    ]
+             , [ button
+                    [ class "button button-primary w-full"
+
+                    -- TODO - onClick
+                    ]
+                    -- TODO - I18N
+                    [ text "Apply" ]
+               ]
+             ]
+                |> List.concat
+            )
+        |> Modal.toHtml
 
 
 viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
@@ -732,6 +895,12 @@ type Msg
     | GotTransferCardProfileSummaryMsg Int Bool Profile.Summary.Msg
     | ClickedTransferCard Int
     | ClickedShowMoreTransfers
+    | ClickedOpenTransferFilters
+    | ClosedTransferFilters
+    | SelectedTransfersDirection (Maybe TransferDirectionValue)
+    | TransfersFiltersDatePickerMsg DatePicker.Msg
+    | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
+    | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -1021,6 +1190,98 @@ update msg model ({ shared, accountName } as loggedIn) =
                     model
                         |> UR.init
 
+        ClickedOpenTransferFilters ->
+            { model | showTransferFiltersModal = True }
+                |> UR.init
+
+        ClosedTransferFilters ->
+            { model | showTransferFiltersModal = False }
+                |> UR.init
+
+        SelectedTransfersDirection maybeDirection ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | filters = { oldFilters | direction = maybeDirection }
+                    }
+            }
+                |> UR.init
+
+        TransfersFiltersDatePickerMsg subMsg ->
+            let
+                ( newDatePicker, datePickerEvent ) =
+                    DatePicker.update (datePickerSettings shared)
+                        subMsg
+                        model.transfersFiltersBeingEdited.datePicker
+
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+
+                newDate =
+                    case datePickerEvent of
+                        DatePicker.Picked pickedDate ->
+                            Just pickedDate
+
+                        _ ->
+                            oldFilters.date
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | datePicker = newDatePicker
+                        , filters = { oldFilters | date = newDate }
+                    }
+            }
+                |> UR.init
+
+        TransfersFiltersOtherAccountSelectMsg subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update (selectConfiguration loggedIn.shared)
+                        subMsg
+                        model.transfersFiltersBeingEdited.otherAccountState
+
+                oldTransfersFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldTransfersFiltersBeingEdited
+                        | otherAccountState = updated
+                    }
+            }
+                |> UR.init
+                |> UR.addCmd cmd
+
+        SelectedTransfersFiltersOtherAccount maybeMinimalProfile ->
+            let
+                oldTransfersFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldTransfersFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldTransfersFiltersBeingEdited
+                        | filters =
+                            { oldFilters
+                                | otherUser = maybeMinimalProfile
+                            }
+                    }
+            }
+                |> UR.init
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1179,13 +1440,19 @@ fetchTransfers loggedIn community maybeCursor model =
                     , filter =
                         Present
                             { communityId = Present (Eos.symbolToString community.symbol)
-                            , date = Absent
+                            , date =
+                                model.transfersFilters.date
+                                    |> Maybe.map (Date.toIsoString >> Cambiatus.Scalar.Date)
+                                    |> OptionalArgument.fromMaybe
                             , direction =
-                                model.transfersDirection
+                                model.transfersFilters.direction
                                     |> Maybe.map
                                         (\direction ->
                                             { direction = direction
-                                            , otherAccount = Absent
+                                            , otherAccount =
+                                                model.transfersFilters.otherUser
+                                                    |> Maybe.map (.account >> Eos.nameToString)
+                                                    |> OptionalArgument.fromMaybe
                                             }
                                         )
                                     |> OptionalArgument.fromMaybe
@@ -1375,6 +1642,24 @@ msgToString msg =
 
         ClickedShowMoreTransfers ->
             [ "ClickedShowMoreTransfers" ]
+
+        ClickedOpenTransferFilters ->
+            [ "ClickedOpenTransferFilters" ]
+
+        ClosedTransferFilters ->
+            [ "ClosedTransferFilters" ]
+
+        SelectedTransfersDirection _ ->
+            [ "SelectedTransfersDirection" ]
+
+        TransfersFiltersDatePickerMsg _ ->
+            [ "TransfersFiltersdatePickerMsg" ]
+
+        TransfersFiltersOtherAccountSelectMsg _ ->
+            [ "TransfersOtherAccountSelectMsg" ]
+
+        SelectedTransfersFiltersOtherAccount _ ->
+            [ "SelectedTransfersFiltersOtherAccount" ]
 
         CreateInvite ->
             [ "CreateInvite" ]
