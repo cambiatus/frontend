@@ -32,6 +32,7 @@ import Cambiatus.Object.Claim as Claim
 import Cambiatus.Object.ClaimConnection
 import Cambiatus.Object.ClaimEdge
 import Cambiatus.Scalar exposing (DateTime(..))
+import Date
 import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -40,6 +41,7 @@ import Html exposing (Html, a, button, div, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, disabled, href, id, style, target)
 import Html.Events exposing (onClick)
 import Icons
+import Iso8601
 import Json.Encode as Encode
 import List.Extra as List
 import Profile
@@ -376,7 +378,7 @@ updateProfileSummaries externalMsg claimProfileSummaries =
 viewClaimCard : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimCard loggedIn profileSummaries claim =
     let
-        { t } =
+        { t, tr } =
             loggedIn.shared.translators
 
         date dateTime =
@@ -394,6 +396,30 @@ viewClaimCard loggedIn profileSummaries claim =
             , verifications =
                 claim.action.verifications
             }
+
+        claimAging =
+            let
+                createdAtDate =
+                    case claim.createdAt of
+                        DateTime dt ->
+                            Iso8601.toTime dt |> Result.map (Date.fromPosix Time.utc)
+            in
+            case createdAtDate of
+                Ok d ->
+                    loggedIn.shared.now |> Date.fromPosix Time.utc |> Date.diff Date.Days d
+
+                Err _ ->
+                    -1
+
+        claimAgingText =
+            if claimAging < 1 then
+                ""
+
+            else if claimAging == 1 then
+                tr "claim.day_ago" [ ( "day_count", String.fromInt claimAging ) ]
+
+            else
+                tr "claim.days_ago" [ ( "day_count", String.fromInt claimAging ) ]
     in
     div [ class "w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 px-2" ]
         [ viewClaimModal loggedIn profileSummaries claim
@@ -432,9 +458,14 @@ viewClaimCard loggedIn profileSummaries claim =
             , div [ class "mb-6" ]
                 [ p [ class "text-body overflow-ellipsis overflow-hidden mb-2" ]
                     [ text claim.action.description ]
-                , p
-                    [ class "text-gray-900 text-caption uppercase" ]
-                    [ text (date claim.createdAt) ]
+                , div [ class "flex w-full" ]
+                    [ p
+                        [ class "text-gray-900 text-caption uppercase" ]
+                        [ text (date claim.createdAt) ]
+                    , p
+                        [ class "ml-auto text-purple-500 text-caption uppercase" ]
+                        [ text claimAgingText ]
+                    ]
                 ]
             , viewVotingProgress loggedIn.shared completionStatus
             , if

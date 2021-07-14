@@ -865,6 +865,8 @@
     },
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
+    "day_ago": "Aberto {{day_count}} dia atrás",
+    "days_ago": "Aberto {{day_count}} dias atrás",
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendente",
