@@ -524,7 +524,7 @@ update session msg model =
                             }
 
                         navKey =
-                            Page.toShared session
+                            toShared session
                                 |> .navKey
 
                         redirectRoute =

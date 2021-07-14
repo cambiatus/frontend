@@ -1015,7 +1015,7 @@ changeRouteTo maybeRoute model =
                         Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
 
-        withSession : Route -> (Page.Session -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+        withSession : Route -> (Session -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
         withSession route fn =
             let
                 ( newModel, newCmd ) =
