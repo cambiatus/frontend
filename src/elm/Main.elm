@@ -641,15 +641,24 @@ updateGuestUResult toStatus toMsg model uResult =
 
                                 ( session, cmd ) =
                                     LoggedIn.initLogin shared (Just privateKey) userWithCommunity token
+
+                                redirectRoute =
+                                    case guest.afterLoginRedirect of
+                                        Just (Route.Invite _) ->
+                                            Route.Dashboard
+
+                                        Just route ->
+                                            route
+
+                                        Nothing ->
+                                            Route.Dashboard
                             in
                             ( { m
                                 | session =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
-                                :: (Maybe.withDefault Route.Dashboard guest.afterLoginRedirect
-                                        |> Route.pushUrl guest.shared.navKey
-                                   )
+                                :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: cmds_
                             )
 
