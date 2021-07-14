@@ -380,7 +380,15 @@
     "to_self": "You can't transfer to yourself",
     "no_profile": "Select a user",
     "no_amount": "Enter an amount",
-    "memo_too_long": "The memo can't be longer than {{maxlength}} characters"
+    "memo_too_long": "The memo can't be longer than {{maxlength}} characters",
+    "direction": {
+      "title": "Transfer direction",
+      "both": "Both",
+      "sending": "Sending",
+      "receiving": "Receiving",
+      "user_who_sent": "User who sent",
+      "user_who_received": "User who received"
+    }
   },
   "notifications": {
     "title": "Notifications",

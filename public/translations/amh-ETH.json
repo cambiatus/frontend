@@ -342,7 +342,15 @@
     "to_self": "ወደራስዎ ማስተላለፍ አይችሉም",
     "no_profile": "አንድ ተጠቃሚ ይምረጡ",
     "no_amount": "አንድ መጠን ያስገቡ",
-    "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም"
+    "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም",
+    "direction": {
+      "title": "የዝውውር አቅጣጫ",
+      "both": "ሁለቱም",
+      "sending": "በመላክ ላይ",
+      "receiving": "መቀበል",
+      "user_who_sent": "የላከው ተጠቃሚ",
+      "user_who_received": "የተቀበለው ተጠቃሚ"
+    }
   },
   "notifications": {
     "title": "ማሳሰቢያዎች",

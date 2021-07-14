@@ -384,7 +384,15 @@
     "to_self": "No puedes transferirte a ti mismo",
     "no_profile": "Selecciona un usuario",
     "no_amount": "Ingrese una cantidad",
-    "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres"
+    "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres",
+    "direction": {
+      "title": "Dirección de transferencia",
+      "both": "Ambas",
+      "sending": "Enviando",
+      "receiving": "Recepción",
+      "user_who_sent": "Usuario que envió",
+      "user_who_received": "Usuario que recibió"
+    }
   },
   "notifications": {
     "title": "Notificaciones",

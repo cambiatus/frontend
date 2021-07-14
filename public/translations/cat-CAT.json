@@ -384,7 +384,15 @@
     "to_self": "No es pot transferir a si mateix",
     "no_profile": "Seleccioneu un usuari",
     "no_amount": "Introduïu un import",
-    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters"
+    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters",
+    "direction": {
+      "total": "Direcció de transferència",
+      "both": "Tots dos",
+      "sending": "S'està enviant",
+      "receiving": "Rebent",
+      "user_who_sent": "Usuari que ha enviat",
+      "user_who_received": "Usuari que va rebre"
+    }
   },
   "notifications": {
     "title": "Notificacions",

@@ -388,7 +388,15 @@
     "to_self": "Você não pode transferir para si mesmo",
     "no_profile": "Selecione um usuário",
     "no_amount": "Insira uma quantidade",
-    "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres"
+    "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres",
+    "direction": {
+      "title": "Direção da transferência",
+      "both": "Ambas",
+      "sending": "Enviando",
+      "receiving": "Recebendo",
+      "user_who_sent": "Usuário que enviou",
+      "user_who_received": "Usuário que recebeu"
+    }
   },
   "notifications": {
     "title": "Notificações",
