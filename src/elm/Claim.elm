@@ -7,6 +7,7 @@ module Claim exposing
     , Model
     , Msg(..)
     , Paginated
+    , VotingProgressBar(..)
     , claimPaginatedSelectionSet
     , encodeVerification
     , initClaimProfileSummaries
@@ -21,6 +22,7 @@ module Claim exposing
     , viewClaimCard
     , viewPhotoModal
     , viewVoteClaimModal
+    , viewVotingProgress
     )
 
 import Action exposing (Action)
@@ -467,7 +469,7 @@ viewClaimCard loggedIn profileSummaries claim =
                         [ text claimAgingText ]
                     ]
                 ]
-            , viewVotingProgress loggedIn.shared completionStatus
+            , viewVotingProgress loggedIn.shared completionStatus ClaimCard
             , if
                 isValidated claim loggedIn.accountName
                     || not (isValidator loggedIn.accountName claim)
@@ -505,8 +507,13 @@ type alias CompletionStatus =
     }
 
 
-viewVotingProgress : Shared -> CompletionStatus -> Html Msg
-viewVotingProgress shared completionStatus =
+type VotingProgressBar
+    = ClaimCard
+    | ClaimModalAndDetailPage
+
+
+viewVotingProgress : Shared -> CompletionStatus -> VotingProgressBar -> Html msg
+viewVotingProgress shared completionStatus claimSpace =
     let
         { t } =
             shared.translators
@@ -529,87 +536,134 @@ viewVotingProgress shared completionStatus =
 
             else
                 text (t "claim.votes")
+
+        viewVotesBar =
+            div [ class "w-full h-2 bg-gray-500 flex rounded-full my-2" ]
+                [ div
+                    [ class "flex rounded-full overflow-hidden h-2"
+                    , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
+                    ]
+                    [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
+                    , div
+                        [ class "bg-red"
+                        , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
+                        ]
+                        []
+                    ]
+                ]
     in
-    div
-        [ class "flex flex-col mb-6" ]
-        [ div
-            [ class "flex" ]
-            [ if completionStatus.approved == 0 then
-                text ""
+    case claimSpace of
+        ClaimCard ->
+            div
+                [ class "flex flex-col mb-6" ]
+                [ div
+                    [ class "flex" ]
+                    [ if votingLeft == 0 then
+                        text ""
 
-              else
-                p
-                    [ class "text-green", style "width" (String.fromFloat approvedWidth ++ "%") ]
-                    [ text (t "claim.approved") ]
-            , if completionStatus.disapproved == 0 then
-                text ""
-
-              else
-                p
-                    [ class "text-red", style "width" (String.fromFloat disapprovedWidth ++ "%") ]
-                    [ text (t "claim.disapproved")
+                      else
+                        p
+                            [ class "w-full text-right text-gray-600" ]
+                            [ text (t "claim.pending") ]
                     ]
-            , if votingLeft == 0 then
-                text ""
+                , viewVotesBar
+                , div [ class "flex" ]
+                    [ if completionStatus.approved == 0 then
+                        text ""
 
-              else
-                p
-                    [ class "w-full text-right text-gray-600" ]
-                    [ text (t "claim.pending") ]
-            ]
-        , div [ class "w-full h-2 bg-gray-500 flex rounded-full my-2" ]
-            [ div
-                [ class "flex rounded-full overflow-hidden h-2"
-                , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
+                      else
+                        p
+                            [ style "width" (String.fromFloat approvedWidth ++ "%") ]
+                            [ span [ class "font-bold text-green" ]
+                                [ text (String.fromInt completionStatus.approved ++ " ")
+                                ]
+                            ]
+                    , if completionStatus.disapproved == 0 then
+                        text ""
+
+                      else
+                        p
+                            [ style "width" (String.fromFloat disapprovedWidth ++ "%") ]
+                            [ span [ class "font-bold text-red" ]
+                                [ text (String.fromInt completionStatus.disapproved ++ " ")
+                                ]
+                            ]
+                    , if votingLeft == 0 then
+                        text ""
+
+                      else
+                        p
+                            [ class "ml-auto text-right" ]
+                            [ span [ class "font-bold text-gray-600" ]
+                                [ text (String.fromInt votingLeft ++ " ")
+                                ]
+                            , span [ class "text-gray-600" ]
+                                [ voteNumberTitleConditional votingLeft ]
+                            ]
+                    ]
                 ]
-                [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
-                , div
-                    [ class "bg-red"
-                    , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
+
+        ClaimModalAndDetailPage ->
+            div
+                [ class "flex flex-col my-6" ]
+                [ div
+                    [ class "flex" ]
+                    [ if votingLeft == 0 then
+                        text ""
+
+                      else
+                        p
+                            [ class "w-full text-right text-gray-600" ]
+                            [ text (t "claim.pending") ]
                     ]
-                    []
+                , viewVotesBar
+                , div [ class "flex" ]
+                    [ if votingLeft == 0 then
+                        p
+                            [ class "ml-auto text-right" ]
+                            [ text (t "claim.votes") ]
+
+                      else
+                        p
+                            [ class "ml-auto text-right" ]
+                            [ span [ class "font-bold text-gray-600" ]
+                                [ text (String.fromInt votingLeft ++ " ")
+                                ]
+                            , span [ class "text-gray-600" ]
+                                [ voteNumberTitleConditional votingLeft ]
+                            ]
+                    ]
+                , div [ class "flex w-full mt-4 justify-center space-x-16 uppercase" ]
+                    [ if completionStatus.approved == 0 then
+                        text ""
+
+                      else
+                        div [ class "flex flex-col text-center text-green mx-4 sm:mx-8" ]
+                            [ p
+                                [ class "font-bold" ]
+                                [ text (String.fromInt completionStatus.approved)
+                                ]
+                            , p
+                                []
+                                [ text (t "claim.approved")
+                                ]
+                            ]
+                    , if completionStatus.disapproved == 0 then
+                        text ""
+
+                      else
+                        div [ class "flex flex-col text-center text-red" ]
+                            [ p
+                                [ class "font-bold" ]
+                                [ text (String.fromInt completionStatus.disapproved)
+                                ]
+                            , p
+                                []
+                                [ text (t "claim.disapproved")
+                                ]
+                            ]
+                    ]
                 ]
-            ]
-        , div [ class "flex" ]
-            [ if completionStatus.approved == 0 then
-                text ""
-
-              else
-                p
-                    [ style "width" (String.fromFloat approvedWidth ++ "%") ]
-                    [ span [ class "font-bold text-green" ]
-                        [ text (String.fromInt completionStatus.approved ++ " ")
-                        ]
-                    , span [ class "text-green" ]
-                        [ voteNumberTitleConditional completionStatus.approved
-                        ]
-                    ]
-            , if completionStatus.disapproved == 0 then
-                text ""
-
-              else
-                p
-                    [ style "width" (String.fromFloat disapprovedWidth ++ "%") ]
-                    [ span [ class "font-bold text-red" ]
-                        [ text (String.fromInt completionStatus.disapproved ++ " ")
-                        ]
-                    , span [ class "text-red" ]
-                        [ voteNumberTitleConditional completionStatus.disapproved ]
-                    ]
-            , if votingLeft == 0 then
-                text ""
-
-              else
-                p
-                    [ class "ml-auto text-right" ]
-                    [ span [ class "font-bold text-gray-600" ]
-                        [ text (String.fromInt votingLeft ++ " ")
-                        ]
-                    , span [ class "text-gray-600" ]
-                        [ voteNumberTitleConditional votingLeft ]
-                    ]
-            ]
-        ]
 
 
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
@@ -851,10 +905,22 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 , viewClaimDateAndState
                 ]
 
+        completionStatus =
+            { approved =
+                List.filter .isApproved claim.checks
+                    |> List.length
+            , disapproved =
+                List.filter (not << .isApproved) claim.checks
+                    |> List.length
+            , verifications =
+                claim.action.verifications
+            }
+
         body =
             div
                 [ class "block" ]
-                [ viewRewardInfo
+                [ viewVotingProgress shared completionStatus ClaimModalAndDetailPage
+                , viewRewardInfo
                 , viewApprovedByProfileSummaryList
                 , viewDisapprovedByProfileSummaryList
                 , viewPendingVotersProfileSummaryList

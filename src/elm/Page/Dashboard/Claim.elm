@@ -3,7 +3,7 @@ module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToStr
 import Action
 import Api.Graphql
 import Cambiatus.Query
-import Claim
+import Claim exposing (VotingProgressBar(..), viewVotingProgress)
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -282,9 +282,21 @@ viewDetails { shared } model claim =
 
         isRejected =
             claim.status == Claim.Rejected
+
+        completionStatus =
+            { approved =
+                List.filter .isApproved claim.checks
+                    |> List.length
+            , disapproved =
+                List.filter (not << .isApproved) claim.checks
+                    |> List.length
+            , verifications =
+                claim.action.verifications
+            }
     in
     div []
-        [ div [ class "mb-8" ]
+        [ viewVotingProgress shared completionStatus ClaimModalAndDetailPage
+        , div [ class "mb-8" ]
             [ p
                 [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.action" ]
