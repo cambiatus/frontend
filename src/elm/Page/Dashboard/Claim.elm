@@ -292,10 +292,11 @@ viewDetails { shared } model claim =
                     |> List.length
             , verifications =
                 claim.action.verifications
+            , claimStatus = claim.status
             }
     in
     div []
-        [ Claim.viewVotingProgress shared completionStatus Claim.ClaimModalAndDetailPage
+        [ Claim.viewVotingProgress shared completionStatus
         , div [ class "mb-8" ]
             [ p
                 [ class "text-caption uppercase text-green" ]
