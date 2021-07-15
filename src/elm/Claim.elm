@@ -575,7 +575,7 @@ viewVotingProgress shared completionStatus claimSpace =
                         p
                             [ style "width" (String.fromFloat approvedWidth ++ "%") ]
                             [ span [ class "font-bold text-green" ]
-                                [ text (String.fromInt completionStatus.approved ++ " ")
+                                [ text (String.fromInt completionStatus.approved)
                                 ]
                             ]
                     , if completionStatus.disapproved == 0 then
@@ -585,7 +585,7 @@ viewVotingProgress shared completionStatus claimSpace =
                         p
                             [ style "width" (String.fromFloat disapprovedWidth ++ "%") ]
                             [ span [ class "font-bold text-red" ]
-                                [ text (String.fromInt completionStatus.disapproved ++ " ")
+                                [ text (String.fromInt completionStatus.disapproved)
                                 ]
                             ]
                     , if votingLeft == 0 then

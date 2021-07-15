@@ -3,7 +3,7 @@ module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToStr
 import Action
 import Api.Graphql
 import Cambiatus.Query
-import Claim exposing (VotingProgressBar(..), viewVotingProgress)
+import Claim
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -295,7 +295,7 @@ viewDetails { shared } model claim =
             }
     in
     div []
-        [ viewVotingProgress shared completionStatus ClaimModalAndDetailPage
+        [ Claim.viewVotingProgress shared completionStatus Claim.ClaimModalAndDetailPage
         , div [ class "mb-8" ]
             [ p
                 [ class "text-caption uppercase text-green" ]
