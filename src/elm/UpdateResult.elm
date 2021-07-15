@@ -238,7 +238,7 @@ logGraphqlError msg graphqlError uResult =
 logDebugValue : msg -> Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logDebugValue msg val uResult =
     addLog
-        (Log.log { msg = msg, kind = Log.DebugValue val })
+        (Log.log { msg = msg, kind = Log.EncodedError val })
         uResult
 
 

@@ -432,8 +432,15 @@ Sentry.init({
 })
 
 function errorLog (msg, err, isFromElm) {
+  if (env === 'development') {
+    console.error(msg, err)
+    return
+  }
+
   const languageString = isFromElm ? 'Elm' : 'Javascript'
   const startMessage = `Begin errorLog from ${languageString}`
+  const endMessage = `End errorLog from ${languageString}`
+
   Sentry.addBreadcrumb({
     message: startMessage,
     level: Sentry.Severity.Info,
@@ -441,28 +448,23 @@ function errorLog (msg, err, isFromElm) {
     category: 'started'
   })
 
-  if (env === 'development') {
-    console.error(msg, err)
-  } else {
-    let error = `Generic ${languageString} errorLog`
-    let details = ''
+  let error = `Generic ${languageString} errorLog`
+  let details = ''
 
-    if (Object.prototype.toString.call(msg) === '[object Array]') {
-      [error, details] = msg
-    }
-
-    const type = isFromElm ? 'elm-error' : 'javascript-error'
-    Sentry.withScope(scope => {
-      scope.setTag('type', type)
-      scope.setLevel(Sentry.Severity.Error)
-      scope.setExtra(`Error shared by ${languageString}`, err)
-      scope.setExtra('raw msg', msg)
-      scope.setExtra('Parsed details', details)
-      Sentry.captureMessage(error + details)
-    })
+  if (Object.prototype.toString.call(msg) === '[object Array]') {
+    [error, details] = msg
   }
 
-  const endMessage = `End errorLog from ${languageString}`
+  const type = isFromElm ? 'elm-error' : 'javascript-error'
+  Sentry.withScope(scope => {
+    scope.setTag('type', type)
+    scope.setLevel(Sentry.Severity.Error)
+    scope.setExtra(`Error shared by ${languageString}`, err)
+    scope.setExtra('raw msg', msg)
+    scope.setExtra('Parsed details', details)
+    Sentry.captureMessage(error + details)
+  })
+
   Sentry.addBreadcrumb({
     message: endMessage,
     level: Sentry.Severity.Info,
@@ -472,6 +474,8 @@ function errorLog (msg, err, isFromElm) {
 }
 
 // Ports error Reporter
+app.ports.addBreadcrumbPort.subscribe(Sentry.addBreadcrumb)
+
 app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
 
 app.ports.logDebug.subscribe(debugLog)
