@@ -538,24 +538,7 @@ viewVotingProgress shared completionStatus claimSpace =
                 text (t "claim.votes")
 
         viewVotesBar =
-            div [ class "w-full h-2 bg-gray-500 flex rounded-full my-2" ]
-                [ div
-                    [ class "flex rounded-full overflow-hidden h-2"
-                    , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
-                    ]
-                    [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
-                    , div
-                        [ class "bg-red"
-                        , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
-                        ]
-                        []
-                    ]
-                ]
-    in
-    case claimSpace of
-        ClaimCard ->
-            div
-                [ class "flex flex-col mb-6" ]
+            div []
                 [ div
                     [ class "flex" ]
                     [ if votingLeft == 0 then
@@ -566,8 +549,27 @@ viewVotingProgress shared completionStatus claimSpace =
                             [ class "w-full text-right text-gray-600" ]
                             [ text (t "claim.pending") ]
                     ]
-                , viewVotesBar
-                , div [ class "flex" ]
+                , div [ class "w-full h-2 bg-gray-500 flex rounded-full my-2" ]
+                    [ div
+                        [ class "flex rounded-full overflow-hidden h-2"
+                        , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
+                        ]
+                        [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
+                        , div
+                            [ class "bg-red"
+                            , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
+                            ]
+                            []
+                        ]
+                    ]
+                ]
+    in
+    div
+        [ class "flex flex-col mb-6" ]
+        [ viewVotesBar
+        , case claimSpace of
+            ClaimCard ->
+                div [ class "flex" ]
                     [ if completionStatus.approved == 0 then
                         text ""
 
@@ -601,69 +603,58 @@ viewVotingProgress shared completionStatus claimSpace =
                                 [ voteNumberTitleConditional votingLeft ]
                             ]
                     ]
-                ]
 
-        ClaimModalAndDetailPage ->
-            div
-                [ class "flex flex-col my-6" ]
-                [ div
-                    [ class "flex" ]
-                    [ if votingLeft == 0 then
-                        text ""
+            ClaimModalAndDetailPage ->
+                div
+                    [ class "flex flex-col my-6" ]
+                    [ div [ class "flex" ]
+                        [ if votingLeft == 0 then
+                            p
+                                [ class "ml-auto text-right" ]
+                                [ text (t "claim.votes") ]
 
-                      else
-                        p
-                            [ class "w-full text-right text-gray-600" ]
-                            [ text (t "claim.pending") ]
+                          else
+                            p
+                                [ class "ml-auto text-right" ]
+                                [ span [ class "font-bold text-gray-600" ]
+                                    [ text (String.fromInt votingLeft ++ " ")
+                                    ]
+                                , span [ class "text-gray-600" ]
+                                    [ voteNumberTitleConditional votingLeft ]
+                                ]
+                        ]
+                    , div [ class "flex w-full mt-4 justify-center space-x-16 uppercase" ]
+                        [ if completionStatus.approved == 0 then
+                            text ""
+
+                          else
+                            div [ class "flex flex-col text-center text-green mx-4 sm:mx-8" ]
+                                [ p
+                                    [ class "font-bold" ]
+                                    [ text (String.fromInt completionStatus.approved)
+                                    ]
+                                , p
+                                    []
+                                    [ text (t "claim.approved")
+                                    ]
+                                ]
+                        , if completionStatus.disapproved == 0 then
+                            text ""
+
+                          else
+                            div [ class "flex flex-col text-center text-red" ]
+                                [ p
+                                    [ class "font-bold" ]
+                                    [ text (String.fromInt completionStatus.disapproved)
+                                    ]
+                                , p
+                                    []
+                                    [ text (t "claim.disapproved")
+                                    ]
+                                ]
+                        ]
                     ]
-                , viewVotesBar
-                , div [ class "flex" ]
-                    [ if votingLeft == 0 then
-                        p
-                            [ class "ml-auto text-right" ]
-                            [ text (t "claim.votes") ]
-
-                      else
-                        p
-                            [ class "ml-auto text-right" ]
-                            [ span [ class "font-bold text-gray-600" ]
-                                [ text (String.fromInt votingLeft ++ " ")
-                                ]
-                            , span [ class "text-gray-600" ]
-                                [ voteNumberTitleConditional votingLeft ]
-                            ]
-                    ]
-                , div [ class "flex w-full mt-4 justify-center space-x-16 uppercase" ]
-                    [ if completionStatus.approved == 0 then
-                        text ""
-
-                      else
-                        div [ class "flex flex-col text-center text-green mx-4 sm:mx-8" ]
-                            [ p
-                                [ class "font-bold" ]
-                                [ text (String.fromInt completionStatus.approved)
-                                ]
-                            , p
-                                []
-                                [ text (t "claim.approved")
-                                ]
-                            ]
-                    , if completionStatus.disapproved == 0 then
-                        text ""
-
-                      else
-                        div [ class "flex flex-col text-center text-red" ]
-                            [ p
-                                [ class "font-bold" ]
-                                [ text (String.fromInt completionStatus.disapproved)
-                                ]
-                            , p
-                                []
-                                [ text (t "claim.disapproved")
-                                ]
-                            ]
-                    ]
-                ]
+        ]
 
 
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
