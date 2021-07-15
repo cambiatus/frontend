@@ -18,7 +18,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Page
-import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
