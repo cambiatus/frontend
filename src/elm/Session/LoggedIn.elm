@@ -1267,6 +1267,22 @@ loadCommunity ({ shared } as model) maybeSymbol =
     )
 
 
+getInvitation : Model -> Maybe String
+getInvitation model =
+    case List.head model.routeHistory of
+        Just (Route.Invite invitation) ->
+            Just invitation
+
+        Just (Route.Login maybeInvitation _) ->
+            maybeInvitation
+
+        Just (Route.Register maybeInvitation _) ->
+            maybeInvitation
+
+        _ ->
+            Nothing
+
+
 {-| Given a `Community.Model`, check if the user is part of it (or if it has
 auto invites), and set it as default or redirect the user
 -}
@@ -1324,9 +1340,16 @@ setCommunity community ({ shared } as model) =
         )
 
     else
-        ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
-        , Cmd.batch [ Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)), storeCommunityCmd ]
-        )
+        case getInvitation model of
+            Just invitation ->
+                ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+                , Route.pushUrl shared.navKey (Route.Invite invitation)
+                )
+
+            Nothing ->
+                ( { model | selectedCommunity = RemoteData.Success community, shared = sharedWithCommunity }
+                , Cmd.batch [ Route.pushUrl shared.navKey (Route.CommunitySelector (List.head model.routeHistory)), storeCommunityCmd ]
+                )
 
 
 signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )
