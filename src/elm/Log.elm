@@ -1,10 +1,13 @@
 port module Log exposing
     ( Breadcrumb
     , BreadcrumbType(..)
+    , ErrorType(..)
     , Event
+    , ExpectedAuthentication(..)
     , Kind(..)
     , Level(..)
     , Log
+    , Tag(..)
     , addBreadcrumb
     , fromDecodeError
     , fromGraphqlHttpError
@@ -74,7 +77,30 @@ type Kind
     | Impossible (List String)
     | EncodedError Value
     | ContractError String
-    | IncompatibleMsg
+
+
+{-| What kind of authentication was expected
+-}
+type ExpectedAuthentication
+    = ExpectedLoggedIn
+    | ExpectedGuest
+
+
+{-| What kind of error to report
+-}
+type ErrorType
+    = IncompatibleMsg
+    | ImpossibleError
+    | DecodingError
+    | HttpErrorType
+    | GraphqlErrorType
+
+
+{-| Defines the possible tags. Tags are used to search for events on Sentry.
+-}
+type Tag
+    = TypeTag ErrorType
+    | IncompatibleAuthentication ExpectedAuthentication
 
 
 {-| Defines the severity of an event. From most important to least:
@@ -145,7 +171,7 @@ extras are very important so we can have a better debugging experience! Fields:
 type alias Event msg =
     { username : Maybe Eos.Account.Name
     , message : String
-    , tags : Dict String String
+    , tags : List Tag
     , context : Maybe Context
     , transaction : msg
     , level : Level
@@ -214,10 +240,9 @@ sendEvent msgToString event =
           )
         , ( "message", Encode.string event.message )
         , ( "tags"
-            -- Prepend cambiatus so there's no name conflict
-          , Dict.map (\_ tag -> "cambiatus." ++ tag) event.tags
-                |> Dict.insert "cambiatus.language" "elm"
-                |> Encode.dict identity Encode.string
+          , List.map encodeTag event.tags
+                |> Dict.fromList
+                |> Encode.dict identity identity
           )
         , ( "context"
           , case event.context of
@@ -261,9 +286,6 @@ send toStrs (Log a) =
             ( "[Contract Error] " ++ err ++ "\n", toStrs a.msg |> String.join "." )
                 |> logError
 
-        IncompatibleMsg ->
-            logError ( "[Incompatible Msg]", toStrs a.msg |> String.join "." )
-
 
 
 -- EXTERNAL HELPERS
@@ -277,7 +299,7 @@ fromImpossible : msg -> String -> Maybe Eos.Account.Name -> Event msg
 fromImpossible transaction message maybeUser =
     { username = maybeUser
     , message = message
-    , tags = Dict.fromList [ ( "type", "impossible error" ) ]
+    , tags = [ TypeTag ImpossibleError ]
     , context = Nothing
     , transaction = transaction
     , level = Fatal
@@ -291,7 +313,7 @@ fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> Decode.Error -> Eve
 fromDecodeError transaction maybeUser description error =
     { username = maybeUser
     , message = "Got an error when trying to decode a JSON value"
-    , tags = Dict.fromList [ ( "type", "decode error" ) ]
+    , tags = [ TypeTag DecodingError ]
     , context =
         Just
             { name = "Decode error"
@@ -312,7 +334,7 @@ fromHttpError : msg -> Maybe Eos.Account.Name -> String -> Http.Error -> Event m
 fromHttpError transaction maybeUser description error =
     { username = maybeUser
     , message = "Got an error when performing an HTTP request"
-    , tags = Dict.fromList [ ( "type", "http error" ) ]
+    , tags = [ TypeTag HttpErrorType ]
     , context =
         Just
             { name = "HTTP error"
@@ -333,7 +355,7 @@ fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> Graphql.Http.E
 fromGraphqlHttpError transaction maybeUser description error =
     { username = maybeUser
     , message = "Got an error when performing a GraphQL request"
-    , tags = Dict.fromList [ ( "type", "graphql error" ) ]
+    , tags = [ TypeTag GraphqlErrorType ]
     , context =
         Just
             { name = "Graphql error"
@@ -583,3 +605,40 @@ encodeGraphqlError error =
                         [ ( "type", Encode.string "Graphql.Http.BadPayload" )
                         , ( "jsonError", encodeDecodingError jsonError )
                         ]
+
+
+encodeTag : Tag -> ( String, Encode.Value )
+encodeTag tag =
+    case tag of
+        TypeTag errorType ->
+            let
+                value =
+                    case errorType of
+                        IncompatibleMsg ->
+                            "incompatible msg"
+
+                        ImpossibleError ->
+                            "impossible error"
+
+                        DecodingError ->
+                            "decoding error"
+
+                        HttpErrorType ->
+                            "http error"
+
+                        GraphqlErrorType ->
+                            "graphql error"
+            in
+            ( "cambiatus.type", Encode.string value )
+
+        IncompatibleAuthentication expectedAuthentication ->
+            let
+                value =
+                    case expectedAuthentication of
+                        ExpectedGuest ->
+                            "guest"
+
+                        ExpectedLoggedIn ->
+                            "logged in"
+            in
+            ( "cambiatus.expected-authentication", Encode.string value )

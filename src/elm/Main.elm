@@ -227,18 +227,46 @@ update msg model =
 
                 Page.LoggedIn _ ->
                     ( model
-                      -- TODO
-                      -- , Log.impossible "loggedIn"
-                    , Cmd.none
+                    , { username = Nothing
+                      , message = "Expected user to be a guest, but they're logged in"
+                      , tags = [ Log.IncompatibleAuthentication Log.ExpectedGuest ]
+                      , context =
+                            Just
+                                { name = "Location"
+                                , extras =
+                                    Dict.fromList
+                                        [ ( "module", Encode.string "Main.elm" )
+                                        , ( "function", Encode.string "update" )
+                                        , ( "statement", Encode.string "withGuest" )
+                                        ]
+                                }
+                      , transaction = msg
+                      , level = Log.Error
+                      }
+                        |> Log.sendEvent msgToString
                     )
 
         withLoggedIn fn =
             case model.session of
                 Page.Guest _ ->
                     ( model
-                      -- TODO
-                      -- , Log.impossible "notLoggedIn"
-                    , Cmd.none
+                    , { username = Nothing
+                      , message = "Expected user to be logged in, but they're a guest"
+                      , tags = [ Log.IncompatibleAuthentication Log.ExpectedLoggedIn ]
+                      , context =
+                            Just
+                                { name = "Location"
+                                , extras =
+                                    Dict.fromList
+                                        [ ( "module", Encode.string "Main.elm" )
+                                        , ( "function", Encode.string "update" )
+                                        , ( "statement", Encode.string "withLoggedIn" )
+                                        ]
+                                }
+                      , transaction = msg
+                      , level = Log.Error
+                      }
+                        |> Log.sendEvent msgToString
                     )
 
                 Page.LoggedIn loggedIn ->
@@ -274,25 +302,25 @@ update msg model =
             in
             case jsAddressResult of
                 Ok jsAddress ->
-                    Maybe.map
-                        (\newMsg -> update newMsg model)
-                        (jsAddressToMsg jsAddress val)
-                        |> Maybe.withDefault
-                            ([ "[Main] No handler for: "
-                             , String.join "." jsAddress
-                             ]
-                                |> String.concat
-                                -- TODO
-                                -- |> Log.impossible
-                                |> (\_ -> Cmd.none)
-                                |> Tuple.pair model
+                    case jsAddressToMsg jsAddress val of
+                        Nothing ->
+                            ( model
+                            , Log.fromImpossible msg
+                                "Got invalid address from JavaScript"
+                                (Page.maybeAccountName model.session)
+                                |> Log.sendEvent msgToString
                             )
+
+                        Just jsMsg ->
+                            update jsMsg model
 
                 Err decodeError ->
                     ( model
-                      -- TODO
-                      -- , Log.decodeError decodeError
-                    , Cmd.none
+                    , Log.fromDecodeError msg
+                        (Page.maybeAccountName model.session)
+                        "Could not decode JavaScript address"
+                        decodeError
+                        |> Log.sendEvent msgToString
                     )
 
         ( GotPageMsg subMsg, _ ) ->
@@ -483,9 +511,23 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-              -- TODO
-              -- , Log.impossible ("Main" :: msgToString msg |> String.join ".")
-            , Cmd.none
+            , { username = Page.maybeAccountName model.session
+              , message = "Msg does not correspond with Status in Main"
+              , tags = [ Log.TypeTag Log.IncompatibleMsg ]
+              , context =
+                    Just
+                        { name = "Location"
+                        , extras =
+                            Dict.fromList
+                                [ ( "module", Encode.string "Main.elm" )
+                                , ( "function", Encode.string "update" )
+                                , ( "case branch", Encode.string "( _, _ )" )
+                                ]
+                        }
+              , transaction = msg
+              , level = Log.Info
+              }
+                |> Log.sendEvent msgToString
             )
 
 

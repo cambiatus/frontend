@@ -9,6 +9,7 @@ module Page exposing
     , init
     , jsAddressToMsg
     , logout
+    , maybeAccountName
     , msgToString
     , subscriptions
     , toShared
@@ -22,6 +23,7 @@ module Page exposing
 
 import Auth
 import Browser.Navigation as Nav
+import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
 import Html exposing (Html, a, div, img, p, text)
@@ -325,6 +327,16 @@ toShared session =
 
         Guest guest ->
             guest.shared
+
+
+maybeAccountName : Session -> Maybe Eos.Account.Name
+maybeAccountName session =
+    case session of
+        LoggedIn loggedIn ->
+            Just loggedIn.accountName
+
+        Guest _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
