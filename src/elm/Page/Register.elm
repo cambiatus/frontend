@@ -754,7 +754,10 @@ update _ msg model ({ shared } as guest) =
         AccountKeysGenerated (Err v) ->
             UR.init
                 model
-                |> UR.logDecodeError msg v
+                |> UR.logDecodingError msg
+                    Nothing
+                    "Could not decode account keys"
+                    v
 
         AccountKeysGenerated (Ok accountKeys) ->
             case model.status of

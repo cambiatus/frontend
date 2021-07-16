@@ -84,7 +84,7 @@ init flagsValue url navKey =
                 Err e ->
                     Page.init Flags.default navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
-                        |> UR.logDecodeError Ignored e
+                        |> UR.logDecodingError Ignored Nothing "Could not decode flags" e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
         ( model, routeCmd ) =
@@ -98,28 +98,6 @@ init flagsValue url navKey =
     , Cmd.batch
         [ pageCmd
         , routeCmd
-        , Log.addBreadcrumb msgToString
-            { type_ = Log.DefaultBreadcrumb
-            , category = Ignored
-            , message = "Test message from breadcrumb"
-            , data = Dict.empty
-            , level = Log.Warning
-            }
-        , Log.sendEvent msgToString
-            { username = Nothing
-            , message = "Test message from event"
-            , tags = Dict.fromList [ ( "is-test-tag", "it is" ) ]
-            , context =
-                { name = "Test context"
-                , extras =
-                    Dict.fromList
-                        [ ( "Test extra item", Encode.int 1 )
-                        , ( "Second test extra item", Encode.object [ ( "is this a test?", Encode.bool True ) ] )
-                        ]
-                }
-            , transaction = Ignored
-            , level = Log.DebugLevel
-            }
         ]
     )
 
@@ -249,14 +227,18 @@ update msg model =
 
                 Page.LoggedIn _ ->
                     ( model
-                    , Log.impossible "loggedIn"
+                      -- TODO
+                      -- , Log.impossible "loggedIn"
+                    , Cmd.none
                     )
 
         withLoggedIn fn =
             case model.session of
                 Page.Guest _ ->
                     ( model
-                    , Log.impossible "notLoggedIn"
+                      -- TODO
+                      -- , Log.impossible "notLoggedIn"
+                    , Cmd.none
                     )
 
                 Page.LoggedIn loggedIn ->
@@ -300,13 +282,17 @@ update msg model =
                              , String.join "." jsAddress
                              ]
                                 |> String.concat
-                                |> Log.impossible
+                                -- TODO
+                                -- |> Log.impossible
+                                |> (\_ -> Cmd.none)
                                 |> Tuple.pair model
                             )
 
                 Err decodeError ->
                     ( model
-                    , Log.decodeError decodeError
+                      -- TODO
+                      -- , Log.decodeError decodeError
+                    , Cmd.none
                     )
 
         ( GotPageMsg subMsg, _ ) ->
@@ -497,7 +483,9 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-            , Log.impossible ("Main" :: msgToString msg |> String.join ".")
+              -- TODO
+              -- , Log.impossible ("Main" :: msgToString msg |> String.join ".")
+            , Cmd.none
             )
 
 

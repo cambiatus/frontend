@@ -1,5 +1,6 @@
 module UpdateResult exposing
     ( UpdateResult
+    , addBreadcrumb
     , addCmd
     , addExt
     , addMsg
@@ -7,7 +8,7 @@ module UpdateResult exposing
     , init
     , logContractError
     , logDebugValue
-    , logDecodeError
+    , logDecodingError
     , logGraphqlError
     , logHttpError
     , logImpossible
@@ -35,6 +36,7 @@ module UpdateResult exposing
 
 -}
 
+import Eos.Account
 import Graphql.Http
 import Http
 import Json.Decode as Decode
@@ -54,6 +56,8 @@ The data structure contains the following
 3.  A list of external messages to be applied to the model and submodel
 4.  A list of ports to execute
 5.  A list of log messages to be applied
+6.  A list of breadcrumbs to be added to Sentry
+7.  A list of events to be sent to Sentry
 
 -}
 type alias UpdateResult model msg extMsg =
@@ -62,6 +66,8 @@ type alias UpdateResult model msg extMsg =
     , exts : List extMsg
     , ports : List (Ports.JavascriptOut msg)
     , logs : List (Log msg)
+    , breadcrumbs : List (Log.Breadcrumb msg)
+    , events : List (Log.Event msg)
     }
 
 
@@ -78,6 +84,8 @@ map toModel toMsg handleExtMsg updateResult =
         , exts = []
         , ports = List.map (Ports.mapAddress toMsg) updateResult.ports
         , logs = List.map (Log.map toMsg) updateResult.logs
+        , breadcrumbs = List.map (Log.mapBreadcrumb toMsg) updateResult.breadcrumbs
+        , events = List.map (Log.mapEvent toMsg) updateResult.events
         }
         updateResult.exts
 
@@ -93,6 +101,8 @@ mapModel transform uResult =
     , exts = uResult.exts
     , ports = uResult.ports
     , logs = uResult.logs
+    , breadcrumbs = uResult.breadcrumbs
+    , events = uResult.events
     }
 
 
@@ -106,6 +116,8 @@ setModel uResult model =
     , exts = uResult.exts
     , ports = uResult.ports
     , logs = uResult.logs
+    , breadcrumbs = uResult.breadcrumbs
+    , events = uResult.events
     }
 
 
@@ -120,6 +132,8 @@ init model =
     , exts = []
     , ports = []
     , logs = []
+    , breadcrumbs = []
+    , events = []
     }
 
 
@@ -148,7 +162,9 @@ toModelCmd transformEMsg msgToString uResult =
             ( uResult.model
             , Cmd.batch
                 (uResult.cmds
+                    ++ List.map (Log.addBreadcrumb msgToString) (List.reverse uResult.breadcrumbs)
                     ++ List.map (Ports.javascriptOutCmd msgToString) uResult.ports
+                    ++ List.map (Log.sendEvent msgToString) (List.reverse uResult.events)
                     ++ List.map (Log.send msgToString) uResult.logs
                 )
             )
@@ -193,8 +209,59 @@ addLog log uResult =
     { uResult | logs = uResult.logs ++ [ log ] }
 
 
-{-| Logs out an httpError to the development console in dev env or to Error reporting in
-production
+{-| Add a breadcrumb to error reporting. On development, prints it to the
+console, and on production adds a breadcrumb to the next event
+-}
+addBreadcrumb : Log.Breadcrumb msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+addBreadcrumb breadcrumb uResult =
+    { uResult | breadcrumbs = breadcrumb :: uResult.breadcrumbs }
+
+
+{-| Add an event to be logged. On development, prints it to the console, and on
+production sends an event to Sentry. Usually you can use auxiliary functions
+such as `logImpossible`, `logDecodingError`, `logHttpError` and
+`logGraphqlError`
+-}
+logEvent : Log.Event msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logEvent event uResult =
+    { uResult | events = event :: uResult.events }
+
+
+{-| Send an Event to Sentry so we can debug later. Should be used when something
+broke on the business rules, e.g. being in a page that requires a Community, but
+not having the Community
+-}
+logImpossible_ : msg -> String -> Maybe Eos.Account.Name -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logImpossible_ transaction message maybeUser uResult =
+    logEvent (Log.fromImpossible transaction message maybeUser) uResult
+
+
+{-| Send an Event to Sentry so we can debug later. Should be used when trying to
+decode a JSON value, but getting an unexpected error.
+-}
+logDecodingError : msg -> Maybe Eos.Account.Name -> String -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logDecodingError transaction maybeUser description error uResult =
+    logEvent (Log.fromDecodeError transaction maybeUser description error) uResult
+
+
+{-| Send an Event to Sentry so we can debug later. Should be used when
+attempting to perform an Http request and getting an error back.
+-}
+logHttpError_ : msg -> Maybe Eos.Account.Name -> String -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logHttpError_ transaction maybeUser description error uResult =
+    logEvent (Log.fromHttpError transaction maybeUser description error) uResult
+
+
+{-| Send an Event to Sentry so we can debug later. Should be used when
+attempting to perform a GraphQL request and getting an error back.
+-}
+logGraphqlError_ : msg -> Maybe Eos.Account.Name -> String -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logGraphqlError_ transaction maybeUser description error uResult =
+    logEvent (Log.fromGraphqlHttpError transaction maybeUser description error) uResult
+
+
+{-| Logs out an httpError to the development console in dev env or to Error
+reporting in production
 -}
 logHttpError : msg -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logHttpError msg httpError uResult =
@@ -210,16 +277,6 @@ logImpossible : msg -> List String -> UpdateResult m msg eMsg -> UpdateResult m 
 logImpossible msg descr uResult =
     addLog
         (Log.log { msg = msg, kind = Log.Impossible descr })
-        uResult
-
-
-{-| Logs a decoding error to the development console in the development environment or does an Incident report
-in production
--}
-logDecodeError : msg -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logDecodeError msg descr uResult =
-    addLog
-        (Log.log { msg = msg, kind = Log.DecodeError descr })
         uResult
 
 

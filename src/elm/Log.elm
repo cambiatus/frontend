@@ -1,14 +1,20 @@
 port module Log exposing
-    ( BreadcrumbType(..)
+    ( Breadcrumb
+    , BreadcrumbType(..)
+    , Event
     , Kind(..)
     , Level(..)
     , Log
     , addBreadcrumb
-    , decodeError
+    , fromDecodeError
+    , fromGraphqlHttpError
+    , fromHttpError
+    , fromImpossible
     , graphqlErrorToKind
-    , impossible
     , log
     , map
+    , mapBreadcrumb
+    , mapEvent
     , send
     , sendEvent
     )
@@ -140,14 +146,10 @@ type alias Event msg =
     { username : Maybe Eos.Account.Name
     , message : String
     , tags : Dict String String
-    , context : Context
+    , context : Maybe Context
     , transaction : msg
     , level : Level
     }
-
-
-
--- TODO: Add Kind to Context or Event
 
 
 {-| Some extra information to be displayed as a key-value table, under a name.
@@ -175,8 +177,11 @@ type alias LogModel msg =
 
 {-| Perform a command to add a Breadcrumb to Sentry. This **does not** send data
 over to Sentry, it only add the breadcrumb information on the Sentry object
-handled by JS. If you want to send an event to Sentry, use [`send`](#send),
-[`impossible`](#impossible) or [`decodeError`](#decodeError)!
+handled by JS. If you want to send an event to Sentry, use
+[`sendEvent`](#sendEvent)!
+
+On development, just logs to the console.
+
 -}
 addBreadcrumb : (msg -> List String) -> Breadcrumb msg -> Cmd msg
 addBreadcrumb msgToString breadcrumb =
@@ -190,6 +195,12 @@ addBreadcrumb msgToString breadcrumb =
         |> addBreadcrumbPort
 
 
+{-| Perform a command to send an Event to Sentry. It will include all the
+breadcrums added since the previous event.
+
+On development, just logs to the console.
+
+-}
 sendEvent : (msg -> List String) -> Event msg -> Cmd msg
 sendEvent msgToString event =
     Encode.object
@@ -208,7 +219,14 @@ sendEvent msgToString event =
                 |> Dict.insert "cambiatus.language" "elm"
                 |> Encode.dict identity Encode.string
           )
-        , ( "context", encodeContext event.context )
+        , ( "context"
+          , case event.context of
+                Nothing ->
+                    Encode.null
+
+                Just context ->
+                    encodeContext context
+          )
         , ( "transaction", msgToString event.transaction |> String.join "." |> Encode.string )
         , ( "level", levelToString event.level |> Encode.string )
         ]
@@ -218,31 +236,20 @@ sendEvent msgToString event =
 send : (a -> List String) -> Log a -> Cmd msg
 send toStrs (Log a) =
     case a.kind of
-        HttpError e ->
-            httpError e
+        HttpError _ ->
+            Cmd.none
 
-        DecodeError e ->
-            decodeError e
+        DecodeError _ ->
+            Cmd.none
 
-        Impossible str ->
-            toStrs a.msg
-                ++ str
-                |> String.join "."
-                |> impossible
+        Impossible _ ->
+            Cmd.none
 
-        GraphqlHttpError e ->
-            toStrs a.msg
-                |> String.join "."
-                |> graphqlHttpError e
+        GraphqlHttpError _ ->
+            Cmd.none
 
-        GraphqlErrors errs ->
-            let
-                msgs =
-                    errs
-                        |> List.map (\e -> e.message)
-                        |> String.join "\n"
-            in
-            logError ( "[GraphqlError]", msgs )
+        GraphqlErrors _ ->
+            Cmd.none
 
         EncodedError val ->
             ( String.join "." (toStrs a.msg)
@@ -258,44 +265,87 @@ send toStrs (Log a) =
             logError ( "[Incompatible Msg]", toStrs a.msg |> String.join "." )
 
 
-impossible : String -> Cmd msg
-impossible e =
-    logError ( "[Impossible Error]", e )
-
-
-decodeError : Decode.Error -> Cmd msg
-decodeError decErr =
-    logError ( "[Decode Error]", Decode.errorToString decErr )
-
-
-httpError : Http.Error -> Cmd msg
-httpError httpError_ =
-    case httpError_ of
-        Http.BadUrl url ->
-            logError ( "[Http Error: BadUrl]", url )
-
-        Http.BadBody err ->
-            logError ( "[Http Error: BadPayload]", err )
-
-        _ ->
-            Cmd.none
-
-
-graphqlHttpError : Graphql.Http.HttpError -> String -> Cmd msg
-graphqlHttpError e str =
-    case e of
-        Graphql.Http.BadUrl url ->
-            logError ( str ++ ".Graphql.Http.BadUrl: ", url )
-
-        Graphql.Http.BadPayload err ->
-            logError ( str ++ ".Graphql.Http.BadPayload: ", Decode.errorToString err )
-
-        _ ->
-            Cmd.none
-
-
 
 -- EXTERNAL HELPERS
+
+
+{-| Creates an Event out of an impossible error. This is something that should
+be impossible to happen, either because of business rules or because we know
+something just can't happen based on the flow of the app.
+-}
+fromImpossible : msg -> String -> Maybe Eos.Account.Name -> Event msg
+fromImpossible transaction message maybeUser =
+    { username = maybeUser
+    , message = message
+    , tags = Dict.fromList [ ( "type", "impossible error" ) ]
+    , context = Nothing
+    , transaction = transaction
+    , level = Fatal
+    }
+
+
+{-| Creates an Event out of a decoding error. This happens when trying to decode
+something, but the data doesn't fit into the decoder provided.
+-}
+fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> Decode.Error -> Event msg
+fromDecodeError transaction maybeUser description error =
+    { username = maybeUser
+    , message = "Got an error when trying to decode a JSON value"
+    , tags = Dict.fromList [ ( "type", "decode error" ) ]
+    , context =
+        Just
+            { name = "Decode error"
+            , extras =
+                Dict.fromList
+                    [ ( "Description", Encode.string description )
+                    , ( "Error", encodeDecodingError error )
+                    ]
+            }
+    , transaction = transaction
+    , level = Error
+    }
+
+
+{-| Creates an Event out of a HTTP error.
+-}
+fromHttpError : msg -> Maybe Eos.Account.Name -> String -> Http.Error -> Event msg
+fromHttpError transaction maybeUser description error =
+    { username = maybeUser
+    , message = "Got an error when performing an HTTP request"
+    , tags = Dict.fromList [ ( "type", "http error" ) ]
+    , context =
+        Just
+            { name = "HTTP error"
+            , extras =
+                Dict.fromList
+                    [ ( "Description", Encode.string description )
+                    , ( "Error", encodeHttpError error )
+                    ]
+            }
+    , transaction = transaction
+    , level = Error
+    }
+
+
+{-| Creates an Event out of a GraphQL error.
+-}
+fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> Graphql.Http.Error a -> Event msg
+fromGraphqlHttpError transaction maybeUser description error =
+    { username = maybeUser
+    , message = "Got an error when performing a GraphQL request"
+    , tags = Dict.fromList [ ( "type", "graphql error" ) ]
+    , context =
+        Just
+            { name = "Graphql error"
+            , extras =
+                Dict.fromList
+                    [ ( "Description", Encode.string description )
+                    , ( "Error", encodeGraphqlError error )
+                    ]
+            }
+    , transaction = transaction
+    , level = Error
+    }
 
 
 log : LogModel msg -> Log msg
@@ -309,6 +359,27 @@ map transform (Log a) =
         { msg = transform a.msg
         , kind = a.kind
         }
+
+
+mapBreadcrumb : (a -> b) -> Breadcrumb a -> Breadcrumb b
+mapBreadcrumb transform breadcrumb =
+    { type_ = breadcrumb.type_
+    , category = transform breadcrumb.category
+    , message = breadcrumb.message
+    , data = breadcrumb.data
+    , level = breadcrumb.level
+    }
+
+
+mapEvent : (a -> b) -> Event a -> Event b
+mapEvent transform event =
+    { username = event.username
+    , message = event.message
+    , tags = event.tags
+    , context = event.context
+    , transaction = transform event.transaction
+    , level = event.level
+    }
 
 
 graphqlErrorToKind : Graphql.Http.Error a -> Kind
@@ -369,3 +440,146 @@ encodeContext context =
         [ ( "name", Encode.string context.name )
         , ( "extras", Encode.dict identity identity context.extras )
         ]
+
+
+encodeDecodingError : Decode.Error -> Encode.Value
+encodeDecodingError error =
+    case error of
+        Decode.Field fieldName fieldError ->
+            Encode.object
+                [ ( "type", Encode.string "Decode.Field" )
+                , ( "fieldName", Encode.string fieldName )
+                , ( "fieldError", encodeDecodingError fieldError )
+                ]
+
+        Decode.Index index indexError ->
+            Encode.object
+                [ ( "type", Encode.string "Decode.Index" )
+                , ( "index", Encode.int index )
+                , ( "indexError", encodeDecodingError indexError )
+                ]
+
+        Decode.OneOf errors ->
+            Encode.object
+                [ ( "type", Encode.string "Decode.OneOf" )
+                , ( "errors", Encode.list encodeDecodingError errors )
+                ]
+
+        Decode.Failure failureString failureValue ->
+            Encode.object
+                [ ( "type", Encode.string "Decode.Failure" )
+                , ( "failureString", Encode.string failureString )
+                , ( "failureValue", failureValue )
+                ]
+
+
+encodeHttpError : Http.Error -> Encode.Value
+encodeHttpError error =
+    case error of
+        Http.BadUrl url ->
+            Encode.object
+                [ ( "type", Encode.string "Http.BadUrl" )
+                , ( "providedUrl", Encode.string url )
+                ]
+
+        Http.Timeout ->
+            Encode.object [ ( "type", Encode.string "Http.Timeout" ) ]
+
+        Http.NetworkError ->
+            Encode.object [ ( "type", Encode.string "Http.NetworkError" ) ]
+
+        Http.BadStatus status ->
+            Encode.object
+                [ ( "type", Encode.string "Http.BadStatus" )
+                , ( "status", Encode.int status )
+                ]
+
+        Http.BadBody body ->
+            Encode.object
+                [ ( "type", Encode.string "Http.BadBody" )
+                , ( "body", Encode.string body )
+                ]
+
+
+encodeGraphqlError : Graphql.Http.Error a -> Encode.Value
+encodeGraphqlError error =
+    let
+        encodeGraphqlInternalError : Graphql.Http.GraphqlError.GraphqlError -> Encode.Value
+        encodeGraphqlInternalError internalError =
+            Encode.object
+                [ ( "message", Encode.string internalError.message )
+                , ( "locations"
+                  , case internalError.locations of
+                        Nothing ->
+                            Encode.null
+
+                        Just locations ->
+                            Encode.list
+                                (\location ->
+                                    Encode.object
+                                        [ ( "line", Encode.int location.line )
+                                        , ( "column", Encode.int location.column )
+                                        ]
+                                )
+                                locations
+                  )
+                , ( "details", Encode.dict identity identity internalError.details )
+                ]
+    in
+    case error of
+        Graphql.Http.GraphqlError possiblyParsedData graphqlErrors ->
+            Encode.object
+                [ ( "type", Encode.string "Graphql.Http.GraphqlError" )
+                , ( "data"
+                  , case possiblyParsedData of
+                        Graphql.Http.GraphqlError.ParsedData _ ->
+                            Encode.object
+                                [ ( "status"
+                                  , Encode.string "Graphql.Http.GraphqlError.ParsedData"
+                                  )
+                                ]
+
+                        Graphql.Http.GraphqlError.UnparsedData unparsedData ->
+                            Encode.object
+                                [ ( "status", Encode.string "Graphql.Http.GraphqlError.UnparsedData" )
+                                , ( "unparsedData", unparsedData )
+                                ]
+                  )
+                , ( "errors"
+                  , Encode.list encodeGraphqlInternalError graphqlErrors
+                  )
+                ]
+
+        Graphql.Http.HttpError httpError ->
+            case httpError of
+                Graphql.Http.BadUrl url ->
+                    Encode.object
+                        [ ( "type", Encode.string "Graphql.Http.BadUrl" )
+                        , ( "providedUrl", Encode.string url )
+                        ]
+
+                Graphql.Http.Timeout ->
+                    Encode.object [ ( "type", Encode.string "Graphql.Http.Timeout" ) ]
+
+                Graphql.Http.NetworkError ->
+                    Encode.object [ ( "type", Encode.string "Graphql.Http.NetworkError" ) ]
+
+                Graphql.Http.BadStatus metadata body ->
+                    Encode.object
+                        [ ( "type", Encode.string "Graphql.Http.BadStatus" )
+                        , ( "metadata"
+                          , Encode.object
+                                [ ( "url", Encode.string metadata.url )
+                                , ( "statusCode", Encode.int metadata.statusCode )
+                                , ( "statusText", Encode.string metadata.statusText )
+                                , ( "headers", Encode.dict identity Encode.string metadata.headers )
+                                ]
+                          )
+                        , ( "body", Encode.string body )
+                        ]
+
+                Graphql.Http.BadPayload jsonError ->
+                    Encode.object
+                        [ ( "type", Encode.string "Graphql.Http.BadPayload" )
+                        , ( "jsonError", encodeDecodingError jsonError )
+                        ]
