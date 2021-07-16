@@ -6,6 +6,7 @@ import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -17,6 +18,7 @@ import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Page
 import Ports
 import RemoteData exposing (RemoteData)
@@ -602,11 +604,24 @@ update msg model loggedIn =
                         }
                             |> UR.init
                             |> completeObjectiveOr loggedIn newCompletionStatus objective identity
-                            |> UR.logContractError msg
-                                ("Action id "
-                                    ++ String.fromInt actionId
-                                    ++ " could not be completed with objective"
-                                )
+                            |> UR.logEvent
+                                { username = Just loggedIn.accountName
+                                , message = "Error when trying to complete action with objective"
+                                , tags = []
+                                , context =
+                                    Just
+                                        { name = "Details"
+                                        , extras =
+                                            Dict.fromList
+                                                [ ( "actionId", Encode.int actionId )
+                                                , ( "objectiveId", Encode.int objective.id )
+                                                , ( "tries", Encode.int currentRetries )
+                                                , ( "maximumRetries", Encode.int maxRetries )
+                                                ]
+                                        }
+                                , transaction = msg
+                                , level = Log.Warning
+                                }
 
                     else
                         case objective.actions |> List.find (\action -> action.id == actionId) of

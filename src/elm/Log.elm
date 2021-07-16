@@ -76,7 +76,6 @@ type Kind
     | DecodeError Decode.Error
     | Impossible (List String)
     | EncodedError Value
-    | ContractError String
 
 
 {-| What kind of authentication was expected
@@ -94,6 +93,7 @@ type ErrorType
     | DecodingError
     | HttpErrorType
     | GraphqlErrorType
+    | ContractError
 
 
 {-| Defines the possible tags. Tags are used to search for events on Sentry.
@@ -281,10 +281,6 @@ send toStrs (Log a) =
             , val
             )
                 |> logDebug
-
-        ContractError err ->
-            ( "[Contract Error] " ++ err ++ "\n", toStrs a.msg |> String.join "." )
-                |> logError
 
 
 
@@ -628,6 +624,9 @@ encodeTag tag =
 
                         GraphqlErrorType ->
                             "graphql error"
+
+                        ContractError ->
+                            "contract error"
             in
             ( "cambiatus.type", Encode.string value )
 

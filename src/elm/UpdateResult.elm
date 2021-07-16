@@ -6,9 +6,9 @@ module UpdateResult exposing
     , addMsg
     , addPort
     , init
-    , logContractError
     , logDebugValue
     , logDecodingError
+    , logEvent
     , logGraphqlError
     , logHttpError
     , logImpossible
@@ -45,6 +45,10 @@ import Log exposing (Log)
 import Ports
 import RemoteData exposing (RemoteData(..))
 import Task
+
+
+
+-- TODO - Update docs
 
 
 {-| Core data structure that enables this project to have an observable update function in our module.
@@ -296,15 +300,6 @@ logDebugValue : msg -> Value -> UpdateResult m msg eMsg -> UpdateResult m msg eM
 logDebugValue msg val uResult =
     addLog
         (Log.log { msg = msg, kind = Log.EncodedError val })
-        uResult
-
-
-{-| Logs a String to the development console in the development environment or
-does an Incident report in production
--}
-logContractError : msg -> String -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logContractError msg val uResult =
-    addLog (Log.log { msg = msg, kind = Log.ContractError val })
         uResult
 
 
