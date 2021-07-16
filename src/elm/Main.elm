@@ -84,7 +84,11 @@ init flagsValue url navKey =
                 Err e ->
                     Page.init Flags.default navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
-                        |> UR.logDecodingError Ignored Nothing "Could not decode flags" e
+                        |> UR.logDecodingError Ignored
+                            Nothing
+                            "Could not decode flags"
+                            []
+                            e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
         ( model, routeCmd ) =
@@ -230,16 +234,13 @@ update msg model =
                     , { username = Nothing
                       , message = "Expected user to be a guest, but they're logged in"
                       , tags = [ Log.IncompatibleAuthentication Log.ExpectedGuest ]
-                      , context =
-                            Just
-                                { name = "Location"
-                                , extras =
-                                    Dict.fromList
-                                        [ ( "module", Encode.string "Main.elm" )
-                                        , ( "function", Encode.string "update" )
-                                        , ( "statement", Encode.string "withGuest" )
-                                        ]
+                      , contexts =
+                            [ Log.contextFromLocation
+                                { moduleName = "Main"
+                                , function = "update"
+                                , statement = "withGuest"
                                 }
+                            ]
                       , transaction = msg
                       , level = Log.Error
                       }
@@ -253,16 +254,13 @@ update msg model =
                     , { username = Nothing
                       , message = "Expected user to be logged in, but they're a guest"
                       , tags = [ Log.IncompatibleAuthentication Log.ExpectedLoggedIn ]
-                      , context =
-                            Just
-                                { name = "Location"
-                                , extras =
-                                    Dict.fromList
-                                        [ ( "module", Encode.string "Main.elm" )
-                                        , ( "function", Encode.string "update" )
-                                        , ( "statement", Encode.string "withLoggedIn" )
-                                        ]
+                      , contexts =
+                            [ Log.contextFromLocation
+                                { moduleName = "Main"
+                                , function = "update"
+                                , statement = "withLoggedIn"
                                 }
+                            ]
                       , transaction = msg
                       , level = Log.Error
                       }
@@ -308,6 +306,12 @@ update msg model =
                             , Log.fromImpossible msg
                                 "Got invalid address from JavaScript"
                                 (Page.maybeAccountName model.session)
+                                [ Log.contextFromLocation
+                                    { moduleName = "Main"
+                                    , function = "update"
+                                    , statement = "( Got JavascriptData val, _ ) -> Ok"
+                                    }
+                                ]
                                 |> Log.sendEvent msgToString
                             )
 
@@ -319,6 +323,12 @@ update msg model =
                     , Log.fromDecodeError msg
                         (Page.maybeAccountName model.session)
                         "Could not decode JavaScript address"
+                        [ Log.contextFromLocation
+                            { moduleName = "Main"
+                            , function = "update"
+                            , statement = "( Got JavascriptData val, _ ) -> Err"
+                            }
+                        ]
                         decodeError
                         |> Log.sendEvent msgToString
                     )
@@ -514,16 +524,13 @@ update msg model =
             , { username = Page.maybeAccountName model.session
               , message = "Msg does not correspond with Status in Main"
               , tags = [ Log.TypeTag Log.IncompatibleMsg ]
-              , context =
-                    Just
-                        { name = "Location"
-                        , extras =
-                            Dict.fromList
-                                [ ( "module", Encode.string "Main.elm" )
-                                , ( "function", Encode.string "update" )
-                                , ( "case branch", Encode.string "( _, _ )" )
-                                ]
+              , contexts =
+                    [ Log.contextFromLocation
+                        { moduleName = "Main"
+                        , function = "update"
+                        , statement = "case branch ( _, _ )"
                         }
+                    ]
               , transaction = msg
               , level = Log.Info
               }

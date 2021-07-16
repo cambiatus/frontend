@@ -6,12 +6,12 @@ module UpdateResult exposing
     , addMsg
     , addPort
     , init
-    , logDebugValue
     , logDecodingError
     , logEvent
     , logGraphqlError
     , logHttpError
     , logImpossible
+    , logJsonValue
     , map
     , mapModel
     , remoteDataToString
@@ -235,33 +235,38 @@ logEvent event uResult =
 broke on the business rules, e.g. being in a page that requires a Community, but
 not having the Community
 -}
-logImpossible_ : msg -> String -> Maybe Eos.Account.Name -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logImpossible_ transaction message maybeUser uResult =
-    logEvent (Log.fromImpossible transaction message maybeUser) uResult
+logImpossible_ : msg -> String -> Maybe Eos.Account.Name -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logImpossible_ transaction message maybeUser contexts uResult =
+    logEvent (Log.fromImpossible transaction message maybeUser contexts) uResult
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when trying to
 decode a JSON value, but getting an unexpected error.
 -}
-logDecodingError : msg -> Maybe Eos.Account.Name -> String -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logDecodingError transaction maybeUser description error uResult =
-    logEvent (Log.fromDecodeError transaction maybeUser description error) uResult
+logDecodingError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logDecodingError transaction maybeUser description contexts error uResult =
+    logEvent (Log.fromDecodeError transaction maybeUser description contexts error) uResult
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform an Http request and getting an error back.
 -}
-logHttpError_ : msg -> Maybe Eos.Account.Name -> String -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logHttpError_ transaction maybeUser description error uResult =
-    logEvent (Log.fromHttpError transaction maybeUser description error) uResult
+logHttpError_ : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logHttpError_ transaction maybeUser description contexts error uResult =
+    logEvent (Log.fromHttpError transaction maybeUser description contexts error) uResult
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform a GraphQL request and getting an error back.
 -}
-logGraphqlError_ : msg -> Maybe Eos.Account.Name -> String -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logGraphqlError_ transaction maybeUser description error uResult =
-    logEvent (Log.fromGraphqlHttpError transaction maybeUser description error) uResult
+logGraphqlError_ : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logGraphqlError_ transaction maybeUser description contexts error uResult =
+    logEvent (Log.fromGraphqlHttpError transaction maybeUser description contexts error) uResult
+
+
+logJsonValue : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Decode.Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logJsonValue transaction maybeUser message contexts jsonValue uResult =
+    logEvent (Log.fromJsonValue transaction maybeUser message contexts jsonValue) uResult
 
 
 {-| Logs out an httpError to the development console in dev env or to Error
@@ -291,15 +296,6 @@ logGraphqlError : msg -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> Upda
 logGraphqlError msg graphqlError uResult =
     addLog
         (Log.log { msg = msg, kind = Log.graphqlErrorToKind graphqlError })
-        uResult
-
-
-{-| Logs a JSON value the development console in the development environment
--}
-logDebugValue : msg -> Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logDebugValue msg val uResult =
-    addLog
-        (Log.log { msg = msg, kind = Log.EncodedError val })
         uResult
 
 

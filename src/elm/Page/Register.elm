@@ -757,6 +757,7 @@ update _ msg model ({ shared } as guest) =
                 |> UR.logDecodingError msg
                     Nothing
                     "Could not decode account keys"
+                    []
                     v
 
         AccountKeysGenerated (Ok accountKeys) ->

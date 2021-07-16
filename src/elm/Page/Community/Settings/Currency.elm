@@ -163,7 +163,11 @@ update msg model ({ shared } as loggedIn) =
             { model | isLoading = False }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "community.error_saving"))
-                |> UR.logDebugValue msg val
+                |> UR.logJsonValue msg
+                    (Just loggedIn.accountName)
+                    "Got an error when submitting currency form"
+                    []
+                    val
 
         CompletedLoadCommunity community ->
             { model

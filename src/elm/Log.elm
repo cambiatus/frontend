@@ -1,18 +1,21 @@
 port module Log exposing
     ( Breadcrumb
     , BreadcrumbType(..)
-    , ErrorType(..)
+    , Context
     , Event
+    , EventType(..)
     , ExpectedAuthentication(..)
     , Kind(..)
     , Level(..)
     , Log
     , Tag(..)
     , addBreadcrumb
+    , contextFromLocation
     , fromDecodeError
     , fromGraphqlHttpError
     , fromHttpError
     , fromImpossible
+    , fromJsonValue
     , graphqlErrorToKind
     , log
     , map
@@ -51,9 +54,6 @@ import Json.Encode as Encode
 -- PORTS
 
 
-port logError : ( String, String ) -> Cmd msg
-
-
 port logDebug : ( String, Value ) -> Cmd msg
 
 
@@ -85,21 +85,23 @@ type ExpectedAuthentication
     | ExpectedGuest
 
 
-{-| What kind of error to report
+{-| What kind of thing to report
 -}
-type ErrorType
+type EventType
     = IncompatibleMsg
     | ImpossibleError
     | DecodingError
     | HttpErrorType
     | GraphqlErrorType
     | ContractError
+    | UnknownError
+    | JsonValue
 
 
 {-| Defines the possible tags. Tags are used to search for events on Sentry.
 -}
 type Tag
-    = TypeTag ErrorType
+    = TypeTag EventType
     | IncompatibleAuthentication ExpectedAuthentication
 
 
@@ -172,7 +174,7 @@ type alias Event msg =
     { username : Maybe Eos.Account.Name
     , message : String
     , tags : List Tag
-    , context : Maybe Context
+    , contexts : List Context
     , transaction : msg
     , level : Level
     }
@@ -244,14 +246,7 @@ sendEvent msgToString event =
                 |> Dict.fromList
                 |> Encode.dict identity identity
           )
-        , ( "context"
-          , case event.context of
-                Nothing ->
-                    Encode.null
-
-                Just context ->
-                    encodeContext context
-          )
+        , ( "contexts", Encode.list encodeContext event.contexts )
         , ( "transaction", msgToString event.transaction |> String.join "." |> Encode.string )
         , ( "level", levelToString event.level |> Encode.string )
         ]
@@ -291,12 +286,12 @@ send toStrs (Log a) =
 be impossible to happen, either because of business rules or because we know
 something just can't happen based on the flow of the app.
 -}
-fromImpossible : msg -> String -> Maybe Eos.Account.Name -> Event msg
-fromImpossible transaction message maybeUser =
+fromImpossible : msg -> String -> Maybe Eos.Account.Name -> List Context -> Event msg
+fromImpossible transaction message maybeUser contexts =
     { username = maybeUser
     , message = message
     , tags = [ TypeTag ImpossibleError ]
-    , context = Nothing
+    , contexts = contexts
     , transaction = transaction
     , level = Fatal
     }
@@ -305,20 +300,20 @@ fromImpossible transaction message maybeUser =
 {-| Creates an Event out of a decoding error. This happens when trying to decode
 something, but the data doesn't fit into the decoder provided.
 -}
-fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> Decode.Error -> Event msg
-fromDecodeError transaction maybeUser description error =
+fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Decode.Error -> Event msg
+fromDecodeError transaction maybeUser description contexts error =
     { username = maybeUser
     , message = "Got an error when trying to decode a JSON value"
     , tags = [ TypeTag DecodingError ]
-    , context =
-        Just
-            { name = "Decode error"
-            , extras =
-                Dict.fromList
-                    [ ( "Description", Encode.string description )
-                    , ( "Error", encodeDecodingError error )
-                    ]
-            }
+    , contexts =
+        { name = "Decode error"
+        , extras =
+            Dict.fromList
+                [ ( "Description", Encode.string description )
+                , ( "Error", encodeDecodingError error )
+                ]
+        }
+            :: contexts
     , transaction = transaction
     , level = Error
     }
@@ -326,20 +321,20 @@ fromDecodeError transaction maybeUser description error =
 
 {-| Creates an Event out of a HTTP error.
 -}
-fromHttpError : msg -> Maybe Eos.Account.Name -> String -> Http.Error -> Event msg
-fromHttpError transaction maybeUser description error =
+fromHttpError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Http.Error -> Event msg
+fromHttpError transaction maybeUser description contexts error =
     { username = maybeUser
     , message = "Got an error when performing an HTTP request"
     , tags = [ TypeTag HttpErrorType ]
-    , context =
-        Just
-            { name = "HTTP error"
-            , extras =
-                Dict.fromList
-                    [ ( "Description", Encode.string description )
-                    , ( "Error", encodeHttpError error )
-                    ]
-            }
+    , contexts =
+        { name = "HTTP error"
+        , extras =
+            Dict.fromList
+                [ ( "Description", Encode.string description )
+                , ( "Error", encodeHttpError error )
+                ]
+        }
+            :: contexts
     , transaction = transaction
     , level = Error
     }
@@ -347,22 +342,49 @@ fromHttpError transaction maybeUser description error =
 
 {-| Creates an Event out of a GraphQL error.
 -}
-fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> Graphql.Http.Error a -> Event msg
-fromGraphqlHttpError transaction maybeUser description error =
+fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Graphql.Http.Error a -> Event msg
+fromGraphqlHttpError transaction maybeUser description contexts error =
     { username = maybeUser
     , message = "Got an error when performing a GraphQL request"
     , tags = [ TypeTag GraphqlErrorType ]
-    , context =
-        Just
-            { name = "Graphql error"
-            , extras =
-                Dict.fromList
-                    [ ( "Description", Encode.string description )
-                    , ( "Error", encodeGraphqlError error )
-                    ]
-            }
+    , contexts =
+        { name = "Graphql error"
+        , extras =
+            Dict.fromList
+                [ ( "Description", Encode.string description )
+                , ( "Error", encodeGraphqlError error )
+                ]
+        }
+            :: contexts
     , transaction = transaction
     , level = Error
+    }
+
+
+fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> List Context -> Decode.Value -> Event msg
+fromJsonValue transaction maybeUser message contexts value =
+    { username = maybeUser
+    , message = message
+    , tags = [ TypeTag JsonValue ]
+    , contexts =
+        { name = "JSON value"
+        , extras = Dict.fromList [ ( "Value", value ) ]
+        }
+            :: contexts
+    , transaction = transaction
+    , level = Info
+    }
+
+
+contextFromLocation : { moduleName : String, function : String, statement : String } -> Context
+contextFromLocation location =
+    { name = "Location"
+    , extras =
+        Dict.fromList
+            [ ( "module", Encode.string location.moduleName )
+            , ( "function", Encode.string location.function )
+            , ( "statement", Encode.string location.statement )
+            ]
     }
 
 
@@ -394,7 +416,7 @@ mapEvent transform event =
     { username = event.username
     , message = event.message
     , tags = event.tags
-    , context = event.context
+    , contexts = event.contexts
     , transaction = transform event.transaction
     , level = event.level
     }
@@ -627,6 +649,12 @@ encodeTag tag =
 
                         ContractError ->
                             "contract error"
+
+                        UnknownError ->
+                            "unknown error"
+
+                        JsonValue ->
+                            "json value"
             in
             ( "cambiatus.type", Encode.string value )
 

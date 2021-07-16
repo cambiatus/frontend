@@ -32,6 +32,7 @@ so we can retrieve their Private Key from localStorage.
 import Api.Graphql
 import Cambiatus.Mutation
 import Cambiatus.Object.Session
+import Dict
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
@@ -42,6 +43,7 @@ import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
+import Log
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
@@ -213,7 +215,20 @@ update msg shared model =
         CompletedSignIn _ (RemoteData.Success Nothing) ->
             model
                 |> authFailed "error.unknown"
-                |> UR.logDebugValue msg (Encode.string "CompletedSignIn with Nothing")
+                |> UR.logEvent
+                    { username = Nothing
+                    , message = "Could not sign in for unknown reason"
+                    , tags = [ Log.TypeTag Log.UnknownError ]
+                    , contexts =
+                        [ Log.contextFromLocation
+                            { moduleName = "Auth"
+                            , function = "update"
+                            , statement = "CompletedSignIn _ (RemoteData.Success Nothing)"
+                            }
+                        ]
+                    , transaction = msg
+                    , level = Log.Error
+                    }
 
         CompletedSignIn _ (RemoteData.Failure err) ->
             model
@@ -256,7 +271,23 @@ update msg shared model =
         GotSubmittedPinResponse (Err err) ->
             model
                 |> authFailed err
-                |> UR.logDebugValue msg (Encode.string err)
+                |> UR.logEvent
+                    { username = Nothing
+                    , message = "Got an error when submitting PIN"
+                    , tags = [ Log.TypeTag Log.UnknownError ]
+                    , contexts =
+                        [ Log.contextFromLocation
+                            { moduleName = "Auth"
+                            , function = "update"
+                            , statement = "GotSubmittedPinResponse (Err err)"
+                            }
+                        , { name = "Error"
+                          , extras = Dict.fromList [ ( "errorValue", Encode.string err ) ]
+                          }
+                        ]
+                    , transaction = msg
+                    , level = Log.Error
+                    }
 
 
 signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation

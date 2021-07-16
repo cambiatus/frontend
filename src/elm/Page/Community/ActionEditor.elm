@@ -1066,8 +1066,11 @@ update msg model ({ shared } as loggedIn) =
             in
             newModel
                 |> UR.init
-                |> UR.logDebugValue msg val
-                |> UR.logImpossible msg []
+                |> UR.logJsonValue msg
+                    (Just loggedIn.accountName)
+                    "Got an error when saving action"
+                    []
+                    val
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
         GotProfileSummaryMsg index subMsg ->

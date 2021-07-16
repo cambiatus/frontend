@@ -319,7 +319,7 @@ const logEvent = (event) => {
     const { message, ...rest } = event
     console.log('[==== EVENT]: ', message, rest)
   } else {
-    const { user, message, tags, context, transaction, level } = event
+    const { user, message, tags, contexts, transaction, level } = event
 
     Sentry.withScope((scope) => {
       if (user !== null) {
@@ -329,7 +329,7 @@ const logEvent = (event) => {
       scope.setTag('cambiatus.language', 'javascript')
       scope.setTags(tags)
       scope.setTransactionName(transaction)
-      scope.setContext(context.name, context.extras)
+      contexts.forEach((context) => { scope.setContext(context.name, context.extras) })
       scope.setLevel(level)
 
       Sentry.captureMessage(message)
@@ -527,53 +527,10 @@ function debugLog (name, arg) {
   }
 }
 
-function errorLog (msg, err, isFromElm) {
-  if (env === 'development') {
-    console.error(msg, err)
-    return
-  }
-
-  const languageString = isFromElm ? 'Elm' : 'Javascript'
-  const startMessage = `Begin errorLog from ${languageString}`
-  const endMessage = `End errorLog from ${languageString}`
-
-  Sentry.addBreadcrumb({
-    message: startMessage,
-    level: Sentry.Severity.Info,
-    type: 'debug',
-    category: 'started'
-  })
-
-  let error = `Generic ${languageString} errorLog`
-  let details = ''
-
-  if (Object.prototype.toString.call(msg) === '[object Array]') {
-    [error, details] = msg
-  }
-
-  const type = isFromElm ? 'elm-error' : 'javascript-error'
-  Sentry.withScope(scope => {
-    scope.setTag('type', type)
-    scope.setLevel(Sentry.Severity.Error)
-    scope.setExtra(`Error shared by ${languageString}`, err)
-    scope.setExtra('raw msg', msg)
-    scope.setExtra('Parsed details', details)
-    Sentry.captureMessage(error + details)
-  })
-
-  Sentry.addBreadcrumb({
-    message: endMessage,
-    level: Sentry.Severity.Info,
-    type: 'debug',
-    category: 'ended'
-  })
-}
 // Ports error Reporter
 app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
 
 app.ports.logEvent.subscribe(logEvent)
-
-app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
 
 app.ports.logDebug.subscribe(debugLog)
 

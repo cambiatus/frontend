@@ -877,7 +877,11 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when creating a shop offer"
+                            []
+                            error
 
                 Saving balances sale imageStatus form ->
                     EditingUpdate balances sale imageStatus Closed form
@@ -888,7 +892,11 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when editing a shop offer"
+                            []
+                            error
 
                 _ ->
                     model
@@ -917,7 +925,11 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when deleting a shop offer"
+                            []
+                            error
 
                 _ ->
                     model

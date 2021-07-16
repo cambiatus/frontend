@@ -854,7 +854,11 @@ update msg model loggedIn =
             { model | isDisabled = False }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.unknown"))
-                |> UR.logDebugValue msg val
+                |> UR.logJsonValue msg
+                    (Just loggedIn.accountName)
+                    "Got an error when creating a community"
+                    []
+                    val
 
         Redirect communityData ->
             let

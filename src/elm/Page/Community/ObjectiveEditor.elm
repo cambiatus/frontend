@@ -608,17 +608,17 @@ update msg model loggedIn =
                                 { username = Just loggedIn.accountName
                                 , message = "Error when trying to complete action with objective"
                                 , tags = []
-                                , context =
-                                    Just
-                                        { name = "Details"
-                                        , extras =
+                                , contexts =
+                                    [ { name = "Details"
+                                      , extras =
                                             Dict.fromList
                                                 [ ( "actionId", Encode.int actionId )
                                                 , ( "objectiveId", Encode.int objective.id )
                                                 , ( "tries", Encode.int currentRetries )
                                                 , ( "maximumRetries", Encode.int maxRetries )
                                                 ]
-                                        }
+                                      }
+                                    ]
                                 , transaction = msg
                                 , level = Log.Warning
                                 }
@@ -749,6 +749,11 @@ update msg model loggedIn =
                                         |> Authorized
                             }
                                 |> UR.init
+                                |> UR.logJsonValue msg
+                                    (Just loggedIn.accountName)
+                                    "Got an error when creating an objective"
+                                    []
+                                    v
 
                         Authorized (EditingObjective objective form SavingEdit) ->
                             { model
@@ -758,6 +763,14 @@ update msg model loggedIn =
                                         |> Authorized
                             }
                                 |> UR.init
+                                |> UR.logJsonValue msg
+                                    (Just loggedIn.accountName)
+                                    "Got an error when updating an objective"
+                                    [ { name = "Objective"
+                                      , extras = Dict.fromList [ ( "ID", Encode.int objective.id ) ]
+                                      }
+                                    ]
+                                    v
 
                         _ ->
                             model
@@ -765,7 +778,6 @@ update msg model loggedIn =
                                 |> UR.logImpossible msg [ "ImpossibleStatus" ]
             in
             newModel
-                |> UR.logDebugValue msg v
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "errors.unknown"))
 
 

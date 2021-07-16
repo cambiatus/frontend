@@ -242,7 +242,11 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logDebugValue msg val
+                |> UR.logJsonValue msg
+                    (Just accName)
+                    "Got an error when claiming an action"
+                    []
+                    val
 
         ( ClaimConfirmationClosed, _ ) ->
             { model
@@ -302,7 +306,11 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logDebugValue msg err
+                |> UR.logJsonValue msg
+                    (Just accName)
+                    "Got error when converting name to Uint64"
+                    []
+                    err
 
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
