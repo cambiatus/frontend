@@ -10,6 +10,7 @@ port module Log exposing
     , log
     , map
     , send
+    , sendEvent
     )
 
 {-| This is a module to help log data to our Sentry account. The two main things
@@ -29,6 +30,7 @@ can see details about the error and analyze further.
 -}
 
 import Dict exposing (Dict)
+import Eos.Account
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Http
@@ -47,6 +49,9 @@ port logDebug : ( String, Value ) -> Cmd msg
 
 
 port addBreadcrumbPort : Value -> Cmd msg
+
+
+port logEvent : Value -> Cmd msg
 
 
 
@@ -93,7 +98,7 @@ type alias Breadcrumb msg =
     { type_ : BreadcrumbType
     , category : msg
     , message : String
-    , data : Dict String String
+    , data : Dict String Encode.Value
     , level : Level
     }
 
@@ -114,6 +119,44 @@ type BreadcrumbType
     | ErrorBreadcrumb
     | InfoBreadcrumb
     | QueryBreadcrumb
+
+
+{-| An event is what we actually send to Sentry. Descriptive messages, tags and
+extras are very important so we can have a better debugging experience! Fields:
+
+  - username: if the error comes from a logged in user, we can include their
+    username. This makes it so if a user reports an error, we can search by
+    their username on Sentry.
+  - message: the title that shows up on Sentry.
+  - tags: generic identifiers related to the event, such as
+    ("error-type", "eos-transaction"). Used to filter/search through events
+  - context: a [`Context`](#Context), which provides extra information.
+  - transaction: used annotate the event with its point of failure. In our app,
+    we use the `Msg` that caused the error
+  - level: used to emphasize events
+
+-}
+type alias Event msg =
+    { username : Maybe Eos.Account.Name
+    , message : String
+    , tags : Dict String String
+    , context : Context
+    , transaction : msg
+    , level : Level
+    }
+
+
+
+-- TODO: Add Kind to Context or Event
+
+
+{-| Some extra information to be displayed as a key-value table, under a name.
+In `extras`, any key is allowed, except for `"type"`.
+-}
+type alias Context =
+    { name : String
+    , extras : Dict String Encode.Value
+    }
 
 
 type Log msg
@@ -141,10 +184,35 @@ addBreadcrumb msgToString breadcrumb =
         [ ( "type", breadcrumbTypeToString breadcrumb.type_ |> Encode.string )
         , ( "category", msgToString breadcrumb.category |> String.join "." |> Encode.string )
         , ( "message", Encode.string breadcrumb.message )
-        , ( "data", Encode.dict identity Encode.string breadcrumb.data )
+        , ( "data", Encode.dict identity identity breadcrumb.data )
         , ( "level", levelToString breadcrumb.level |> Encode.string )
         ]
         |> addBreadcrumbPort
+
+
+sendEvent : (msg -> List String) -> Event msg -> Cmd msg
+sendEvent msgToString event =
+    Encode.object
+        [ ( "user"
+          , case event.username of
+                Nothing ->
+                    Encode.null
+
+                Just username ->
+                    Eos.Account.encodeName username
+          )
+        , ( "message", Encode.string event.message )
+        , ( "tags"
+            -- Prepend cambiatus so there's no name conflict
+          , Dict.map (\_ tag -> "cambiatus." ++ tag) event.tags
+                |> Dict.insert "cambiatus.language" "elm"
+                |> Encode.dict identity Encode.string
+          )
+        , ( "context", encodeContext event.context )
+        , ( "transaction", msgToString event.transaction |> String.join "." |> Encode.string )
+        , ( "level", levelToString event.level |> Encode.string )
+        ]
+        |> logEvent
 
 
 send : (a -> List String) -> Log a -> Cmd msg
@@ -293,3 +361,11 @@ breadcrumbTypeToString breadcrumbType =
 
         QueryBreadcrumb ->
             "query"
+
+
+encodeContext : Context -> Encode.Value
+encodeContext context =
+    Encode.object
+        [ ( "name", Encode.string context.name )
+        , ( "extras", Encode.dict identity identity context.extras )
+        ]

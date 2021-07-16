@@ -2,10 +2,12 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Dict
 import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
+import Json.Encode as Encode
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
@@ -96,6 +98,28 @@ init flagsValue url navKey =
     , Cmd.batch
         [ pageCmd
         , routeCmd
+        , Log.addBreadcrumb msgToString
+            { type_ = Log.DefaultBreadcrumb
+            , category = Ignored
+            , message = "Test message from breadcrumb"
+            , data = Dict.empty
+            , level = Log.Warning
+            }
+        , Log.sendEvent msgToString
+            { username = Nothing
+            , message = "Test message from event"
+            , tags = Dict.fromList [ ( "is-test-tag", "it is" ) ]
+            , context =
+                { name = "Test context"
+                , extras =
+                    Dict.fromList
+                        [ ( "Test extra item", Encode.int 1 )
+                        , ( "Second test extra item", Encode.object [ ( "is this a test?", Encode.bool True ) ] )
+                        ]
+                }
+            , transaction = Ignored
+            , level = Log.DebugLevel
+            }
         ]
     )
 

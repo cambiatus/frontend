@@ -473,8 +473,63 @@ function errorLog (msg, err, isFromElm) {
   })
 }
 
+/* On production, adds a breadcrumb to sentry. Needs an object like this:
+  { type: 'default' | 'debug' | 'error' | 'info' | 'query',
+    category: portName,
+    message: 'Something went wrong',
+    data: { transactionId },
+    level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'
+  }
+
+  On development, just logs that information to the console
+*/
+const addBreadcrumb = (breadcrumb) => {
+  if (env === 'development') {
+    const { message, ...rest } = breadcrumb
+    console.log('[==== BREADCRUMB]: ', message, rest)
+    return
+  }
+
+  Sentry.addBreadcrumb(breadcrumb)
+}
+
+/* On production, sends an event to Sentry. Needs an object like this:
+  { username: eosUsername | null,
+    message: 'Something went wrong,
+    tags: { 'cambiatus.type': 'eos-transaction' },
+    context: { name: 'Eos transaction', extras: { transactionId: transactionId } },
+    transaction: portName,
+    level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'
+  }
+
+  On development, just logs that information to the console
+*/
+const logEvent = (event) => {
+  if (env === 'development') {
+    const { message, ...rest } = event
+    console.log('[==== EVENT]: ', message, rest)
+    return
+  }
+
+  const { user, message, tags, context, transaction, level } = event
+
+  Sentry.withScope((scope) => {
+    scope.setUser(user)
+    // If the error comes from Elm, this key will be overwritten
+    scope.setTag('cambiatus.language', 'javascript')
+    scope.setTags(tags)
+    scope.setTransactionName(transaction)
+    scope.setContext(context.name, context.extras)
+    scope.setLevel(level)
+
+    Sentry.captureMessage(message)
+  })
+}
+
 // Ports error Reporter
-app.ports.addBreadcrumbPort.subscribe(Sentry.addBreadcrumb)
+app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
+
+app.ports.logEvent.subscribe(logEvent)
 
 app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
 
@@ -555,7 +610,7 @@ function logout () {
     category: 'auth',
     message: 'User logged out'
   })
-  Sentry.setUser(null)
+  Sentry.configureScope((scope) => scope.setUser(null))
   debugLog('set sentry user to null', '')
 }
 
@@ -658,7 +713,7 @@ async function handleJavascriptPort (arg) {
             debugLog('saved credentials to EOS', '')
 
             // Configure Sentry logged user
-            Sentry.setUser({ email: accountName })
+            Sentry.setUser({ username: accountName })
             debugLog('set sentry user', accountName)
 
             return { accountName, privateKey }
@@ -709,7 +764,7 @@ async function handleJavascriptPort (arg) {
           debugLog('saved credentials to EOS', '')
 
           // Configure Sentry logged user
-          Sentry.setUser({ account: user.accountName })
+          Sentry.setUser({ username: user.accountName })
           debugLog('set sentry user', user.accountName)
 
           Sentry.addBreadcrumb({
