@@ -16,6 +16,7 @@ import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
+import Log
 import Page
 import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
@@ -835,7 +836,16 @@ update _ msg model ({ shared } as guest) =
             model
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to sign up"
+                    [ Log.contextFromLocation
+                        { moduleName = "Page.Register"
+                        , function = "update"
+                        , statement = "CompletedSignUp (RemoteData.Failure error)"
+                        }
+                    ]
+                    error
                 |> scrollTop
 
         CompletedSignUp _ ->
@@ -851,7 +861,16 @@ update _ msg model ({ shared } as guest) =
             { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to load invite"
+                    [ Log.contextFromLocation
+                        { moduleName = "Page.Register"
+                        , function = "update"
+                        , statement = "CompletedLoadInvite (RemoteData.Failure error)"
+                        }
+                    ]
+                    error
 
         CompletedLoadInvite _ ->
             UR.init model
@@ -869,7 +888,11 @@ update _ msg model ({ shared } as guest) =
         CompletedLoadCountry (RemoteData.Failure error) ->
             { model | status = ErrorShowed }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when loading country data"
+                    []
+                    error
 
         CompletedLoadCountry _ ->
             UR.init model

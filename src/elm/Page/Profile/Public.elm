@@ -95,7 +95,7 @@ view loggedIn status =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init NotFound
@@ -105,7 +105,11 @@ update msg model _ =
 
         CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init (LoadingFailed err)
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load public profile"
+                    []
+                    err
 
         CompletedProfileLoad _ ->
             UR.init model

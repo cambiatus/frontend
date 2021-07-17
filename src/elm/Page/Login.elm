@@ -540,7 +540,11 @@ updateWithPin msg model ({ shared } as guest) =
 
         GotSignInResult _ (RemoteData.Failure err) ->
             UR.init model
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to login"
+                    []
+                    err
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null

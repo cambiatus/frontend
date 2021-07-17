@@ -391,7 +391,11 @@ update msg model loggedIn =
 
         CompletedSalesLoad (RemoteData.Failure err) ->
             UR.init { model | cards = LoadingFailed err }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading sales from shop"
+                    []
+                    err
 
         CompletedSalesLoad _ ->
             UR.init model

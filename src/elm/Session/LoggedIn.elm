@@ -993,7 +993,11 @@ update msg model =
                             _ ->
                                 model.profile
                 }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when trying to load profile"
+                    []
+                    err
 
         CompletedLoadProfile RemoteData.NotAsked ->
             UR.init model
@@ -1020,7 +1024,11 @@ update msg model =
                     not (Community.isNonExistingCommunityError e)
             in
             UR.init { model | selectedCommunity = RemoteData.Failure e }
-                |> UR.logGraphqlError msg e
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading community as logged in"
+                    []
+                    e
                 |> (if communityExists then
                         identity
 

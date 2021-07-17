@@ -373,7 +373,11 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Failure e })
-                |> UR.logGraphqlError msg e
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to save profile"
+                    []
+                    e
 
         GotSaveResult _ ->
             UR.init model

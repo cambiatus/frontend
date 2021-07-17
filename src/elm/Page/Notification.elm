@@ -10,6 +10,7 @@ import Html exposing (Html, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import I18Next exposing (Delims(..))
+import Log
 import Notification exposing (History, MintData, NotificationType(..), OrderData, TransferData)
 import Page
 import RemoteData exposing (RemoteData)
@@ -369,7 +370,11 @@ update msg model loggedIn =
 
         CompletedLoadNotificationHistory (RemoteData.Failure err) ->
             UR.init model
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load notification history"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         CompletedLoadNotificationHistory _ ->
             UR.init model
@@ -444,7 +449,11 @@ update msg model loggedIn =
         CompletedReading (RemoteData.Failure e) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg e
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when reading notification"
+                    []
+                    e
 
         CompletedReading _ ->
             UR.init model

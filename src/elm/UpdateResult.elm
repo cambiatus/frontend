@@ -258,8 +258,8 @@ logHttpError transaction maybeUser description contexts error uResult =
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform a GraphQL request and getting an error back.
 -}
-logGraphqlError_ : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logGraphqlError_ transaction maybeUser description contexts error uResult =
+logGraphqlError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logGraphqlError transaction maybeUser description contexts error uResult =
     logEvent (Log.fromGraphqlHttpError transaction maybeUser description contexts error) uResult
 
 
@@ -275,16 +275,6 @@ logImpossible : msg -> List String -> UpdateResult m msg eMsg -> UpdateResult m 
 logImpossible msg descr uResult =
     addLog
         (Log.log { msg = msg, kind = Log.Impossible descr })
-        uResult
-
-
-{-| Logs a Graphql error the development console in the development environment or does an Incident report
-in production
--}
-logGraphqlError : msg -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logGraphqlError msg graphqlError uResult =
-    addLog
-        (Log.log { msg = msg, kind = Log.graphqlErrorToKind graphqlError })
         uResult
 
 

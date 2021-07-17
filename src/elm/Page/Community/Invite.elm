@@ -18,6 +18,7 @@ import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
+import Log
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
@@ -420,7 +421,11 @@ update session msg model =
         CompletedLoadInvite (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Page.maybeAccountName session)
+                    "Got an error when trying to load invite"
+                    []
+                    error
 
         CompletedLoadInvite _ ->
             UR.init model
@@ -551,7 +556,16 @@ update session msg model =
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Page.maybeAccountName session)
+                    "Got an error when signing in"
+                    [ Log.contextFromLocation
+                        { moduleName = "Invite"
+                        , function = "update"
+                        , statement = "CompletedSignIn _ (RemoteData.Failure error)"
+                        }
+                    ]
+                    error
 
         CompletedSignIn _ _ ->
             UR.init model

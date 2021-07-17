@@ -7,6 +7,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -146,7 +147,16 @@ update session msg model =
         CompletedSignIn loggedIn (RemoteData.Failure error) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to sign in"
+                    [ Log.contextFromLocation
+                        { moduleName = "Join"
+                        , function = "update"
+                        , statement = "CompletedSignIn loggedIn (RemoteData.Failure error)"
+                        }
+                    ]
+                    error
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "auth.failed"))
 
         CompletedSignIn _ _ ->

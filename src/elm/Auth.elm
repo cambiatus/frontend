@@ -233,7 +233,11 @@ update msg shared model =
         CompletedSignIn _ (RemoteData.Failure err) ->
             model
                 |> authFailed "auth.failed"
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when signing in"
+                    []
+                    err
                 |> UR.addPort
                     { responseAddress = Ignored
                     , responseData = Encode.null

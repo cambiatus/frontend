@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Dom
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -410,7 +411,21 @@ update msg model ({ shared } as loggedIn) =
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             UR.init { model | isLoading = False }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to check if domain is available"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity
+                    , { name = "Domain"
+                      , extras =
+                            Dict.fromList
+                                [ ( "tried"
+                                  , Route.communityFullDomain loggedIn.shared model.subdomainInput
+                                        |> Encode.string
+                                  )
+                                ]
+                      }
+                    ]
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
         GotDomainAvailableResponse RemoteData.Loading ->
@@ -430,7 +445,11 @@ update msg model ({ shared } as loggedIn) =
         CompletedAddingCoverPhoto _ (RemoteData.Failure err) ->
             { model | coverPhoto = RemoteData.NotAsked, isLoading = False }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to add a cover photo"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.cover_upload")

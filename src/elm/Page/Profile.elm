@@ -673,7 +673,11 @@ update msg model loggedIn =
                 RemoteData.Failure err ->
                     model
                         |> UR.init
-                        |> UR.logGraphqlError msg err
+                        |> UR.logGraphqlError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when trying to delete KYC and address"
+                            []
+                            err
                         |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
 
                 _ ->

@@ -28,6 +28,7 @@ import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra as LE
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Select
@@ -322,7 +323,7 @@ getTransfers maybeObj =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
-update msg model { shared, authToken } =
+update msg model ({ shared, authToken } as loggedIn) =
     case msg of
         AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
@@ -357,7 +358,11 @@ update msg model { shared, authToken } =
         AutocompleteProfilesLoaded (RemoteData.Failure err) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading profiles for auto complete"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         AutocompleteProfilesLoaded _ ->
             UR.init model
@@ -402,7 +407,11 @@ update msg model { shared, authToken } =
         RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
             { model | queryStatus = Failed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading recipient profile with transfers"
+                    []
+                    err
 
         RecipientProfileWithTransfersLoaded _ ->
             UR.init model

@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Events as Events
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -810,7 +811,20 @@ update msg model loggedIn =
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             { model | isDisabled = False }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when checking if community domain is available"
+                    [ { name = "Domain"
+                      , extras =
+                            Dict.fromList
+                                [ ( "tried"
+                                  , Route.communityFullDomain loggedIn.shared model.subdomain
+                                        |> Encode.string
+                                  )
+                                ]
+                      }
+                    ]
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
 
         GotDomainAvailableResponse RemoteData.NotAsked ->

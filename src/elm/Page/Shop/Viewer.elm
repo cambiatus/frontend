@@ -222,7 +222,11 @@ update msg model loggedIn =
         CompletedSaleLoad (RemoteData.Failure err) ->
             { model | status = LoadingFailed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load shop sale"
+                    []
+                    err
 
         CompletedSaleLoad _ ->
             UR.init model

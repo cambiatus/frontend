@@ -32,6 +32,7 @@ import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Encode exposing (Value)
+import Log
 import Ports
 import RemoteData exposing (RemoteData)
 import Route
@@ -284,7 +285,16 @@ update msg session =
         ( SignedIn (RemoteData.Failure error), Guest guest ) ->
             UR.init session
                 |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (maybeAccountName session)
+                    "Got an error when trying to sign in"
+                    [ Log.contextFromLocation
+                        { moduleName = "Page"
+                        , function = "update"
+                        , statement = "( SignedIn (RemoteData.Failure error), Guest guest )"
+                        }
+                    ]
+                    error
 
         ( _, _ ) ->
             UR.init session

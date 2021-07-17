@@ -387,7 +387,11 @@ update msg ({ shared } as model) =
 
         CompletedLoadCommunityPreview (RemoteData.Failure err) ->
             UR.init { model | community = RemoteData.Failure err }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when loading community preview as a guest"
+                    []
+                    err
                 |> UR.addCmd
                     (case invalidCommunityRedirectUrl currentUrl shared.useSubdomain of
                         Nothing ->

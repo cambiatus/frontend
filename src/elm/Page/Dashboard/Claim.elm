@@ -515,7 +515,11 @@ update msg model loggedIn =
         ClaimLoaded (RemoteData.Failure err) ->
             { model | statusClaim = Failed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load claim"
+                    []
+                    err
 
         ClaimLoaded _ ->
             UR.init model

@@ -664,7 +664,16 @@ update msg model loggedIn =
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
             UR.init model
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "community.objectives.editor.error_marking_as_complete"))
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when completing objective"
+                    [ Log.contextFromLocation
+                        { moduleName = "Page.Community.ObjectiveEditor"
+                        , function = "update"
+                        , statement = "GotCompleteObjectiveResponse (RemoteData.Failure err)"
+                        }
+                    ]
+                    err
 
         GotCompleteObjectiveResponse _ ->
             UR.init model

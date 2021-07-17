@@ -326,7 +326,11 @@ update msg model user =
             model
                 |> updateStatus (LoadFailed error)
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just user.accountName)
+                    "Got an error when loading transfer"
+                    []
+                    error
 
         CompletedTransferLoad _ ->
             UR.init model

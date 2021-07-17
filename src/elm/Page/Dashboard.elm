@@ -779,7 +779,11 @@ update msg model ({ shared, accountName } as loggedIn) =
         ClaimsLoaded (RemoteData.Failure err) ->
             { model | analysis = FailedGraphql err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading claims on the dashboard"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         ClaimsLoaded _ ->
             UR.init model
@@ -791,7 +795,11 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
             { model | transfers = FailedGraphql err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load user's transfers"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         CompletedLoadUserTransfers _ ->
             UR.init model
