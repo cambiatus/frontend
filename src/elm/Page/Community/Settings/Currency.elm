@@ -18,6 +18,7 @@ import Html.Events exposing (onSubmit)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Log
 import Page
 import Ports
 import RemoteData
@@ -247,7 +248,11 @@ update msg model ({ shared } as loggedIn) =
         CompletedLoadExpiryOpts (Err err) ->
             { model | isLoading = False }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading expiry_opts for a community"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 

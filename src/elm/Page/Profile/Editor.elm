@@ -401,7 +401,11 @@ update msg model loggedIn =
 
         CompletedAvatarUpload (Err err) ->
             UR.init { model | avatar = RemoteData.Failure err }
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading avatar"
+                    []
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
 

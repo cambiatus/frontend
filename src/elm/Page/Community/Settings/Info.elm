@@ -23,6 +23,7 @@ import Html.Events exposing (onSubmit)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -169,7 +170,11 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.logo_upload")
                     )
-                |> UR.logHttpError msg e
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading a logo to community"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    e
 
         EnteredName name ->
             { model | nameInput = name }
@@ -204,7 +209,11 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.cover_upload")
                     )
-                |> UR.logHttpError msg e
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading cover picture for community"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    e
 
         EnteredSubdomain subdomain ->
             { model | subdomainInput = subdomain }

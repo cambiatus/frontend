@@ -947,7 +947,11 @@ update msg model =
 
         CompletedLoadTranslation _ (Err err) ->
             UR.init { model | shared = Shared.loadTranslation (Err err) shared }
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just model.accountName)
+                    "Got an error when loading translation as a logged in user"
+                    []
+                    err
 
         ClickedTryAgainTranslation ->
             UR.init { model | shared = Shared.toLoadingTranslation shared }

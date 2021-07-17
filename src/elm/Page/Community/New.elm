@@ -742,7 +742,11 @@ update msg model loggedIn =
         CompletedLogoUpload index (Err err) ->
             { model | logoList = List.removeAt index model.logoList, logoSelected = 0, isDisabled = False }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading logo for a new community"
+                    []
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
 
         CompletedLogoUpload index (Ok url) ->

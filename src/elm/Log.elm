@@ -10,6 +10,7 @@ port module Log exposing
     , Log
     , Tag(..)
     , addBreadcrumb
+    , contextFromCommunity
     , contextFromLocation
     , fromDecodeError
     , fromGraphqlHttpError
@@ -42,12 +43,14 @@ can see details about the error and analyze further.
 -}
 
 import Dict exposing (Dict)
+import Eos
 import Eos.Account
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
+import RemoteData exposing (RemoteData)
 
 
 
@@ -385,6 +388,22 @@ contextFromLocation location =
             , ( "function", Encode.string location.function )
             , ( "statement", Encode.string location.statement )
             ]
+    }
+
+
+contextFromCommunity : RemoteData a { community | symbol : Eos.Symbol, name : String } -> Context
+contextFromCommunity remoteData =
+    { name = "Community"
+    , extras =
+        case remoteData of
+            RemoteData.Success community ->
+                Dict.fromList
+                    [ ( "symbol", Eos.encodeSymbol community.symbol )
+                    , ( "name", Encode.string community.name )
+                    ]
+
+            _ ->
+                Dict.fromList [ ( "error", Encode.string "Impossible error: loggedIn.selectedCommunity /= RemoteData.Success" ) ]
     }
 
 

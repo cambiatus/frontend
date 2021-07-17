@@ -26,6 +26,7 @@ import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
+import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -38,6 +39,7 @@ import Icons
 import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Log
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
@@ -365,7 +367,18 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logHttpError msg error
+                |> UR.logHttpError msg
+                    (Just accName)
+                    "Error uploading photo for proof of action"
+                    [ { name = "Action"
+                      , extras =
+                            Dict.fromList
+                                [ ( "id", Encode.int action.id )
+                                , ( "symbol", Eos.encodeSymbol selectedCommunity )
+                                ]
+                      }
+                    ]
+                    error
 
         _ ->
             { model

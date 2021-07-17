@@ -15,6 +15,7 @@ import Api.Graphql
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
+import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -25,6 +26,7 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Result exposing (Result)
@@ -507,7 +509,11 @@ update msg model loggedIn =
         CompletedBalancesLoad (Err error) ->
             LoadBalancesFailed error
                 |> UR.init
-                |> UR.logHttpError msg error
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading balances for shop editor"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    error
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
@@ -575,19 +581,35 @@ update msg model loggedIn =
                 EditingCreate balances _ form ->
                     EditingCreate balances (RemoteData.Failure error) form
                         |> UR.init
-                        |> UR.logHttpError msg error
+                        |> UR.logHttpError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when uploading an image for a new shop offer"
+                            []
+                            error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 EditingUpdate balances sale _ _ form ->
                     EditingUpdate balances sale (RemoteData.Failure error) Closed form
                         |> UR.init
-                        |> UR.logHttpError msg error
+                        |> UR.logHttpError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when uploading an image for an existing shop offer"
+                            [ { name = "Product"
+                              , extras =
+                                    Dict.fromList
+                                        [ ( "id", Encode.int sale.id )
+                                        , ( "title", Encode.string sale.title )
+                                        , ( "symbol", Eos.encodeSymbol sale.symbol )
+                                        ]
+                              }
+                            ]
+                            error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logHttpError msg error
+                        |> UR.logImpossible msg [ "NotUpdatingOrCreating" ]
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
         EnteredImage (file :: _) ->

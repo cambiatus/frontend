@@ -40,7 +40,6 @@ import Eos.Account
 import Graphql.Http
 import Http
 import Json.Decode as Decode
-import Json.Encode exposing (Value)
 import Log exposing (Log)
 import Ports
 import RemoteData exposing (RemoteData(..))
@@ -251,8 +250,8 @@ logDecodingError transaction maybeUser description contexts error uResult =
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform an Http request and getting an error back.
 -}
-logHttpError_ : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logHttpError_ transaction maybeUser description contexts error uResult =
+logHttpError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logHttpError transaction maybeUser description contexts error uResult =
     logEvent (Log.fromHttpError transaction maybeUser description contexts error) uResult
 
 
@@ -267,16 +266,6 @@ logGraphqlError_ transaction maybeUser description contexts error uResult =
 logJsonValue : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Decode.Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logJsonValue transaction maybeUser message contexts jsonValue uResult =
     logEvent (Log.fromJsonValue transaction maybeUser message contexts jsonValue) uResult
-
-
-{-| Logs out an httpError to the development console in dev env or to Error
-reporting in production
--}
-logHttpError : msg -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logHttpError msg httpError uResult =
-    addLog
-        (Log.log { msg = msg, kind = Log.HttpError httpError })
-        uResult
 
 
 {-| Logs an Impossible state the development console in the development environment or does an Incident report

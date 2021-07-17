@@ -338,7 +338,11 @@ update msg ({ shared } as model) =
         CompletedLoadTranslation _ (Err err) ->
             { model | shared = Shared.loadTranslation (Err err) shared }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    Nothing
+                    "Got an error when loading translation as a guest"
+                    []
+                    err
 
         ClickedTryAgainTranslation ->
             { model | shared = Shared.toLoadingTranslation shared }

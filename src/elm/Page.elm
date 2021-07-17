@@ -240,7 +240,11 @@ update msg session =
             Shared.loadTranslation (Err err)
                 |> updateShared session
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (maybeAccountName session)
+                    "Got an error when loading translations"
+                    []
+                    err
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel

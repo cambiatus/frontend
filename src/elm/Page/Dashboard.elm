@@ -32,6 +32,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile
 import Profile.Contact as Contact
@@ -746,7 +747,11 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         CompletedLoadBalance (Err httpError) ->
             UR.init { model | balance = RemoteData.Failure httpError }
-                |> UR.logHttpError msg httpError
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading balance on the dashboard"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
 
         ClaimsLoaded (RemoteData.Success claims) ->
             let
@@ -983,7 +988,11 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedInviteCreation (Err httpError) ->
             UR.init
                 { model | inviteModalStatus = InviteModalFailed (loggedIn.shared.translators.t "community.invite.failed") }
-                |> UR.logHttpError msg httpError
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when creating an invite"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
 
         CopyToClipboard elementId ->
             model

@@ -18,6 +18,7 @@ import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -350,7 +351,11 @@ update msg model loggedIn =
         GotTokenInfo (Err err) ->
             { model | tokenInfo = RemoteData.Failure err }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when retrieving token info"
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
