@@ -657,7 +657,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
 viewGuestButton : Shared -> ProductPreview -> Html msg
 viewGuestButton { translators } sale =
     a
-        [ Route.href (Route.Login Nothing (Just (Route.ViewSale sale.id)))
+        [ Route.href (Route.Register Nothing (Just (Route.ViewSale sale.id)))
         , class "button button-primary"
         ]
         [ text <| translators.t "shop.buy" ]
