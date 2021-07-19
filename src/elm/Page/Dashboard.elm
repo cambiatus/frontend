@@ -1551,17 +1551,18 @@ fetchTransfers loggedIn community maybeCursor model =
                                     |> Maybe.map (Date.toIsoString >> Cambiatus.Scalar.Date)
                                     |> OptionalArgument.fromMaybe
                             , direction =
-                                model.transfersFilters.direction
-                                    |> Maybe.map
-                                        (\direction ->
-                                            { direction = direction
+                                case ( model.transfersFilters.direction, model.transfersFilters.otherAccount ) of
+                                    ( Nothing, Nothing ) ->
+                                        Absent
+
+                                    _ ->
+                                        Present
+                                            { direction = OptionalArgument.fromMaybe model.transfersFilters.direction
                                             , otherAccount =
                                                 model.transfersFilters.otherAccount
                                                     |> Maybe.map (.account >> Eos.nameToString)
                                                     |> OptionalArgument.fromMaybe
                                             }
-                                        )
-                                    |> OptionalArgument.fromMaybe
                             }
                 }
             )

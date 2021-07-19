@@ -184,7 +184,7 @@ profileWithTransfersSelectionSet community model =
                             , date = optionalDate
                             , direction =
                                 Present
-                                    { direction = TransferDirectionValue.Receiving
+                                    { direction = Present TransferDirectionValue.Receiving
                                     , otherAccount = optionalFromAccount
                                     }
                             }

@@ -240,9 +240,9 @@ type alias ProductPreviewRequiredArguments =
 productPreview :
     ProductPreviewRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.ProductPreview
-    -> SelectionSet (Maybe decodesTo) RootQuery
+    -> SelectionSet decodesTo RootQuery
 productPreview requiredArgs object_ =
-    Object.selectionForCompositeField "productPreview" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "productPreview" [ Argument.required "id" requiredArgs.id Encode.int ] object_ identity
 
 
 type alias ProductsOptionalArguments =
