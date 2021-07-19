@@ -380,10 +380,6 @@ viewClaimCard loggedIn profileSummaries claim =
         { t, tr } =
             loggedIn.shared.translators
 
-        -- date dateTime =
-        --     Just dateTime
-        --         |> Utils.posixDateTime
-        --         |> Strftime.format "%d %b %Y" Time.utc
         completionStatus =
             { approved =
                 List.filter .isApproved claim.checks
