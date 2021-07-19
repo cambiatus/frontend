@@ -234,7 +234,7 @@ view ({ shared, accountName } as loggedIn) model =
 
 viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
+    div [ class "flex inline-block text-gray-900 font-light text-heading mt-6 mb-5" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
             , span [ class "text-indigo-500 font-medium" ]
@@ -533,11 +533,11 @@ viewTransfers loggedIn model =
         [ div [ class "container mx-auto p-4" ]
             [ div [ class "flex justify-between" ]
                 [ div [ class "text-heading" ]
-                    [ span [ class "text-gray-900" ] [ text <| t "transfer.timeline_my" ++ " " ]
-                    , span [ class "text-indigo-500 font-bold" ] [ text <| t "transfer.timeline" ]
+                    [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ++ " " ]
+                    , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
                     ]
                 , button
-                    [ class "flex text-heading lowercase text-indigo-500"
+                    [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
                     , onClick ClickedOpenTransferFilters
                     ]
                     [ text (t "all_analysis.filter.title")
