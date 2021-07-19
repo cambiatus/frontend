@@ -247,6 +247,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.logJsonValue msg
                     (Just accName)
                     "Got an error when claiming an action"
+                    { moduleName = "Auth", function = "update" }
                     []
                     val
 
@@ -311,6 +312,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.logJsonValue msg
                     (Just accName)
                     "Got error when converting name to Uint64"
+                    { moduleName = "Action", function = "update" }
                     []
                     err
 
@@ -370,6 +372,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.logHttpError msg
                     (Just accName)
                     "Error uploading photo for proof of action"
+                    { moduleName = "Action", function = "update" }
                     [ { name = "Action"
                       , extras =
                             Dict.fromList

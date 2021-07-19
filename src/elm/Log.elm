@@ -5,25 +5,20 @@ port module Log exposing
     , Event
     , EventType(..)
     , ExpectedAuthentication(..)
-    , Kind(..)
     , Level(..)
-    , Log
+    , Location
     , Tag(..)
     , addBreadcrumb
     , contextFromCommunity
-    , contextFromLocation
     , fromDecodeError
     , fromGraphqlHttpError
     , fromHttpError
     , fromImpossible
+    , fromIncompatibleMsg
     , fromJsonValue
-    , graphqlErrorToKind
-    , log
     , map
     , mapBreadcrumb
-    , mapEvent
     , send
-    , sendEvent
     )
 
 {-| This is a module to help log data to our Sentry account. The two main things
@@ -57,9 +52,6 @@ import RemoteData exposing (RemoteData)
 -- PORTS
 
 
-port logDebug : ( String, Value ) -> Cmd msg
-
-
 port addBreadcrumbPort : Value -> Cmd msg
 
 
@@ -68,17 +60,6 @@ port logEvent : Value -> Cmd msg
 
 
 -- TYPES
-
-
-{-| What kind of error happened
--}
-type Kind
-    = HttpError Http.Error
-    | GraphqlHttpError Graphql.Http.HttpError
-    | GraphqlErrors (List Graphql.Http.GraphqlError.GraphqlError)
-    | DecodeError Decode.Error
-    | Impossible (List String)
-    | EncodedError Value
 
 
 {-| What kind of authentication was expected
@@ -99,6 +80,7 @@ type EventType
     | ContractError
     | UnknownError
     | JsonValue
+    | UnsupportedFeature
 
 
 {-| Defines the possible tags. Tags are used to search for events on Sentry.
@@ -177,6 +159,7 @@ type alias Event msg =
     { username : Maybe Eos.Account.Name
     , message : String
     , tags : List Tag
+    , location : Location
     , contexts : List Context
     , transaction : msg
     , level : Level
@@ -192,13 +175,18 @@ type alias Context =
     }
 
 
-type Log msg
-    = Log (LogModel msg)
+{-| Represents the location of a piece of code, or the location where an event
+was generated. The `statement` field doesn't need to be exact, but should be
+enough that it's easy to find where it happened.
 
+        { moduleName = "Main"
+        , function = "update"
+        }
 
-type alias LogModel msg =
-    { msg : msg
-    , kind : Kind
+-}
+type alias Location =
+    { moduleName : String
+    , function : String
     }
 
 
@@ -232,8 +220,8 @@ breadcrums added since the previous event.
 On development, just logs to the console.
 
 -}
-sendEvent : (msg -> List String) -> Event msg -> Cmd msg
-sendEvent msgToString event =
+send : (msg -> List String) -> Event msg -> Cmd msg
+send msgToString event =
     Encode.object
         [ ( "user"
           , case event.username of
@@ -249,36 +237,14 @@ sendEvent msgToString event =
                 |> Dict.fromList
                 |> Encode.dict identity identity
           )
-        , ( "contexts", Encode.list encodeContext event.contexts )
+        , ( "contexts"
+          , (contextFromLocation event.location :: event.contexts)
+                |> Encode.list encodeContext
+          )
         , ( "transaction", msgToString event.transaction |> String.join "." |> Encode.string )
         , ( "level", levelToString event.level |> Encode.string )
         ]
         |> logEvent
-
-
-send : (a -> List String) -> Log a -> Cmd msg
-send toStrs (Log a) =
-    case a.kind of
-        HttpError _ ->
-            Cmd.none
-
-        DecodeError _ ->
-            Cmd.none
-
-        Impossible _ ->
-            Cmd.none
-
-        GraphqlHttpError _ ->
-            Cmd.none
-
-        GraphqlErrors _ ->
-            Cmd.none
-
-        EncodedError val ->
-            ( String.join "." (toStrs a.msg)
-            , val
-            )
-                |> logDebug
 
 
 
@@ -289,11 +255,12 @@ send toStrs (Log a) =
 be impossible to happen, either because of business rules or because we know
 something just can't happen based on the flow of the app.
 -}
-fromImpossible : msg -> String -> Maybe Eos.Account.Name -> List Context -> Event msg
-fromImpossible transaction message maybeUser contexts =
+fromImpossible : msg -> String -> Maybe Eos.Account.Name -> Location -> List Context -> Event msg
+fromImpossible transaction message maybeUser location contexts =
     { username = maybeUser
     , message = message
     , tags = [ TypeTag ImpossibleError ]
+    , location = location
     , contexts = contexts
     , transaction = transaction
     , level = Fatal
@@ -303,11 +270,12 @@ fromImpossible transaction message maybeUser contexts =
 {-| Creates an Event out of a decoding error. This happens when trying to decode
 something, but the data doesn't fit into the decoder provided.
 -}
-fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Decode.Error -> Event msg
-fromDecodeError transaction maybeUser description contexts error =
+fromDecodeError : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Decode.Error -> Event msg
+fromDecodeError transaction maybeUser description location contexts error =
     { username = maybeUser
     , message = "Got an error when trying to decode a JSON value"
     , tags = [ TypeTag DecodingError ]
+    , location = location
     , contexts =
         { name = "Decode error"
         , extras =
@@ -324,11 +292,12 @@ fromDecodeError transaction maybeUser description contexts error =
 
 {-| Creates an Event out of a HTTP error.
 -}
-fromHttpError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Http.Error -> Event msg
-fromHttpError transaction maybeUser description contexts error =
+fromHttpError : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Http.Error -> Event msg
+fromHttpError transaction maybeUser description location contexts error =
     { username = maybeUser
     , message = "Got an error when performing an HTTP request"
     , tags = [ TypeTag HttpErrorType ]
+    , location = location
     , contexts =
         { name = "HTTP error"
         , extras =
@@ -345,11 +314,12 @@ fromHttpError transaction maybeUser description contexts error =
 
 {-| Creates an Event out of a GraphQL error.
 -}
-fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> List Context -> Graphql.Http.Error a -> Event msg
-fromGraphqlHttpError transaction maybeUser description contexts error =
+fromGraphqlHttpError : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Graphql.Http.Error a -> Event msg
+fromGraphqlHttpError transaction maybeUser description location contexts error =
     { username = maybeUser
     , message = "Got an error when performing a GraphQL request"
     , tags = [ TypeTag GraphqlErrorType ]
+    , location = location
     , contexts =
         { name = "Graphql error"
         , extras =
@@ -364,11 +334,12 @@ fromGraphqlHttpError transaction maybeUser description contexts error =
     }
 
 
-fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> List Context -> Decode.Value -> Event msg
-fromJsonValue transaction maybeUser message contexts value =
+fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Decode.Value -> Event msg
+fromJsonValue transaction maybeUser message location contexts value =
     { username = maybeUser
     , message = message
     , tags = [ TypeTag JsonValue ]
+    , location = location
     , contexts =
         { name = "JSON value"
         , extras = Dict.fromList [ ( "Value", value ) ]
@@ -379,15 +350,15 @@ fromJsonValue transaction maybeUser message contexts value =
     }
 
 
-contextFromLocation : { moduleName : String, function : String, statement : String } -> Context
-contextFromLocation location =
-    { name = "Location"
-    , extras =
-        Dict.fromList
-            [ ( "module", Encode.string location.moduleName )
-            , ( "function", Encode.string location.function )
-            , ( "statement", Encode.string location.statement )
-            ]
+fromIncompatibleMsg : msg -> Maybe Eos.Account.Name -> Location -> List Context -> Event msg
+fromIncompatibleMsg transaction maybeUser location contexts =
+    { username = maybeUser
+    , message = "Msg does not correspond with Model"
+    , tags = [ TypeTag IncompatibleMsg ]
+    , location = location
+    , contexts = contexts
+    , transaction = transaction
+    , level = Info
     }
 
 
@@ -407,19 +378,6 @@ contextFromCommunity remoteData =
     }
 
 
-log : LogModel msg -> Log msg
-log =
-    Log
-
-
-map : (a -> b) -> Log a -> Log b
-map transform (Log a) =
-    Log
-        { msg = transform a.msg
-        , kind = a.kind
-        }
-
-
 mapBreadcrumb : (a -> b) -> Breadcrumb a -> Breadcrumb b
 mapBreadcrumb transform breadcrumb =
     { type_ = breadcrumb.type_
@@ -430,29 +388,31 @@ mapBreadcrumb transform breadcrumb =
     }
 
 
-mapEvent : (a -> b) -> Event a -> Event b
-mapEvent transform event =
+map : (a -> b) -> Event a -> Event b
+map transform event =
     { username = event.username
     , message = event.message
     , tags = event.tags
+    , location = event.location
     , contexts = event.contexts
     , transaction = transform event.transaction
     , level = event.level
     }
 
 
-graphqlErrorToKind : Graphql.Http.Error a -> Kind
-graphqlErrorToKind graphqlError_ =
-    case graphqlError_ of
-        Graphql.Http.HttpError httpError_ ->
-            GraphqlHttpError httpError_
-
-        Graphql.Http.GraphqlError _ errors ->
-            GraphqlErrors errors
-
-
 
 -- INTERNAL HELPERS
+
+
+contextFromLocation : Location -> Context
+contextFromLocation location =
+    { name = "Location"
+    , extras =
+        Dict.fromList
+            [ ( "module", Encode.string location.moduleName )
+            , ( "function", Encode.string location.function )
+            ]
+    }
 
 
 levelToString : Level -> String
@@ -674,6 +634,9 @@ encodeTag tag =
 
                         JsonValue ->
                             "json value"
+
+                        UnsupportedFeature ->
+                            "unsupported feature"
             in
             ( "cambiatus.type", Encode.string value )
 

@@ -108,6 +108,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load public profile"
+                    { moduleName = "Page.Profile.Public", function = "update" }
                     []
                     err
 

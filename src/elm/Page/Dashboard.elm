@@ -750,6 +750,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading balance on the dashboard"
+                    { moduleName = "Page.Dashboard", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     httpError
 
@@ -782,6 +783,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading claims on the dashboard"
+                    { moduleName = "Page.Dashboard", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
 
@@ -798,6 +800,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load user's transfers"
+                    { moduleName = "Page.Dashboard", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
 
@@ -934,7 +937,11 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "balanceNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Created invitation, but balance wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Dashboard", function = "update" }
+                            []
 
         GotContactMsg subMsg ->
             case LoggedIn.profile loggedIn of
@@ -999,6 +1006,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when creating an invite"
+                    { moduleName = "Page.Dashboard", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     httpError
 

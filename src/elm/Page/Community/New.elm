@@ -746,6 +746,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when uploading logo for a new community"
+                    { moduleName = "Page.Community.New", function = "update" }
                     []
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
@@ -814,6 +815,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when checking if community domain is available"
+                    { moduleName = "Page.Community.New", function = "update" }
                     [ { name = "Domain"
                       , extras =
                             Dict.fromList
@@ -875,6 +877,7 @@ update msg model loggedIn =
                 |> UR.logJsonValue msg
                     (Just loggedIn.accountName)
                     "Got an error when creating a community"
+                    { moduleName = "Page.Community.New", function = "update" }
                     []
                     val
 

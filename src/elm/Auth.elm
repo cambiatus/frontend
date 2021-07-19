@@ -219,13 +219,11 @@ update msg shared model =
                     { username = Nothing
                     , message = "Could not sign in for unknown reason"
                     , tags = [ Log.TypeTag Log.UnknownError ]
-                    , contexts =
-                        [ Log.contextFromLocation
-                            { moduleName = "Auth"
-                            , function = "update"
-                            , statement = "CompletedSignIn _ (RemoteData.Success Nothing)"
-                            }
-                        ]
+                    , location =
+                        { moduleName = "Auth"
+                        , function = "update"
+                        }
+                    , contexts = []
                     , transaction = msg
                     , level = Log.Error
                     }
@@ -236,6 +234,7 @@ update msg shared model =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when signing in"
+                    { moduleName = "Auth", function = "update" }
                     []
                     err
                 |> UR.addPort
@@ -279,13 +278,12 @@ update msg shared model =
                     { username = Nothing
                     , message = "Got an error when submitting PIN"
                     , tags = [ Log.TypeTag Log.UnknownError ]
+                    , location =
+                        { moduleName = "Auth"
+                        , function = "update"
+                        }
                     , contexts =
-                        [ Log.contextFromLocation
-                            { moduleName = "Auth"
-                            , function = "update"
-                            , statement = "GotSubmittedPinResponse (Err err)"
-                            }
-                        , { name = "Error"
+                        [ { name = "Error"
                           , extras = Dict.fromList [ ( "errorValue", Encode.string err ) ]
                           }
                         ]

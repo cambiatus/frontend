@@ -758,6 +758,7 @@ update _ msg model ({ shared } as guest) =
                 |> UR.logDecodingError msg
                     Nothing
                     "Could not decode account keys"
+                    { moduleName = "Page.Register", function = "update" }
                     []
                     v
 
@@ -839,12 +840,8 @@ update _ msg model ({ shared } as guest) =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when trying to sign up"
-                    [ Log.contextFromLocation
-                        { moduleName = "Page.Register"
-                        , function = "update"
-                        , statement = "CompletedSignUp (RemoteData.Failure error)"
-                        }
-                    ]
+                    { moduleName = "Page.Register", function = "update" }
+                    []
                     error
                 |> scrollTop
 
@@ -864,12 +861,8 @@ update _ msg model ({ shared } as guest) =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when trying to load invite"
-                    [ Log.contextFromLocation
-                        { moduleName = "Page.Register"
-                        , function = "update"
-                        , statement = "CompletedLoadInvite (RemoteData.Failure error)"
-                        }
-                    ]
+                    { moduleName = "Page.Register", function = "update" }
+                    []
                     error
 
         CompletedLoadInvite _ ->
@@ -891,6 +884,7 @@ update _ msg model ({ shared } as guest) =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when loading country data"
+                    { moduleName = "Page.Register", function = "update" }
                     []
                     error
 

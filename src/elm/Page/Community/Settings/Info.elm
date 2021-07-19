@@ -174,6 +174,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when uploading a logo to community"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     e
 
@@ -213,6 +214,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when uploading cover picture for community"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     e
 
@@ -414,6 +416,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to check if domain is available"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity
                     , { name = "Domain"
                       , extras =
@@ -448,6 +451,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to add a cover photo"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
                 |> UR.addExt
@@ -521,7 +525,11 @@ update msg model ({ shared } as loggedIn) =
                     _ ->
                         model
                             |> UR.init
-                            |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                            |> UR.logImpossible msg
+                                "Saved community, but it wasn't loaded"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Community.Settings.Info", function = "update" }
+                                []
 
         GotSaveResponse (Err _) ->
             { model | isLoading = False }

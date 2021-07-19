@@ -341,6 +341,7 @@ update msg ({ shared } as model) =
                 |> UR.logHttpError msg
                     Nothing
                     "Got an error when loading translation as a guest"
+                    { moduleName = "Session.Guest", function = "update" }
                     []
                     err
 
@@ -390,6 +391,7 @@ update msg ({ shared } as model) =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when loading community preview as a guest"
+                    { moduleName = "Session.Guest", function = "update" }
                     []
                     err
                 |> UR.addCmd

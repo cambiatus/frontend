@@ -354,6 +354,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when retrieving token info"
+                    { moduleName = "Page.Community", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
 

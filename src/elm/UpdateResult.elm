@@ -11,6 +11,7 @@ module UpdateResult exposing
     , logGraphqlError
     , logHttpError
     , logImpossible
+    , logIncompatibleMsg
     , logJsonValue
     , map
     , mapModel
@@ -40,7 +41,7 @@ import Eos.Account
 import Graphql.Http
 import Http
 import Json.Decode as Decode
-import Log exposing (Log)
+import Log
 import Ports
 import RemoteData exposing (RemoteData(..))
 import Task
@@ -68,7 +69,6 @@ type alias UpdateResult model msg extMsg =
     , cmds : List (Cmd msg)
     , exts : List extMsg
     , ports : List (Ports.JavascriptOut msg)
-    , logs : List (Log msg)
     , breadcrumbs : List (Log.Breadcrumb msg)
     , events : List (Log.Event msg)
     }
@@ -86,9 +86,8 @@ map toModel toMsg handleExtMsg updateResult =
         , cmds = [ Cmd.map toMsg (Cmd.batch updateResult.cmds) ]
         , exts = []
         , ports = List.map (Ports.mapAddress toMsg) updateResult.ports
-        , logs = List.map (Log.map toMsg) updateResult.logs
         , breadcrumbs = List.map (Log.mapBreadcrumb toMsg) updateResult.breadcrumbs
-        , events = List.map (Log.mapEvent toMsg) updateResult.events
+        , events = List.map (Log.map toMsg) updateResult.events
         }
         updateResult.exts
 
@@ -103,7 +102,6 @@ mapModel transform uResult =
     , cmds = uResult.cmds
     , exts = uResult.exts
     , ports = uResult.ports
-    , logs = uResult.logs
     , breadcrumbs = uResult.breadcrumbs
     , events = uResult.events
     }
@@ -118,7 +116,6 @@ setModel uResult model =
     , cmds = uResult.cmds
     , exts = uResult.exts
     , ports = uResult.ports
-    , logs = uResult.logs
     , breadcrumbs = uResult.breadcrumbs
     , events = uResult.events
     }
@@ -134,7 +131,6 @@ init model =
     , cmds = []
     , exts = []
     , ports = []
-    , logs = []
     , breadcrumbs = []
     , events = []
     }
@@ -167,8 +163,7 @@ toModelCmd transformEMsg msgToString uResult =
                 (uResult.cmds
                     ++ List.map (Log.addBreadcrumb msgToString) (List.reverse uResult.breadcrumbs)
                     ++ List.map (Ports.javascriptOutCmd msgToString) uResult.ports
-                    ++ List.map (Log.sendEvent msgToString) (List.reverse uResult.events)
-                    ++ List.map (Log.send msgToString) uResult.logs
+                    ++ List.map (Log.send msgToString) (List.reverse uResult.events)
                 )
             )
 
@@ -205,13 +200,6 @@ addPort port_ uResult =
     { uResult | ports = uResult.ports ++ [ Ports.javascriptOut port_ ] }
 
 
-{-| Add a log msg to a command an UpdateResult
--}
-addLog : Log msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-addLog log uResult =
-    { uResult | logs = uResult.logs ++ [ log ] }
-
-
 {-| Add a breadcrumb to error reporting. On development, prints it to the
 console, and on production adds a breadcrumb to the next event
 -}
@@ -231,51 +219,53 @@ logEvent event uResult =
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when something
-broke on the business rules, e.g. being in a page that requires a Community, but
-not having the Community
+broke on the business rules, or when we know something can't happen based on the
+flow of the app, e.g. being in a page that requires a Community, but not having
+the Community available
 -}
-logImpossible_ : msg -> String -> Maybe Eos.Account.Name -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logImpossible_ transaction message maybeUser contexts uResult =
-    logEvent (Log.fromImpossible transaction message maybeUser contexts) uResult
+logImpossible : msg -> String -> Maybe Eos.Account.Name -> Log.Location -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logImpossible transaction message maybeUser location contexts =
+    Log.fromImpossible transaction message maybeUser location contexts
+        |> logEvent
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when trying to
 decode a JSON value, but getting an unexpected error.
 -}
-logDecodingError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logDecodingError transaction maybeUser description contexts error uResult =
-    logEvent (Log.fromDecodeError transaction maybeUser description contexts error) uResult
+logDecodingError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logDecodingError transaction maybeUser description location contexts error =
+    Log.fromDecodeError transaction maybeUser description location contexts error
+        |> logEvent
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform an Http request and getting an error back.
 -}
-logHttpError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logHttpError transaction maybeUser description contexts error uResult =
-    logEvent (Log.fromHttpError transaction maybeUser description contexts error) uResult
+logHttpError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logHttpError transaction maybeUser description location contexts error =
+    Log.fromHttpError transaction maybeUser description location contexts error
+        |> logEvent
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
 attempting to perform a GraphQL request and getting an error back.
 -}
-logGraphqlError : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logGraphqlError transaction maybeUser description contexts error uResult =
-    logEvent (Log.fromGraphqlHttpError transaction maybeUser description contexts error) uResult
+logGraphqlError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logGraphqlError transaction maybeUser description location contexts error =
+    Log.fromGraphqlHttpError transaction maybeUser description location contexts error
+        |> logEvent
 
 
-logJsonValue : msg -> Maybe Eos.Account.Name -> String -> List Log.Context -> Decode.Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logJsonValue transaction maybeUser message contexts jsonValue uResult =
-    logEvent (Log.fromJsonValue transaction maybeUser message contexts jsonValue) uResult
+logJsonValue : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Decode.Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logJsonValue transaction maybeUser message location contexts jsonValue =
+    Log.fromJsonValue transaction maybeUser message location contexts jsonValue
+        |> logEvent
 
 
-{-| Logs an Impossible state the development console in the development environment or does an Incident report
-in production
--}
-logImpossible : msg -> List String -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
-logImpossible msg descr uResult =
-    addLog
-        (Log.log { msg = msg, kind = Log.Impossible descr })
-        uResult
+logIncompatibleMsg : msg -> Maybe Eos.Account.Name -> Log.Location -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
+logIncompatibleMsg transaction maybeUser location contexts =
+    Log.fromIncompatibleMsg transaction maybeUser location contexts
+        |> logEvent
 
 
 {-| Converts a Result Dataset into a string usable by UpdateResult

@@ -361,6 +361,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading profiles for auto complete"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
 
@@ -410,6 +411,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading recipient profile with transfers"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
                     []
                     err
 

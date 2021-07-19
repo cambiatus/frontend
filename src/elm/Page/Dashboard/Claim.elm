@@ -518,6 +518,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load claim"
+                    { moduleName = "Page.Dashboard.Claim", function = "update" }
                     []
                     err
 
@@ -640,7 +641,11 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "NotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Got a Profile.Summary.Msg, but claims aren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Dashboard.Claim", function = "update" }
+                            []
 
 
 

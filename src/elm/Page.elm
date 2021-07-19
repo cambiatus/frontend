@@ -244,6 +244,7 @@ update msg session =
                 |> UR.logHttpError msg
                     (maybeAccountName session)
                     "Got an error when loading translations"
+                    { moduleName = "Page", function = "update" }
                     []
                     err
 
@@ -288,17 +289,18 @@ update msg session =
                 |> UR.logGraphqlError msg
                     (maybeAccountName session)
                     "Got an error when trying to sign in"
-                    [ Log.contextFromLocation
-                        { moduleName = "Page"
-                        , function = "update"
-                        , statement = "( SignedIn (RemoteData.Failure error), Guest guest )"
-                        }
-                    ]
+                    { moduleName = "Page", function = "update" }
+                    []
                     error
 
         ( _, _ ) ->
             UR.init session
-                |> UR.logImpossible msg []
+                |> UR.logIncompatibleMsg msg
+                    (maybeAccountName session)
+                    { moduleName = "Page"
+                    , function = "update"
+                    }
+                    []
 
 
 updateShared : Session -> (Shared -> Shared) -> Session

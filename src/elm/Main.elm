@@ -2,12 +2,10 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Dict
 import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
-import Json.Encode as Encode
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
@@ -87,6 +85,7 @@ init flagsValue url navKey =
                         |> UR.logDecodingError Ignored
                             Nothing
                             "Could not decode flags"
+                            { moduleName = "Main", function = "update" }
                             []
                             e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
@@ -234,17 +233,12 @@ update msg model =
                     , { username = Nothing
                       , message = "Expected user to be a guest, but they're logged in"
                       , tags = [ Log.IncompatibleAuthentication Log.ExpectedGuest ]
-                      , contexts =
-                            [ Log.contextFromLocation
-                                { moduleName = "Main"
-                                , function = "update"
-                                , statement = "withGuest"
-                                }
-                            ]
+                      , location = { moduleName = "Main", function = "update" }
+                      , contexts = []
                       , transaction = msg
                       , level = Log.Error
                       }
-                        |> Log.sendEvent msgToString
+                        |> Log.send msgToString
                     )
 
         withLoggedIn fn =
@@ -254,17 +248,12 @@ update msg model =
                     , { username = Nothing
                       , message = "Expected user to be logged in, but they're a guest"
                       , tags = [ Log.IncompatibleAuthentication Log.ExpectedLoggedIn ]
-                      , contexts =
-                            [ Log.contextFromLocation
-                                { moduleName = "Main"
-                                , function = "update"
-                                , statement = "withLoggedIn"
-                                }
-                            ]
+                      , location = { moduleName = "Main", function = "update" }
+                      , contexts = []
                       , transaction = msg
                       , level = Log.Error
                       }
-                        |> Log.sendEvent msgToString
+                        |> Log.send msgToString
                     )
 
                 Page.LoggedIn loggedIn ->
@@ -306,13 +295,9 @@ update msg model =
                             , Log.fromImpossible msg
                                 "Got invalid address from JavaScript"
                                 (Page.maybeAccountName model.session)
-                                [ Log.contextFromLocation
-                                    { moduleName = "Main"
-                                    , function = "update"
-                                    , statement = "( Got JavascriptData val, _ ) -> Ok"
-                                    }
-                                ]
-                                |> Log.sendEvent msgToString
+                                { moduleName = "Main", function = "update" }
+                                []
+                                |> Log.send msgToString
                             )
 
                         Just jsMsg ->
@@ -323,14 +308,10 @@ update msg model =
                     , Log.fromDecodeError msg
                         (Page.maybeAccountName model.session)
                         "Could not decode JavaScript address"
-                        [ Log.contextFromLocation
-                            { moduleName = "Main"
-                            , function = "update"
-                            , statement = "( Got JavascriptData val, _ ) -> Err"
-                            }
-                        ]
+                        { moduleName = "Main", function = "update" }
+                        []
                         decodeError
-                        |> Log.sendEvent msgToString
+                        |> Log.send msgToString
                     )
 
         ( GotPageMsg subMsg, _ ) ->
@@ -521,20 +502,24 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-            , { username = Page.maybeAccountName model.session
-              , message = "Msg does not correspond with Status in Main"
-              , tags = [ Log.TypeTag Log.IncompatibleMsg ]
-              , contexts =
-                    [ Log.contextFromLocation
-                        { moduleName = "Main"
-                        , function = "update"
-                        , statement = "case branch ( _, _ )"
-                        }
-                    ]
-              , transaction = msg
-              , level = Log.Info
-              }
-                |> Log.sendEvent msgToString
+              -- , { username = Page.maybeAccountName model.session
+              --   , message = "Msg does not correspond with Model"
+              --   , tags = [ Log.TypeTag Log.IncompatibleMsg ]
+              --   , contexts =
+              --         [ Log.contextFromLocation
+              --             { moduleName = "Main"
+              --             , function = "update"
+              --             , statement = "case branch ( _, _ )"
+              --             }
+              --         ]
+              --   , transaction = msg
+              --   , level = Log.Info
+              --   }
+            , Log.fromIncompatibleMsg msg
+                (Page.maybeAccountName model.session)
+                { moduleName = "Main", function = "update" }
+                []
+                |> Log.send msgToString
             )
 
 
@@ -737,7 +722,7 @@ updateGuestUResult toStatus toMsg model uResult =
                 , Cmd.batch
                     (Cmd.map toMsg (Cmd.batch uResult.cmds)
                         :: List.map (Ports.mapAddress toMsg >> Ports.javascriptOutCmd msgToString) uResult.ports
-                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.logs
+                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.events
                         ++ cmds_
                     )
                 )
@@ -792,7 +777,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                 , Cmd.batch
                     (Cmd.map toMsg (Cmd.batch uResult.cmds)
                         :: List.map (Ports.mapAddress toMsg >> Ports.javascriptOutCmd msgToString) uResult.ports
-                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.logs
+                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.events
                         ++ cmds_
                     )
                 )

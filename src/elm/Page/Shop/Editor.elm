@@ -504,7 +504,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Completed loading balances, but user wasn't creating or updating sale"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedBalancesLoad (Err error) ->
             LoadBalancesFailed error
@@ -512,6 +516,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading balances for shop editor"
+                    { moduleName = "Page.Shop.Editor", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     error
 
@@ -543,7 +548,11 @@ update msg model loggedIn =
                 ( _, _ ) ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Completed loading sale, but sale was unavailable or user wasn't editing sale"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedSaleLoad (RemoteData.Failure error) ->
             LoadSaleFailed error
@@ -551,6 +560,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading sale"
+                    { moduleName = "Page.Shop.Editor", function = "update" }
                     []
                     error
 
@@ -578,7 +588,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Finished uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedImageUpload (Err error) ->
             case model of
@@ -588,6 +602,7 @@ update msg model loggedIn =
                         |> UR.logHttpError msg
                             (Just loggedIn.accountName)
                             "Got an error when uploading an image for a new shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
                             []
                             error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
@@ -598,6 +613,7 @@ update msg model loggedIn =
                         |> UR.logHttpError msg
                             (Just loggedIn.accountName)
                             "Got an error when uploading an image for an existing shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
                             [ { name = "Product"
                               , extras =
                                     Dict.fromList
@@ -613,8 +629,12 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NotUpdatingOrCreating" ]
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
+                        |> UR.logImpossible msg
+                            "Completed uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         EnteredImage (file :: _) ->
             let
@@ -635,7 +655,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         EnteredImage _ ->
             model
@@ -822,7 +846,11 @@ update msg model loggedIn =
                 _ ->
                     validatedModel
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Clicked save shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         ClickedDelete ->
             case model of
@@ -880,7 +908,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Clicked delete shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         GotSaveResponse (Ok _) ->
             UR.init model
@@ -906,6 +938,7 @@ update msg model loggedIn =
                         |> UR.logJsonValue msg
                             (Just loggedIn.accountName)
                             "Got an error when creating a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
                             []
                             error
 
@@ -921,13 +954,18 @@ update msg model loggedIn =
                         |> UR.logJsonValue msg
                             (Just loggedIn.accountName)
                             "Got an error when editing a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
                             []
                             error
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Saved shop item, but wasn't creating or editing"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         GotDeleteResponse (Ok _) ->
             model
@@ -954,13 +992,18 @@ update msg model loggedIn =
                         |> UR.logJsonValue msg
                             (Just loggedIn.accountName)
                             "Got an error when deleting a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
                             []
                             error
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Deleted shop item, but wasn't in the state of Deleting"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         PressedEnter val ->
             if val then

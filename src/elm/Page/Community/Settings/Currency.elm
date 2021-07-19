@@ -138,7 +138,11 @@ update msg model ({ shared } as loggedIn) =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Tried submitting token edit, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                            []
 
         GotSubmitResponse (Ok updateTokenData) ->
             { model | isLoading = False }
@@ -157,7 +161,11 @@ update msg model ({ shared } as loggedIn) =
                                 >> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySettings)
 
                         _ ->
-                            UR.logImpossible msg [ "WithoutCommunity" ]
+                            UR.logImpossible msg
+                                "Completed updating token, but community wasn't loaded"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                                []
                    )
 
         GotSubmitResponse (Err val) ->
@@ -167,7 +175,8 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logJsonValue msg
                     (Just loggedIn.accountName)
                     "Got an error when submitting currency form"
-                    []
+                    { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     val
 
         CompletedLoadCommunity community ->
@@ -211,7 +220,11 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NoCommunity" ]
+                        |> UR.logImpossible msg
+                            "Completed loading token information, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                            []
 
         CompletedLoadToken (Err err) ->
             { model | isLoading = False }
@@ -220,6 +233,12 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_currency.token_error")
                     )
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load token information"
+                    { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         CompletedLoadExpiryOpts (Ok (Just expiryOptsData)) ->
             { model
@@ -239,11 +258,15 @@ update msg model ({ shared } as loggedIn) =
         CompletedLoadExpiryOpts (Ok Nothing) ->
             { model | isLoading = False }
                 |> UR.init
-                |> UR.logImpossible msg [ "NoExpiryOpts" ]
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_currency.expiryopts_not_found")
                     )
+                |> UR.logImpossible msg
+                    "Completed loading expiry_opts, but got Nothing"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Settings.Currency", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         CompletedLoadExpiryOpts (Err err) ->
             { model | isLoading = False }
@@ -251,6 +274,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading expiry_opts for a community"
+                    { moduleName = "Page.Community.Settings.Currency", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))

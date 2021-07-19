@@ -225,6 +225,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load shop sale"
+                    { moduleName = "Page.Shop.Viewer", function = "update" }
                     []
                     err
 
@@ -339,7 +340,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Entered available units, but sale is not loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Viewer", function = "update" }
+                            []
 
         EnteredMemo m ->
             let

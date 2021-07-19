@@ -21,6 +21,7 @@ import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
+import Log
 import Page
 import Profile
 import RemoteData
@@ -372,9 +373,14 @@ getProfile maybeTo community =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model ({ shared } as loggedIn) =
     let
+        onlyLogImpossible : String -> UpdateResult
         onlyLogImpossible desc =
             UR.init model
-                |> UR.logImpossible msg desc
+                |> UR.logImpossible msg
+                    desc
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Transfer", function = "update" }
+                    []
     in
     case msg of
         CompletedLoadCommunity community ->
@@ -541,7 +547,7 @@ update msg model ({ shared } as loggedIn) =
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
-                    onlyLogImpossible []
+                    onlyLogImpossible "Pushed transaction, but wasn't creating subscription or community wasn't loaded"
 
         GotTransferResult (Ok _) ->
             case model.transferStatus of
@@ -550,7 +556,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.init
 
                 _ ->
-                    onlyLogImpossible []
+                    onlyLogImpossible "Got successful transfer result, but wasn't sending transfer"
 
         GotTransferResult (Err eosErrorString) ->
             let
@@ -564,7 +570,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
-                    onlyLogImpossible []
+                    onlyLogImpossible "Got transfer result with error, but wasn't sending transfer"
 
         Redirect value ->
             case ( model.transferStatus, loggedIn.selectedCommunity ) of
@@ -588,20 +594,33 @@ update msg model ({ shared } as loggedIn) =
                                                 |> Route.replaceUrl shared.navKey
                                             )
 
-                                Err _ ->
+                                Err err ->
                                     model
                                         |> UR.init
-                                        |> UR.logImpossible msg []
+                                        |> UR.logDecodingError msg
+                                            (Just loggedIn.accountName)
+                                            "Got an error when decoding transfer subscription"
+                                            { moduleName = "Page.Community.Transfer", function = "update" }
+                                            []
+                                            err
 
                         Nothing ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg []
+                                |> UR.logImpossible msg
+                                    "After transferring there wasn't a selected profile"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.Transfer", function = "update" }
+                                    []
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried transfering, but community is not loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Transfer", function = "update" }
+                            []
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -424,6 +424,7 @@ update session msg model =
                 |> UR.logGraphqlError msg
                     (Page.maybeAccountName session)
                     "Got an error when trying to load invite"
+                    { moduleName = "Page.Community.Invite", function = "update" }
                     []
                     error
 
@@ -551,7 +552,11 @@ update session msg model =
                     model
                         |> UR.init
                         |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
-                        |> UR.logImpossible msg [ "NoInvite" ]
+                        |> UR.logImpossible msg
+                            "Completed signin in, but invite was unavailable"
+                            (Page.maybeAccountName session)
+                            { moduleName = "Page.Community.Invite", function = "update" }
+                            []
 
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }
@@ -559,12 +564,8 @@ update session msg model =
                 |> UR.logGraphqlError msg
                     (Page.maybeAccountName session)
                     "Got an error when signing in"
-                    [ Log.contextFromLocation
-                        { moduleName = "Invite"
-                        , function = "update"
-                        , statement = "CompletedSignIn _ (RemoteData.Failure error)"
-                        }
-                    ]
+                    { moduleName = "Page.Community.Invite", function = "update" }
+                    []
                     error
 
         CompletedSignIn _ _ ->

@@ -47,6 +47,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
@@ -950,6 +951,7 @@ update msg model =
                 |> UR.logHttpError msg
                     (Just model.accountName)
                     "Got an error when loading translation as a logged in user"
+                    { moduleName = "Session.LoggedIn", function = "update" }
                     []
                     err
 
@@ -996,6 +998,7 @@ update msg model =
                 |> UR.logGraphqlError msg
                     (Just model.accountName)
                     "Got an error when trying to load profile"
+                    { moduleName = "Session.LoggedIn", function = "update" }
                     []
                     err
 
@@ -1027,6 +1030,7 @@ update msg model =
                 |> UR.logGraphqlError msg
                     (Just model.accountName)
                     "Got an error when loading community as logged in"
+                    { moduleName = "Session.LoggedIn", function = "update" }
                     []
                     e
                 |> (if communityExists then
@@ -1122,10 +1126,15 @@ update msg model =
                     { model | unreadCount = res }
                         |> UR.init
 
-                Err _ ->
+                Err err ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logDecodingError msg
+                            (Just model.accountName)
+                            "Got an error when loading unread notifications"
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            []
+                            err
 
         KeyDown key ->
             if key == "Esc" || key == "Escape" then

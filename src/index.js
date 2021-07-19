@@ -532,8 +532,6 @@ app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
 
 app.ports.logEvent.subscribe(logEvent)
 
-app.ports.logDebug.subscribe(debugLog)
-
 // =========================================
 // EOS / Identity functions
 // =========================================

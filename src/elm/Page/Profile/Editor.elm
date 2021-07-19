@@ -356,7 +356,11 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried saving profile, but current profile wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Profile.Editor", function = "update" }
+                            []
 
         GotSaveResult (RemoteData.Success (Just profile)) ->
             model
@@ -376,6 +380,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to save profile"
+                    { moduleName = "Page.Profile.Editor", function = "update" }
                     []
                     e
 
@@ -395,7 +400,11 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried uploading avatar, but profile wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Profile.Editor", function = "update" }
+                            []
 
         EnteredAvatar [] ->
             UR.init model
@@ -408,6 +417,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when uploading avatar"
+                    { moduleName = "Page.profile.Editor", function = "update" }
                     []
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))

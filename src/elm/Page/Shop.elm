@@ -11,8 +11,8 @@ module Page.Shop exposing
 
 import Api
 import Api.Graphql
-import Array
 import Community exposing (Balance)
+import Dict
 import Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
@@ -22,6 +22,7 @@ import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
+import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
 import Profile exposing (viewProfileNameTag)
@@ -394,6 +395,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when loading sales from shop"
+                    { moduleName = "Page.Shop", function = "update" }
                     []
                     err
 
@@ -436,11 +438,7 @@ update msg model loggedIn =
         OnImageError index ->
             case model.cards of
                 Loaded cards ->
-                    let
-                        cardArray =
-                            Array.fromList cards
-                    in
-                    case cards |> Array.fromList |> Array.get index of
+                    case LE.getAt index cards of
                         Just card ->
                             let
                                 oldSale =
@@ -456,13 +454,26 @@ update msg model loggedIn =
                                     { card | product = newSale }
 
                                 newList =
-                                    Array.set index newCard cardArray
+                                    LE.setAt index newCard cards
                             in
-                            { model | cards = Loaded (Array.toList newList) } |> UR.init
+                            { model | cards = Loaded newList } |> UR.init
 
                         Nothing ->
-                            UR.logImpossible msg [ "cardOutOfIndex" ] (UR.init model)
+                            UR.init model
+                                |> UR.logImpossible msg
+                                    "Got an image error, but there isn't a card on the given index"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Shop", function = "update" }
+                                    [ { name = "Card info"
+                                      , extras =
+                                            Dict.fromList
+                                                [ ( "errorIndex", Encode.int index )
+                                                , ( "cardsLength", Encode.int (List.length cards) )
+                                                ]
+                                      }
+                                    ]
 
+                -- UR.logImpossible msg [ "cardOutOfIndex" ] (UR.init model)
                 _ ->
                     model |> UR.init
 
@@ -518,10 +529,28 @@ updateCard msg cardIndex transform ({ model } as uResult) =
                         |> (\uR -> List.foldl (\fn uR_ -> fn uR_) uR xCmds)
 
                 _ ->
-                    UR.logImpossible msg [ "cardOutOfIndex" ] uResult
+                    uResult
+                        -- |> UR.logImpossible msg [ "cardOutOfIndex" ]
+                        |> UR.logImpossible msg
+                            "Tried updating sale card, but the index was invalid"
+                            Nothing
+                            { moduleName = "Page.Shop", function = "updateCard" }
+                            [ { name = "Card info"
+                              , extras =
+                                    Dict.fromList
+                                        [ ( "givenIndex", Encode.int cardIndex )
+                                        , ( "listLength", Encode.int (List.length cards) )
+                                        ]
+                              }
+                            ]
 
         _ ->
-            UR.logImpossible msg [] uResult
+            uResult
+                |> UR.logImpossible msg
+                    "Tried updating sale card, but cards weren't loaded"
+                    Nothing
+                    { moduleName = "Page.Shop", function = "updateCard" }
+                    []
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -373,6 +373,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load notification history"
+                    { moduleName = "Page.Notification", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
 
@@ -444,7 +445,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Completed reading notification, but notifications weren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Notification", function = "update" }
+                            []
 
         CompletedReading (RemoteData.Failure e) ->
             model
@@ -452,6 +457,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when reading notification"
+                    { moduleName = "Page.Notification", function = "update" }
                     []
                     e
 
