@@ -7,7 +7,6 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
-    , setMetaInformation
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -62,30 +61,6 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 --
 -- Commands
 --
-
-
-type alias MetaInformation =
-    { description : String
-    , title : String
-    , image : String
-    , locale : String
-    }
-
-
-{-| Set the relevant `meta` tags on the document's `head`
--}
-setMetaInformation : MetaInformation -> Cmd msg
-setMetaInformation metaInformation =
-    Encode.object
-        [ ( "description", Encode.string metaInformation.description )
-        , ( "og:title", Encode.string metaInformation.title )
-        , ( "og:image", Encode.string metaInformation.image )
-        , ( "og:locale", Encode.string metaInformation.locale )
-        ]
-        |> setMetaInformationPort
-
-
-port setMetaInformationPort : Value -> Cmd msg
 
 
 port storeLanguage : String -> Cmd msg

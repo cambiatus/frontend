@@ -209,51 +209,10 @@ updateAsGuest msg model guest =
                     )
 
         CompletedSalePreviewLoad (RemoteData.Success (Just productPreview)) ->
-            let
-                maybeProductImage =
-                    productPreview.image
-                        |> Maybe.andThen
-                            (\img ->
-                                if img == "" then
-                                    Nothing
-
-                                else
-                                    Just img
-                            )
-            in
             case guest.community of
-                RemoteData.Success community ->
+                RemoteData.Success _ ->
                     { model | productPreview = RemoteData.Success productPreview }
                         |> UR.init
-                        |> UR.addCmd
-                            (Ports.setMetaInformation
-                                { description =
-                                    guest.shared.translators.tr "shop.preview_text"
-                                        [ ( "user"
-                                          , productPreview.creator.name
-                                                |> Maybe.withDefault (productPreview.creator.account |> Eos.nameToString)
-                                          )
-                                        , ( "product", productPreview.title )
-                                        , ( "community", community.name )
-                                        ]
-                                        ++ "\n"
-                                        ++ productPreview.description
-                                , title = productPreview.title ++ " | Cambiatus"
-                                , image =
-                                    case maybeProductImage of
-                                        Just img ->
-                                            img
-
-                                        Nothing ->
-                                            case guest.community of
-                                                RemoteData.Success communityPreview ->
-                                                    communityPreview.logo
-
-                                                _ ->
-                                                    guest.shared.logoMobile
-                                , locale = guest.shared.language
-                                }
-                            )
 
                 _ ->
                     model
