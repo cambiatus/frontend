@@ -461,30 +461,27 @@ encodeReadNotificationInput input =
 
 
 buildTransferDirection :
-    TransferDirectionRequiredFields
-    -> (TransferDirectionOptionalFields -> TransferDirectionOptionalFields)
+    (TransferDirectionOptionalFields -> TransferDirectionOptionalFields)
     -> TransferDirection
-buildTransferDirection required fillOptionals =
+buildTransferDirection fillOptionals =
     let
         optionals =
             fillOptionals
-                { otherAccount = Absent }
+                { direction = Absent, otherAccount = Absent }
     in
-    { direction = required.direction, otherAccount = optionals.otherAccount }
-
-
-type alias TransferDirectionRequiredFields =
-    { direction : Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue }
+    { direction = optionals.direction, otherAccount = optionals.otherAccount }
 
 
 type alias TransferDirectionOptionalFields =
-    { otherAccount : OptionalArgument String }
+    { direction : OptionalArgument Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue
+    , otherAccount : OptionalArgument String
+    }
 
 
 {-| Type for the TransferDirection input object.
 -}
 type alias TransferDirection =
-    { direction : Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue
+    { direction : OptionalArgument Cambiatus.Enum.TransferDirectionValue.TransferDirectionValue
     , otherAccount : OptionalArgument String
     }
 
@@ -494,7 +491,7 @@ type alias TransferDirection =
 encodeTransferDirection : TransferDirection -> Value
 encodeTransferDirection input =
     Encode.maybeObject
-        [ ( "direction", Encode.enum Cambiatus.Enum.TransferDirectionValue.toString input.direction |> Just ), ( "otherAccount", Encode.string |> Encode.optional input.otherAccount ) ]
+        [ ( "direction", Encode.enum Cambiatus.Enum.TransferDirectionValue.toString |> Encode.optional input.direction ), ( "otherAccount", Encode.string |> Encode.optional input.otherAccount ) ]
 
 
 buildTransferFilter :

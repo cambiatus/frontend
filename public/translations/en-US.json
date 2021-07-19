@@ -726,7 +726,6 @@
     "buy": "Buy",
     "edit": "Edit my offer",
     "sold_by": "Sold by",
-    "preview_text": "{{user}} is selling {{product}} on the {{community}} community in Cambiatus:",
     "transfer": {
       "units_label": "How many units do you want?",
       "quantity_label": "Value",
