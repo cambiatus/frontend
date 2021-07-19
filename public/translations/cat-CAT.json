@@ -390,6 +390,7 @@
       "both": "Tots dos",
       "sending": "S'està enviant",
       "receiving": "Rebent",
+      "other_user": "Usuari que ha enviat o rebut",
       "user_who_sent": "Usuari que ha enviat",
       "user_who_received": "Usuari que va rebre"
     }

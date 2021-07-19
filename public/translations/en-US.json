@@ -386,6 +386,7 @@
       "both": "Both",
       "sending": "Sending",
       "receiving": "Receiving",
+      "other_user": "User who sent or received",
       "user_who_sent": "User who sent",
       "user_who_received": "User who received"
     }

@@ -348,6 +348,7 @@
       "both": "ሁለቱም",
       "sending": "በመላክ ላይ",
       "receiving": "መቀበል",
+      "other_user": "የላከ ወይም የተቀበለ ተጠቃሚ",
       "user_who_sent": "የላከው ተጠቃሚ",
       "user_who_received": "የተቀበለው ተጠቃሚ"
     }

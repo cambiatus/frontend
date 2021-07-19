@@ -390,6 +390,7 @@
       "both": "Ambas",
       "sending": "Enviando",
       "receiving": "Recepción",
+      "other_user": "Usuario que envió o recibió",
       "user_who_sent": "Usuario que envió",
       "user_who_received": "Usuario que recibió"
     }

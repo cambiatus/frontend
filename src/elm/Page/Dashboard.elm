@@ -691,6 +691,17 @@ viewTransferFilters ({ shared } as loggedIn) users model =
     let
         { t } =
             shared.translators
+
+        directionText =
+            case model.transfersFiltersBeingEdited.filters.direction of
+                Nothing ->
+                    "transfer.direction.other_user"
+
+                Just TransferDirectionValue.Receiving ->
+                    "transfer.direction.user_who_sent"
+
+                Just TransferDirectionValue.Sending ->
+                    "transfer.direction.user_who_received"
     in
     Modal.initWith
         { closeMsg = ClosedTransfersFilters
@@ -698,94 +709,76 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            (span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
-                :: div [ class "flex space-x-4" ]
-                    [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
-                        (datePickerSettings shared)
-                        model.transfersFiltersBeingEdited.datePicker
-                        |> Html.map TransfersFiltersDatePickerMsg
-                    , button
-                        [ class "h-12"
-                        , onClick ClickedClearTransfersFiltersDate
-                        ]
-                        [ Icons.trash "" ]
+            [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
+            , div [ class "flex space-x-4" ]
+                [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
+                    (datePickerSettings shared)
+                    model.transfersFiltersBeingEdited.datePicker
+                    |> Html.map TransfersFiltersDatePickerMsg
+                , button
+                    [ class "h-12"
+                    , onClick ClickedClearTransfersFiltersDate
                     ]
-                :: (Select.init
-                        { id = "direction-selector"
-                        , label = t "transfer.direction.title"
-                        , onInput = SelectedTransfersDirection
-                        , firstOption = { value = Nothing, label = t "transfer.direction.both" }
-                        , value = model.transfersFiltersBeingEdited.filters.direction
-                        , valueToString =
-                            Maybe.map TransferDirectionValue.toString
-                                >> Maybe.withDefault "BOTH"
-                        , disabled = False
-                        , problems = Nothing
-                        }
-                        |> Select.withOption
-                            { value = Just TransferDirectionValue.Sending
-                            , label = t "transfer.direction.sending"
-                            }
-                        |> Select.withOption
-                            { value = Just TransferDirectionValue.Receiving
-                            , label = t "transfer.direction.receiving"
-                            }
-                        |> Select.withContainerAttrs [ class "mt-10" ]
-                        |> Select.toHtml
-                   )
-                :: (case model.transfersFiltersBeingEdited.filters.direction of
-                        Nothing ->
-                            []
+                    [ Icons.trash "" ]
+                ]
+            , Select.init
+                { id = "direction-selector"
+                , label = t "transfer.direction.title"
+                , onInput = SelectedTransfersDirection
+                , firstOption = { value = Nothing, label = t "transfer.direction.both" }
+                , value = model.transfersFiltersBeingEdited.filters.direction
+                , valueToString =
+                    Maybe.map TransferDirectionValue.toString
+                        >> Maybe.withDefault "BOTH"
+                , disabled = False
+                , problems = Nothing
+                }
+                |> Select.withOption
+                    { value = Just TransferDirectionValue.Sending
+                    , label = t "transfer.direction.sending"
+                    }
+                |> Select.withOption
+                    { value = Just TransferDirectionValue.Receiving
+                    , label = t "transfer.direction.receiving"
+                    }
+                |> Select.withContainerAttrs [ class "mt-10" ]
+                |> Select.toHtml
+            , View.Form.label "other-account-select" (t directionText)
+            , model.transfersFiltersBeingEdited.filters.otherAccount
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
+                |> Select.view (selectConfiguration shared)
+                    model.transfersFiltersBeingEdited.otherAccountState
+                    users
+                |> Html.map TransfersFiltersOtherAccountSelectMsg
+            , case model.transfersFiltersBeingEdited.filters.otherAccount of
+                Nothing ->
+                    text ""
 
-                        Just direction ->
-                            let
-                                labelText =
-                                    case direction of
-                                        TransferDirectionValue.Receiving ->
-                                            "transfer.direction.user_who_sent"
-
-                                        TransferDirectionValue.Sending ->
-                                            "transfer.direction.user_who_received"
-                            in
-                            [ View.Form.label "other-account-select" (t labelText)
-                            , model.transfersFiltersBeingEdited.filters.otherAccount
-                                |> Maybe.map List.singleton
-                                |> Maybe.withDefault []
-                                |> Select.view (selectConfiguration shared)
-                                    model.transfersFiltersBeingEdited.otherAccountState
-                                    users
-                                |> Html.map TransfersFiltersOtherAccountSelectMsg
-                            , case model.transfersFiltersBeingEdited.filters.otherAccount of
-                                Nothing ->
-                                    text ""
-
-                                Just otherAccount ->
-                                    div [ class "flex mt-4 items-start" ]
-                                        [ div [ class "flex flex-col items-center" ]
-                                            [ model.transfersFiltersBeingEdited.otherAccountProfileSummary
-                                                |> Profile.Summary.withRelativeSelector ".modal-content"
-                                                |> Profile.Summary.withScrollSelector ".modal-body"
-                                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
-                                                |> Profile.Summary.view shared
-                                                    loggedIn.accountName
-                                                    otherAccount
-                                                |> Html.map GotTransfersFiltersProfileSummaryMsg
-                                            , button
-                                                [ class "mt-2"
-                                                , onClick ClickedClearTransfersFiltersUser
-                                                ]
-                                                [ Icons.trash "" ]
-                                            ]
-                                        ]
+                Just otherAccount ->
+                    div [ class "flex mt-4 items-start" ]
+                        [ div [ class "flex flex-col items-center" ]
+                            [ model.transfersFiltersBeingEdited.otherAccountProfileSummary
+                                |> Profile.Summary.withRelativeSelector ".modal-content"
+                                |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+                                |> Profile.Summary.view shared
+                                    loggedIn.accountName
+                                    otherAccount
+                                |> Html.map GotTransfersFiltersProfileSummaryMsg
+                            , button
+                                [ class "mt-2"
+                                , onClick ClickedClearTransfersFiltersUser
+                                ]
+                                [ Icons.trash "" ]
                             ]
-                   )
-                ++ [ button
-                        [ class "button button-primary w-full mt-10"
-                        , onClick ClickedApplyTransfersFilters
                         ]
-                        [ text (t "all_analysis.filter.apply") ]
-                   ]
-            )
+            , button
+                [ class "button button-primary w-full mt-10"
+                , onClick ClickedApplyTransfersFilters
+                ]
+                [ text (t "all_analysis.filter.apply") ]
+            ]
         |> Modal.toHtml
 
 
