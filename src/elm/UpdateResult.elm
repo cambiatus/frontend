@@ -22,7 +22,7 @@ module UpdateResult exposing
     )
 
 {- This library allows us to have an observable update function which allows us to transmit message from
-   various model to and fro other modules including the Main module. This enables us to request side effects from within modules
+   various model to and from other modules including the Main module. This enables us to request side effects from within modules
    while maintaining a flexible codebase.
    In a scenario such as displaying a request to sign a transfer or a sale is where the usefulness of this module really shines through
 
@@ -48,7 +48,7 @@ import Task
 
 
 
--- TODO - Update docs
+-- DEFINITION
 
 
 {-| Core data structure that enables this project to have an observable update function in our module.
@@ -59,9 +59,8 @@ The data structure contains the following
 2.  A list of Cmd messages that will be applied to the model
 3.  A list of external messages to be applied to the model and submodel
 4.  A list of ports to execute
-5.  A list of log messages to be applied
-6.  A list of breadcrumbs to be added to Sentry
-7.  A list of events to be sent to Sentry
+5.  A list of breadcrumbs to be added to Sentry
+6.  A list of events to be sent to Sentry
 
 -}
 type alias UpdateResult model msg extMsg =
@@ -74,7 +73,30 @@ type alias UpdateResult model msg extMsg =
     }
 
 
-{-| Applies commands, ports and Logs messages to an UpdateResult dataset resulting in new UpdateResult dataset with all
+
+-- INITIALIZING
+
+
+{-| Builds an inital UpdateResult dataset from a model, this is widely used when initiating actions, ports and Logs
+as within the update function in a module a use only has access to the model hence it is necessary to construct
+an UpdateResult dataset out of the model before requesting for commads, ports and log actions
+-}
+init : model -> UpdateResult model msg extMsg
+init model =
+    { model = model
+    , cmds = []
+    , exts = []
+    , ports = []
+    , breadcrumbs = []
+    , events = []
+    }
+
+
+
+-- MAPPING
+
+
+{-| Applies commands, ports, events and breadcrumbs to an UpdateResult dataset resulting in new UpdateResult dataset with all
 the pending actions applied. Useful when moving from one state to another using UpdateResult such as updating the data when
 a user has logged in, or when handling a Community message on the Dashboard
 -}
@@ -121,19 +143,8 @@ setModel uResult model =
     }
 
 
-{-| Builds an inital UpdateResult dataset from a model, this is widely used when initiating actions, ports and Logs
-as within the update function in a module a use only has access to the model hence it is necessary to construct
-an UpdateResult dataset out of the model before requesting for commads, ports and log actions
--}
-init : model -> UpdateResult model msg extMsg
-init model =
-    { model = model
-    , cmds = []
-    , exts = []
-    , ports = []
-    , breadcrumbs = []
-    , events = []
-    }
+
+-- CONVERTING TO USEFUL TYPES
 
 
 {-| Converts an UpdateResult into a (model, command) tuple, it accepts a function that handles conversion of
@@ -168,6 +179,10 @@ toModelCmd transformEMsg msgToString uResult =
             )
 
 
+
+-- PIPELINE HELPERS
+
+
 {-| Add a Command msg to the list of msgs in an UpdateResult, useful when asking for effects, such as a network
 request
 -}
@@ -200,6 +215,10 @@ addPort port_ uResult =
     { uResult | ports = uResult.ports ++ [ Ports.javascriptOut port_ ] }
 
 
+
+-- LOGGING
+
+
 {-| Add a breadcrumb to error reporting. On development, prints it to the
 console, and on production adds a breadcrumb to the next event
 -}
@@ -210,8 +229,8 @@ addBreadcrumb breadcrumb uResult =
 
 {-| Add an event to be logged. On development, prints it to the console, and on
 production sends an event to Sentry. Usually you can use auxiliary functions
-such as `logImpossible`, `logDecodingError`, `logHttpError` and
-`logGraphqlError`
+such as `logImpossible`, `logDecodingError`, `logHttpError`, `logGraphqlError`,
+`logJsonValue` and `logIncompatibleMsg`
 -}
 logEvent : Log.Event msg -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logEvent event uResult =
@@ -230,7 +249,7 @@ logImpossible transaction message maybeUser location contexts =
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when trying to
-decode a JSON value, but getting an unexpected error.
+decode a JSON value, but getting a Json.Decode.Error.
 -}
 logDecodingError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Decode.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logDecodingError transaction maybeUser description location contexts error =
@@ -239,7 +258,7 @@ logDecodingError transaction maybeUser description location contexts error =
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
-attempting to perform an Http request and getting an error back.
+attempting to perform an Http request and getting an Http.Error.
 -}
 logHttpError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Http.Error -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logHttpError transaction maybeUser description location contexts error =
@@ -248,7 +267,7 @@ logHttpError transaction maybeUser description location contexts error =
 
 
 {-| Send an Event to Sentry so we can debug later. Should be used when
-attempting to perform a GraphQL request and getting an error back.
+attempting to perform a GraphQL request and getting a Graphql.Http.Error.
 -}
 logGraphqlError : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Graphql.Http.Error a -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logGraphqlError transaction maybeUser description location contexts error =
@@ -256,16 +275,32 @@ logGraphqlError transaction maybeUser description location contexts error =
         |> logEvent
 
 
+{-| Send an Event to Sentry so we can debug later. Should be used when we get
+some sort of error encoded as a JSON value.
+
+**Note**: If you just want to log extra information, use something else and add
+that information in a `Log.Context`.
+
+-}
 logJsonValue : msg -> Maybe Eos.Account.Name -> String -> Log.Location -> List Log.Context -> Decode.Value -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logJsonValue transaction maybeUser message location contexts jsonValue =
     Log.fromJsonValue transaction maybeUser message location contexts jsonValue
         |> logEvent
 
 
+{-| Send an Event to Sentry so we can debug later. Should be used when
+pattern-matching two values at once (usually Model and Msg on update functions),
+and they're in a configuration that doesn't match (usually pattern-matched as
+`(_, _)`)
+-}
 logIncompatibleMsg : msg -> Maybe Eos.Account.Name -> Log.Location -> List Log.Context -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg
 logIncompatibleMsg transaction maybeUser location contexts =
     Log.fromIncompatibleMsg transaction maybeUser location contexts
         |> logEvent
+
+
+
+-- EXTERNAL HELPERS
 
 
 {-| Converts a Result Dataset into a string usable by UpdateResult

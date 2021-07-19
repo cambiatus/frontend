@@ -149,6 +149,7 @@ extras are very important so we can have a better debugging experience! Fields:
   - message: the title that shows up on Sentry.
   - tags: generic identifiers related to the event, such as
     ("error-type", "eos-transaction"). Used to filter/search through events
+  - location: where in the code the Event happened.
   - context: a [`Context`](#Context), which provides extra information.
   - transaction: used annotate the event with its point of failure. In our app,
     we use the `Msg` that caused the error
@@ -167,7 +168,6 @@ type alias Event msg =
 
 
 {-| Some extra information to be displayed as a key-value table, under a name.
-In `extras`, any key is allowed, except for `"type"`.
 -}
 type alias Context =
     { name : String
@@ -334,6 +334,8 @@ fromGraphqlHttpError transaction maybeUser description location contexts error =
     }
 
 
+{-| Creates an Event out of an encoded Json value.
+-}
 fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Decode.Value -> Event msg
 fromJsonValue transaction maybeUser message location contexts value =
     { username = maybeUser
@@ -350,6 +352,10 @@ fromJsonValue transaction maybeUser message location contexts value =
     }
 
 
+{-| Creates an Event out of an incompatible msg. This usually happens on update
+functions, when pattern-matching two values at once (usually Model and Msg), and
+they are not compatible with each other.
+-}
 fromIncompatibleMsg : msg -> Maybe Eos.Account.Name -> Location -> List Context -> Event msg
 fromIncompatibleMsg transaction maybeUser location contexts =
     { username = maybeUser
@@ -362,6 +368,12 @@ fromIncompatibleMsg transaction maybeUser location contexts =
     }
 
 
+{-| Creates a Context out of a Community. It's an extendable record because:
+
+1.  Import cycles
+2.  This way we can have it both for LoggedIn and Guest
+
+-}
 contextFromCommunity : RemoteData a { community | symbol : Eos.Symbol, name : String } -> Context
 contextFromCommunity remoteData =
     { name = "Community"
@@ -378,6 +390,8 @@ contextFromCommunity remoteData =
     }
 
 
+{-| Change the type of a Breadcrumb
+-}
 mapBreadcrumb : (a -> b) -> Breadcrumb a -> Breadcrumb b
 mapBreadcrumb transform breadcrumb =
     { type_ = breadcrumb.type_
@@ -388,6 +402,8 @@ mapBreadcrumb transform breadcrumb =
     }
 
 
+{-| Change the type of an Event
+-}
 map : (a -> b) -> Event a -> Event b
 map transform event =
     { username = event.username
