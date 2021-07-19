@@ -518,15 +518,6 @@ addBreadcrumb({
 // Register Service Worker After App
 // registerServiceWorker()
 
-// Log
-function debugLog (name, arg) {
-  if (env === 'development') {
-    console.log('[==== DEV]: ', name, arg)
-  } else {
-    Sentry.addBreadcrumb({ message: name, level: 'info', type: 'debug' })
-  }
-}
-
 // Ports error Reporter
 app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
 
