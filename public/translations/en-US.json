@@ -493,9 +493,12 @@
         "submit": "Save",
         "mark_as_complete": "Mark as complete",
         "error_marking_as_complete": "Something went wrong when marking your objective as completed",
+        "completed_progress": "{{progress}} of {{total}} completed actions",
+        "completion_text": "All actions related to this objective will be completed",
+        "completed_success": "Objective successfully completed",
         "modal": {
           "title": "Mark objective as complete",
-          "body": "Marking the objective as complete cannot be undone. Actions from this objective will no longer be available for analysis. Do you really want to mark this objective as complete?",
+          "body": "Marking the objective as complete cannot be undone. Actions from this objective will also be marked as complete, and will no longer be available for analysis. Do you really want to mark this objective as complete?",
           "confirm": "Yes",
           "cancel": "No"
         }
@@ -860,6 +863,10 @@
     },
     "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
     "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
+    "day_ago": "Opened {{day_count}} day ago",
+    "days_ago": "Opened {{day_count}} days ago",
+    "vote": "vote",
+    "votes": "votes",
     "pending": "Pending",
     "disapproved": "Disapproved",
     "approved": "Approved",

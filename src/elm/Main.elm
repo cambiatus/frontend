@@ -676,15 +676,24 @@ updateGuestUResult toStatus toMsg model uResult =
 
                                 ( session, cmd ) =
                                     LoggedIn.initLogin shared (Just privateKey) userWithCommunity token
+
+                                redirectRoute =
+                                    case guest.afterLoginRedirect of
+                                        Just (Route.Invite _) ->
+                                            Route.Dashboard
+
+                                        Just route ->
+                                            route
+
+                                        Nothing ->
+                                            Route.Dashboard
                             in
                             ( { m
                                 | session =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
-                                :: (Maybe.withDefault Route.Dashboard guest.afterLoginRedirect
-                                        |> Route.pushUrl guest.shared.navKey
-                                   )
+                                :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: cmds_
                             )
 
@@ -927,58 +936,56 @@ changeRouteTo maybeRoute model =
         noCmd model_ =
             ( model_, Cmd.none )
 
-        afterLoginRedirect maybeRedirect =
-            let
-                addRedirect redirect =
-                    case model.session of
-                        Page.LoggedIn _ ->
-                            model
+        addAfterLoginRedirect : Maybe Route -> Model -> Model
+        addAfterLoginRedirect maybeRedirect model_ =
+            case model_.session of
+                Page.LoggedIn _ ->
+                    model_
 
-                        Page.Guest guest ->
-                            { model
+                Page.Guest guest ->
+                    case maybeRedirect of
+                        Nothing ->
+                            model_
+
+                        Just redirect ->
+                            { model_
                                 | session =
                                     Guest.addAfterLoginRedirect redirect guest
                                         |> Page.Guest
-                                , status = Redirect
                             }
-            in
-            Maybe.map addRedirect maybeRedirect
-                |> Maybe.withDefault model
 
+        addMaybeInvitation : Maybe String -> Model -> Model
         addMaybeInvitation maybeInvitation model_ =
             case model_.session of
                 Page.LoggedIn _ ->
                     model_
 
                 Page.Guest guest ->
-                    { model_ | session = { guest | maybeInvitation = maybeInvitation } |> Page.Guest }
+                    { model_
+                        | session =
+                            { guest | maybeInvitation = maybeInvitation }
+                                |> Page.Guest
+                    }
 
-        withGuest init_ update_ maybeInvitation maybeRedirect =
-            let
-                model_ =
-                    afterLoginRedirect maybeRedirect
-                        |> addMaybeInvitation maybeInvitation
-
-                fn =
-                    init_
-                        >> update_ model_
-            in
+        withGuest : Maybe String -> Maybe Route -> (Guest.Model -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+        withGuest maybeInvitation maybeRedirect fn =
             case session of
-                Page.Guest guest ->
-                    fn guest
-
                 Page.LoggedIn _ ->
-                    let
-                        redirect =
-                            case maybeRedirect of
-                                Nothing ->
-                                    Route.Dashboard
+                    ( model
+                    , maybeRedirect
+                        |> Maybe.withDefault Route.Dashboard
+                        |> Route.replaceUrl shared.navKey
+                    )
 
-                                Just route_ ->
-                                    route_
+                Page.Guest guest ->
+                    let
+                        ( newModel, newCmd ) =
+                            fn guest
                     in
-                    ( model_
-                    , Route.replaceUrl shared.navKey redirect
+                    ( newModel
+                        |> addAfterLoginRedirect maybeRedirect
+                        |> addMaybeInvitation maybeInvitation
+                    , newCmd
                     )
 
         addRouteToHistory status loggedIn =
@@ -998,6 +1005,7 @@ changeRouteTo maybeRoute model =
                         routeHistory ->
                             { loggedIn | routeHistory = newRoute :: routeHistory }
 
+        withLoggedIn : Route -> (LoggedIn.Model -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
         withLoggedIn route fn =
             case session of
                 Page.LoggedIn loggedIn ->
@@ -1041,6 +1049,37 @@ changeRouteTo maybeRoute model =
                       else
                         Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
+
+        withSession : Route -> (Session -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
+        withSession route fn =
+            let
+                ( newModel, newCmd ) =
+                    fn session
+            in
+            case newModel.session of
+                Page.LoggedIn loggedIn ->
+                    let
+                        newSession =
+                            addRouteToHistory newModel.status loggedIn
+                                |> Page.LoggedIn
+                    in
+                    ( { newModel | session = newSession }
+                    , Cmd.batch
+                        [ newCmd
+                        , Task.perform
+                            (LoggedIn.GotTimeInternal
+                                >> Page.GotLoggedInMsg
+                                >> GotPageMsg
+                            )
+                            Time.now
+                        ]
+                    )
+
+                Page.Guest _ ->
+                    ( newModel
+                        |> addAfterLoginRedirect (Just route)
+                    , newCmd
+                    )
     in
     case maybeRoute of
         Nothing ->
@@ -1059,18 +1098,14 @@ changeRouteTo maybeRoute model =
                 |> noCmd
 
         Just (Route.Register invitation maybeRedirect) ->
-            withGuest
-                (Register.init invitation)
-                (updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg)
-                invitation
-                maybeRedirect
+            Register.init invitation
+                >> updateStatusWith (Register invitation maybeRedirect) GotRegisterMsg model
+                |> withGuest invitation maybeRedirect
 
         Just (Route.Login maybeInvitation maybeRedirect) ->
-            withGuest
-                Login.init
-                (updateStatusWith (Login maybeRedirect) GotLoginMsg)
-                maybeInvitation
-                maybeRedirect
+            Login.init
+                >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
+                |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init
@@ -1212,12 +1247,14 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.ViewTransfer transferId)
 
         Just (Route.Invite invitationId) ->
-            Invite.init session invitationId
-                |> updateStatusWith Invite GotInviteMsg model
+            (\s -> Invite.init s invitationId)
+                >> updateStatusWith Invite GotInviteMsg model
+                |> withSession (Route.Invite invitationId)
 
         Just (Route.Join maybeRedirect) ->
-            Join.init session maybeRedirect
-                |> updateStatusWith Join GotJoinMsg model
+            (\s -> Join.init s maybeRedirect)
+                >> updateStatusWith Join GotJoinMsg model
+                |> withSession (Route.Join maybeRedirect)
 
         Just (Route.Transfer maybeTo) ->
             (\l -> Transfer.init l maybeTo)

@@ -1,5 +1,6 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Action
 import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
@@ -11,17 +12,18 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, classList, disabled, maxlength, placeholder, required, rows, type_, value)
+import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, style, type_, value)
 import Html.Events exposing (onClick, onInput)
-import I18Next exposing (t)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import List.Extra as List
 import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Translators)
+import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
 
@@ -34,8 +36,6 @@ initNew : LoggedIn.Model -> ( Model, Cmd Msg )
 initNew loggedIn =
     ( { status = Loading
       , objectiveId = Nothing
-      , showMarkAsCompletedConfirmationModal = False
-      , isMarkAsCompletedConfirmationModalLoading = False
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -45,8 +45,6 @@ initEdit : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
 initEdit loggedIn objectiveId =
     ( { status = Loading
       , objectiveId = Just objectiveId
-      , showMarkAsCompletedConfirmationModal = False
-      , isMarkAsCompletedConfirmationModalLoading = False
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -59,33 +57,41 @@ initEdit loggedIn objectiveId =
 type alias Model =
     { status : Status
     , objectiveId : Maybe Int
-    , showMarkAsCompletedConfirmationModal : Bool
-    , isMarkAsCompletedConfirmationModalLoading : Bool
     }
 
 
 type Status
     = Loading
-    | Authorized EditStatus
+    | Authorized FormStatus
     | Unauthorized
     | NotFound
 
 
-type EditStatus
-    = NewObjective ObjectiveForm
-    | EditObjective Int ObjectiveForm
+type FormStatus
+    = CreatingObjective ObjectiveForm CreatingStatus
+    | EditingObjective Community.Objective ObjectiveForm EditingStatus
 
 
-type SaveStatus
-    = NotAsked
-    | Saving
-    | Saved
-    | SaveFailed
+type CreatingStatus
+    = Creating
+    | SavingCreation
+
+
+type EditingStatus
+    = Editing
+    | SavingEdit
+    | RequestingConfirmation
+    | CompletingActions CompletionStatus
+
+
+type alias CompletionStatus =
+    { completed : List Action.Action
+    , left : List { tries : Int, action : Action.Action }
+    }
 
 
 type alias ObjectiveForm =
     { description : String
-    , save : SaveStatus
     , isCompleted : Bool
     }
 
@@ -107,8 +113,9 @@ type Msg
     | EnteredDescription String
     | ClickedSaveObjective
     | ClickedCompleteObjective
-    | AcceptedCompleteObjective
     | DeniedCompleteObjective
+    | AcceptedCompleteObjective
+    | GotCompleteActionResponse (Result Int String)
     | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
 
@@ -116,7 +123,6 @@ type Msg
 initObjectiveForm : ObjectiveForm
 initObjectiveForm =
     { description = ""
-    , save = NotAsked
     , isCompleted = False
     }
 
@@ -137,10 +143,10 @@ view ({ shared } as loggedIn) model =
                     let
                         action =
                             case editStatus of
-                                NewObjective _ ->
+                                CreatingObjective _ _ ->
                                     t "menu.create"
 
-                                EditObjective _ _ ->
+                                EditingObjective _ _ _ ->
                                     t "menu.edit"
                     in
                     action
@@ -173,13 +179,14 @@ view ({ shared } as loggedIn) model =
                 ( RemoteData.Success _, Authorized editStatus ) ->
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title")
-                        , case editStatus of
-                            NewObjective objForm ->
-                                viewForm loggedIn objForm False
-
-                            EditObjective _ objForm ->
-                                viewForm loggedIn objForm True
+                        , viewForm loggedIn editStatus
                         , viewMarkAsCompletedConfirmationModal shared.translators model
+                        , case editStatus of
+                            EditingObjective _ _ (CompletingActions completionStatus) ->
+                                viewCompletion shared completionStatus
+
+                            _ ->
+                                text ""
                         ]
     in
     { title = title
@@ -204,14 +211,29 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewForm : LoggedIn.Model -> ObjectiveForm -> Bool -> Html Msg
-viewForm { shared } objForm isEdit =
+viewForm : LoggedIn.Model -> FormStatus -> Html Msg
+viewForm { shared } formStatus =
     let
         t =
             shared.translators.t
 
-        isDisabled =
-            objForm.save == Saving
+        ( isDisabled, objForm, isEdit ) =
+            case formStatus of
+                CreatingObjective form status ->
+                    case status of
+                        Creating ->
+                            ( False, form, False )
+
+                        SavingCreation ->
+                            ( True, form, False )
+
+                EditingObjective _ form status ->
+                    case status of
+                        Editing ->
+                            ( False, form, True )
+
+                        _ ->
+                            ( True, form, True )
     in
     div [ class "bg-white w-full p-10" ]
         [ div [ class "container mx-auto" ]
@@ -258,9 +280,18 @@ viewForm { shared } objForm isEdit =
 
 viewMarkAsCompletedConfirmationModal : Translators -> Model -> Html Msg
 viewMarkAsCompletedConfirmationModal { t } model =
+    let
+        isVisible =
+            case model.status of
+                Authorized (EditingObjective _ _ RequestingConfirmation) ->
+                    True
+
+                _ ->
+                    False
+    in
     Modal.initWith
         { closeMsg = DeniedCompleteObjective
-        , isVisible = model.showMarkAsCompletedConfirmationModal
+        , isVisible = isVisible
         }
         |> Modal.withHeader (t "community.objectives.editor.modal.title")
         |> Modal.withBody
@@ -269,20 +300,68 @@ viewMarkAsCompletedConfirmationModal { t } model =
         |> Modal.withFooter
             [ button
                 [ class "modal-cancel"
-                , classList [ ( "button-disabled", model.isMarkAsCompletedConfirmationModalLoading ) ]
                 , onClick DeniedCompleteObjective
-                , disabled model.isMarkAsCompletedConfirmationModalLoading
                 ]
                 [ text (t "community.objectives.editor.modal.cancel") ]
             , button
                 [ class "modal-accept"
-                , classList [ ( "button-disabled", model.isMarkAsCompletedConfirmationModalLoading ) ]
                 , onClick AcceptedCompleteObjective
-                , disabled model.isMarkAsCompletedConfirmationModalLoading
                 ]
                 [ text (t "community.objectives.editor.modal.confirm") ]
             ]
         |> Modal.toHtml
+
+
+viewCompletion : Shared -> CompletionStatus -> Html Msg
+viewCompletion shared completionStatus =
+    let
+        totalNumber =
+            List.length completionStatus.completed
+                + List.length completionStatus.left
+
+        progressWidth =
+            String.fromFloat
+                (toFloat (List.length completionStatus.completed)
+                    / toFloat totalNumber
+                )
+    in
+    viewModal
+        [ View.Components.loadingLogoWithCustomText shared.translators
+            "community.objectives.editor.completion_text"
+            ""
+        , div [ class "mb-10 mt-6" ]
+            [ span [ class "text-black uppercase font-light text-xs" ]
+                [ text
+                    (shared.translators.tr
+                        "community.objectives.editor.completed_progress"
+                        [ ( "progress", List.length completionStatus.completed |> String.fromInt )
+                        , ( "total", String.fromInt totalNumber )
+                        ]
+                    )
+                ]
+            , div [ class "h-2 relative flex mt-2 bg-gray-900 rounded-full overflow-hidden" ]
+                [ div
+                    [ class "bg-green w-full transition-transform origin-left"
+                    , if List.length completionStatus.completed /= totalNumber then
+                        style "transform" ("scaleX(" ++ progressWidth ++ ")")
+
+                      else
+                        class ""
+                    ]
+                    []
+                ]
+            ]
+        ]
+
+
+viewModal : List (Html Msg) -> Html Msg
+viewModal body =
+    div [ class "fixed inset-0 z-50" ]
+        [ View.Components.bgNoScroll [ class "fixed inset-0 bg-black opacity-50" ]
+            View.Components.PreventScrollAlways
+        , div [ class "fixed top-modal inset-x-4 mx-auto max-w-sm px-8 pt-2 text-center bg-white rounded-lg" ]
+            body
+        ]
 
 
 
@@ -303,46 +382,31 @@ completeObjectiveSelectionSet objectiveId =
         objectiveSelectionSet
 
 
-loadObjectiveForm : Community.Model -> Int -> ObjectiveForm
-loadObjectiveForm community objectiveId =
-    let
-        maybeObjective =
-            List.filterMap
-                (\o ->
-                    if o.id == objectiveId then
-                        Just (ObjectiveForm o.description NotAsked o.isCompleted)
-
-                    else
-                        Nothing
-                )
-                community.objectives
-    in
-    case maybeObjective of
-        [ x ] ->
-            x
-
-        _ ->
-            initObjectiveForm
+loadObjectiveForm : Community.Objective -> ObjectiveForm
+loadObjectiveForm objective =
+    { description = objective.description
+    , isCompleted = objective.isCompleted
+    }
 
 
-updateObjective : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
-updateObjective msg fn uResult =
+updateObjectiveForm : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
+updateObjectiveForm msg fn uResult =
     case uResult.model.status of
-        Authorized (NewObjective objForm) ->
+        Authorized (CreatingObjective objForm Creating) ->
             UR.mapModel
                 (\m ->
                     { m
                         | status =
-                            Authorized (NewObjective (fn objForm))
+                            Authorized (CreatingObjective (fn objForm) Creating)
                     }
                 )
                 uResult
 
-        Authorized (EditObjective objId objForm) ->
+        Authorized (EditingObjective objective objForm Editing) ->
             UR.mapModel
                 (\m ->
                     { m
-                        | status = Authorized (EditObjective objId (fn objForm))
+                        | status = Authorized (EditingObjective objective (fn objForm) Editing)
                     }
                 )
                 uResult
@@ -361,72 +425,220 @@ update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
-                case model.objectiveId of
-                    Just objectiveId ->
-                        if List.any (\o -> o.id == objectiveId) community.objectives then
+                if model.status == Loading then
+                    case model.objectiveId of
+                        Just objectiveId ->
+                            case List.find (\o -> o.id == objectiveId) community.objectives of
+                                Just objective ->
+                                    { model
+                                        | status =
+                                            Editing
+                                                |> EditingObjective objective (loadObjectiveForm objective)
+                                                |> Authorized
+                                    }
+                                        |> UR.init
+
+                                Nothing ->
+                                    { model | status = NotFound }
+                                        |> UR.init
+
+                        Nothing ->
                             { model
                                 | status =
-                                    Authorized
-                                        (EditObjective
-                                            objectiveId
-                                            (loadObjectiveForm community objectiveId)
-                                        )
+                                    Creating
+                                        |> CreatingObjective initObjectiveForm
+                                        |> Authorized
                             }
                                 |> UR.init
 
-                        else
-                            { model | status = NotFound }
-                                |> UR.init
-
-                    Nothing ->
-                        { model | status = Authorized (NewObjective initObjectiveForm) }
-                            |> UR.init
+                else
+                    model |> UR.init
 
             else
                 { model | status = Unauthorized }
                     |> UR.init
 
         ClosedAuthModal ->
-            { model
-                | isMarkAsCompletedConfirmationModalLoading = False
-                , showMarkAsCompletedConfirmationModal = False
-            }
-                |> UR.init
+            case model.status of
+                Authorized (CreatingObjective form SavingCreation) ->
+                    { model | status = Authorized (CreatingObjective form Creating) }
+                        |> UR.init
+
+                Authorized (EditingObjective objective form SavingEdit) ->
+                    { model | status = Authorized (EditingObjective objective form Editing) }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "ImpossibleStatus" ]
 
         EnteredDescription val ->
             UR.init model
-                |> updateObjective msg (\o -> { o | description = val })
+                |> updateObjectiveForm msg (\o -> { o | description = val })
 
         ClickedCompleteObjective ->
-            { model | showMarkAsCompletedConfirmationModal = True }
-                |> UR.init
+            case model.status of
+                Authorized (EditingObjective objective form Editing) ->
+                    { model
+                        | status =
+                            Authorized
+                                (EditingObjective objective form RequestingConfirmation)
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NotEditing" ]
+
+        DeniedCompleteObjective ->
+            case model.status of
+                Authorized (EditingObjective objective form RequestingConfirmation) ->
+                    { model | status = Authorized (EditingObjective objective form Editing) }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NotRequestingConfirmation" ]
 
         AcceptedCompleteObjective ->
             case model.status of
-                Authorized (EditObjective id _) ->
-                    { model | isMarkAsCompletedConfirmationModalLoading = True }
+                Authorized (EditingObjective objective form RequestingConfirmation) ->
+                    let
+                        completionStatus =
+                            { completed = List.filter .isCompleted objective.actions
+                            , left =
+                                List.filter (not << .isCompleted) objective.actions
+                                    |> List.map (\action -> { tries = 0, action = action })
+                            }
+                    in
+                    { model
+                        | status =
+                            completionStatus
+                                |> CompletingActions
+                                |> EditingObjective objective form
+                                |> Authorized
+                    }
                         |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation
-                                loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (completeObjectiveSelectionSet id)
-                                GotCompleteObjectiveResponse
-                            )
-                        |> LoggedIn.withAuthentication loggedIn
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> completeActionOrObjective loggedIn model msg completionStatus objective
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg [ "NotRequestingConfirmation" ]
 
-        DeniedCompleteObjective ->
-            { model | showMarkAsCompletedConfirmationModal = False }
-                |> UR.init
+        GotCompleteActionResponse (Ok _) ->
+            case model.status of
+                Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
+                    case completionStatus.left of
+                        [] ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg [ "NotAction" ]
+
+                        { action } :: left ->
+                            let
+                                newCompletionStatus =
+                                    { completionStatus
+                                        | completed = action :: completionStatus.completed
+                                        , left = left
+                                    }
+                            in
+                            { model
+                                | status =
+                                    newCompletionStatus
+                                        |> CompletingActions
+                                        |> EditingObjective objective form
+                                        |> Authorized
+                            }
+                                |> UR.init
+                                |> completeActionOrObjective loggedIn
+                                    model
+                                    msg
+                                    newCompletionStatus
+                                    objective
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NotCompletingActions" ]
+
+        GotCompleteActionResponse (Err _) ->
+            case model.status of
+                Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
+                    case completionStatus.left of
+                        [] ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg [ "NoAction" ]
+
+                        { tries, action } :: left ->
+                            let
+                                maxRetries =
+                                    2
+                            in
+                            if tries >= maxRetries then
+                                let
+                                    newCompletionStatus =
+                                        { completionStatus
+                                            | completed = action :: completionStatus.completed
+                                            , left = left
+                                        }
+                                in
+                                -- If we can't do it in `maxRetries` tries,
+                                -- consider it completed and log it
+                                { model
+                                    | status =
+                                        newCompletionStatus
+                                            |> CompletingActions
+                                            |> EditingObjective objective form
+                                            |> Authorized
+                                }
+                                    |> UR.init
+                                    |> completeActionOrObjective loggedIn
+                                        model
+                                        msg
+                                        newCompletionStatus
+                                        objective
+                                    |> UR.logContractError msg
+                                        ("Action id "
+                                            ++ String.fromInt action.id
+                                            ++ " could not be completed with objective"
+                                        )
+
+                            else
+                                let
+                                    newCompletionStatus =
+                                        { completionStatus
+                                            | left =
+                                                { tries = tries + 1, action = action }
+                                                    :: left
+                                        }
+                                in
+                                { model
+                                    | status =
+                                        newCompletionStatus
+                                            |> CompletingActions
+                                            |> EditingObjective objective form
+                                            |> Authorized
+                                }
+                                    |> UR.init
+                                    |> completeActionOrObjective loggedIn
+                                        model
+                                        msg
+                                        newCompletionStatus
+                                        objective
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NotCompletingActions" ]
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Objectives)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "community.objectives.editor.completed_success"))
 
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
             UR.init model
@@ -437,96 +649,140 @@ update msg model loggedIn =
             UR.init model
 
         ClickedSaveObjective ->
-            let
-                newModel =
-                    UR.init model
-                        |> updateObjective msg (\o -> { o | save = Saving })
-
-                save form isEdit _ =
-                    case ( loggedIn.selectedCommunity, isEdit ) of
-                        ( RemoteData.Success _, Just objectiveId ) ->
-                            newModel
-                                |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective
-                                    , responseData = Encode.null
-                                    , data =
-                                        Eos.encodeTransaction
-                                            [ { accountName = loggedIn.shared.contracts.community
-                                              , name = "updobjective"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data =
-                                                    { objectiveId = objectiveId
-                                                    , description = form.description
-                                                    , editor = loggedIn.accountName
-                                                    }
-                                                        |> Community.encodeUpdateObjectiveAction
-                                              }
-                                            ]
-                                    }
-
-                        ( RemoteData.Success community, Nothing ) ->
-                            newModel
-                                |> UR.addPort
-                                    { responseAddress = ClickedSaveObjective
-                                    , responseData = Encode.null
-                                    , data =
-                                        Eos.encodeTransaction
-                                            [ { accountName = loggedIn.shared.contracts.community
-                                              , name = "newobjective"
-                                              , authorization =
-                                                    { actor = loggedIn.accountName
-                                                    , permissionName = Eos.samplePermission
-                                                    }
-                                              , data =
-                                                    { asset = Eos.Asset 0 community.symbol
-                                                    , description = form.description
-                                                    , creator = loggedIn.accountName
-                                                    }
-                                                        |> Community.encodeCreateObjectiveAction
-                                              }
-                                            ]
-                                    }
-
-                        _ ->
-                            newModel
-            in
             case ( loggedIn.selectedCommunity, model.status ) of
-                ( RemoteData.Success community, Authorized (NewObjective objForm) ) ->
-                    save objForm Nothing (Eos.getSymbolPrecision community.symbol)
+                ( RemoteData.Success community, Authorized (CreatingObjective objForm _) ) ->
+                    { model | status = Authorized (CreatingObjective objForm SavingCreation) }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedSaveObjective
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "newobjective"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { asset = Eos.Asset 0 community.symbol
+                                            , description = objForm.description
+                                            , creator = loggedIn.accountName
+                                            }
+                                                |> Community.encodeCreateObjectiveAction
+                                      }
+                                    ]
+                            }
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                ( RemoteData.Success community, Authorized (EditObjective objectiveId objForm) ) ->
-                    save objForm (Just objectiveId) (Eos.getSymbolPrecision community.symbol)
+                ( RemoteData.Success _, Authorized (EditingObjective objective objForm _) ) ->
+                    { model | status = Authorized (EditingObjective objective objForm SavingEdit) }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedSaveObjective
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "updobjective"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { objectiveId = objective.id
+                                            , description = objForm.description
+                                            , editor = loggedIn.accountName
+                                            }
+                                                |> Community.encodeUpdateObjectiveAction
+                                      }
+                                    ]
+                            }
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->
-                    newModel
-                        |> UR.logImpossible msg []
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "ImpossibleStatus" ]
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
-                |> updateObjective msg (\o -> { o | save = Saved })
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.objectives.create_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
 
         GotSaveObjectiveResponse (Err v) ->
-            UR.init model
-                |> updateObjective msg (\o -> { o | save = SaveFailed })
+            let
+                newModel =
+                    case model.status of
+                        Authorized (CreatingObjective form SavingCreation) ->
+                            { model
+                                | status =
+                                    Creating
+                                        |> CreatingObjective form
+                                        |> Authorized
+                            }
+                                |> UR.init
+
+                        Authorized (EditingObjective objective form SavingEdit) ->
+                            { model
+                                | status =
+                                    Editing
+                                        |> EditingObjective objective form
+                                        |> Authorized
+                            }
+                                |> UR.init
+
+                        _ ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg [ "ImpossibleStatus" ]
+            in
+            newModel
                 |> UR.logDebugValue msg v
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "errors.unknown"))
 
 
 
 -- UTILS
+
+
+completeActionOrObjective :
+    LoggedIn.Model
+    -> Model
+    -> Msg
+    -> CompletionStatus
+    -> Community.Objective
+    -> (UpdateResult -> UpdateResult)
+completeActionOrObjective loggedIn model msg completionStatus objective =
+    case List.head completionStatus.left of
+        Nothing ->
+            Api.Graphql.mutation
+                loggedIn.shared
+                (Just loggedIn.authToken)
+                (completeObjectiveSelectionSet objective.id)
+                GotCompleteObjectiveResponse
+                |> UR.addCmd
+
+        Just { action } ->
+            UR.addPort
+                ({ action | isCompleted = True }
+                    |> Action.updateAction loggedIn.accountName loggedIn.shared
+                    |> (\completedAction ->
+                            { responseAddress = AcceptedCompleteObjective
+                            , responseData = Encode.int action.id
+                            , data = Eos.encodeTransaction [ completedAction ]
+                            }
+                       )
+                )
+                >> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -554,6 +810,19 @@ jsAddressToMsg addr val =
                 |> Result.map (Just << GotSaveObjectiveResponse)
                 |> Result.withDefault Nothing
 
+        "AcceptedCompleteObjective" :: [] ->
+            val
+                |> Decode.decodeValue
+                    (Decode.oneOf
+                        [ Decode.field "transactionId" Decode.string
+                            |> Decode.map Ok
+                        , Decode.field "addressData" Decode.int
+                            |> Decode.map Err
+                        ]
+                    )
+                |> Result.map GotCompleteActionResponse
+                |> Result.toMaybe
+
         _ ->
             Nothing
 
@@ -576,11 +845,14 @@ msgToString msg =
         ClickedCompleteObjective ->
             [ "ClickedCompleteObjective" ]
 
+        DeniedCompleteObjective ->
+            [ "DeniedCompleteObjective" ]
+
         AcceptedCompleteObjective ->
             [ "AcceptedCompleteObjective" ]
 
-        DeniedCompleteObjective ->
-            [ "DeniedCompleteObjective" ]
+        GotCompleteActionResponse r ->
+            [ "GotCompleteActionResponse", UR.resultToString r ]
 
         GotCompleteObjectiveResponse r ->
             [ "GotCompleteObjectiveResponse", UR.remoteDataToString r ]
