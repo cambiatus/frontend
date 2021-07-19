@@ -4,7 +4,6 @@ module Page.Shop.Viewer exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , receiveGuestBroadcast
     , update
     , view
     )
@@ -64,8 +63,10 @@ init session saleId =
 
         Page.Guest guest ->
             ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
-            , Guest.maybeInitWith (\_ -> CompletedLoadCommunityPreview) .community guest
-                |> Cmd.map AsGuestMsg
+            , Api.Graphql.query guest.shared
+                Nothing
+                (Shop.productPreviewQuery saleId)
+                (CompletedSalePreviewLoad >> AsGuestMsg)
             )
 
 
@@ -80,7 +81,7 @@ type Model
 
 type alias GuestModel =
     { saleId : Int
-    , productPreview : RemoteData (Graphql.Http.Error (Maybe ProductPreview)) ProductPreview
+    , productPreview : RemoteData (Graphql.Http.Error ProductPreview) ProductPreview
     }
 
 
@@ -145,8 +146,7 @@ type Msg
 
 
 type GuestMsg
-    = CompletedLoadCommunityPreview
-    | CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error (Maybe ProductPreview)) (Maybe ProductPreview))
+    = CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error ProductPreview) ProductPreview)
 
 
 type LoggedInMsg
@@ -194,34 +194,11 @@ update msg model session =
 
 
 updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
-updateAsGuest msg model guest =
+updateAsGuest msg model _ =
     case msg of
-        CompletedLoadCommunityPreview ->
-            -- This is so we can display the community's logo on preview links
-            model
+        CompletedSalePreviewLoad (RemoteData.Success productPreview) ->
+            { model | productPreview = RemoteData.Success productPreview }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query guest.shared
-                        Nothing
-                        (Shop.productPreviewQuery model.saleId)
-                        CompletedSalePreviewLoad
-                    )
-
-        CompletedSalePreviewLoad (RemoteData.Success (Just productPreview)) ->
-            case guest.community of
-                RemoteData.Success _ ->
-                    { model | productPreview = RemoteData.Success productPreview }
-                        |> UR.init
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg [ "NoCommunity" ]
-
-        CompletedSalePreviewLoad (RemoteData.Success Nothing) ->
-            model
-                |> UR.init
-                |> UR.logImpossible msg [ "NoSaleFound" ]
 
         CompletedSalePreviewLoad (RemoteData.Failure err) ->
             { model | productPreview = RemoteData.Failure err }
@@ -459,7 +436,7 @@ view session model =
                             shopTitle
 
         contentContainer children =
-            div [ class "container mx-auto" ]
+            div [ class "container mx-auto h-full flex items-center" ]
                 [ div [ class "flex flex-wrap" ]
                     children
                 ]
@@ -657,7 +634,11 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
 viewGuestButton : Shared -> ProductPreview -> Html msg
 viewGuestButton { translators } sale =
     a
-        [ Route.href (Route.Register Nothing (Just (Route.ViewSale sale.id)))
+        [ Route.href
+            (Route.ViewSale sale.id
+                |> Just
+                |> Route.Join
+            )
         , class "button button-primary"
         ]
         [ text <| translators.t "shop.buy" ]
@@ -905,13 +886,6 @@ isFormValid form =
 -- UTILS
 
 
-receiveGuestBroadcast : Guest.BroadcastMsg -> Maybe Msg
-receiveGuestBroadcast (Guest.CommunityLoaded _) =
-    CompletedLoadCommunityPreview
-        |> AsGuestMsg
-        |> Just
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -925,9 +899,6 @@ msgToString msg =
 guestMsgToString : GuestMsg -> List String
 guestMsgToString msg =
     case msg of
-        CompletedLoadCommunityPreview ->
-            [ "CompletedLoadCommunityPreview" ]
-
         CompletedSalePreviewLoad r ->
             [ "CompletedSalePreviewLoad", UR.remoteDataToString r ]
 

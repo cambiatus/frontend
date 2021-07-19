@@ -161,7 +161,7 @@ productQuery saleId =
     Query.product { id = saleId } productSelection
 
 
-productPreviewQuery : Int -> SelectionSet (Maybe ProductPreview) RootQuery
+productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
 productPreviewQuery productId =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
