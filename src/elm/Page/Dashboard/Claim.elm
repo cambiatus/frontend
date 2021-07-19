@@ -281,9 +281,22 @@ viewDetails { shared } model claim =
 
         isRejected =
             claim.status == Claim.Rejected
+
+        completionStatus =
+            { approved =
+                List.filter .isApproved claim.checks
+                    |> List.length
+            , disapproved =
+                List.filter (not << .isApproved) claim.checks
+                    |> List.length
+            , verifications =
+                claim.action.verifications
+            , claimStatus = claim.status
+            }
     in
     div []
-        [ div [ class "mb-8" ]
+        [ Claim.viewVotingProgress shared completionStatus
+        , div [ class "mb-8" ]
             [ p
                 [ class "text-caption uppercase text-green" ]
                 [ text_ "claim.action" ]

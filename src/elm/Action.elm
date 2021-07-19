@@ -35,7 +35,6 @@ import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Ports
