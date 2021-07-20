@@ -836,7 +836,7 @@
     "error": "Algo deu errado ao carregar ações",
     "tabs": {
       "waiting_vote": "Esperando voto",
-      "analyzed": "Analizadas"
+      "analyzed": "Analisadas"
     },
     "filter": {
       "title": "Filtros",
@@ -868,7 +868,13 @@
     },
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
+    "day_ago": "Aberto {{day_count}} dia atrás",
+    "days_ago": "Aberto {{day_count}} dias atrás",
+    "vote": "voto",
+    "votes": "votos",
     "pending": "Pendente",
+    "disapproved": "Reprovado",
+    "approved": "Aprovado",
     "disapproved_by": "Reprovado por",
     "pending_vote": "Votação Pendente",
     "approved_by": "Aprovado por",
