@@ -246,7 +246,7 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.logJsonValue msg
                     (Just accName)
                     "Got an error when claiming an action"
-                    { moduleName = "Auth", function = "update" }
+                    { moduleName = "Action", function = "update" }
                     []
                     val
 

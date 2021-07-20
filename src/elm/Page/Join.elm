@@ -157,7 +157,7 @@ update session msg model =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when trying to sign in"
-                    { moduleName = "Join", function = "update" }
+                    { moduleName = "Page.Join", function = "update" }
                     []
                     error
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "auth.failed"))

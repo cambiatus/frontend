@@ -446,7 +446,7 @@ updateWithPassphrase msg model { shared } =
                     { username = Nothing
                     , message = "Clipboard API not supported"
                     , tags = [ Log.TypeTag Log.UnsupportedFeature ]
-                    , location = { moduleName = "Page.LoggedIn", function = "updateWithPassphrase" }
+                    , location = { moduleName = "Page.Login", function = "updateWithPassphrase" }
                     , contexts = []
                     , transaction = msg
                     , level = Log.Warning
@@ -464,7 +464,7 @@ updateWithPassphrase msg model { shared } =
                     { username = Nothing
                     , message = "Got error when pasting from clipboard"
                     , tags = [ Log.TypeTag Log.UnknownError ]
-                    , location = { moduleName = "Page.LoggedIn", function = "updateWithPassphrase" }
+                    , location = { moduleName = "Page.Login", function = "updateWithPassphrase" }
                     , contexts =
                         [ { name = "Error"
                           , extras = Dict.fromList [ ( "message", Encode.string error ) ]

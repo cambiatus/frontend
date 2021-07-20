@@ -93,7 +93,7 @@ init flagsValue url navKey =
                         |> UR.logDecodingError Ignored
                             Nothing
                             "Could not decode flags"
-                            { moduleName = "Main", function = "update" }
+                            { moduleName = "Main", function = "init" }
                             []
                             e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString

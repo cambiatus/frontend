@@ -426,7 +426,7 @@ update msg model loggedIn =
                 |> UR.logHttpError msg
                     (Just loggedIn.accountName)
                     "Got an error when uploading avatar"
-                    { moduleName = "Page.profile.Editor", function = "update" }
+                    { moduleName = "Page.Profile.Editor", function = "update" }
                     []
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))

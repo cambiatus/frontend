@@ -9,6 +9,12 @@ To add packages that contain rules, add them to this review project using
 
 when inside the directory containing this file.
 
+If you want to create a new rule, just run
+
+    `elm-review new-rule`
+
+inside the `review` directory.
+
 -}
 
 import NoBooleanCase
@@ -16,6 +22,7 @@ import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoExposingEverything
 import NoFunctionOutsideOfModules
+import NoInconsistentEventLocation
 import NoInconsistentJsAddressToMsg
 import NoInconsistentMsgToString
 import NoLeftPizza
@@ -56,6 +63,7 @@ config =
     , NoRedundantConcat.rule
     , NoInconsistentMsgToString.rule
     , NoInconsistentJsAddressToMsg.rule
+    , NoInconsistentEventLocation.rule
     , NoRedundantCons.rule
     , NoFunctionOutsideOfModules.rule
         [ ( [ "Html.input" ]
