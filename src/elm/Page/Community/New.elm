@@ -27,6 +27,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -797,6 +798,19 @@ update msg model loggedIn =
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Checked that domain is available"
+                            , data =
+                                Dict.fromList
+                                    [ ( "domain"
+                                      , Route.communityFullDomain loggedIn.shared model.subdomain
+                                            |> Encode.string
+                                      )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 Err withError ->
                     UR.init withError
@@ -808,6 +822,19 @@ update msg model loggedIn =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (loggedIn.shared.translators.t "settings.community_info.errors.url.already_taken")
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Tried domain that is unavailable"
+                    , data =
+                        Dict.fromList
+                            [ ( "domain"
+                              , Route.communityFullDomain loggedIn.shared model.subdomain
+                                    |> Encode.string
+                              )
+                            ]
+                    , level = Log.DebugLevel
+                    }
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             { model | isDisabled = False }

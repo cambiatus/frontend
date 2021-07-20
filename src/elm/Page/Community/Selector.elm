@@ -27,7 +27,6 @@ init maybeRedirect _ =
 
 
 
--- UPDATE
 -- VIEW
 
 

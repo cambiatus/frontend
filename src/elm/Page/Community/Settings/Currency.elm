@@ -10,6 +10,7 @@ module Page.Community.Settings.Currency exposing
     )
 
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Html exposing (Html, br, button, div, form, span, text)
@@ -159,6 +160,13 @@ update msg model ({ shared } as loggedIn) =
                                         (shared.translators.t "community.create.success")
                                     )
                                 >> UR.addCmd (Route.pushUrl shared.navKey Route.CommunitySettings)
+                                >> UR.addBreadcrumb
+                                    { type_ = Log.DebugBreadcrumb
+                                    , category = msg
+                                    , message = "Submitted Currency page"
+                                    , data = Dict.empty
+                                    , level = Log.DebugLevel
+                                    }
 
                         _ ->
                             UR.logImpossible msg

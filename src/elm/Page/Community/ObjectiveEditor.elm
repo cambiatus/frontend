@@ -679,6 +679,17 @@ update msg model loggedIn =
                                         newCompletionStatus
                                         objective
                                         (UR.addPort (completeAction loggedIn action))
+                                    |> UR.addBreadcrumb
+                                        { type_ = Log.ErrorBreadcrumb
+                                        , category = msg
+                                        , message = "Failed to complete action"
+                                        , data =
+                                            Dict.fromList
+                                                [ ( "currentRetries", Encode.int currentRetries )
+                                                , ( "actionId", Encode.int action.id )
+                                                ]
+                                        , level = Log.Warning
+                                        }
 
                 _ ->
                     model

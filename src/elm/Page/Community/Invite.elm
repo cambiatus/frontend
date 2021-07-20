@@ -11,6 +11,7 @@ module Page.Community.Invite exposing
 import Api.Graphql
 import Auth exposing (SignInResponse)
 import Community exposing (Invite)
+import Dict
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
@@ -414,6 +415,13 @@ update session msg model =
                         JoinConfirmation
             in
             UR.init { model | pageStatus = newPageStatus invite }
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Completed loading invite"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
@@ -449,12 +457,23 @@ update session msg model =
                 |> UR.init
 
         InvitationRejected ->
+            let
+                addBreadcrumb =
+                    UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Rejected invitation"
+                        , data = Dict.empty
+                        , level = Log.DebugLevel
+                        }
+            in
             case session of
                 LoggedIn loggedIn ->
                     model
                         |> UR.init
                         |> UR.addCmd
                             (Route.Dashboard |> Route.replaceUrl loggedIn.shared.navKey)
+                        |> addBreadcrumb
 
                 Guest guest ->
                     model
@@ -463,6 +482,7 @@ update session msg model =
                             (Route.Register Nothing Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+                        |> addBreadcrumb
 
         InvitationAccepted invitationId invite ->
             let
@@ -490,6 +510,15 @@ update session msg model =
                 allowedToJoinCommunity =
                     (invite.community.hasKyc && areUserKycFieldsFilled)
                         || not invite.community.hasKyc
+
+                addBreadcrumb =
+                    UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Accepted invitation"
+                        , data = Dict.empty
+                        , level = Log.DebugLevel
+                        }
             in
             case session of
                 LoggedIn ({ shared, accountName } as loggedIn) ->
@@ -502,10 +531,12 @@ update session msg model =
                                     (Auth.signIn accountName shared (Just model.invitationId))
                                     (CompletedSignIn loggedIn)
                                 )
+                            |> addBreadcrumb
 
                     else
                         { model | pageStatus = KycInfo invite }
                             |> UR.init
+                            |> addBreadcrumb
 
                 Guest guest ->
                     model
@@ -514,6 +545,7 @@ update session msg model =
                             (Route.Register (Just invitationId) Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+                        |> addBreadcrumb
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
             case getInvite model of
@@ -547,6 +579,13 @@ update session msg model =
                         |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                         |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
                         |> UR.addCmd (Route.pushUrl navKey redirectRoute)
+                        |> UR.addBreadcrumb
+                            { type_ = Log.InfoBreadcrumb
+                            , category = msg
+                            , message = "Signed in"
+                            , data = Dict.empty
+                            , level = Log.Info
+                            }
 
                 Nothing ->
                     model

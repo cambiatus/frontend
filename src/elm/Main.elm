@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Dict
 import Eos.Account
 import Flags
 import Html exposing (Html, text)
@@ -77,6 +78,13 @@ init flagsValue url navKey =
                 Ok flags ->
                     Page.init flags navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = Ignored
+                            , message = "Started elm app with flags being decoded"
+                            , data = Dict.empty
+                            , level = Log.DebugLevel
+                            }
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
                 Err e ->
@@ -705,6 +713,13 @@ updateGuestUResult toStatus toMsg model uResult =
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
+                                :: Log.addBreadcrumb msgToString
+                                    { type_ = Log.InfoBreadcrumb
+                                    , category = Ignored
+                                    , message = "Guest logged in"
+                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                                    , level = Log.Info
+                                    }
                                 :: cmds_
                             )
 

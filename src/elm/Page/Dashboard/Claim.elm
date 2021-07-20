@@ -4,6 +4,7 @@ import Action
 import Api.Graphql
 import Cambiatus.Query
 import Claim
+import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -14,6 +15,7 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile
 import Profile.Summary
@@ -557,6 +559,17 @@ update msg model loggedIn =
                                       , data = Claim.encodeVerification claimId loggedIn.accountName vote
                                       }
                                     ]
+                            }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.QueryBreadcrumb
+                            , category = msg
+                            , message = "Requested to vote on claim"
+                            , data =
+                                Dict.fromList
+                                    [ ( "claimId", Encode.int claimId )
+                                    , ( "vote", Encode.bool vote )
+                                    ]
+                            , level = Log.Info
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model

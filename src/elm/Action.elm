@@ -39,7 +39,6 @@ import Icons
 import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Log
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)

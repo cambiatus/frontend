@@ -9,7 +9,9 @@ import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Icons
+import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile.Summary
 import RemoteData
@@ -383,6 +385,13 @@ update msg model loggedIn =
             if model.openObjective == Just index then
                 { model | openObjective = Nothing, profileSummaries = Dict.empty }
                     |> UR.init
+                    |> UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Closed objective"
+                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , level = Log.DebugLevel
+                        }
 
             else
                 { model
@@ -404,6 +413,13 @@ update msg model loggedIn =
                             |> Dict.fromList
                 }
                     |> UR.init
+                    |> UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Closed objective"
+                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , level = Log.DebugLevel
+                        }
 
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model

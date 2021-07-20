@@ -1144,6 +1144,13 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Saved action"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         GotSaveAction (Err val) ->
             let

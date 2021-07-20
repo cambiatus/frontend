@@ -16,7 +16,6 @@ import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
-import Log
 import Page
 import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm

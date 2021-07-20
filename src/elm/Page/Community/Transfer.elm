@@ -10,6 +10,7 @@ module Page.Community.Transfer exposing
     )
 
 import Community
+import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -551,9 +552,25 @@ update msg model ({ shared } as loggedIn) =
 
         GotTransferResult (Ok _) ->
             case model.transferStatus of
-                SendingTransfer _ ->
+                SendingTransfer form ->
                     model
                         |> UR.init
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Transferred to another user"
+                            , data =
+                                Dict.fromList
+                                    [ ( "to"
+                                      , Maybe.map .account form.selectedProfile
+                                            |> Maybe.withDefault (Eos.stringToName "")
+                                            |> Eos.encodeName
+                                      )
+                                    , ( "from", Eos.encodeName loggedIn.accountName )
+                                    , ( "amount", Encode.string form.amount )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 _ ->
                     onlyLogImpossible "Got successful transfer result, but wasn't sending transfer"

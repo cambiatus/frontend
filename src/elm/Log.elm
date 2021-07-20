@@ -77,7 +77,6 @@ type EventType
     | DecodingError
     | HttpErrorType
     | GraphqlErrorType
-    | ContractError
     | UnknownError
     | JsonValue
     | UnsupportedFeature
@@ -336,7 +335,7 @@ fromGraphqlHttpError transaction maybeUser description location contexts error =
 
 {-| Creates an Event out of an encoded Json value.
 -}
-fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Decode.Value -> Event msg
+fromJsonValue : msg -> Maybe Eos.Account.Name -> String -> Location -> List Context -> Value -> Event msg
 fromJsonValue transaction maybeUser message location contexts value =
     { username = maybeUser
     , message = message
@@ -641,9 +640,6 @@ encodeTag tag =
 
                         GraphqlErrorType ->
                             "graphql error"
-
-                        ContractError ->
-                            "contract error"
 
                         UnknownError ->
                             "unknown error"

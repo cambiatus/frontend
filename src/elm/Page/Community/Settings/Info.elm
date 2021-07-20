@@ -203,6 +203,13 @@ update msg model ({ shared } as loggedIn) =
         CompletedCoverPhotoUpload (Ok url) ->
             { model | coverPhoto = RemoteData.Success url }
                 |> UR.init
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Added cover photo"
+                    , data = Dict.fromList [ ( "url", Encode.string url ) ]
+                    , level = Log.DebugLevel
+                    }
 
         CompletedCoverPhotoUpload (Err e) ->
             { model | coverPhoto = RemoteData.Failure e }
@@ -399,9 +406,27 @@ update msg model ({ shared } as loggedIn) =
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Checked that domain is available"
+                            , data =
+                                Dict.fromList
+                                    [ ( "domain"
+                                      , Route.communityFullDomain shared model.subdomainInput
+                                            |> Encode.string
+                                      )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg
+                            "Model is not valid or community is not loaded when checking if domain is available in Community Info"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Info", function = "update" }
+                            []
 
         GotDomainAvailableResponse (RemoteData.Success False) ->
             { model | isLoading = False }
@@ -410,6 +435,19 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.url.already_taken")
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Tried domain that is unavailable"
+                    , data =
+                        Dict.fromList
+                            [ ( "domain"
+                              , Route.communityFullDomain shared model.subdomainInput
+                                    |> Encode.string
+                              )
+                            ]
+                    , level = Log.DebugLevel
+                    }
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             UR.init { model | isLoading = False }
@@ -521,6 +559,13 @@ update msg model ({ shared } as loggedIn) =
                                     }
                                     |> LoggedIn.ExternalBroadcast
                                 )
+                            |> UR.addBreadcrumb
+                                { type_ = Log.DebugBreadcrumb
+                                , category = msg
+                                , message = "Saved community information"
+                                , data = Dict.empty
+                                , level = Log.DebugLevel
+                                }
 
                     _ ->
                         model

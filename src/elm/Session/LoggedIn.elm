@@ -32,6 +32,7 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Graphql.Document
@@ -958,6 +959,13 @@ update msg model =
         ClickedTryAgainTranslation ->
             UR.init { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
+                |> UR.addBreadcrumb
+                    { type_ = Log.ErrorBreadcrumb
+                    , category = msg
+                    , message = "Clicked to fetch translation again"
+                    , data = Dict.empty
+                    , level = Log.Warning
+                    }
 
         CompletedLoadProfile (RemoteData.Success profile_) ->
             let
@@ -978,6 +986,13 @@ update msg model =
                                     [ ( "name", Encode.string "subscribeToUnreadCount" )
                                     , ( "subscription", Encode.string subscriptionDoc )
                                     ]
+                            }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DefaultBreadcrumb
+                            , category = msg
+                            , message = "User profile successfully loaded"
+                            , data = Dict.fromList [ ( "username", Eos.encodeName p.account ) ]
+                            , level = Log.Info
                             }
 
                 Nothing ->
@@ -1016,6 +1031,17 @@ update msg model =
             UR.init newModel
                 |> UR.addCmd cmd
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DefaultBreadcrumb
+                    , category = msg
+                    , message = "Community successfully loaded"
+                    , data =
+                        Dict.fromList
+                            [ ( "symbol", Eos.encodeSymbol community.symbol )
+                            , ( "name", Encode.string community.name )
+                            ]
+                    , level = Log.Info
+                    }
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
             UR.init model
@@ -1118,6 +1144,13 @@ update msg model =
                                         )
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
+                                    |> UR.addBreadcrumb
+                                        { type_ = Log.DefaultBreadcrumb
+                                        , category = msg
+                                        , message = "Successfully authenticated user through PIN"
+                                        , data = Dict.fromList [ ( "username", Eos.encodeName user.account ) ]
+                                        , level = Log.Info
+                                        }
                     )
 
         CompletedLoadUnread payload ->

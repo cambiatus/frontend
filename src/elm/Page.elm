@@ -23,6 +23,7 @@ module Page exposing
 
 import Auth
 import Browser.Navigation as Nav
+import Dict
 import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
@@ -65,6 +66,13 @@ init flags navKey url =
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with loggedIn user"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         ( Just ( accountName, _ ), Nothing ) ->
             let
@@ -76,6 +84,13 @@ init flags navKey url =
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
                 |> UR.addCmd signedInCmd
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with guest logging in"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         ( Nothing, _ ) ->
             let
@@ -85,6 +100,13 @@ init flags navKey url =
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with regular guest user"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
 
 fetchTranslations : Shared -> String -> Cmd Msg
@@ -222,7 +244,8 @@ type ExternalMsg
 
 
 type Msg
-    = CompletedLoadTranslation String (Result Http.Error Translations)
+    = Ignored
+    | CompletedLoadTranslation String (Result Http.Error Translations)
     | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
@@ -231,6 +254,9 @@ type Msg
 update : Msg -> Session -> UpdateResult
 update msg session =
     case ( msg, session ) of
+        ( Ignored, _ ) ->
+            UR.init session
+
         ( CompletedLoadTranslation lang (Ok transl), _ ) ->
             Shared.loadTranslation (Ok ( lang, transl ))
                 |> updateShared session
@@ -282,6 +308,13 @@ update msg session =
                         |> Maybe.withDefault Route.Dashboard
                         |> Route.replaceUrl shared.navKey
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "User logged in"
+                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                    , level = Log.Info
+                    }
 
         ( SignedIn (RemoteData.Failure error), Guest guest ) ->
             UR.init session
@@ -369,6 +402,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
 
