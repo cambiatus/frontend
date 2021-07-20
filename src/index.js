@@ -261,7 +261,14 @@ const config = configuration[env]
 // automatically
 Sentry.init({
   dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
-  environment: env
+  environment: env,
+  beforeBreadcrumb (breadcrumb, hint) {
+    // We have a limited amount of breadcrumbs, and these aren't super useful
+    // to us, so we just don't include them
+    const unusedCategories = ['ui.click', 'ui.input']
+
+    return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
+  }
 })
 
 /** On production, adds a breadcrumb to sentry. Needs an object like this:
@@ -323,12 +330,12 @@ const logEvent = (event) => {
 
     Sentry.withScope((scope) => {
       if (user !== null) {
-        scope.setUser(user)
+        scope.setUser({ username: user })
       }
       // If the error comes from Elm, this key will be overwritten
       scope.setTag('cambiatus.language', 'javascript')
       scope.setTags(tags)
-      scope.setTransactionName(transaction)
+      scope.setTransaction(transaction)
       contexts.forEach((context) => { scope.setContext(context.name, context.extras) })
       scope.setLevel(level)
 
@@ -637,7 +644,6 @@ function logout () {
     localData: {},
     level: 'info'
   })
-  Sentry.configureScope((scope) => scope.setUser(null))
 }
 
 function downloadPdf (accountName, passphrase) {
@@ -792,17 +798,6 @@ async function handleJavascriptPort (arg) {
               category: 'login',
               message: 'Saved credentials to EOS',
               data: {},
-              localData: {},
-              level: 'debug'
-            })
-
-            // Configure Sentry logged user
-            Sentry.setUser({ username: accountName })
-            addBreadcrumb({
-              type: 'debug',
-              category: 'login',
-              message: 'Set Sentry user',
-              data: {},
               localData: { accountName },
               level: 'debug'
             })
@@ -870,11 +865,10 @@ async function handleJavascriptPort (arg) {
           })
 
           // Configure Sentry logged user
-          Sentry.setUser({ username: user.accountName })
           addBreadcrumb({
             type: 'info',
             category: 'getPrivateKey',
-            message: 'Logged user with PIN and set Sentry user',
+            message: 'Logged user with PIN',
             data: { accountName: user.accountName },
             localData: {},
             level: 'info'
