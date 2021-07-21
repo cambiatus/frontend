@@ -537,7 +537,7 @@ viewOffers translators symbol offers =
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
                 [ div
                     [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
-                    , onClick (FoundItemClicked (Route.ViewSale (String.fromInt offer.id)))
+                    , onClick (FoundItemClicked (Route.ViewSale offer.id))
                     ]
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
