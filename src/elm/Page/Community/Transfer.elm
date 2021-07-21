@@ -9,6 +9,7 @@ module Page.Community.Transfer exposing
     , view
     )
 
+import Api
 import Community
 import Dict
 import Eos exposing (Symbol)
@@ -18,6 +19,7 @@ import Graphql.Document
 import Html exposing (Html, button, div, form, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, rows, type_, value)
 import Html.Events exposing (onSubmit)
+import Http
 import I18Next
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -25,11 +27,12 @@ import List.Extra as LE
 import Log
 import Page
 import Profile
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared
+import Session.Shared as Shared exposing (Shared)
+import Token
 import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -51,7 +54,19 @@ type alias Model =
     { maybeTo : Maybe String
     , transferStatus : TransferStatus
     , autoCompleteState : Select.State
+    , balance : RemoteData BalanceError Community.Balance
+    , token : RemoteData Http.Error Token.Model
     }
+
+
+type BalanceError
+    = BalanceNotFound
+    | WithHttpError Http.Error
+
+
+type MaxAmountError
+    = TokenError Http.Error
+    | BalanceError BalanceError
 
 
 initModel : Maybe String -> Model
@@ -59,6 +74,8 @@ initModel maybeTo =
     { maybeTo = maybeTo
     , transferStatus = EditingTransfer emptyForm
     , autoCompleteState = Select.newState ""
+    , balance = RemoteData.Loading
+    , token = RemoteData.Loading
     }
 
 
@@ -124,8 +141,8 @@ validateSelectedProfile currentAccount form =
     }
 
 
-validateAmount : Symbol -> Form -> Form
-validateAmount symbol form =
+validateAmount : Symbol -> RemoteData MaxAmountError Float -> Form -> Form
+validateAmount symbol maxAmountStatus form =
     let
         symbolPrecision =
             Eos.getSymbolPrecision symbol
@@ -135,6 +152,9 @@ validateAmount symbol form =
                 |> LE.dropWhile (\c -> c /= '.')
                 |> List.drop 1
                 |> List.length
+
+        maxAmount =
+            RemoteData.withDefault 0 maxAmountStatus
     in
     { form
         | amountValidation =
@@ -145,7 +165,21 @@ validateAmount symbol form =
                 String.all (validAmountCharacter symbol) form.amount
                     && (String.length form.amount > 0)
             then
-                Valid
+                case String.toFloat form.amount of
+                    Nothing ->
+                        Invalid "transfer.no_amount" Nothing
+
+                    Just amount ->
+                        if amount > maxAmount then
+                            Invalid "transfer.too_much"
+                                (Just
+                                    [ ( "token", Eos.symbolToSymbolCodeString symbol )
+                                    , ( "max_asset", Eos.assetToString { amount = maxAmount, symbol = symbol } )
+                                    ]
+                                )
+
+                        else
+                            Valid
 
             else
                 Invalid "transfer.no_amount" Nothing
@@ -164,11 +198,11 @@ validateMemo form =
     }
 
 
-validateForm : Eos.Name -> Symbol -> Form -> Form
-validateForm currentAccount symbol form =
+validateForm : Eos.Name -> RemoteData MaxAmountError Float -> Symbol -> Form -> Form
+validateForm currentAccount maxAmount symbol form =
     form
         |> validateSelectedProfile currentAccount
-        |> validateAmount symbol
+        |> validateAmount symbol maxAmount
         |> validateMemo
 
 
@@ -192,23 +226,44 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view ({ shared } as loggedIn) model =
     let
         content =
-            case ( loggedIn.selectedCommunity, model.transferStatus ) of
-                ( RemoteData.NotAsked, _ ) ->
+            case ( loggedIn.selectedCommunity, model.transferStatus, maxTransferAmount model ) of
+                ( RemoteData.NotAsked, _, _ ) ->
                     Page.fullPageLoading shared
 
-                ( RemoteData.Loading, _ ) ->
+                ( RemoteData.Loading, _, _ ) ->
                     Page.fullPageLoading shared
 
-                ( RemoteData.Failure e, _ ) ->
+                ( _, _, RemoteData.NotAsked ) ->
+                    Page.fullPageLoading shared
+
+                ( _, _, RemoteData.Loading ) ->
+                    Page.fullPageLoading shared
+
+                ( RemoteData.Failure e, _, _ ) ->
                     Page.fullPageGraphQLError (shared.translators.t "community.objectives.title_plural") e
 
-                ( RemoteData.Success community, EditingTransfer f ) ->
+                ( _, _, RemoteData.Failure e ) ->
+                    let
+                        httpError =
+                            case e of
+                                TokenError error ->
+                                    error
+
+                                BalanceError (WithHttpError error) ->
+                                    error
+
+                                BalanceError BalanceNotFound ->
+                                    Http.Timeout
+                    in
+                    Page.fullPageError (shared.translators.t "community.objectives.title_plural") httpError
+
+                ( RemoteData.Success community, EditingTransfer f, RemoteData.Success _ ) ->
                     viewForm loggedIn model f community False
 
-                ( RemoteData.Success community, CreatingSubscription f ) ->
+                ( RemoteData.Success community, CreatingSubscription f, RemoteData.Success _ ) ->
                     viewForm loggedIn model f community True
 
-                ( RemoteData.Success community, SendingTransfer f ) ->
+                ( RemoteData.Success community, SendingTransfer f, RemoteData.Success _ ) ->
                     viewForm loggedIn model f community True
     in
     { title = shared.translators.t "transfer.title"
@@ -221,6 +276,11 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
     let
         text_ s =
             text (loggedIn.shared.translators.t s)
+
+        currBalance =
+            model.balance
+                |> RemoteData.map .asset
+                |> RemoteData.withDefault { amount = 0, symbol = community.symbol }
     in
     div [ class "bg-white" ]
         [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
@@ -246,8 +306,15 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         |> Maybe.map List.singleton
                 , translators = shared.translators
                 }
+                |> Input.withContainerAttrs [ class "mb-4" ]
                 |> Input.withCurrency community.symbol
                 |> Input.toHtml
+            , div [ class "bg-gray-100 uppercase text-xs px-2 inline-block mb-10" ]
+                [ text
+                    (shared.translators.tr "account.my_wallet.your_current_balance"
+                        [ ( "balance", Eos.assetToString currBalance ) ]
+                    )
+                ]
             , Input.init
                 { label = shared.translators.t "account.my_wallet.transfer.memo"
                 , id = "transfer-memo-field"
@@ -341,6 +408,8 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | CompletedLoadBalance (Result Http.Error (Maybe Community.Balance))
+    | CompletedLoadToken (Result Http.Error Token.Model)
     | ClosedAuthModal
     | OnSelect (Maybe Profile.Minimal)
     | SelectMsg (Select.Msg Profile.Minimal)
@@ -386,6 +455,52 @@ update msg model ({ shared } as loggedIn) =
     case msg of
         CompletedLoadCommunity community ->
             UR.init { model | transferStatus = getProfile model.maybeTo community }
+                |> UR.addCmd (fetchBalance shared loggedIn.accountName community)
+                |> UR.addCmd (Token.getToken shared community.symbol CompletedLoadToken)
+
+        CompletedLoadBalance (Ok (Just balance)) ->
+            { model | balance = RemoteData.Success balance }
+                |> UR.init
+
+        CompletedLoadBalance (Ok Nothing) ->
+            { model | balance = RemoteData.Failure BalanceNotFound }
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Couldn't find balance related to community on transfer page"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Transfer", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+
+        CompletedLoadBalance (Err httpError) ->
+            { model | balance = RemoteData.Failure (WithHttpError httpError) }
+                |> UR.init
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading balance on the transfer page"
+                    { moduleName = "Page.Community.Transfer", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
+
+        CompletedLoadToken (Ok token) ->
+            { model | token = RemoteData.Success token }
+                |> UR.init
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "Completed loading token on transfer page"
+                    , data = Dict.empty
+                    , level = Log.Info
+                    }
+
+        CompletedLoadToken (Err httpError) ->
+            { model | token = RemoteData.Failure httpError }
+                |> UR.init
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading token on the transfer page"
+                    { moduleName = "Page.Community.Transfer", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
 
         ClosedAuthModal ->
             let
@@ -438,6 +553,7 @@ update msg model ({ shared } as loggedIn) =
                             EditingTransfer
                                 ({ form | amount = getNumericValues value }
                                     |> validateAmount selectedCommunity.symbol
+                                        (maxTransferAmount model)
                                 )
                     }
                         |> UR.init
@@ -468,6 +584,7 @@ update msg model ({ shared } as loggedIn) =
                             let
                                 newForm =
                                     validateForm loggedIn.accountName
+                                        (maxTransferAmount model)
                                         community.symbol
                                         form
 
@@ -498,6 +615,7 @@ update msg model ({ shared } as loggedIn) =
                                 | transferStatus =
                                     EditingTransfer
                                         (validateForm loggedIn.accountName
+                                            (maxTransferAmount model)
                                             community.symbol
                                             form
                                         )
@@ -640,6 +758,25 @@ update msg model ({ shared } as loggedIn) =
                             []
 
 
+fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
+fetchBalance shared accountName community =
+    Api.getBalances shared
+        accountName
+        (Result.map
+            (\balances ->
+                LE.find (.asset >> .symbol >> (==) community.symbol) balances
+            )
+            >> CompletedLoadBalance
+        )
+
+
+maxTransferAmount : Model -> RemoteData MaxAmountError Float
+maxTransferAmount model =
+    RemoteData.map2 (\balance token -> balance.asset.amount - token.minBalance.amount)
+        (RemoteData.mapError BalanceError model.balance)
+        (RemoteData.mapError TokenError model.token)
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -693,6 +830,12 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadBalance r ->
+            [ "CompletedLoadBalance", UR.resultToString r ]
+
+        CompletedLoadToken r ->
+            [ "CompletedLoadToken", UR.resultToString r ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

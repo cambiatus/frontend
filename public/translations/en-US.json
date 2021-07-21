@@ -375,6 +375,7 @@
     "to_self": "You can't transfer to yourself",
     "no_profile": "Select a user",
     "no_amount": "Enter an amount",
+    "too_much": "You don't have enough {{token}} to transfer that much. You can transfer up to {{max_asset}}",
     "memo_too_long": "The memo can't be longer than {{maxlength}} characters"
   },
   "notifications": {
