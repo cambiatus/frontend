@@ -14,25 +14,28 @@ module Search exposing
 
 import Action exposing (Action)
 import Api.Graphql
+import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
 import Eos exposing (Symbol)
+import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, minlength, required, src)
+import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
+import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src)
 import Html.Events exposing (onClick, onFocus, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
 import List.Extra as List
 import Ports
+import Profile
 import RemoteData exposing (RemoteData)
-import Route exposing (Route)
+import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
@@ -72,11 +75,13 @@ type State
 type ActiveTab
     = OffersTab
     | ActionsTab
+    | MembersTab
 
 
 type alias SearchResults =
     { offers : List Offer
     , actions : List Action
+    , members : List Profile.Minimal
     }
 
 
@@ -116,6 +121,7 @@ searchResultSelectionSet queryString =
     SelectionSet.succeed SearchResults
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
+        |> with (Cambiatus.Object.SearchResult.members (\_ -> { query = Present queryString }) Profile.minimalSelectionSet)
 
 
 offersSelectionSet : SelectionSet Offer Cambiatus.Object.Product
@@ -144,7 +150,7 @@ type Msg
     | TabActivated ActiveTab
     | CurrentQueryChanged String
     | ClearSearchIconClicked
-    | FoundItemClicked Route
+    | FoundItemClicked
 
 
 update : Shared -> String -> Symbol -> Model -> Msg -> ( Model, Cmd Msg )
@@ -156,12 +162,12 @@ update shared authToken symbol model msg =
         CurrentQueryChanged q ->
             ( { model | currentQuery = q }, Cmd.none )
 
-        FoundItemClicked route ->
+        FoundItemClicked ->
             ( { model
                 | state = Inactive
                 , currentQuery = ""
               }
-            , Route.replaceUrl shared.navKey route
+            , Cmd.none
             )
 
         RecentQueryClicked q ->
@@ -343,40 +349,40 @@ viewSearchBody :
 viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searchModel =
     div [ class "container mx-auto flex flex-grow" ]
         [ case searchModel.state of
-            ResultsShowed (RemoteData.Success { actions, offers }) activeTab ->
-                case ( List.length actions, List.length offers ) of
-                    ( 0, 0 ) ->
-                        viewEmptyResults translators searchModel.currentQuery
-                            |> Html.map searchToMsg
+            ResultsShowed (RemoteData.Success results) activeTab ->
+                if List.isEmpty results.actions && List.isEmpty results.offers && List.isEmpty results.members then
+                    viewEmptyResults translators searchModel.currentQuery
+                        |> Html.map searchToMsg
 
-                    _ ->
-                        let
-                            results =
-                                { actions = actions
-                                , offers = offers
-                                }
-                        in
-                        case activeTab of
-                            Just OffersTab ->
-                                div [ class "w-full" ]
-                                    [ viewTabs translators results OffersTab
-                                    , viewOffers translators selectedCommunity results.offers
-                                    ]
+                else
+                    case activeTab of
+                        Just OffersTab ->
+                            div [ class "w-full" ]
+                                [ viewTabs translators results OffersTab
+                                , viewOffers translators selectedCommunity results.offers
+                                ]
+                                |> Html.map searchToMsg
+
+                        Just ActionsTab ->
+                            div [ class "w-full" ]
+                                [ viewTabs translators results ActionsTab
                                     |> Html.map searchToMsg
+                                , Action.viewSearchActions translators today results.actions
+                                    |> Html.map actionToMsg
+                                ]
 
-                            Just ActionsTab ->
-                                div [ class "w-full" ]
-                                    [ viewTabs translators results ActionsTab
-                                        |> Html.map searchToMsg
-                                    , Action.viewSearchActions translators today results.actions
-                                        |> Html.map actionToMsg
-                                    ]
+                        Just MembersTab ->
+                            div [ class "w-full" ]
+                                [ viewTabs translators results MembersTab
+                                , viewMembers translators results.members
+                                ]
+                                |> Html.map searchToMsg
 
-                            Nothing ->
-                                div [ class "bg-white w-full p-4" ]
-                                    [ viewResultsOverview translators results
-                                    ]
-                                    |> Html.map searchToMsg
+                        Nothing ->
+                            div [ class "bg-white w-full p-4" ]
+                                [ viewResultsOverview translators results
+                                ]
+                                |> Html.map searchToMsg
 
             ResultsShowed RemoteData.Loading _ ->
                 View.Components.loadingLogoAnimated translators ""
@@ -423,7 +429,7 @@ viewRecentQueries { t } recentQueries =
 
 
 viewTabs : Translators -> SearchResults -> ActiveTab -> Html Msg
-viewTabs { t } results activeTab =
+viewTabs { tr } results activeTab =
     let
         viewTab : ActiveTab -> String -> List a -> Msg -> Html Msg
         viewTab tabKind label foundItems clickMsg =
@@ -432,38 +438,37 @@ viewTabs { t } results activeTab =
                     List.length foundItems
             in
             li
-                [ if activeTab == tabKind then
-                    class "bg-orange-300 text-white"
-
-                  else
-                    class "bg-gray-100"
-                , class "rounded-sm flex-1 text-center cursor-pointer capitalize"
+                [ class "rounded-sm flex-1 text-center cursor-pointer capitalize"
+                , classList
+                    [ ( "bg-orange-300 text-white", activeTab == tabKind )
+                    , ( "bg-gray-100", activeTab /= tabKind )
+                    ]
                 , if count > 0 then
                     onClick clickMsg
 
                   else
                     class "cursor-not-allowed text-gray-300"
                 ]
-                [ text label
-                , text " ("
-                , text (String.fromInt count)
-                , text ")"
-                ]
+                [ text <| tr label [ ( "count", String.fromInt count ) ] ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
         [ viewTab OffersTab
-            (t "menu.search.offers")
+            "menu.search.offers_title"
             results.offers
             (TabActivated OffersTab)
         , viewTab ActionsTab
-            (t "menu.search.actions")
+            "menu.search.actions_title"
             results.actions
             (TabActivated ActionsTab)
+        , viewTab MembersTab
+            "menu.search.members_title"
+            results.members
+            (TabActivated MembersTab)
         ]
 
 
 viewResultsOverview : Translators -> SearchResults -> Html Msg
-viewResultsOverview { t } { offers, actions } =
+viewResultsOverview { t, tr } { offers, actions, members } =
     let
         viewItem icon count singular plural showMsg =
             li [ class "py-4 flex items-center" ]
@@ -473,14 +478,11 @@ viewResultsOverview { t } { offers, actions } =
                         [ text <| t "menu.search.overviewFound"
                         , text " "
                         , strong []
-                            [ text (String.fromInt count)
-                            , text " "
-                            , text <|
-                                if count == 1 then
-                                    singular
+                            [ if count == 1 then
+                                text <| t singular
 
-                                else
-                                    plural
+                              else
+                                text <| tr plural [ ( "count", String.fromInt count ) ]
                             ]
                         ]
                     ]
@@ -504,14 +506,19 @@ viewResultsOverview { t } { offers, actions } =
         , ul []
             [ viewItem Icons.shop
                 (List.length offers)
-                (t "menu.search.offer")
-                (t "menu.search.offers")
+                "menu.search.offer"
+                "menu.search.offers"
                 (TabActivated OffersTab)
             , viewItem Icons.flag
                 (List.length actions)
-                (t "menu.search.action")
-                (t "menu.search.actions")
+                "menu.search.action"
+                "menu.search.actions"
                 (TabActivated ActionsTab)
+            , viewItem Icons.accountCircle
+                (List.length members)
+                "menu.search.member"
+                "menu.search.members"
+                (TabActivated MembersTab)
             ]
         ]
 
@@ -535,9 +542,10 @@ viewOffers translators symbol offers =
             in
             li
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
-                [ div
+                [ a
                     [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
-                    , onClick (FoundItemClicked (Route.ViewSale offer.id))
+                    , onClick FoundItemClicked
+                    , Route.href (Route.ViewSale offer.id)
                     ]
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
@@ -557,8 +565,33 @@ viewOffers translators symbol offers =
                     ]
                 ]
     in
-    ul [ class "offers-list flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
+    ul [ class "flex flex-wrap mt-6 mb-8 mx-2 justify-left" ]
         (List.map viewOffer offers)
+
+
+viewMembers : Translators -> List Profile.Minimal -> Html Msg
+viewMembers { t } members =
+    let
+        viewMember member =
+            div [ class "bg-white rounded flex flex-col p-4 space-y-4 justify-between" ]
+                [ div [ class "grid grid-cols-3 px-4" ]
+                    [ Avatar.view member.avatar "h-20 w-20 my-auto"
+                    , div [ class "flex flex-col col-span-2" ]
+                        [ span [ class "text-heading font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
+                        , span [ class "text-sm text-gray-900" ] [ text (member.email |> Maybe.withDefault "") ]
+                        , span [ class "text-sm text-gray-900" ] [ text (Eos.Account.nameToString member.account) ]
+                        ]
+                    ]
+                , a
+                    [ class "w-full button button-secondary cursor-pointer"
+                    , onClick FoundItemClicked
+                    , Route.href (Route.ProfilePublic (Eos.Account.nameToString member.account))
+                    ]
+                    [ text (t "all_analysis.more_details") ]
+                ]
+    in
+    ul [ class "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6 mb-8 mx-2" ]
+        (List.map viewMember members)
 
 
 
