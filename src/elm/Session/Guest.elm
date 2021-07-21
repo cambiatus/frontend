@@ -135,11 +135,14 @@ subscriptions _ =
 {-| Page types the Guest can access.
 -}
 type Page
-    = Register
+    = Redirect
+    | NotFound
+    | ComingSoon
+    | Register
     | Login
     | Invite
     | Join
-    | Other
+    | ShopViewer
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -166,7 +169,16 @@ view thisMsg page ({ shared } as model) content =
                             )
                         |> Maybe.withDefault ( Nothing, "md:w-full" )
 
-                Other ->
+                ShopViewer ->
+                    ( Nothing, "md:w-full" )
+
+                Redirect ->
+                    ( Nothing, "md:w-full" )
+
+                NotFound ->
+                    ( Nothing, "md:w-full" )
+
+                ComingSoon ->
                     ( Nothing, "md:w-full" )
     in
     case Shared.translationStatus shared of

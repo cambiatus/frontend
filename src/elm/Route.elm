@@ -52,7 +52,7 @@ type Route
     | Shop Shop.Filter
     | NewSale
     | EditSale String
-    | ViewSale String
+    | ViewSale Int
     | ViewTransfer Int
     | Invite String
     | Join (Maybe Route)
@@ -133,7 +133,7 @@ parser url =
                         (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
-        , Url.map ViewSale (s "shop" </> string)
+        , Url.map ViewSale (s "shop" </> int)
         , Url.map EditSale (s "shop" </> string </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
@@ -447,7 +447,7 @@ routeToString route =
                     ( [ "shop", saleId, "edit" ], [] )
 
                 ViewSale saleId ->
-                    ( [ "shop", saleId ], [] )
+                    ( [ "shop", String.fromInt saleId ], [] )
 
                 ViewTransfer transferId ->
                     ( [ "transfer", String.fromInt transferId ], [] )

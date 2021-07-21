@@ -10,7 +10,7 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
-import Cambiatus.Enum.TransferDirection exposing (TransferDirection(..))
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
 import Cambiatus.Object
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -162,9 +162,16 @@ profileWithTransfersSelectionSet model =
                 { r
                     | first = Present 16
                     , after = afterOption
-                    , date = optionalDate
-                    , direction = Present Incoming
-                    , secondPartyAccount = optionalFromAccount
+                    , filter =
+                        Present
+                            { communityId = Absent
+                            , date = optionalDate
+                            , direction =
+                                Present
+                                    { direction = Present TransferDirectionValue.Receiving
+                                    , otherAccount = optionalFromAccount
+                                    }
+                            }
                 }
     in
     SelectionSet.map4 ProfileWithTransfers

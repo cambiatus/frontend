@@ -39,6 +39,26 @@ actions fillInOptionals object_ =
     Object.selectionForCompositeField "actions" optionalArgs object_ (identity >> Decode.list)
 
 
+type alias MembersOptionalArguments =
+    { query : OptionalArgument String }
+
+
+members :
+    (MembersOptionalArguments -> MembersOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (List decodesTo) Cambiatus.Object.SearchResult
+members fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { query = Absent }
+
+        optionalArgs =
+            [ Argument.optional "query" filledInOptionals.query Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "members" optionalArgs object_ (identity >> Decode.list)
+
+
 type alias ProductsOptionalArguments =
     { query : OptionalArgument String }
 
