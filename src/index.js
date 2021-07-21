@@ -302,7 +302,7 @@ const addBreadcrumb = (breadcrumb) => {
   { user: eosUsername | null,
     message: 'Something went wrong',
     tags: { 'cambiatus.type': 'eos-transaction' },
-    context: { name: 'Eos transaction', extras: { transactionId: transactionId } },
+    contexts: [{ name: 'Eos transaction', extras: { transactionId: transactionId } }],
     localData: { privateKey },
     transaction: portName,
     level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'
@@ -477,7 +477,7 @@ async function readClipboardWithPermission () {
       user: null,
       message: 'Error when reading clipboard',
       tags: { 'cambiatus.kind': 'clipboard' },
-      context: { name: 'Error details', extras: { error: err } },
+      contexts: [{ name: 'Error details', extras: { error: err } }],
       transaction: 'readClipboardWithPermission',
       level: 'error'
     })
@@ -809,7 +809,7 @@ async function handleJavascriptPort (arg) {
             user: null,
             message: 'Login port error',
             tags: { 'cambiatus.kind': 'auth' },
-            context: { name: 'Error details', extras: { error: err } },
+            contexts: [{ name: 'Error details', extras: { error: err } }],
             transaction: 'login',
             level: 'error'
           })
@@ -917,7 +917,7 @@ async function handleJavascriptPort (arg) {
             user: null,
             message: 'Got an error when pushing transaction to EOS',
             tags: { 'cambiatus.type': 'eos-transaction' },
-            context: {
+            contexts: [{
               name: 'Eos transaction',
               extras: {
                 sent: arg.data,
@@ -925,7 +925,7 @@ async function handleJavascriptPort (arg) {
                 error,
                 errorString
               }
-            },
+            }],
             localData: {},
             transaction: 'eosTransaction',
             level: 'error'
