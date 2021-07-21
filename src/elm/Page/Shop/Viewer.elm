@@ -190,7 +190,10 @@ update msg model session =
         _ ->
             model
                 |> UR.init
-                |> UR.logImpossible msg [ "InvalidMsg" ]
+                |> UR.logIncompatibleMsg msg
+                    (Page.maybeAccountName session)
+                    { moduleName = "Page.Shop.Viewer", function = "update" }
+                    []
 
 
 updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
@@ -203,7 +206,12 @@ updateAsGuest msg model _ =
         CompletedSalePreviewLoad (RemoteData.Failure err) ->
             { model | productPreview = RemoteData.Failure err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when loading sale preview"
+                    { moduleName = "Page.Shop.Viewer", function = "updateAsGuest" }
+                    []
+                    err
 
         CompletedSalePreviewLoad RemoteData.NotAsked ->
             model
@@ -234,7 +242,11 @@ updateAsLoggedIn msg model loggedIn =
                         |> UR.init
                         -- If there isn't a sale with the given id, the backend
                         -- returns an error
-                        |> UR.logImpossible msg [ "NoSaleFound" ]
+                        |> UR.logImpossible msg
+                            "Couldn't find the sale"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
+                            []
 
                 Just sale ->
                     { model | status = RemoteData.Success sale }
