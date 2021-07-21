@@ -282,7 +282,7 @@ updateAsLoggedIn msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when trying to load shop sale"
-                    { moduleName = "Page.Shop.Viewer", function = "update" }
+                    { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
                     []
                     err
 
@@ -400,7 +400,7 @@ updateAsLoggedIn msg model loggedIn =
                         |> UR.logImpossible msg
                             "Entered available units, but sale is not loaded"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Viewer", function = "update" }
+                            { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
                             []
 
         EnteredMemo m ->

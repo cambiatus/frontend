@@ -367,7 +367,7 @@ viewError translators validation =
             span [ class "form-error" ] [ text translatedError ]
 
 
-viewAutoCompleteAccount : Shared.Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
+viewAutoCompleteAccount : Shared -> Model -> Form -> Bool -> Community.Model -> Html Msg
 viewAutoCompleteAccount shared model form isDisabled community =
     let
         selectedUsers =
@@ -385,7 +385,7 @@ viewAutoCompleteAccount shared model form isDisabled community =
         ]
 
 
-selectConfiguration : Shared.Shared -> Bool -> Select.Config Msg Profile.Minimal
+selectConfiguration : Shared -> Bool -> Select.Config Msg Profile.Minimal
 selectConfiguration shared isDisabled =
     Profile.selectConfig
         (Select.newConfig
