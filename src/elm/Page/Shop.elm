@@ -473,7 +473,6 @@ update msg model loggedIn =
                                       }
                                     ]
 
-                -- UR.logImpossible msg [ "cardOutOfIndex" ] (UR.init model)
                 _ ->
                     model |> UR.init
 
@@ -530,7 +529,6 @@ updateCard msg cardIndex transform ({ model } as uResult) =
 
                 _ ->
                     uResult
-                        -- |> UR.logImpossible msg [ "cardOutOfIndex" ]
                         |> UR.logImpossible msg
                             "Tried updating sale card, but the index was invalid"
                             Nothing

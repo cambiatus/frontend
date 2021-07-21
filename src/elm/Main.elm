@@ -510,19 +510,6 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-              -- , { username = Page.maybeAccountName model.session
-              --   , message = "Msg does not correspond with Model"
-              --   , tags = [ Log.TypeTag Log.IncompatibleMsg ]
-              --   , contexts =
-              --         [ Log.contextFromLocation
-              --             { moduleName = "Main"
-              --             , function = "update"
-              --             , statement = "case branch ( _, _ )"
-              --             }
-              --         ]
-              --   , transaction = msg
-              --   , level = Log.Info
-              --   }
             , Log.fromIncompatibleMsg msg
                 (Page.maybeAccountName model.session)
                 { moduleName = "Main", function = "update" }
