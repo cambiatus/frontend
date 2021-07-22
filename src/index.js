@@ -295,6 +295,16 @@ const addBreadcrumb = (breadcrumb) => {
   // information
   const { localData, ...rest } = breadcrumb
 
+  // Sentry doesn't support objects/arrays as a value for extras, so we
+  // just encode them as JSON. Strings and numbers are fine though.
+  for (const dataKey in rest.data) {
+    if (Object.hasOwnProperty.call(rest.data, dataKey)) {
+      if (typeof rest.data[dataKey] === 'object') {
+        rest.data[dataKey] = JSON.stringify(rest.data[dataKey])
+      }
+    }
+  }
+
   Sentry.addBreadcrumb(rest)
 }
 
@@ -336,7 +346,19 @@ const logEvent = (event) => {
       scope.setTag('cambiatus.language', 'javascript')
       scope.setTags(tags)
       scope.setTransaction(transaction)
-      contexts.forEach((context) => { scope.setContext(context.name, context.extras) })
+      contexts.forEach((context) => {
+        // Sentry doesn't support objects/arrays as a value for extras, so we
+        // just encode them as JSON. Strings and numbers are fine though.
+        for (const extraKey in context.extras) {
+          if (Object.hasOwnProperty.call(context.extras, extraKey)) {
+            if (typeof context.extras[extraKey] === 'object') {
+              context.extras[extraKey] = JSON.stringify(context.extras[extraKey])
+            }
+          }
+        }
+
+        scope.setContext(context.name, context.extras)
+      })
       scope.setLevel(level)
 
       Sentry.captureMessage(message)
@@ -488,12 +510,18 @@ async function readClipboardWithPermission () {
 
 function flags () {
   const user = JSON.parse(getItem(USER_KEY))
+  const accountName = (user && user.accountName) || null
+
+  if (accountName !== null) {
+    Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+  }
+
   return {
     env: env,
     graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
-    accountName: (user && user.accountName) || null,
+    accountName: accountName,
     isPinAvailable: !!(user && user.encryptedKey),
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
@@ -644,6 +672,7 @@ function logout () {
     localData: {},
     level: 'info'
   })
+  Sentry.configureScope((scope) => { scope.setUser(null) })
 }
 
 function downloadPdf (accountName, passphrase) {
@@ -793,6 +822,7 @@ async function handleJavascriptPort (arg) {
 
             // Save credentials to EOS
             eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+            Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
             addBreadcrumb({
               type: 'debug',
               category: 'login',
