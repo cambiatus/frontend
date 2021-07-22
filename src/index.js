@@ -295,16 +295,6 @@ const addBreadcrumb = (breadcrumb) => {
   // information
   const { localData, ...rest } = breadcrumb
 
-  // Sentry doesn't support objects/arrays as a value for extras, so we
-  // just encode them as JSON. Strings and numbers are fine though.
-  for (const dataKey in rest.data) {
-    if (Object.hasOwnProperty.call(rest.data, dataKey)) {
-      if (typeof rest.data[dataKey] === 'object') {
-        rest.data[dataKey] = JSON.stringify(rest.data[dataKey])
-      }
-    }
-  }
-
   Sentry.addBreadcrumb(rest)
 }
 
@@ -341,22 +331,19 @@ const logEvent = (event) => {
     Sentry.withScope((scope) => {
       if (user !== null) {
         scope.setUser({ username: user })
+      } else {
+        const user = JSON.parse(getItem(USER_KEY))
+        const accountName = (user && user.accountName) || null
+
+        if (accountName !== null) {
+          scope.setUser({ username: accountName })
+        }
       }
       // If the error comes from Elm, this key will be overwritten
       scope.setTag('cambiatus.language', 'javascript')
       scope.setTags(tags)
       scope.setTransaction(transaction)
       contexts.forEach((context) => {
-        // Sentry doesn't support objects/arrays as a value for extras, so we
-        // just encode them as JSON. Strings and numbers are fine though.
-        for (const extraKey in context.extras) {
-          if (Object.hasOwnProperty.call(context.extras, extraKey)) {
-            if (typeof context.extras[extraKey] === 'object') {
-              context.extras[extraKey] = JSON.stringify(context.extras[extraKey])
-            }
-          }
-        }
-
         scope.setContext(context.name, context.extras)
       })
       scope.setLevel(level)
@@ -952,8 +939,7 @@ async function handleJavascriptPort (arg) {
               extras: {
                 sent: arg.data,
                 response,
-                error,
-                errorString
+                error
               }
             }],
             localData: {},
