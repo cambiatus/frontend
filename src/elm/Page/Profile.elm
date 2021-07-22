@@ -13,6 +13,7 @@ module Page.Profile exposing
 import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
+import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
@@ -29,6 +30,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
+import Time
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -109,6 +111,7 @@ view ({ shared } as loggedIn) model =
                         [ Page.viewHeader loggedIn (shared.translators.t "menu.profile")
                         , viewUserInfo loggedIn
                             profile
+                            Nothing
                             Private
                             (viewSettings loggedIn model profile)
                         , viewNewPinModal model shared
@@ -235,8 +238,18 @@ type ProfilePage
     | Public
 
 
-viewUserInfo : LoggedIn.Model -> Profile.Model -> ProfilePage -> Html msg -> Html msg
-viewUserInfo loggedIn profile pageType privateView =
+type alias AdditionalInfo =
+    { totalBalance : Eos.Asset
+    , totalTransfers : Int
+    , totalClaims : Int
+    , totalProducts : Int
+    , registrationDate : Time.Posix
+    , lastTransaction : Time.Posix
+    }
+
+
+viewUserInfo : LoggedIn.Model -> Profile.Model -> Maybe AdditionalInfo -> ProfilePage -> Html msg -> Html msg
+viewUserInfo loggedIn profile maybeAdditionalInfo pageType privateView =
     let
         ({ t } as translators) =
             loggedIn.shared.translators
@@ -349,6 +362,60 @@ viewUserInfo loggedIn profile pageType privateView =
                         |> List.map (viewContactButton translators)
                         |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
 
+        viewHistoryItem title number translation =
+            li [ class "flex items-center py-4" ]
+                [ div [ class "flex items-center" ]
+                    title
+                , div [ class "ml-auto" ]
+                    [ span [ class "mr-1 text-indigo-500 text-sm font-bold" ]
+                        [ number ]
+                    , span [ class "text-caption text-gray-900 uppercase" ]
+                        [ translation ]
+                    ]
+                ]
+
+        viewHistory additionalInfo =
+            ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6" ]
+                [ viewHistoryItem
+                    [ Icons.coin "mr-2"
+                    , span [] [ text "Total balance" ]
+                    ]
+                    (span [ class "text-3xl mr-1" ]
+                        [ additionalInfo.totalBalance.amount
+                            |> Eos.formatSymbolAmount additionalInfo.totalBalance.symbol
+                            |> text
+                        ]
+                    )
+                    (additionalInfo.totalBalance.symbol
+                        |> Eos.symbolToSymbolCodeString
+                        |> text
+                    )
+                , viewHistoryItem [ text "Number of transfers" ]
+                    (additionalInfo.totalTransfers
+                        |> String.fromInt
+                        |> text
+                    )
+                    (text "Transfers")
+                , viewHistoryItem [ text "Number of Claims" ]
+                    (additionalInfo.totalClaims
+                        |> String.fromInt
+                        |> text
+                    )
+                    (text "Claims")
+                , viewHistoryItem [ text "Items on shop" ]
+                    (additionalInfo.totalProducts
+                        |> String.fromInt
+                        |> text
+                    )
+                    (text "items")
+                , viewHistoryItem [ text "Member since" ]
+                    (span [ class "-mr-1" ] [ text "2 Nov 2020" ])
+                    (text "")
+                , viewHistoryItem [ text "Last transaction" ]
+                    (span [ class "-mr-1" ] [ text "8 Nov 2020" ])
+                    (text "")
+                ]
+
         leftSide =
             div
                 [ class "p-4 bg-white border-white border-r md:border-gray-500 flex md:w-1/2" ]
@@ -441,6 +508,12 @@ viewUserInfo loggedIn profile pageType privateView =
         [ div [ class "z-10 flex flex-col w-full md:container md:mx-auto md:flex-row bg-grey-100" ]
             [ leftSide
             , rightSide
+            , case maybeAdditionalInfo of
+                Just additionalInfo ->
+                    viewHistory additionalInfo
+
+                Nothing ->
+                    text ""
             ]
         , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 md:bg-white" ] []
         ]

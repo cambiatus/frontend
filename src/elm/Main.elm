@@ -561,6 +561,10 @@ broadcast broadcastMessage status =
                     ProfileEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileEditorMsg
 
+                ProfilePublic _ _ ->
+                    ProfilePublic.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfilePublicMsg
+
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
                         |> Maybe.map GotInviteMsg

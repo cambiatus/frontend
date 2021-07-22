@@ -27,7 +27,7 @@ import Cambiatus.Object.DeleteKycAddress
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
-import Cambiatus.Scalar exposing (Id(..))
+import Cambiatus.Scalar exposing (DateTime(..), Id(..))
 import Dict exposing (Dict)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
