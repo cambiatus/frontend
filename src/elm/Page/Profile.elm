@@ -113,7 +113,7 @@ view ({ shared } as loggedIn) model =
                             profile
                             Nothing
                             Private
-                            (viewSettings loggedIn model profile)
+                            (Just (viewSettings loggedIn model profile))
                         , viewNewPinModal model shared
                         , viewDownloadPdfErrorModal model loggedIn
                         , viewDeleteKycModal shared.translators model
@@ -226,8 +226,6 @@ viewSettings loggedIn model profile =
                 (viewButton (t "profile.pin.button") ClickedChangePin)
                 Center
                 Nothing
-
-            -- , viewProfileItem (text (t "notifications.title")) (viewTogglePush loggedIn model) Center Nothing
             , viewKycSettings
             ]
         ]
@@ -248,8 +246,8 @@ type alias AdditionalInfo =
     }
 
 
-viewUserInfo : LoggedIn.Model -> Profile.Model -> Maybe AdditionalInfo -> ProfilePage -> Html msg -> Html msg
-viewUserInfo loggedIn profile maybeAdditionalInfo pageType privateView =
+viewUserInfo : LoggedIn.Model -> Profile.Model -> Maybe AdditionalInfo -> ProfilePage -> Maybe (Html msg) -> Html msg
+viewUserInfo loggedIn profile maybeAdditionalInfo pageType maybePrivateView =
     let
         ({ t } as translators) =
             loggedIn.shared.translators
@@ -375,7 +373,7 @@ viewUserInfo loggedIn profile maybeAdditionalInfo pageType privateView =
                 ]
 
         viewHistory additionalInfo =
-            ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6" ]
+            ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100 md:mt-16" ]
                 [ viewHistoryItem
                     [ Icons.coin "mr-2"
                     , span [] [ text "Total balance" ]
@@ -465,7 +463,7 @@ viewUserInfo loggedIn profile maybeAdditionalInfo pageType privateView =
                 ]
 
         rightSide =
-            div [ class "w-full bg-gray-100 md:w-1/2" ]
+            div [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
                 [ div [ class "w-full bg-white md:bg-gray-100" ]
                     [ div [ class "px-4" ]
                         [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
@@ -495,27 +493,32 @@ viewUserInfo loggedIn profile maybeAdditionalInfo pageType privateView =
                             ]
                         ]
                     ]
-                , div [ class "bg-white w-full md:bg-gray-100" ]
-                    [ div [ class "px-4" ]
-                        [ div [ class "container mx-auto" ]
-                            [ privateView
+                , case maybePrivateView of
+                    Just privateView ->
+                        div [ class "bg-white w-full md:bg-gray-100" ]
+                            [ div [ class "px-4" ]
+                                [ div [ class "container mx-auto" ]
+                                    [ privateView
+                                    ]
+                                ]
                             ]
-                        ]
-                    ]
+
+                    Nothing ->
+                        text ""
+                , case maybeAdditionalInfo of
+                    Just additionalInfo ->
+                        viewHistory additionalInfo
+
+                    Nothing ->
+                        text ""
                 ]
     in
     div [ class "flex-grow flex bg-gray-100 relative" ]
-        [ div [ class "z-10 flex flex-col w-full md:container md:mx-auto md:flex-row bg-grey-100" ]
+        [ div [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
             [ leftSide
             , rightSide
-            , case maybeAdditionalInfo of
-                Just additionalInfo ->
-                    viewHistory additionalInfo
-
-                Nothing ->
-                    text ""
             ]
-        , div [ class "z-0 absolute w-full md:w-1/2 h-full max-h-100 md:bg-white" ] []
+        , div [ class "z-0 absolute w-full md:w-1/2 h-full md:bg-white" ] []
         ]
 
 

@@ -2,13 +2,20 @@ module Page.Profile.Public exposing (Model, Msg, Status, init, msgToString, rece
 
 import Api
 import Api.Graphql
+import Cambiatus.Object
+import Cambiatus.Object.Claim
+import Cambiatus.Object.Product
+import Cambiatus.Object.TransferConnection
+import Cambiatus.Object.User as User
+import Cambiatus.Query
 import Community
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, div, text)
+import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Http
 import List.Extra as List
@@ -46,14 +53,14 @@ type Msg
     = CompletedProfileLoad (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Community.Balance))
-    | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error GraphqlInfo) GraphqlInfo)
+    | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
 
 
 type alias Model =
     { profileAccountName : Eos.Name
     , profileStatus : Status
-    , blockchainInfo : RemoteData BalanceError Community.Balance
-    , graphqlInfo : RemoteData (Graphql.Http.Error GraphqlInfo) GraphqlInfo
+    , blockchainInfo : RemoteData (QueryError Http.Error) Community.Balance
+    , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
     }
 
 
@@ -71,9 +78,9 @@ type Status
     | NotFound
 
 
-type BalanceError
-    = BalanceNotFound
-    | BalanceWithHttpError Http.Error
+type QueryError error
+    = ResultNotFound
+    | ResultWithError error
 
 
 initModel : Eos.Name -> Model
@@ -116,7 +123,7 @@ view loggedIn model =
                                 }
                             )
                             Public
-                            (text "")
+                            Nothing
                         ]
 
                 ( NotFound, _, _ ) ->
@@ -127,14 +134,19 @@ view loggedIn model =
 
                 ( _, RemoteData.Failure err, _ ) ->
                     case err of
-                        BalanceNotFound ->
+                        ResultNotFound ->
                             Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
 
-                        BalanceWithHttpError httpError ->
+                        ResultWithError httpError ->
                             Page.fullPageError (t "error.unknown") httpError
 
                 ( _, _, RemoteData.Failure err ) ->
-                    Page.fullPageGraphQLError (t "error.unknown") err
+                    case err of
+                        ResultNotFound ->
+                            Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
+
+                        ResultWithError graphqlError ->
+                            Page.fullPageGraphQLError (t "error.unknown") graphqlError
 
                 _ ->
                     Page.fullPageLoading loggedIn.shared
@@ -182,7 +194,7 @@ update msg model loggedIn =
                 |> UR.addCmd
                     (Api.Graphql.query loggedIn.shared
                         (Just loggedIn.authToken)
-                        graphqlInfoSelectionSet
+                        (graphqlInfoQuery model.profileAccountName community.symbol)
                         CompletedLoadGraphqlInfo
                     )
 
@@ -191,20 +203,24 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadBalance (Ok Nothing) ->
-            { model | blockchainInfo = RemoteData.Failure BalanceNotFound }
+            { model | blockchainInfo = RemoteData.Failure ResultNotFound }
                 |> UR.init
 
         CompletedLoadBalance (Err error) ->
-            { model | blockchainInfo = RemoteData.Failure (BalanceWithHttpError error) }
+            { model | blockchainInfo = RemoteData.Failure (ResultWithError error) }
                 |> UR.init
                 |> UR.logHttpError msg error
 
-        CompletedLoadGraphqlInfo (RemoteData.Success graphqlInfo) ->
+        CompletedLoadGraphqlInfo (RemoteData.Success (Just graphqlInfo)) ->
             { model | graphqlInfo = RemoteData.Success graphqlInfo }
                 |> UR.init
 
+        CompletedLoadGraphqlInfo (RemoteData.Success Nothing) ->
+            { model | graphqlInfo = RemoteData.Failure ResultNotFound }
+                |> UR.init
+
         CompletedLoadGraphqlInfo (RemoteData.Failure err) ->
-            { model | graphqlInfo = RemoteData.Failure err }
+            { model | graphqlInfo = RemoteData.Failure (ResultWithError err) }
                 |> UR.init
                 |> UR.logGraphqlError msg err
 
@@ -217,13 +233,79 @@ update msg model loggedIn =
                 |> UR.init
 
 
-graphqlInfoSelectionSet : SelectionSet GraphqlInfo RootQuery
-graphqlInfoSelectionSet =
-    -- TODO
+
+-- GRAPHQL
+
+
+graphqlInfoSelectionSet : Eos.Symbol -> SelectionSet GraphqlInfo Cambiatus.Object.User
+graphqlInfoSelectionSet communitySymbol =
     SelectionSet.succeed GraphqlInfo
-        |> SelectionSet.hardcoded 0
-        |> SelectionSet.hardcoded 0
-        |> SelectionSet.hardcoded 0
+        |> SelectionSet.with
+            (User.transfers
+                (\optionals ->
+                    { optionals
+                        | first = Present 0
+                        , filter =
+                            Present
+                                { communityId =
+                                    communitySymbol
+                                        |> Eos.symbolToString
+                                        |> Present
+                                , date = Absent
+                                , direction = Absent
+                                }
+                    }
+                )
+                transfersSelectionSet
+                |> SelectionSet.map (Maybe.withDefault 0)
+            )
+        |> SelectionSet.with
+            (User.claims identity claimSelectionSet
+                |> SelectionSet.map List.length
+            )
+        |> SelectionSet.with
+            (User.products productSelectionSet
+                |> SelectionSet.map
+                    (\products ->
+                        products
+                            |> List.filterMap identity
+                            |> List.filter (\{ symbol } -> symbol == communitySymbol)
+                            |> List.length
+                    )
+            )
+
+
+graphqlInfoQuery : Eos.Name -> Eos.Symbol -> SelectionSet (Maybe GraphqlInfo) RootQuery
+graphqlInfoQuery profileAccountName communitySymbol =
+    Cambiatus.Query.user
+        { account = Eos.nameToString profileAccountName }
+        (graphqlInfoSelectionSet communitySymbol)
+
+
+transfersSelectionSet : SelectionSet Int Cambiatus.Object.TransferConnection
+transfersSelectionSet =
+    SelectionSet.succeed identity
+        |> SelectionSet.with
+            (Cambiatus.Object.TransferConnection.count
+                |> SelectionSet.map (Maybe.withDefault 0)
+            )
+
+
+claimSelectionSet : SelectionSet { id : Int } Cambiatus.Object.Claim
+claimSelectionSet =
+    SelectionSet.succeed (\id -> { id = id })
+        |> SelectionSet.with Cambiatus.Object.Claim.id
+
+
+productSelectionSet : SelectionSet { id : Int, symbol : Eos.Symbol } Cambiatus.Object.Product
+productSelectionSet =
+    SelectionSet.succeed (\id symbol -> { id = id, symbol = symbol })
+        |> SelectionSet.with Cambiatus.Object.Product.id
+        |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
+
+
+
+-- UTILS
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
