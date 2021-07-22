@@ -29,6 +29,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
+import Strftime
 import Task
 import Time
 import UpdateResult as UR
@@ -372,6 +373,9 @@ viewUserInfo loggedIn profile maybeAdditionalInfo pageType maybePrivateView =
                     ]
                 ]
 
+        formatPosix posix =
+            Strftime.format "%d %b %Y" Time.utc posix
+
         viewHistory additionalInfo =
             ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100 md:mt-16" ]
                 [ viewHistoryItem
@@ -407,10 +411,10 @@ viewUserInfo loggedIn profile maybeAdditionalInfo pageType maybePrivateView =
                     )
                     (text "items")
                 , viewHistoryItem [ text "Member since" ]
-                    (span [ class "-mr-1" ] [ text "2 Nov 2020" ])
+                    (span [ class "-mr-1" ] [ text <| formatPosix additionalInfo.registrationDate ])
                     (text "")
                 , viewHistoryItem [ text "Last transaction" ]
-                    (span [ class "-mr-1" ] [ text "8 Nov 2020" ])
+                    (span [ class "-mr-1" ] [ text <| formatPosix additionalInfo.lastTransaction ])
                     (text "")
                 ]
 

@@ -8,6 +8,7 @@ import Cambiatus.Object.Product
 import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.User as User
 import Cambiatus.Query
+import Cambiatus.Scalar
 import Community
 import Eos
 import Eos.Account as Eos
@@ -26,6 +27,7 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Time
 import UpdateResult as UR
+import Utils
 
 
 init : LoggedIn.Model -> String -> ( Model, Cmd Msg )
@@ -68,6 +70,7 @@ type alias GraphqlInfo =
     { totalTransfers : Int
     , totalClaims : Int
     , totalProducts : Int
+    , createdDate : Time.Posix
     }
 
 
@@ -118,7 +121,7 @@ view loggedIn model =
                                 , totalTransfers = graphqlInfo.totalTransfers
                                 , totalClaims = graphqlInfo.totalClaims
                                 , totalProducts = graphqlInfo.totalProducts
-                                , registrationDate = Time.millisToPosix 0
+                                , registrationDate = graphqlInfo.createdDate
                                 , lastTransaction = blockchainInfo.lastActivity
                                 }
                             )
@@ -199,7 +202,19 @@ update msg model loggedIn =
                     )
 
         CompletedLoadBalance (Ok (Just balance)) ->
-            { model | blockchainInfo = RemoteData.Success balance }
+            { model
+                | blockchainInfo =
+                    RemoteData.Success
+                        { balance
+                            | lastActivity =
+                                -- Blockchain divides posix values by 1000, so
+                                -- we need to multiply it by 1000
+                                balance.lastActivity
+                                    |> Time.posixToMillis
+                                    |> (*) 1000
+                                    |> Time.millisToPosix
+                        }
+            }
                 |> UR.init
 
         CompletedLoadBalance (Ok Nothing) ->
@@ -271,6 +286,14 @@ graphqlInfoSelectionSet communitySymbol =
                             |> List.filterMap identity
                             |> List.filter (\{ symbol } -> symbol == communitySymbol)
                             |> List.length
+                    )
+            )
+        |> SelectionSet.with
+            -- TODO - Fix after backend has been worked out. Right now this always returns Nothing
+            (User.createdAt
+                |> SelectionSet.map
+                    (Maybe.map Cambiatus.Scalar.DateTime
+                        >> Utils.posixDateTime
                     )
             )
 
