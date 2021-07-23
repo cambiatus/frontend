@@ -585,7 +585,7 @@ viewMembers { t } members =
                 , a
                     [ class "w-full button button-secondary cursor-pointer"
                     , onClick FoundItemClicked
-                    , Route.href (Route.ProfilePublic (Eos.Account.nameToString member.account))
+                    , Route.href (Route.Profile member.account)
                     ]
                     [ text (t "all_analysis.more_details") ]
                 ]

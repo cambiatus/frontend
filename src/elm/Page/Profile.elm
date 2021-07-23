@@ -1,52 +1,55 @@
 module Page.Profile exposing
     ( Model
     , Msg
-    , ProfilePage(..)
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveBroadcast
     , update
     , view
-    , viewUserInfo
     )
 
+import Api
 import Api.Graphql
 import Avatar
-import Browser.Dom as Dom
+import Cambiatus.Object
+import Cambiatus.Object.Claim
+import Cambiatus.Object.Product
+import Cambiatus.Object.TransferConnection
+import Cambiatus.Object.User as User
+import Cambiatus.Query
+import Cambiatus.Scalar
+import Community
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
-import Html exposing (Html, a, br, button, div, label, li, p, span, text, ul)
-import Html.Attributes exposing (class, href, target)
+import Graphql.Operation exposing (RootQuery)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, href, target)
 import Html.Events exposing (onClick)
+import Http
 import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
-import Page
-import Profile exposing (DeleteKycAndAddressResult)
+import Kyc
+import List.Extra as List
+import Page exposing (Session(..))
+import Profile
+import Profile.Address
 import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
-import Task
 import Time
 import UpdateResult as UR
+import Utils
 import View.Feedback as Feedback
 import View.Modal as Modal
 import View.Pin as Pin
-
-
-
--- INIT
-
-
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
-    ( initModel
-    , Task.succeed CheckPushPref |> Task.perform identity
-    )
 
 
 
@@ -54,89 +57,484 @@ init _ =
 
 
 type alias Model =
-    { currentPin : Maybe String
+    { profileName : Eos.Name
+    , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
+    , balance : RemoteData (QueryError Http.Error) Community.Balance
+    , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
+    , isDeleteKycModalVisible : Bool
+    , downloadingPdfStatus : DownloadStatus
     , isNewPinModalVisible : Bool
-    , isPushNotificationsEnabled : Bool
-    , maybePdfDownloadedSuccessfully : Maybe Bool
-    , isDeleteKycModalShowed : Bool
     , pinInputModel : Pin.Model
+    , currentPin : Maybe String
     }
 
 
-initModel : Model
-initModel =
-    { currentPin = Nothing
-    , isNewPinModalVisible = False
-    , isPushNotificationsEnabled = False
-    , maybePdfDownloadedSuccessfully = Nothing
-    , isDeleteKycModalShowed = False
-    , pinInputModel =
-        Pin.init
-            { label = "profile.newPin"
-            , id = "new-pin-input"
-            , withConfirmation = False
-            , submitLabel = "profile.pin.button"
-            , submittingLabel = "profile.pin.button"
+
+-- INIT
+
+
+init : LoggedIn.Model -> Eos.Name -> ( Model, Cmd Msg )
+init loggedIn profileName =
+    let
+        fetchProfile =
+            if loggedIn.accountName == profileName then
+                LoggedIn.maybeInitWith
+                    (Just >> RemoteData.Success >> CompletedLoadProfile)
+                    .profile
+                    loggedIn
+
+            else
+                Api.Graphql.query loggedIn.shared
+                    (Just loggedIn.authToken)
+                    (Profile.query profileName)
+                    CompletedLoadProfile
+    in
+    ( { profileName = profileName
+      , profile = RemoteData.Loading
+      , balance = RemoteData.Loading
+      , graphqlInfo = RemoteData.Loading
+      , isDeleteKycModalVisible = False
+      , downloadingPdfStatus = NotDownloading
+      , isNewPinModalVisible = False
+      , pinInputModel =
+            Pin.init
+                { label = "profile.newPin"
+                , id = "new-pin-input"
+                , withConfirmation = False
+                , submitLabel = "profile.pin.button"
+                , submittingLabel = "profile.pin.button"
+                }
+      , currentPin = Nothing
+      }
+    , Cmd.batch
+        [ fetchProfile
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        ]
+    )
+
+
+
+-- TYPES
+
+
+type QueryError error
+    = ResultNotFound
+    | ResultWithError error
+
+
+type alias GraphqlInfo =
+    { totalTransfers : Int
+    , totalClaims : Int
+    , totalProducts : Int
+    , createdDate : Time.Posix
+    }
+
+
+type VerticalAlign
+    = Top
+    | Center
+
+
+type alias DeleteResult =
+    { result : String
+    , status : String
+    }
+
+
+type alias DeleteKycAndAddressResult =
+    { deleteKyc : Maybe DeleteResult
+    , deleteAddress : Maybe DeleteResult
+    }
+
+
+type DownloadStatus
+    = Downloading
+    | DownloadWithError
+    | NotDownloading
+
+
+type Msg
+    = Ignored
+    | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
+    | CompletedLoadCommunity Community.Model
+    | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
+    | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
+    | ToggleDeleteKycModal
+    | DeleteKycAccepted
+    | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
+    | ClickedDownloadPdf
+    | DownloadPdfProcessed Bool
+    | ClickedClosePdfDownloadError
+    | ClickedChangePin
+    | ClickedCloseNewPinModal
+    | GotPinMsg Pin.Msg
+    | SubmittedNewPin String
+    | PinChanged
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
+
+
+
+-- UPDATE
+
+
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
+update msg model loggedIn =
+    case msg of
+        Ignored ->
+            UR.init model
+
+        CompletedLoadProfile (RemoteData.Success (Just profile)) ->
+            if profile.account == model.profileName then
+                { model | profile = RemoteData.Success profile }
+                    |> UR.init
+
+            else
+                UR.init model
+
+        CompletedLoadProfile (RemoteData.Success Nothing) ->
+            { model | profile = RemoteData.Failure ResultNotFound }
+                |> UR.init
+
+        CompletedLoadProfile (RemoteData.Failure error) ->
+            { model | profile = RemoteData.Failure (ResultWithError error) }
+                |> UR.init
+                |> UR.logGraphqlError msg error
+
+        CompletedLoadProfile RemoteData.Loading ->
+            UR.init model
+
+        CompletedLoadProfile RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadCommunity community ->
+            let
+                fetchBalance =
+                    Api.getBalances loggedIn.shared
+                        model.profileName
+                        (\balancesResult ->
+                            case balancesResult of
+                                Ok balances ->
+                                    balances
+                                        |> List.find (\balance -> balance.asset.symbol == community.symbol)
+                                        |> Result.fromMaybe ResultNotFound
+                                        |> CompletedLoadBalance
+
+                                Err error ->
+                                    CompletedLoadBalance (Err (ResultWithError error))
+                        )
+            in
+            model
+                |> UR.init
+                |> UR.addCmd fetchBalance
+                |> UR.addCmd
+                    (Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (graphqlInfoQuery model.profileName community.symbol)
+                        CompletedLoadGraphqlInfo
+                    )
+
+        CompletedLoadBalance (Ok balance) ->
+            { model
+                | balance =
+                    { balance
+                        | lastActivity =
+                            -- Blockchain divides posix values by 1000, so
+                            -- we need to multiply it by 1000
+                            balance.lastActivity
+                                |> Time.posixToMillis
+                                |> (*) 1000
+                                |> Time.millisToPosix
+                    }
+                        |> RemoteData.Success
             }
-    }
+                |> UR.init
+
+        CompletedLoadBalance (Err err) ->
+            { model | balance = RemoteData.Failure err }
+                |> UR.init
+
+        CompletedLoadGraphqlInfo (RemoteData.Success (Just graphqlInfo)) ->
+            { model | graphqlInfo = RemoteData.Success graphqlInfo }
+                |> UR.init
+
+        CompletedLoadGraphqlInfo (RemoteData.Success Nothing) ->
+            { model | graphqlInfo = RemoteData.Failure ResultNotFound }
+                |> UR.init
+
+        CompletedLoadGraphqlInfo (RemoteData.Failure error) ->
+            { model | graphqlInfo = RemoteData.Failure (ResultWithError error) }
+                |> UR.init
+
+        CompletedLoadGraphqlInfo RemoteData.Loading ->
+            UR.init model
+
+        CompletedLoadGraphqlInfo RemoteData.NotAsked ->
+            UR.init model
+
+        ToggleDeleteKycModal ->
+            { model | isDeleteKycModalVisible = not model.isDeleteKycModalVisible }
+                |> UR.init
+
+        DeleteKycAccepted ->
+            { model | isDeleteKycModalVisible = False }
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.mutation loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
+                        DeleteKycAndAddressCompleted
+                    )
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+
+        DeleteKycAndAddressCompleted (RemoteData.Success _) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.kyc.delete.success"))
+
+        DeleteKycAndAddressCompleted (RemoteData.Failure error) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg error
+                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
+
+        DeleteKycAndAddressCompleted RemoteData.Loading ->
+            model
+                |> UR.init
+
+        DeleteKycAndAddressCompleted RemoteData.NotAsked ->
+            model
+                |> UR.init
+
+        ClickedDownloadPdf ->
+            let
+                currentPin =
+                    model.currentPin
+                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+            in
+            { model | downloadingPdfStatus = Downloading }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = DownloadPdfProcessed False
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "downloadAuthPdfFromProfile" )
+                            , ( "pin", Encode.string currentPin )
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = Ignored }
+
+        DownloadPdfProcessed downloadStatus ->
+            { model
+                | downloadingPdfStatus =
+                    if downloadStatus then
+                        NotDownloading
+
+                    else
+                        DownloadWithError
+            }
+                |> UR.init
+
+        ClickedClosePdfDownloadError ->
+            { model | downloadingPdfStatus = NotDownloading }
+                |> UR.init
+
+        ClickedChangePin ->
+            { model | isNewPinModalVisible = True }
+                |> UR.init
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = Ignored }
+
+        ClickedCloseNewPinModal ->
+            { model | isNewPinModalVisible = False }
+                |> UR.init
+
+        GotPinMsg subMsg ->
+            let
+                ( newPinModel, submitStatus ) =
+                    Pin.update subMsg model.pinInputModel
+            in
+            { model | pinInputModel = newPinModel }
+                |> UR.init
+                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedNewPin)
+
+        SubmittedNewPin newPin ->
+            let
+                currentPin =
+                    model.currentPin
+                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+            in
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = PinChanged
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "changePin" )
+                            , ( "currentPin", Encode.string currentPin )
+                            , ( "newPin", Encode.string newPin )
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = Ignored }
+
+        PinChanged ->
+            { model
+                | isNewPinModalVisible = False
+                , currentPin = Just model.pinInputModel.pin
+            }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
 
 
 
 -- VIEW
 
 
+type CombinedErrors
+    = ProfileError (QueryError (Graphql.Http.Error (Maybe Profile.Model)))
+    | BalanceError (QueryError Http.Error)
+    | GraphqlError (QueryError (Graphql.Http.Error (Maybe GraphqlInfo)))
+
+
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view ({ shared } as loggedIn) model =
+view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         title =
-            case loggedIn.profile of
+            case model.profile of
                 RemoteData.Success profile ->
-                    Maybe.withDefault "" profile.name
+                    profile.name
+                        |> Maybe.withDefault (Eos.nameToString model.profileName)
 
                 _ ->
-                    ""
+                    Eos.nameToString model.profileName
+
+        combinedRemoteData =
+            RemoteData.map3
+                (\profile balance graphqlInfo ->
+                    { profile = profile
+                    , balance = balance
+                    , graphqlInfo = graphqlInfo
+                    }
+                )
+                (RemoteData.mapError ProfileError model.profile)
+                (RemoteData.mapError BalanceError model.balance)
+                (RemoteData.mapError GraphqlError model.graphqlInfo)
 
         content =
-            case loggedIn.profile of
-                RemoteData.Loading ->
-                    Page.fullPageLoading shared
+            case combinedRemoteData of
+                RemoteData.Success { profile, balance, graphqlInfo } ->
+                    div [ class "flex flex-grow flex-col" ]
+                        [ Page.viewHeader loggedIn (t "menu.profile")
+                        , view_ loggedIn model profile balance graphqlInfo
+                        ]
+
+                RemoteData.Failure error ->
+                    case error of
+                        ProfileError (ResultWithError graphqlError) ->
+                            Page.fullPageGraphQLError (t "error.unknown") graphqlError
+
+                        BalanceError (ResultWithError httpError) ->
+                            Page.fullPageError (t "error.unknown") httpError
+
+                        GraphqlError (ResultWithError graphqlError) ->
+                            Page.fullPageGraphQLError (t "error.unknown") graphqlError
+
+                        _ ->
+                            Page.fullPageNotFound (t "error.unknown") (t "error.pageNotFound")
 
                 RemoteData.NotAsked ->
-                    Page.fullPageLoading shared
+                    Page.fullPageLoading loggedIn.shared
 
-                RemoteData.Failure e ->
-                    Page.fullPageGraphQLError (shared.translators.t "profile.title") e
-
-                RemoteData.Success profile ->
-                    div [ class "flex-grow flex flex-col" ]
-                        [ Page.viewHeader loggedIn (shared.translators.t "menu.profile")
-                        , viewUserInfo loggedIn
-                            profile
-                            Nothing
-                            Private
-                            (Just (viewSettings loggedIn model profile))
-                        , viewNewPinModal model shared
-                        , viewDownloadPdfErrorModal model loggedIn
-                        , viewDeleteKycModal shared.translators model
-                        ]
+                RemoteData.Loading ->
+                    Page.fullPageLoading loggedIn.shared
     in
     { title = title
     , content = content
     }
 
 
+view_ : LoggedIn.Model -> Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Html Msg
+view_ loggedIn model profile balance graphqlInfo =
+    div [ class "flex flex-grow bg-gray-100 relative" ]
+        [ div [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
+            [ viewProfile loggedIn profile
+            , viewDetails loggedIn profile balance graphqlInfo
+            ]
+        , div [ class "z-0 absolute w-full h-full md:w-1/2 md:bg-white" ] []
+        , viewNewPinModal loggedIn.shared model
+        , viewDownloadPdfErrorModal loggedIn model
+        , viewDeleteKycModal loggedIn.shared.translators model
+        ]
+
+
+viewNewPinModal : Shared -> Model -> Html Msg
+viewNewPinModal shared model =
+    Modal.initWith
+        { closeMsg = ClickedCloseNewPinModal
+        , isVisible = model.isNewPinModalVisible
+        }
+        |> Modal.withHeader (shared.translators.t "profile.changePin")
+        |> Modal.withBody
+            [ p [ class "text-sm" ]
+                [ text (shared.translators.t "profile.changePinPrompt") ]
+            , Pin.view shared.translators model.pinInputModel
+                |> Html.map GotPinMsg
+            ]
+        |> Modal.toHtml
+
+
+viewDownloadPdfErrorModal : LoggedIn.Model -> Model -> Html Msg
+viewDownloadPdfErrorModal loggedIn model =
+    Modal.initWith
+        { closeMsg = ClickedClosePdfDownloadError
+        , isVisible =
+            case model.downloadingPdfStatus of
+                DownloadWithError ->
+                    True
+
+                _ ->
+                    False
+        }
+        |> Modal.withHeader "Sorry, we can't find your 12 words"
+        |> Modal.withBody
+            [ p [ class "my-3" ]
+                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in." ]
+            , p [ class "my-3" ]
+                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
+                ]
+            , case LoggedIn.maybePrivateKey loggedIn of
+                Nothing ->
+                    text ""
+
+                Just pk ->
+                    p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
+                        [ text (Eos.privateKeyToString pk)
+                        ]
+            ]
+        |> Modal.toHtml
+
+
 viewDeleteKycModal : Translators -> Model -> Html Msg
 viewDeleteKycModal { t } model =
     Modal.initWith
         { closeMsg = ToggleDeleteKycModal
-        , isVisible = model.isDeleteKycModalShowed
+        , isVisible = model.isDeleteKycModalVisible
         }
         |> Modal.withHeader (t "community.kyc.delete.confirmationHeader")
-        |> Modal.withBody
-            [ div []
-                [ text (t "community.kyc.delete.confirmationBody")
-                ]
-            ]
+        |> Modal.withBody [ text (t "community.kyc.delete.confirmationBody") ]
         |> Modal.withFooter
             [ button
                 [ class "modal-cancel"
@@ -152,746 +550,456 @@ viewDeleteKycModal { t } model =
         |> Modal.toHtml
 
 
-viewSettings : LoggedIn.Model -> Model -> Profile.Model -> Html Msg
-viewSettings loggedIn model profile =
+viewProfile : LoggedIn.Model -> Profile.Model -> Html msg
+viewProfile loggedIn profile =
     let
-        { t } =
-            loggedIn.shared.translators
+        email =
+            Maybe.withDefault "" profile.email
 
-        downloadAction =
-            case LoggedIn.maybePrivateKey loggedIn of
-                Just _ ->
-                    let
-                        currentPin =
-                            case model.currentPin of
-                                -- The case when "Download" PDF button pressed just after changing the PIN
-                                Just pin ->
-                                    pin
+        isProfileOwner =
+            loggedIn.accountName == profile.account
 
-                                Nothing ->
-                                    loggedIn.auth.pinModel.pin
-                    in
-                    DownloadPdf currentPin
-
-                Nothing ->
-                    case loggedIn.shared.maybeAccount of
-                        Just ( _, True ) ->
-                            ClickedViewPrivateKeyAuth
-
-                        _ ->
-                            Ignored
-
-        viewKycSettings =
-            let
-                kycLabel =
-                    span [ class "flex items-center" ]
-                        [ text (t "community.kyc.dataTitle")
-                        , span [ class "icon-tooltip ml-1" ]
-                            [ Icons.question "inline-block"
-                            , p
-                                [ class "icon-tooltip-content" ]
-                                [ text (t "community.kyc.info")
-                                ]
+        text_ =
+            text << loggedIn.shared.translators.t
+    in
+    div [ class "p-4 bg-white border-white border-r flex md:w-1/2 md:border-gray-500" ]
+        [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
+            (div [ class "pb-4 w-full" ]
+                [ div [ class "flex flex-wrap items-center justify-center mb-4" ]
+                    [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
+                    , div [ class "flex flex-grow items-center justify-between" ]
+                        [ ul [ class "text-sm text-gray-900" ]
+                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                                [ text (Maybe.withDefault "" profile.name) ]
+                            , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                            , li [] [ text (Eos.nameToString profile.account) ]
                             ]
                         ]
-            in
-            case profile.kyc of
-                Just _ ->
-                    viewProfileItem
-                        kycLabel
-                        (viewDangerButton (t "community.kyc.delete.label") ToggleDeleteKycModal)
+                    , if isProfileOwner then
+                        a [ class "ml-2", Route.href Route.ProfileEditor ]
+                            [ Icons.edit "" ]
+
+                      else
+                        text ""
+                    ]
+                , p [ class "text-sm text-gray-900" ]
+                    [ text (Maybe.withDefault "" profile.bio) ]
+                ]
+                :: (if isProfileOwner then
+                        []
+
+                    else
+                        [ div [ class "mt-3 mb-2" ]
+                            [ a
+                                [ class "button button-primary w-full"
+                                , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
+                                ]
+                                [ text_ "transfer.title" ]
+                            ]
+                        , profile.contacts
+                            |> List.map
+                                (\contact ->
+                                    let
+                                        { contactType } =
+                                            Contact.unwrap contact
+                                    in
+                                    a
+                                        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeTextColor contactType)
+                                        , Contact.toHref contact
+                                        , target "_blank"
+                                        ]
+                                        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
+                                        , text (Contact.contactTypeToString loggedIn.shared.translators contactType)
+                                        ]
+                                )
+                            |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
+                        ]
+                   )
+            )
+        ]
+
+
+viewDetails : LoggedIn.Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Html Msg
+viewDetails loggedIn profile balance graphqlInfo =
+    let
+        text_ =
+            text << loggedIn.shared.translators.t
+
+        isProfileOwner =
+            loggedIn.accountName == profile.account
+    in
+    div [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
+        [ div [ class "w-full bg-white md:bg-gray-100" ]
+            [ div [ class "px-4" ]
+                [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
+                    [ viewDetailsItem
+                        (text_ "profile.locations")
+                        (text (profile.localization |> Maybe.withDefault ""))
                         Center
-                        (Just
-                            (div [ class "uppercase text-red pt-2 text-xs" ]
-                                [ text (t "community.kyc.delete.warning")
+                    , case profile.address of
+                        Just address ->
+                            viewAddress loggedIn.shared.translators address
+
+                        Nothing ->
+                            text ""
+                    , viewDetailsItem (text_ "profile.interests")
+                        (text (String.join ", " profile.interests))
+                        Top
+                    , if isProfileOwner then
+                        viewDetailsItem (text_ "contact_form.options")
+                            (a
+                                [ class "button-secondary button-sm uppercase cursor-pointer"
+                                , Route.href Route.ProfileAddContact
+                                ]
+                                [ if List.isEmpty profile.contacts then
+                                    text_ "menu.add"
+
+                                  else
+                                    text_ "menu.edit"
                                 ]
                             )
-                        )
+                            Center
 
-                Nothing ->
-                    viewProfileItem
-                        kycLabel
-                        (viewButton (t "menu.add") AddKycClicked)
-                        Center
-                        Nothing
-    in
-    div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
-        [ ul [ class "w-full divide-y divide-gray-500" ]
-            [ viewProfileItem
-                (text (t "profile.12words.title"))
-                (viewButton (t "profile.12words.button") downloadAction)
-                Center
-                Nothing
-            , viewProfileItem
-                (text (t "profile.pin.title"))
-                (viewButton (t "profile.pin.button") ClickedChangePin)
-                Center
-                Nothing
-            , viewKycSettings
+                      else
+                        text ""
+                    , if isProfileOwner then
+                        case profile.kyc of
+                            Just kyc ->
+                                viewKycInfo kyc
+
+                            Nothing ->
+                                text ""
+
+                      else
+                        text ""
+                    ]
+                ]
+            ]
+        , if isProfileOwner then
+            viewSettings loggedIn profile
+
+          else
+            text ""
+        , if isProfileOwner then
+            viewHistory balance graphqlInfo
+
+          else
+            text ""
+        ]
+
+
+viewDetailsItem : Html msg -> Html msg -> VerticalAlign -> Html msg
+viewDetailsItem label content verticalAlign =
+    li [ class "py-4" ]
+        [ div
+            [ class "flex justify-between"
+            , classList
+                [ ( "items-start", verticalAlign == Top )
+                , ( "items-center", verticalAlign == Center )
+                ]
+            ]
+            [ span [ class "text-sm leading-6 mr-4" ]
+                [ label ]
+            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+                [ content ]
             ]
         ]
 
 
-type ProfilePage
-    = Private
-    | Public
-
-
-type alias AdditionalInfo =
-    { totalBalance : Eos.Asset
-    , totalTransfers : Int
-    , totalClaims : Int
-    , totalProducts : Int
-    , registrationDate : Time.Posix
-    , lastTransaction : Time.Posix
-    }
-
-
-viewUserInfo : LoggedIn.Model -> Profile.Model -> Maybe AdditionalInfo -> ProfilePage -> Maybe (Html msg) -> Html msg
-viewUserInfo loggedIn profile maybeAdditionalInfo pageType maybePrivateView =
+viewAddress : Translators -> Profile.Address.Address -> Html msg
+viewAddress { t } address =
     let
-        ({ t } as translators) =
-            loggedIn.shared.translators
+        fullAddress =
+            span []
+                [ [ address.country
+                  , address.state
+                  , address.city
+                  , address.neighborhood
+                  , address.street
+                  , address.number
+                  ]
+                    |> List.filter (not << String.isEmpty)
+                    |> String.join ", "
+                    |> text
+                , br [] []
+                , text address.zip
+                ]
+    in
+    viewDetailsItem (text <| t "Address")
+        fullAddress
+        Top
 
-        userName =
-            Maybe.withDefault "" profile.name
 
-        email =
-            Maybe.withDefault "" profile.email
+viewKycInfo : Kyc.ProfileKyc -> Html msg
+viewKycInfo kyc =
+    let
+        documentLabel =
+            case kyc.documentType of
+                "cedula_de_identidad" ->
+                    "Cédula de identidad"
 
-        bio =
-            Maybe.withDefault "" profile.bio
+                "dimex" ->
+                    "DIMEX"
 
-        location =
-            Maybe.withDefault "" profile.localization
+                "nite" ->
+                    "NITE"
 
-        account =
-            Eos.nameToString profile.account
+                "gran_empresa" ->
+                    "Gran Empresa"
 
-        viewAddress =
-            case profile.address of
-                Just addr ->
-                    let
-                        fullAddress =
-                            span []
-                                [ text <|
-                                    addr.country
-                                        ++ ", "
-                                        ++ addr.state
-                                        ++ ", "
-                                        ++ addr.city
-                                        ++ ", "
-                                        ++ addr.neighborhood
-                                        ++ ", "
-                                        ++ addr.street
-                                        ++ (if addr.number /= "" then
-                                                ", " ++ addr.number
+                "mipyme" ->
+                    "MIPYME"
 
-                                            else
-                                                ""
-                                           )
-                                , br [] []
-                                , text addr.zip
-                                ]
-                    in
-                    viewProfileItem
-                        (text (t "Address"))
-                        fullAddress
-                        Top
-                        Nothing
+                _ ->
+                    "Unknown Document"
+    in
+    viewDetailsItem (text documentLabel)
+        (text kyc.document)
+        Center
 
-                Nothing ->
-                    text ""
 
-        viewKyc =
+viewSettings : LoggedIn.Model -> Profile.Model -> Html Msg
+viewSettings loggedIn profile =
+    let
+        text_ =
+            text << loggedIn.shared.translators.t
+
+        kycLabel =
+            span [ class "flex items-center" ]
+                [ text_ "community.kyc.dataTitle"
+                , span [ class "icon-tooltip ml-1" ]
+                    [ Icons.question "inline-block"
+                    , p [ class "icon-tooltip-content" ]
+                        [ text_ "community.kyc.info" ]
+                    ]
+                ]
+
+        kycButton =
             case profile.kyc of
-                Just kyc ->
-                    let
-                        documentLabel =
-                            case kyc.documentType of
-                                "cedula_de_identidad" ->
-                                    "Cédula de identidad"
-
-                                "dimex" ->
-                                    "DIMEX"
-
-                                "nite" ->
-                                    "NITE"
-
-                                "gran_empresa" ->
-                                    "Gran Empresa"
-
-                                "mipyme" ->
-                                    "MIPYME"
-
-                                _ ->
-                                    "Unknown Document"
-                    in
-                    viewProfileItem
-                        (text documentLabel)
-                        (text kyc.document)
-                        Center
-                        Nothing
+                Just _ ->
+                    button
+                        [ class "button-secondary uppercase button-sm text-red border-red"
+                        , onClick ToggleDeleteKycModal
+                        ]
+                        [ text_ "community.kyc.delete.label" ]
 
                 Nothing ->
-                    text ""
+                    a
+                        [ class "button-secondary uppercase button-sm"
+                        , Route.href Route.ProfileAddKyc
+                        ]
+                        [ text_ "menu.add" ]
+    in
+    div [ class "bg-white w-full md:bg-gray-100" ]
+        [ div [ class "px-4" ]
+            [ div [ class "container mx-auto" ]
+                [ div [ class "bg-white mb-6 w-full md:bg-gray-100" ]
+                    [ ul [ class "w-full divide-y divide-gray-500" ]
+                        [ viewDetailsItem (text_ "profile.12words.title")
+                            (button
+                                [ class "button-secondary uppercase button-sm"
+                                , onClick ClickedDownloadPdf
+                                ]
+                                [ text_ "profile.12words.button" ]
+                            )
+                            Center
+                        , viewDetailsItem (text_ "profile.pin.title")
+                            (button
+                                [ class "button-secondary uppercase button-sm"
+                                , onClick ClickedChangePin
+                                ]
+                                [ text_ "profile.pin.button"
+                                ]
+                            )
+                            Center
+                        , case profile.kyc of
+                            Nothing ->
+                                viewDetailsItem kycLabel
+                                    kycButton
+                                    Center
 
-        viewContact =
-            case pageType of
-                Private ->
-                    viewProfileItem (text (t "contact_form.options"))
-                        (a
-                            [ class "button-secondary button-sm uppercase cursor-pointer"
-                            , Route.href Route.ProfileAddContact
-                            ]
-                            [ text
-                                (if List.isEmpty profile.contacts then
-                                    t "menu.add"
+                            Just _ ->
+                                viewDetailsItem
+                                    (div []
+                                        [ kycLabel
+                                        , span [ class "uppercase text-red pt-2 text-xs" ]
+                                            [ text_ "community.kyc.delete.warning" ]
+                                        ]
+                                    )
+                                    kycButton
+                                    Top
+                        ]
+                    ]
+                ]
+            ]
+        ]
 
-                                 else
-                                    t "menu.edit"
-                                )
-                            ]
-                        )
-                        Center
-                        Nothing
 
-                Public ->
-                    profile.contacts
-                        |> List.map (viewContactButton translators)
-                        |> div [ class "flex flex-col space-y-4 mt-4 mb-2" ]
+viewHistory : Community.Balance -> GraphqlInfo -> Html msg
+viewHistory balance graphqlInfo =
+    let
+        formatPosix posix =
+            Strftime.format "%d %b %Y" Time.utc posix
 
         viewHistoryItem title number translation =
-            li [ class "flex items-center py-4" ]
+            li [ class "flex items-center py-4 text-sm leading-6" ]
                 [ div [ class "flex items-center" ]
                     title
                 , div [ class "ml-auto" ]
-                    [ span [ class "mr-1 text-indigo-500 text-sm font-bold" ]
+                    [ span [ class "mr-1 text-indigo-500 font-bold" ]
                         [ number ]
                     , span [ class "text-caption text-gray-900 uppercase" ]
                         [ translation ]
                     ]
                 ]
-
-        formatPosix posix =
-            Strftime.format "%d %b %Y" Time.utc posix
-
-        viewHistory additionalInfo =
-            ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100 md:mt-16" ]
-                [ viewHistoryItem
-                    [ Icons.coin "mr-2"
-                    , span [] [ text "Total balance" ]
-                    ]
-                    (span [ class "text-3xl mr-1" ]
-                        [ additionalInfo.totalBalance.amount
-                            |> Eos.formatSymbolAmount additionalInfo.totalBalance.symbol
-                            |> text
-                        ]
-                    )
-                    (additionalInfo.totalBalance.symbol
-                        |> Eos.symbolToSymbolCodeString
-                        |> text
-                    )
-                , viewHistoryItem [ text "Number of transfers" ]
-                    (additionalInfo.totalTransfers
-                        |> String.fromInt
-                        |> text
-                    )
-                    (text "Transfers")
-                , viewHistoryItem [ text "Number of Claims" ]
-                    (additionalInfo.totalClaims
-                        |> String.fromInt
-                        |> text
-                    )
-                    (text "Claims")
-                , viewHistoryItem [ text "Items on shop" ]
-                    (additionalInfo.totalProducts
-                        |> String.fromInt
-                        |> text
-                    )
-                    (text "items")
-                , viewHistoryItem [ text "Member since" ]
-                    (span [ class "-mr-1" ] [ text <| formatPosix additionalInfo.registrationDate ])
-                    (text "")
-                , viewHistoryItem [ text "Last transaction" ]
-                    (span [ class "-mr-1" ] [ text <| formatPosix additionalInfo.lastTransaction ])
-                    (text "")
-                ]
-
-        leftSide =
-            div
-                [ class "p-4 bg-white border-white border-r md:border-gray-500 flex md:w-1/2" ]
-                [ div
-                    [ class "w-full container mx-auto md:max-w-lg self-center" ]
-                    [ div
-                        [ class "pb-4 w-full" ]
-                        [ div [ class "flex mb-4 items-center flex-wrap justify-center" ]
-                            [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
-                            , div [ class "flex-grow flex items-center justify-between" ]
-                                [ ul [ class "text-sm text-gray-900" ]
-                                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
-                                        [ text userName ]
-                                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
-                                    , li [] [ text account ]
-                                    ]
-                                , case pageType of
-                                    Private ->
-                                        a
-                                            [ class "ml-2"
-                                            , Route.href Route.ProfileEditor
-                                            ]
-                                            [ Icons.edit "" ]
-
-                                    Public ->
-                                        text ""
-                                ]
-                            ]
-                        , p [ class "text-sm text-gray-900" ]
-                            [ text bio ]
-                        ]
-                    , case pageType of
-                        Public ->
-                            viewTransferButton
-                                loggedIn.shared
-                                account
-
-                        Private ->
-                            text ""
-                    , case pageType of
-                        Public ->
-                            viewContact
-
-                        Private ->
-                            text ""
-                    ]
-                ]
-
-        rightSide =
-            div [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
-                [ div [ class "w-full bg-white md:bg-gray-100" ]
-                    [ div [ class "px-4" ]
-                        [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
-                            [ viewProfileItem
-                                (text (t "profile.locations"))
-                                (text location)
-                                Center
-                                Nothing
-                            , viewAddress
-                            , viewProfileItem
-                                (text (t "profile.interests"))
-                                (text (String.join ", " profile.interests))
-                                Top
-                                Nothing
-                            , case pageType of
-                                Public ->
-                                    text ""
-
-                                Private ->
-                                    viewContact
-                            , case pageType of
-                                Private ->
-                                    viewKyc
-
-                                Public ->
-                                    text ""
-                            ]
-                        ]
-                    ]
-                , case maybePrivateView of
-                    Just privateView ->
-                        div [ class "bg-white w-full md:bg-gray-100" ]
-                            [ div [ class "px-4" ]
-                                [ div [ class "container mx-auto" ]
-                                    [ privateView
-                                    ]
-                                ]
-                            ]
-
-                    Nothing ->
-                        text ""
-                , case maybeAdditionalInfo of
-                    Just additionalInfo ->
-                        viewHistory additionalInfo
-
-                    Nothing ->
-                        text ""
-                ]
     in
-    div [ class "flex-grow flex bg-gray-100 relative" ]
-        [ div [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
-            [ leftSide
-            , rightSide
+    -- TODO - I18N
+    ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100" ]
+        [ viewHistoryItem
+            [ Icons.coin "mr-2"
+            , span [] [ text "Total balance" ]
             ]
-        , div [ class "z-0 absolute w-full md:w-1/2 h-full md:bg-white" ] []
-        ]
-
-
-type VerticalAlign
-    = Top
-    | Center
-
-
-viewProfileItem : Html msg -> Html msg -> VerticalAlign -> Maybe (Html msg) -> Html msg
-viewProfileItem lbl content vAlign extraContent =
-    let
-        vAlignClass =
-            case vAlign of
-                Top ->
-                    "items-start"
-
-                Center ->
-                    "items-center"
-    in
-    li
-        [ class "py-4" ]
-        [ div
-            [ class "flex justify-between"
-            , class vAlignClass
-            ]
-            [ span [ class "text-sm leading-6 mr-4" ]
-                [ lbl ]
-            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
-                [ content ]
-            ]
-        , case extraContent of
-            Just extra ->
-                extra
-
-            Nothing ->
-                text ""
-        ]
-
-
-viewTransferButton : Shared -> String -> Html msg
-viewTransferButton shared user =
-    let
-        text_ s =
-            text (shared.translators.t s)
-    in
-    div [ class "mt-3 mb-2" ]
-        [ a
-            [ class "button button-primary w-full"
-            , Route.href (Route.Transfer (Just user))
-            ]
-            [ text_ "transfer.title" ]
-        ]
-
-
-viewDownloadPdfErrorModal : Model -> LoggedIn.Model -> Html Msg
-viewDownloadPdfErrorModal model loggedIn =
-    let
-        modalVisibility =
-            case model.maybePdfDownloadedSuccessfully of
-                Just isDownloaded ->
-                    not isDownloaded
-
-                Nothing ->
-                    False
-
-        privateKey =
-            case LoggedIn.maybePrivateKey loggedIn of
-                Nothing ->
-                    ""
-
-                Just pk ->
-                    Eos.privateKeyToString pk
-
-        body =
-            [ p [ class "my-3" ]
-                [ text "Please, check if you have your 12 words saved during the registration process and use them for further signing in."
+            (span [ class "text-3xl mr-1" ]
+                [ balance.asset.amount
+                    |> Eos.formatSymbolAmount balance.asset.symbol
+                    |> text
                 ]
-            , p [ class "my-3" ]
-                [ text "If you completely lost your 12 words, please, contact us and provide this private key and we will help you to recover:"
-                ]
-            , p [ class "font-bold my-3 text-lg text-center border p-4 rounded-sm bg-gray-100" ]
-                [ text privateKey
-                ]
-            ]
-    in
-    Modal.initWith
-        { closeMsg = ClickedClosePdfDownloadError
-        , isVisible = modalVisibility
-        }
-        |> Modal.withHeader "Sorry, we can't find your 12 words"
-        |> Modal.withBody body
-        |> Modal.toHtml
-
-
-viewNewPinModal : Model -> Shared -> Html Msg
-viewNewPinModal model shared =
-    let
-        tr str =
-            text (shared.translators.t str)
-
-        body =
-            [ div []
-                [ p [ class "text-sm" ]
-                    [ tr "profile.changePinPrompt" ]
-                ]
-            , Pin.view shared.translators model.pinInputModel
-                |> Html.map GotPinMsg
-            ]
-    in
-    Modal.initWith
-        { closeMsg = ClickedCloseChangePin
-        , isVisible = model.isNewPinModalVisible
-        }
-        |> Modal.withHeader (shared.translators.t "profile.changePin")
-        |> Modal.withBody body
-        |> Modal.toHtml
-
-
-viewButton : String -> Msg -> Html Msg
-viewButton label msg =
-    button
-        [ class "button-secondary uppercase button-sm"
-        , onClick msg
-        ]
-        [ text label
-        ]
-
-
-viewDangerButton : String -> Msg -> Html Msg
-viewDangerButton label msg =
-    button
-        [ class "button-secondary uppercase button-sm text-red border-red"
-        , onClick msg
-        ]
-        [ text label
-        ]
-
-
-viewContactButton : Translators -> Contact.Normalized -> Html msg
-viewContactButton translators normalized =
-    let
-        { contactType } =
-            Contact.unwrap normalized
-
-        textColor =
-            "text-" ++ Contact.contactTypeColor contactType
-    in
-    a
-        [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ textColor)
-        , Contact.toHref normalized
-        , target "_blank"
-        ]
-        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
-        , text (Contact.contactTypeToString translators contactType)
+            )
+            (balance.asset.symbol
+                |> Eos.symbolToSymbolCodeString
+                |> text
+            )
+        , viewHistoryItem [ text "Number of transfers" ]
+            (graphqlInfo.totalTransfers
+                |> String.fromInt
+                |> text
+            )
+            (text "Claims")
+        , viewHistoryItem [ text "Items on shop" ]
+            (graphqlInfo.totalProducts
+                |> String.fromInt
+                |> text
+            )
+            (text "Items")
+        , viewHistoryItem [ text "Member since" ]
+            (span [ class "-mr-1" ]
+                [ text <| formatPosix graphqlInfo.createdDate ]
+            )
+            (text "")
+        , viewHistoryItem [ text "Last transaction" ]
+            (span [ class "-mr-1" ]
+                [ text <| formatPosix balance.lastActivity ]
+            )
+            (text "")
         ]
 
 
 
--- UPDATE
+-- GRAPHQL
 
 
-type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+graphqlInfoQuery : Eos.Name -> Eos.Symbol -> SelectionSet (Maybe GraphqlInfo) RootQuery
+graphqlInfoQuery profileName communitySymbol =
+    Cambiatus.Query.user
+        { account = Eos.nameToString profileName }
+        (graphqlInfoSelectionSet communitySymbol)
 
 
-type Msg
-    = Ignored
-    | DownloadPdf String
-    | DownloadPdfProcessed Bool
-    | ClickedClosePdfDownloadError
-    | ClickedViewPrivateKeyAuth
-    | ClickedChangePin
-    | ChangePinSubmitted String
-    | GotPinMsg Pin.Msg
-    | ClickedCloseChangePin
-    | PinChanged
-    | GotPushPreference Bool
-    | ToggleDeleteKycModal
-    | AddKycClicked
-    | DeleteKycAccepted
-    | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
-    | CheckPushPref
-
-
-update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
-    let
-        t =
-            loggedIn.shared.translators.t
-
-        downloadPdfPort pin =
-            UR.addPort
-                { responseAddress = DownloadPdfProcessed False
-                , responseData = Encode.null
-                , data =
-                    Encode.object
-                        [ ( "name", Encode.string "downloadAuthPdfFromProfile" )
-                        , ( "pin", Encode.string pin )
-                        ]
-                }
-    in
-    case msg of
-        Ignored ->
-            UR.init model
-
-        ToggleDeleteKycModal ->
-            { model | isDeleteKycModalShowed = not model.isDeleteKycModalShowed }
-                |> UR.init
-
-        AddKycClicked ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Route.ProfileAddKyc
-                        |> Route.replaceUrl loggedIn.shared.navKey
-                    )
-
-        DeleteKycAccepted ->
-            { model | isDeleteKycModalShowed = False }
-                |> UR.init
-                |> UR.addCmd (deleteKycAndAddress loggedIn)
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-
-        DeleteKycAndAddressCompleted resp ->
-            case resp of
-                RemoteData.Success _ ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
-                        |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.delete.success"))
-
-                RemoteData.Failure err ->
-                    model
-                        |> UR.init
-                        |> UR.logGraphqlError msg err
-                        |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
-
-                _ ->
-                    UR.init model
-
-        ClickedChangePin ->
-            UR.init { model | isNewPinModalVisible = True }
-                |> UR.addCmd
-                    (Dom.focus "pinInput"
-                        |> Task.attempt (\_ -> Ignored)
-                    )
-                |> LoggedIn.withAuthentication loggedIn
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        ChangePinSubmitted newPin ->
-            let
-                currentPin =
-                    case model.currentPin of
-                        Just pin ->
-                            pin
-
-                        Nothing ->
-                            loggedIn.auth.pinModel.pin
-            in
-            UR.init model
-                |> UR.addPort
-                    { responseAddress = PinChanged
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "changePin" )
-                            , ( "currentPin", Encode.string currentPin )
-                            , ( "newPin", Encode.string newPin )
-                            ]
+graphqlInfoSelectionSet : Eos.Symbol -> SelectionSet GraphqlInfo Cambiatus.Object.User
+graphqlInfoSelectionSet communitySymbol =
+    SelectionSet.succeed GraphqlInfo
+        |> SelectionSet.with
+            (User.transfers
+                (\optionals ->
+                    { optionals
+                        | first = Present 0
+                        , filter =
+                            Present
+                                { communityId = communitySymbol |> Eos.symbolToString |> Present
+                                , date = Absent
+                                , direction = Absent
+                                }
                     }
-                |> LoggedIn.withAuthentication loggedIn
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinInputModel
-            in
-            UR.init { model | pinInputModel = newPinModel }
-                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus ChangePinSubmitted)
-
-        ClickedCloseChangePin ->
-            UR.init { model | isNewPinModalVisible = False }
-
-        PinChanged ->
-            { model
-                | isNewPinModalVisible = False
-                , currentPin = Just model.pinInputModel.pin
-            }
-                |> UR.init
-                |> UR.addExt (ShowFeedback Feedback.Success (t "profile.pin.successMsg"))
-
-        ClickedViewPrivateKeyAuth ->
-            model
-                |> UR.init
-                |> downloadPdfPort loggedIn.auth.pinModel.pin
-                |> LoggedIn.withAuthentication loggedIn
-                    model
-                    { successMsg = msg, errorMsg = Ignored }
-
-        DownloadPdf pin ->
-            model
-                |> UR.init
-                |> downloadPdfPort pin
-
-        DownloadPdfProcessed isDownloaded ->
-            { model | maybePdfDownloadedSuccessfully = Just isDownloaded }
-                |> UR.init
-
-        ClickedClosePdfDownloadError ->
-            { model | maybePdfDownloadedSuccessfully = Nothing }
-                |> UR.init
-
-        GotPushPreference val ->
-            { model | isPushNotificationsEnabled = val }
-                |> UR.init
-
-        CheckPushPref ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotPushPreference False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
-                    }
+                )
+                transfersSelectionSet
+                |> SelectionSet.map (Maybe.withDefault 0)
+            )
+        |> SelectionSet.with
+            (User.claims identity claimSelectionSet
+                |> SelectionSet.map List.length
+            )
+        |> SelectionSet.with
+            (User.products productSelectionSet
+                |> SelectionSet.map
+                    (\products ->
+                        products
+                            |> List.filterMap identity
+                            |> List.filter (\{ symbol } -> symbol == communitySymbol)
+                            |> List.length
+                    )
+            )
+        |> SelectionSet.with
+            -- TODO - Fix after backend has been worked out. Right now this always returns Nothing
+            (User.createdAt
+                |> SelectionSet.map
+                    (Maybe.map Cambiatus.Scalar.DateTime
+                        >> Utils.posixDateTime
+                    )
+            )
 
 
-decodePushPref : Value -> Maybe Msg
-decodePushPref val =
-    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
-        |> Result.map GotPushPreference
-        |> Result.toMaybe
+transfersSelectionSet : SelectionSet Int Cambiatus.Object.TransferConnection
+transfersSelectionSet =
+    SelectionSet.succeed identity
+        |> SelectionSet.with
+            (Cambiatus.Object.TransferConnection.count
+                |> SelectionSet.map (Maybe.withDefault 0)
+            )
 
 
-decodeIsPdfDownloaded : Value -> Maybe Msg
-decodeIsPdfDownloaded val =
-    Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
-        |> Result.map DownloadPdfProcessed
-        |> Result.toMaybe
+claimSelectionSet : SelectionSet { id : Int } Cambiatus.Object.Claim
+claimSelectionSet =
+    SelectionSet.succeed (\id -> { id = id })
+        |> SelectionSet.with Cambiatus.Object.Claim.id
 
 
-deleteKycAndAddress : LoggedIn.Model -> Cmd Msg
-deleteKycAndAddress { accountName, shared, authToken } =
-    Api.Graphql.mutation shared
-        (Just authToken)
-        (Profile.deleteKycAndAddressMutation accountName)
-        DeleteKycAndAddressCompleted
+productSelectionSet : SelectionSet { id : Int, symbol : Eos.Symbol } Cambiatus.Object.Product
+productSelectionSet =
+    SelectionSet.succeed (\id symbol -> { id = id, symbol = symbol })
+        |> SelectionSet.with Cambiatus.Object.Product.id
+        |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
+
+
+
+-- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.ProfileLoaded profile ->
+            Just profile
+                |> RemoteData.Success
+                |> CompletedLoadProfile
+                |> Just
+
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedCloseChangePin" :: [] ->
-            Just ClickedCloseChangePin
+        "DownloadPdfProcessed" :: _ ->
+            Decode.decodeValue (Decode.field "isDownloaded" Decode.bool) val
+                |> Result.map DownloadPdfProcessed
+                |> Result.toMaybe
 
         "PinChanged" :: [] ->
             Just PinChanged
-
-        "DownloadPdfProcessed" :: _ ->
-            decodeIsPdfDownloaded val
-
-        "ChangePinSubmitted" :: pin :: [] ->
-            Just (ChangePinSubmitted pin)
-
-        "GotPushPreference" :: _ ->
-            decodePushPref val
 
         _ ->
             Nothing
@@ -903,20 +1011,29 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
+        CompletedLoadProfile r ->
+            [ "CompletedLoadProfile", UR.remoteDataToString r ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
+        CompletedLoadBalance r ->
+            [ "CompletedLoadBalance", UR.resultToString r ]
+
+        CompletedLoadGraphqlInfo r ->
+            [ "CompletedLoadGraphqlInfo", UR.remoteDataToString r ]
+
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
-
-        AddKycClicked ->
-            [ "AddKycClicked" ]
 
         DeleteKycAccepted ->
             [ "DeleteKycAccepted" ]
 
-        DeleteKycAndAddressCompleted _ ->
-            [ "DeleteKycAndAddressCompleted" ]
+        DeleteKycAndAddressCompleted r ->
+            [ "DeleteKycAndAddressCompleted", UR.remoteDataToString r ]
 
-        DownloadPdf _ ->
-            [ "DownloadPdf" ]
+        ClickedDownloadPdf ->
+            [ "ClickedDownloadPdf" ]
 
         DownloadPdfProcessed _ ->
             [ "DownloadPdfProcessed" ]
@@ -927,23 +1044,14 @@ msgToString msg =
         ClickedChangePin ->
             [ "ClickedChangePin" ]
 
-        ClickedCloseChangePin ->
-            [ "ClickedCloseChangePin" ]
-
-        PinChanged ->
-            [ "PinChanged" ]
-
-        ClickedViewPrivateKeyAuth ->
-            [ "ClickedViewPrivateKeyAuth" ]
-
-        ChangePinSubmitted pin ->
-            [ "ChangePinSubmitted", pin ]
-
-        GotPushPreference _ ->
-            [ "GotPushPreference" ]
-
-        CheckPushPref ->
-            [ "CheckPushPref" ]
+        ClickedCloseNewPinModal ->
+            [ "ClickedCloseNewPinModal" ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg
+
+        SubmittedNewPin _ ->
+            [ "SubmittedNewPin" ]
+
+        PinChanged ->
+            [ "PinChanged" ]

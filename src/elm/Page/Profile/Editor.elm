@@ -363,7 +363,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt (LoggedIn.ProfileLoaded profile |> LoggedIn.ExternalBroadcast)
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "profile.edit_success"))
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Profile loggedIn.accountName))
 
         GotSaveResult (RemoteData.Success Nothing) ->
             model

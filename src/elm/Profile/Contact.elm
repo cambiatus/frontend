@@ -4,7 +4,7 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
-    , contactTypeColor
+    , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
     , initMultiple
@@ -679,20 +679,20 @@ toHref (Normalized { contactType, contact }) =
                 )
 
 
-contactTypeColor : ContactType -> String
-contactTypeColor contactType =
+contactTypeTextColor : ContactType -> String
+contactTypeTextColor contactType =
     case contactType of
         Phone ->
-            "phone"
+            "text-phone"
 
         Instagram ->
-            "instagram"
+            "text-instagram"
 
         Telegram ->
-            "telegram"
+            "text-telegram"
 
         Whatsapp ->
-            "whatsapp"
+            "text-whatsapp"
 
 
 viewInput : Translators -> Basic -> Html Msg
