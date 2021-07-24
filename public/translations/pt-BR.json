@@ -660,6 +660,17 @@
     "changePin": "Troque seu PIN!",
     "newPin": "Novo PIN",
     "changePinPrompt": "Entre seu novo PIN de segurança com 6 dígitos.",
+    "history": {
+      "balance": "Saldo total",
+      "transfers_number": "Número de transferências",
+      "transfers": "Transferências",
+      "claims_number": "Número de reivindicações",
+      "claims": "Reivindicações",
+      "products": "Itens na loja",
+      "items": "Itens",
+      "registration_date": "Membro desde",
+      "last_transaction": "Última transação"
+    },
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"

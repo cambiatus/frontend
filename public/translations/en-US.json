@@ -653,6 +653,17 @@
     "changePin": "Change PIN",
     "newPin": "New security PIN",
     "changePinPrompt": "Enter your new 6-digit security PIN.",
+    "history": {
+      "balance": "Total balance",
+      "transfers_number": "Number of transfers",
+      "transfers": "Transfers",
+      "claims_number": "Number of claims",
+      "claims": "Claims",
+      "products": "Items on shop",
+      "items": "Items",
+      "registration_date": "Member since",
+      "last_transaction": "Last transaction"
+    },
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"

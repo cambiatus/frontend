@@ -656,6 +656,17 @@
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
     "changePinPrompt": "Introduïu el vostre nou PIN de seguretat de 6 dígits.",
+    "history": {
+      "balance": "Saldo total",
+      "transfers_number": "Nombre de transferències",
+      "transfers": "Transferències",
+      "claims_number": "Nombre de reclamacions",
+      "claims": "Reclamacions",
+      "products": "Articles a la botiga",
+      "items": "Articles",
+      "registration_date": "Membre des de",
+      "last_transaction": "Darrera transacció"
+    },
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"

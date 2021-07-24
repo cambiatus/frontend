@@ -627,6 +627,14 @@ viewDetails loggedIn profile balance graphqlInfo =
 
         isProfileOwner =
             loggedIn.accountName == profile.account
+
+        isCommunityAdmin =
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    community.creator == loggedIn.accountName
+
+                _ ->
+                    False
     in
     div [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
         [ div [ class "w-full bg-white md:bg-gray-100" ]
@@ -680,8 +688,8 @@ viewDetails loggedIn profile balance graphqlInfo =
 
           else
             text ""
-        , if isProfileOwner then
-            viewHistory balance graphqlInfo
+        , if isProfileOwner || isCommunityAdmin then
+            viewHistory loggedIn.shared.translators balance graphqlInfo
 
           else
             text ""
@@ -835,9 +843,12 @@ viewSettings loggedIn profile =
         ]
 
 
-viewHistory : Community.Balance -> GraphqlInfo -> Html msg
-viewHistory balance graphqlInfo =
+viewHistory : Translators -> Community.Balance -> GraphqlInfo -> Html msg
+viewHistory { t } balance graphqlInfo =
     let
+        text_ =
+            text << t
+
         formatPosix posix =
             Strftime.format "%d %b %Y" Time.utc posix
 
@@ -853,11 +864,10 @@ viewHistory balance graphqlInfo =
                     ]
                 ]
     in
-    -- TODO - I18N
     ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100" ]
         [ viewHistoryItem
             [ Icons.coin "mr-2"
-            , span [] [ text "Total balance" ]
+            , span [] [ text_ "profile.history.balance" ]
             ]
             (span [ class "text-3xl mr-1" ]
                 [ balance.asset.amount
@@ -869,24 +879,30 @@ viewHistory balance graphqlInfo =
                 |> Eos.symbolToSymbolCodeString
                 |> text
             )
-        , viewHistoryItem [ text "Number of transfers" ]
+        , viewHistoryItem [ text_ "profile.history.transfers_number" ]
             (graphqlInfo.totalTransfers
                 |> String.fromInt
                 |> text
             )
-            (text "Claims")
-        , viewHistoryItem [ text "Items on shop" ]
+            (text_ "profile.history.transfers")
+        , viewHistoryItem [ text_ "profile.history.claims_number" ]
+            (graphqlInfo.totalClaims
+                |> String.fromInt
+                |> text
+            )
+            (text_ "profile.history.claims")
+        , viewHistoryItem [ text_ "profile.history.products" ]
             (graphqlInfo.totalProducts
                 |> String.fromInt
                 |> text
             )
-            (text "Items")
-        , viewHistoryItem [ text "Member since" ]
+            (text_ "profile.history.items")
+        , viewHistoryItem [ text_ "profile.history.registration_date" ]
             (span [ class "-mr-1" ]
                 [ text <| formatPosix graphqlInfo.createdDate ]
             )
             (text "")
-        , viewHistoryItem [ text "Last transaction" ]
+        , viewHistoryItem [ text_ "profile.history.last_transaction" ]
             (span [ class "-mr-1" ]
                 [ text <| formatPosix balance.lastActivity ]
             )
