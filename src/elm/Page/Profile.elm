@@ -147,6 +147,12 @@ type alias DeleteKycAndAddressResult =
     }
 
 
+type alias Network =
+    { symbol : Eos.Symbol
+    , createdAt : Time.Posix
+    }
+
+
 type DownloadStatus
     = Downloading
     | DownloadWithError
@@ -272,7 +278,7 @@ update msg model loggedIn =
                 reportCreatedDateNotFound =
                     case graphqlInfo.createdDate of
                         Nothing ->
-                            UR.logImpossible msg []
+                            UR.logImpossible msg [ "NoCreatedDate" ]
 
                         Just _ ->
                             identity
@@ -1015,12 +1021,6 @@ productSelectionSet =
     SelectionSet.succeed (\id symbol -> { id = id, symbol = symbol })
         |> SelectionSet.with Cambiatus.Object.Product.id
         |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
-
-
-type alias Network =
-    { symbol : Eos.Symbol
-    , createdAt : Time.Posix
-    }
 
 
 networkSelectionSet : SelectionSet Network Cambiatus.Object.Network
