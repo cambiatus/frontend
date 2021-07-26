@@ -509,11 +509,13 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-            , Log.fromIncompatibleMsg msg
-                (Page.maybeAccountName model.session)
-                { moduleName = "Main", function = "update" }
-                []
-                |> Log.send msgToString
+            , { type_ = Log.InfoBreadcrumb
+              , category = msg
+              , message = "Msg does not correspond with Model"
+              , data = Dict.empty
+              , level = Log.Info
+              }
+                |> Log.addBreadcrumb msgToString
             )
 
 
