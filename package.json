@@ -75,7 +75,7 @@
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
     "@dillonkearns/elm-graphql": "^4.0.3",
-    "@sentry/browser": "^6.9.0",
+    "@sentry/browser": "5.4.0",
     "@tailwindcss/forms": "^0.3.2",
     "axios": "^0.21.1",
     "babel-runtime": "^6.26.0",

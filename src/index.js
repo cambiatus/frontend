@@ -922,17 +922,24 @@ async function handleJavascriptPort (arg) {
         })
         .catch(errorString => {
           let error
+          let errorMessage
           try {
             error = JSON.parse(errorString)
+            if (error.details[0]) {
+              errorMessage = `[EOS] ${error.details[0]}`
+            } else {
+              errorMessage = `[EOS] ${error.message}`
+            }
           } catch {
             error = errorString
+            errorMessage = 'Got an error when pushing transaction to EOS'
           }
 
           const response = { error }
 
           logEvent({
             user: null,
-            message: 'Got an error when pushing transaction to EOS',
+            message: errorMessage,
             tags: { 'cambiatus.type': 'eos-transaction' },
             contexts: [{
               name: 'Eos transaction',
