@@ -14,11 +14,11 @@ import Api.Graphql
 import Avatar
 import Cambiatus.Object
 import Cambiatus.Object.Claim
+import Cambiatus.Object.Network
 import Cambiatus.Object.Product
 import Cambiatus.Object.TransferConnection
 import Cambiatus.Object.User as User
 import Cambiatus.Query
-import Cambiatus.Scalar
 import Community
 import Eos
 import Eos.Account as Eos
@@ -126,7 +126,7 @@ type alias GraphqlInfo =
     { totalTransfers : Int
     , totalClaims : Int
     , totalProducts : Int
-    , createdDate : Time.Posix
+    , createdDate : Maybe Time.Posix
     }
 
 
@@ -197,6 +197,7 @@ update msg model loggedIn =
         CompletedLoadProfile (RemoteData.Success Nothing) ->
             { model | profile = RemoteData.Failure ResultNotFound }
                 |> UR.init
+                |> UR.logImpossible msg [ "ProfileNotFound" ]
 
         CompletedLoadProfile (RemoteData.Failure error) ->
             { model | profile = RemoteData.Failure (ResultWithError error) }
@@ -253,20 +254,42 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadBalance (Err err) ->
+            let
+                logError =
+                    case err of
+                        ResultNotFound ->
+                            UR.logImpossible msg [ "BalanceNotFound" ]
+
+                        ResultWithError httpError ->
+                            UR.logHttpError msg httpError
+            in
             { model | balance = RemoteData.Failure err }
                 |> UR.init
+                |> logError
 
         CompletedLoadGraphqlInfo (RemoteData.Success (Just graphqlInfo)) ->
+            let
+                reportCreatedDateNotFound =
+                    case graphqlInfo.createdDate of
+                        Nothing ->
+                            UR.logImpossible msg []
+
+                        Just _ ->
+                            identity
+            in
             { model | graphqlInfo = RemoteData.Success graphqlInfo }
                 |> UR.init
+                |> reportCreatedDateNotFound
 
         CompletedLoadGraphqlInfo (RemoteData.Success Nothing) ->
             { model | graphqlInfo = RemoteData.Failure ResultNotFound }
                 |> UR.init
+                |> UR.logImpossible msg [ "GraphqlInfoNotFound" ]
 
         CompletedLoadGraphqlInfo (RemoteData.Failure error) ->
             { model | graphqlInfo = RemoteData.Failure (ResultWithError error) }
                 |> UR.init
+                |> UR.logGraphqlError msg error
 
         CompletedLoadGraphqlInfo RemoteData.Loading ->
             UR.init model
@@ -897,11 +920,16 @@ viewHistory { t } balance graphqlInfo =
                 |> text
             )
             (text_ "profile.history.items")
-        , viewHistoryItem [ text_ "profile.history.registration_date" ]
-            (span [ class "-mr-1" ]
-                [ text <| formatPosix graphqlInfo.createdDate ]
-            )
-            (text "")
+        , case graphqlInfo.createdDate of
+            Just createdDate ->
+                viewHistoryItem [ text_ "profile.history.registration_date" ]
+                    (span [ class "-mr-1" ]
+                        [ text <| formatPosix createdDate ]
+                    )
+                    (text "")
+
+            Nothing ->
+                text ""
         , viewHistoryItem [ text_ "profile.history.last_transaction" ]
             (span [ class "-mr-1" ]
                 [ text <| formatPosix balance.lastActivity ]
@@ -955,11 +983,14 @@ graphqlInfoSelectionSet communitySymbol =
                     )
             )
         |> SelectionSet.with
-            -- TODO - Fix after backend has been worked out. Right now this always returns Nothing
-            (User.createdAt
+            (User.network networkSelectionSet
                 |> SelectionSet.map
-                    (Maybe.map Cambiatus.Scalar.DateTime
-                        >> Utils.posixDateTime
+                    (\networks ->
+                        networks
+                            |> Maybe.withDefault []
+                            |> List.filterMap identity
+                            |> List.find (\network -> network.symbol == communitySymbol)
+                            |> Maybe.map .createdAt
                     )
             )
 
@@ -984,6 +1015,25 @@ productSelectionSet =
     SelectionSet.succeed (\id symbol -> { id = id, symbol = symbol })
         |> SelectionSet.with Cambiatus.Object.Product.id
         |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
+
+
+type alias Network =
+    { symbol : Eos.Symbol
+    , createdAt : Time.Posix
+    }
+
+
+networkSelectionSet : SelectionSet Network Cambiatus.Object.Network
+networkSelectionSet =
+    SelectionSet.succeed Network
+        |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Network.communityId)
+        |> SelectionSet.with
+            (Cambiatus.Object.Network.createdAt
+                |> SelectionSet.map
+                    (Just
+                        >> Utils.posixDateTime
+                    )
+            )
 
 
 
