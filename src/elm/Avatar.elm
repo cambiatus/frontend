@@ -30,11 +30,11 @@ view : Avatar -> String -> Html msg
 view (Avatar maybeUrl) cls =
     case maybeUrl of
         Nothing ->
-            Icons.accountCircle cls
+            Icons.accountCircleSolid cls
 
         Just url ->
             if String.isEmpty (String.trim url) then
-                Icons.accountCircle cls
+                Icons.accountCircleSolid cls
 
             else
                 Html.div
