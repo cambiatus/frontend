@@ -925,9 +925,9 @@ async function handleJavascriptPort (arg) {
           let errorMessage
           try {
             error = JSON.parse(errorString)
-            if (error.details[0]) {
-              errorMessage = `[EOS] ${error.details[0]}`
-            } else {
+            try {
+              errorMessage = `[EOS] ${error.error.details[0]}`
+            } catch {
               errorMessage = `[EOS] ${error.message}`
             }
           } catch {
