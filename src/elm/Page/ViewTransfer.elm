@@ -4,9 +4,11 @@ import Api.Graphql
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
+import Eos
 import Graphql.Http
-import Html exposing (Html, a, div, h2, h5, img, p, text)
+import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, src)
+import Icons
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -158,7 +160,7 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
-            [ Transfer.viewCard loggedIn
+            [ viewTransferCard loggedIn
                 transfer
                 direction
                 profileSummaries
@@ -185,6 +187,70 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                     [ text (t "transfer_result.my_balance") ]
                 ]
             ]
+        ]
+
+
+viewTransferCard :
+    LoggedIn.Model
+    -> Transfer
+    -> TransferDirectionValue
+    -> Transfer.ProfileSummaries
+    -> (Bool -> Profile.Summary.Msg -> msg)
+    -> List (Html.Attribute msg)
+    -> Html msg
+viewTransferCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg attrs =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        ( leftProfile, rightProfile, rotateClass ) =
+            case transferDirection of
+                TransferDirectionValue.Receiving ->
+                    ( transfer.to, transfer.from, "rotate-90" )
+
+                TransferDirectionValue.Sending ->
+                    ( transfer.from, transfer.to, "-rotate-90" )
+
+        arrowClass =
+            "fill-current text-green " ++ rotateClass
+
+        viewSummary profile summary =
+            Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
+                |> Html.map (profileSummaryToMsg (profile == leftProfile))
+    in
+    div
+        (class "grid grid-cols-5 place-items-center"
+            :: attrs
+        )
+        [ viewSummary leftProfile profileSummaries.left
+        , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
+            [ Icons.arrowDown arrowClass
+            , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
+                [ span [ class "text-gray-900 text-caption uppercase" ]
+                    [ text <|
+                        case transferDirection of
+                            TransferDirectionValue.Receiving ->
+                                t "transfer_result.received"
+
+                            TransferDirectionValue.Sending ->
+                                t "transfer_result.transferred"
+                    ]
+                , div [ class "flex text-green" ]
+                    [ span [ class "font-medium text-heading" ]
+                        [ transfer.value
+                            |> Eos.formatSymbolAmount transfer.community.symbol
+                            |> text
+                        ]
+                    , span [ class "text-caption ml-2 mb-2 self-end" ]
+                        [ transfer.community.symbol
+                            |> Eos.symbolToSymbolCodeString
+                            |> text
+                        ]
+                    ]
+                ]
+            , Icons.arrowDown arrowClass
+            ]
+        , viewSummary rightProfile profileSummaries.right
         ]
 
 

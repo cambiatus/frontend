@@ -11,11 +11,10 @@ module Transfer exposing
     , transferSucceedSubscription
     , transfersUserQuery
     , updateProfileSummaries
-    , viewCard
+    , view
     )
 
 import Api.Relay exposing (Edge, PageConnection, pageInfoSelectionSet)
-import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Object
 import Cambiatus.Object.Community
 import Cambiatus.Object.Subdomain
@@ -30,12 +29,12 @@ import Eos exposing (symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, div, span, text)
-import Html.Attributes exposing (class)
-import Icons
+import Html exposing (Html, a, div, p, span, text)
+import Html.Attributes exposing (class, classList)
 import Json.Encode as Encode exposing (Value)
 import Profile
 import Profile.Summary
+import Route
 import Session.LoggedIn as LoggedIn
 
 
@@ -237,65 +236,67 @@ updateProfileSummaries profileSummaries isLeft profileSummaryMsg =
         { profileSummaries | right = Profile.Summary.update profileSummaryMsg profileSummaries.right }
 
 
-viewCard :
+view :
     LoggedIn.Model
     -> Transfer
-    -> TransferDirectionValue
-    -> ProfileSummaries
-    -> (Bool -> Profile.Summary.Msg -> msg)
-    -> List (Html.Attribute msg)
+    -> Profile.Summary.Model
+    -> (Profile.Summary.Msg -> msg)
     -> Html msg
-viewCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg attrs =
+view loggedIn transfer profileSummary profileSummaryToMsg =
     let
         { t } =
             loggedIn.shared.translators
 
-        ( leftProfile, rightProfile, rotateClass ) =
-            case transferDirection of
-                TransferDirectionValue.Receiving ->
-                    ( transfer.to, transfer.from, "rotate-90" )
+        ( otherProfile, isSent ) =
+            if transfer.from.account == loggedIn.accountName then
+                ( transfer.to, False )
 
-                TransferDirectionValue.Sending ->
-                    ( transfer.from, transfer.to, "-rotate-90" )
-
-        arrowClass =
-            "fill-current text-green " ++ rotateClass
-
-        viewSummary profile summary =
-            Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
-                |> Html.map (profileSummaryToMsg (profile == leftProfile))
+            else
+                ( transfer.from, True )
     in
-    div
-        (class "grid grid-cols-5 place-items-center"
-            :: attrs
-        )
-        [ viewSummary leftProfile profileSummaries.left
-        , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
-            [ Icons.arrowDown arrowClass
-            , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
-                [ span [ class "text-gray-900 text-caption uppercase" ]
-                    [ text <|
-                        case transferDirection of
-                            TransferDirectionValue.Receiving ->
-                                t "transfer_result.received"
-
-                            TransferDirectionValue.Sending ->
-                                t "transfer_result.transferred"
-                    ]
-                , div [ class "flex text-green" ]
-                    [ span [ class "font-medium text-heading" ]
-                        [ transfer.value
-                            |> Eos.formatSymbolAmount transfer.community.symbol
-                            |> text
-                        ]
-                    , span [ class "text-caption ml-2 mb-2 self-end" ]
-                        [ transfer.community.symbol
-                            |> Eos.symbolToSymbolCodeString
-                            |> text
-                        ]
+    a
+        [ class "flex hover:bg-gray-100 p-4"
+        , Route.href (Route.ViewTransfer transfer.id)
+        ]
+        [ profileSummary
+            |> Profile.Summary.withoutName
+            |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
+            |> Html.map profileSummaryToMsg
+        , div [ class "ml-4 w-full truncate" ]
+            [ p
+                [ class "font-sm leading-tight"
+                , classList
+                    [ ( "text-gray-333", isSent )
+                    , ( "text-indigo-500", not isSent )
                     ]
                 ]
-            , Icons.arrowDown arrowClass
+                [ if isSent then
+                    text "Enviou para "
+
+                  else
+                    text "Recebeu de "
+                , span [ class "font-bold" ]
+                    [ text <|
+                        Maybe.withDefault (Eos.nameToString otherProfile.account)
+                            otherProfile.name
+                    ]
+                ]
+            , p
+                [ classList
+                    [ ( "text-gray-333", isSent )
+                    , ( "text-indigo-500", not isSent )
+                    ]
+                ]
+                [ span [ class "font-bold text-heading leading-tight" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                , text " "
+                , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
+                ]
+            , case transfer.memo of
+                Nothing ->
+                    text ""
+
+                Just memo ->
+                    span [ class "text-xs text-gray-900" ]
+                        [ text <| t memo ]
             ]
-        , viewSummary rightProfile profileSummaries.right
         ]

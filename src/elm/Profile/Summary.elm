@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling, withRelativeSelector, withScrollSelector)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling, withRelativeSelector, withScrollSelector, withoutName)
 
 import Avatar
 import Eos.Account as Eos
@@ -24,6 +24,7 @@ type alias Model =
     , preventScrolling : View.Components.PreventScroll
     , relativeSelector : Maybe String
     , scrollSelector : Maybe String
+    , showNameTag : Bool
     }
 
 
@@ -34,6 +35,7 @@ init isLarge =
     , preventScrolling = View.Components.PreventScrollOnMobile
     , relativeSelector = Nothing
     , scrollSelector = Nothing
+    , showNameTag = True
     }
 
 
@@ -83,6 +85,11 @@ withRelativeSelector relativeSelector model =
 withScrollSelector : String -> Model -> Model
 withScrollSelector scrollSelector model =
     { model | scrollSelector = Just scrollSelector }
+
+
+withoutName : Model -> Model
+withoutName model =
+    { model | showNameTag = False }
 
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
@@ -157,8 +164,12 @@ viewUserImg shared loggedInAccount profile isMobile model =
               else
                 text ""
             ]
-        , div [ class "mt-2" ]
-            [ Profile.viewProfileNameTag shared loggedInAccount profile ]
+        , if model.showNameTag then
+            div [ class "mt-2" ]
+                [ Profile.viewProfileNameTag shared loggedInAccount profile ]
+
+          else
+            text ""
         ]
 
 

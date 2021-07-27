@@ -21,7 +21,32 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 // Custom elements
 // =========================================
-/* global HTMLElement */
+/* global HTMLElement, CustomEvent */
+
+window.customElements.define('infinite-list',
+  class InfiniteList extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-distance-to-request' ] }
+
+    connectedCallback () {
+      let scrolling = false
+      this.addEventListener('scroll', () => { scrolling = true })
+
+      setInterval(() => {
+        if (scrolling) {
+          scrolling = false
+          const boundingRect = this.getBoundingClientRect()
+          if (this.scrollTop >= this.scrollHeight - this._distanceToRequest - boundingRect.height) {
+            this.dispatchEvent(new CustomEvent('requested-items', {}))
+          }
+        }
+      }, 300)
+    }
+
+    attributeChangedCallback () {
+      this._distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
+    }
+  }
+)
 
 window.customElements.define('date-formatter',
   class DateFormatter extends HTMLElement {

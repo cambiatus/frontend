@@ -1,9 +1,8 @@
 module View.Components exposing
-    ( loadingLogoAnimated, loadingLogoAnimatedFluid
+    ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
-    , tooltip, pdfViewer
+    , tooltip, pdfViewer, dateViewer, infiniteList
     , bgNoScroll, PreventScroll(..)
-    , dateViewer, loadingLogoWithCustomText
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -12,7 +11,7 @@ state or configuration, such as loading indicators and containers
 
 # Loading
 
-@docs loadingLogoAnimated, loadingLogoAnimatedFluid
+@docs loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
 
 
 # Containers
@@ -27,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer
+@docs tooltip, pdfViewer, dateViewer, infiniteList
 
 
 # Helpers
@@ -38,7 +37,10 @@ state or configuration, such as loading indicators and containers
 
 import Html exposing (Html, div, img, node, p, span, text)
 import Html.Attributes exposing (attribute, class, src)
+import Html.Events exposing (on)
+import Html.Keyed
 import Icons
+import Json.Decode
 import Session.Shared exposing (Shared, Translators)
 import Time
 import Translation
@@ -187,6 +189,35 @@ dateViewer attrs fillInTranslations shared time =
             , date = time
             , translationString = translations.other
             }
+
+
+{-| An infinite list component. It automatically requests more items as the user
+scrolls down, based on a `distanceToRequest`, which is the distance to the
+bottom of the container. If you don't want to request more items (i.e. when
+there are no more items), just pass `requestedItems = Nothing`.
+-}
+infiniteList :
+    { onRequestedItems : Maybe msg, distanceToRequest : Int }
+    -> List (Html.Attribute msg)
+    -> List ( String, Html msg )
+    -> Html msg
+infiniteList options attrs children =
+    let
+        requestedItemsListener =
+            case options.onRequestedItems of
+                Nothing ->
+                    class ""
+
+                Just onRequestedItems ->
+                    on "requested-items" (Json.Decode.succeed onRequestedItems)
+    in
+    Html.Keyed.node "infinite-list"
+        (requestedItemsListener
+            :: class "overflow-y-auto inline-block"
+            :: attribute "elm-distance-to-request" (String.fromInt options.distanceToRequest)
+            :: attrs
+        )
+        children
 
 
 

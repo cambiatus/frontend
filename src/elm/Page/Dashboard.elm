@@ -27,7 +27,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, src)
+import Html.Attributes exposing (class, classList, id, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -82,7 +82,7 @@ type alias Model =
     , analysisFilter : Direction
     , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
-    , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Transfer.ProfileSummaries ))
+    , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Profile.Summary.Model ))
     , transfersFilters : TransfersFilters
     , transfersFiltersBeingEdited :
         { datePicker : DatePicker.DatePicker
@@ -208,10 +208,21 @@ view ({ shared, accountName } as loggedIn) model =
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
-                    div [ class "mb-10" ]
+                    div []
                         [ div [ class "container mx-auto px-4" ]
                             [ viewHeader loggedIn community isCommunityAdmin
-                            , viewBalance loggedIn model balance
+
+                            -- TODO
+                            -- , div [ class "grid grid-cols-4 grid-rows-5 gap-6" ]
+                            , div
+                                [ class "grid grid-cols-4 gap-6"
+                                , style "grid-template-rows" "repeat(5, 110px)"
+                                ]
+                                [ viewBalance shared balance
+                                , viewTransfers loggedIn model
+                                , viewMyClaimsCard loggedIn
+                                , viewMyOffersCard loggedIn
+                                ]
                             , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                                 viewAnalysisList loggedIn model
 
@@ -529,119 +540,110 @@ viewTransfers loggedIn model =
         t =
             loggedIn.shared.translators.t
     in
-    div [ class "mt-4 bg-white" ]
-        [ div [ class "container mx-auto p-4" ]
-            [ div [ class "flex justify-between" ]
-                [ div [ class "text-heading" ]
-                    [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ++ " " ]
-                    , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
-                    ]
-                , button
-                    [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
-                    , onClick ClickedOpenTransferFilters
-                    ]
-                    [ text (t "all_analysis.filter.title")
-                    , Icons.arrowDown "fill-current"
-                    ]
+    div
+        [ class "col-span-2 row-span-5 bg-white rounded h-full" ]
+        [ div [ class "flex justify-between items-center bg-white z-10 sticky top-0 px-6 pt-6 pb-4" ]
+            [ p [ class "text-3xl" ]
+                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ]
+                , text " "
+                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
                 ]
-            , case model.transfers of
-                LoadingGraphql Nothing ->
-                    Page.viewCardEmpty
-                        [ div [ class "text-gray-900 text-sm" ]
-                            [ text (t "menu.loading") ]
-                        ]
-
-                FailedGraphql _ ->
-                    Page.viewCardEmpty
-                        [ div [ class "text-gray-900 text-sm" ]
-                            [ text (t "transfer.loading_error") ]
-                        ]
-
-                LoadedGraphql [] _ ->
-                    Page.viewCardEmpty
-                        [ div [ class "text-gray-900 text-sm" ]
-                            [ text (t "transfer.no_transfers_yet") ]
-                        ]
-
-                LoadingGraphql (Just existingTransfers) ->
-                    div []
-                        [ viewTransferList loggedIn existingTransfers Nothing
-                        , View.Components.loadingLogoAnimated loggedIn.shared.translators ""
-                        ]
-
-                LoadedGraphql transfers maybePageInfo ->
-                    viewTransferList loggedIn transfers maybePageInfo
+            , button
+                [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
+                , onClick ClickedOpenTransferFilters
+                ]
+                [ text <| t "all_analysis.filter.title"
+                , Icons.arrowDown "fill-current"
+                ]
             ]
+        , case model.transfers of
+            LoadingGraphql Nothing ->
+                Page.viewCardEmpty [ div [ class "text-gray-900 text-sm" ] [ text <| t "menu.loading" ] ]
+
+            FailedGraphql _ ->
+                Page.viewCardEmpty []
+
+            LoadedGraphql [] _ ->
+                Page.viewCardEmpty []
+
+            LoadingGraphql (Just transfers) ->
+                viewTransferList loggedIn transfers Nothing True
+
+            LoadedGraphql transfers maybePageInfo ->
+                viewTransferList loggedIn transfers maybePageInfo False
         ]
 
 
 viewTransferList :
     LoggedIn.Model
-    -> List ( Transfer, Transfer.ProfileSummaries )
+    -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
+    -> Bool
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo =
+viewTransferList loggedIn transfers maybePageInfo isLoading =
     let
         { t } =
             loggedIn.shared.translators
+
+        unwrapDateTime (Cambiatus.Scalar.DateTime dateTime) =
+            dateTime
+
+        addLoading transfers_ =
+            if isLoading then
+                transfers_
+                    ++ [ ( "transfers-loading-indicator"
+                         , View.Components.loadingLogoAnimated loggedIn.shared.translators ""
+                         )
+                       ]
+
+            else
+                transfers_
     in
-    div []
-        [ div [ class "divide-y" ]
-            (transfers
-                |> List.groupWhile
-                    (\( t1, _ ) ( t2, _ ) ->
-                        Utils.areSameDay loggedIn.shared.timezone
+    View.Components.infiniteList
+        { onRequestedItems =
+            maybePageInfo
+                |> Maybe.andThen
+                    (\pageInfo ->
+                        if pageInfo.hasNextPage then
+                            Just ClickedShowMoreTransfers
+
+                        else
+                            Nothing
+                    )
+        , distanceToRequest = 1000
+        }
+        [ class "px-6 pb-6 divide-y max-h-full w-full" ]
+        (transfers
+            |> List.groupWhile
+                (\( t1, _ ) ( t2, _ ) ->
+                    Utils.areSameDay loggedIn.shared.timezone
+                        (Utils.fromDateTime t1.blockTime)
+                        (Utils.fromDateTime t2.blockTime)
+                )
+            |> List.map
+                (\( ( t1, _ ) as first, rest ) ->
+                    ( "transfers-from-" ++ unwrapDateTime t1.blockTime
+                    , div [ class "pb-4" ]
+                        [ View.Components.dateViewer
+                            [ class "uppercase text-caption text-black tracking-wider" ]
+                            identity
+                            loggedIn.shared
                             (Utils.fromDateTime t1.blockTime)
-                            (Utils.fromDateTime t2.blockTime)
-                    )
-                |> List.map
-                    (\( ( t1, _ ) as first, rest ) ->
-                        div [ class "py-4" ]
-                            [ View.Components.dateViewer
-                                [ class "uppercase text-caption text-black tracking-wider" ]
-                                identity
-                                loggedIn.shared
-                                (Utils.fromDateTime t1.blockTime)
-                            , div [ class "divide-y" ]
-                                (List.map
-                                    (\( transfer, profileSummaries ) ->
-                                        let
-                                            direction =
-                                                if transfer.to.account == loggedIn.accountName then
-                                                    TransferDirectionValue.Receiving
-
-                                                else
-                                                    TransferDirectionValue.Sending
-                                        in
-                                        Transfer.viewCard loggedIn
-                                            transfer
-                                            direction
-                                            profileSummaries
-                                            (GotTransferCardProfileSummaryMsg transfer.id)
-                                            [ class "py-4 cursor-pointer hover:bg-gray-100"
-                                            , onClick (ClickedTransferCard transfer.id)
-                                            ]
-                                    )
-                                    (first :: rest)
+                        , div [ class "divide-y" ]
+                            (List.map
+                                (\( transfer, profileSummary ) ->
+                                    Transfer.view loggedIn
+                                        transfer
+                                        profileSummary
+                                        (GotTransferCardProfileSummaryMsg transfer.id)
                                 )
-                            ]
-                    )
-            )
-        , case maybePageInfo of
-            Just pageInfo ->
-                if pageInfo.hasNextPage then
-                    button
-                        [ class "button button-primary w-full"
-                        , onClick ClickedShowMoreTransfers
+                                (first :: rest)
+                            )
                         ]
-                        [ text <| t "payment_history.more" ]
-
-                else
-                    text ""
-
-            Nothing ->
-                text ""
-        ]
+                    )
+                )
+            |> addLoading
+        )
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -782,110 +784,92 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
-viewBalance ({ shared } as loggedIn) _ balance =
+viewBalance : Shared -> Balance -> Html Msg
+viewBalance shared balance =
     let
         text_ =
             text << shared.translators.t
-
-        symbolText =
-            Eos.symbolToSymbolCodeString balance.asset.symbol
-
-        balanceText =
-            String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex-wrap flex lg:space-x-3" ]
-        [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
-            [ div [ class "w-full" ]
-                (div [ class "input-label mb-2" ]
-                    [ text_ "account.my_wallet.balances.current" ]
-                    :: div [ class "flex items-center mb-4" ]
-                        [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                            [ text balanceText ]
-                        , div [ class "text-indigo-500 ml-2" ]
-                            [ text symbolText ]
-                        ]
-                    :: (case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                [ a
-                                    [ class "button button-primary w-full font-medium mb-2"
-                                    , Route.href <| Route.Transfer Nothing
-                                    ]
-                                    [ text_ "dashboard.transfer" ]
-                                , a
-                                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                                    , Route.href Route.Community
-                                    ]
-                                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
-                                    , Icons.arrowDown "rotate--90"
-                                    ]
-                                ]
-
-                            _ ->
-                                []
-                       )
-                    ++ [ button
-                            [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                            , onClick CreateInvite
-                            ]
-                            [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
-                       ]
-                )
+    div [ class "col-span-2 row-span-3 bg-white rounded px-6 pt-4 pb-2 md:pt-10" ]
+        [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
+        , p [ class "text-indigo-500 text-3xl mt-3" ]
+            [ span [ class "font-bold" ]
+                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
+            , text " "
+            , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
             ]
-        , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
-            [ viewQuickLinks loggedIn
+        , a
+            [ class "button button-primary w-full mt-6"
+            , Route.href (Route.Transfer Nothing)
+            ]
+            [ text_ "dashboard.transfer" ]
+        , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
+            [ a
+                [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                , Route.href Route.Community
+                ]
+                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString balance.asset.symbol ) ]
+                , Icons.arrowDown "-rotate-90"
+                ]
+            , button
+                [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                , onClick CreateInvite
+                ]
+                [ text_ "dashboard.invite"
+                , Icons.arrowDown "-rotate-90"
+                ]
             ]
         ]
 
 
-viewQuickLinks : LoggedIn.Model -> Html Msg
-viewQuickLinks ({ shared } as loggedIn) =
+viewMyClaimsCard : LoggedIn.Model -> Html Msg
+viewMyClaimsCard loggedIn =
     let
-        t =
-            shared.translators.t
+        { t } =
+            loggedIn.shared.translators
     in
-    div [ class "flex-wrap flex" ]
-        [ div [ class "w-1/2 lg:w-full" ]
-            [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
-                RemoteData.Success True ->
-                    a
-                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
-                        , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
-                        ]
-                        [ div []
-                            [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
-                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
-                                [ text <| t "dashboard.my_claims.1"
-                                , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
-                                ]
-                            ]
-                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
-                        ]
+    case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+        RemoteData.Success True ->
+            a
+                [ class "row-span-2 rounded bg-white px-6 py-10 hover:shadow"
+                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+                ]
+                [ Icons.claims "w-8 h-8"
+                , p [ class "text-gray-600 mt-5" ]
+                    [ text <| t "dashboard.my_claims.1"
+                    , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                    ]
+                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
+                    [ text <| t "dashboard.my_claims.go" ]
+                ]
 
-                _ ->
-                    text ""
-            ]
-        , div [ class "w-1/2 lg:w-full" ]
-            [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
-                RemoteData.Success True ->
-                    a
-                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:ml-0"
-                        , Route.href (Route.Shop Shop.UserSales)
-                        ]
-                        [ div []
-                            [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
-                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
-                                [ text <| t "dashboard.my_offers.1"
-                                , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
-                                ]
-                            ]
-                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
-                        ]
+        _ ->
+            text ""
 
-                _ ->
-                    text ""
-            ]
-        ]
+
+viewMyOffersCard : LoggedIn.Model -> Html Msg
+viewMyOffersCard loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
+    case RemoteData.map .hasShop loggedIn.selectedCommunity of
+        RemoteData.Success True ->
+            a
+                [ class "row-span-2 rounded bg-white px-6 py-10 hover:shadow"
+                , Route.href (Route.Shop Shop.UserSales)
+                ]
+                [ Icons.shop "w-8 h-8 fill-current"
+                , p [ class "text-gray-600 mt-5" ]
+                    [ text <| t "dashboard.my_offers.1"
+                    , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                    ]
+                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
+                    [ text <| t "dashboard.my_offers.go" ]
+                ]
+
+        _ ->
+            text ""
 
 
 
@@ -907,8 +891,7 @@ type Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
-    | GotTransferCardProfileSummaryMsg Int Bool Profile.Summary.Msg
-    | ClickedTransferCard Int
+    | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedShowMoreTransfers
     | ClickedOpenTransferFilters
     | ClosedTransfersFilters
@@ -1008,7 +991,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                         |> Maybe.andThen .transfers
                         |> Maybe.map .pageInfo
 
-                previousTransfers : List ( Transfer, Transfer.ProfileSummaries )
+                previousTransfers : List ( Transfer, Profile.Summary.Model )
                 previousTransfers =
                     case model.transfers of
                         LoadedGraphql previousTransfers_ _ ->
@@ -1023,14 +1006,7 @@ update msg model ({ shared, accountName } as loggedIn) =
             { model
                 | transfers =
                     Transfer.getTransfers maybeTransfers
-                        |> List.map
-                            (\transfer ->
-                                ( transfer
-                                , { left = Profile.Summary.init False
-                                  , right = Profile.Summary.init False
-                                  }
-                                )
-                            )
+                        |> List.map (\transfer -> ( transfer, Profile.Summary.init False ))
                         |> (\transfers -> LoadedGraphql (previousTransfers ++ transfers) maybePageInfo)
             }
                 |> UR.init
@@ -1161,7 +1137,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 _ ->
                     model |> UR.init
 
-        GotTransferCardProfileSummaryMsg transferId isLeft subMsg ->
+        GotTransferCardProfileSummaryMsg transferId subMsg ->
             case model.transfers of
                 LoadedGraphql transfers pageInfo ->
                     let
@@ -1169,11 +1145,9 @@ update msg model ({ shared, accountName } as loggedIn) =
                             transfers
                                 |> List.updateIf
                                     (\( transfer, _ ) -> transfer.id == transferId)
-                                    (\( transfer, profileSummaries ) ->
+                                    (\( transfer, profileSummary ) ->
                                         ( transfer
-                                        , Transfer.updateProfileSummaries profileSummaries
-                                            isLeft
-                                            subMsg
+                                        , Profile.Summary.update subMsg profileSummary
                                         )
                                     )
                     in
@@ -1187,11 +1161,6 @@ update msg model ({ shared, accountName } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-
-        ClickedTransferCard transferId ->
-            model
-                |> UR.init
-                |> UR.addCmd (Route.pushUrl shared.navKey (Route.ViewTransfer transferId))
 
         ClickedShowMoreTransfers ->
             case ( model.transfers, loggedIn.selectedCommunity ) of
@@ -1734,11 +1703,8 @@ msgToString msg =
         GotVoteResult _ result ->
             [ "GotVoteResult", UR.resultToString result ]
 
-        GotTransferCardProfileSummaryMsg _ _ _ ->
+        GotTransferCardProfileSummaryMsg _ _ ->
             [ "GotTransferCardProfileSummaryMsg" ]
-
-        ClickedTransferCard _ ->
-            [ "ClickedTransferCard" ]
 
         ClickedShowMoreTransfers ->
             [ "ClickedShowMoreTransfers" ]
