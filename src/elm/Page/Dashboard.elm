@@ -211,17 +211,17 @@ view ({ shared, accountName } as loggedIn) model =
                     div []
                         [ div [ class "container mx-auto px-4" ]
                             [ viewHeader loggedIn community isCommunityAdmin
-
-                            -- TODO
-                            -- , div [ class "grid grid-cols-4 grid-rows-5 gap-6" ]
                             , div
-                                [ class "grid grid-cols-4 gap-6"
-                                , style "grid-template-rows" "repeat(5, 110px)"
-                                ]
-                                [ viewBalance shared balance
-                                , viewTransfers loggedIn model
-                                , viewMyClaimsCard loggedIn
-                                , viewMyOffersCard loggedIn
+                                [ class "grid md:grid-cols-2 md:space-x-6" ]
+                                [ div [ class "w-full" ]
+                                    [ viewBalance shared balance
+                                    , div [ class "mt-6 flex space-x-6" ]
+                                        [ viewMyClaimsCard loggedIn
+                                        , viewMyOffersCard loggedIn
+                                        ]
+                                    ]
+                                , div [ class "hidden md:flex" ]
+                                    [ viewTransfers loggedIn model ]
                                 ]
                             , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                                 viewAnalysisList loggedIn model
@@ -229,7 +229,7 @@ view ({ shared, accountName } as loggedIn) model =
                               else
                                 text ""
                             ]
-                        , viewTransfers loggedIn model
+                        , div [ class "md:hidden" ] [ viewTransfers loggedIn model ]
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
                         , viewTransferFilters loggedIn community.members model
@@ -436,7 +436,7 @@ viewAnalysisList loggedIn model =
             div [ class "w-full flex" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "flex justify-between text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
+                    [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
                         [ div [ class "flex-wrap md:flex" ]
                             [ div [ class "text-indigo-500 mr-2 font-medium" ]
                                 [ text_ "dashboard.analysis.title.1"
@@ -541,9 +541,9 @@ viewTransfers loggedIn model =
             loggedIn.shared.translators.t
     in
     div
-        [ class "col-span-2 row-span-5 bg-white rounded h-full" ]
-        [ div [ class "flex justify-between items-center bg-white z-10 sticky top-0 px-6 pt-6 pb-4" ]
-            [ p [ class "text-3xl" ]
+        [ class "w-full bg-white md:rounded md:flex md:flex-col" ]
+        [ div [ class "flex justify-between items-center px-6 pt-6 pb-4" ]
+            [ p [ class "text-heading" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ]
                 , text " "
                 , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
@@ -582,9 +582,6 @@ viewTransferList :
     -> Html Msg
 viewTransferList loggedIn transfers maybePageInfo isLoading =
     let
-        { t } =
-            loggedIn.shared.translators
-
         unwrapDateTime (Cambiatus.Scalar.DateTime dateTime) =
             dateTime
 
@@ -612,7 +609,7 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                     )
         , distanceToRequest = 1000
         }
-        [ class "px-6 pb-6 divide-y max-h-full w-full" ]
+        [ class "px-6 pb-6 divide-y flex-grow w-full flex-basis-0" ]
         (transfers
             |> List.groupWhile
                 (\( t1, _ ) ( t2, _ ) ->
@@ -831,7 +828,7 @@ viewMyClaimsCard loggedIn =
     case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
         RemoteData.Success True ->
             a
-                [ class "row-span-2 rounded bg-white px-6 py-10 hover:shadow"
+                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
                 , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                 ]
                 [ Icons.claims "w-8 h-8"
@@ -856,7 +853,7 @@ viewMyOffersCard loggedIn =
     case RemoteData.map .hasShop loggedIn.selectedCommunity of
         RemoteData.Success True ->
             a
-                [ class "row-span-2 rounded bg-white px-6 py-10 hover:shadow"
+                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
                 , Route.href (Route.Shop Shop.UserSales)
                 ]
                 [ Icons.shop "w-8 h-8 fill-current"

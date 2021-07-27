@@ -247,12 +247,12 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
         { t } =
             loggedIn.shared.translators
 
-        ( otherProfile, isSent ) =
+        ( otherProfile, isFromUser ) =
             if transfer.from.account == loggedIn.accountName then
-                ( transfer.to, False )
+                ( transfer.to, True )
 
             else
-                ( transfer.from, True )
+                ( transfer.from, False )
     in
     a
         [ class "flex hover:bg-gray-100 p-4"
@@ -266,11 +266,12 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
             [ p
                 [ class "font-sm leading-tight"
                 , classList
-                    [ ( "text-gray-333", isSent )
-                    , ( "text-indigo-500", not isSent )
+                    [ ( "text-gray-333", isFromUser )
+                    , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                [ if isSent then
+                -- TODO - I18N
+                [ if isFromUser then
                     text "Enviou para "
 
                   else
@@ -283,8 +284,8 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
                 ]
             , p
                 [ classList
-                    [ ( "text-gray-333", isSent )
-                    , ( "text-indigo-500", not isSent )
+                    [ ( "text-gray-333", isFromUser )
+                    , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
                 [ span [ class "font-bold text-heading leading-tight" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]

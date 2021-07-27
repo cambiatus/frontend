@@ -438,6 +438,16 @@ textarea.input {
 
 /* End of Claims */
 
+/* Extra utilities */
+
+@layer utilities {
+  .flex-basis-0 {
+    flex-basis: 0;
+  }
+}
+
+/* End of extra utilities */
+
 /* Button Modifiers (must be below all other button's styles) */
 .button-disabled {
   @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
