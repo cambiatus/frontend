@@ -4,16 +4,18 @@ module Shop exposing
     , ProductId
     , ProductPreview
     , ShopProfile
-    , encodeTransferSale
-    , productPreviewQuery
+    ,  encodeTransferSale
+       -- , productPreviewQuery
+
     , productQuery
     , productsQuery
     )
 
+-- import Cambiatus.Object.ProductPreview
+
 import Avatar exposing (Avatar)
 import Cambiatus.Object
 import Cambiatus.Object.Product
-import Cambiatus.Object.ProductPreview
 import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
@@ -116,30 +118,30 @@ productSelection =
         |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
 
 
-productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
-productPreviewSelectionSet =
-    SelectionSet.succeed ProductPreview
-        |> with (Eos.symbolSelectionSet Cambiatus.Object.ProductPreview.communityId)
-        |> with
-            (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
-                |> SelectionSet.map productPreviewProfile
-            )
-        |> with Cambiatus.Object.ProductPreview.description
-        |> with Cambiatus.Object.ProductPreview.id
-        |> with Cambiatus.Object.ProductPreview.image
-        |> with Cambiatus.Object.ProductPreview.price
-        |> with Cambiatus.Object.ProductPreview.title
 
-
-productPreviewProfile : Eos.Name -> ShopProfile
-productPreviewProfile accountName =
-    { account = accountName
-    , name = accountName |> Eos.nameToString |> Just
-    , avatar = Avatar.empty
-    , email = Nothing
-    , bio = Nothing
-    , contacts = []
-    }
+-- TODO - Bring back in the next release
+-- productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
+-- productPreviewSelectionSet =
+--     SelectionSet.succeed ProductPreview
+--         |> with (Eos.symbolSelectionSet Cambiatus.Object.ProductPreview.communityId)
+--         |> with
+--             (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
+--                 |> SelectionSet.map productPreviewProfile
+--             )
+--         |> with Cambiatus.Object.ProductPreview.description
+--         |> with Cambiatus.Object.ProductPreview.id
+--         |> with Cambiatus.Object.ProductPreview.image
+--         |> with Cambiatus.Object.ProductPreview.price
+--         |> with Cambiatus.Object.ProductPreview.title
+-- productPreviewProfile : Eos.Name -> ShopProfile
+-- productPreviewProfile accountName =
+--     { account = accountName
+--     , name = accountName |> Eos.nameToString |> Just
+--     , avatar = Avatar.empty
+--     , email = Nothing
+--     , bio = Nothing
+--     , contacts = []
+--     }
 
 
 shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.User
@@ -161,9 +163,11 @@ productQuery saleId =
     Query.product { id = saleId } productSelection
 
 
-productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
-productPreviewQuery productId =
-    Query.productPreview { id = productId } productPreviewSelectionSet
+
+-- TODO - Bring back in the next release
+-- productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
+-- productPreviewQuery productId =
+--     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
 productsQuery : Filter -> Eos.Name -> Symbol -> SelectionSet (List Product) RootQuery

@@ -39,35 +39,53 @@ import View.Form.Input as Input
 
 
 -- INIT
+-- TODO - Bring back in the next release
+-- init : Session -> Int -> ( Model, Cmd Msg )
+-- init session saleId =
+--     case session of
+--         Page.LoggedIn { shared, authToken, accountName } ->
+--             ( AsLoggedIn
+--                 { status = RemoteData.Loading
+--                 , viewing = ViewingCard
+--                 , form = initForm
+--                 , balances = []
+--                 }
+--             , Cmd.batch
+--                 [ Api.Graphql.query shared
+--                     (Just authToken)
+--                     (Shop.productQuery saleId)
+--                     CompletedSaleLoad
+--                 , Api.getBalances shared accountName CompletedLoadBalances
+--                 ]
+--                 |> Cmd.map AsLoggedInMsg
+--             )
+--         Page.Guest _ ->
+--             ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
+--               , Api.Graphql.query guest.shared
+--                   Nothing
+--                   (Shop.productPreviewQuery saleId)
+--                   (CompletedSalePreviewLoad >> AsGuestMsg)
+--             , Cmd.none
+--             )
 
 
-init : Session -> Int -> ( Model, Cmd Msg )
-init session saleId =
-    case session of
-        Page.LoggedIn { shared, authToken, accountName } ->
-            ( AsLoggedIn
-                { status = RemoteData.Loading
-                , viewing = ViewingCard
-                , form = initForm
-                , balances = []
-                }
-            , Cmd.batch
-                [ Api.Graphql.query shared
-                    (Just authToken)
-                    (Shop.productQuery saleId)
-                    CompletedSaleLoad
-                , Api.getBalances shared accountName CompletedLoadBalances
-                ]
-                |> Cmd.map AsLoggedInMsg
-            )
-
-        Page.Guest guest ->
-            ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
-            , Api.Graphql.query guest.shared
-                Nothing
-                (Shop.productPreviewQuery saleId)
-                (CompletedSalePreviewLoad >> AsGuestMsg)
-            )
+init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
+init { shared, authToken, accountName } saleId =
+    ( AsLoggedIn
+        { status = RemoteData.Loading
+        , viewing = ViewingCard
+        , form = initForm
+        , balances = []
+        }
+    , Cmd.batch
+        [ Api.Graphql.query shared
+            (Just authToken)
+            (Shop.productQuery saleId)
+            CompletedSaleLoad
+        , Api.getBalances shared accountName CompletedLoadBalances
+        ]
+        |> Cmd.map AsLoggedInMsg
+    )
 
 
 

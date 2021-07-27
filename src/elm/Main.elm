@@ -796,7 +796,6 @@ statusToRoute status session =
 
         PaymentHistory subModel ->
             subModel.recipientProfile.account
-                |> Eos.Account.nameToString
                 |> Route.PaymentHistory
                 |> Just
 
@@ -1104,7 +1103,7 @@ changeRouteTo maybeRoute model =
                 |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
-            PaymentHistory.init
+            PaymentHistory.init accountName
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn (Route.PaymentHistory accountName)
 
@@ -1234,8 +1233,13 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditSale saleId)
 
         Just (Route.ViewSale saleId) ->
-            ShopViewer.init session saleId
-                |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+            -- TODO - Bring back in the next release
+            -- ShopViewer.init session saleId
+            --     |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+            --     >> withLoggedIn (Route.ViewSale saleId)
+            (\l -> ShopViewer.init l saleId)
+                >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+                |> withLoggedIn (Route.ViewSale saleId)
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
