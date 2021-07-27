@@ -264,18 +264,20 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
             |> Html.map profileSummaryToMsg
         , div [ class "ml-4 w-full truncate" ]
             [ p
-                [ class "font-sm leading-tight"
+                [ class "font-sm leading-tight flex flex-wrap"
                 , classList
                     [ ( "text-gray-333", isFromUser )
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
                 -- TODO - I18N
-                [ if isFromUser then
-                    text "Enviou para "
+                [ span [ class "mr-1" ]
+                    [ if isFromUser then
+                        text "Enviou para"
 
-                  else
-                    text "Recebeu de "
+                      else
+                        text "Recebeu de"
+                    ]
                 , span [ class "font-bold" ]
                     [ text <|
                         Maybe.withDefault (Eos.nameToString otherProfile.account)

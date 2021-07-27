@@ -25,25 +25,43 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-distance-to-request' ] }
+    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
 
     connectedCallback () {
-      let scrolling = false
-      this.addEventListener('scroll', () => { scrolling = true })
+      this.listenToScroll()
 
-      setInterval(() => {
+      window.addEventListener('resize', () => { this.listenToScroll() })
+    }
+
+    attributeChangedCallback () {
+      this.listenToScroll()
+    }
+
+    listenToScroll () {
+      if (this._scrollInterval) {
+        clearInterval(this._scrollInterval)
+      }
+
+      let scrolling = false
+      const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
+      if (!isHidden) {
+        if (this.getAttribute('elm-element-to-track') === 'track-window') {
+          window.addEventListener('scroll', () => { scrolling = true })
+        } else {
+          this.addEventListener('scroll', () => { scrolling = true })
+        }
+      }
+
+      const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
+      this._scrollInterval = setInterval(() => {
         if (scrolling) {
           scrolling = false
           const boundingRect = this.getBoundingClientRect()
-          if (this.scrollTop >= this.scrollHeight - this._distanceToRequest - boundingRect.height) {
+          if (this.scrollTop >= this.scrollHeight - distanceToRequest - boundingRect.height) {
             this.dispatchEvent(new CustomEvent('requested-items', {}))
           }
         }
       }, 300)
-    }
-
-    attributeChangedCallback () {
-      this._distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
     }
   }
 )

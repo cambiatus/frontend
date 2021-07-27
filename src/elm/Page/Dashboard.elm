@@ -27,7 +27,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, id, src, style)
+import Html.Attributes exposing (class, classList, id, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -220,8 +220,7 @@ view ({ shared, accountName } as loggedIn) model =
                                         , viewMyOffersCard loggedIn
                                         ]
                                     ]
-                                , div [ class "hidden md:flex" ]
-                                    [ viewTransfers loggedIn model ]
+                                , viewTransfers loggedIn model False
                                 ]
                             , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
                                 viewAnalysisList loggedIn model
@@ -229,7 +228,7 @@ view ({ shared, accountName } as loggedIn) model =
                               else
                                 text ""
                             ]
-                        , div [ class "md:hidden" ] [ viewTransfers loggedIn model ]
+                        , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
                         , viewTransferFilters loggedIn community.members model
@@ -433,17 +432,17 @@ viewAnalysisList loggedIn model =
             Page.fullPageLoading loggedIn.shared
 
         LoadedGraphql claims _ ->
-            div [ class "w-full flex" ]
+            div [ class "w-full flex mb-8 md:mb-40" ]
                 [ div
                     [ class "w-full" ]
                     [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex-wrap md:flex" ]
+                        [ div [ class "flex flex-wrap mr-4" ]
                             [ div [ class "text-indigo-500 mr-2 font-medium" ]
                                 [ text_ "dashboard.analysis.title.1"
                                 ]
                             , text_ "dashboard.analysis.title.2"
                             ]
-                        , div [ class "flex justify-between space-x-4" ]
+                        , div [ class "flex xs-max:flex-col xs-max:space-x-0 justify-between space-x-4" ]
                             [ button
                                 [ class "w-full button button-secondary"
                                 , onClick ToggleAnalysisSorting
@@ -482,7 +481,7 @@ viewAnalysisList loggedIn model =
                 ]
 
         FailedGraphql err ->
-            div [] [ Page.fullPageGraphQLError "Failed load" err ]
+            div [ class "md:mb-40" ] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
 viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
@@ -534,14 +533,19 @@ viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
                 |> Html.map (ClaimMsg claimIndex)
 
 
-viewTransfers : LoggedIn.Model -> Model -> Html Msg
-viewTransfers loggedIn model =
+viewTransfers : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewTransfers loggedIn model isMobile =
     let
         t =
             loggedIn.shared.translators.t
     in
     div
-        [ class "w-full bg-white md:rounded md:flex md:flex-col" ]
+        [ class "w-full bg-white"
+        , classList
+            [ ( "hidden md:flex md:flex-col md:rounded", not isMobile )
+            , ( "md:hidden", isMobile )
+            ]
+        ]
         [ div [ class "flex justify-between items-center px-6 pt-6 pb-4" ]
             [ p [ class "text-heading" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ]
@@ -558,19 +562,28 @@ viewTransfers loggedIn model =
             ]
         , case model.transfers of
             LoadingGraphql Nothing ->
-                Page.viewCardEmpty [ div [ class "text-gray-900 text-sm" ] [ text <| t "menu.loading" ] ]
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text <| t "menu.loading" ]
+                    ]
 
             FailedGraphql _ ->
-                Page.viewCardEmpty []
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.loading_error") ]
+                    ]
 
             LoadedGraphql [] _ ->
-                Page.viewCardEmpty []
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text (t "transfer.no_transfers_yet") ]
+                    ]
 
             LoadingGraphql (Just transfers) ->
-                viewTransferList loggedIn transfers Nothing True
+                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
 
             LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn transfers maybePageInfo False
+                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
         ]
 
 
@@ -578,20 +591,14 @@ viewTransferList :
     LoggedIn.Model
     -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
-    -> Bool
+    -> { isLoading : Bool, isMobile : Bool }
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo isLoading =
+viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
     let
-        unwrapDateTime (Cambiatus.Scalar.DateTime dateTime) =
-            dateTime
-
         addLoading transfers_ =
             if isLoading then
                 transfers_
-                    ++ [ ( "transfers-loading-indicator"
-                         , View.Components.loadingLogoAnimated loggedIn.shared.translators ""
-                         )
-                       ]
+                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
 
             else
                 transfers_
@@ -602,12 +609,18 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                 |> Maybe.andThen
                     (\pageInfo ->
                         if pageInfo.hasNextPage then
-                            Just ClickedShowMoreTransfers
+                            Just RequestedMoreTransfers
 
                         else
                             Nothing
                     )
         , distanceToRequest = 1000
+        , elementToTrack =
+            if isMobile then
+                View.Components.TrackWindow
+
+            else
+                View.Components.TrackSelf
         }
         [ class "px-6 pb-6 divide-y flex-grow w-full flex-basis-0" ]
         (transfers
@@ -619,8 +632,7 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                 )
             |> List.map
                 (\( ( t1, _ ) as first, rest ) ->
-                    ( "transfers-from-" ++ unwrapDateTime t1.blockTime
-                    , div [ class "pb-4" ]
+                    div [ class "pb-4" ]
                         [ View.Components.dateViewer
                             [ class "uppercase text-caption text-black tracking-wider" ]
                             identity
@@ -637,7 +649,6 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                                 (first :: rest)
                             )
                         ]
-                    )
                 )
             |> addLoading
         )
@@ -889,7 +900,7 @@ type Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
-    | ClickedShowMoreTransfers
+    | RequestedMoreTransfers
     | ClickedOpenTransferFilters
     | ClosedTransfersFilters
     | SelectedTransfersDirection (Maybe TransferDirectionValue)
@@ -1159,7 +1170,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     model
                         |> UR.init
 
-        ClickedShowMoreTransfers ->
+        RequestedMoreTransfers ->
             case ( model.transfers, loggedIn.selectedCommunity ) of
                 ( LoadedGraphql transfers maybePageInfo, RemoteData.Success community ) ->
                     let
@@ -1703,8 +1714,8 @@ msgToString msg =
         GotTransferCardProfileSummaryMsg _ _ ->
             [ "GotTransferCardProfileSummaryMsg" ]
 
-        ClickedShowMoreTransfers ->
-            [ "ClickedShowMoreTransfers" ]
+        RequestedMoreTransfers ->
+            [ "RequestedMoreTransfers" ]
 
         ClickedOpenTransferFilters ->
             [ "ClickedOpenTransferFilters" ]

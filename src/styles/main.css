@@ -440,6 +440,9 @@ textarea.input {
 
 /* Extra utilities */
 
+/* For more information on adding new utilities, see
+https://tailwindcss.com/docs/adding-new-utilities */
+
 @layer utilities {
   .flex-basis-0 {
     flex-basis: 0;

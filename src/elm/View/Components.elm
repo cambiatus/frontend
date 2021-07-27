@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
-    , tooltip, pdfViewer, dateViewer, infiniteList
+    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
     , bgNoScroll, PreventScroll(..)
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList
+@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack
 
 
 # Helpers
@@ -38,7 +38,6 @@ state or configuration, such as loading indicators and containers
 import Html exposing (Html, div, img, node, p, span, text)
 import Html.Attributes exposing (attribute, class, src)
 import Html.Events exposing (on)
-import Html.Keyed
 import Icons
 import Json.Decode
 import Session.Shared exposing (Shared, Translators)
@@ -191,15 +190,23 @@ dateViewer attrs fillInTranslations shared time =
             }
 
 
+type ElementToTrack
+    = TrackSelf
+    | TrackWindow
+
+
 {-| An infinite list component. It automatically requests more items as the user
 scrolls down, based on a `distanceToRequest`, which is the distance to the
 bottom of the container. If you don't want to request more items (i.e. when
 there are no more items), just pass `requestedItems = Nothing`.
 -}
 infiniteList :
-    { onRequestedItems : Maybe msg, distanceToRequest : Int }
+    { onRequestedItems : Maybe msg
+    , distanceToRequest : Int
+    , elementToTrack : ElementToTrack
+    }
     -> List (Html.Attribute msg)
-    -> List ( String, Html msg )
+    -> List (Html msg)
     -> Html msg
 infiniteList options attrs children =
     let
@@ -210,11 +217,20 @@ infiniteList options attrs children =
 
                 Just onRequestedItems ->
                     on "requested-items" (Json.Decode.succeed onRequestedItems)
+
+        elementToTrackToString elementToTrack =
+            case elementToTrack of
+                TrackWindow ->
+                    "track-window"
+
+                TrackSelf ->
+                    "track-self"
     in
-    Html.Keyed.node "infinite-list"
+    node "infinite-list"
         (requestedItemsListener
             :: class "overflow-y-auto inline-block"
             :: attribute "elm-distance-to-request" (String.fromInt options.distanceToRequest)
+            :: attribute "elm-element-to-track" (elementToTrackToString options.elementToTrack)
             :: attrs
         )
         children
