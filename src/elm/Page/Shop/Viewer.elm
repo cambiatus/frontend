@@ -87,6 +87,7 @@ init { shared, authToken, accountName } saleId =
       , viewing = ViewingCard
       , form = initForm
       , balances = []
+      , isBuyButtonDisabled = False
       }
     , Cmd.batch
         [ Api.Graphql.query shared
@@ -115,6 +116,7 @@ type alias LoggedInModel =
     , viewing : ViewState
     , form : Form
     , balances : List Balance
+    , isBuyButtonDisabled : Bool
     }
 
 
@@ -268,7 +270,7 @@ updateAsLoggedIn msg model loggedIn =
                             (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
                 _ ->
-                    model
+                    { model | isBuyButtonDisabled = False }
                         |> UR.init
 
         GotTransferResult (Err eosErrorString) ->
@@ -276,7 +278,7 @@ updateAsLoggedIn msg model loggedIn =
                 errorMessage =
                     EosError.parseTransferError loggedIn.shared.translators eosErrorString
             in
-            model
+            { model | isBuyButtonDisabled = False }
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
@@ -333,7 +335,7 @@ updateAsLoggedIn msg model loggedIn =
                         , symbol = sale.symbol
                         }
                 in
-                model
+                { model | isBuyButtonDisabled = True }
                     |> UR.init
                     |> UR.addPort
                         { responseAddress = ClickedTransfer sale
@@ -699,6 +701,7 @@ viewLoggedInButton loggedIn model sale =
                 [ button
                     [ class "button button-primary"
                     , onClick (ClickedTransfer sale)
+                    , disabled model.isBuyButtonDisabled
                     ]
                     [ text_ "shop.transfer.submit" ]
                 ]
