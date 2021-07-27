@@ -1,8 +1,9 @@
 module Shop exposing
     ( Filter(..)
     , Product
-    , ProductId
-    , ProductPreview
+    ,  ProductId
+       -- , ProductPreview
+
     , ShopProfile
     ,  encodeTransferSale
        -- , productPreviewQuery
@@ -45,15 +46,17 @@ type alias Product =
     }
 
 
-type alias ProductPreview =
-    { symbol : Symbol
-    , creator : ShopProfile
-    , description : String
-    , id : Int
-    , image : Maybe String
-    , price : Float
-    , title : String
-    }
+
+-- TODO - Bring back in the next release
+-- type alias ProductPreview =
+-- { symbol : Symbol
+-- , creator : ShopProfile
+-- , description : String
+-- , id : Int
+-- , image : Maybe String
+-- , price : Float
+-- , title : String
+-- }
 
 
 type alias ProductId =

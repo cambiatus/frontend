@@ -9,8 +9,9 @@ module Session.LoggedIn exposing
     , init
     , initLogin
     , isAccount
-    , jsAddressToMsg
-    , mapExternal
+    ,  jsAddressToMsg
+       -- , mapExternal
+
     , maybeInitWith
     , maybePrivateKey
     , msgToString
@@ -734,32 +735,27 @@ type External msg
     | HideFeedback
 
 
-mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
-mapExternal mapFn msg =
-    case msg of
-        UpdatedLoggedIn model ->
-            UpdatedLoggedIn model
 
-        AddedCommunity communityInfo ->
-            AddedCommunity communityInfo
-
-        CreatedCommunity symbol name ->
-            CreatedCommunity symbol name
-
-        ExternalBroadcast broadcastMsg ->
-            ExternalBroadcast broadcastMsg
-
-        ReloadResource resource ->
-            ReloadResource resource
-
-        RequiredAuthentication { successMsg, errorMsg } ->
-            RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
-
-        ShowFeedback status message ->
-            ShowFeedback status message
-
-        HideFeedback ->
-            HideFeedback
+-- TODO - Bring back in the next release
+-- mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
+-- mapExternal mapFn msg =
+--     case msg of
+--         UpdatedLoggedIn model ->
+--             UpdatedLoggedIn model
+--         AddedCommunity communityInfo ->
+--             AddedCommunity communityInfo
+--         CreatedCommunity symbol name ->
+--             CreatedCommunity symbol name
+--         ExternalBroadcast broadcastMsg ->
+--             ExternalBroadcast broadcastMsg
+--         ReloadResource resource ->
+--             ReloadResource resource
+--         RequiredAuthentication { successMsg, errorMsg } ->
+--             RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
+--         ShowFeedback status message ->
+--             ShowFeedback status message
+--         HideFeedback ->
+--             HideFeedback
 
 
 type Resource
