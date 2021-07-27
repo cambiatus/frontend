@@ -31,10 +31,10 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, classList)
+import Html.Events exposing (onClick)
 import Json.Encode as Encode exposing (Value)
 import Profile
 import Profile.Summary
-import Route
 import Session.LoggedIn as LoggedIn
 
 
@@ -241,8 +241,9 @@ view :
     -> Transfer
     -> Profile.Summary.Model
     -> (Profile.Summary.Msg -> msg)
+    -> msg
     -> Html msg
-view loggedIn transfer profileSummary profileSummaryToMsg =
+view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
     let
         { t } =
             loggedIn.shared.translators
@@ -254,17 +255,18 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
             else
                 ( transfer.from, False )
     in
-    a
-        [ class "flex hover:bg-gray-100 p-4"
-        , Route.href (Route.ViewTransfer transfer.id)
+    div
+        [ class "flex hover:bg-gray-100 p-4 cursor-pointer"
+        , onClick onClickMsg
         ]
         [ profileSummary
             |> Profile.Summary.withoutName
+            |> Profile.Summary.withImageSize "w-14 h-14"
             |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
             |> Html.map profileSummaryToMsg
         , div [ class "ml-4 w-full truncate" ]
             [ p
-                [ class "font-sm leading-tight flex flex-wrap"
+                [ class "font-sm flex flex-wrap"
                 , classList
                     [ ( "text-gray-333", isFromUser )
                     , ( "text-indigo-500", not isFromUser )
@@ -290,7 +292,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg =
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                [ span [ class "font-bold text-heading leading-tight" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
                 , text " "
                 , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]

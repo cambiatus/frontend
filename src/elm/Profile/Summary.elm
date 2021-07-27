@@ -1,4 +1,4 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withPreventScrolling, withRelativeSelector, withScrollSelector, withoutName)
+module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withImageSize, withPreventScrolling, withRelativeSelector, withScrollSelector, withoutName)
 
 import Avatar
 import Eos.Account as Eos
@@ -20,7 +20,7 @@ import View.Modal as Modal
 
 type alias Model =
     { isExpanded : Bool
-    , isLarge : Bool
+    , imageSize : String
     , preventScrolling : View.Components.PreventScroll
     , relativeSelector : Maybe String
     , scrollSelector : Maybe String
@@ -31,7 +31,12 @@ type alias Model =
 init : Bool -> Model
 init isLarge =
     { isExpanded = False
-    , isLarge = isLarge
+    , imageSize =
+        if isLarge then
+            "w-20 h-20"
+
+        else
+            "h-10 w-10"
     , preventScrolling = View.Components.PreventScrollOnMobile
     , relativeSelector = Nothing
     , scrollSelector = Nothing
@@ -92,6 +97,11 @@ withoutName model =
     { model | showNameTag = False }
 
 
+withImageSize : String -> Model -> Model
+withImageSize imageSize model =
+    { model | imageSize = imageSize }
+
+
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 view shared loggedInAccount profile model =
     div [ Utils.onClickPreventAll Ignored ]
@@ -128,13 +138,6 @@ desktopView shared loggedInAccount profile model =
 viewUserImg : Shared -> Eos.Name -> Profile.Basic profile -> Bool -> Model -> Html Msg
 viewUserImg shared loggedInAccount profile isMobile model =
     let
-        size =
-            if model.isLarge then
-                "w-20 h-20"
-
-            else
-                "w-10 h-10"
-
         container attrs =
             if isMobile then
                 button (onClickNoBubble OpenedInfo :: attrs)
@@ -151,8 +154,8 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 a (Route.href route :: attrs)
     in
     div [ class "flex flex-col items-center" ]
-        [ div [ class ("rounded-full " ++ size) ]
-            [ container [] [ Avatar.view profile.avatar size ]
+        [ div [ class ("rounded-full " ++ model.imageSize) ]
+            [ container [] [ Avatar.view profile.avatar model.imageSize ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble
                     { class_ = "w-120"

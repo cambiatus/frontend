@@ -546,8 +546,9 @@ viewTransfers loggedIn model isMobile =
             , ( "md:hidden", isMobile )
             ]
         ]
-        [ div [ class "flex justify-between items-center px-6 pt-6 pb-4" ]
+        [ div [ class "flex justify-between items-center p-4 pb-0" ]
             [ p [ class "text-heading" ]
+                -- TODO - Change to "Last transactions"
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ]
                 , text " "
                 , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
@@ -622,7 +623,7 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
             else
                 View.Components.TrackSelf
         }
-        [ class "px-6 pb-6 divide-y flex-grow w-full flex-basis-0" ]
+        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
         (transfers
             |> List.groupWhile
                 (\( t1, _ ) ( t2, _ ) ->
@@ -632,12 +633,14 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                 )
             |> List.map
                 (\( ( t1, _ ) as first, rest ) ->
-                    div [ class "pb-4" ]
-                        [ View.Components.dateViewer
-                            [ class "uppercase text-caption text-black tracking-wider" ]
-                            identity
-                            loggedIn.shared
-                            (Utils.fromDateTime t1.blockTime)
+                    div []
+                        [ div [ class "mt-4 mx-4" ]
+                            [ View.Components.dateViewer
+                                [ class "uppercase text-caption text-black tracking-wider" ]
+                                identity
+                                loggedIn.shared
+                                (Utils.fromDateTime t1.blockTime)
+                            ]
                         , div [ class "divide-y" ]
                             (List.map
                                 (\( transfer, profileSummary ) ->
@@ -645,6 +648,7 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                                         transfer
                                         profileSummary
                                         (GotTransferCardProfileSummaryMsg transfer.id)
+                                        (ClickedTransferCard transfer.id)
                                 )
                                 (first :: rest)
                             )
@@ -798,10 +802,10 @@ viewBalance shared balance =
         text_ =
             text << shared.translators.t
     in
-    div [ class "col-span-2 row-span-3 bg-white rounded px-6 pt-4 pb-2 md:pt-10" ]
+    div [ class "col-span-2 row-span-3 bg-white rounded p-4" ]
         [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
-        , p [ class "text-indigo-500 text-3xl mt-3" ]
-            [ span [ class "font-bold" ]
+        , p [ class "text-indigo-500 mt-3" ]
+            [ span [ class "font-bold text-3xl" ]
                 [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
             , text " "
             , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
@@ -911,6 +915,7 @@ type Msg
     | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
     | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
     | ClickedApplyTransfersFilters
+    | ClickedTransferCard Int
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -1358,6 +1363,11 @@ update msg model ({ shared, accountName } as loggedIn) =
                         |> UR.init
                         |> UR.logImpossible msg [ "NoCommunity" ]
 
+        ClickedTransferCard transferId ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1746,6 +1756,9 @@ msgToString msg =
 
         ClickedApplyTransfersFilters ->
             [ "ClickedApplyTransfersFilters" ]
+
+        ClickedTransferCard _ ->
+            [ "ClickedTransferCard" ]
 
         CreateInvite ->
             [ "CreateInvite" ]
