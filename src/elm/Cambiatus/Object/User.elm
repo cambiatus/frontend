@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.User exposing (..)
 
+import Cambiatus.Enum.TransferDirection
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -163,15 +164,18 @@ products object_ =
 type alias TransfersOptionalArguments =
     { after : OptionalArgument String
     , before : OptionalArgument String
-    , filter : OptionalArgument Cambiatus.InputObject.TransferFilter
+    , date : OptionalArgument Cambiatus.ScalarCodecs.Date
+    , direction : OptionalArgument Cambiatus.Enum.TransferDirection.TransferDirection
     , first : OptionalArgument Int
     , last : OptionalArgument Int
+    , secondPartyAccount : OptionalArgument String
     }
 
 
 {-|
 
-  - filter - Optional Filters for querying transfers
+  - date - The date of the transfer in `yyyy-mm-dd` format.
+  - secondPartyAccount - Account name of the other participant of the transfer.
 
 -}
 transfers :
@@ -181,10 +185,10 @@ transfers :
 transfers fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { after = Absent, before = Absent, filter = Absent, first = Absent, last = Absent }
+            fillInOptionals { after = Absent, before = Absent, date = Absent, direction = Absent, first = Absent, last = Absent, secondPartyAccount = Absent }
 
         optionalArgs =
-            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "filter" filledInOptionals.filter Cambiatus.InputObject.encodeTransferFilter, Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int ]
+            [ Argument.optional "after" filledInOptionals.after Encode.string, Argument.optional "before" filledInOptionals.before Encode.string, Argument.optional "date" filledInOptionals.date (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDate), Argument.optional "direction" filledInOptionals.direction (Encode.enum Cambiatus.Enum.TransferDirection.toString), Argument.optional "first" filledInOptionals.first Encode.int, Argument.optional "last" filledInOptionals.last Encode.int, Argument.optional "secondPartyAccount" filledInOptionals.secondPartyAccount Encode.string ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "transfers" optionalArgs object_ (identity >> Decode.nullable)

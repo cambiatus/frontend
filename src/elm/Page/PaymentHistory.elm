@@ -7,10 +7,12 @@ module Page.PaymentHistory exposing
     , view
     )
 
+-- import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
+
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
-import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
+import Cambiatus.Enum.TransferDirection as TransferDirection
 import Cambiatus.Object
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -27,7 +29,6 @@ import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import Icons
-import List.Extra as LE
 import Page
 import RemoteData exposing (RemoteData)
 import Select
@@ -162,17 +163,28 @@ profileWithTransfersSelectionSet model =
                 { r
                     | first = Present 16
                     , after = afterOption
-                    , filter =
-                        Present
-                            { communityId = Absent
-                            , date = optionalDate
-                            , direction =
-                                Present
-                                    { direction = Present TransferDirectionValue.Receiving
-                                    , otherAccount = optionalFromAccount
-                                    }
-                            }
+                    , date = optionalDate
+                    , direction = Present TransferDirection.Incoming
+                    , secondPartyAccount = optionalFromAccount
                 }
+
+        -- TODO - Bring back in the next release
+        -- optionalArgsFn =
+        --     \r ->
+        --         { r
+        --             | first = Present 16
+        --             , after = afterOption
+        --             , filter =
+        --                 Present
+        --                     { communityId = Absent
+        --                     , date = optionalDate
+        --                     , direction =
+        --                         Present
+        --                             { direction = Present TransferDirectionValue.Receiving
+        --                             , otherAccount = optionalFromAccount
+        --                             }
+        --                     }
+        --         }
     in
     SelectionSet.map4 ProfileWithTransfers
         User.name
@@ -245,20 +257,11 @@ datePickerSettings shared =
     }
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init { shared, authToken } =
+init : Eos.Account.Name -> LoggedIn.Model -> ( Model, Cmd Msg )
+init recipientAccountName { shared, authToken } =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
-
-        recipientAccountName =
-            let
-                uriLastPart =
-                    String.split "/" shared.url.path
-                        |> LE.last
-            in
-            Eos.Account.stringToName <|
-                Maybe.withDefault "" uriLastPart
 
         recipientProfile : ProfileBase
         recipientProfile =
