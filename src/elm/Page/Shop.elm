@@ -301,7 +301,7 @@ viewCard model ({ shared } as loggedIn) index card =
     in
     a
         [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
-        , Route.href (Route.ViewSale (String.fromInt card.product.id))
+        , Route.href (Route.ViewSale card.product.id)
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
             [ div [ class "w-1/4" ]

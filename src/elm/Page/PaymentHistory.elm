@@ -29,7 +29,6 @@ import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import Icons
-import List.Extra as LE
 import Page
 import RemoteData exposing (RemoteData)
 import Select
@@ -261,20 +260,11 @@ datePickerSettings shared =
     }
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared } as loggedIn) =
+init : Eos.Account.Name -> LoggedIn.Model -> ( Model, Cmd Msg )
+init recipientAccountName loggedIn =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
-
-        recipientAccountName =
-            let
-                uriLastPart =
-                    String.split "/" shared.url.path
-                        |> LE.last
-            in
-            Eos.Account.stringToName <|
-                Maybe.withDefault "" uriLastPart
 
         recipientProfile : ProfileBase
         recipientProfile =

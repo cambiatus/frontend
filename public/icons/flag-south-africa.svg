@@ -1,0 +1,16 @@
+<svg width="21" height="15" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <mask id="a" maskUnits="userSpaceOnUse" x="0" y="0" width="21" height="15">
+        <path d="M19 0H2a2 2 0 00-2 2v11a2 2 0 002 2h17a2 2 0 002-2V2a2 2 0 00-2-2z" fill="#fff" />
+    </mask>
+    <g mask="url(#a)">
+        <path d="M19 0H2a2 2 0 00-2 2v11a2 2 0 002 2h17a2 2 0 002-2V2a2 2 0 00-2-2z" fill="#fff" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 10h21v5H0v-5z" fill="#02269F" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 0h21v5H0V0z" fill="#E24038" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M8.013 10L2 15.033H0V0h2l6 5h13v5H8.013z" fill="#fff" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M7.7 9L.5 15l-.5.033V0h.5l7.2 6H21v3H7.7z" fill="#008557" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 3l6 4.5L0 12V3z" fill="#FFBE0F" />
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M0 4l4.75 3.5L0 11V4z" fill="#000" />
+        <path d="M19 .5H2A1.5 1.5 0 00.5 2v11A1.5 1.5 0 002 14.5h17a1.5 1.5 0 001.5-1.5V2A1.5 1.5 0 0019 .5z"
+            stroke="#000" stroke-opacity=".1" />
+    </g>
+</svg>

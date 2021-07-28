@@ -2,7 +2,6 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
@@ -118,10 +117,6 @@ subscriptions model =
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
 
-            ShopViewer _ subModel ->
-                ShopViewer.subscriptions subModel
-                    |> Sub.map GotShopViewerMsg
-
             _ ->
                 Sub.none
         ]
@@ -166,7 +161,7 @@ type Status
     | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
     | ShopEditor (Maybe String) ShopEditor.Model
-    | ShopViewer String ShopViewer.Model
+    | ShopViewer Int ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
     | Join Join.Model
@@ -237,6 +232,9 @@ update msg model =
 
                 Page.LoggedIn loggedIn ->
                     fn loggedIn
+
+        withSession fn =
+            fn model.session
     in
     case ( msg, model.status ) of
         ( Ignored, _ ) ->
@@ -435,8 +433,8 @@ update msg model =
 
         ( GotShopViewerMsg subMsg, ShopViewer saleId subModel ) ->
             ShopViewer.update subMsg subModel
-                >> updateLoggedInUResult (ShopViewer saleId) GotShopViewerMsg model
-                |> withLoggedIn
+                >> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
+                |> withSession
 
         ( GotActionEditorMsg subMsg, ActionEditor subModel ) ->
             ActionEditor.update subMsg subModel
@@ -605,6 +603,38 @@ updateSessionWith toMsg model ( session, subCmd ) =
     )
 
 
+updatePageUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateResult subModel subMsg (Page.External subMsg) -> ( Model, Cmd Msg )
+updatePageUResult toStatus toMsg model uResult =
+    case model.session of
+        Page.Guest _ ->
+            uResult
+                |> UR.map identity
+                    identity
+                    (\extMsg currUResult ->
+                        case extMsg of
+                            Page.GuestExternal guestMsg ->
+                                UR.addExt guestMsg currUResult
+
+                            Page.LoggedInExternal _ ->
+                                currUResult
+                    )
+                |> updateGuestUResult toStatus toMsg model
+
+        Page.LoggedIn _ ->
+            uResult
+                |> UR.map identity
+                    identity
+                    (\extMsg currUResult ->
+                        case extMsg of
+                            Page.GuestExternal _ ->
+                                currUResult
+
+                            Page.LoggedInExternal loggedInMsg ->
+                                UR.addExt loggedInMsg currUResult
+                    )
+                |> updateLoggedInUResult toStatus toMsg model
+
+
 updateGuestUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateResult subModel subMsg Guest.External -> ( Model, Cmd Msg )
 updateGuestUResult toStatus toMsg model uResult =
     List.foldl
@@ -769,7 +799,6 @@ statusToRoute status session =
 
         PaymentHistory subModel ->
             subModel.recipientProfile.account
-                |> Eos.Account.nameToString
                 |> Route.PaymentHistory
                 |> Just
 
@@ -1077,7 +1106,7 @@ changeRouteTo maybeRoute model =
                 |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
-            PaymentHistory.init
+            PaymentHistory.init accountName
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn (Route.PaymentHistory accountName)
 
@@ -1207,9 +1236,8 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditSale saleId)
 
         Just (Route.ViewSale saleId) ->
-            (\l -> ShopViewer.init l saleId)
-                >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
-                |> withLoggedIn (Route.ViewSale saleId)
+            ShopViewer.init session saleId
+                |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
@@ -1508,13 +1536,13 @@ view model =
     in
     case model.status of
         Redirect ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) { title = "", content = text "" }
+            viewPage Guest.Redirect LoggedIn.Redirect (\_ -> Ignored) { title = "", content = text "" }
 
         NotFound ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (NotFound.view model.session)
+            viewPage Guest.NotFound LoggedIn.NotFound (\_ -> Ignored) (NotFound.view model.session)
 
         ComingSoon ->
-            viewPage Guest.Other LoggedIn.Other (\_ -> Ignored) (ComingSoon.view model.session)
+            viewPage Guest.ComingSoon LoggedIn.ComingSoon (\_ -> Ignored) (ComingSoon.view model.session)
 
         Invite subModel ->
             viewPage Guest.Invite LoggedIn.Invite GotInviteMsg (Invite.view model.session subModel)
@@ -1595,7 +1623,7 @@ view model =
             viewLoggedIn subModel LoggedIn.ShopEditor GotShopEditorMsg ShopEditor.view
 
         ShopViewer _ subModel ->
-            viewLoggedIn subModel LoggedIn.ShopViewer GotShopViewerMsg ShopViewer.view
+            viewPage Guest.ShopViewer LoggedIn.ShopViewer GotShopViewerMsg (ShopViewer.view model.session subModel)
 
         ViewTransfer _ subModel ->
             viewLoggedIn subModel LoggedIn.ViewTransfer GotViewTransferScreenMsg ViewTransfer.view

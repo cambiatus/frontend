@@ -1,5 +1,6 @@
 module Page exposing
-    ( ExternalMsg(..)
+    ( External(..)
+    , ExternalMsg(..)
     , Msg(..)
     , Session(..)
     , fullPageError
@@ -224,9 +225,19 @@ type alias UpdateResult =
     UR.UpdateResult Session Msg ExternalMsg
 
 
+{-| External msg for the `UpdateResult` produced by `Page.update`
+-}
 type ExternalMsg
     = LoggedInExternalMsg LoggedIn.ExternalMsg
     | GuestBroadcastMsg Guest.BroadcastMsg
+
+
+{-| External msg for pages to produce when they can be viewed by a logged in
+user and by a guest user
+-}
+type External msg
+    = LoggedInExternal (LoggedIn.External msg)
+    | GuestExternal Guest.External
 
 
 type Msg

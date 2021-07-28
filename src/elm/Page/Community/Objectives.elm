@@ -324,12 +324,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                         Just validatorSummary ->
                                             let
                                                 validatorId =
-                                                    "validator-"
-                                                        ++ String.fromInt objectiveId
-                                                        ++ "-"
-                                                        ++ String.fromInt action.id
-                                                        ++ "-"
-                                                        ++ String.fromInt validatorIndex
+                                                    [ objectiveId, action.id, validatorIndex ]
+                                                        |> List.map String.fromInt
+                                                        |> (::) "validator"
+                                                        |> String.join "-"
                                             in
                                             div
                                                 [ class "mr-4 action-verifier relative"

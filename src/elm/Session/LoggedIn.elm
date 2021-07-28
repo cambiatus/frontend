@@ -10,6 +10,7 @@ module Session.LoggedIn exposing
     , initLogin
     , isAccount
     , jsAddressToMsg
+    , mapExternal
     , maybeInitWith
     , maybePrivateKey
     , msgToString
@@ -204,7 +205,9 @@ maybePrivateKey model =
 
 
 type Page
-    = Other
+    = Redirect
+    | NotFound
+    | ComingSoon
     | Invite
     | Join
     | Dashboard
@@ -359,7 +362,9 @@ viewPageBody ({ shared } as model) profile_ page content =
 
         availableWithoutKyc : List Page
         availableWithoutKyc =
-            [ Other
+            [ Redirect
+            , NotFound
+            , ComingSoon
             , Invite
             , CommunitySelector
             , Profile
@@ -729,6 +734,34 @@ type External msg
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
+
+
+mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
+mapExternal mapFn msg =
+    case msg of
+        UpdatedLoggedIn model ->
+            UpdatedLoggedIn model
+
+        AddedCommunity communityInfo ->
+            AddedCommunity communityInfo
+
+        CreatedCommunity symbol name ->
+            CreatedCommunity symbol name
+
+        ExternalBroadcast broadcastMsg ->
+            ExternalBroadcast broadcastMsg
+
+        ReloadResource resource ->
+            ReloadResource resource
+
+        RequiredAuthentication { successMsg, errorMsg } ->
+            RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
+
+        ShowFeedback status message ->
+            ShowFeedback status message
+
+        HideFeedback ->
+            HideFeedback
 
 
 type Resource

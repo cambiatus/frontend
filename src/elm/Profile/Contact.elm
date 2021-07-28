@@ -993,6 +993,9 @@ defaultCountry =
     }
 
 
+{-| To add a new `SupportedCountry`, use flags from this figma file:
+<https://www.figma.com/file/uAZdgsI1d7qW5kyBNWQZp1>
+-}
 supportedCountries : List SupportedCountry
 supportedCountries =
     [ defaultCountry
@@ -1023,6 +1026,10 @@ supportedCountries =
     , { country = Countries.countryUS
       , phonePlaceholder = "209 123 4567"
       , flagIcon = "/icons/flag-usa.svg"
+      }
+    , { country = Countries.countryZA
+      , phonePlaceholder = "71 123 4567"
+      , flagIcon = "/icons/flag-south-africa.svg"
       }
     ]
 

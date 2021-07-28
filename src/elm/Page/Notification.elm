@@ -402,7 +402,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd cmd
                         |> UR.addCmd
-                            (Route.ViewSale (String.fromInt sale.product.id)
+                            (Route.ViewSale sale.product.id
                                 |> redirectCmd sale.product.community
                             )
 
