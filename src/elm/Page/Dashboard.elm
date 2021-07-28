@@ -244,7 +244,7 @@ view ({ shared, accountName } as loggedIn) model =
 
 viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-900 font-light text-heading mt-6 mb-5" ]
+    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-heading" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
             , span [ class "text-indigo-500 font-medium" ]
@@ -429,10 +429,10 @@ viewAnalysisList loggedIn model =
     in
     case model.analysis of
         LoadingGraphql _ ->
-            Page.fullPageLoading loggedIn.shared
+            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageLoading loggedIn.shared ]
 
         LoadedGraphql claims _ ->
-            div [ class "w-full flex mb-8 md:mb-40" ]
+            div [ class "w-full flex mb-8 md:mb-40 md:mt-10" ]
                 [ div
                     [ class "w-full" ]
                     [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
@@ -481,7 +481,7 @@ viewAnalysisList loggedIn model =
                 ]
 
         FailedGraphql err ->
-            div [ class "md:mb-40" ] [ Page.fullPageGraphQLError "Failed load" err ]
+            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
 viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
@@ -548,10 +548,9 @@ viewTransfers loggedIn model isMobile =
         ]
         [ div [ class "flex justify-between items-center p-4 pb-0" ]
             [ p [ class "text-heading" ]
-                -- TODO - Change to "Last transactions"
-                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.timeline_my" ]
+                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.timeline" ]
+                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
                 ]
             , button
                 [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
@@ -802,7 +801,7 @@ viewBalance shared balance =
         text_ =
             text << shared.translators.t
     in
-    div [ class "col-span-2 row-span-3 bg-white rounded p-4" ]
+    div [ class "bg-white rounded p-4 md:p-6" ]
         [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
         , p [ class "text-indigo-500 mt-3" ]
             [ span [ class "font-bold text-3xl" ]

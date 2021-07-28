@@ -370,8 +370,8 @@
     }
   },
   "transfer": {
-    "timeline_my": "My",
-    "timeline": "timeline",
+    "transfers_latest": "Latest",
+    "transfers": "transfers",
     "loading_error": "Something went wrong while fetching transfers.",
     "no_transfers_yet": "No transfers yet.",
     "info": "{{from}} transferred {{value}} to {{to}}",
@@ -381,6 +381,8 @@
     "no_profile": "Select a user",
     "no_amount": "Enter an amount",
     "memo_too_long": "The memo can't be longer than {{maxlength}} characters",
+    "sent_to": "Sent to",
+    "received_from": "Received from",
     "direction": {
       "title": "Transfer direction",
       "both": "Both",

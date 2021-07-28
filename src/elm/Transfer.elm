@@ -272,13 +272,12 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                -- TODO - I18N
                 [ span [ class "mr-1" ]
                     [ if isFromUser then
-                        text "Enviou para"
+                        text <| t "transfer.sent_to"
 
                       else
-                        text "Recebeu de"
+                        text <| t "transfer.received_from"
                     ]
                 , span [ class "font-bold" ]
                     [ text <|

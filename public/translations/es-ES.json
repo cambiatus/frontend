@@ -374,8 +374,8 @@
     }
   },
   "transfer": {
-    "timeline_my": "Mi",
-    "timeline": "cronología",
+    "transfers_latest": "Últimas",
+    "transfers": "transferencias",
     "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
     "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",
@@ -385,6 +385,8 @@
     "no_profile": "Selecciona un usuario",
     "no_amount": "Ingrese una cantidad",
     "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres",
+    "sent_to": "Enviado a",
+    "received_from": "Recebido de",
     "direction": {
       "title": "Dirección de transferencia",
       "both": "Ambas",

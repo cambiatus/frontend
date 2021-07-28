@@ -332,8 +332,8 @@
     }
   },
   "transfer": {
-    "timeline_my": "የእኔ",
-    "timeline": "የጊዜ ሰሌዳ",
+    "transfers_latest": "የቅርብ ጊዜ",
+    "transfers": "ዝውውሮች",
     "loading_error": "የተላለፈዉን ሲፈለግ የሆነ ችግር ተፈጥሯል.",
     "no_transfers_yet": "እስከአሁን ምንም አልተላለፈም.",
     "info": "{{from}} ተላልፏል {{value}} ለ {{to}}",
@@ -343,6 +343,8 @@
     "no_profile": "አንድ ተጠቃሚ ይምረጡ",
     "no_amount": "አንድ መጠን ያስገቡ",
     "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም",
+    "sent_to": "ተልኳል",
+    "received_from": "የተቀበለው ከ",
     "direction": {
       "title": "የዝውውር አቅጣጫ",
       "both": "ሁለቱም",

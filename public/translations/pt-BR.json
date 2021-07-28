@@ -378,8 +378,8 @@
     }
   },
   "transfer": {
-    "timeline_my": "Minha",
-    "timeline": "linha do tempo",
+    "transfers_latest": "Últimas",
+    "transfers": "transferências",
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
     "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
@@ -389,6 +389,8 @@
     "no_profile": "Selecione um usuário",
     "no_amount": "Insira uma quantidade",
     "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres",
+    "sent_to": "Enviado para",
+    "received_from": "Recebido de",
     "direction": {
       "title": "Direção da transferência",
       "both": "Ambas",

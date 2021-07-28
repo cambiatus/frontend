@@ -374,8 +374,8 @@
     }
   },
   "transfer": {
-    "timeline_my": "La meva",
-    "timeline": "cronologia",
+    "transfers_latest": "Últimes",
+    "transfers": "transferències",
     "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",
@@ -385,6 +385,8 @@
     "no_profile": "Seleccioneu un usuari",
     "no_amount": "Introduïu un import",
     "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters",
+    "sent_to": "Enviat a",
+    "received_from": "Rebut de",
     "direction": {
       "total": "Direcció de transferència",
       "both": "Tots dos",
