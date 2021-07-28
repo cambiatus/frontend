@@ -558,7 +558,7 @@ viewAction shared canEdit date action isDisabled =
                             Just _ ->
                                 div []
                                     [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
-                                    , View.Components.dateViewer [ class ("capitalize" ++ dateColor) ]
+                                    , View.Components.dateViewer [ class ("capitalize " ++ dateColor) ]
                                         identity
                                         shared
                                         posixDeadline
