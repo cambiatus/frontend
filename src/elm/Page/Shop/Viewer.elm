@@ -4,12 +4,9 @@ module Page.Shop.Viewer exposing
     , Model
     , Msg
     , init
-    , jsAddressToLoggedInMsg
     , jsAddressToMsg
-    , loggedInMsgToString
     , msgToString
     , update
-    , updateAsLoggedIn
     , view
     )
 

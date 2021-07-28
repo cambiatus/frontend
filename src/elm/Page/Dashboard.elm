@@ -27,7 +27,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, id, src)
+import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
