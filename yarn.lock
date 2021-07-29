@@ -799,6 +799,13 @@
     "@nodelib/fs.scandir" "2.1.4"
     fastq "^1.6.0"
 
+"@paypal/paypal-js@^4.0.6":
+  version "4.0.6"
+  resolved "https://registry.yarnpkg.com/@paypal/paypal-js/-/paypal-js-4.0.6.tgz#0f4c0ab8ebb48386c763497c38cf56108fd396d8"
+  integrity sha512-stmKvch8xm7qRx7XatArkxUDHaBB05fQpWwA4xXZRA5Dz/HrrbC6x5ttmNg1mYUP3EreLwmLC3xjTnFM3atpVw==
+  dependencies:
+    promise-polyfill "^8.2.0"
+
 "@sentry/browser@5.4.0":
   version "5.4.0"
   resolved "https://registry.yarnpkg.com/@sentry/browser/-/browser-5.4.0.tgz#4c553e4769555e09a34f8f86c6af27ebec74c715"
@@ -9539,6 +9546,11 @@ promise-inflight@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/promise-inflight/-/promise-inflight-1.0.1.tgz#98472870bf228132fcbdd868129bad12c3c029e3"
   integrity sha1-mEcocL8igTL8vdhoEputEsPAKeM=
+
+promise-polyfill@^8.2.0:
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/promise-polyfill/-/promise-polyfill-8.2.0.tgz#367394726da7561457aba2133c9ceefbd6267da0"
+  integrity sha512-k/TC0mIcPVF6yHhUvwAp7cvL6I2fFV7TzF1DuGPI8mBh4QQazf36xCKEHKTZKRysEoTQoQdKyP25J8MPJp7j5g==
 
 promise@8.0.1:
   version "8.0.1"

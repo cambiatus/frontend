@@ -15,6 +15,7 @@ all =
     describe "Utils"
         [ posixDateTime
         , formatFloat
+        , formatFloatWithMaxCases
         ]
 
 
@@ -139,4 +140,22 @@ formatFloat =
 
                     _ ->
                         Expect.fail "didn't expect list with more than 2 elements"
+        ]
+
+
+formatFloatWithMaxCases : Test
+formatFloatWithMaxCases =
+    describe "formatFloatWithMaxCases"
+        [ test "should handle cases like 1.1 when maxCases = 2" <|
+            \() ->
+                Utils.formatFloatWithMaxCases 2 False 1.1
+                    |> Expect.equal "1.1"
+        , test "should handle cases like 1.11 when maxCases = 2" <|
+            \() ->
+                Utils.formatFloatWithMaxCases 2 False 1.11
+                    |> Expect.equal "1.11"
+        , test "should handle cases like 1.111 when maxCases = 2" <|
+            \() ->
+                Utils.formatFloatWithMaxCases 2 False 1.111
+                    |> Expect.equal "1.11"
         ]

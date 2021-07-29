@@ -3,6 +3,7 @@ module Utils exposing
     , decodeTimestamp
     , errorToString
     , formatFloat
+    , formatFloatWithMaxCases
     , onClickNoBubble
     , onClickPreventAll
     , posixDateTime
@@ -15,6 +16,7 @@ import Html
 import Html.Events
 import Iso8601
 import Json.Decode as Decode
+import List.Extra as List
 import Time exposing (Posix)
 
 
@@ -97,6 +99,28 @@ formatFloat number decimalCases useSeparator =
                                 "0"
                 in
                 String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
+
+
+formatFloatWithMaxCases : Int -> Bool -> Float -> String
+formatFloatWithMaxCases decimalCases useSeparator number =
+    case
+        formatFloat number decimalCases useSeparator
+            |> String.split "."
+    of
+        [ noSeparator ] ->
+            noSeparator
+
+        [ beforeSeparator, afterSeparator ] ->
+            [ beforeSeparator
+            , String.toList afterSeparator
+                |> List.dropWhileRight ((==) '0')
+                |> String.fromList
+            ]
+                |> String.join "."
+
+        impossible ->
+            impossible
+                |> String.join "."
 
 
 decodeTimestamp : Decode.Decoder Posix

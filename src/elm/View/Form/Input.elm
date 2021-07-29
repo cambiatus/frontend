@@ -58,6 +58,7 @@ import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import Session.Shared exposing (Translators)
+import Utils
 import View.Form
 import View.Form.InputCounter
 
@@ -98,6 +99,7 @@ init options =
     , inputType = Input
     , fieldType = Text
     , counterType = View.Form.InputCounter.CountLetters
+    , beforeInputMsg = identity
     }
 
 
@@ -163,7 +165,7 @@ input options =
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput options.onInput
+                :: onInput (options.beforeInputMsg >> options.onInput)
                 :: class ("w-full " ++ inputClass)
                 :: disabled options.disabled
                 :: value options.value
@@ -241,7 +243,50 @@ is valid and has the symbol's precision
 -}
 withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
 withCurrency symbol options =
-    options
+    let
+        beforeInputMsg value =
+            let
+                symbolPrecision =
+                    Eos.getSymbolPrecision symbol
+
+                newAmount =
+                    case String.toFloat value of
+                        Nothing ->
+                            if value == "" then
+                                "0"
+
+                            else
+                                options.value
+
+                        Just floatAmount ->
+                            if floatAmount == 0 then
+                                "0"
+
+                            else
+                                case String.toList value of
+                                    '0' :: rest ->
+                                        String.fromList rest
+
+                                    _ ->
+                                        value
+            in
+            if newAmount == "" then
+                Utils.formatFloat 0 symbolPrecision False
+
+            else
+                newAmount
+                    |> String.toFloat
+                    |> Maybe.withDefault 0
+                    |> Utils.formatFloatWithMaxCases symbolPrecision False
+                    |> (\newValue ->
+                            if String.endsWith "." newValue then
+                                String.dropRight 1 newValue
+
+                            else
+                                newValue
+                       )
+    in
+    { options | beforeInputMsg = beforeInputMsg }
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
@@ -324,6 +369,7 @@ type alias InputOptions a =
     , inputType : InputType
     , fieldType : FieldType
     , counterType : View.Form.InputCounter.CounterType
+    , beforeInputMsg : String -> String
     }
 
 

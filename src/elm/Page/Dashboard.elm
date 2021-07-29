@@ -47,6 +47,7 @@ import Url
 import View.Feedback as Feedback
 import View.Form.Input as Input
 import View.Modal as Modal
+import View.SponsorModal as SponsorModal
 
 
 
@@ -80,6 +81,7 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , sponsorModal : SponsorModal.Model
     }
 
 
@@ -96,6 +98,7 @@ initModel =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+    , sponsorModal = SponsorModal.init
     }
 
 
@@ -178,6 +181,8 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewTransfers loggedIn model
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
+                        , SponsorModal.view loggedIn community model.sponsorModal
+                            |> Html.map GotSponsorModalMsg
                         ]
 
                 ( RemoteData.Success _, _ ) ->
@@ -708,6 +713,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ToggleAnalysisSorting
+    | GotSponsorModalMsg SponsorModal.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1028,6 +1034,15 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd fetchCmd
 
+        GotSponsorModalMsg subMsg ->
+            let
+                ( newSubmodel, subCmd ) =
+                    SponsorModal.update subMsg model.sponsorModal
+            in
+            { model | sponsorModal = newSubmodel }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotSponsorModalMsg subCmd)
+
 
 
 -- HELPERS
@@ -1261,3 +1276,6 @@ msgToString msg =
 
         ToggleAnalysisSorting ->
             [ "ToggleAnalysisSorting" ]
+
+        GotSponsorModalMsg subMsg ->
+            "GotSponsorModalMsg" :: SponsorModal.msgToString subMsg

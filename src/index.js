@@ -13,6 +13,7 @@ import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import * as paypalJs from '@paypal/paypal-js'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -21,7 +22,57 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 // Custom elements
 // =========================================
-/* global HTMLElement */
+/* global HTMLElement, CustomEvent */
+
+window.customElements.define('paypal-buttons',
+  class PaypalButtons extends HTMLElement {
+    connectedCallback () {
+      const communityName = this.getAttribute('elm-community-name')
+
+      // TODO - Use real client-id
+      paypalJs.loadScript({ 'client-id': 'sb' })
+        .then((paypal) => {
+          paypal.Buttons({
+            style: {
+              shape: 'pill'
+            },
+            createOrder: (data, actions) => {
+              return actions.order.create({
+                purchase_units: [{
+                  amount: {
+                    value: this.getAttribute('elm-value'),
+                    currency_code: 'USD'
+                  }
+                }],
+                application_context: {
+                  brand_name: communityName,
+                  shipping_preference: 'NO_SHIPPING'
+                }
+              })
+            },
+
+            // TODO - Send appropriate data to Elm (on all of these listeners)
+            onApprove: (data, actions) => {
+              this.dispatchEvent(new CustomEvent('paypal-approve', {}))
+            },
+
+            onCancel: (data) => {
+              this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
+            },
+
+            onError: (err) => {
+              this.dispatchEvent(new CustomEvent('paypal-error', {}))
+              console.error(err)
+            }
+          }).render(`#${this.id}`)
+        })
+        .catch((err) => {
+          // TODO - Log error
+          console.error(err)
+        })
+    }
+  }
+)
 
 window.customElements.define('pdf-viewer',
   class PdfViewer extends HTMLElement {
