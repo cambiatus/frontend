@@ -24,7 +24,7 @@ import FormatNumber
 import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, p, span, text)
+import Html exposing (Html, a, button, div, h1, img, p, span, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Http
@@ -81,6 +81,7 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , isModalRequestingSponsorVisible : Bool
     , sponsorModal : SponsorModal.Model
     }
 
@@ -98,6 +99,9 @@ initModel =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+
+    -- TODO - Check if user has seen this modal before
+    , isModalRequestingSponsorVisible = True
     , sponsorModal = SponsorModal.init
     }
 
@@ -183,6 +187,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , addContactModal shared model
                         , SponsorModal.view loggedIn community model.sponsorModal
                             |> Html.map GotSponsorModalMsg
+                        , viewModalRequestingSponsor shared community model
                         ]
 
                 ( RemoteData.Success _, _ ) ->
@@ -214,20 +219,50 @@ viewHeader loggedIn community isCommunityAdmin =
         ]
 
 
+viewNewTag : Shared -> Html msg
+viewNewTag shared =
+    p [ class "flex items-center bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+        [ text <| shared.translators.t "contact_modal.new" ]
+
+
+viewModalRequestingSponsor : Shared -> Community.Model -> Model -> Html Msg
+viewModalRequestingSponsor shared community model =
+    let
+        text_ =
+            shared.translators.t >> text
+    in
+    Modal.initWith
+        { closeMsg = ClosedModalRequestingSponsor
+        , isVisible = model.isModalRequestingSponsorVisible
+        }
+        |> Modal.withHeaderElement (viewNewTag shared)
+        |> Modal.withBody
+            [ div [ class "flex flex-col items-center h-full" ]
+                [ h1 [ class "text-center text-heading font-bold" ]
+                    [ text_ "sponsorship.dashboard_modal.title" ]
+                , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
+                , div [ class "w-full mt-7 mx-auto space-y-6 md:w-5/6 lg:w-2/3" ]
+                    [ p [ class "text-center" ]
+                        [ text_ "sponsorship.dashboard_modal.subtitle" ]
+                    , p [ class "text-center" ]
+                        [ text_ "sponsorship.dashboard_modal.explanation" ]
+                    , button
+                        [ class "button button-primary w-full md:mt-8"
+                        , onClick ClickedSponsorCommunity
+                        ]
+                        [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
+                    ]
+                ]
+            ]
+        |> Modal.toHtml
+
+
 addContactModal : Shared -> Model -> Html Msg
 addContactModal shared ({ contactModel } as model) =
     let
         text_ s =
             shared.translators.t s
                 |> text
-
-        header =
-            div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
-                    [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
-                    [ text_ "contact_modal.title" ]
-                ]
 
         form =
             Contact.view shared.translators contactModel
@@ -237,8 +272,9 @@ addContactModal shared ({ contactModel } as model) =
         { closeMsg = ClosedAddContactModal
         , isVisible = model.showContactModal
         }
+        |> Modal.withHeaderElement (viewNewTag shared)
         |> Modal.withBody
-            [ header
+            [ p [ class "text-heading font-bold mt-2" ] [ text_ "contact_modal.title" ]
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
             , p [ class "text-caption text-center uppercase my-4" ]
@@ -713,6 +749,8 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ToggleAnalysisSorting
+    | ClosedModalRequestingSponsor
+    | ClickedSponsorCommunity
     | GotSponsorModalMsg SponsorModal.Msg
 
 
@@ -735,16 +773,8 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
 
-        CompletedLoadProfile profile ->
-            let
-                addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
-
-                showContactModalFromDate =
-                    addContactLimitDate - Time.posixToMillis shared.now > 0
-            in
-            { model | showContactModal = showContactModalFromDate && List.isEmpty profile.contacts }
+        CompletedLoadProfile _ ->
+            { model | showContactModal = shouldShowContactModal loggedIn model }
                 |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
@@ -1034,6 +1064,21 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd fetchCmd
 
+        ClosedModalRequestingSponsor ->
+            let
+                newModel =
+                    { model | isModalRequestingSponsorVisible = False }
+            in
+            { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
+                |> UR.init
+
+        ClickedSponsorCommunity ->
+            { model
+                | sponsorModal = SponsorModal.show model.sponsorModal
+                , isModalRequestingSponsorVisible = False
+            }
+                |> UR.init
+
         GotSponsorModalMsg subMsg ->
             let
                 ( newSubmodel, subCmd ) =
@@ -1046,6 +1091,27 @@ update msg model ({ shared, accountName } as loggedIn) =
 
 
 -- HELPERS
+
+
+shouldShowContactModal : LoggedIn.Model -> Model -> Bool
+shouldShowContactModal loggedIn model =
+    case loggedIn.profile of
+        RemoteData.Success profile ->
+            let
+                addContactLimitDate =
+                    -- 01/01/2022
+                    1641006000000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis loggedIn.shared.now > 0
+            in
+            showContactModalFromDate
+                && List.isEmpty profile.contacts
+                && not model.isModalRequestingSponsorVisible
+                && not model.sponsorModal.isVisible
+
+        _ ->
+            False
 
 
 fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
@@ -1276,6 +1342,12 @@ msgToString msg =
 
         ToggleAnalysisSorting ->
             [ "ToggleAnalysisSorting" ]
+
+        ClosedModalRequestingSponsor ->
+            [ "ClosedModalRequestingSponsor" ]
+
+        ClickedSponsorCommunity ->
+            [ "ClickedSponsorCommunity" ]
 
         GotSponsorModalMsg subMsg ->
             "GotSponsorModalMsg" :: SponsorModal.msgToString subMsg

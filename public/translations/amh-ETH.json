@@ -1032,5 +1032,13 @@
       "cancel": "አይ",
       "accept": "አዎ"
     }
+  },
+  "sponsorship": {
+    "dashboard_modal": {
+      "title": "ማህበረሰብዎን ይደግፉ",
+      "subtitle": "አሁን ይህንን ማህበረሰብ ስፖንሰር ማድረግ ይችላሉ።",
+      "explanation": "ከታች ያለውን አዝራር ጠቅ በማድረግ አስተዋፅኦዎን ያበርክቱ። ግብይትዎን ለማጠናቀቅ ወደ PayPal ይዛወራሉ።",
+      "sponsor": "ስፖንሰር {{community_name}}"
+    }
   }
 }

@@ -5,6 +5,7 @@ module View.Modal exposing
     , withBody
     , withFooter
     , withHeader
+    , withHeaderElement
     , withPreventScrolling
     , withSize
     )
@@ -44,7 +45,7 @@ import View.Components
 {-| All possible options for the modal dialog.
 -}
 type alias Options msg =
-    { header : Maybe String
+    { header : Maybe (Html msg)
     , body : Maybe (List (Html msg))
     , footer : Maybe (List (Html msg))
     , isVisible : Bool
@@ -97,6 +98,11 @@ initWith reqOpts =
 
 withHeader : String -> Modal msg -> Modal msg
 withHeader header (Modal options) =
+    Modal { options | header = Just (h3 [] [ text header ]) }
+
+
+withHeaderElement : Html msg -> Modal msg -> Modal msg
+withHeaderElement header (Modal options) =
     Modal { options | header = Just header }
 
 
@@ -139,9 +145,8 @@ viewModalDetails options =
         header =
             div [ class "modal-header" ]
                 [ case options.header of
-                    Just headerText ->
-                        h3 []
-                            [ text headerText ]
+                    Just headerElement ->
+                        headerElement
 
                     Nothing ->
                         text ""

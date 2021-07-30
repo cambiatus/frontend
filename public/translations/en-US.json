@@ -1071,5 +1071,13 @@
       "cancel": "No",
       "accept": "Yes"
     }
+  },
+  "sponsorship": {
+    "dashboard_modal": {
+      "title": "Sponsor your Community",
+      "subtitle": "Now you can sponsor this community.",
+      "explanation": "Make your contribution with cash by clicking on the button below. You'll be redirected to PayPal to complete your transaction.",
+      "sponsor": "Sponsor {{community_name}}"
+    }
   }
 }

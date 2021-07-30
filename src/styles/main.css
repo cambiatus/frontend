@@ -219,7 +219,7 @@ textarea.input {
 }
 
 .modal-content {
-  @apply bg-white rounded-t-lg absolute bottom-0 w-full;
+  @apply bg-white rounded-t-lg absolute bottom-0 w-full flex flex-col;
 }
 
 .modal-content-full {
@@ -231,7 +231,7 @@ textarea.input {
 }
 
 .modal-body {
-  @apply p-4 pt-0 text-body overflow-y-auto;
+  @apply p-4 pt-0 text-body overflow-y-auto h-full;
   min-height: 4rem;
   max-height: 60vh;
 }

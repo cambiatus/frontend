@@ -1,4 +1,4 @@
-module View.SponsorModal exposing (Model, Msg, init, msgToString, update, view)
+module View.SponsorModal exposing (Model, Msg, init, msgToString, show, update, view)
 
 import Community
 import Eos
@@ -20,7 +20,7 @@ type alias Model =
 
 init : Model
 init =
-    { isVisible = True
+    { isVisible = False
     , amount = "0"
     }
 
@@ -117,6 +117,11 @@ view loggedIn community model =
 
 
 -- UTILS
+
+
+show : Model -> Model
+show model =
+    { model | isVisible = True }
 
 
 msgToString : Msg -> List String

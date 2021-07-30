@@ -1077,5 +1077,13 @@
       "cancel": "Não",
       "accept": "Sim"
     }
+  },
+  "sponsorship": {
+    "dashboard_modal": {
+      "title": "Patrocine sua Comunidade",
+      "subtitle": "Agora você pode patrocinar esta comunidade.",
+      "explanation": "Faça sua contribuição clicando no botão abaixo. Você será redirecionado ao PayPal para completar sua transação.",
+      "sponsor": "Patrocinar {{community_name}}"
+    }
   }
 }
