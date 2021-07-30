@@ -212,7 +212,7 @@ view ({ shared, accountName } as loggedIn) model =
                         [ div [ class "container mx-auto px-4" ]
                             [ viewHeader loggedIn community isCommunityAdmin
                             , div
-                                [ class "grid md:grid-cols-2 md:space-x-6" ]
+                                [ class "grid mb-10 md:grid-cols-2 md:space-x-6" ]
                                 [ div [ class "w-full" ]
                                     [ viewBalance shared balance
                                     , div [ class "mt-6 flex space-x-6" ]
@@ -432,7 +432,7 @@ viewAnalysisList loggedIn model =
             div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageLoading loggedIn.shared ]
 
         LoadedGraphql claims _ ->
-            div [ class "w-full flex mb-8 md:mb-40 md:mt-10" ]
+            div [ class "w-full flex mb-10 md:mb-40" ]
                 [ div
                     [ class "w-full" ]
                     [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
@@ -538,14 +538,19 @@ viewTransfers loggedIn model isMobile =
     let
         t =
             loggedIn.shared.translators.t
+
+        outerContainer children =
+            if isMobile then
+                div [ class "w-full bg-white md:hidden" ]
+                    [ div [ class "container mx-auto" ]
+                        children
+                    ]
+
+            else
+                div [ class "w-full bg-white hidden md:flex md:flex-col md:rounded" ]
+                    children
     in
-    div
-        [ class "w-full bg-white"
-        , classList
-            [ ( "hidden md:flex md:flex-col md:rounded", not isMobile )
-            , ( "md:hidden", isMobile )
-            ]
-        ]
+    outerContainer
         [ div [ class "flex justify-between items-center p-4 pb-0" ]
             [ p [ class "text-heading" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
