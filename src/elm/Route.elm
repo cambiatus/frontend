@@ -11,6 +11,7 @@ module Route exposing
 
 import Browser.Navigation as Nav
 import Eos
+import Eos.Account
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Session.Shared exposing (Shared)
@@ -33,7 +34,7 @@ type Route
     | ProfilePublic String
     | ProfileClaims String
     | ProfileAddContact
-    | PaymentHistory String
+    | PaymentHistory Eos.Account.Name
     | Profile
     | Dashboard
     | Community
@@ -98,7 +99,7 @@ parser url =
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map ProfilePublic (s "profile" </> string)
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
-        , Url.map PaymentHistory (s "payments" </> string)
+        , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
@@ -374,7 +375,7 @@ routeToString route =
                     ( [ "profile", "add-contact" ], [] )
 
                 PaymentHistory accountName ->
-                    ( [ "payments", accountName ], [] )
+                    ( [ "payments", Eos.Account.nameToString accountName ], [] )
 
                 Profile ->
                     ( [ "profile" ], [] )

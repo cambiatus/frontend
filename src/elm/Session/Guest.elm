@@ -145,7 +145,11 @@ type Page
     | Login
     | Invite
     | Join
-    | ShopViewer
+
+
+
+-- TODO - Bring back in the next release
+-- | ShopViewer
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -172,9 +176,9 @@ view thisMsg page ({ shared } as model) content =
                             )
                         |> Maybe.withDefault ( Nothing, "md:w-full" )
 
-                ShopViewer ->
-                    ( Nothing, "md:w-full" )
-
+                -- TODO - Bring back in the next release
+                -- ShopViewer ->
+                --     ( Nothing, "md:w-full" )
                 Redirect ->
                     ( Nothing, "md:w-full" )
 

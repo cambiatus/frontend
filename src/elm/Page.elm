@@ -1,6 +1,7 @@
 module Page exposing
-    ( External(..)
-    , ExternalMsg(..)
+    (  --  External(..)
+       ExternalMsg(..)
+
     , Msg(..)
     , Session(..)
     , fullPageError
@@ -246,12 +247,19 @@ type ExternalMsg
     | GuestBroadcastMsg Guest.BroadcastMsg
 
 
+
+-- TODO - Bring back in the next release
+
+
 {-| External msg for pages to produce when they can be viewed by a logged in
 user and by a guest user
 -}
-type External msg
-    = LoggedInExternal (LoggedIn.External msg)
-    | GuestExternal Guest.External
+
+
+
+-- type External msg
+--     = LoggedInExternal (LoggedIn.External msg)
+-- | GuestExternal Guest.External
 
 
 type Msg

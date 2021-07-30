@@ -2,54 +2,54 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Enum.TransferDirectionValue exposing (..)
+module Cambiatus.Enum.TransferDirection exposing (..)
 
 import Json.Decode as Decode exposing (Decoder)
 
 
 {-| The direction of the transfer
 
-  - Receiving - User's received transfers.
-  - Sending - User's sent transfers.
+  - Incoming - User's incoming transfers.
+  - Outgoing - User's outgoing transfers.
 
 -}
-type TransferDirectionValue
-    = Receiving
-    | Sending
+type TransferDirection
+    = Incoming
+    | Outgoing
 
 
-list : List TransferDirectionValue
+list : List TransferDirection
 list =
-    [ Receiving, Sending ]
+    [ Incoming, Outgoing ]
 
 
-decoder : Decoder TransferDirectionValue
+decoder : Decoder TransferDirection
 decoder =
     Decode.string
         |> Decode.andThen
             (\string ->
                 case string of
-                    "RECEIVING" ->
-                        Decode.succeed Receiving
+                    "INCOMING" ->
+                        Decode.succeed Incoming
 
-                    "SENDING" ->
-                        Decode.succeed Sending
+                    "OUTGOING" ->
+                        Decode.succeed Outgoing
 
                     _ ->
-                        Decode.fail ("Invalid TransferDirectionValue type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+                        Decode.fail ("Invalid TransferDirection type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
             )
 
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
-toString : TransferDirectionValue -> String
+toString : TransferDirection -> String
 toString enum =
     case enum of
-        Receiving ->
-            "RECEIVING"
+        Incoming ->
+            "INCOMING"
 
-        Sending ->
-            "SENDING"
+        Outgoing ->
+            "OUTGOING"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -63,14 +63,14 @@ This is the inverse of the Enum `toString` function. So you can call `toString` 
 This can be useful for generating Strings to use for <select> menus to check which item was selected.
 
 -}
-fromString : String -> Maybe TransferDirectionValue
+fromString : String -> Maybe TransferDirection
 fromString enumString =
     case enumString of
-        "RECEIVING" ->
-            Just Receiving
+        "INCOMING" ->
+            Just Incoming
 
-        "SENDING" ->
-            Just Sending
+        "OUTGOING" ->
+            Just Outgoing
 
         _ ->
             Nothing
