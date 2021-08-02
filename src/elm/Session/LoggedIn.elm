@@ -9,9 +9,8 @@ module Session.LoggedIn exposing
     , init
     , initLogin
     , isAccount
-    ,  jsAddressToMsg
-       -- , mapExternal
-
+    , jsAddressToMsg
+    , mapExternal
     , maybeInitWith
     , maybePrivateKey
     , msgToString
@@ -104,8 +103,8 @@ fetchCommunity shared authToken maybeToken =
         Api.Graphql.query shared (Just authToken) (Community.symbolQuery symbol) CompletedLoadCommunity
 
 
-fetchTranslations : String -> Shared -> Cmd Msg
-fetchTranslations language _ =
+fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
 
@@ -546,9 +545,11 @@ viewHeader page ({ shared } as model) profile_ =
                     , if model.showLanguageItems then
                         div [ class "ml-10 mb-2" ]
                             (button
-                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs"
+                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
                                 ]
-                                [ Shared.langFlag shared.language, text (String.toUpper shared.language) ]
+                                [ Shared.langFlag shared.language
+                                , text (Translation.languageToLanguageCode shared.language)
+                                ]
                                 :: Shared.viewLanguageItems shared ClickedLanguage
                             )
 
@@ -737,27 +738,32 @@ type External msg
     | HideFeedback
 
 
+mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
+mapExternal mapFn msg =
+    case msg of
+        UpdatedLoggedIn model ->
+            UpdatedLoggedIn model
 
--- TODO - Bring back in the next release
--- mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
--- mapExternal mapFn msg =
---     case msg of
---         UpdatedLoggedIn model ->
---             UpdatedLoggedIn model
---         AddedCommunity communityInfo ->
---             AddedCommunity communityInfo
---         CreatedCommunity symbol name ->
---             CreatedCommunity symbol name
---         ExternalBroadcast broadcastMsg ->
---             ExternalBroadcast broadcastMsg
---         ReloadResource resource ->
---             ReloadResource resource
---         RequiredAuthentication { successMsg, errorMsg } ->
---             RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
---         ShowFeedback status message ->
---             ShowFeedback status message
---         HideFeedback ->
---             HideFeedback
+        AddedCommunity communityInfo ->
+            AddedCommunity communityInfo
+
+        CreatedCommunity symbol name ->
+            CreatedCommunity symbol name
+
+        ExternalBroadcast broadcastMsg ->
+            ExternalBroadcast broadcastMsg
+
+        ReloadResource resource ->
+            ReloadResource resource
+
+        RequiredAuthentication { successMsg, errorMsg } ->
+            RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
+
+        ShowFeedback status message ->
+            ShowFeedback status message
+
+        HideFeedback ->
+            HideFeedback
 
 
 type Resource
@@ -892,7 +898,7 @@ type BroadcastMsg
 
 type Msg
     = NoOp
-    | CompletedLoadTranslation String (Result Http.Error Translations)
+    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -900,7 +906,7 @@ type Msg
     | ClickedLogout
     | ShowUserNav Bool
     | ToggleLanguageItems
-    | ClickedLanguage String
+    | ClickedLanguage Translation.Language
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
@@ -971,7 +977,7 @@ update msg model =
             case model.profile of
                 RemoteData.Success _ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
-                        |> UR.addCmd (Ports.storeLanguage lang)
+                        |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
 
                 _ ->
                     UR.init model
@@ -987,7 +993,7 @@ update msg model =
 
         ClickedTryAgainTranslation ->
             UR.init { model | shared = Shared.toLoadingTranslation shared }
-                |> UR.addCmd (fetchTranslations (Shared.language shared) shared)
+                |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addBreadcrumb
                     { type_ = Log.ErrorBreadcrumb
                     , category = msg
@@ -1135,7 +1141,7 @@ update msg model =
                     | shared = Shared.toLoadingTranslation shared
                     , showUserNav = False
                 }
-                |> UR.addCmd (fetchTranslations lang shared)
+                |> UR.addCmd (fetchTranslations lang)
 
         ClosedAuthModal ->
             UR.init closeAllModals

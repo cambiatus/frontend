@@ -20,7 +20,86 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 // Custom elements
 // =========================================
-/* global HTMLElement */
+/* global HTMLElement, CustomEvent */
+
+window.customElements.define('infinite-list',
+  class InfiniteList extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
+
+    connectedCallback () {
+      this.listenToScroll()
+
+      window.addEventListener('resize', () => { this.listenToScroll() })
+    }
+
+    attributeChangedCallback () {
+      this.listenToScroll()
+    }
+
+    listenToScroll () {
+      if (this._scrollInterval) {
+        clearInterval(this._scrollInterval)
+      }
+
+      let scrolling = false
+      const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
+      if (!isHidden) {
+        if (this.getAttribute('elm-element-to-track') === 'track-window') {
+          window.addEventListener('scroll', () => { scrolling = true })
+        } else {
+          this.addEventListener('scroll', () => { scrolling = true })
+        }
+      }
+
+      const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
+      this._scrollInterval = setInterval(() => {
+        if (scrolling) {
+          scrolling = false
+          const boundingRect = this.getBoundingClientRect()
+          if (this.scrollTop >= this.scrollHeight - distanceToRequest - boundingRect.height) {
+            this.dispatchEvent(new CustomEvent('requested-items', {}))
+          }
+        }
+      }, 300)
+    }
+  }
+)
+
+window.customElements.define('date-formatter',
+  class DateFormatter extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-locale', 'elm-date' ] }
+
+    constructor () {
+      super()
+
+      const shadow = this.attachShadow({ mode: 'open' })
+      const textContainer = document.createElement('span')
+      this._textContainer = textContainer
+      shadow.appendChild(textContainer)
+    }
+
+    connectedCallback () {
+      this.setDateText()
+    }
+
+    attributeChangedCallback () {
+      this.setDateText()
+    }
+
+    setDateText () {
+      const locale = this.getAttribute('elm-locale')
+      const date = new Date(parseInt(this.getAttribute('elm-date')))
+      const dayString = date.toLocaleDateString(locale, { day: 'numeric' })
+      const monthString = date.toLocaleDateString(locale, { month: 'short' })
+        .replace(/[.]/g, '')
+      const yearString = date.toLocaleDateString(locale, { year: 'numeric' })
+
+      const translationString = this.getAttribute('elm-translation') === null ? '{{date}}' : this.getAttribute('elm-translation')
+      const translatedString = translationString.replace(/{{date}}/, `${dayString} ${monthString} ${yearString}`)
+      this._textContainer.textContent = translatedString
+    }
+  }
+)
 
 window.customElements.define('pdf-viewer',
   class PdfViewer extends HTMLElement {

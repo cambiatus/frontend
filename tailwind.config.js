@@ -13,6 +13,7 @@ module.exports = {
         '100': '#F8F8F8',
         '200': '#eeeeee',
         '300': '#e0e0e0',
+        '333': '#333333',
         '400': '#bdbdbd',
         '500': '#E7E7E7',
         '600': '#9E9E9E',
@@ -163,6 +164,9 @@ module.exports = {
       width: {
         form: '45.625rem',
         '120': '30rem'
+      },
+      minWidth: {
+        '30': '7.5rem'
       },
       opacity: {
         '10': '0.1',

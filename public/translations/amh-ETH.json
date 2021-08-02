@@ -1,6 +1,10 @@
 {
   "bespiral": "ከምባትስ",
   "back": "ወደ ኃላ",
+  "dates": {
+    "today": "ዛሬ",
+    "yesterday": "ትናንት"
+  },
   "loading": {
     "title": "አንድ አፍታ ይጠብቁ",
     "subtitle": "ጥያቄዎን እየሠራን ነው"
@@ -328,7 +332,8 @@
     }
   },
   "transfer": {
-    "last_title": "በቅረብ የተላለፈ",
+    "transfers_latest": "የቅርብ ጊዜ",
+    "transfers": "ዝውውሮች",
     "loading_error": "የተላለፈዉን ሲፈለግ የሆነ ችግር ተፈጥሯል.",
     "no_transfers_yet": "እስከአሁን ምንም አልተላለፈም.",
     "info": "{{from}} ተላልፏል {{value}} ለ {{to}}",
@@ -338,7 +343,18 @@
     "no_profile": "አንድ ተጠቃሚ ይምረጡ",
     "no_amount": "አንድ መጠን ያስገቡ",
     "too_much": "ያን ያህል ለማስተላለፍ {{token}} የለዎትም። እስከ {{max_asset}} ማስተላለፍ ይችላሉ",
-    "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም"
+    "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም",
+    "sent_to": "ተልኳል",
+    "received_from": "የተቀበለው ከ",
+    "direction": {
+      "title": "የዝውውር አቅጣጫ",
+      "both": "ሁለቱም",
+      "sending": "በመላክ ላይ",
+      "receiving": "መቀበል",
+      "other_user": "የላከ ወይም የተቀበለ ተጠቃሚ",
+      "user_who_sent": "የላከው ተጠቃሚ",
+      "user_who_received": "የተቀበለው ተጠቃሚ"
+    }
   },
   "notifications": {
     "title": "ማሳሰቢያዎች",
@@ -837,7 +853,9 @@
     "objective": "ተጠባቂ ዉጤት",
     "action": "ተግባር",
     "claimer": "የተጠየቀዉ",
-    "claimed_on": "የሚል ጥያቄ አቅርቧል {{claim_date}}",
+    "claimed_today": "ዛሬ ይገባኛል ተብሏል",
+    "claimed_yesterday": "ትናንት ይገባኛል ተብሏል",
+    "claimed_on": "የሚል ጥያቄ አቅርቧል {{date}}",
     "date": "የተጠየቀበት ቀን",
     "claimer_reward": "የተጠቃሚ ሽልማት",
     "your_reward": "የእርሶ ሽልማት",

@@ -1,6 +1,7 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
@@ -13,11 +14,10 @@ import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Strftime
-import Time
 import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 
@@ -47,21 +47,10 @@ type alias Model =
     }
 
 
-type State
-    = Transferred
-    | Received
-
-
-type alias ProfileSummaries =
-    { originSummary : Profile.Summary.Model
-    , destinationSummary : Profile.Summary.Model
-    }
-
-
 type Status
     = Loading
     | LoadFailed (Graphql.Http.Error (Maybe Transfer))
-    | Loaded (Maybe Transfer) State ProfileSummaries
+    | Loaded (Maybe Transfer) TransferDirectionValue Transfer.ProfileSummaries
 
 
 
@@ -98,14 +87,14 @@ view loggedIn model =
                         , Page.fullPageGraphQLError (t "transfer_result.title") error
                         ]
 
-                Loaded maybeTransfer state profileSummaries ->
+                Loaded maybeTransfer direction profileSummaries ->
                     case maybeTransfer of
                         Just transfer ->
                             div []
                                 [ Page.viewHeader loggedIn (t "transfer_result.title")
                                 , div []
-                                    [ viewTransfer loggedIn transfer state
-                                    , viewDetails loggedIn transfer profileSummaries state
+                                    [ viewTransfer loggedIn transfer direction
+                                    , viewDetails loggedIn transfer profileSummaries direction
                                     ]
                                 ]
 
@@ -120,8 +109,8 @@ view loggedIn model =
     }
 
 
-viewTransfer : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewTransfer loggedIn transfer state =
+viewTransfer : LoggedIn.Model -> Transfer -> TransferDirectionValue -> Html Msg
+viewTransfer loggedIn transfer direction =
     let
         t =
             loggedIn.shared.translators.t
@@ -136,11 +125,11 @@ viewTransfer loggedIn transfer state =
                     []
                 , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
                     [ text <|
-                        case state of
-                            Transferred ->
+                        case direction of
+                            TransferDirectionValue.Sending ->
                                 t "transfer_result.transfer_success"
 
-                            Received ->
+                            TransferDirectionValue.Receiving ->
                                 t "transfer_result.receive_success"
                     ]
                 , div
@@ -157,98 +146,37 @@ viewTransfer loggedIn transfer state =
         ]
 
 
-viewTransferCard : LoggedIn.Model -> Transfer -> ProfileSummaries -> State -> Html Msg
-viewTransferCard loggedIn transfer { originSummary, destinationSummary } state =
-    let
-        originUser =
-            case state of
-                Received ->
-                    transfer.to
-
-                Transferred ->
-                    transfer.from
-
-        destinationUser =
-            case state of
-                Received ->
-                    transfer.from
-
-                Transferred ->
-                    transfer.to
-
-        viewSummary user summary =
-            Profile.Summary.view loggedIn.shared loggedIn.accountName user summary
-                |> Html.map (GotProfileSummaryMsg (user == originUser))
-    in
-    div [ class "flex flex-row w-full justify-center items-center bg-gray-100 px-6 pt-8 pb-6 my-8" ]
-        [ div [ class "w-1/6" ] [ viewSummary originUser originSummary ]
-        , div [ class "w-4/6" ] [ viewAmount loggedIn transfer state ]
-        , div [ class "w-1/6" ] [ viewSummary destinationUser destinationSummary ]
-        ]
-
-
-viewAmount : LoggedIn.Model -> Transfer -> State -> Html Msg
-viewAmount { shared } transfer state =
-    let
-        t =
-            shared.translators.t
-
-        direction =
-            case state of
-                Received ->
-                    "rotate-90"
-
-                Transferred ->
-                    "rotate--90"
-    in
-    div [ class "flex flex-row justify-center items-center" ]
-        [ div [ class "w-1/4 flex  justify-end" ] [ Icons.arrowDown ("fill-current text-green " ++ direction) ]
-        , div [ class "w-32 border border-solid rounded-sm border-green bg-white px-4 py-1 mx-2" ]
-            [ p [ class "text-caption text-gray-900" ]
-                [ text <|
-                    case state of
-                        Received ->
-                            String.toUpper (t "transfer_result.received")
-
-                        Transferred ->
-                            String.toUpper (t "transfer_result.transferred")
-                ]
-            , div [ class "flex flex-row items-center" ]
-                [ p [ class "text-heading font-semibold text-green" ]
-                    [ text <|
-                        String.fromFloat transfer.value
-                    ]
-                , span [ class "ml-2 text-caption text-green font-extralight" ]
-                    [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
-                ]
-            ]
-        , div [ class "w-1/4" ] [ Icons.arrowDown ("fill-current text-green " ++ direction) ]
-        ]
-
-
-viewDetails : LoggedIn.Model -> Transfer -> ProfileSummaries -> State -> Html Msg
-viewDetails ({ shared } as loggedIn) transfer profileSummaries state =
+viewDetails :
+    LoggedIn.Model
+    -> Transfer
+    -> Transfer.ProfileSummaries
+    -> TransferDirectionValue
+    -> Html Msg
+viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
     let
         t str =
             shared.translators.t str
                 |> String.toUpper
-
-        date =
-            Just transfer.blockTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
     in
     div [ class "flex flex-wrap mb-4 bg-white" ]
         [ div [ class "container mx-auto" ]
-            [ div [ class "flex w-full" ]
-                [ viewTransferCard loggedIn transfer profileSummaries state
-                ]
+            [ viewTransferCard loggedIn
+                transfer
+                direction
+                profileSummaries
+                GotProfileSummaryMsg
+                [ class "w-full px-4 bg-gray-100 py-6 my-8 md:px-20" ]
             , div [ class "w-full mb-10 px-4" ]
-                [ viewDetail (t "transfer_result.date") date
+                [ viewDetail (t "transfer_result.date")
+                    (View.Components.dateViewer []
+                        identity
+                        shared
+                        (Utils.fromDateTime transfer.blockTime)
+                    )
                 , case transfer.memo of
                     Just memo ->
                         if String.length memo > 0 then
-                            viewDetail (t "transfer_result.message") memo
+                            viewDetail (t "transfer_result.message") (text memo)
 
                         else
                             text ""
@@ -262,13 +190,77 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries state =
         ]
 
 
-viewDetail : String -> String -> Html Msg
+viewTransferCard :
+    LoggedIn.Model
+    -> Transfer
+    -> TransferDirectionValue
+    -> Transfer.ProfileSummaries
+    -> (Bool -> Profile.Summary.Msg -> msg)
+    -> List (Html.Attribute msg)
+    -> Html msg
+viewTransferCard loggedIn transfer transferDirection profileSummaries profileSummaryToMsg attrs =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        ( leftProfile, rightProfile, rotateClass ) =
+            case transferDirection of
+                TransferDirectionValue.Receiving ->
+                    ( transfer.to, transfer.from, "rotate-90" )
+
+                TransferDirectionValue.Sending ->
+                    ( transfer.from, transfer.to, "-rotate-90" )
+
+        arrowClass =
+            "fill-current text-green " ++ rotateClass
+
+        viewSummary profile summary =
+            Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
+                |> Html.map (profileSummaryToMsg (profile == leftProfile))
+    in
+    div
+        (class "grid grid-cols-5 place-items-center"
+            :: attrs
+        )
+        [ viewSummary leftProfile profileSummaries.left
+        , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
+            [ Icons.arrowDown arrowClass
+            , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
+                [ span [ class "text-gray-900 text-caption uppercase" ]
+                    [ text <|
+                        case transferDirection of
+                            TransferDirectionValue.Receiving ->
+                                t "transfer_result.received"
+
+                            TransferDirectionValue.Sending ->
+                                t "transfer_result.transferred"
+                    ]
+                , div [ class "flex text-green" ]
+                    [ span [ class "font-medium text-heading" ]
+                        [ transfer.value
+                            |> Eos.formatSymbolAmount transfer.community.symbol
+                            |> text
+                        ]
+                    , span [ class "text-caption ml-2 mb-2 self-end" ]
+                        [ transfer.community.symbol
+                            |> Eos.symbolToSymbolCodeString
+                            |> text
+                        ]
+                    ]
+                ]
+            , Icons.arrowDown arrowClass
+            ]
+        , viewSummary rightProfile profileSummaries.right
+        ]
+
+
+viewDetail : String -> Html Msg -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
         [ h5 [ class "input-label mb-2" ]
             [ text title ]
         , p [ class "text-body" ]
-            [ text content ]
+            [ content ]
         ]
 
 
@@ -285,21 +277,18 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (External Msg)
 
 
-findState : Maybe Transfer -> LoggedIn.Model -> State
-findState maybeTransfer { accountName } =
+findDirection : Maybe Transfer -> LoggedIn.Model -> TransferDirectionValue
+findDirection maybeTransfer { accountName } =
     case maybeTransfer of
         Just transfer ->
-            if transfer.from.account == accountName then
-                Transferred
-
-            else if transfer.to.account == accountName then
-                Received
+            if transfer.to.account == accountName then
+                TransferDirectionValue.Receiving
 
             else
-                Transferred
+                TransferDirectionValue.Sending
 
         Nothing ->
-            Transferred
+            TransferDirectionValue.Sending
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -307,9 +296,8 @@ update msg model user =
     case msg of
         CompletedTransferLoad (RemoteData.Success transfer) ->
             let
-                -- find out state either transferred or received
-                state =
-                    findState transfer user
+                direction =
+                    findDirection transfer user
 
                 summary =
                     Profile.Summary.init False
@@ -317,8 +305,8 @@ update msg model user =
             { model
                 | status =
                     Loaded transfer
-                        state
-                        { originSummary = summary, destinationSummary = summary }
+                        direction
+                        { left = summary, right = summary }
             }
                 |> UR.init
 
@@ -336,25 +324,13 @@ update msg model user =
         CompletedTransferLoad _ ->
             UR.init model
 
-        GotProfileSummaryMsg isOrigin subMsg ->
+        GotProfileSummaryMsg isLeft subMsg ->
             case model.status of
-                Loaded maybeTransfer state profileSummaries ->
-                    let
-                        subUpdate =
-                            Profile.Summary.update subMsg
-
-                        updatedSummaries =
-                            if isOrigin then
-                                { profileSummaries | originSummary = subUpdate profileSummaries.originSummary }
-
-                            else
-                                { profileSummaries | destinationSummary = subUpdate profileSummaries.destinationSummary }
-                    in
+                Loaded maybeTransfer direction profileSummaries ->
                     { model
                         | status =
-                            Loaded maybeTransfer
-                                state
-                                updatedSummaries
+                            Transfer.updateProfileSummaries profileSummaries isLeft subMsg
+                                |> Loaded maybeTransfer direction
                     }
                         |> UR.init
 

@@ -1,7 +1,6 @@
 module Page exposing
-    (  --  External(..)
-       ExternalMsg(..)
-
+    ( External(..)
+    , ExternalMsg(..)
     , Msg(..)
     , Session(..)
     , fullPageError
@@ -42,6 +41,8 @@ import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
+import Task
+import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
@@ -67,7 +68,8 @@ init flags navKey url =
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -84,7 +86,8 @@ init flags navKey url =
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
                 |> UR.addCmd signedInCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
@@ -101,7 +104,8 @@ init flags navKey url =
             in
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -111,10 +115,16 @@ init flags navKey url =
                     }
 
 
-fetchTranslations : Shared -> String -> Cmd Msg
-fetchTranslations _ language =
+fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
+
+
+fetchTimezone : Cmd Msg
+fetchTimezone =
+    Time.here
+        |> Task.attempt GotTimezone
 
 
 
@@ -247,24 +257,18 @@ type ExternalMsg
     | GuestBroadcastMsg Guest.BroadcastMsg
 
 
-
--- TODO - Bring back in the next release
-
-
 {-| External msg for pages to produce when they can be viewed by a logged in
 user and by a guest user
 -}
-
-
-
--- type External msg
---     = LoggedInExternal (LoggedIn.External msg)
--- | GuestExternal Guest.External
+type External msg
+    = LoggedInExternal (LoggedIn.External msg)
+    | GuestExternal Guest.External
 
 
 type Msg
     = Ignored
-    | CompletedLoadTranslation String (Result Http.Error Translations)
+    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    | GotTimezone (Result () Time.Zone)
     | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
@@ -280,7 +284,7 @@ update msg session =
             Shared.loadTranslation (Ok ( lang, transl ))
                 |> updateShared session
                 |> UR.init
-                |> UR.addCmd (Ports.storeLanguage lang)
+                |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
 
         ( CompletedLoadTranslation _ (Err err), _ ) ->
             Shared.loadTranslation (Err err)
@@ -292,6 +296,14 @@ update msg session =
                     { moduleName = "Page", function = "update" }
                     []
                     err
+
+        ( GotTimezone (Ok zone), _ ) ->
+            (\shared -> { shared | timezone = zone })
+                |> updateShared session
+                |> UR.init
+
+        ( GotTimezone (Err ()), _ ) ->
+            UR.init session
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel
@@ -426,6 +438,9 @@ msgToString msg =
 
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
+
+        GotTimezone r ->
+            [ "GotTimezone", UR.resultToString r ]
 
         SignedIn r ->
             [ "SignedIn", UR.remoteDataToString r ]

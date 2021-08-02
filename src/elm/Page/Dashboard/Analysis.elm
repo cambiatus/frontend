@@ -925,7 +925,7 @@ selectConfiguration shared isDisabled =
             , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
-            |> Select.withMenuClass "max-h-40 overflow-y-auto"
+            |> Select.withMenuClass "max-h-44 overflow-y-auto"
         )
         shared
         isDisabled
@@ -946,6 +946,7 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers 
                             [ profileSummary
                                 |> Profile.Summary.withRelativeSelector ".modal-content"
                                 |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
                                 |> Profile.Summary.view shared loggedIn.accountName p
                                 |> Html.map GotProfileSummaryMsg
                             , div

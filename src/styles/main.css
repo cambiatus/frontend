@@ -76,6 +76,7 @@ body {
 
   .form-select {
     @apply form-input pr-10 bg-no-repeat focus:outline-none;
+
     background-position: right 0.5rem center;
     background-size: 1.5em;
     background-image: url('/icons/select-arrow.svg');
@@ -141,13 +142,13 @@ textarea.input {
 
 /* End of Select */
 
-/* Elm Select*/
+/* Elm Select */
 
 .elm-select-menu .elm-select-item:last-of-type .items-center > .border-dotted {
-  border-style: unset
+  border-style: unset;
 }
 
-/* End of Elm Select*/
+/* End of Elm Select */
 
 /* Tooltip */
 
@@ -179,6 +180,7 @@ textarea.input {
 
 .icon-tooltip .icon-tooltip-content {
   @apply invisible absolute bg-black rounded-sm p-2 text-sm text-white;
+
   width: 18em;
   line-height: 1.4;
   left: -3em;
@@ -201,7 +203,7 @@ textarea.input {
   border-color: transparent transparent black transparent;
 }
 
-.icon-tooltip:hover:after {
+.icon-tooltip:hover::after {
   @apply visible;
 }
 
@@ -211,6 +213,7 @@ textarea.input {
 
 .modal {
   @apply z-50 fixed inset-0;
+
   transition: opacity 0.25s ease;
 }
 
@@ -232,12 +235,14 @@ textarea.input {
 
 .modal-body {
   @apply p-4 pt-0 text-body overflow-y-auto;
+
   min-height: 4rem;
   max-height: 60vh;
 }
 
 .modal-body-lg {
   @apply p-4 pt-0 text-body overflow-y-auto;
+
   min-height: 4rem;
   max-height: 70vh;
 }
@@ -261,6 +266,7 @@ textarea.input {
 @screen md {
   .modal-content {
     @apply max-w-3xl top-modal z-10 bottom-auto left-1/2 transform mx-auto rounded-lg;
+
     /* Using -translate-y-1/2 and -translate-x-1/2 doesn't work because they
     overwrite each other, so we just set the variables tailwind uses */
     --tw-translate-x: -50%;
@@ -269,11 +275,13 @@ textarea.input {
   .modal-content-lg,
   .modal-content-full {
     @apply top-1/2;
+
     --tw-translate-y: -50%;
   }
 
   .modal-body-lg {
     @apply px-4 py-0 text-body overflow-y-auto;
+
     min-height: 4rem;
     max-height: 60vh;
   }
@@ -321,7 +329,7 @@ textarea.input {
   min-width: 43px;
 }
 
-.form-switch-label:before {
+.form-switch-label::before {
   @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
 
   right: 50%;
@@ -333,7 +341,7 @@ textarea.input {
   @apply bg-indigo-500 shadow-none;
 }
 
-.form-switch-checkbox:checked + .form-switch-label:before {
+.form-switch-checkbox:checked + .form-switch-label::before {
   @apply right-0 bg-white;
 
   margin-right: 0.05rem;
@@ -347,26 +355,31 @@ textarea.input {
 }
 
 .shake-invalid {
-  animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+  animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
 @keyframes shake {
-  10%, 90% {
+  10%,
+  90% {
     transform: translate3d(-1px, 0, 0);
   }
 
-  20%, 80% {
+  20%,
+  80% {
     transform: translate3d(2px, 0, 0);
   }
 
-  30%, 50%, 70% {
+  30%,
+  50%,
+  70% {
     transform: translate3d(-4px, 0, 0);
   }
 
-  40%, 60% {
+  40%,
+  60% {
     transform: translate3d(4px, 0, 0);
   }
 }
@@ -383,6 +396,7 @@ textarea.input {
   /* Fill all available vertical space. It works predictable for mobile,
   because it doesn't take the address bar into account. */
   @apply min-h-screen;
+
   min-height: stretch;
 }
 
@@ -403,8 +417,9 @@ textarea.input {
 
 /* Objectives */
 .action-verifier svg {
-  fill: #EEEEEE;
+  fill: #eee;
 }
+
 /* End of Objectives */
 
 .spinner-light {
@@ -420,7 +435,21 @@ textarea.input {
 .claim-photo-thumb:hover {
   @apply ring;
 }
+
 /* End of Claims */
+
+/* Extra utilities */
+
+/* For more information on adding new utilities, see
+https://tailwindcss.com/docs/adding-new-utilities */
+
+@layer utilities {
+  .flex-basis-0 {
+    flex-basis: 0;
+  }
+}
+
+/* End of extra utilities */
 
 /* Button Modifiers (must be below all other button's styles) */
 .button-disabled {
@@ -438,18 +467,19 @@ textarea.input {
 .button-danger:hover {
   @apply border-red;
 }
+
 /* End of Button Modifiers */
 
 /* Legacy CSS leftover */
 
 .hidden-img-input,
 .profile-img-input {
-    width: .1px;
-    height: .1px;
-    opacity: 0;
-    overflow: hidden;
-    position: absolute;
-    z-index: -1;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: -1;
 }
 
 /* End of Legacy CSS leftover */

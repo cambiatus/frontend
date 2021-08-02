@@ -1,6 +1,7 @@
 module Transfer exposing
     ( ConnectionTransfer
     , EdgeTransfer
+    , ProfileSummaries
     , QueryTransfers
     , Transfer
     , encodeEosActionData
@@ -9,6 +10,8 @@ module Transfer exposing
     , transferQuery
     , transferSucceedSubscription
     , transfersUserQuery
+    , updateProfileSummaries
+    , view
     )
 
 import Api.Relay exposing (Edge, PageConnection, pageInfoSelectionSet)
@@ -26,8 +29,13 @@ import Eos exposing (symbolToString)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, a, div, p, span, text)
+import Html.Attributes exposing (class, classList)
+import Html.Events exposing (onClick)
 import Json.Encode as Encode exposing (Value)
 import Profile
+import Profile.Summary
+import Session.LoggedIn as LoggedIn
 
 
 type alias Transfer =
@@ -207,3 +215,92 @@ transferSucceedSubscription symbol fromAccount toAccount =
             }
     in
     Subscription.transfersucceed args transferItemSelectionSet
+
+
+
+-- VIEWS
+
+
+type alias ProfileSummaries =
+    { left : Profile.Summary.Model
+    , right : Profile.Summary.Model
+    }
+
+
+updateProfileSummaries : ProfileSummaries -> Bool -> Profile.Summary.Msg -> ProfileSummaries
+updateProfileSummaries profileSummaries isLeft profileSummaryMsg =
+    if isLeft then
+        { profileSummaries | left = Profile.Summary.update profileSummaryMsg profileSummaries.left }
+
+    else
+        { profileSummaries | right = Profile.Summary.update profileSummaryMsg profileSummaries.right }
+
+
+view :
+    LoggedIn.Model
+    -> Transfer
+    -> Profile.Summary.Model
+    -> (Profile.Summary.Msg -> msg)
+    -> msg
+    -> Html msg
+view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        ( otherProfile, isFromUser ) =
+            if transfer.from.account == loggedIn.accountName then
+                ( transfer.to, True )
+
+            else
+                ( transfer.from, False )
+    in
+    div
+        [ class "flex hover:bg-gray-100 p-4 cursor-pointer"
+        , onClick onClickMsg
+        ]
+        [ profileSummary
+            |> Profile.Summary.withoutName
+            |> Profile.Summary.withImageSize "w-14 h-14"
+            |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
+            |> Html.map profileSummaryToMsg
+        , div [ class "ml-4 w-full truncate" ]
+            [ p
+                [ class "font-sm flex flex-wrap"
+                , classList
+                    [ ( "text-gray-333", isFromUser )
+                    , ( "text-indigo-500", not isFromUser )
+                    ]
+                ]
+                [ span [ class "mr-1" ]
+                    [ if isFromUser then
+                        text <| t "transfer.sent_to"
+
+                      else
+                        text <| t "transfer.received_from"
+                    ]
+                , span [ class "font-bold" ]
+                    [ text <|
+                        Maybe.withDefault (Eos.nameToString otherProfile.account)
+                            otherProfile.name
+                    ]
+                ]
+            , p
+                [ classList
+                    [ ( "text-gray-333", isFromUser )
+                    , ( "text-indigo-500", not isFromUser )
+                    ]
+                ]
+                [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                , text " "
+                , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
+                ]
+            , case transfer.memo of
+                Nothing ->
+                    text ""
+
+                Just memo ->
+                    span [ class "text-xs text-gray-900" ]
+                        [ text <| t memo ]
+            ]
+        ]

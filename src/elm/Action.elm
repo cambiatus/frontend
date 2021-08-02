@@ -36,7 +36,6 @@ import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Iso8601
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Ports
@@ -697,15 +696,9 @@ encode action =
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
         , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
         , ( "deadline"
-          , case action.deadline of
-                Nothing ->
-                    Encode.int 0
-
-                Just (Cambiatus.Scalar.DateTime dateTimeString) ->
-                    Iso8601.toTime dateTimeString
-                        |> Result.map Time.posixToMillis
-                        |> Result.withDefault 0
-                        |> Encode.int
+          , Utils.fromMaybeDateTime action.deadline
+                |> Time.posixToMillis
+                |> Encode.int
           )
         , ( "usages", Encode.int action.usages )
         , ( "usages_left", Encode.int action.usagesLeft )
@@ -874,7 +867,7 @@ isPastDeadline : Action -> Time.Posix -> Bool
 isPastDeadline action now =
     case action.deadline of
         Just _ ->
-            Time.posixToMillis now > Time.posixToMillis (Utils.posixDateTime action.deadline)
+            Time.posixToMillis now > Time.posixToMillis (Utils.fromMaybeDateTime action.deadline)
 
         Nothing ->
             False

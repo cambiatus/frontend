@@ -339,7 +339,9 @@ viewCard model ({ shared } as loggedIn) index card =
         , div
             [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white"
             ]
-            [ div [ class "w-full relative bg-gray-500 rounded-t-lg" ]
+            [ div
+                [ class "w-full relative bg-gray-500 rounded-t-lg"
+                ]
                 [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
                 , div
                     [ class "absolute right-1 bottom-1"

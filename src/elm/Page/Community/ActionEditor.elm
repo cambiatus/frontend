@@ -166,8 +166,8 @@ initForm =
     }
 
 
-editForm : Form -> Action -> Form
-editForm form action =
+editForm : Shared -> Form -> Action -> Form
+editForm shared form action =
     let
         dateValidator : Maybe (Validator String)
         dateValidator =
@@ -176,7 +176,7 @@ editForm form action =
                     (\d ->
                         defaultDateValidator
                             |> updateInput
-                                (Just d |> Utils.posixDateTime |> Strftime.format "%m%d%Y" Time.utc)
+                                (d |> Utils.fromDateTime |> Strftime.format "%m%d%Y" shared.timezone)
                             |> Just
                     )
 
@@ -577,7 +577,7 @@ update msg model ({ shared } as loggedIn) =
                             Just action ->
                                 { model
                                     | status = Authorized
-                                    , form = editForm model.form action
+                                    , form = editForm shared model.form action
                                 }
                                     |> UR.init
 
@@ -1114,7 +1114,7 @@ update msg model ({ shared } as loggedIn) =
 
                             else
                                 Just (DateTime date)
-                                    |> Utils.posixDateTime
+                                    |> Utils.fromMaybeDateTime
                                     |> Time.posixToMillis
                     in
                     update (SaveAction dateInt) model loggedIn

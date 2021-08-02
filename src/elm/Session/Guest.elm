@@ -89,7 +89,7 @@ fetchCommunity shared =
             CompletedLoadCommunityPreview
 
 
-fetchTranslations : String -> Cmd Msg
+fetchTranslations : Translation.Language -> Cmd Msg
 fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
@@ -145,11 +145,7 @@ type Page
     | Login
     | Invite
     | Join
-
-
-
--- TODO - Bring back in the next release
--- | ShopViewer
+    | ShopViewer
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -176,9 +172,9 @@ view thisMsg page ({ shared } as model) content =
                             )
                         |> Maybe.withDefault ( Nothing, "md:w-full" )
 
-                -- TODO - Bring back in the next release
-                -- ShopViewer ->
-                --     ( Nothing, "md:w-full" )
+                ShopViewer ->
+                    ( Nothing, "md:w-full" )
+
                 Redirect ->
                     ( Nothing, "md:w-full" )
 
@@ -286,8 +282,8 @@ viewPageHeader model shared =
                 ]
                 [ Shared.langFlag shared.language
                 , if model.showLanguageNav then
-                    div [ class "flex-grow whitespace-nowrap" ]
-                        [ text (String.toUpper model.shared.language) ]
+                    div [ class "flex-grow whitespace-nowrap uppercase" ]
+                        [ text (Translation.languageToLanguageCode model.shared.language) ]
 
                   else
                     text ""
@@ -333,10 +329,10 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadTranslation String (Result Http.Error Translations)
+    = CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | ShowLanguageNav Bool
-    | ClickedLanguage String
+    | ClickedLanguage Translation.Language
     | KeyDown String
     | CompletedLoadCommunityPreview (RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) (Maybe Community.CommunityPreview))
     | GotFeedbackMsg Feedback.Msg
@@ -352,7 +348,7 @@ update msg ({ shared } as model) =
         CompletedLoadTranslation lang (Ok transl) ->
             { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                 |> UR.init
-                |> UR.addCmd (Ports.storeLanguage lang)
+                |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
 
         CompletedLoadTranslation _ (Err err) ->
             { model | shared = Shared.loadTranslation (Err err) shared }
@@ -367,7 +363,7 @@ update msg ({ shared } as model) =
         ClickedTryAgainTranslation ->
             { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.init
-                |> UR.addCmd (fetchTranslations (Shared.language shared))
+                |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addBreadcrumb
                     { type_ = Log.ErrorBreadcrumb
                     , category = msg
