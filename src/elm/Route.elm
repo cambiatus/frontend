@@ -45,6 +45,7 @@ type Route
     | CommunitySettingsCurrency
     | CommunitySelector (Maybe Route)
     | CommunityThankYou
+    | CommunitySupporters
     | Objectives
     | NewObjective
     | EditObjective Int
@@ -117,6 +118,7 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map CommunityThankYou (s "community" </> s "thank-you")
+        , Url.map CommunitySupporters (s "community" </> s "supporters")
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -407,6 +409,9 @@ routeToString route =
 
                 CommunityThankYou ->
                     ( [ "community", "thank-you" ], [] )
+
+                CommunitySupporters ->
+                    ( [ "community", "supporters" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

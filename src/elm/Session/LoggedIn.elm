@@ -220,6 +220,7 @@ type Page
     | CommunityEditor
     | CommunitySelector
     | CommunityThankYou
+    | CommunitySupporters
     | Objectives
     | ObjectiveEditor
     | ActionEditor
