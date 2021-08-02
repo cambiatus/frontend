@@ -33,7 +33,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Page
-import Profile
 import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
@@ -60,7 +59,7 @@ init ({ shared, accountName, authToken } as loggedIn) =
     , Cmd.batch
         [ fetchTransfers shared accountName authToken
         , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
+        , LoggedIn.maybeInitWith (\_ -> CompletedLoadProfile) .profile loggedIn
         ]
     )
 
@@ -734,7 +733,7 @@ type Msg
     = NoOp
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
-    | CompletedLoadProfile Profile.Model
+    | CompletedLoadProfile
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
@@ -773,7 +772,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
 
-        CompletedLoadProfile _ ->
+        CompletedLoadProfile ->
             { model | showContactModal = shouldShowContactModal loggedIn model }
                 |> UR.init
 
@@ -1251,8 +1250,8 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
-        LoggedIn.ProfileLoaded profile ->
-            Just (CompletedLoadProfile profile)
+        LoggedIn.ProfileLoaded _ ->
+            Just CompletedLoadProfile
 
         _ ->
             Nothing
@@ -1298,7 +1297,7 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        CompletedLoadProfile _ ->
+        CompletedLoadProfile ->
             [ "CompletedLoadProfile" ]
 
         CompletedLoadBalance result ->

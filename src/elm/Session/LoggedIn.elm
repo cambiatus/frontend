@@ -219,6 +219,7 @@ type Page
     | CommunitySettingsCurrency
     | CommunityEditor
     | CommunitySelector
+    | CommunityThankYou
     | Objectives
     | ObjectiveEditor
     | ActionEditor

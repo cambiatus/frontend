@@ -21,6 +21,7 @@ import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
+import Page.Community.ThankYou as CommunityThankYou
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
@@ -147,6 +148,7 @@ type Status
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySelector CommunitySelector.Model
+    | CommunityThankYou
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -829,6 +831,9 @@ statusToRoute status session =
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
 
+        CommunityThankYou ->
+            Just Route.CommunityThankYou
+
         Objectives _ ->
             Just Route.Objectives
 
@@ -1190,6 +1195,11 @@ changeRouteTo maybeRoute model =
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
                 |> withLoggedIn (Route.CommunitySelector maybeRedirect)
+
+        Just Route.CommunityThankYou ->
+            CommunityThankYou
+                |> updateStatus model
+                |> noCmd
 
         Just Route.NewCommunity ->
             CommunityEditor.init
@@ -1594,6 +1604,9 @@ view model =
 
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view
+
+        CommunityThankYou ->
+            viewLoggedIn () LoggedIn.CommunityThankYou (\_ -> Ignored) (\l () -> CommunityThankYou.view l)
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view
