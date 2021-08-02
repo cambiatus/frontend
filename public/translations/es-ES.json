@@ -631,6 +631,12 @@
         "canRemove": "Siempre puede eliminar esta información de su perfil si decide hacerlo.",
         "success": "Sus datos KYC se guardaron correctamente."
       }
+    },
+    "thank_you": {
+      "title": "¡Gracias!",
+      "headline": "¡Gracias por patrocinar esta comunidad!",
+      "importance": "Tu contribución es muy importante para las personas de esta comunidad.",
+      "all_supporters": "Ver la lista de todos los patrocinadores"
     }
   },
   "profile": {

@@ -631,6 +631,12 @@
         "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
         "success": "Les vostres dades KYC s'han desat correctament."
       }
+    },
+    "thank_you": {
+      "title": "Gràcies!",
+      "headline": "Gràcies per patrocinar aquesta comunitat!",
+      "importance": "La vostra contribució és molt important per a la gent d’aquesta comunitat.",
+      "all_supporters": "Consulteu la llista de tots els partidaris"
     }
   },
   "profile": {
