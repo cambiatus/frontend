@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Voltar",
+  "dates": {
+    "today": "Hoje",
+    "yesterday": "Ontem"
+  },
   "loading": {
     "title": "Aguarde um instante",
     "subtitle": "Estamos processando sua solicitação"
@@ -374,7 +378,8 @@
     }
   },
   "transfer": {
-    "last_title": "Últimas Transferências",
+    "transfers_latest": "Últimas",
+    "transfers": "transferências",
     "loading_error": "Algo de errado aconteceu ao carregar as transferências.",
     "no_transfers_yet": "Nenhuma transferência.",
     "info": "{{from}} transferiu {{value}} para {{to}}",
@@ -383,7 +388,18 @@
     "to_self": "Você não pode transferir para si mesmo",
     "no_profile": "Selecione um usuário",
     "no_amount": "Insira uma quantidade",
-    "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres"
+    "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres",
+    "sent_to": "Enviado para",
+    "received_from": "Recebido de",
+    "direction": {
+      "title": "Direção da transferência",
+      "both": "Ambas",
+      "sending": "Enviando",
+      "receiving": "Recebendo",
+      "other_user": "Usuário que enviou ou recebeu",
+      "user_who_sent": "Usuário que enviou",
+      "user_who_received": "Usuário que recebeu"
+    }
   },
   "notifications": {
     "title": "Notificações",
@@ -884,7 +900,9 @@
     "objective": "Objetivo",
     "action": "Ação",
     "claimer": "Reivindicado por",
-    "claimed_on": "Reivindicado em {{claim_date}}",
+    "claimed_today": "Reivindicado hoje",
+    "claimed_yesterday": "Reivindicado ontem",
+    "claimed_on": "Reivindicado em {{date}}",
     "date": "Data da reinvindicação",
     "claimer_reward": "Recompensa do usuário",
     "your_reward": "Sua recompensa",

@@ -97,6 +97,10 @@ type Product
     = Product
 
 
+type ProductPreview
+    = ProductPreview
+
+
 type PushSubscription
     = PushSubscription
 

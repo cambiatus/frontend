@@ -62,6 +62,7 @@ config =
           , [ "View.Form.Input", "View.Form.Toggle", "View.Form.Radio", "View.Form.FileUploader", "View.Form.Checkbox" ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select" ] )
+        , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
         ]
     ]
         -- Ignore generated code

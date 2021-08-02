@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Volver",
+  "dates": {
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
   "loading": {
     "title": "Espera un momento",
     "subtitle": "Estamos procesando su petición"
@@ -370,7 +374,8 @@
     }
   },
   "transfer": {
-    "last_title": "Últimas transferencias",
+    "transfers_latest": "Últimas",
+    "transfers": "transferencias",
     "loading_error": "Algo salió mal mientras recuperabamos las transferencias.",
     "no_transfers_yet": "Aún no hay transferencias",
     "info": "{{from}} transfirió {{value}} a {{to}}",
@@ -379,7 +384,18 @@
     "to_self": "No puedes transferirte a ti mismo",
     "no_profile": "Selecciona un usuario",
     "no_amount": "Ingrese una cantidad",
-    "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres"
+    "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres",
+    "sent_to": "Enviado a",
+    "received_from": "Recebido de",
+    "direction": {
+      "title": "Dirección de transferencia",
+      "both": "Ambas",
+      "sending": "Enviando",
+      "receiving": "Recepción",
+      "other_user": "Usuario que envió o recibió",
+      "user_who_sent": "Usuario que envió",
+      "user_who_received": "Usuario que recibió"
+    }
   },
   "notifications": {
     "title": "Notificaciones",
@@ -877,7 +893,9 @@
     "objective": "Objetivo",
     "action": "Acción",
     "claimer": "Reclamado por",
-    "claimed_on": "Reclamado en {{claim_date}}",
+    "claimed_today": "Reclamado hoy",
+    "claimed_yesterday": "Reclamado ayer",
+    "claimed_on": "Reclamado en {{date}}",
     "date": "Fecha de reclamo",
     "claimer_reward": "Recompensa del usuario",
     "approved_by": "Aprobado por",

@@ -13,17 +13,19 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
 import Cambiatus.Query
+import Cambiatus.Scalar
 import Claim
 import Community exposing (Balance)
+import Date
+import DatePicker
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
-import FormatNumber
-import FormatNumber.Locales exposing (usLocale)
 import Graphql.Http
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
@@ -35,17 +37,24 @@ import List.Extra as List
 import Page
 import Profile
 import Profile.Contact as Contact
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
+import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
+import Simple.Fuzzy
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
+import Utils
+import View.Components
 import View.Feedback as Feedback
+import View.Form
 import View.Form.Input as Input
+import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -54,11 +63,10 @@ import View.Modal as Modal
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, accountName, authToken } as loggedIn) =
-    ( initModel
+init loggedIn =
+    ( initModel loggedIn.shared
     , Cmd.batch
-        [ fetchTransfers shared accountName authToken
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
         ]
     )
@@ -74,7 +82,16 @@ type alias Model =
     , analysisFilter : Direction
     , profileSummaries : List Claim.ClaimProfileSummaries
     , lastSocket : String
-    , transfers : GraphqlStatus (Maybe QueryTransfers) (List Transfer)
+    , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Profile.Summary.Model ))
+    , transfersFilters : TransfersFilters
+    , transfersFiltersBeingEdited :
+        { datePicker : DatePicker.DatePicker
+        , otherAccountInput : String
+        , otherAccountState : Select.State
+        , otherAccountProfileSummary : Profile.Summary.Model
+        , filters : TransfersFilters
+        }
+    , showTransferFiltersModal : Bool
     , contactModel : Contact.Model
     , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
@@ -83,14 +100,23 @@ type alias Model =
     }
 
 
-initModel : Model
-initModel =
+initModel : Shared -> Model
+initModel shared =
     { balance = RemoteData.NotAsked
-    , analysis = LoadingGraphql
+    , analysis = LoadingGraphql Nothing
     , analysisFilter = initAnalysisFilter
     , profileSummaries = []
     , lastSocket = ""
-    , transfers = LoadingGraphql
+    , transfers = LoadingGraphql Nothing
+    , transfersFilters = initTransfersFilters
+    , transfersFiltersBeingEdited =
+        { datePicker = DatePicker.initFromDate (Date.fromPosix shared.timezone shared.now)
+        , otherAccountInput = ""
+        , otherAccountState = Select.newState "other-account-select"
+        , otherAccountProfileSummary = Profile.Summary.init False
+        , filters = initTransfersFilters
+        }
+    , showTransferFiltersModal = False
     , contactModel = Contact.initSingle
     , showContactModal = False
     , inviteModalStatus = InviteModalClosed
@@ -104,8 +130,23 @@ initAnalysisFilter =
     DESC
 
 
+initTransfersFilters : TransfersFilters
+initTransfersFilters =
+    { date = Nothing
+    , direction = Nothing
+    , otherAccount = Nothing
+    }
+
+
+type alias TransfersFilters =
+    { date : Maybe Date.Date
+    , direction : Maybe TransferDirectionValue
+    , otherAccount : Maybe Profile.Minimal
+    }
+
+
 type GraphqlStatus err a
-    = LoadingGraphql
+    = LoadingGraphql (Maybe a)
     | LoadedGraphql a (Maybe Api.Relay.PageInfo)
     | FailedGraphql (Graphql.Http.Error err)
 
@@ -167,17 +208,30 @@ view ({ shared, accountName } as loggedIn) model =
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
-                    div [ class "container mx-auto px-4 mb-10" ]
-                        [ viewHeader loggedIn community isCommunityAdmin
-                        , viewBalance loggedIn model balance
-                        , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                            viewAnalysisList loggedIn model
+                    div []
+                        [ div [ class "container mx-auto px-4" ]
+                            [ viewHeader loggedIn community isCommunityAdmin
+                            , div
+                                [ class "grid mb-10 md:grid-cols-2 md:space-x-6" ]
+                                [ div [ class "w-full" ]
+                                    [ viewBalance shared balance
+                                    , div [ class "mt-6 flex space-x-6" ]
+                                        [ viewMyClaimsCard loggedIn
+                                        , viewMyOffersCard loggedIn
+                                        ]
+                                    ]
+                                , viewTransfers loggedIn model False
+                                ]
+                            , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
+                                viewAnalysisList loggedIn model
 
-                          else
-                            text ""
-                        , viewTransfers loggedIn model
+                              else
+                                text ""
+                            ]
+                        , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
+                        , viewTransferFilters loggedIn community.members model
                         ]
 
                 ( RemoteData.Success _, _ ) ->
@@ -190,7 +244,7 @@ view ({ shared, accountName } as loggedIn) model =
 
 viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-600 font-light mt-6 mb-5" ]
+    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-heading" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
             , span [ class "text-indigo-500 font-medium" ]
@@ -374,21 +428,21 @@ viewAnalysisList loggedIn model =
                 claims
     in
     case model.analysis of
-        LoadingGraphql ->
-            Page.fullPageLoading loggedIn.shared
+        LoadingGraphql _ ->
+            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageLoading loggedIn.shared ]
 
         LoadedGraphql claims _ ->
-            div [ class "w-full flex" ]
+            div [ class "w-full flex mb-10 md:mb-40" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "flex justify-between text-gray-600 text-2xl font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex-wrap md:flex" ]
+                    [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
+                        [ div [ class "flex flex-wrap mr-4" ]
                             [ div [ class "text-indigo-500 mr-2 font-medium" ]
                                 [ text_ "dashboard.analysis.title.1"
                                 ]
                             , text_ "dashboard.analysis.title.2"
                             ]
-                        , div [ class "flex justify-between space-x-4" ]
+                        , div [ class "flex xs-max:flex-col xs-max:space-x-0 justify-between space-x-4" ]
                             [ button
                                 [ class "w-full button button-secondary"
                                 , onClick ToggleAnalysisSorting
@@ -427,7 +481,7 @@ viewAnalysisList loggedIn model =
                 ]
 
         FailedGraphql err ->
-            div [] [ Page.fullPageGraphQLError "Failed load" err ]
+            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageGraphQLError "Failed load" err ]
 
 
 viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
@@ -479,21 +533,43 @@ viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
                 |> Html.map (ClaimMsg claimIndex)
 
 
-viewTransfers : LoggedIn.Model -> Model -> Html Msg
-viewTransfers loggedIn model =
+viewTransfers : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewTransfers loggedIn model isMobile =
     let
         t =
             loggedIn.shared.translators.t
+
+        outerContainer children =
+            if isMobile then
+                div [ class "w-full bg-white md:hidden" ]
+                    [ div [ class "container mx-auto" ]
+                        children
+                    ]
+
+            else
+                div [ class "w-full bg-white hidden md:flex md:flex-col md:rounded" ]
+                    children
     in
-    div [ class "mt-4" ]
-        [ div [ class "text-2xl text-indigo-500 mr-2 font-medium mb-4" ]
-            [ text <| t "transfer.last_title"
+    outerContainer
+        [ div [ class "flex justify-between items-center p-4 pb-0" ]
+            [ p [ class "text-heading" ]
+                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
+                , text " "
+                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
+                ]
+            , button
+                [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
+                , onClick ClickedOpenTransferFilters
+                ]
+                [ text <| t "all_analysis.filter.title"
+                , Icons.arrowDown "fill-current"
+                ]
             ]
         , case model.transfers of
-            LoadingGraphql ->
+            LoadingGraphql Nothing ->
                 Page.viewCardEmpty
                     [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "menu.loading") ]
+                        [ text <| t "menu.loading" ]
                     ]
 
             FailedGraphql _ ->
@@ -508,177 +584,308 @@ viewTransfers loggedIn model =
                         [ text (t "transfer.no_transfers_yet") ]
                     ]
 
-            LoadedGraphql transfers _ ->
-                div [ class "rounded-lg bg-white" ]
-                    (List.map (\transfer -> viewTransfer loggedIn transfer) transfers)
+            LoadingGraphql (Just transfers) ->
+                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
+
+            LoadedGraphql transfers maybePageInfo ->
+                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
         ]
 
 
-viewTransfer : LoggedIn.Model -> Transfer -> Html msg
-viewTransfer ({ shared } as loggedIn) transfer =
+viewTransferList :
+    LoggedIn.Model
+    -> List ( Transfer, Profile.Summary.Model )
+    -> Maybe Api.Relay.PageInfo
+    -> { isLoading : Bool, isMobile : Bool }
+    -> Html Msg
+viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
     let
-        isReceive =
-            loggedIn.accountName == transfer.to.account
-
-        amount =
-            if isReceive then
-                transfer.value
+        addLoading transfers_ =
+            if isLoading then
+                transfers_
+                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
 
             else
-                transfer.value * -1
-
-        description =
-            if isReceive then
-                [ ( "user", Eos.nameToString transfer.from.account )
-                , ( "amount", String.fromFloat transfer.value )
-                ]
-                    |> shared.translators.tr "notifications.transfer.receive"
-
-            else
-                [ ( "user", Eos.nameToString transfer.to.account )
-                , ( "amount", String.fromFloat transfer.value )
-                ]
-                    |> shared.translators.tr "notifications.transfer.sent"
+                transfers_
     in
-    a
-        [ class "flex items-start lg:items-center p-4 border-b last:border-b-0"
-        , Route.externalHref shared transfer.community (Route.ViewTransfer transfer.id)
-        ]
-        [ div [ class "flex-col flex-grow-1 pl-4" ]
-            [ p
-                [ class "text-black text-sm leading-relaxed" ]
-                [ text description ]
-            , p
-                [ class "text-gray-900 text-caption uppercase" ]
-                [ text (Maybe.withDefault "" transfer.memo) ]
+    View.Components.infiniteList
+        { onRequestedItems =
+            maybePageInfo
+                |> Maybe.andThen
+                    (\pageInfo ->
+                        if pageInfo.hasNextPage then
+                            Just RequestedMoreTransfers
+
+                        else
+                            Nothing
+                    )
+        , distanceToRequest = 1000
+        , elementToTrack =
+            if isMobile then
+                View.Components.TrackWindow
+
+            else
+                View.Components.TrackSelf
+        }
+        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
+        (transfers
+            |> List.groupWhile
+                (\( t1, _ ) ( t2, _ ) ->
+                    Utils.areSameDay loggedIn.shared.timezone
+                        (Utils.fromDateTime t1.blockTime)
+                        (Utils.fromDateTime t2.blockTime)
+                )
+            |> List.map
+                (\( ( t1, _ ) as first, rest ) ->
+                    div []
+                        [ div [ class "mt-4 mx-4" ]
+                            [ View.Components.dateViewer
+                                [ class "uppercase text-caption text-black tracking-wider" ]
+                                identity
+                                loggedIn.shared
+                                (Utils.fromDateTime t1.blockTime)
+                            ]
+                        , div [ class "divide-y" ]
+                            (List.map
+                                (\( transfer, profileSummary ) ->
+                                    Transfer.view loggedIn
+                                        transfer
+                                        profileSummary
+                                        (GotTransferCardProfileSummaryMsg transfer.id)
+                                        (ClickedTransferCard transfer.id)
+                                )
+                                (first :: rest)
+                            )
+                        ]
+                )
+            |> addLoading
+        )
+
+
+datePickerSettings : Shared -> DatePicker.Settings
+datePickerSettings shared =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+    in
+    { defaultSettings
+        | changeYear = DatePicker.off
+        , placeholder = shared.translators.t "payment_history.pick_date"
+        , inputClassList = [ ( "input w-full", True ) ]
+        , containerClassList = [ ( "relative-table w-full", True ) ]
+        , dateFormatter = Date.format "E, d MMM y"
+    }
+
+
+selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
+selectConfiguration shared =
+    let
+        toLabel =
+            .account >> Eos.nameToString
+
+        filter minChars query items =
+            if String.length query < minChars then
+                Nothing
+
+            else
+                items
+                    |> Simple.Fuzzy.filter toLabel query
+                    |> Just
+    in
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = SelectedTransfersFiltersOtherAccount
+            , toLabel = toLabel
+            , filter = filter 2
+            }
+            |> Select.withMenuClass "max-h-44 overflow-y-auto !relative"
+        )
+        shared
+        False
+
+
+viewTransferFilters : LoggedIn.Model -> List Profile.Minimal -> Model -> Html Msg
+viewTransferFilters ({ shared } as loggedIn) users model =
+    let
+        { t } =
+            shared.translators
+
+        directionText =
+            case model.transfersFiltersBeingEdited.filters.direction of
+                Nothing ->
+                    "transfer.direction.other_user"
+
+                Just TransferDirectionValue.Receiving ->
+                    "transfer.direction.user_who_sent"
+
+                Just TransferDirectionValue.Sending ->
+                    "transfer.direction.user_who_received"
+    in
+    Modal.initWith
+        { closeMsg = ClosedTransfersFilters
+        , isVisible = model.showTransferFiltersModal
+        }
+        |> Modal.withHeader (t "all_analysis.filter.title")
+        |> Modal.withBody
+            [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
+            , div [ class "flex space-x-4" ]
+                [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
+                    (datePickerSettings shared)
+                    model.transfersFiltersBeingEdited.datePicker
+                    |> Html.map TransfersFiltersDatePickerMsg
+                , button
+                    [ class "h-12"
+                    , onClick ClickedClearTransfersFiltersDate
+                    ]
+                    [ Icons.trash "" ]
+                ]
+            , Select.init
+                { id = "direction-selector"
+                , label = t "transfer.direction.title"
+                , onInput = SelectedTransfersDirection
+                , firstOption = { value = Nothing, label = t "transfer.direction.both" }
+                , value = model.transfersFiltersBeingEdited.filters.direction
+                , valueToString =
+                    Maybe.map TransferDirectionValue.toString
+                        >> Maybe.withDefault "BOTH"
+                , disabled = False
+                , problems = Nothing
+                }
+                |> Select.withOption
+                    { value = Just TransferDirectionValue.Sending
+                    , label = t "transfer.direction.sending"
+                    }
+                |> Select.withOption
+                    { value = Just TransferDirectionValue.Receiving
+                    , label = t "transfer.direction.receiving"
+                    }
+                |> Select.withContainerAttrs [ class "mt-10" ]
+                |> Select.toHtml
+            , View.Form.label "other-account-select" (t directionText)
+            , model.transfersFiltersBeingEdited.filters.otherAccount
+                |> Maybe.map List.singleton
+                |> Maybe.withDefault []
+                |> Select.view (selectConfiguration shared)
+                    model.transfersFiltersBeingEdited.otherAccountState
+                    users
+                |> Html.map TransfersFiltersOtherAccountSelectMsg
+            , case model.transfersFiltersBeingEdited.filters.otherAccount of
+                Nothing ->
+                    text ""
+
+                Just otherAccount ->
+                    div [ class "flex mt-4 items-start" ]
+                        [ div [ class "flex flex-col items-center" ]
+                            [ model.transfersFiltersBeingEdited.otherAccountProfileSummary
+                                |> Profile.Summary.withRelativeSelector ".modal-content"
+                                |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+                                |> Profile.Summary.view shared
+                                    loggedIn.accountName
+                                    otherAccount
+                                |> Html.map GotTransfersFiltersProfileSummaryMsg
+                            , button
+                                [ class "mt-2"
+                                , onClick ClickedClearTransfersFiltersUser
+                                ]
+                                [ Icons.trash "" ]
+                            ]
+                        ]
+            , button
+                [ class "button button-primary w-full mt-10"
+                , onClick ClickedApplyTransfersFilters
+                ]
+                [ text (t "all_analysis.filter.apply") ]
             ]
-        , div [ class "flex flex-none pl-4" ]
-            (viewAmount amount (Eos.symbolToSymbolCodeString transfer.community.symbol))
-        ]
+        |> Modal.toHtml
 
 
-viewAmount : Float -> String -> List (Html msg)
-viewAmount amount symbol =
-    let
-        amountText =
-            FormatNumber.format usLocale amount
-
-        color =
-            if amount > 0 then
-                "text-green"
-
-            else
-                "text-red"
-    in
-    [ div [ class "text-2xl", class color ] [ text amountText ]
-    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans", class color ] [ text symbol ]
-    ]
-
-
-viewBalance : LoggedIn.Model -> Model -> Balance -> Html Msg
-viewBalance ({ shared } as loggedIn) _ balance =
+viewBalance : Shared -> Balance -> Html Msg
+viewBalance shared balance =
     let
         text_ =
             text << shared.translators.t
-
-        symbolText =
-            Eos.symbolToSymbolCodeString balance.asset.symbol
-
-        balanceText =
-            String.fromFloat balance.asset.amount ++ " "
     in
-    div [ class "flex-wrap flex lg:space-x-3" ]
-        [ div [ class "flex w-full lg:w-1/3 bg-white rounded h-64 p-4" ]
-            [ div [ class "w-full" ]
-                (div [ class "input-label mb-2" ]
-                    [ text_ "account.my_wallet.balances.current" ]
-                    :: div [ class "flex items-center mb-4" ]
-                        [ div [ class "text-indigo-500 font-bold text-3xl" ]
-                            [ text balanceText ]
-                        , div [ class "text-indigo-500 ml-2" ]
-                            [ text symbolText ]
-                        ]
-                    :: (case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                [ a
-                                    [ class "button button-primary w-full font-medium mb-2"
-                                    , Route.href <| Route.Transfer Nothing
-                                    ]
-                                    [ text_ "dashboard.transfer" ]
-                                , a
-                                    [ class "flex w-full items-center justify-between h-12 text-gray-600 border-b"
-                                    , Route.href Route.Community
-                                    ]
-                                    [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
-                                    , Icons.arrowDown "rotate--90"
-                                    ]
-                                ]
-
-                            _ ->
-                                []
-                       )
-                    ++ [ button
-                            [ class "flex w-full items-center justify-between h-12 text-gray-600"
-                            , onClick CreateInvite
-                            ]
-                            [ text_ "dashboard.invite", Icons.arrowDown "rotate--90 text-gray-600" ]
-                       ]
-                )
+    div [ class "bg-white rounded p-4 md:p-6" ]
+        [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
+        , p [ class "text-indigo-500 mt-3" ]
+            [ span [ class "font-bold text-3xl" ]
+                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
+            , text " "
+            , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
             ]
-        , div [ class "w-full lg:w-1/3 mt-4 lg:mt-0" ]
-            [ viewQuickLinks loggedIn
+        , a
+            [ class "button button-primary w-full mt-6"
+            , Route.href (Route.Transfer Nothing)
+            ]
+            [ text_ "dashboard.transfer" ]
+        , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
+            [ a
+                [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                , Route.href Route.Community
+                ]
+                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString balance.asset.symbol ) ]
+                , Icons.arrowDown "-rotate-90"
+                ]
+            , button
+                [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                , onClick CreateInvite
+                ]
+                [ text_ "dashboard.invite"
+                , Icons.arrowDown "-rotate-90"
+                ]
             ]
         ]
 
 
-viewQuickLinks : LoggedIn.Model -> Html Msg
-viewQuickLinks ({ shared } as loggedIn) =
+viewMyClaimsCard : LoggedIn.Model -> Html Msg
+viewMyClaimsCard loggedIn =
     let
-        t =
-            shared.translators.t
+        { t } =
+            loggedIn.shared.translators
     in
-    div [ class "flex-wrap flex" ]
-        [ div [ class "w-1/2 lg:w-full" ]
-            [ case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
-                RemoteData.Success True ->
-                    a
-                        [ class "flex flex-wrap mr-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:mb-6 lg:mr-0"
-                        , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
-                        ]
-                        [ div []
-                            [ div [ class "w-full mb-4" ] [ Icons.claims "w-8 h-8" ]
-                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
-                                [ text <| t "dashboard.my_claims.1"
-                                , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
-                                ]
-                            ]
-                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_claims.go" ]
-                        ]
+    case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
+        RemoteData.Success True ->
+            a
+                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
+                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+                ]
+                [ Icons.claims "w-8 h-8"
+                , p [ class "text-gray-600 mt-5" ]
+                    [ text <| t "dashboard.my_claims.1"
+                    , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                    ]
+                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
+                    [ text <| t "dashboard.my_claims.go" ]
+                ]
 
-                _ ->
-                    text ""
-            ]
-        , div [ class "w-1/2 lg:w-full" ]
-            [ case RemoteData.map .hasShop loggedIn.selectedCommunity of
-                RemoteData.Success True ->
-                    a
-                        [ class "flex flex-wrap ml-2 px-4 py-6 rounded bg-white hover:shadow lg:flex-nowrap lg:justify-between lg:items-center lg:ml-0"
-                        , Route.href (Route.Shop Shop.UserSales)
-                        ]
-                        [ div []
-                            [ div [ class "w-full mb-4 lg:mb-2" ] [ Icons.shop "w-8 h-8 fill-current" ]
-                            , p [ class "w-full h-12 lg:h-auto text-gray-600 mb-4 lg:mb-0" ]
-                                [ text <| t "dashboard.my_offers.1"
-                                , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
-                                ]
-                            ]
-                        , div [ class "w-full lg:w-1/3 button button-primary" ] [ text <| t "dashboard.my_offers.go" ]
-                        ]
+        _ ->
+            text ""
 
-                _ ->
-                    text ""
-            ]
-        ]
+
+viewMyOffersCard : LoggedIn.Model -> Html Msg
+viewMyOffersCard loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
+    case RemoteData.map .hasShop loggedIn.selectedCommunity of
+        RemoteData.Success True ->
+            a
+                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
+                , Route.href (Route.Shop Shop.UserSales)
+                ]
+                [ Icons.shop "w-8 h-8 fill-current"
+                , p [ class "text-gray-600 mt-5" ]
+                    [ text <| t "dashboard.my_offers.1"
+                    , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                    ]
+                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
+                    [ text <| t "dashboard.my_offers.go" ]
+                ]
+
+        _ ->
+            text ""
 
 
 
@@ -700,6 +907,19 @@ type Msg
     | ClaimMsg Int Claim.Msg
     | VoteClaim Claim.ClaimId Bool
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
+    | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
+    | RequestedMoreTransfers
+    | ClickedOpenTransferFilters
+    | ClosedTransfersFilters
+    | SelectedTransfersDirection (Maybe TransferDirectionValue)
+    | TransfersFiltersDatePickerMsg DatePicker.Msg
+    | ClickedClearTransfersFiltersDate
+    | GotTransfersFiltersProfileSummaryMsg Profile.Summary.Msg
+    | ClickedClearTransfersFiltersUser
+    | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
+    | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
+    | ClickedApplyTransfersFilters
+    | ClickedTransferCard Int
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -724,10 +944,11 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init
                 { model
                     | balance = RemoteData.Loading
-                    , analysis = LoadingGraphql
+                    , analysis = LoadingGraphql Nothing
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
+                |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
 
         CompletedLoadProfile profile ->
             let
@@ -780,7 +1001,31 @@ update msg model ({ shared, accountName } as loggedIn) =
             UR.init model
 
         CompletedLoadUserTransfers (RemoteData.Success maybeTransfers) ->
-            { model | transfers = LoadedGraphql (Transfer.getTransfers maybeTransfers) Nothing }
+            let
+                maybePageInfo : Maybe Api.Relay.PageInfo
+                maybePageInfo =
+                    maybeTransfers
+                        |> Maybe.andThen .transfers
+                        |> Maybe.map .pageInfo
+
+                previousTransfers : List ( Transfer, Profile.Summary.Model )
+                previousTransfers =
+                    case model.transfers of
+                        LoadedGraphql previousTransfers_ _ ->
+                            previousTransfers_
+
+                        LoadingGraphql (Just previousTransfers_) ->
+                            previousTransfers_
+
+                        _ ->
+                            []
+            in
+            { model
+                | transfers =
+                    Transfer.getTransfers maybeTransfers
+                        |> List.map (\transfer -> ( transfer, Profile.Summary.init False ))
+                        |> (\transfers -> LoadedGraphql (previousTransfers ++ transfers) maybePageInfo)
+            }
                 |> UR.init
 
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
@@ -909,6 +1154,224 @@ update msg model ({ shared, accountName } as loggedIn) =
                 _ ->
                     model |> UR.init
 
+        GotTransferCardProfileSummaryMsg transferId subMsg ->
+            case model.transfers of
+                LoadedGraphql transfers pageInfo ->
+                    let
+                        newTransfers =
+                            transfers
+                                |> List.updateIf
+                                    (\( transfer, _ ) -> transfer.id == transferId)
+                                    (\( transfer, profileSummary ) ->
+                                        ( transfer
+                                        , Profile.Summary.update subMsg profileSummary
+                                        )
+                                    )
+                    in
+                    { model
+                        | transfers =
+                            LoadedGraphql newTransfers
+                                pageInfo
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+
+        RequestedMoreTransfers ->
+            case ( model.transfers, loggedIn.selectedCommunity ) of
+                ( LoadedGraphql transfers maybePageInfo, RemoteData.Success community ) ->
+                    let
+                        maybeCursor : Maybe String
+                        maybeCursor =
+                            Maybe.andThen .endCursor maybePageInfo
+                    in
+                    { model | transfers = LoadingGraphql (Just transfers) }
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor model)
+
+                _ ->
+                    model
+                        |> UR.init
+
+        ClickedOpenTransferFilters ->
+            { model | showTransferFiltersModal = True }
+                |> UR.init
+
+        ClosedTransfersFilters ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+            in
+            { model
+                | showTransferFiltersModal = False
+                , transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | otherAccountInput =
+                            Maybe.map (.account >> Eos.nameToString) model.transfersFilters.otherAccount
+                                |> Maybe.withDefault ""
+                        , filters = model.transfersFilters
+                    }
+            }
+                |> UR.init
+
+        SelectedTransfersDirection maybeDirection ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | filters = { oldFilters | direction = maybeDirection }
+                    }
+            }
+                |> UR.init
+
+        TransfersFiltersDatePickerMsg subMsg ->
+            let
+                ( newDatePicker, datePickerEvent ) =
+                    DatePicker.update (datePickerSettings shared)
+                        subMsg
+                        model.transfersFiltersBeingEdited.datePicker
+
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+
+                newDate =
+                    case datePickerEvent of
+                        DatePicker.Picked pickedDate ->
+                            Just pickedDate
+
+                        _ ->
+                            oldFilters.date
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | datePicker = newDatePicker
+                        , filters = { oldFilters | date = newDate }
+                    }
+            }
+                |> UR.init
+
+        ClickedClearTransfersFiltersDate ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | filters = { oldFilters | date = Nothing }
+                    }
+            }
+                |> UR.init
+
+        GotTransfersFiltersProfileSummaryMsg subMsg ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | otherAccountProfileSummary =
+                            Profile.Summary.update subMsg oldFiltersBeingEdited.otherAccountProfileSummary
+                    }
+            }
+                |> UR.init
+
+        ClickedClearTransfersFiltersUser ->
+            let
+                oldFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldFiltersBeingEdited
+                        | filters = { oldFilters | otherAccount = Nothing }
+                        , otherAccountInput = ""
+                    }
+            }
+                |> UR.init
+
+        TransfersFiltersOtherAccountSelectMsg subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update (selectConfiguration loggedIn.shared)
+                        subMsg
+                        model.transfersFiltersBeingEdited.otherAccountState
+
+                oldTransfersFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldTransfersFiltersBeingEdited
+                        | otherAccountState = updated
+                    }
+            }
+                |> UR.init
+                |> UR.addCmd cmd
+
+        SelectedTransfersFiltersOtherAccount maybeMinimalProfile ->
+            let
+                oldTransfersFiltersBeingEdited =
+                    model.transfersFiltersBeingEdited
+
+                oldFilters =
+                    oldTransfersFiltersBeingEdited.filters
+            in
+            { model
+                | transfersFiltersBeingEdited =
+                    { oldTransfersFiltersBeingEdited
+                        | filters =
+                            { oldFilters
+                                | otherAccount = maybeMinimalProfile
+                            }
+                    }
+            }
+                |> UR.init
+
+        ClickedApplyTransfersFilters ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        newModel =
+                            { model
+                                | transfersFilters = model.transfersFiltersBeingEdited.filters
+                                , showTransferFiltersModal = False
+                                , transfers = LoadingGraphql Nothing
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers loggedIn community Nothing newModel)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg [ "NoCommunity" ]
+
+        ClickedTransferCard transferId ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1013,7 +1476,7 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                                 DESC ->
                                     ASC
-                        , analysis = LoadingGraphql
+                        , analysis = LoadingGraphql Nothing
                     }
 
                 fetchCmd =
@@ -1054,14 +1517,38 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : Shared -> Eos.Name -> String -> Cmd Msg
-fetchTransfers shared accountName authToken =
-    Api.Graphql.query shared
-        (Just authToken)
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> Cmd Msg
+fetchTransfers loggedIn community maybeCursor model =
+    Api.Graphql.query loggedIn.shared
+        (Just loggedIn.authToken)
         (Transfer.transfersUserQuery
-            accountName
+            loggedIn.accountName
             (\args ->
-                { args | first = Present 10 }
+                { args
+                    | first = Present 10
+                    , after = OptionalArgument.fromMaybe maybeCursor
+                    , filter =
+                        Present
+                            { communityId = Present (Eos.symbolToString community.symbol)
+                            , date =
+                                model.transfersFilters.date
+                                    |> Maybe.map (Date.toIsoString >> Cambiatus.Scalar.Date)
+                                    |> OptionalArgument.fromMaybe
+                            , direction =
+                                case ( model.transfersFilters.direction, model.transfersFilters.otherAccount ) of
+                                    ( Nothing, Nothing ) ->
+                                        Absent
+
+                                    _ ->
+                                        Present
+                                            { direction = OptionalArgument.fromMaybe model.transfersFilters.direction
+                                            , otherAccount =
+                                                model.transfersFilters.otherAccount
+                                                    |> Maybe.map (.account >> Eos.nameToString)
+                                                    |> OptionalArgument.fromMaybe
+                                            }
+                            }
+                }
             )
         )
         CompletedLoadUserTransfers
@@ -1237,6 +1724,45 @@ msgToString msg =
 
         GotVoteResult _ result ->
             [ "GotVoteResult", UR.resultToString result ]
+
+        GotTransferCardProfileSummaryMsg _ _ ->
+            [ "GotTransferCardProfileSummaryMsg" ]
+
+        RequestedMoreTransfers ->
+            [ "RequestedMoreTransfers" ]
+
+        ClickedOpenTransferFilters ->
+            [ "ClickedOpenTransferFilters" ]
+
+        ClosedTransfersFilters ->
+            [ "ClosedTransfersFilters" ]
+
+        SelectedTransfersDirection _ ->
+            [ "SelectedTransfersDirection" ]
+
+        TransfersFiltersDatePickerMsg _ ->
+            [ "TransfersFiltersDatePickerMsg" ]
+
+        ClickedClearTransfersFiltersDate ->
+            [ "ClickedClearTransfersFiltersDate" ]
+
+        GotTransfersFiltersProfileSummaryMsg subMsg ->
+            "GotTransfersFiltersProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
+
+        ClickedClearTransfersFiltersUser ->
+            [ "ClickedClearTransfersFiltersUser" ]
+
+        TransfersFiltersOtherAccountSelectMsg _ ->
+            [ "TransfersFiltersOtherAccountSelectMsg" ]
+
+        SelectedTransfersFiltersOtherAccount _ ->
+            [ "SelectedTransfersFiltersOtherAccount" ]
+
+        ClickedApplyTransfersFilters ->
+            [ "ClickedApplyTransfersFilters" ]
+
+        ClickedTransferCard _ ->
+            [ "ClickedTransferCard" ]
 
         CreateInvite ->
             [ "CreateInvite" ]

@@ -1,6 +1,7 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
 import Api.Graphql
+import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account as Eos
 import FormatNumber
@@ -16,10 +17,9 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Strftime
-import Time
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 
@@ -140,11 +140,6 @@ viewNotificationTransfer shared history notification =
             else
                 Just notification.community.logo
 
-        date =
-            Just history.insertedAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
         description =
             if isReceive then
                 [ ( "user", notification.fromId )
@@ -180,9 +175,10 @@ viewNotificationTransfer shared history notification =
             [ p
                 [ class "font-sans text-black text-sm leading-relaxed" ]
                 [ text description ]
-            , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-                [ text date ]
+            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+                identity
+                shared
+                (Utils.fromDateTime history.insertedAt)
             ]
         , div [ class "flex flex-none pl-4" ]
             (viewAmount amount notification.symbol)
@@ -198,11 +194,6 @@ viewNotificationMint shared history notification =
 
             else
                 Just notification.community.logo
-
-        date =
-            Just history.insertedAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
 
         description =
             [ ( "amount", String.fromFloat notification.quantity )
@@ -232,9 +223,10 @@ viewNotificationMint shared history notification =
             [ p
                 [ class "font-sans text-black text-sm leading-relaxed" ]
                 [ text description ]
-            , p
-                [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-                [ text date ]
+            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+                identity
+                shared
+                (Utils.fromDateTime history.insertedAt)
             ]
         , div [ class "flex flex-none pl-4" ]
             (viewAmount notification.quantity notification.community.symbol)
@@ -253,11 +245,6 @@ viewNotificationSaleHistory loggedIn notification sale =
 
             else
                 Just logoString
-
-        date =
-            Just notification.insertedAt
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
     in
     div
         [ class "flex items-start lg:items-center p-4"
@@ -278,11 +265,11 @@ viewNotificationSaleHistory loggedIn notification sale =
                         [ class "w-10 h-10 object-scale-down" ]
                         []
             ]
-            :: viewNotificationSaleHistoryDetail loggedIn sale date
+            :: viewNotificationSaleHistoryDetail loggedIn sale notification.insertedAt
         )
 
 
-viewNotificationSaleHistoryDetail : LoggedIn.Model -> OrderData -> String -> List (Html msg)
+viewNotificationSaleHistoryDetail : LoggedIn.Model -> OrderData -> DateTime -> List (Html msg)
 viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     let
         isBuy =
@@ -305,9 +292,10 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
         [ p
             [ class "font-sans text-black text-sm leading-relaxed" ]
             [ text description ]
-        , p
-            [ class "font-normal font-sans text-gray-900 text-caption uppercase" ]
-            [ text date ]
+        , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+            identity
+            shared
+            (Utils.fromDateTime date)
         ]
     , div [ class "flex flex-none pl-4" ]
         [ img
