@@ -213,7 +213,7 @@ updateAsGuest msg model _ =
                 |> UR.logGraphqlError msg
                     Nothing
                     "Got an error when loading sale preview"
-                    { moduleName = "Page.Shop.Viewer", function = "update" }
+                    { moduleName = "Page.Shop.Viewer", function = "updateAsGuest" }
                     []
                     err
 
