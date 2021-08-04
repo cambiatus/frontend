@@ -20,7 +20,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, p, span, text)
-import Html.Attributes exposing (class, disabled, id, maxlength, required, value)
+import Html.Attributes exposing (class, disabled, id, maxlength, required, rows, value)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode
@@ -329,7 +329,7 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
                     , problems = listErrors shared.translations form.description |> Just
                     , translators = shared.translators
                     }
-                    |> Input.withAttrs [ required True ]
+                    |> Input.withAttrs [ required True, rows 5 ]
                     |> Input.withInputType Input.TextArea
                     |> Input.toHtml
                 , Select.init
