@@ -384,6 +384,7 @@
     "to_self": "No puedes transferirte a ti mismo",
     "no_profile": "Selecciona un usuario",
     "no_amount": "Ingrese una cantidad",
+    "too_much": "No tienes suficiente {{token}} para transferir tanto. Puede transferir hasta {{max_asset}}",
     "memo_too_long": "La nota no puede tener más de {{maxlength}} caracteres",
     "sent_to": "Enviado a",
     "received_from": "Recebido de",

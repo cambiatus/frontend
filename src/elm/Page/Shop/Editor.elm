@@ -15,6 +15,7 @@ import Api.Graphql
 import Browser.Events as Events
 import Community exposing (Balance)
 import DataValidator exposing (Validator, getInput, greaterThanOrEqual, hasErrors, listErrors, longerThan, lowerThanOrEqual, newValidator, oneOf, updateInput, validate)
+import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -25,6 +26,7 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Result exposing (Result)
@@ -502,12 +504,21 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Completed loading balances, but user wasn't creating or updating sale"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedBalancesLoad (Err error) ->
             LoadBalancesFailed error
                 |> UR.init
-                |> UR.logHttpError msg error
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading balances for shop editor"
+                    { moduleName = "Page.Shop.Editor", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    error
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
@@ -537,12 +548,21 @@ update msg model loggedIn =
                 ( _, _ ) ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Completed loading sale, but sale was unavailable or user wasn't editing sale"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedSaleLoad (RemoteData.Failure error) ->
             LoadSaleFailed error
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading sale"
+                    { moduleName = "Page.Shop.Editor", function = "update" }
+                    []
+                    error
 
         CompletedSaleLoad _ ->
             UR.init model
@@ -568,27 +588,53 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Finished uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         CompletedImageUpload (Err error) ->
             case model of
                 EditingCreate balances _ form ->
                     EditingCreate balances (RemoteData.Failure error) form
                         |> UR.init
-                        |> UR.logHttpError msg error
+                        |> UR.logHttpError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when uploading an image for a new shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 EditingUpdate balances sale _ _ form ->
                     EditingUpdate balances sale (RemoteData.Failure error) Closed form
                         |> UR.init
-                        |> UR.logHttpError msg error
+                        |> UR.logHttpError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when uploading an image for an existing shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            [ { name = "Product"
+                              , extras =
+                                    Dict.fromList
+                                        [ ( "id", Encode.int sale.id )
+                                        , ( "title", Encode.string sale.title )
+                                        , ( "symbol", Eos.encodeSymbol sale.symbol )
+                                        ]
+                              }
+                            ]
+                            error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logHttpError msg error
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
+                        |> UR.logImpossible msg
+                            "Completed uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         EnteredImage (file :: _) ->
             let
@@ -609,7 +655,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried uploading image for shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         EnteredImage _ ->
             model
@@ -796,7 +846,11 @@ update msg model loggedIn =
                 _ ->
                     validatedModel
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Clicked save shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         ClickedDelete ->
             case model of
@@ -854,7 +908,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Clicked delete shop item, but wasn't editing or creating shop offer"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         GotSaveResponse (Ok _) ->
             UR.init model
@@ -877,7 +935,12 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when creating a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
 
                 Saving balances sale imageStatus form ->
                     EditingUpdate balances sale imageStatus Closed form
@@ -888,12 +951,21 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when editing a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Saved shop item, but wasn't creating or editing"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         GotDeleteResponse (Ok _) ->
             model
@@ -917,12 +989,21 @@ update msg model loggedIn =
                                 }
                             )
                         |> UR.init
-                        |> UR.logDebugValue msg error
+                        |> UR.logJsonValue msg
+                            (Just loggedIn.accountName)
+                            "Got an error when deleting a shop offer"
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+                            error
 
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Deleted shop item, but wasn't in the state of Deleting"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         PressedEnter val ->
             if val then

@@ -342,6 +342,7 @@
     "to_self": "ወደራስዎ ማስተላለፍ አይችሉም",
     "no_profile": "አንድ ተጠቃሚ ይምረጡ",
     "no_amount": "አንድ መጠን ያስገቡ",
+    "too_much": "ያን ያህል ለማስተላለፍ {{token}} የለዎትም። እስከ {{max_asset}} ማስተላለፍ ይችላሉ",
     "memo_too_long": "ማስታወሻው ከ {{maxlength}} ቁምፊዎች ሊረዝም አይችልም",
     "sent_to": "ተልኳል",
     "received_from": "የተቀበለው ከ",

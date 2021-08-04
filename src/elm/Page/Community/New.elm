@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Events as Events
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -26,6 +27,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -742,7 +744,12 @@ update msg model loggedIn =
         CompletedLogoUpload index (Err err) ->
             { model | logoList = List.removeAt index model.logoList, logoSelected = 0, isDisabled = False }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading logo for a new community"
+                    { moduleName = "Page.Community.New", function = "update" }
+                    []
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
 
         CompletedLogoUpload index (Ok url) ->
@@ -791,6 +798,19 @@ update msg model loggedIn =
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Checked that domain is available"
+                            , data =
+                                Dict.fromList
+                                    [ ( "domain"
+                                      , Route.communityFullDomain loggedIn.shared model.subdomain
+                                            |> Encode.string
+                                      )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 Err withError ->
                     UR.init withError
@@ -802,11 +822,38 @@ update msg model loggedIn =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (loggedIn.shared.translators.t "settings.community_info.errors.url.already_taken")
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Tried domain that is unavailable"
+                    , data =
+                        Dict.fromList
+                            [ ( "domain"
+                              , Route.communityFullDomain loggedIn.shared model.subdomain
+                                    |> Encode.string
+                              )
+                            ]
+                    , level = Log.DebugLevel
+                    }
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             { model | isDisabled = False }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when checking if community domain is available"
+                    { moduleName = "Page.Community.New", function = "update" }
+                    [ { name = "Domain"
+                      , extras =
+                            Dict.fromList
+                                [ ( "tried"
+                                  , Route.communityFullDomain loggedIn.shared model.subdomain
+                                        |> Encode.string
+                                  )
+                                ]
+                      }
+                    ]
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
 
         GotDomainAvailableResponse RemoteData.NotAsked ->
@@ -854,7 +901,12 @@ update msg model loggedIn =
             { model | isDisabled = False }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.unknown"))
-                |> UR.logDebugValue msg val
+                |> UR.logJsonValue msg
+                    (Just loggedIn.accountName)
+                    "Got an error when creating a community"
+                    { moduleName = "Page.Community.New", function = "update" }
+                    []
+                    val
 
         Redirect communityData ->
             let

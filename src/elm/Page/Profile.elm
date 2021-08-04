@@ -42,7 +42,7 @@ import View.Pin as Pin
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init _ =
     ( initModel
-    , Task.succeed CheckPushPref |> Task.perform identity
+    , Cmd.none
     )
 
 
@@ -53,7 +53,6 @@ init _ =
 type alias Model =
     { currentPin : Maybe String
     , isNewPinModalVisible : Bool
-    , isPushNotificationsEnabled : Bool
     , maybePdfDownloadedSuccessfully : Maybe Bool
     , isDeleteKycModalShowed : Bool
     , pinInputModel : Pin.Model
@@ -64,7 +63,6 @@ initModel : Model
 initModel =
     { currentPin = Nothing
     , isNewPinModalVisible = False
-    , isPushNotificationsEnabled = False
     , maybePdfDownloadedSuccessfully = Nothing
     , isDeleteKycModalShowed = False
     , pinInputModel =
@@ -619,12 +617,10 @@ type Msg
     | GotPinMsg Pin.Msg
     | ClickedCloseChangePin
     | PinChanged
-    | GotPushPreference Bool
     | ToggleDeleteKycModal
     | AddKycClicked
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
-    | CheckPushPref
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -677,7 +673,12 @@ update msg model loggedIn =
                 RemoteData.Failure err ->
                     model
                         |> UR.init
-                        |> UR.logGraphqlError msg err
+                        |> UR.logGraphqlError msg
+                            (Just loggedIn.accountName)
+                            "Got an error when trying to delete KYC and address"
+                            { moduleName = "Page.Profile", function = "update" }
+                            []
+                            err
                         |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
 
                 _ ->
@@ -758,27 +759,6 @@ update msg model loggedIn =
             { model | maybePdfDownloadedSuccessfully = Nothing }
                 |> UR.init
 
-        GotPushPreference val ->
-            { model | isPushNotificationsEnabled = val }
-                |> UR.init
-
-        CheckPushPref ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotPushPreference False
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object [ ( "name", Encode.string "checkPushPref" ) ]
-                    }
-
-
-decodePushPref : Value -> Maybe Msg
-decodePushPref val =
-    Decode.decodeValue (Decode.field "isSet" Decode.bool) val
-        |> Result.map GotPushPreference
-        |> Result.toMaybe
-
 
 decodeIsPdfDownloaded : Value -> Maybe Msg
 decodeIsPdfDownloaded val =
@@ -809,9 +789,6 @@ jsAddressToMsg addr val =
 
         "ChangePinSubmitted" :: pin :: [] ->
             Just (ChangePinSubmitted pin)
-
-        "GotPushPreference" :: _ ->
-            decodePushPref val
 
         _ ->
             Nothing
@@ -858,12 +835,6 @@ msgToString msg =
 
         ChangePinSubmitted pin ->
             [ "ChangePinSubmitted", pin ]
-
-        GotPushPreference _ ->
-            [ "GotPushPreference" ]
-
-        CheckPushPref ->
-            [ "CheckPushPref" ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg

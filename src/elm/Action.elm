@@ -26,6 +26,7 @@ import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
+import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import File exposing (File)
@@ -241,7 +242,12 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logDebugValue msg val
+                |> UR.logJsonValue msg
+                    (Just accName)
+                    "Got an error when claiming an action"
+                    { moduleName = "Action", function = "update" }
+                    []
+                    val
 
         ( ClaimConfirmationClosed, _ ) ->
             { model
@@ -301,7 +307,12 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logDebugValue msg err
+                |> UR.logJsonValue msg
+                    (Just accName)
+                    "Got error when converting name to Uint64"
+                    { moduleName = "Action", function = "update" }
+                    []
+                    err
 
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
@@ -356,7 +367,19 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 , needsPinConfirmation = False
             }
                 |> UR.init
-                |> UR.logHttpError msg error
+                |> UR.logHttpError msg
+                    (Just accName)
+                    "Error uploading photo for proof of action"
+                    { moduleName = "Action", function = "update" }
+                    [ { name = "Action"
+                      , extras =
+                            Dict.fromList
+                                [ ( "id", Encode.int action.id )
+                                , ( "symbol", Eos.encodeSymbol selectedCommunity )
+                                ]
+                      }
+                    ]
+                    error
 
         _ ->
             { model

@@ -20,6 +20,7 @@ import Auth
 import Browser.Events
 import Browser.Navigation
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -30,6 +31,8 @@ import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Decode as Decode
+import Json.Encode as Encode
+import Log
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
@@ -350,12 +353,24 @@ update msg ({ shared } as model) =
         CompletedLoadTranslation _ (Err err) ->
             { model | shared = Shared.loadTranslation (Err err) shared }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    Nothing
+                    "Got an error when loading translation as a guest"
+                    { moduleName = "Session.Guest", function = "update" }
+                    []
+                    err
 
         ClickedTryAgainTranslation ->
             { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.init
                 |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addBreadcrumb
+                    { type_ = Log.ErrorBreadcrumb
+                    , category = msg
+                    , message = "Clicked to fetch translation again"
+                    , data = Dict.empty
+                    , level = Log.Warning
+                    }
 
         ShowLanguageNav b ->
             UR.init { model | showLanguageNav = b }
@@ -381,6 +396,17 @@ update msg ({ shared } as model) =
             { model | community = RemoteData.Success communityPreview }
                 |> UR.init
                 |> UR.addExt (CommunityLoaded communityPreview)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DefaultBreadcrumb
+                    , category = msg
+                    , message = "Community preview loaded successfully"
+                    , data =
+                        Dict.fromList
+                            [ ( "symbol", Eos.encodeSymbol communityPreview.symbol )
+                            , ( "name", Encode.string communityPreview.name )
+                            ]
+                    , level = Log.Info
+                    }
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model
@@ -395,7 +421,12 @@ update msg ({ shared } as model) =
 
         CompletedLoadCommunityPreview (RemoteData.Failure err) ->
             UR.init { model | community = RemoteData.Failure err }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when loading community preview as a guest"
+                    { moduleName = "Session.Guest", function = "update" }
+                    []
+                    err
                 |> UR.addCmd
                     (case invalidCommunityRedirectUrl currentUrl shared.useSubdomain of
                         Nothing ->

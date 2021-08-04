@@ -314,7 +314,12 @@ update msg model user =
             model
                 |> updateStatus (LoadFailed error)
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just user.accountName)
+                    "Got an error when loading transfer"
+                    { moduleName = "Page.ViewTransfer", function = "update" }
+                    []
+                    error
 
         CompletedTransferLoad _ ->
             UR.init model
@@ -331,7 +336,11 @@ update msg model user =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "NotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Got a Profile.Summary.Msg, but transfer wasn't loaded"
+                            (Just user.accountName)
+                            { moduleName = "Page.ViewTransfer", function = "update" }
+                            []
 
 
 updateStatus : Status -> Model -> Model

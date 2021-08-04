@@ -1,12 +1,14 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Community
+import Dict
 import Eos
 import Eos.Account
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (Value)
-import Json.Encode
+import Json.Encode as Encode
+import Log
 import Page
 import Ports
 import RemoteData
@@ -201,6 +203,18 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (translate "settings.success"))
                 |> addBroadcast
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Saved community feature"
+                    , data =
+                        Dict.fromList
+                            [ ( "hasShop", Encode.bool model.hasShop )
+                            , ( "hasObjectives", Encode.bool model.hasObjectives )
+                            , ( "hasKyc", Encode.bool model.hasKyc )
+                            ]
+                    , level = Log.DebugLevel
+                    }
 
 
 updateCommunity : Community.Model -> Model -> Community.Model
@@ -270,7 +284,7 @@ saveFeature feature state authorization { shared, accountName } community =
             }
     in
     { responseAddress = SaveSuccess
-    , responseData = Json.Encode.null
+    , responseData = Encode.null
     , data =
         Eos.encodeTransaction
             [ { accountName = shared.contracts.community

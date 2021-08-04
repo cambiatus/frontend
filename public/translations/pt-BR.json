@@ -388,6 +388,7 @@
     "to_self": "Você não pode transferir para si mesmo",
     "no_profile": "Selecione um usuário",
     "no_amount": "Insira uma quantidade",
+    "too_much": "Você não tem {{token}} o suficiente para transferir esta quantia. Você pode transferir até {{max_asset}}",
     "memo_too_long": "A mensagem não pode ser maior do que {{maxlength}} caracteres",
     "sent_to": "Enviado para",
     "received_from": "Recebido de",

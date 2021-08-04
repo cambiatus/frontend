@@ -4,6 +4,7 @@ import Action
 import Api.Graphql
 import Cambiatus.Query
 import Claim
+import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -14,6 +15,7 @@ import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile
 import Profile.Summary
@@ -526,7 +528,12 @@ update msg model loggedIn =
         ClaimLoaded (RemoteData.Failure err) ->
             { model | statusClaim = Failed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load claim"
+                    { moduleName = "Page.Dashboard.Claim", function = "update" }
+                    []
+                    err
 
         ClaimLoaded _ ->
             UR.init model
@@ -563,6 +570,17 @@ update msg model loggedIn =
                                       , data = Claim.encodeVerification claimId loggedIn.accountName vote
                                       }
                                     ]
+                            }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.QueryBreadcrumb
+                            , category = msg
+                            , message = "Requested to vote on claim"
+                            , data =
+                                Dict.fromList
+                                    [ ( "claimId", Encode.int claimId )
+                                    , ( "vote", Encode.bool vote )
+                                    ]
+                            , level = Log.Info
                             }
                         |> LoggedIn.withAuthentication loggedIn
                             model
@@ -647,7 +665,11 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "NotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Got a Profile.Summary.Msg, but claims aren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Dashboard.Claim", function = "update" }
+                            []
 
 
 

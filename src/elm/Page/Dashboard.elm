@@ -34,6 +34,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile
 import Profile.Contact as Contact
@@ -212,7 +213,7 @@ view ({ shared, accountName } as loggedIn) model =
                         [ div [ class "container mx-auto px-4" ]
                             [ viewHeader loggedIn community isCommunityAdmin
                             , div
-                                [ class "grid mb-10 md:grid-cols-2 md:space-x-6" ]
+                                [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
                                 [ div [ class "w-full" ]
                                     [ viewBalance shared balance
                                     , div [ class "mt-6 flex space-x-6" ]
@@ -847,13 +848,15 @@ viewMyClaimsCard loggedIn =
     case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
         RemoteData.Success True ->
             a
-                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
+                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
                 , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
                 ]
-                [ Icons.claims "w-8 h-8"
-                , p [ class "text-gray-600 mt-5" ]
-                    [ text <| t "dashboard.my_claims.1"
-                    , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                [ div []
+                    [ Icons.claims "w-8 h-8"
+                    , p [ class "text-gray-600 mt-5" ]
+                        [ text <| t "dashboard.my_claims.1"
+                        , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
+                        ]
                     ]
                 , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
                     [ text <| t "dashboard.my_claims.go" ]
@@ -872,13 +875,15 @@ viewMyOffersCard loggedIn =
     case RemoteData.map .hasShop loggedIn.selectedCommunity of
         RemoteData.Success True ->
             a
-                [ class "w-full rounded bg-white px-6 py-10 hover:shadow"
+                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
                 , Route.href (Route.Shop Shop.UserSales)
                 ]
-                [ Icons.shop "w-8 h-8 fill-current"
-                , p [ class "text-gray-600 mt-5" ]
-                    [ text <| t "dashboard.my_offers.1"
-                    , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                [ div []
+                    [ Icons.shop "w-8 h-8 fill-current"
+                    , p [ class "text-gray-600 mt-5" ]
+                        [ text <| t "dashboard.my_offers.1"
+                        , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
+                        ]
                     ]
                 , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
                     [ text <| t "dashboard.my_offers.go" ]
@@ -967,7 +972,12 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         CompletedLoadBalance (Err httpError) ->
             UR.init { model | balance = RemoteData.Failure httpError }
-                |> UR.logHttpError msg httpError
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading balance on the dashboard"
+                    { moduleName = "Page.Dashboard", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
 
         ClaimsLoaded (RemoteData.Success claims) ->
             let
@@ -995,7 +1005,12 @@ update msg model ({ shared, accountName } as loggedIn) =
         ClaimsLoaded (RemoteData.Failure err) ->
             { model | analysis = FailedGraphql err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading claims on the dashboard"
+                    { moduleName = "Page.Dashboard", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         ClaimsLoaded _ ->
             UR.init model
@@ -1031,7 +1046,12 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
             { model | transfers = FailedGraphql err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load user's transfers"
+                    { moduleName = "Page.Dashboard", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         CompletedLoadUserTransfers _ ->
             UR.init model
@@ -1365,7 +1385,11 @@ update msg model ({ shared, accountName } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NoCommunity" ]
+                        |> UR.logImpossible msg
+                            "Applied filters on transfer list, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Dashboard", function = "update" }
+                            []
 
         ClickedTransferCard transferId ->
             model
@@ -1384,7 +1408,11 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "balanceNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Created invitation, but balance wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Dashboard", function = "update" }
+                            []
 
         GotContactMsg subMsg ->
             case LoggedIn.profile loggedIn of
@@ -1446,7 +1474,12 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedInviteCreation (Err httpError) ->
             UR.init
                 { model | inviteModalStatus = InviteModalFailed (loggedIn.shared.translators.t "community.invite.failed") }
-                |> UR.logHttpError msg httpError
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when creating an invite"
+                    { moduleName = "Page.Dashboard", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    httpError
 
         CopyToClipboard elementId ->
             model

@@ -29,6 +29,7 @@ import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import Icons
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Select
@@ -375,7 +376,12 @@ update msg model ({ shared, authToken } as loggedIn) =
         AutocompleteProfilesLoaded (RemoteData.Failure err) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading profiles for auto complete"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         AutocompleteProfilesLoaded _ ->
             UR.init model
@@ -420,7 +426,12 @@ update msg model ({ shared, authToken } as loggedIn) =
         RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
             { model | queryStatus = Failed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading recipient profile with transfers"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
+                    []
+                    err
 
         RecipientProfileWithTransfersLoaded _ ->
             UR.init model
@@ -435,7 +446,11 @@ update msg model ({ shared, authToken } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Clicked show more, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         OnSelect maybeProfile ->
             case loggedIn.selectedCommunity of
@@ -455,7 +470,11 @@ update msg model ({ shared, authToken } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Selected user, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         SelectMsg subMsg ->
             let
@@ -492,7 +511,11 @@ update msg model ({ shared, authToken } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Cleared selected user, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         SetDatePicker subMsg ->
             let
@@ -519,7 +542,11 @@ update msg model ({ shared, authToken } as loggedIn) =
                         _ ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                                |> UR.logImpossible msg
+                                    "Picked a date, but community wasn't loaded"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.PaymentHistory", function = "update" }
+                                    []
 
                 _ ->
                     { model | datePicker = newDatePicker }
@@ -543,7 +570,11 @@ update msg model ({ shared, authToken } as loggedIn) =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                        |> UR.logImpossible msg
+                            "Tried clearing date picker, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
 
 

@@ -33,6 +33,7 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Graphql.Document
@@ -48,6 +49,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
@@ -982,11 +984,23 @@ update msg model =
 
         CompletedLoadTranslation _ (Err err) ->
             UR.init { model | shared = Shared.loadTranslation (Err err) shared }
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just model.accountName)
+                    "Got an error when loading translation as a logged in user"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
 
         ClickedTryAgainTranslation ->
             UR.init { model | shared = Shared.toLoadingTranslation shared }
                 |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addBreadcrumb
+                    { type_ = Log.ErrorBreadcrumb
+                    , category = msg
+                    , message = "Clicked to fetch translation again"
+                    , data = Dict.empty
+                    , level = Log.Warning
+                    }
 
         CompletedLoadProfile (RemoteData.Success profile_) ->
             let
@@ -1008,6 +1022,13 @@ update msg model =
                                     , ( "subscription", Encode.string subscriptionDoc )
                                     ]
                             }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DefaultBreadcrumb
+                            , category = msg
+                            , message = "User profile successfully loaded"
+                            , data = Dict.fromList [ ( "username", Eos.encodeName p.account ) ]
+                            , level = Log.Info
+                            }
 
                 Nothing ->
                     UR.init model
@@ -1024,7 +1045,12 @@ update msg model =
                             _ ->
                                 model.profile
                 }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when trying to load profile"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
 
         CompletedLoadProfile RemoteData.NotAsked ->
             UR.init model
@@ -1040,6 +1066,17 @@ update msg model =
             UR.init newModel
                 |> UR.addCmd cmd
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DefaultBreadcrumb
+                    , category = msg
+                    , message = "Community successfully loaded"
+                    , data =
+                        Dict.fromList
+                            [ ( "symbol", Eos.encodeSymbol community.symbol )
+                            , ( "name", Encode.string community.name )
+                            ]
+                    , level = Log.Info
+                    }
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
             UR.init model
@@ -1051,7 +1088,12 @@ update msg model =
                     not (Community.isNonExistingCommunityError e)
             in
             UR.init { model | selectedCommunity = RemoteData.Failure e }
-                |> UR.logGraphqlError msg e
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading community as logged in"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    e
                 |> (if communityExists then
                         identity
 
@@ -1137,6 +1179,13 @@ update msg model =
                                         )
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
+                                    |> UR.addBreadcrumb
+                                        { type_ = Log.DefaultBreadcrumb
+                                        , category = msg
+                                        , message = "Successfully authenticated user through PIN"
+                                        , data = Dict.fromList [ ( "username", Eos.encodeName user.account ) ]
+                                        , level = Log.Info
+                                        }
                     )
 
         CompletedLoadUnread payload ->
@@ -1145,10 +1194,15 @@ update msg model =
                     { model | unreadCount = res }
                         |> UR.init
 
-                Err _ ->
+                Err err ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logDecodingError msg
+                            (Just model.accountName)
+                            "Got an error when loading unread notifications"
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            []
+                            err
 
         KeyDown key ->
             if key == "Esc" || key == "Escape" then

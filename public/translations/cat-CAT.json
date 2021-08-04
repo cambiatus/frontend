@@ -384,6 +384,7 @@
     "to_self": "No es pot transferir a si mateix",
     "no_profile": "Seleccioneu un usuari",
     "no_amount": "Introduïu un import",
+    "too_much": "No teniu prou {{token}} per transferir tant. Podeu transferir fins a {{max_asset}}",
     "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters",
     "sent_to": "Enviat a",
     "received_from": "Rebut de",
