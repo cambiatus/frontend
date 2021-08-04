@@ -1,4 +1,4 @@
-module View.Form.InputCounter exposing (CounterType(..), view, viewWithAttrs)
+module View.Form.InputCounter exposing (CounterType(..), viewWithAttrs)
 
 {-| Creates a Cambiatus-style input counter.
 -}
@@ -6,11 +6,6 @@ module View.Form.InputCounter exposing (CounterType(..), view, viewWithAttrs)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import I18Next
-
-
-view : (String -> I18Next.Replacements -> String) -> Int -> String -> Html msg
-view tr max str =
-    viewWithAttrs tr max str [] CountLetters
 
 
 viewWithAttrs : (String -> I18Next.Replacements -> String) -> Int -> String -> List (Html.Attribute msg) -> CounterType -> Html msg

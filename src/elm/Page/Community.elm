@@ -243,6 +243,29 @@ viewObjective loggedIn model metadata index objective =
             else
                 " "
 
+        objDescCharCount =
+            String.length objective.description
+
+        objDivStyle =
+            let
+                objMainClass =
+                    "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center cursor-pointer"
+            in
+            if isOpen && objDescCharCount > 40 then
+                class (objMainClass ++ "sm:h-auto")
+
+            else
+                class (objMainClass ++ "sm:h-10")
+
+        objTextStyle =
+            class
+                (if isOpen then
+                    "text-white font-medium text-sm sm:flex-grow-8 sm:leading-normal sm:text-lg"
+
+                 else
+                    "truncate overflow-hidden whitespace-nowrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                )
+
         isDisabled =
             case loggedIn.claimingAction.status of
                 Action.ClaimInProgress _ _ ->
@@ -270,7 +293,7 @@ viewObjective loggedIn model metadata index objective =
     else
         div [ class "my-2" ]
             [ div
-                [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+                [ objDivStyle
                 , if isOpen then
                     onClick ClickedCloseObjective
 
@@ -279,7 +302,7 @@ viewObjective loggedIn model metadata index objective =
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ div
-                        [ class "truncate overflow-hidden whitespace-nowrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                        [ objTextStyle
                         ]
                         [ text objective.description ]
                     ]
