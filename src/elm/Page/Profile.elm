@@ -46,7 +46,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
-import Strftime
 import Time
 import Transfer exposing (QueryTransfers)
 import UpdateResult as UR
@@ -132,7 +131,7 @@ type QueryError error
 type TransfersStatus
     = Loaded (List ( Transfer.Transfer, Profile.Summary.Model )) (Maybe Api.Relay.PageInfo)
     | Loading (List ( Transfer.Transfer, Profile.Summary.Model ))
-    | FailedLoading (Graphql.Http.Error (Maybe QueryTransfers))
+    | FailedLoading
 
 
 type alias GraphqlInfo =
@@ -369,7 +368,7 @@ update msg model loggedIn =
                         Loading previousTransfers_ ->
                             previousTransfers_
 
-                        FailedLoading _ ->
+                        FailedLoading ->
                             []
             in
             { model
@@ -381,7 +380,7 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
-            { model | transfersStatus = FailedLoading err }
+            { model | transfersStatus = FailedLoading }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -541,7 +540,7 @@ update msg model loggedIn =
                     { model | transfersStatus = Loading (updateTransfers transfers) }
                         |> UR.init
 
-                FailedLoading _ ->
+                FailedLoading ->
                     model
                         |> UR.init
 
@@ -864,7 +863,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
               else
                 text ""
             , if isProfileOwner || isCommunityAdmin then
-                viewHistory loggedIn.shared.translators balance graphqlInfo
+                viewHistory loggedIn.shared balance graphqlInfo
 
               else
                 text ""
@@ -1074,7 +1073,7 @@ viewLatestTransactions loggedIn model =
                 , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
                 ]
             , case model.transfersStatus of
-                FailedLoading _ ->
+                FailedLoading ->
                     Page.viewCardEmpty
                         [ div [ class "text-gray-900 text-sm" ]
                             [ text_ "transfer.loading_error" ]
@@ -1131,14 +1130,14 @@ viewTransactionList loggedIn transfers =
             )
 
 
-viewHistory : Translators -> Community.Balance -> GraphqlInfo -> Html msg
-viewHistory { t } balance graphqlInfo =
+viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Html msg
+viewHistory shared balance graphqlInfo =
     let
+        { t } =
+            shared.translators
+
         text_ =
             text << t
-
-        formatPosix posix =
-            Strftime.format "%d %b %Y" Time.utc posix
 
         viewHistoryItem title number translation =
             li [ class "flex items-center py-4 text-sm leading-6" ]
@@ -1189,17 +1188,13 @@ viewHistory { t } balance graphqlInfo =
             , case graphqlInfo.createdDate of
                 Just createdDate ->
                     viewHistoryItem [ text_ "profile.history.registration_date" ]
-                        (span [ class "-mr-1" ]
-                            [ text <| formatPosix createdDate ]
-                        )
+                        (View.Components.dateViewer [ class "capitalize -mr-1" ] identity shared createdDate)
                         (text "")
 
                 Nothing ->
                     text ""
             , viewHistoryItem [ text_ "profile.history.last_transaction" ]
-                (span [ class "-mr-1" ]
-                    [ text <| formatPosix balance.lastActivity ]
-                )
+                (View.Components.dateViewer [ class "capitalize -mr-1" ] identity shared balance.lastActivity)
                 (text "")
             ]
         ]
