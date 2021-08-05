@@ -18,16 +18,17 @@ import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Translators)
-import Strftime
+import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix, posixToMillis)
 import Token
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 
@@ -257,7 +258,7 @@ viewObjective loggedIn model metadata index objective =
                 |> List.sortBy (\a -> a.position |> Maybe.withDefault 0)
                 |> List.map
                     (\action ->
-                        viewAction loggedIn.shared.translators
+                        viewAction loggedIn.shared
                             (LoggedIn.isAccount metadata.creator loggedIn)
                             loggedIn.shared.now
                             action
@@ -350,7 +351,12 @@ update msg model loggedIn =
         GotTokenInfo (Err err) ->
             { model | tokenInfo = RemoteData.Failure err }
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when retrieving token info"
+                    { moduleName = "Page.Community", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -414,11 +420,11 @@ receiveBroadcast broadcastMsg =
             Nothing
 
 
-viewAction : Translators -> Bool -> Posix -> Action -> Bool -> Html Msg
-viewAction translators canEdit date action isDisabled =
+viewAction : Shared -> Bool -> Posix -> Action -> Bool -> Html Msg
+viewAction shared canEdit date action isDisabled =
     let
         { t, tr } =
-            translators
+            shared.translators
 
         text_ s =
             text (t s)
@@ -426,12 +432,7 @@ viewAction translators canEdit date action isDisabled =
         posixDeadline : Posix
         posixDeadline =
             action.deadline
-                |> Utils.posixDateTime
-
-        deadlineStr : String
-        deadlineStr =
-            posixDeadline
-                |> Strftime.format "%d %B %Y" Time.utc
+                |> Utils.fromMaybeDateTime
 
         pastDeadline : Bool
         pastDeadline =
@@ -563,7 +564,10 @@ viewAction translators canEdit date action isDisabled =
                             Just _ ->
                                 div []
                                     [ span [ class "capitalize text-text-grey" ] [ text_ "community.actions.available_until" ]
-                                    , span [ class dateColor ] [ text deadlineStr ]
+                                    , View.Components.dateViewer [ class ("capitalize " ++ dateColor) ]
+                                        identity
+                                        shared
+                                        posixDeadline
                                     , span [] [ text_ "community.actions.or" ]
                                     ]
 

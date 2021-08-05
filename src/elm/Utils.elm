@@ -1,15 +1,19 @@
 module Utils exposing
-    ( decodeEnterKeyDown
+    ( areSameDay
+    , decodeEnterKeyDown
     , decodeTimestamp
     , errorToString
     , formatFloat
     , formatFloatWithMaxCases
+    , fromDateTime
+    , fromMaybeDateTime
     , onClickNoBubble
     , onClickPreventAll
-    , posixDateTime
+    , previousDay
     )
 
 import Cambiatus.Scalar exposing (DateTime(..))
+import Date
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html
@@ -20,19 +24,35 @@ import List.Extra as List
 import Time exposing (Posix)
 
 
-posixDateTime : Maybe DateTime -> Posix
-posixDateTime maybedt =
-    case maybedt of
+fromMaybeDateTime : Maybe DateTime -> Posix
+fromMaybeDateTime maybeDateTime =
+    case maybeDateTime of
         Nothing ->
             Time.millisToPosix 0
 
-        Just (DateTime s) ->
-            case Iso8601.toTime s of
-                Ok posix ->
-                    posix
+        Just dateTime ->
+            fromDateTime dateTime
 
-                Err _ ->
-                    Time.millisToPosix 0
+
+fromDateTime : DateTime -> Posix
+fromDateTime (DateTime dateTime) =
+    Iso8601.toTime dateTime
+        |> Result.withDefault (Time.millisToPosix 0)
+
+
+areSameDay : Time.Zone -> Posix -> Posix -> Bool
+areSameDay timezone first second =
+    Date.fromPosix timezone first == Date.fromPosix timezone second
+
+
+previousDay : Posix -> Posix
+previousDay time =
+    let
+        day =
+            -- 1000ms * 60s * 60min * 24h
+            1000 * 60 * 60 * 24
+    in
+    Time.millisToPosix (Time.posixToMillis time - day)
 
 
 {-| Format a float to separate thousands, and use `,` as a separator for

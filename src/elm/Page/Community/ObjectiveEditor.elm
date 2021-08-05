@@ -6,6 +6,7 @@ import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -17,6 +18,7 @@ import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -413,7 +415,11 @@ updateObjectiveForm msg fn uResult =
 
         _ ->
             uResult
-                |> UR.logImpossible msg []
+                |> UR.logImpossible msg
+                    "Tried updating the objective form, but isn't authorized"
+                    Nothing
+                    { moduleName = "Page.Community.ObjectiveEditor", function = "updateObjectiveForm" }
+                    []
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -471,7 +477,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "ImpossibleStatus" ]
+                        |> UR.logImpossible msg
+                            "Closed auth modal, but isn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         EnteredDescription val ->
             UR.init model
@@ -490,7 +500,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NotEditing" ]
+                        |> UR.logImpossible msg
+                            "Requested to complete objective, but isn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         DeniedCompleteObjective ->
             case model.status of
@@ -501,7 +515,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NotRequestingConfirmation" ]
+                        |> UR.logImpossible msg
+                            "Denied to complete objective, but isn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         AcceptedCompleteObjective ->
             case model.status of
@@ -526,7 +544,11 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "NotRequestingConfirmation" ]
+                        |> UR.logImpossible msg
+                            "Accepted to complete objective, but isn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         GotCompleteActionResponse (Ok _) ->
             case model.status of
@@ -535,7 +557,11 @@ update msg model loggedIn =
                         [] ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg [ "NotAction" ]
+                                |> UR.logImpossible msg
+                                    "Finished completing an action successfully, but there were none left"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    []
 
                         { action } :: left ->
                             let
@@ -562,7 +588,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NotCompletingActions" ]
+                        |> UR.logImpossible msg
+                            "Completed an action, but isn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         GotCompleteActionResponse (Err _) ->
             case model.status of
@@ -571,7 +601,11 @@ update msg model loggedIn =
                         [] ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg [ "NoAction" ]
+                                |> UR.logImpossible msg
+                                    "Finished completing an action with an error, but there were none left"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    []
 
                         { tries, action } :: left ->
                             let
@@ -601,11 +635,25 @@ update msg model loggedIn =
                                         msg
                                         newCompletionStatus
                                         objective
-                                    |> UR.logContractError msg
-                                        ("Action id "
-                                            ++ String.fromInt action.id
-                                            ++ " could not be completed with objective"
-                                        )
+                                    |> UR.logEvent
+                                        { username = Just loggedIn.accountName
+                                        , message = "Error when trying to complete action with objective"
+                                        , tags = []
+                                        , location = { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                        , contexts =
+                                            [ { name = "Details"
+                                              , extras =
+                                                    Dict.fromList
+                                                        [ ( "actionId", Encode.int action.id )
+                                                        , ( "objectiveId", Encode.int objective.id )
+                                                        , ( "tries", Encode.int tries )
+                                                        , ( "maximumRetries", Encode.int maxRetries )
+                                                        ]
+                                              }
+                                            ]
+                                        , transaction = msg
+                                        , level = Log.Warning
+                                        }
 
                             else
                                 let
@@ -629,11 +677,28 @@ update msg model loggedIn =
                                         msg
                                         newCompletionStatus
                                         objective
+                                    |> UR.addBreadcrumb
+                                        { type_ = Log.ErrorBreadcrumb
+                                        , category = msg
+                                        , message = "Failed to complete action"
+                                        , data =
+                                            Dict.fromList
+                                                [ ( "tries", Encode.int tries )
+                                                , ( "actionId", Encode.int action.id )
+                                                ]
+                                        , level = Log.Warning
+                                        }
 
+                -- =======
+                -- >>>>>>> master
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "NotCompletingActions" ]
+                        |> UR.logImpossible msg
+                            "Completed an action without being authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
             UR.init model
@@ -643,7 +708,12 @@ update msg model loggedIn =
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
             UR.init model
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "community.objectives.editor.error_marking_as_complete"))
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when completing objective"
+                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                    []
+                    err
 
         GotCompleteObjectiveResponse _ ->
             UR.init model
@@ -707,7 +777,11 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg [ "ImpossibleStatus" ]
+                        |> UR.logImpossible msg
+                            "Tried saving objective without having the community loaded or without being authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         GotSaveObjectiveResponse (Ok _) ->
             UR.init model
@@ -728,6 +802,12 @@ update msg model loggedIn =
                                         |> Authorized
                             }
                                 |> UR.init
+                                |> UR.logJsonValue msg
+                                    (Just loggedIn.accountName)
+                                    "Got an error when creating an objective"
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    []
+                                    v
 
                         Authorized (EditingObjective objective form SavingEdit) ->
                             { model
@@ -737,14 +817,26 @@ update msg model loggedIn =
                                         |> Authorized
                             }
                                 |> UR.init
+                                |> UR.logJsonValue msg
+                                    (Just loggedIn.accountName)
+                                    "Got an error when updating an objective"
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    [ { name = "Objective"
+                                      , extras = Dict.fromList [ ( "ID", Encode.int objective.id ) ]
+                                      }
+                                    ]
+                                    v
 
                         _ ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg [ "ImpossibleStatus" ]
+                                |> UR.logImpossible msg
+                                    "Saved objective without being authorized"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    []
             in
             newModel
-                |> UR.logDebugValue msg v
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "errors.unknown"))
 
 

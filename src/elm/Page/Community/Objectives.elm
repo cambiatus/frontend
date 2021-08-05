@@ -9,17 +9,19 @@ import Html exposing (Html, a, button, div, p, text)
 import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
+import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile.Summary
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Strftime
 import Task
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
+import View.Components
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -124,7 +126,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
 
 
 viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model community index objective =
+viewObjective ({ shared } as loggedIn) model _ index objective =
     let
         isOpen : Bool
         isOpen =
@@ -209,12 +211,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         posixDeadline : Posix
         posixDeadline =
             action.deadline
-                |> Utils.posixDateTime
-
-        deadlineStr : String
-        deadlineStr =
-            posixDeadline
-                |> Strftime.format "%d %B %Y" Time.utc
+                |> Utils.fromMaybeDateTime
 
         pastDeadline =
             Action.isPastDeadline action shared.now
@@ -280,13 +277,16 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    p
-                                        [ classList
+                                    View.Components.dateViewer
+                                        [ class "capitalize"
+                                        , classList
                                             [ ( "text-red", pastDeadline )
                                             , ( "text-white", not pastDeadline )
                                             ]
                                         ]
-                                        [ text deadlineStr ]
+                                        identity
+                                        shared
+                                        posixDeadline
 
                                 Nothing ->
                                     text ""
@@ -395,6 +395,13 @@ update msg model loggedIn =
             if model.openObjective == Just index then
                 { model | openObjective = Nothing, profileSummaries = Dict.empty }
                     |> UR.init
+                    |> UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Closed objective"
+                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , level = Log.DebugLevel
+                        }
 
             else
                 { model
@@ -416,6 +423,13 @@ update msg model loggedIn =
                             |> Dict.fromList
                 }
                     |> UR.init
+                    |> UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Closed objective"
+                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                        , level = Log.DebugLevel
+                        }
 
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model

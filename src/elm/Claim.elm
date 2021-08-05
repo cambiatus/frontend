@@ -42,7 +42,6 @@ import Html exposing (Html, a, button, div, label, p, span, strong, text)
 import Html.Attributes exposing (class, classList, disabled, href, id, style, target)
 import Html.Events exposing (onClick)
 import Icons
-import Iso8601
 import Json.Encode as Encode
 import List.Extra as List
 import Profile
@@ -50,7 +49,6 @@ import Profile.Summary
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
-import Strftime
 import Time
 import Utils
 import View.Components
@@ -382,11 +380,6 @@ viewClaimCard loggedIn profileSummaries claim =
         { t, tr } =
             loggedIn.shared.translators
 
-        date dateTime =
-            Just dateTime
-                |> Utils.posixDateTime
-                |> Strftime.format "%d %b %Y" Time.utc
-
         completionStatus =
             { approved =
                 List.filter .isApproved claim.checks
@@ -402,16 +395,12 @@ viewClaimCard loggedIn profileSummaries claim =
         claimAging =
             let
                 createdAtDate =
-                    case claim.createdAt of
-                        DateTime dt ->
-                            Iso8601.toTime dt |> Result.map (Date.fromPosix Time.utc)
+                    Utils.fromDateTime claim.createdAt
+                        |> Date.fromPosix loggedIn.shared.timezone
             in
-            case createdAtDate of
-                Ok d ->
-                    loggedIn.shared.now |> Date.fromPosix Time.utc |> Date.diff Date.Days d
-
-                Err _ ->
-                    -1
+            loggedIn.shared.now
+                |> Date.fromPosix loggedIn.shared.timezone
+                |> Date.diff Date.Days createdAtDate
 
         claimAgingText =
             if claimAging < 1 then
@@ -461,9 +450,10 @@ viewClaimCard loggedIn profileSummaries claim =
                 [ p [ class "text-body overflow-ellipsis overflow-hidden mb-2" ]
                     [ text claim.action.description ]
                 , div [ class "flex w-full" ]
-                    [ p
-                        [ class "text-gray-900 text-caption uppercase" ]
-                        [ text (date claim.createdAt) ]
+                    [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
+                        identity
+                        loggedIn.shared
+                        (Utils.fromDateTime claim.createdAt)
                     , p
                         [ class "ml-auto text-purple-500 text-caption uppercase" ]
                         [ text claimAgingText ]
@@ -670,11 +660,6 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         viewClaimDateAndState =
             let
-                date datetime =
-                    Just datetime
-                        |> Utils.posixDateTime
-                        |> Strftime.format "%d %b %Y" Time.utc
-
                 ( claimStatusPhrase, claimStatus, textColor ) =
                     case claim.status of
                         Approved ->
@@ -689,12 +674,18 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
                             else
                                 ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
-
-                claimDate =
-                    tr "claim.claimed_on" [ ( "claim_date", date claim.createdAt ) ]
             in
             div [ class "block" ]
-                [ p [ class "text-xs uppercase" ] [ text claimDate ]
+                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                    (\translations ->
+                        { translations
+                            | today = t "claim.claimed_today"
+                            , yesterday = t "claim.claimed_yesterday"
+                            , other = t "claim.claimed_on"
+                        }
+                    )
+                    shared
+                    (Utils.fromDateTime claim.createdAt)
                 , label [ class "text-2xl font-bold" ]
                     [ text claimStatusPhrase
                     ]

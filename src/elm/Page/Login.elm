@@ -21,6 +21,7 @@ the Private Key (PK), which can be used to sign EOS transactions.
 import Api.Graphql
 import Auth
 import Browser.Dom as Dom
+import Dict
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
@@ -29,6 +30,7 @@ import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
+import Log
 import Ports
 import RemoteData exposing (RemoteData)
 import Route
@@ -374,15 +376,30 @@ update msg model guest =
         -- Impossible Msgs
         ( GotPassphraseMsg _, EnteringPin _ ) ->
             UR.init model
-                |> UR.logImpossible msg [ "CreatingPin" ]
+                |> UR.logIncompatibleMsg msg
+                    Nothing
+                    { moduleName = "Page.Login"
+                    , function = "update"
+                    }
+                    []
 
         ( WentToPin _, EnteringPin _ ) ->
             UR.init model
-                |> UR.logImpossible msg [ "CreatingPin" ]
+                |> UR.logIncompatibleMsg msg
+                    Nothing
+                    { moduleName = "Page.Login"
+                    , function = "update"
+                    }
+                    []
 
         ( GotPinMsg _, EnteringPassphrase _ ) ->
             UR.init model
-                |> UR.logImpossible msg [ "CreatingPassphrase" ]
+                |> UR.logIncompatibleMsg msg
+                    Nothing
+                    { moduleName = "Page.Login"
+                    , function = "update"
+                    }
+                    []
 
 
 updateWithPassphrase : PassphraseMsg -> PassphraseModel -> Guest.Model -> PassphraseUpdateResult
@@ -420,22 +437,42 @@ updateWithPassphrase msg model { shared } =
         GotClipboardResponse NotSupported ->
             { model | hasPasted = False }
                 |> UR.init
-                |> UR.logImpossible msg [ "NotSupported" ]
                 |> UR.addExt
                     (Feedback.Visible Feedback.Failure (shared.translators.t "error.clipboard.paste.notSupported")
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
                     )
+                |> UR.logEvent
+                    { username = Nothing
+                    , message = "Clipboard API not supported"
+                    , tags = [ Log.TypeTag Log.UnsupportedFeature ]
+                    , location = { moduleName = "Page.Login", function = "updateWithPassphrase" }
+                    , contexts = []
+                    , transaction = msg
+                    , level = Log.Warning
+                    }
 
         GotClipboardResponse (WithError error) ->
             { model | hasPasted = False }
                 |> UR.init
-                |> UR.logImpossible msg [ "WithError", error ]
                 |> UR.addExt
                     (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
                     )
+                |> UR.logEvent
+                    { username = Nothing
+                    , message = "Got error when pasting from clipboard"
+                    , tags = [ Log.TypeTag Log.UnknownError ]
+                    , location = { moduleName = "Page.Login", function = "updateWithPassphrase" }
+                    , contexts =
+                        [ { name = "Error"
+                          , extras = Dict.fromList [ ( "message", Encode.string error ) ]
+                          }
+                        ]
+                    , transaction = msg
+                    , level = Log.Warning
+                    }
 
         GotClipboardResponse (WithContent content) ->
             { model
@@ -536,11 +573,20 @@ updateWithPin msg model ({ shared } as guest) =
                     , responseData = Encode.null
                     , data = Encode.object [ ( "name", Encode.string "logout" ) ]
                     }
-                |> UR.logImpossible msg [ "NoSignInResponse" ]
+                |> UR.logImpossible msg
+                    "Got a sign in response with Nothing"
+                    Nothing
+                    { moduleName = "Page.Login", function = "updateWithPin" }
+                    []
 
         GotSignInResult _ (RemoteData.Failure err) ->
             UR.init model
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to login"
+                    { moduleName = "Page.Login", function = "updateWithPin" }
+                    []
+                    err
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null

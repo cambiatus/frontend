@@ -15,6 +15,7 @@ import Cambiatus.Object.User as Profile
 import Cambiatus.Query
 import Claim
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -29,6 +30,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
@@ -567,8 +569,24 @@ update msg model loggedIn =
                     model |> UR.init
 
         SelectedTab tab ->
+            let
+                tabToString tab_ =
+                    case tab_ of
+                        WaitingVote ->
+                            "waiting vote"
+
+                        Analyzed ->
+                            "analyzed"
+            in
             { model | selectedTab = tab }
                 |> UR.init
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "Selected claims tab"
+                    , data = Dict.fromList [ ( "tab", tabToString tab |> Encode.string ) ]
+                    , level = Log.Info
+                    }
 
         OpenedFilterModal ->
             { model | showFiltersModal = True }
@@ -587,9 +605,24 @@ update msg model loggedIn =
 
                         Desc ->
                             Asc
+
+                directionToString direction =
+                    case direction of
+                        Asc ->
+                            "ASC"
+
+                        Desc ->
+                            "DESC"
             in
             { model | orderDirection = newDirection }
                 |> UR.init
+                |> UR.addBreadcrumb
+                    { type_ = Log.QueryBreadcrumb
+                    , category = msg
+                    , message = "Toggled sorting"
+                    , data = Dict.fromList [ ( "newSorting", directionToString newDirection |> Encode.string ) ]
+                    , level = Log.Info
+                    }
 
         SelectedStatusFilter statusFilter ->
             { model | editingStatusFilter = statusFilter }

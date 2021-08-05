@@ -754,7 +754,12 @@ update _ msg model ({ shared } as guest) =
         AccountKeysGenerated (Err v) ->
             UR.init
                 model
-                |> UR.logDecodeError msg v
+                |> UR.logDecodingError msg
+                    Nothing
+                    "Could not decode account keys"
+                    { moduleName = "Page.Register", function = "update" }
+                    []
+                    v
 
         AccountKeysGenerated (Ok accountKeys) ->
             case model.status of
@@ -831,7 +836,12 @@ update _ msg model ({ shared } as guest) =
             model
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to sign up"
+                    { moduleName = "Page.Register", function = "update" }
+                    []
+                    error
                 |> scrollTop
 
         CompletedSignUp _ ->
@@ -847,7 +857,12 @@ update _ msg model ({ shared } as guest) =
             { model | status = ErrorShowed }
                 |> UR.init
                 |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "error.unknown"))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to load invite"
+                    { moduleName = "Page.Register", function = "update" }
+                    []
+                    error
 
         CompletedLoadInvite _ ->
             UR.init model
@@ -865,7 +880,12 @@ update _ msg model ({ shared } as guest) =
         CompletedLoadCountry (RemoteData.Failure error) ->
             { model | status = ErrorShowed }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when loading country data"
+                    { moduleName = "Page.Register", function = "update" }
+                    []
+                    error
 
         CompletedLoadCountry _ ->
             UR.init model

@@ -6,7 +6,6 @@ import mnemonic from './scripts/mnemonic.js'
 import configuration from './scripts/config.js'
 // import registerServiceWorker from './scripts/registerServiceWorker'
 import pdfDefinition from './scripts/pdfDefinition'
-import * as pushSub from './scripts/pushNotifications'
 import { Elm } from './elm/Main.elm'
 import * as Sentry from '@sentry/browser'
 import * as AbsintheSocket from '@absinthe/socket'
@@ -85,6 +84,85 @@ window.customElements.define('paypal-buttons',
           // TODO - Log error
           console.error(err)
         })
+    }
+  }
+)
+
+window.customElements.define('infinite-list',
+  class InfiniteList extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
+
+    connectedCallback () {
+      this.listenToScroll()
+
+      window.addEventListener('resize', () => { this.listenToScroll() })
+    }
+
+    attributeChangedCallback () {
+      this.listenToScroll()
+    }
+
+    listenToScroll () {
+      if (this._scrollInterval) {
+        clearInterval(this._scrollInterval)
+      }
+
+      let scrolling = false
+      const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
+      if (!isHidden) {
+        if (this.getAttribute('elm-element-to-track') === 'track-window') {
+          window.addEventListener('scroll', () => { scrolling = true })
+        } else {
+          this.addEventListener('scroll', () => { scrolling = true })
+        }
+      }
+
+      const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
+      this._scrollInterval = setInterval(() => {
+        if (scrolling) {
+          scrolling = false
+          const boundingRect = this.getBoundingClientRect()
+          if (this.scrollTop >= this.scrollHeight - distanceToRequest - boundingRect.height) {
+            this.dispatchEvent(new CustomEvent('requested-items', {}))
+          }
+        }
+      }, 300)
+    }
+  }
+)
+
+window.customElements.define('date-formatter',
+  class DateFormatter extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-locale', 'elm-date' ] }
+
+    constructor () {
+      super()
+
+      const shadow = this.attachShadow({ mode: 'open' })
+      const textContainer = document.createElement('span')
+      this._textContainer = textContainer
+      shadow.appendChild(textContainer)
+    }
+
+    connectedCallback () {
+      this.setDateText()
+    }
+
+    attributeChangedCallback () {
+      this.setDateText()
+    }
+
+    setDateText () {
+      const locale = this.getAttribute('elm-locale')
+      const date = new Date(parseInt(this.getAttribute('elm-date')))
+      const dayString = date.toLocaleDateString(locale, { day: 'numeric' })
+      const monthString = date.toLocaleDateString(locale, { month: 'short' })
+        .replace(/[.]/g, '')
+      const yearString = date.toLocaleDateString(locale, { year: 'numeric' })
+
+      const translationString = this.getAttribute('elm-translation') === null ? '{{date}}' : this.getAttribute('elm-translation')
+      const translatedString = translationString.replace(/{{date}}/, `${dayString} ${monthString} ${yearString}`)
+      this._textContainer.textContent = translatedString
     }
   }
 )
@@ -177,7 +255,14 @@ window.customElements.define('pdf-viewer',
           window.clearTimeout(notFoundTimeout)
           setContent(img)
         } else {
-          debugLog('pdf-viewer error', e)
+          addBreadcrumb({
+            type: 'error',
+            category: 'pdf-viewer',
+            message: 'Got an error when trying to display a PDF',
+            data: { error: e },
+            localData: {},
+            level: 'warning'
+          })
         }
       })
     }
@@ -305,6 +390,111 @@ window.customElements.define('bg-no-scroll',
 // App startup
 // =========================================
 
+// Init Sentry as soon as possible so it starts recording events and breadcrumbs
+// automatically
+Sentry.init({
+  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
+  environment: env,
+  beforeBreadcrumb (breadcrumb, hint) {
+    // We have a limited amount of breadcrumbs, and these aren't super useful
+    // to us, so we just don't include them
+    const unusedCategories = ['ui.click', 'ui.input']
+
+    return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
+  }
+})
+
+/** On production, adds a breadcrumb to sentry. Needs an object like this:
+  { type: 'default' | 'debug' | 'error' | 'info' | 'query',
+    category: portName,
+    message: 'Something went wrong',
+    data: { transactionId },
+    localData: { transactionId, passphrase }
+    level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'
+  }
+
+  Where the localData field is only displayed on development
+
+  On development, just logs that information to the console
+*/
+const addBreadcrumb = (breadcrumb) => {
+  if (env === 'development') {
+    const { message, ...rest } = breadcrumb
+    console.log('[==== BREADCRUMB]: ', message, rest)
+    return
+  }
+
+  // We don't want to send localData to sentry, as it might contain sensitive
+  // information
+  const { localData, ...rest } = breadcrumb
+
+  Sentry.addBreadcrumb(rest)
+}
+
+/** On production, sends an event to Sentry. Needs an object like this:
+  { user: eosUsername | null,
+    message: 'Something went wrong',
+    tags: { 'cambiatus.type': 'eos-transaction' },
+    contexts: [{ name: 'Eos transaction', extras: { transactionId: transactionId } }],
+    localData: { privateKey },
+    transaction: portName,
+    level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'
+  }
+
+  Where the localData field is only displayed on development
+
+  On development, just logs that information to the console
+*/
+const logEvent = (event) => {
+  addBreadcrumb({
+    type: 'debug',
+    category: 'logEvent.start',
+    message: 'Begin logEvent',
+    data: { transaction: event.transaction, eventMessage: event.message },
+    localData: event.localData,
+    level: 'debug'
+  })
+
+  if (env === 'development') {
+    const { message, ...rest } = event
+    console.log('[==== EVENT]: ', message, rest)
+  } else {
+    const { user, message, tags, contexts, transaction, level } = event
+
+    Sentry.withScope((scope) => {
+      if (user !== null) {
+        scope.setUser({ username: user })
+      } else {
+        const user = JSON.parse(getItem(USER_KEY))
+        const accountName = (user && user.accountName) || null
+
+        if (accountName !== null) {
+          scope.setUser({ username: accountName })
+        }
+      }
+      // If the error comes from Elm, this key will be overwritten
+      scope.setTag('cambiatus.language', 'javascript')
+      scope.setTags(tags)
+      scope.setTransaction(transaction)
+      contexts.forEach((context) => {
+        scope.setContext(context.name, context.extras)
+      })
+      scope.setLevel(level)
+
+      Sentry.captureMessage(message)
+    })
+  }
+
+  addBreadcrumb({
+    type: 'debug',
+    category: 'logEvent.end',
+    message: 'Ended logEvent',
+    data: { transaction: event.transaction, eventMessage: event.message },
+    localData: event.localData,
+    level: 'debug'
+  })
+}
+
 const hostnameInfo = () => {
   const environments = ['staging', 'demo']
   let hostnameParts = window.location.hostname.split('.')
@@ -425,19 +615,33 @@ async function readClipboardWithPermission () {
     const clipboardContent = await navigator.clipboard.readText()
     return { clipboardContent }
   } catch (err) {
-    errorLog('clipboard.readText() error', err, false)
+    logEvent({
+      user: null,
+      message: 'Error when reading clipboard',
+      tags: { 'cambiatus.kind': 'clipboard' },
+      contexts: [{ name: 'Error details', extras: { error: err } }],
+      transaction: 'readClipboardWithPermission',
+      level: 'error'
+    })
+
     return { error: err.message }
   }
 }
 
 function flags () {
   const user = JSON.parse(getItem(USER_KEY))
+  const accountName = (user && user.accountName) || null
+
+  if (accountName !== null) {
+    Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+  }
+
   return {
     env: env,
     graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
-    accountName: (user && user.accountName) || null,
+    accountName: accountName,
     isPinAvailable: !!(user && user.encryptedKey),
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
@@ -457,78 +661,22 @@ const app = Elm.Main.init({
   flags: flags()
 })
 
-Sentry.addBreadcrumb({
-  message: 'Started Elm app',
-  level: Sentry.Severity.Info,
+addBreadcrumb({
   type: 'debug',
-  category: 'started',
-  data: {
-    flags: flags()
-  }
+  category: 'elm.start',
+  message: 'Started Elm app',
+  data: { flags: flags() },
+  localData: {},
+  level: 'info'
 })
 
 // Register Service Worker After App
 // registerServiceWorker()
 
-// Log
-function debugLog (name, arg) {
-  if (env === 'development') {
-    console.log('[==== DEV]: ', name, arg)
-  } else {
-    Sentry.addBreadcrumb({ message: name, level: 'info', type: 'debug' })
-  }
-}
-
-// Init Sentry
-Sentry.init({
-  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
-  environment: env
-})
-
-function errorLog (msg, err, isFromElm) {
-  const languageString = isFromElm ? 'Elm' : 'Javascript'
-  const startMessage = `Begin errorLog from ${languageString}`
-  Sentry.addBreadcrumb({
-    message: startMessage,
-    level: Sentry.Severity.Info,
-    type: 'debug',
-    category: 'started'
-  })
-
-  if (env === 'development') {
-    console.error(msg, err)
-  } else {
-    let error = `Generic ${languageString} errorLog`
-    let details = ''
-
-    if (Object.prototype.toString.call(msg) === '[object Array]') {
-      [error, details] = msg
-    }
-
-    const type = isFromElm ? 'elm-error' : 'javascript-error'
-    Sentry.withScope(scope => {
-      scope.setTag('type', type)
-      scope.setLevel(Sentry.Severity.Error)
-      scope.setExtra(`Error shared by ${languageString}`, err)
-      scope.setExtra('raw msg', msg)
-      scope.setExtra('Parsed details', details)
-      Sentry.captureMessage(error + details)
-    })
-  }
-
-  const endMessage = `End errorLog from ${languageString}`
-  Sentry.addBreadcrumb({
-    message: endMessage,
-    level: Sentry.Severity.Info,
-    type: 'debug',
-    category: 'ended'
-  })
-}
-
 // Ports error Reporter
-app.ports.logError.subscribe((msg, err) => { errorLog(msg, err, true) })
+app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
 
-app.ports.logDebug.subscribe(debugLog)
+app.ports.logEvent.subscribe(logEvent)
 
 // =========================================
 // EOS / Identity functions
@@ -542,38 +690,66 @@ app.ports.storeLanguage.subscribe(storeLanguage)
 
 function storeLanguage (lang) {
   setItem(LANGUAGE_KEY, lang)
-  debugLog(`stored language: ${lang}`, '')
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeLanguage',
+    message: 'Stored language',
+    data: { language: lang },
+    localData: {},
+    level: 'debug'
+  })
 }
 
 // STORE RECENT SEARCHES
 app.ports.storeRecentSearches.subscribe(query => {
   setItem(RECENT_SEARCHES, query)
-  debugLog(`stored recent searches: ${query}`, '')
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeRecentSearches',
+    message: 'Stored recent searches',
+    data: { recentSearches: query },
+    localData: {},
+    level: 'debug'
+  })
 })
 
 // RETRIEVE RECENT SEARCHES
 app.ports.getRecentSearches.subscribe(() => {
   const recentSearches = getItem(RECENT_SEARCHES) || '[]'
   app.ports.gotRecentSearches.send(recentSearches)
-  debugLog(`got recent searches: ${recentSearches}`, '')
+  addBreadcrumb({
+    type: 'info',
+    category: 'getRecentSearches',
+    message: 'Got recent searches',
+    data: { recentSearches: recentSearches },
+    localData: {},
+    level: 'debug'
+  })
 })
 
 app.ports.storeAuthToken.subscribe(token => {
   setItem(AUTH_TOKEN, token)
-  debugLog(`stored auth token`, token)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeAuthToken',
+    message: 'Stored auth token',
+    data: {},
+    localData: {},
+    level: 'debug'
+  })
 })
 
 app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
   setItem(SELECTED_COMMUNITY_KEY, symbol)
-  debugLog(`stored community`, symbol)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeSelectedCommunitySymbol',
+    message: 'Stored selected community\'s symbol',
+    data: { symbol },
+    localData: {},
+    level: 'debug'
+  })
 })
-
-// STORE PUSH PREF
-
-function storePushPref (pref) {
-  setItem(PUSH_PREF, pref)
-  debugLog(`stored push pref: ${pref}`, '')
-}
 
 // STORE PIN
 
@@ -594,49 +770,103 @@ function storePin (data, pin) {
 
   removeItem(USER_KEY)
   setItem(USER_KEY, JSON.stringify(storeData))
-  debugLog('stored pin', pin)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storePin',
+    message: 'Stored PIN',
+    data: {},
+    localData: { storeData },
+    level: 'debug'
+  })
 }
 
 function logout () {
   removeItem(USER_KEY)
   removeItem(AUTH_TOKEN)
 
-  Sentry.addBreadcrumb({
-    category: 'auth',
-    message: 'User logged out'
+  addBreadcrumb({
+    type: 'info',
+    category: 'logout',
+    message: 'User logged out',
+    data: {},
+    localData: {},
+    level: 'info'
   })
-  Sentry.setUser(null)
-  debugLog('set sentry user to null', '')
+  Sentry.configureScope((scope) => { scope.setUser(null) })
 }
 
 function downloadPdf (accountName, passphrase) {
-  debugLog('started downloadPdf', accountName)
+  addBreadcrumb({
+    type: 'info',
+    category: 'downloadPdf',
+    message: 'Started downloading pdf',
+    data: { accountName },
+    localData: {},
+    level: 'debug'
+  })
+
   const definition = pdfDefinition(passphrase)
   const pdf = pdfMake.createPdf(definition)
 
   pdf.download(accountName + '_cambiatus.pdf')
 
-  debugLog('downloadPdf finished', '')
+  addBreadcrumb({
+    type: 'info',
+    category: 'downloadPdf',
+    message: 'Finished downloading pdf',
+    data: { accountName },
+    localData: {},
+    level: 'debug'
+  })
 
   return { isDownloaded: true }
 }
 
 app.ports.javascriptOutPort.subscribe(async (arg) => {
-  debugLog(`${arg.data.name} port started`, arg)
+  addBreadcrumb({
+    type: 'info',
+    category: arg.data.name,
+    message: 'Port handler started',
+    data: {},
+    localData: arg,
+    level: 'debug'
+  })
+
   const defaultResponse = {
     address: arg.responseAddress,
     addressData: arg.responseData
   }
 
   const portResponse = await handleJavascriptPort(arg)
-  debugLog(`got ${arg.data.name} port response`, portResponse)
+  addBreadcrumb({
+    type: 'info',
+    category: arg.data.name,
+    message: 'Got port handler response',
+    data: {},
+    localData: portResponse,
+    level: 'debug'
+  })
 
   const response = { ...defaultResponse, ...portResponse }
 
   if (response.error) {
-    debugLog(`${arg.data.name} port failed: ${response.error}`, response)
+    addBreadcrumb({
+      type: 'info',
+      category: arg.data.name,
+      message: 'Port handler failed',
+      data: { error: response.error },
+      localData: { response },
+      level: 'error'
+    })
   } else {
-    debugLog(`${arg.data.name} port finished`, response)
+    addBreadcrumb({
+      type: 'info',
+      category: arg.data.name,
+      message: 'Port handler finished without errors',
+      data: {},
+      localData: { response },
+      level: 'info'
+    })
   }
 
   // Only send data through port if there is a portResponse, and the port is not a subscription
@@ -685,7 +915,14 @@ async function handleJavascriptPort (arg) {
         try {
           const publicKey = ecc.privateToPublic(privateKey)
           const accounts = await eos.getKeyAccounts(publicKey)
-          debugLog(`got ${accounts.account_names.length} accounts`, accounts)
+          addBreadcrumb({
+            type: 'debug',
+            category: 'login',
+            message: 'Got accounts from public key',
+            data: { numberOfAccounts: accounts.account_names.length },
+            localData: { accounts },
+            level: 'debug'
+          })
 
           if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
             return { error: 'error.accountNotFound' }
@@ -705,16 +942,28 @@ async function handleJavascriptPort (arg) {
 
             // Save credentials to EOS
             eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-            debugLog('saved credentials to EOS', '')
-
-            // Configure Sentry logged user
-            Sentry.setUser({ email: accountName })
-            debugLog('set sentry user', accountName)
+            Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+            addBreadcrumb({
+              type: 'debug',
+              category: 'login',
+              message: 'Saved credentials to EOS',
+              data: {},
+              localData: { accountName },
+              level: 'debug'
+            })
 
             return { accountName, privateKey }
           }
         } catch (err) {
-          errorLog('login port error', err, false)
+          logEvent({
+            user: null,
+            message: 'Login port error',
+            tags: { 'cambiatus.kind': 'auth' },
+            contexts: [{ name: 'Error details', extras: { error: err } }],
+            transaction: 'login',
+            level: 'error'
+          })
+
           return { error: 'error.unknown' }
         }
       }
@@ -756,16 +1005,23 @@ async function handleJavascriptPort (arg) {
           const decryptedKey = sjcl.decrypt(pin, user.encryptedKey)
 
           eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
-          debugLog('saved credentials to EOS', '')
+          addBreadcrumb({
+            type: 'debug',
+            category: 'getPrivateKey',
+            message: 'Saved credentials to EOS',
+            data: {},
+            localData: {},
+            level: 'debug'
+          })
 
           // Configure Sentry logged user
-          Sentry.setUser({ account: user.accountName })
-          debugLog('set sentry user', user.accountName)
-
-          Sentry.addBreadcrumb({
-            category: 'auth',
-            level: Sentry.Severity.Info,
-            message: 'Logged user with PIN: ' + user.accountName
+          addBreadcrumb({
+            type: 'info',
+            category: 'getPrivateKey',
+            message: 'Logged user with PIN',
+            data: { accountName: user.accountName },
+            localData: {},
+            level: 'info'
           })
 
           return { accountName: user.accountName, privateKey: decryptedKey }
@@ -775,56 +1031,60 @@ async function handleJavascriptPort (arg) {
       }
     }
     case 'eosTransaction': {
-      Sentry.addBreadcrumb({
+      addBreadcrumb({
         type: 'debug',
-        category: 'started',
-        level: 'info',
-        message: 'Begin pushing transaction to EOS'
+        category: 'eosTransaction',
+        message: 'Started pushing transaction to EOS',
+        data: {},
+        localData: { actions: arg.data.actions },
+        level: 'info'
       })
 
       return eos.transaction({ actions: arg.data.actions })
         .then(res => {
-          Sentry.addBreadcrumb({
+          addBreadcrumb({
             type: 'debug',
-            category: 'ended',
-            level: 'info',
-            message: 'Success pushing transaction to EOS'
+            category: 'eosTransaction',
+            message: 'Finished pushing transaction to EOS without errors',
+            data: { transactionId: res.transaction_id },
+            localData: {},
+            level: 'info'
           })
 
           return { transactionId: res.transaction_id }
         })
         .catch(errorString => {
           let error
+          let errorMessage
           try {
             error = JSON.parse(errorString)
+            try {
+              errorMessage = `[EOS] ${error.error.details[0].message}`
+            } catch {
+              errorMessage = `[EOS] ${error.message}`
+            }
           } catch {
             error = errorString
+            errorMessage = 'Got an error when pushing transaction to EOS'
           }
 
           const response = { error }
 
-          // Send to sentry
-          Sentry.addBreadcrumb({
-            type: 'default',
-            category: 'sentry.transaction',
-            level: 'info',
-            message: 'Failure pushing transaction to EOS'
-          })
-          Sentry.withScope(scope => {
-            let message
-            try {
-              message = error.error.details[0].message || 'Generic EOS Error'
-            } catch {
-              message = errorString
-            }
-
-            scope.setTag('type', 'eos-transaction')
-            scope.setExtra('Sent data', arg.data)
-            scope.setExtra('Response', response)
-            scope.setExtra('Error', response.error)
-            scope.setExtra('Error String', errorString)
-            scope.setLevel(Sentry.Severity.Error)
-            Sentry.captureMessage(message)
+          logEvent({
+            user: null,
+            message: errorMessage,
+            tags: { 'cambiatus.type': 'eos-transaction' },
+            contexts: [{
+              name: 'Eos transaction',
+              extras: {
+                sent: arg.data,
+                response,
+                error
+              }
+            }],
+            localData: {},
+            transaction: 'eosTransaction',
+            level: 'error'
           })
 
           return response
@@ -834,38 +1094,6 @@ async function handleJavascriptPort (arg) {
       logout()
 
       return {}
-    }
-    case 'requestPushPermission': {
-      const swUrl = `${process.env.PUBLIC_URL}/service-worker.js`
-      const pKey = config.pushKey
-      if (pushSub.isPushSupported()) {
-        return navigator.serviceWorker
-          .register(swUrl)
-          .then(sw => pushSub.askPermission())
-          .then(sw => pushSub.subscribeUserToPush(pKey))
-          .then(sub => {
-            return { sub: JSON.stringify(sub) }
-          })
-          .catch(err => {
-            debugLog('requestPushPermission port error: Push Permission Denied', err)
-            return { error: `push permission denied: ${err}` }
-          })
-      } else {
-        debugLog('requestPushPermission port error: Push not supported on this agent', '')
-        return { error: 'push not supported on this agent' }
-      }
-    }
-    case 'completedPushUpload': {
-      storePushPref('set')
-      return { isSet: true }
-    }
-    case 'checkPushPref': {
-      return { isSet: getItem(PUSH_PREF) !== null }
-    }
-    case 'disablePushPref': {
-      removeItem(PUSH_PREF)
-      pushSub.unsubscribeFromPush()
-      return { isSet: false }
     }
     case 'downloadAuthPdfFromRegistration': {
       const { accountName, passphrase } = arg.data
@@ -906,10 +1134,6 @@ async function handleJavascriptPort (arg) {
         return { date: isoDate }
       }
     }
-    case 'hideFooter': {
-      document.getElementById('guest-footer').className += ' guest__footer'
-      return {}
-    }
     case 'subscribeToNewCommunity': {
       let notifiers = []
 
@@ -931,7 +1155,15 @@ async function handleJavascriptPort (arg) {
       )
 
       const onStart = data => {
-        debugLog('subscribeToNewCommunity port: onStart handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToNewCommunity',
+          message: 'Started listening to new communities',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -941,19 +1173,48 @@ async function handleJavascriptPort (arg) {
       }
 
       const onAbort = data => {
-        debugLog('subscribeToNewCommunity port: onAbort handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToNewCommunity',
+          message: 'Aborted listening to new communities',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onCancel = data => {
-        debugLog('subscribeToNewCommunity port: onCancel handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToNewCommunity',
+          message: 'Cancelled listening to new communities',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onError = data => {
-        debugLog('subscribeToNewCommunity port: onError handler called', data)
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToNewCommunity',
+          message: 'Error when listening to new communities',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
       }
 
       let onResult = data => {
-        debugLog('subscribeToNewCommunity port: onResult handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToNewCommunity',
+          message: 'Got a new community result',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -995,7 +1256,14 @@ async function handleJavascriptPort (arg) {
       )
 
       let onStart = data => {
-        debugLog('subscribeToTransfer port: onStart handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToTransfer',
+          message: 'Started listening for transfer',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
 
         const response = {
           address: arg.responseAddress,
@@ -1006,19 +1274,48 @@ async function handleJavascriptPort (arg) {
       }
 
       const onAbort = data => {
-        debugLog('subscribeToTransfer port: onAbort handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToTransfer',
+          message: 'Aborted listening for transfer',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onCancel = data => {
-        debugLog('subscribeToTransfer port: onCancel handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToTransfer',
+          message: 'Cancelled listening for transfer',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onError = data => {
-        debugLog('subscribeToTransfer port: onError handler called', data)
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToTransfer',
+          message: 'Error when listening for transfer',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
       }
 
       const onResult = data => {
-        debugLog('subscribeToTransfer port: onResult handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToTransfer',
+          message: 'Got transfer result',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -1061,24 +1358,59 @@ async function handleJavascriptPort (arg) {
       )
 
       const onStart = data => {
-        const payload = { dta: data, msg: 'starting unread countsubscription' }
-        debugLog('subscribeToUnreadCount port: onStart handler called', payload)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToUnreadCount',
+          message: 'Started listening for unread notifications',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onAbort = data => {
-        debugLog('subscribeToUnreadCount port: onAbort handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToUnreadCount',
+          message: 'Aborted listening for unread notifications',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onCancel = data => {
-        debugLog('subscribeToUnreadCount port: onCancel handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToUnreadCount',
+          message: 'Cancelled listening for unread notifications',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
       }
 
       const onError = data => {
-        debugLog('subscribeToUnreadCount port: onError handler called', data)
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToUnreadCount',
+          message: 'Error when listening for unread notifications',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
       }
 
       const onResult = data => {
-        debugLog('subscribeToUnreadCount port: onResult handler called', data)
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToUnreadCount',
+          message: 'Got a result when listening for unread notifications',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
         const response = {
           address: arg.responseAddress,
           addressData: arg.responseData,
@@ -1115,22 +1447,62 @@ async function handleJavascriptPort (arg) {
 
           switch (permissionStatus.state) {
             case 'denied': {
-              debugLog('clipboard-read permission denied', '')
+              addBreadcrumb({
+                type: 'info',
+                category: 'readClipboard',
+                message: 'Checked for clipboard access, and it\'s denied',
+                data: {},
+                localData: {},
+                level: 'info'
+              })
+
               // We can't request for permission, the user needs to do it manually
               return { isDenied: true }
             }
             case 'granted': {
-              debugLog('clipboard-read permission granted', '')
+              addBreadcrumb({
+                type: 'info',
+                category: 'readClipboard',
+                message: 'Checked for clipboard access, and it\'s granted',
+                data: {},
+                localData: {},
+                level: 'info'
+              })
+
               return readClipboardWithPermission()
             }
             case 'prompt': {
-              debugLog('clipboard-read permission prompt', '')
+              addBreadcrumb({
+                type: 'debug',
+                category: 'readClipboard',
+                message: 'Prompting user for clipboard access',
+                data: {},
+                localData: {},
+                level: 'debug'
+              })
+
               try {
                 const clipboardContent = await navigator.clipboard.readText()
-                debugLog('clipboard-read permission prompt accepted', '')
+                addBreadcrumb({
+                  type: 'info',
+                  category: 'readClipboard',
+                  message: 'User granted access to clipboard',
+                  data: {},
+                  localData: { clipboardContent },
+                  level: 'info'
+                })
+
                 return { clipboardContent }
               } catch (err) {
-                debugLog('clipboard-read permission prompt denied', err)
+                addBreadcrumb({
+                  type: 'info',
+                  category: 'readClipboard',
+                  message: 'User denied access to clipboard',
+                  data: {},
+                  localData: { error: err },
+                  level: 'info'
+                })
+
                 return { isDenied: true }
               }
             }
@@ -1139,11 +1511,27 @@ async function handleJavascriptPort (arg) {
             }
           }
         } catch (permissionError) {
-          debugLog('permissions API not supported', permissionError)
+          addBreadcrumb({
+            type: 'info',
+            category: 'readClipboard',
+            message: 'The permissions API is not supported by the user\'s browser',
+            data: { permissionError },
+            localData: {},
+            level: 'info'
+          })
+
           return readClipboardWithPermission()
         }
       } else {
-        debugLog('clipboard.readText() not supported', '')
+        addBreadcrumb({
+          type: 'info',
+          category: 'readClipboard',
+          message: 'clipboard.readText() is not supported by the user\'s browser',
+          data: {},
+          localData: {},
+          level: 'info'
+        })
+
         return { notSupported: true }
       }
     }

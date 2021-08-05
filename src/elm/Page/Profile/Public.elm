@@ -1,10 +1,12 @@
 module Page.Profile.Public exposing (Model, Msg, Status, init, msgToString, update, view)
 
 import Api.Graphql
+import Dict
 import Eos.Account as Eos
 import Graphql.Http
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
+import Log
 import Page
 import Page.Profile exposing (ProfilePage(..), viewUserInfo)
 import Profile
@@ -95,17 +97,29 @@ view loggedIn status =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         CompletedProfileLoad (RemoteData.Success Nothing) ->
             UR.init NotFound
 
         CompletedProfileLoad (RemoteData.Success (Just profile)) ->
             UR.init (Loaded profile)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Completed loading public profile"
+                    , data = Dict.fromList [ ( "username", Eos.encodeName profile.account ) ]
+                    , level = Log.DebugLevel
+                    }
 
         CompletedProfileLoad (RemoteData.Failure err) ->
             UR.init (LoadingFailed err)
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load public profile"
+                    { moduleName = "Page.Profile.Public", function = "update" }
+                    []
+                    err
 
         CompletedProfileLoad _ ->
             UR.init model

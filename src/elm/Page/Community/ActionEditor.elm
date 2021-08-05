@@ -30,6 +30,7 @@ import DataValidator
         , updateInput
         , validate
         )
+import Dict
 import Eos
 import Eos.Account as Eos
 import Html exposing (Html, b, button, div, label, p, span, text, textarea)
@@ -39,6 +40,7 @@ import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
@@ -164,8 +166,8 @@ initForm =
     }
 
 
-editForm : Form -> Action -> Form
-editForm form action =
+editForm : Shared -> Form -> Action -> Form
+editForm shared form action =
     let
         dateValidator : Maybe (Validator String)
         dateValidator =
@@ -174,7 +176,7 @@ editForm form action =
                     (\d ->
                         defaultDateValidator
                             |> updateInput
-                                (Just d |> Utils.posixDateTime |> Strftime.format "%m%d%Y" Time.utc)
+                                (d |> Utils.fromDateTime |> Strftime.format "%m%d%Y" shared.timezone)
                             |> Just
                     )
 
@@ -575,7 +577,7 @@ update msg model ({ shared } as loggedIn) =
                             Just action ->
                                 { model
                                     | status = Authorized
-                                    , form = editForm model.form action
+                                    , form = editForm shared model.form action
                                 }
                                     |> UR.init
 
@@ -707,7 +709,26 @@ update msg model ({ shared } as loggedIn) =
                 NoValidation ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried setting a deadline for action, but action has no validation"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ActionEditor", function = "update" }
+                            [ { name = "Action"
+                              , extras =
+                                    Dict.fromList
+                                        [ ( "actionId"
+                                          , case model.actionId of
+                                                Nothing ->
+                                                    Encode.null
+
+                                                Just id ->
+                                                    Encode.int id
+                                          )
+                                        , ( "tried", Encode.string val )
+                                        ]
+                              }
+                            , Log.contextFromCommunity loggedIn.selectedCommunity
+                            ]
 
                 Validations maybeDate usageValidation ->
                     case maybeDate of
@@ -723,14 +744,52 @@ update msg model ({ shared } as loggedIn) =
                         Nothing ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg []
+                                |> UR.logImpossible msg
+                                    "Tried setting a deadline for action, but action's validation has no date"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ActionEditor", function = "update" }
+                                    [ { name = "Action"
+                                      , extras =
+                                            Dict.fromList
+                                                [ ( "actionId"
+                                                  , case model.actionId of
+                                                        Nothing ->
+                                                            Encode.null
+
+                                                        Just id ->
+                                                            Encode.int id
+                                                  )
+                                                , ( "tried", Encode.string val )
+                                                ]
+                                      }
+                                    , Log.contextFromCommunity loggedIn.selectedCommunity
+                                    ]
 
         EnteredUsages val ->
             case model.form.validation of
                 NoValidation ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried setting max usages for action, but action's validation has no date"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ActionEditor", function = "update" }
+                            [ { name = "Action"
+                              , extras =
+                                    Dict.fromList
+                                        [ ( "actionId"
+                                          , case model.actionId of
+                                                Nothing ->
+                                                    Encode.null
+
+                                                Just id ->
+                                                    Encode.int id
+                                          )
+                                        , ( "tried", Encode.string val )
+                                        ]
+                              }
+                            , Log.contextFromCommunity loggedIn.selectedCommunity
+                            ]
 
                 Validations maybeDate maybeUsage ->
                     case maybeUsage of
@@ -746,7 +805,26 @@ update msg model ({ shared } as loggedIn) =
                         Nothing ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg []
+                                |> UR.logImpossible msg
+                                    "Tried setting max usages for action, but action's validation has no max usages"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ActionEditor", function = "update" }
+                                    [ { name = "Action"
+                                      , extras =
+                                            Dict.fromList
+                                                [ ( "actionId"
+                                                  , case model.actionId of
+                                                        Nothing ->
+                                                            Encode.null
+
+                                                        Just id ->
+                                                            Encode.int id
+                                                  )
+                                                , ( "tried", Encode.string val )
+                                                ]
+                                      }
+                                    , Log.contextFromCommunity loggedIn.selectedCommunity
+                                    ]
 
         EnteredUsagesLeft val ->
             case model.form.usagesLeft of
@@ -854,7 +932,11 @@ update msg model ({ shared } as loggedIn) =
                 NoValidation ->
                     model
                         |> UR.init
-                        |> UR.logImpossible msg []
+                        |> UR.logImpossible msg
+                            "Tried changing action's deadline, but action has no validation"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ActionEditor", function = "update" }
+                            []
 
                 Validations maybeDate _ ->
                     case maybeDate of
@@ -870,7 +952,11 @@ update msg model ({ shared } as loggedIn) =
                         Nothing ->
                             model
                                 |> UR.init
-                                |> UR.logImpossible msg []
+                                |> UR.logImpossible msg
+                                    "Changed action's deadline, but action doesn't have a validation date"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ActionEditor", function = "update" }
+                                    []
 
         ToggleValidity ->
             model
@@ -1028,7 +1114,7 @@ update msg model ({ shared } as loggedIn) =
 
                             else
                                 Just (DateTime date)
-                                    |> Utils.posixDateTime
+                                    |> Utils.fromMaybeDateTime
                                     |> Time.posixToMillis
                     in
                     update (SaveAction dateInt) model loggedIn
@@ -1058,6 +1144,13 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Saved action"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         GotSaveAction (Err val) ->
             let
@@ -1066,8 +1159,12 @@ update msg model ({ shared } as loggedIn) =
             in
             newModel
                 |> UR.init
-                |> UR.logDebugValue msg val
-                |> UR.logImpossible msg []
+                |> UR.logJsonValue msg
+                    (Just loggedIn.accountName)
+                    "Got an error when saving action"
+                    { moduleName = "Page.Community.ActionEditor", function = "update" }
+                    []
+                    val
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
         GotProfileSummaryMsg index subMsg ->

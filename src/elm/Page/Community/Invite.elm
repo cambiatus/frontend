@@ -11,6 +11,7 @@ module Page.Community.Invite exposing
 import Api.Graphql
 import Auth exposing (SignInResponse)
 import Community exposing (Invite)
+import Dict
 import Eos exposing (symbolToString)
 import Eos.Account exposing (nameToString)
 import Graphql.Http
@@ -18,6 +19,7 @@ import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
+import Log
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
 import Profile.EditKycForm as KycForm
@@ -413,6 +415,13 @@ update session msg model =
                         JoinConfirmation
             in
             UR.init { model | pageStatus = newPageStatus invite }
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Completed loading invite"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         CompletedLoadInvite (RemoteData.Success Nothing) ->
             UR.init { model | pageStatus = NotFound }
@@ -420,7 +429,12 @@ update session msg model =
         CompletedLoadInvite (RemoteData.Failure error) ->
             { model | pageStatus = Failed error }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Page.maybeAccountName session)
+                    "Got an error when trying to load invite"
+                    { moduleName = "Page.Community.Invite", function = "update" }
+                    []
+                    error
 
         CompletedLoadInvite _ ->
             UR.init model
@@ -443,12 +457,23 @@ update session msg model =
                 |> UR.init
 
         InvitationRejected ->
+            let
+                addBreadcrumb =
+                    UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Rejected invitation"
+                        , data = Dict.empty
+                        , level = Log.DebugLevel
+                        }
+            in
             case session of
                 LoggedIn loggedIn ->
                     model
                         |> UR.init
                         |> UR.addCmd
                             (Route.Dashboard |> Route.replaceUrl loggedIn.shared.navKey)
+                        |> addBreadcrumb
 
                 Guest guest ->
                     model
@@ -457,6 +482,7 @@ update session msg model =
                             (Route.Register Nothing Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+                        |> addBreadcrumb
 
         InvitationAccepted invitationId invite ->
             let
@@ -484,6 +510,15 @@ update session msg model =
                 allowedToJoinCommunity =
                     (invite.community.hasKyc && areUserKycFieldsFilled)
                         || not invite.community.hasKyc
+
+                addBreadcrumb =
+                    UR.addBreadcrumb
+                        { type_ = Log.DebugBreadcrumb
+                        , category = msg
+                        , message = "Accepted invitation"
+                        , data = Dict.empty
+                        , level = Log.DebugLevel
+                        }
             in
             case session of
                 LoggedIn ({ shared, accountName } as loggedIn) ->
@@ -496,10 +531,12 @@ update session msg model =
                                     (Auth.signIn accountName shared (Just model.invitationId))
                                     (CompletedSignIn loggedIn)
                                 )
+                            |> addBreadcrumb
 
                     else
                         { model | pageStatus = KycInfo invite }
                             |> UR.init
+                            |> addBreadcrumb
 
                 Guest guest ->
                     model
@@ -508,6 +545,7 @@ update session msg model =
                             (Route.Register (Just invitationId) Nothing
                                 |> Route.replaceUrl guest.shared.navKey
                             )
+                        |> addBreadcrumb
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
             case getInvite model of
@@ -541,17 +579,33 @@ update session msg model =
                         |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                         |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
                         |> UR.addCmd (Route.pushUrl navKey redirectRoute)
+                        |> UR.addBreadcrumb
+                            { type_ = Log.InfoBreadcrumb
+                            , category = msg
+                            , message = "Signed in"
+                            , data = Dict.empty
+                            , level = Log.Info
+                            }
 
                 Nothing ->
                     model
                         |> UR.init
                         |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
-                        |> UR.logImpossible msg [ "NoInvite" ]
+                        |> UR.logImpossible msg
+                            "Completed signin in, but invite was unavailable"
+                            (Page.maybeAccountName session)
+                            { moduleName = "Page.Community.Invite", function = "update" }
+                            []
 
         CompletedSignIn _ (RemoteData.Failure error) ->
             { model | pageStatus = Error Http.NetworkError }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Page.maybeAccountName session)
+                    "Got an error when signing in"
+                    { moduleName = "Page.Community.Invite", function = "update" }
+                    []
+                    error
 
         CompletedSignIn _ _ ->
             UR.init model

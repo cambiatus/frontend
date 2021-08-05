@@ -3,20 +3,20 @@ module Page.PaymentHistory exposing
     , Msg
     , init
     , msgToString
+    , receiveBroadcast
     , update
     , view
     )
 
--- import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
-
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
-import Cambiatus.Enum.TransferDirection as TransferDirection
+import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
 import Cambiatus.Object
 import Cambiatus.Object.User as User
 import Cambiatus.Query
 import Cambiatus.Scalar
+import Community
 import Date exposing (Date)
 import DatePicker exposing (DateEvent(..), defaultSettings, off)
 import Emoji
@@ -29,6 +29,7 @@ import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
 import Html.Attributes as Attrs exposing (class, href, style)
 import Html.Events exposing (onClick)
 import Icons
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Select
@@ -47,7 +48,8 @@ import Utils
 
 
 type Msg
-    = RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
+    = CompletedLoadCommunity Community.Model
+    | RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
     | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
@@ -57,9 +59,22 @@ type Msg
     | ShowMore
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
         ShowMore ->
             [ "ShowMore" ]
 
@@ -128,8 +143,8 @@ type alias ProfileWithOnlyAutocomplete =
     }
 
 
-profileWithTransfersSelectionSet : Model -> SelectionSet ProfileWithTransfers Cambiatus.Object.User
-profileWithTransfersSelectionSet model =
+profileWithTransfersSelectionSet : Community.Model -> Model -> SelectionSet ProfileWithTransfers Cambiatus.Object.User
+profileWithTransfersSelectionSet community model =
     let
         endCursor =
             Maybe.andThen .endCursor model.incomingTransfersPageInfo
@@ -163,28 +178,17 @@ profileWithTransfersSelectionSet model =
                 { r
                     | first = Present 16
                     , after = afterOption
-                    , date = optionalDate
-                    , direction = Present TransferDirection.Incoming
-                    , secondPartyAccount = optionalFromAccount
+                    , filter =
+                        Present
+                            { communityId = Present (Eos.symbolToString community.symbol)
+                            , date = optionalDate
+                            , direction =
+                                Present
+                                    { direction = Present TransferDirectionValue.Receiving
+                                    , otherAccount = optionalFromAccount
+                                    }
+                            }
                 }
-
-        -- TODO - Bring back in the next release
-        -- optionalArgsFn =
-        --     \r ->
-        --         { r
-        --             | first = Present 16
-        --             , after = afterOption
-        --             , filter =
-        --                 Present
-        --                     { communityId = Absent
-        --                     , date = optionalDate
-        --                     , direction =
-        --                         Present
-        --                             { direction = Present TransferDirectionValue.Receiving
-        --                             , otherAccount = optionalFromAccount
-        --                             }
-        --                     }
-        --         }
     in
     SelectionSet.map4 ProfileWithTransfers
         User.name
@@ -196,8 +200,8 @@ profileWithTransfersSelectionSet model =
         )
 
 
-fetchProfileWithTransfers : Shared -> Model -> String -> Cmd Msg
-fetchProfileWithTransfers shared model authToken =
+fetchProfileWithTransfers : Shared -> Community.Model -> Model -> String -> Cmd Msg
+fetchProfileWithTransfers shared community model authToken =
     let
         accountName =
             Eos.Account.nameToString model.recipientProfile.account
@@ -206,7 +210,7 @@ fetchProfileWithTransfers shared model authToken =
         (Just authToken)
         (Cambiatus.Query.user
             { account = accountName }
-            (profileWithTransfersSelectionSet model)
+            (profileWithTransfersSelectionSet community model)
         )
         RecipientProfileWithTransfersLoaded
 
@@ -258,7 +262,7 @@ datePickerSettings shared =
 
 
 init : Eos.Account.Name -> LoggedIn.Model -> ( Model, Cmd Msg )
-init recipientAccountName { shared, authToken } =
+init recipientAccountName loggedIn =
     let
         ( datePicker, datePickerCmd ) =
             DatePicker.init
@@ -282,7 +286,7 @@ init recipientAccountName { shared, authToken } =
     ( initModel
     , Cmd.batch
         [ Cmd.map SetDatePicker datePickerCmd
-        , fetchProfileWithTransfers shared initModel authToken
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
         ]
     )
 
@@ -332,8 +336,13 @@ getTransfers maybeObj =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
-update msg model { shared, authToken } =
+update msg model ({ shared, authToken } as loggedIn) =
     case msg of
+        CompletedLoadCommunity community ->
+            model
+                |> UR.init
+                |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+
         AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
                 Just profileWithPayers ->
@@ -367,7 +376,12 @@ update msg model { shared, authToken } =
         AutocompleteProfilesLoaded (RemoteData.Failure err) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading profiles for auto complete"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         AutocompleteProfilesLoaded _ ->
             UR.init model
@@ -412,28 +426,55 @@ update msg model { shared, authToken } =
         RecipientProfileWithTransfersLoaded (RemoteData.Failure err) ->
             { model | queryStatus = Failed err }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading recipient profile with transfers"
+                    { moduleName = "Page.PaymentHistory", function = "update" }
+                    []
+                    err
 
         RecipientProfileWithTransfersLoaded _ ->
             UR.init model
 
         ShowMore ->
-            model
-                |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared model authToken)
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Clicked show more, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         OnSelect maybeProfile ->
-            let
-                newModel =
-                    { model
-                        | incomingTransfers = Nothing
-                        , incomingTransfersPageInfo = Nothing
-                        , autocompleteSelectedProfile = maybeProfile
-                    }
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        newModel =
+                            { model
+                                | incomingTransfers = Nothing
+                                , incomingTransfersPageInfo = Nothing
+                                , autocompleteSelectedProfile = maybeProfile
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Selected user, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         SelectMsg subMsg ->
             let
@@ -453,17 +494,28 @@ update msg model { shared, authToken } =
                         |> UR.addCmd cmd
 
         ClearSelect ->
-            let
-                newModel =
-                    { model
-                        | incomingTransfers = Nothing
-                        , incomingTransfersPageInfo = Nothing
-                        , autocompleteSelectedProfile = Nothing
-                    }
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        newModel =
+                            { model
+                                | incomingTransfers = Nothing
+                                , incomingTransfersPageInfo = Nothing
+                                , autocompleteSelectedProfile = Nothing
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Cleared selected user, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
         SetDatePicker subMsg ->
             let
@@ -472,35 +524,57 @@ update msg model { shared, authToken } =
             in
             case dateEvent of
                 Picked newDate ->
-                    let
-                        newModel =
-                            { model
-                                | selectedDate = Just newDate
-                                , incomingTransfersPageInfo = Nothing
-                                , datePicker = newDatePicker
-                                , incomingTransfers = Nothing
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            let
+                                newModel =
+                                    { model
+                                        | selectedDate = Just newDate
+                                        , incomingTransfersPageInfo = Nothing
+                                        , datePicker = newDatePicker
+                                        , incomingTransfers = Nothing
+                                    }
+                            in
+                            newModel
+                                |> UR.init
+                                |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
+
+                        _ ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Picked a date, but community wasn't loaded"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.PaymentHistory", function = "update" }
+                                    []
 
                 _ ->
                     { model | datePicker = newDatePicker }
                         |> UR.init
 
         ClearDatePicker ->
-            let
-                newModel =
-                    { model
-                        | incomingTransfers = Nothing
-                        , selectedDate = Nothing
-                        , incomingTransfersPageInfo = Nothing
-                    }
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared newModel authToken)
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        newModel =
+                            { model
+                                | incomingTransfers = Nothing
+                                , selectedDate = Nothing
+                                , incomingTransfersPageInfo = Nothing
+                            }
+                    in
+                    newModel
+                        |> UR.init
+                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Tried clearing date picker, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.PaymentHistory", function = "update" }
+                            []
 
 
 
@@ -735,8 +809,8 @@ viewTransfer shared payment =
             Eos.Account.nameToString payer.account
 
         time =
-            Utils.posixDateTime (Just payment.blockTime)
-                |> Strftime.format "%d %b %Y, %H:%M" Time.utc
+            Utils.fromMaybeDateTime (Just payment.blockTime)
+                |> Strftime.format "%d %b %Y, %H:%M" shared.timezone
 
         avatarImg =
             Avatar.view payer.avatar "max-w-full max-h-full"
