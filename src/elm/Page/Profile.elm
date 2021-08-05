@@ -28,7 +28,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href, target)
+import Html.Attributes exposing (class, classList, href, id, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -621,7 +621,7 @@ view loggedIn model =
 
 view_ : LoggedIn.Model -> Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Html Msg
 view_ loggedIn model profile balance graphqlInfo =
-    div [ class "flex flex-grow bg-gray-100 relative" ]
+    div [ class "flex flex-grow bg-gray-100 relative", id "transfer-relative-container" ]
         [ div
             [ class "z-10 w-full bg-grey-100 grid md:grid-cols-2 md:container md:mx-auto" ]
             [ viewProfile loggedIn profile
@@ -792,7 +792,10 @@ viewDetails loggedIn profile balance graphqlInfo model =
     in
     div
         [ class "bg-gray-100 w-full flex flex-col" ]
-        [ div [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto" ]
+        [ div
+            [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
+            , id "transfer-scroll-container"
+            ]
             [ div [ class "w-full bg-white md:bg-gray-100" ]
                 [ div [ class "px-4" ]
                     [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
@@ -1082,7 +1085,10 @@ viewTransactionList loggedIn transfers =
                             (\( transfer, profileSummary ) ->
                                 Transfer.view loggedIn
                                     transfer
-                                    profileSummary
+                                    (profileSummary
+                                        |> Profile.Summary.withRelativeSelector "#transfer-relative-container"
+                                        |> Profile.Summary.withScrollSelector "#transfer-scroll-container"
+                                    )
                                     (GotTransferCardProfileSummaryMsg transfer.id)
                                     (ClickedTransferCard transfer.id)
                                     [ class "md:hover:bg-gray-200" ]
