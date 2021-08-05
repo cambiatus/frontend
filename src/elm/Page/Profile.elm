@@ -623,7 +623,7 @@ view_ : LoggedIn.Model -> Model -> Profile.Model -> Community.Balance -> Graphql
 view_ loggedIn model profile balance graphqlInfo =
     div [ class "flex flex-grow bg-gray-100 relative" ]
         [ div
-            [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
+            [ class "z-10 w-full bg-grey-100 grid md:grid-cols-2 md:container md:mx-auto" ]
             [ viewProfile loggedIn profile
             , viewDetails loggedIn profile balance graphqlInfo model
             ]
@@ -716,7 +716,7 @@ viewProfile loggedIn profile =
         text_ =
             text << loggedIn.shared.translators.t
     in
-    div [ class "p-4 bg-white border-white border-r flex md:w-1/2 md:border-gray-500" ]
+    div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
         [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
             (div [ class "pb-4 w-full" ]
                 [ div [ class "flex flex-wrap items-center justify-center mb-4" ]
@@ -791,68 +791,70 @@ viewDetails loggedIn profile balance graphqlInfo model =
                     False
     in
     div
-        [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
-        [ div [ class "w-full bg-white md:bg-gray-100" ]
-            [ div [ class "px-4" ]
-                [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
-                    [ viewDetailsItem
-                        (text_ "profile.locations")
-                        (text (profile.localization |> Maybe.withDefault ""))
-                        Center
-                    , case profile.address of
-                        Just address ->
-                            viewAddress loggedIn.shared.translators address
-
-                        Nothing ->
-                            text ""
-                    , viewDetailsItem (text_ "profile.interests")
-                        (text (String.join ", " profile.interests))
-                        Top
-                    , if isProfileOwner then
-                        viewDetailsItem (text_ "contact_form.options")
-                            (a
-                                [ class "button-secondary button-sm uppercase cursor-pointer"
-                                , Route.href Route.ProfileAddContact
-                                ]
-                                [ if List.isEmpty profile.contacts then
-                                    text_ "menu.add"
-
-                                  else
-                                    text_ "menu.edit"
-                                ]
-                            )
+        [ class "bg-gray-100 w-full flex flex-col" ]
+        [ div [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto" ]
+            [ div [ class "w-full bg-white md:bg-gray-100" ]
+                [ div [ class "px-4" ]
+                    [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
+                        [ viewDetailsItem
+                            (text_ "profile.locations")
+                            (text (profile.localization |> Maybe.withDefault ""))
                             Center
-
-                      else
-                        text ""
-                    , if isProfileOwner then
-                        case profile.kyc of
-                            Just kyc ->
-                                viewKycInfo kyc
+                        , case profile.address of
+                            Just address ->
+                                viewAddress loggedIn.shared.translators address
 
                             Nothing ->
                                 text ""
+                        , viewDetailsItem (text_ "profile.interests")
+                            (text (String.join ", " profile.interests))
+                            Top
+                        , if isProfileOwner then
+                            viewDetailsItem (text_ "contact_form.options")
+                                (a
+                                    [ class "button-secondary button-sm uppercase cursor-pointer"
+                                    , Route.href Route.ProfileAddContact
+                                    ]
+                                    [ if List.isEmpty profile.contacts then
+                                        text_ "menu.add"
 
-                      else
-                        text ""
+                                      else
+                                        text_ "menu.edit"
+                                    ]
+                                )
+                                Center
+
+                          else
+                            text ""
+                        , if isProfileOwner then
+                            case profile.kyc of
+                                Just kyc ->
+                                    viewKycInfo kyc
+
+                                Nothing ->
+                                    text ""
+
+                          else
+                            text ""
+                        ]
                     ]
                 ]
+            , if isProfileOwner then
+                viewSettings loggedIn profile
+
+              else
+                text ""
+            , if isProfileOwner || isCommunityAdmin then
+                viewHistory loggedIn.shared.translators balance graphqlInfo
+
+              else
+                text ""
+            , if isProfileOwner || isCommunityAdmin then
+                viewLatestTransactions loggedIn model
+
+              else
+                text ""
             ]
-        , if isProfileOwner then
-            viewSettings loggedIn profile
-
-          else
-            text ""
-        , if isProfileOwner || isCommunityAdmin then
-            viewHistory loggedIn.shared.translators balance graphqlInfo
-
-          else
-            text ""
-        , if isProfileOwner || isCommunityAdmin then
-            viewLatestTransactions loggedIn model
-
-          else
-            text ""
         ]
 
 
@@ -1026,30 +1028,32 @@ viewLatestTransactions loggedIn model =
                 , distanceToRequest = 1000
                 , elementToTrack = View.Components.TrackSelf
                 }
-                [ class "w-full mt-2 divide-y" ]
+                [ class "w-full mt-2 divide-y divide-gray-500" ]
     in
     div [ class "p-4 bg-white md:px-3 md:bg-transparent" ]
-        [ p [ class "text-heading" ]
-            [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
-            , text " "
-            , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+        [ div [ class "container mx-auto w-full" ]
+            [ p [ class "text-heading" ]
+                [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
+                , text " "
+                , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+                ]
+            , case model.transfersStatus of
+                FailedLoading _ ->
+                    Page.viewCardEmpty
+                        [ div [ class "text-gray-900 text-sm" ]
+                            [ text_ "transfer.loading_error" ]
+                        ]
+
+                Loading transfers ->
+                    viewInfiniteList Nothing
+                        (viewTransactionList loggedIn transfers
+                            ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
+                        )
+
+                Loaded transfers maybePageInfo ->
+                    viewTransactionList loggedIn transfers
+                        |> viewInfiniteList maybePageInfo
             ]
-        , case model.transfersStatus of
-            FailedLoading _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text_ "transfer.loading_error" ]
-                    ]
-
-            Loading transfers ->
-                viewInfiniteList Nothing
-                    (viewTransactionList loggedIn transfers
-                        ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
-                    )
-
-            Loaded transfers maybePageInfo ->
-                viewTransactionList loggedIn transfers
-                    |> viewInfiniteList maybePageInfo
         ]
 
 
@@ -1065,7 +1069,7 @@ viewTransactionList loggedIn transfers =
         |> List.map
             (\( ( t1, _ ) as first, rest ) ->
                 div []
-                    [ div [ class "mt-4 mx-4" ]
+                    [ div [ class "mt-4" ]
                         [ View.Components.dateViewer
                             [ class "uppercase text-caption text-black tracking-wider" ]
                             identity
@@ -1083,7 +1087,7 @@ viewTransactionList loggedIn transfers =
                                     (ClickedTransferCard transfer.id)
                                     [ class "md:hover:bg-gray-200" ]
                             )
-                        |> div [ class "divide-y" ]
+                        |> div [ class "divide-y divide-gray-500" ]
                     ]
             )
 
@@ -1109,54 +1113,56 @@ viewHistory { t } balance graphqlInfo =
                     ]
                 ]
     in
-    ul [ class "bg-white divide-y divide-gray-500 px-4 mb-6 md:bg-gray-100" ]
-        [ viewHistoryItem
-            [ Icons.coin "mr-2"
-            , span [] [ text_ "profile.history.balance" ]
-            ]
-            (span [ class "text-3xl mr-1" ]
-                [ balance.asset.amount
-                    |> Eos.formatSymbolAmount balance.asset.symbol
-                    |> text
+    div [ class "bg-white px-4 mb-6 md:bg-gray-100" ]
+        [ ul [ class "container mx-auto w-full self-center divide-y divide-gray-500" ]
+            [ viewHistoryItem
+                [ Icons.coin "mr-2"
+                , span [] [ text_ "profile.history.balance" ]
                 ]
-            )
-            (balance.asset.symbol
-                |> Eos.symbolToSymbolCodeString
-                |> text
-            )
-        , viewHistoryItem [ text_ "profile.history.transfers_number" ]
-            (graphqlInfo.totalTransfers
-                |> String.fromInt
-                |> text
-            )
-            (text_ "profile.history.transfers")
-        , viewHistoryItem [ text_ "profile.history.claims_number" ]
-            (graphqlInfo.totalClaims
-                |> String.fromInt
-                |> text
-            )
-            (text_ "profile.history.claims")
-        , viewHistoryItem [ text_ "profile.history.products" ]
-            (graphqlInfo.totalProducts
-                |> String.fromInt
-                |> text
-            )
-            (text_ "profile.history.items")
-        , case graphqlInfo.createdDate of
-            Just createdDate ->
-                viewHistoryItem [ text_ "profile.history.registration_date" ]
-                    (span [ class "-mr-1" ]
-                        [ text <| formatPosix createdDate ]
-                    )
-                    (text "")
+                (span [ class "text-3xl mr-1" ]
+                    [ balance.asset.amount
+                        |> Eos.formatSymbolAmount balance.asset.symbol
+                        |> text
+                    ]
+                )
+                (balance.asset.symbol
+                    |> Eos.symbolToSymbolCodeString
+                    |> text
+                )
+            , viewHistoryItem [ text_ "profile.history.transfers_number" ]
+                (graphqlInfo.totalTransfers
+                    |> String.fromInt
+                    |> text
+                )
+                (text_ "profile.history.transfers")
+            , viewHistoryItem [ text_ "profile.history.claims_number" ]
+                (graphqlInfo.totalClaims
+                    |> String.fromInt
+                    |> text
+                )
+                (text_ "profile.history.claims")
+            , viewHistoryItem [ text_ "profile.history.products" ]
+                (graphqlInfo.totalProducts
+                    |> String.fromInt
+                    |> text
+                )
+                (text_ "profile.history.items")
+            , case graphqlInfo.createdDate of
+                Just createdDate ->
+                    viewHistoryItem [ text_ "profile.history.registration_date" ]
+                        (span [ class "-mr-1" ]
+                            [ text <| formatPosix createdDate ]
+                        )
+                        (text "")
 
-            Nothing ->
-                text ""
-        , viewHistoryItem [ text_ "profile.history.last_transaction" ]
-            (span [ class "-mr-1" ]
-                [ text <| formatPosix balance.lastActivity ]
-            )
-            (text "")
+                Nothing ->
+                    text ""
+            , viewHistoryItem [ text_ "profile.history.last_transaction" ]
+                (span [ class "-mr-1" ]
+                    [ text <| formatPosix balance.lastActivity ]
+                )
+                (text "")
+            ]
         ]
 
 
