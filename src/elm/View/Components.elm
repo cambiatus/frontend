@@ -193,6 +193,7 @@ dateViewer attrs fillInTranslations shared time =
 type ElementToTrack
     = TrackSelf
     | TrackWindow
+    | TrackSelector String
 
 
 {-| An infinite list component. It automatically requests more items as the user
@@ -225,6 +226,9 @@ infiniteList options attrs children =
 
                 TrackSelf ->
                     "track-self"
+
+                TrackSelector selector ->
+                    selector
     in
     node "infinite-list"
         (requestedItemsListener

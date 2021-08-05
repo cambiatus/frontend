@@ -192,6 +192,7 @@ type Msg
     | PinChanged
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedTransferCard Int
+    | RequestedMoreTransfers
 
 
 type alias UpdateResult =
@@ -547,6 +548,21 @@ update msg model loggedIn =
         ClickedTransferCard transferId ->
             UR.init model
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
+
+        RequestedMoreTransfers ->
+            case ( model.transfersStatus, loggedIn.selectedCommunity ) of
+                ( Loaded transfers maybePageInfo, RemoteData.Success community ) ->
+                    let
+                        maybeCursor =
+                            Maybe.andThen .endCursor maybePageInfo
+                    in
+                    { model | transfersStatus = Loading transfers }
+                        |> UR.init
+                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor)
+
+                _ ->
+                    model
+                        |> UR.init
 
 
 
@@ -1015,23 +1031,40 @@ viewLatestTransactions loggedIn model =
             text << loggedIn.shared.translators.t
 
         viewInfiniteList : Maybe Api.Relay.PageInfo -> List (Html Msg) -> Html Msg
-        viewInfiniteList maybePageInfo =
-            View.Components.infiniteList
-                { onRequestedItems =
-                    maybePageInfo
-                        |> Maybe.andThen
-                            (\pageInfo ->
-                                if pageInfo.hasNextPage then
-                                    -- Just RequestedMoreTransfers
-                                    Nothing
+        viewInfiniteList maybePageInfo children =
+            let
+                viewList isMobile =
+                    View.Components.infiniteList
+                        { onRequestedItems =
+                            maybePageInfo
+                                |> Maybe.andThen
+                                    (\pageInfo ->
+                                        if pageInfo.hasNextPage then
+                                            Just RequestedMoreTransfers
 
-                                else
-                                    Nothing
-                            )
-                , distanceToRequest = 1000
-                , elementToTrack = View.Components.TrackSelf
-                }
-                [ class "w-full mt-2 divide-y divide-gray-500" ]
+                                        else
+                                            Nothing
+                                    )
+                        , distanceToRequest = 1000
+                        , elementToTrack =
+                            if isMobile then
+                                View.Components.TrackWindow
+
+                            else
+                                View.Components.TrackSelector "#transfer-scroll-container"
+                        }
+                        [ class "w-full mt-2 divide-y divide-gray-500"
+                        , classList
+                            [ ( "hidden md:block", not isMobile )
+                            , ( "md:hidden", isMobile )
+                            ]
+                        ]
+                        children
+            in
+            div []
+                [ viewList True
+                , viewList False
+                ]
     in
     div [ class "p-4 bg-white md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
@@ -1377,3 +1410,6 @@ msgToString msg =
 
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
+
+        RequestedMoreTransfers ->
+            [ "RequestedMoreTransfers" ]
