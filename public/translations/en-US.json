@@ -1099,6 +1099,9 @@
   },
   "sponsorship": {
     "sponsor": "Sponsor ",
+    "amount_too_small": "The amount must be at least {{minimum}} USD",
+    "amount_too_big": "The amount must be a maximum of {{maximum}} USD",
+    "unknown_error": "There was an error processing your payment",
     "dashboard_modal": {
       "title": "Sponsor your Community",
       "subtitle": "Now you can sponsor this community.",

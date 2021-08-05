@@ -1101,6 +1101,9 @@
   },
   "sponsorship": {
     "sponsor": "Patrocinar ",
+    "amount_too_small": "El monto debe ser de al menos {{minimum}} USD",
+    "amount_too_big": "El monto debe ser máximo {{maximum}} USD",
+    "unknown_error": "Hubo un error al procesar su pago",
     "dashboard_modal": {
       "title": "Patrocina tu Comunidad",
       "subtitle": "Ahora puedes patrocinar esta comunidad.",

@@ -12,7 +12,8 @@ import Utils
 
 
 type Error
-    = InvalidAmount Float
+    = AmountTooSmall { enteredAmount : Float, minimumAmount : Float }
+    | AmountTooBig { enteredAmount : Float, maximumAmount : Float }
     | UnknownError
 
 
@@ -38,8 +39,25 @@ view attrs options =
             :: on "paypal-approve" (Json.Decode.succeed options.onApprove)
             :: on "paypal-cancel" (Json.Decode.succeed options.onCancel)
             :: on "paypal-error"
-                (if options.value <= 0 then
-                    Json.Decode.succeed (options.onError (InvalidAmount options.value))
+                (if options.value < paypalMinimumAmount then
+                    Json.Decode.succeed
+                        (options.onError
+                            (AmountTooSmall
+                                { enteredAmount = options.value
+                                , minimumAmount = paypalMinimumAmount
+                                }
+                            )
+                        )
+
+                 else if options.value > paypalMaximumAmount then
+                    Json.Decode.succeed
+                        (options.onError
+                            (AmountTooBig
+                                { enteredAmount = options.value
+                                , maximumAmount = paypalMaximumAmount
+                                }
+                            )
+                        )
 
                  else
                     Json.Decode.succeed (options.onError UnknownError)
@@ -48,3 +66,17 @@ view attrs options =
             :: attrs
         )
         []
+
+
+
+-- INTERNAL HELPERS
+
+
+paypalMinimumAmount : Float
+paypalMinimumAmount =
+    1
+
+
+paypalMaximumAmount : Float
+paypalMaximumAmount =
+    9999999.99

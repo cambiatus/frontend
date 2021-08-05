@@ -44,7 +44,6 @@ window.customElements.define('paypal-buttons',
     connectedCallback () {
       const communityName = this.getAttribute('elm-community-name')
 
-      // TODO - Use real client-id
       paypalJs.loadScript({ 'client-id': config.paypal.clientId, currency: 'USD' })
         .then((paypal) => {
           paypal.Buttons({
@@ -66,12 +65,11 @@ window.customElements.define('paypal-buttons',
               })
             },
 
-            // TODO - Send appropriate data to Elm (on all of these listeners)
             onApprove: (data, actions) => {
               this.dispatchEvent(new CustomEvent('paypal-approve', {}))
             },
 
-            onCancel: (data) => {
+            onCancel: () => {
               this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
             },
 

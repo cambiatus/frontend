@@ -4,8 +4,10 @@ import Community
 import Eos
 import Html exposing (Html, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
+import I18Next
 import Route
 import Session.LoggedIn as LoggedIn
+import Utils
 import View.Feedback as Feedback
 import View.Form.Input as Input
 import View.Modal as Modal
@@ -17,13 +19,17 @@ import View.PaypalButtons as PaypalButtons
 
 
 type alias Model =
-    { isVisible : Bool, amount : String }
+    { isVisible : Bool
+    , amount : String
+    , amountProblem : Maybe ( String, I18Next.Replacements )
+    }
 
 
 init : Model
 init =
     { isVisible = False
     , amount = "0"
+    , amountProblem = Nothing
     }
 
 
@@ -61,14 +67,40 @@ update loggedIn msg model =
         PaypalCanceled ->
             ( model
             , Cmd.none
-            , Just ( Feedback.Failure, "Cancelled purchase" )
+            , Nothing
             )
 
-        PaypalErrored _ ->
-            ( { model | isVisible = False }
-            , Cmd.none
-            , Just ( Feedback.Failure, "Error when purchasing" )
-            )
+        PaypalErrored error ->
+            case error of
+                PaypalButtons.AmountTooSmall { minimumAmount } ->
+                    ( { model
+                        | amountProblem =
+                            Just
+                                ( "sponsorship.amount_too_small"
+                                , [ ( "minimum", Utils.formatFloat minimumAmount 2 False ) ]
+                                )
+                      }
+                    , Cmd.none
+                    , Nothing
+                    )
+
+                PaypalButtons.AmountTooBig { maximumAmount } ->
+                    ( { model
+                        | amountProblem =
+                            Just
+                                ( "sponsorship.amount_too_big"
+                                , [ ( "maximum", Utils.formatFloat maximumAmount 2 False ) ]
+                                )
+                      }
+                    , Cmd.none
+                    , Nothing
+                    )
+
+                PaypalButtons.UnknownError ->
+                    ( { model | isVisible = False }
+                    , Cmd.none
+                    , Just ( Feedback.Failure, loggedIn.shared.translators.t "sponsorship.unknown_error" )
+                    )
 
 
 
@@ -101,7 +133,12 @@ view loggedIn community model =
                         , disabled = False
                         , value = model.amount
                         , placeholder = Nothing
-                        , problems = Nothing
+                        , problems =
+                            model.amountProblem
+                                |> Maybe.map
+                                    (\( translation, replacements ) ->
+                                        [ loggedIn.shared.translators.tr translation replacements ]
+                                    )
                         , translators = loggedIn.shared.translators
                         }
                         |> Input.withCurrency dollarSymbol
