@@ -79,8 +79,15 @@ window.customElements.define('paypal-buttons',
           }).render(`#${this.id}`)
         })
         .catch((err) => {
-          // TODO - Log error
-          console.error(err)
+          logEvent({
+            user: null,
+            message: 'Error when loading PayPal buttons',
+            tags: { 'cambiatus.kind': 'paypal' },
+            contexts: [{ name: 'Error details', extras: { error: err } }],
+            transaction: 'paypal-buttons.load',
+            level: 'error'
+          })
+          this.dispatchEvent(new CustomEvent('paypal-load-error', {}))
         })
     }
   }

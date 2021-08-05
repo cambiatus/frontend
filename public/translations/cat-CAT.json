@@ -1104,6 +1104,7 @@
     "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} USD",
     "amount_too_big": "L'import ha de ser màxim d'{{maximum}} USD",
     "unknown_error": "S'ha produït un error en processar el vostre pagament",
+    "load_error": "S'ha produït un problema en connectar amb PayPal, torneu-ho a provar més tard",
     "dashboard_modal": {
       "title": "Patrocina la teva Comunitat",
       "subtitle": "Ara podeu patrocinar aquesta comunitat.",

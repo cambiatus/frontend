@@ -1063,6 +1063,7 @@
     "amount_too_small": "መጠኑ ቢያንስ {{minimum}} ዶላር መሆን አለበት",
     "amount_too_big": "መጠኑ ከፍተኛው {{maximum}} ዶላር መሆን አለበት",
     "unknown_error": "ክፍያዎን ማስኬድ ላይ ስህተት ነበር",
+    "load_error": "ከ PayPal ጋር መገናኘት ላይ ችግር ነበር ፣ እባክዎ ቆይተው እንደገና ይሞክሩ",
     "dashboard_modal": {
       "title": "ማህበረሰብዎን ይደግፉ",
       "subtitle": "አሁን ይህንን ማህበረሰብ ስፖንሰር ማድረግ ይችላሉ።",

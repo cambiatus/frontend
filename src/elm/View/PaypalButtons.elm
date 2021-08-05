@@ -14,6 +14,7 @@ import Utils
 type Error
     = AmountTooSmall { enteredAmount : Float, minimumAmount : Float }
     | AmountTooBig { enteredAmount : Float, maximumAmount : Float }
+    | LoadError
     | UnknownError
 
 
@@ -62,6 +63,7 @@ view attrs options =
                  else
                     Json.Decode.succeed (options.onError UnknownError)
                 )
+            :: on "paypal-load-error" (Json.Decode.succeed (options.onError LoadError))
             :: id options.id
             :: attrs
         )

@@ -96,6 +96,12 @@ update loggedIn msg model =
                     , Nothing
                     )
 
+                PaypalButtons.LoadError ->
+                    ( { model | isVisible = False }
+                    , Cmd.none
+                    , Just ( Feedback.Failure, loggedIn.shared.translators.t "sponsorship.load_error" )
+                    )
+
                 PaypalButtons.UnknownError ->
                     ( { model | isVisible = False }
                     , Cmd.none
