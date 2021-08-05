@@ -4,10 +4,12 @@ import Community
 import Eos
 import Html exposing (Html, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
+import Route
 import Session.LoggedIn as LoggedIn
-import View.Components
+import View.Feedback as Feedback
 import View.Form.Input as Input
 import View.Modal as Modal
+import View.PaypalButtons as PaypalButtons
 
 
 
@@ -34,31 +36,39 @@ type Msg
     | EnteredAmount String
     | PaypalApproved
     | PaypalCanceled
-    | PaypalErrored
+    | PaypalErrored PaypalButtons.Error
 
 
 
 -- UPDATE
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : LoggedIn.Model -> Msg -> Model -> ( Model, Cmd Msg, Maybe ( Feedback.Status, String ) )
+update loggedIn msg model =
     case msg of
         ClosedModal ->
-            ( { model | isVisible = False }, Cmd.none )
+            ( { model | isVisible = False }, Cmd.none, Nothing )
 
         EnteredAmount amount ->
-            ( { model | amount = amount }, Cmd.none )
+            ( { model | amount = amount }, Cmd.none, Nothing )
 
-        -- TODO - Handle events from PayPal
         PaypalApproved ->
-            ( model, Cmd.none )
+            ( model
+            , Route.pushUrl loggedIn.shared.navKey Route.CommunityThankYou
+            , Nothing
+            )
 
         PaypalCanceled ->
-            ( model, Cmd.none )
+            ( model
+            , Cmd.none
+            , Just ( Feedback.Failure, "Cancelled purchase" )
+            )
 
-        PaypalErrored ->
-            ( model, Cmd.none )
+        PaypalErrored _ ->
+            ( { model | isVisible = False }
+            , Cmd.none
+            , Just ( Feedback.Failure, "Error when purchasing" )
+            )
 
 
 
@@ -81,8 +91,7 @@ view loggedIn community model =
                 [ div [ class "flex flex-col items-center w-full" ]
                     [ img [ class "h-12", src community.logo ] []
                     , p [ class "text-2xl pt-4 pb-8 text-center" ]
-                        -- TODO - I18N
-                        [ text "Sponsor "
+                        [ text (loggedIn.shared.translators.t "sponsorship.sponsor")
                         , span [ class "font-bold" ] [ text community.name ]
                         ]
                     , Input.init
@@ -98,7 +107,7 @@ view loggedIn community model =
                         |> Input.withCurrency dollarSymbol
                         |> Input.withContainerAttrs [ class "w-full" ]
                         |> Input.toHtml
-                    , View.Components.paypalButtons [ class "w-full" ]
+                    , PaypalButtons.view [ class "w-full" ]
                         { id = "sponsorship-paypal-buttons"
                         , value =
                             model.amount
@@ -139,5 +148,5 @@ msgToString msg =
         PaypalCanceled ->
             [ "PaypalCanceled" ]
 
-        PaypalErrored ->
+        PaypalErrored _ ->
             [ "PaypalErrored" ]

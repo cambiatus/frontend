@@ -1079,6 +1079,7 @@
     }
   },
   "sponsorship": {
+    "sponsor": "Sponsor ",
     "dashboard_modal": {
       "title": "Sponsor your Community",
       "subtitle": "Now you can sponsor this community.",

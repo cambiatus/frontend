@@ -1080,12 +1080,21 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         GotSponsorModalMsg subMsg ->
             let
-                ( newSubmodel, subCmd ) =
-                    SponsorModal.update subMsg model.sponsorModal
+                ( newSubmodel, subCmd, maybeFeedback ) =
+                    SponsorModal.update loggedIn subMsg model.sponsorModal
+
+                showFeedback =
+                    case maybeFeedback of
+                        Nothing ->
+                            identity
+
+                        Just ( feedbackStatus, feedbackMsg ) ->
+                            UR.addExt (LoggedIn.ShowFeedback feedbackStatus feedbackMsg)
             in
             { model | sponsorModal = newSubmodel }
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotSponsorModalMsg subCmd)
+                |> showFeedback
 
 
 

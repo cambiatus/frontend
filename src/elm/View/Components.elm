@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid
     , dialogBubble
-    , tooltip, pdfViewer, paypalButtons
+    , tooltip, pdfViewer
     , bgNoScroll, PreventScroll(..)
     , loadingLogoWithCustomText
     )
@@ -27,7 +27,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, paypalButtons
+@docs tooltip, pdfViewer
 
 
 # Helpers
@@ -37,12 +37,9 @@ state or configuration, such as loading indicators and containers
 -}
 
 import Html exposing (Html, div, img, node, p, span, text)
-import Html.Attributes exposing (attribute, class, id, src)
-import Html.Events exposing (on)
+import Html.Attributes exposing (attribute, class, src)
 import Icons
-import Json.Decode
 import Session.Shared exposing (Translators)
-import Utils
 
 
 
@@ -128,32 +125,6 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
             :: class "flex flex-col items-center justify-center"
             :: loadingAttributes
             ++ attrs
-        )
-        []
-
-
-{-| Buttons to pay with Paypal
--}
-paypalButtons :
-    List (Html.Attribute msg)
-    ->
-        { id : String
-        , value : Float
-        , communityName : String
-        , onApprove : msg
-        , onCancel : msg
-        , onError : msg
-        }
-    -> Html msg
-paypalButtons attrs options =
-    node "paypal-buttons"
-        (attribute "elm-value" (Utils.formatFloat options.value 2 False)
-            :: attribute "elm-community-name" options.communityName
-            :: on "paypal-approve" (Json.Decode.succeed options.onApprove)
-            :: on "paypal-cancel" (Json.Decode.succeed options.onCancel)
-            :: on "paypal-error" (Json.Decode.succeed options.onError)
-            :: id options.id
-            :: attrs
         )
         []
 

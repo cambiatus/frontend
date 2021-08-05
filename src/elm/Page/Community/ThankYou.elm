@@ -2,6 +2,7 @@ module Page.Community.ThankYou exposing (view)
 
 import Html exposing (Html, a, div, img, p, text)
 import Html.Attributes exposing (class, src)
+import Route
 import Session.LoggedIn as LoggedIn
 
 
@@ -29,9 +30,7 @@ view loggedIn =
                         [ text_ "community.thank_you.importance" ]
                     , a
                         [ class "underline cursor-pointer"
-
-                        -- TODO - Add CommunitySupporters Route
-                        -- , Route.href Route.CommunitySupporters
+                        , Route.href Route.CommunitySupporters
                         ]
                         [ text_ "community.thank_you.all_supporters" ]
                     ]
