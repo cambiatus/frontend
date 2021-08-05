@@ -203,12 +203,21 @@ update msg model loggedIn =
         CompletedLoadProfile (RemoteData.Success Nothing) ->
             { model | profile = RemoteData.Failure ResultNotFound }
                 |> UR.init
-                |> UR.logImpossible msg [ "ProfileNotFound" ]
+                |> UR.logImpossible msg
+                    "Profile was not found"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
 
         CompletedLoadProfile (RemoteData.Failure error) ->
             { model | profile = RemoteData.Failure (ResultWithError error) }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got a graphql error when loading profile page"
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
+                    error
 
         CompletedLoadProfile RemoteData.Loading ->
             UR.init model
@@ -264,10 +273,19 @@ update msg model loggedIn =
                 logError =
                     case err of
                         ResultNotFound ->
-                            UR.logImpossible msg [ "BalanceNotFound" ]
+                            UR.logImpossible msg
+                                "Balance was not found on profile page"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Profile", function = "update" }
+                                []
 
                         ResultWithError httpError ->
-                            UR.logHttpError msg httpError
+                            UR.logHttpError msg
+                                (Just loggedIn.accountName)
+                                "Got an HTTP error when loading balance on profile page"
+                                { moduleName = "Page.Profile", function = "update" }
+                                []
+                                httpError
             in
             { model | balance = RemoteData.Failure err }
                 |> UR.init
@@ -278,7 +296,11 @@ update msg model loggedIn =
                 reportCreatedDateNotFound =
                     case graphqlInfo.createdDate of
                         Nothing ->
-                            UR.logImpossible msg [ "NoCreatedDate" ]
+                            UR.logImpossible msg
+                                "Profile's createdDate is null"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Profile", function = "update" }
+                                []
 
                         Just _ ->
                             identity
@@ -290,12 +312,21 @@ update msg model loggedIn =
         CompletedLoadGraphqlInfo (RemoteData.Success Nothing) ->
             { model | graphqlInfo = RemoteData.Failure ResultNotFound }
                 |> UR.init
-                |> UR.logImpossible msg [ "GraphqlInfoNotFound" ]
+                |> UR.logImpossible msg
+                    "Profile's graphql info not found"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
 
         CompletedLoadGraphqlInfo (RemoteData.Failure error) ->
             { model | graphqlInfo = RemoteData.Failure (ResultWithError error) }
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading profile's graphql info"
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
+                    error
 
         CompletedLoadGraphqlInfo RemoteData.Loading ->
             UR.init model
@@ -327,7 +358,12 @@ update msg model loggedIn =
         DeleteKycAndAddressCompleted (RemoteData.Failure error) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to delete KYC and address"
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
+                    error
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)
 
         DeleteKycAndAddressCompleted RemoteData.Loading ->
@@ -1029,10 +1065,7 @@ networkSelectionSet =
         |> SelectionSet.with (Eos.symbolSelectionSet Cambiatus.Object.Network.communityId)
         |> SelectionSet.with
             (Cambiatus.Object.Network.createdAt
-                |> SelectionSet.map
-                    (Just
-                        >> Utils.posixDateTime
-                    )
+                |> SelectionSet.map Utils.fromDateTime
             )
 
 

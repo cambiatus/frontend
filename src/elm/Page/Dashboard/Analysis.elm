@@ -15,6 +15,7 @@ import Cambiatus.Enum.Direction
 import Cambiatus.Query
 import Claim
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
@@ -27,6 +28,7 @@ import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
+import Log
 import Page
 import Profile
 import Profile.Summary
@@ -712,10 +714,25 @@ update msg model loggedIn =
 
                         _ ->
                             identity
+
+                tabToString tab_ =
+                    case tab_ of
+                        WaitingToVote ->
+                            "waiting to vote"
+
+                        Analyzed ->
+                            "analyzed"
             in
             newModel
                 |> UR.init
                 |> addFetchCommand
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "Selected tab"
+                    , data = Dict.fromList [ ( "tab", tabToString tab |> Encode.string ) ]
+                    , level = Log.Info
+                    }
 
         OnSelectVerifier maybeProfile ->
             let
@@ -736,6 +753,13 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community.symbol)
+                        |> UR.addBreadcrumb
+                            { type_ = Log.QueryBreadcrumb
+                            , category = msg
+                            , message = "Requested to show more items"
+                            , data = Dict.empty
+                            , level = Log.Info
+                            }
 
                 _ ->
                     UR.init model
@@ -901,7 +925,7 @@ selectConfiguration shared isDisabled =
             , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
             }
             |> Select.withMultiSelection True
-            |> Select.withMenuClass "max-h-40 overflow-y-auto"
+            |> Select.withMenuClass "max-h-44 overflow-y-auto"
         )
         shared
         isDisabled
@@ -922,6 +946,7 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers 
                             [ profileSummary
                                 |> Profile.Summary.withRelativeSelector ".modal-content"
                                 |> Profile.Summary.withScrollSelector ".modal-body"
+                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
                                 |> Profile.Summary.view shared loggedIn.accountName p
                                 |> Html.map GotProfileSummaryMsg
                             , div

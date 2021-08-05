@@ -1,6 +1,10 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "dates": {
+    "today": "Avui",
+    "yesterday": "Ahir"
+  },
   "loading": {
     "title": "Espera un moment",
     "subtitle": "Estem processant la vostra sol·licitud"
@@ -375,7 +379,8 @@
     }
   },
   "transfer": {
-    "last_title": "Darreres transferències ",
+    "transfers_latest": "Últimes",
+    "transfers": "transferències",
     "loading_error": "Alguna cosa ha sortit malament mentre recuperàvem les transferències.",
     "no_transfers_yet": "Encara no hi ha transferències.",
     "info": "{{from}} ha transferit {{value}} a {{to}}",
@@ -384,7 +389,19 @@
     "to_self": "No es pot transferir a si mateix",
     "no_profile": "Seleccioneu un usuari",
     "no_amount": "Introduïu un import",
-    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters"
+    "too_much": "No teniu prou {{token}} per transferir tant. Podeu transferir fins a {{max_asset}}",
+    "memo_too_long": "La nota no pot tenir més de {{maxlength}} caràcters",
+    "sent_to": "Enviat a",
+    "received_from": "Rebut de",
+    "direction": {
+      "total": "Direcció de transferència",
+      "both": "Tots dos",
+      "sending": "S'està enviant",
+      "receiving": "Rebent",
+      "other_user": "Usuari que ha enviat o rebut",
+      "user_who_sent": "Usuari que ha enviat",
+      "user_who_received": "Usuari que va rebre"
+    }
   },
   "notifications": {
     "title": "Notificacions",
@@ -893,7 +910,9 @@
     "objective": "Objectiu",
     "action": "Acció",
     "claimer": "Reclamat per",
-    "claimed_on": "Reclamat el {{claim_date}}",
+    "claimed_today": "Reclamat avui",
+    "claimed_yesterday": "Reclamat ahir",
+    "claimed_on": "Reclamat el {{date}}",
     "date": "Data de reclamació",
     "claimer_reward": "Recompensa per l'usuari",
     "your_reward": "La teva recompensa",

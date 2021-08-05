@@ -75,7 +75,11 @@ update session msg model =
             case session of
                 Page.Guest _ ->
                     UR.init model
-                        |> UR.logImpossible msg [ "AsGuest" ]
+                        |> UR.logImpossible msg
+                            "Completed load community, but is still guest"
+                            Nothing
+                            { moduleName = "Page.Join", function = "update" }
+                            []
 
                 Page.LoggedIn loggedIn ->
                     let
@@ -131,7 +135,11 @@ update session msg model =
                                     )
 
                         _ ->
-                            UR.logImpossible msg [ "NoCommunity" ]
+                            UR.logImpossible msg
+                                "Completed sign in, but community is not loaded"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Join", function = "update" }
+                                []
             in
             model
                 |> UR.init
@@ -146,7 +154,12 @@ update session msg model =
         CompletedSignIn loggedIn (RemoteData.Failure error) ->
             model
                 |> UR.init
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when trying to sign in"
+                    { moduleName = "Page.Join", function = "update" }
+                    []
+                    error
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "auth.failed"))
 
         CompletedSignIn _ _ ->

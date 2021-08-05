@@ -10,6 +10,7 @@ module Page exposing
     , init
     , jsAddressToMsg
     , logout
+    , maybeAccountName
     , msgToString
     , subscriptions
     , toShared
@@ -23,6 +24,8 @@ module Page exposing
 
 import Auth
 import Browser.Navigation as Nav
+import Dict
+import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
 import Html exposing (Html, a, div, img, p, text)
@@ -31,12 +34,15 @@ import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Encode exposing (Value)
+import Log
 import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared exposing (Shared)
+import Task
+import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
@@ -62,7 +68,15 @@ init flags navKey url =
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with loggedIn user"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         ( Just ( accountName, _ ), Nothing ) ->
             let
@@ -72,8 +86,16 @@ init flags navKey url =
             Guest model
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
                 |> UR.addCmd signedInCmd
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with guest logging in"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
         ( Nothing, _ ) ->
             let
@@ -82,13 +104,27 @@ init flags navKey url =
             in
             UR.init (Guest model)
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared shared.language)
+                |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd fetchTimezone
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with regular guest user"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
 
-fetchTranslations : Shared -> String -> Cmd Msg
-fetchTranslations _ language =
+fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
+
+
+fetchTimezone : Cmd Msg
+fetchTimezone =
+    Time.here
+        |> Task.attempt GotTimezone
 
 
 
@@ -230,7 +266,9 @@ type External msg
 
 
 type Msg
-    = CompletedLoadTranslation String (Result Http.Error Translations)
+    = Ignored
+    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    | GotTimezone (Result () Time.Zone)
     | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
@@ -239,17 +277,33 @@ type Msg
 update : Msg -> Session -> UpdateResult
 update msg session =
     case ( msg, session ) of
+        ( Ignored, _ ) ->
+            UR.init session
+
         ( CompletedLoadTranslation lang (Ok transl), _ ) ->
             Shared.loadTranslation (Ok ( lang, transl ))
                 |> updateShared session
                 |> UR.init
-                |> UR.addCmd (Ports.storeLanguage lang)
+                |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
 
         ( CompletedLoadTranslation _ (Err err), _ ) ->
             Shared.loadTranslation (Err err)
                 |> updateShared session
                 |> UR.init
-                |> UR.logHttpError msg err
+                |> UR.logHttpError msg
+                    (maybeAccountName session)
+                    "Got an error when loading translations"
+                    { moduleName = "Page", function = "update" }
+                    []
+                    err
+
+        ( GotTimezone (Ok zone), _ ) ->
+            (\shared -> { shared | timezone = zone })
+                |> updateShared session
+                |> UR.init
+
+        ( GotTimezone (Err ()), _ ) ->
+            UR.init session
 
         ( GotGuestMsg subMsg, Guest subModel ) ->
             Guest.update subMsg subModel
@@ -285,15 +339,32 @@ update msg session =
                         |> Maybe.withDefault Route.Dashboard
                         |> Route.replaceUrl shared.navKey
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "User logged in"
+                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                    , level = Log.Info
+                    }
 
         ( SignedIn (RemoteData.Failure error), Guest guest ) ->
             UR.init session
                 |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
-                |> UR.logGraphqlError msg error
+                |> UR.logGraphqlError msg
+                    (maybeAccountName session)
+                    "Got an error when trying to sign in"
+                    { moduleName = "Page", function = "update" }
+                    []
+                    error
 
         ( _, _ ) ->
             UR.init session
-                |> UR.logImpossible msg []
+                |> UR.logIncompatibleMsg msg
+                    (maybeAccountName session)
+                    { moduleName = "Page"
+                    , function = "update"
+                    }
+                    []
 
 
 updateShared : Session -> (Shared -> Shared) -> Session
@@ -338,6 +409,16 @@ toShared session =
             guest.shared
 
 
+maybeAccountName : Session -> Maybe Eos.Account.Name
+maybeAccountName session =
+    case session of
+        LoggedIn loggedIn ->
+            Just loggedIn.accountName
+
+        Guest _ ->
+            Nothing
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -352,8 +433,14 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
         CompletedLoadTranslation _ r ->
             [ "CompletedLoadTranslation", UR.resultToString r ]
+
+        GotTimezone r ->
+            [ "GotTimezone", UR.resultToString r ]
 
         SignedIn r ->
             [ "SignedIn", UR.remoteDataToString r ]

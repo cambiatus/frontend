@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Browser.Dom
 import Community
+import Dict
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
@@ -23,6 +24,7 @@ import Html.Events exposing (onSubmit)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
+import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -169,7 +171,12 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.logo_upload")
                     )
-                |> UR.logHttpError msg e
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading a logo to community"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    e
 
         EnteredName name ->
             { model | nameInput = name }
@@ -196,6 +203,13 @@ update msg model ({ shared } as loggedIn) =
         CompletedCoverPhotoUpload (Ok url) ->
             { model | coverPhoto = RemoteData.Success url }
                 |> UR.init
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Added cover photo"
+                    , data = Dict.fromList [ ( "url", Encode.string url ) ]
+                    , level = Log.DebugLevel
+                    }
 
         CompletedCoverPhotoUpload (Err e) ->
             { model | coverPhoto = RemoteData.Failure e }
@@ -204,7 +218,12 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.cover_upload")
                     )
-                |> UR.logHttpError msg e
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when uploading cover picture for community"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    e
 
         EnteredSubdomain subdomain ->
             { model | subdomainInput = subdomain }
@@ -387,9 +406,27 @@ update msg model ({ shared } as loggedIn) =
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Checked that domain is available"
+                            , data =
+                                Dict.fromList
+                                    [ ( "domain"
+                                      , Route.communityFullDomain shared model.subdomainInput
+                                            |> Encode.string
+                                      )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg
+                            "Model is not valid or community is not loaded when checking if domain is available in Community Info"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Info", function = "update" }
+                            []
 
         GotDomainAvailableResponse (RemoteData.Success False) ->
             { model | isLoading = False }
@@ -398,10 +435,38 @@ update msg model ({ shared } as loggedIn) =
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.url.already_taken")
                     )
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Tried domain that is unavailable"
+                    , data =
+                        Dict.fromList
+                            [ ( "domain"
+                              , Route.communityFullDomain shared model.subdomainInput
+                                    |> Encode.string
+                              )
+                            ]
+                    , level = Log.DebugLevel
+                    }
 
         GotDomainAvailableResponse (RemoteData.Failure err) ->
             UR.init { model | isLoading = False }
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to check if domain is available"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity
+                    , { name = "Domain"
+                      , extras =
+                            Dict.fromList
+                                [ ( "tried"
+                                  , Route.communityFullDomain loggedIn.shared model.subdomainInput
+                                        |> Encode.string
+                                  )
+                                ]
+                      }
+                    ]
+                    err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
         GotDomainAvailableResponse RemoteData.Loading ->
@@ -421,7 +486,12 @@ update msg model ({ shared } as loggedIn) =
         CompletedAddingCoverPhoto _ (RemoteData.Failure err) ->
             { model | coverPhoto = RemoteData.NotAsked, isLoading = False }
                 |> UR.init
-                |> UR.logGraphqlError msg err
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to add a cover photo"
+                    { moduleName = "Page.Community.Settings.Info", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
                         (shared.translators.t "settings.community_info.errors.cover_upload")
@@ -489,11 +559,22 @@ update msg model ({ shared } as loggedIn) =
                                     }
                                     |> LoggedIn.ExternalBroadcast
                                 )
+                            |> UR.addBreadcrumb
+                                { type_ = Log.DebugBreadcrumb
+                                , category = msg
+                                , message = "Saved community information"
+                                , data = Dict.empty
+                                , level = Log.DebugLevel
+                                }
 
                     _ ->
                         model
                             |> UR.init
-                            |> UR.logImpossible msg [ "CommunityNotLoaded" ]
+                            |> UR.logImpossible msg
+                                "Saved community, but it wasn't loaded"
+                                (Just loggedIn.accountName)
+                                { moduleName = "Page.Community.Settings.Info", function = "update" }
+                                []
 
         GotSaveResponse (Err _) ->
             { model | isLoading = False }

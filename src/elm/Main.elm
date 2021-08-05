@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Dict
 import Eos.Account
 import Flags
 import Html exposing (Html, text)
@@ -76,12 +77,24 @@ init flagsValue url navKey =
                 Ok flags ->
                     Page.init flags navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = Ignored
+                            , message = "Started elm app with flags being decoded"
+                            , data = Dict.empty
+                            , level = Log.DebugLevel
+                            }
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
                 Err e ->
                     Page.init Flags.default navKey url
                         |> UR.map identity GotPageMsg (\_ uR -> uR)
-                        |> UR.logDecodeError Ignored e
+                        |> UR.logDecodingError Ignored
+                            Nothing
+                            "Could not decode flags"
+                            { moduleName = "Main", function = "init" }
+                            []
+                            e
                         |> UR.toModelCmd (\_ m -> ( m, Cmd.none )) msgToString
 
         ( model, routeCmd ) =
@@ -218,14 +231,30 @@ update msg model =
 
                 Page.LoggedIn _ ->
                     ( model
-                    , Log.impossible "loggedIn"
+                    , { username = Nothing
+                      , message = "Expected user to be a guest, but they're logged in"
+                      , tags = [ Log.IncompatibleAuthentication Log.ExpectedGuest ]
+                      , location = { moduleName = "Main", function = "update" }
+                      , contexts = []
+                      , transaction = msg
+                      , level = Log.Error
+                      }
+                        |> Log.send msgToString
                     )
 
         withLoggedIn fn =
             case model.session of
                 Page.Guest _ ->
                     ( model
-                    , Log.impossible "notLoggedIn"
+                    , { username = Nothing
+                      , message = "Expected user to be logged in, but they're a guest"
+                      , tags = [ Log.IncompatibleAuthentication Log.ExpectedLoggedIn ]
+                      , location = { moduleName = "Main", function = "update" }
+                      , contexts = []
+                      , transaction = msg
+                      , level = Log.Error
+                      }
+                        |> Log.send msgToString
                     )
 
                 Page.LoggedIn loggedIn ->
@@ -264,21 +293,29 @@ update msg model =
             in
             case jsAddressResult of
                 Ok jsAddress ->
-                    Maybe.map
-                        (\newMsg -> update newMsg model)
-                        (jsAddressToMsg jsAddress val)
-                        |> Maybe.withDefault
-                            ([ "[Main] No handler for: "
-                             , String.join "." jsAddress
-                             ]
-                                |> String.concat
-                                |> Log.impossible
-                                |> Tuple.pair model
+                    case jsAddressToMsg jsAddress val of
+                        Nothing ->
+                            ( model
+                            , Log.fromImpossible msg
+                                "Got invalid address from JavaScript"
+                                (Page.maybeAccountName model.session)
+                                { moduleName = "Main", function = "update" }
+                                []
+                                |> Log.send msgToString
                             )
+
+                        Just jsMsg ->
+                            update jsMsg model
 
                 Err decodeError ->
                     ( model
-                    , Log.decodeError decodeError
+                    , Log.fromDecodeError msg
+                        (Page.maybeAccountName model.session)
+                        "Could not decode JavaScript address"
+                        { moduleName = "Main", function = "update" }
+                        []
+                        decodeError
+                        |> Log.send msgToString
                     )
 
         ( GotPageMsg subMsg, _ ) ->
@@ -464,7 +501,13 @@ update msg model =
 
         ( _, _ ) ->
             ( model
-            , Log.impossible ("Main" :: msgToString msg |> String.join ".")
+            , { type_ = Log.InfoBreadcrumb
+              , category = msg
+              , message = "Msg does not correspond with Model"
+              , data = Dict.empty
+              , level = Log.Info
+              }
+                |> Log.addBreadcrumb msgToString
             )
 
 
@@ -564,6 +607,10 @@ broadcast broadcastMessage status =
                 Join _ ->
                     Join.receiveBroadcast broadcastMessage
                         |> Maybe.map GotJoinMsg
+
+                PaymentHistory _ ->
+                    PaymentHistory.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotPaymentHistoryMsg
 
                 _ ->
                     Nothing
@@ -686,6 +733,13 @@ updateGuestUResult toStatus toMsg model uResult =
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
+                                :: Log.addBreadcrumb msgToString
+                                    { type_ = Log.InfoBreadcrumb
+                                    , category = Ignored
+                                    , message = "Guest logged in"
+                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                                    , level = Log.Info
+                                    }
                                 :: cmds_
                             )
 
@@ -703,7 +757,7 @@ updateGuestUResult toStatus toMsg model uResult =
                 , Cmd.batch
                     (Cmd.map toMsg (Cmd.batch uResult.cmds)
                         :: List.map (Ports.mapAddress toMsg >> Ports.javascriptOutCmd msgToString) uResult.ports
-                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.logs
+                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.events
                         ++ cmds_
                     )
                 )
@@ -758,7 +812,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                 , Cmd.batch
                     (Cmd.map toMsg (Cmd.batch uResult.cmds)
                         :: List.map (Ports.mapAddress toMsg >> Ports.javascriptOutCmd msgToString) uResult.ports
-                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.logs
+                        ++ List.map (Log.map toMsg >> Log.send msgToString) uResult.events
                         ++ cmds_
                     )
                 )
@@ -792,7 +846,6 @@ statusToRoute status session =
 
         PaymentHistory subModel ->
             subModel.recipientProfile.account
-                |> Eos.Account.nameToString
                 |> Route.PaymentHistory
                 |> Just
 
@@ -1097,7 +1150,7 @@ changeRouteTo maybeRoute model =
                 |> withGuest maybeInvitation maybeRedirect
 
         Just (Route.PaymentHistory accountName) ->
-            PaymentHistory.init
+            PaymentHistory.init accountName
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
                 |> withLoggedIn (Route.PaymentHistory accountName)
 

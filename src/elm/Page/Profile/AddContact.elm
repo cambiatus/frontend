@@ -85,7 +85,11 @@ update msg model ({ shared, authToken } as loggedIn) =
 
                                         _ ->
                                             updateResult
-                                                |> UR.logImpossible msg [ "WithContacts", "NoProfile" ]
+                                                |> UR.logImpossible msg
+                                                    "Tried updating contacts, but profile is not loaded"
+                                                    (Just loggedIn.accountName)
+                                                    { moduleName = "Page.Profile.AddContact", function = "update" }
+                                                    []
 
                                 Contact.WithError errorMessage ->
                                     updateResult
