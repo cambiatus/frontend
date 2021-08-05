@@ -7,6 +7,7 @@ module.exports = {
   theme: {
     // Colors used on the 'Design System'
     colors: {
+      transparent: 'transparent',
       black: '#000000',
       white: '#FFFFFF',
       gray: {

@@ -11,6 +11,7 @@ module Page.Profile exposing
 
 import Api
 import Api.Graphql
+import Api.Relay
 import Avatar
 import Cambiatus.Object
 import Cambiatus.Object.Claim
@@ -24,7 +25,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, href, target)
@@ -35,18 +36,22 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Kyc
 import List.Extra as List
+import Log
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
 import Profile.Contact as Contact
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
 import Time
+import Transfer exposing (QueryTransfers)
 import UpdateResult as UR
 import Utils
+import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
 import View.Pin as Pin
@@ -61,6 +66,7 @@ type alias Model =
     , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
     , balance : RemoteData (QueryError Http.Error) Community.Balance
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
+    , transfersStatus : TransfersStatus
     , isDeleteKycModalVisible : Bool
     , downloadingPdfStatus : DownloadStatus
     , isNewPinModalVisible : Bool
@@ -93,6 +99,7 @@ init loggedIn profileName =
       , profile = RemoteData.Loading
       , balance = RemoteData.Loading
       , graphqlInfo = RemoteData.Loading
+      , transfersStatus = Loading []
       , isDeleteKycModalVisible = False
       , downloadingPdfStatus = NotDownloading
       , isNewPinModalVisible = False
@@ -120,6 +127,12 @@ init loggedIn profileName =
 type QueryError error
     = ResultNotFound
     | ResultWithError error
+
+
+type TransfersStatus
+    = Loaded (List ( Transfer.Transfer, Profile.Summary.Model )) (Maybe Api.Relay.PageInfo)
+    | Loading (List ( Transfer.Transfer, Profile.Summary.Model ))
+    | FailedLoading (Graphql.Http.Error (Maybe QueryTransfers))
 
 
 type alias GraphqlInfo =
@@ -165,6 +178,7 @@ type Msg
     | CompletedLoadCommunity Community.Model
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
+    | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ToggleDeleteKycModal
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
@@ -176,6 +190,8 @@ type Msg
     | GotPinMsg Pin.Msg
     | SubmittedNewPin String
     | PinChanged
+    | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
+    | ClickedTransferCard Int
 
 
 type alias UpdateResult =
@@ -251,6 +267,7 @@ update msg model loggedIn =
                         (graphqlInfoQuery model.profileName community.symbol)
                         CompletedLoadGraphqlInfo
                     )
+                |> UR.addCmd (fetchTransfers loggedIn community Nothing)
 
         CompletedLoadBalance (Ok balance) ->
             { model
@@ -332,6 +349,50 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLoadGraphqlInfo RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadUserTransfers (RemoteData.Success maybeTransfers) ->
+            let
+                maybePageInfo : Maybe Api.Relay.PageInfo
+                maybePageInfo =
+                    maybeTransfers
+                        |> Maybe.andThen .transfers
+                        |> Maybe.map .pageInfo
+
+                previousTransfers : List ( Transfer.Transfer, Profile.Summary.Model )
+                previousTransfers =
+                    case model.transfersStatus of
+                        Loaded previousTransfers_ _ ->
+                            previousTransfers_
+
+                        Loading previousTransfers_ ->
+                            previousTransfers_
+
+                        FailedLoading _ ->
+                            []
+            in
+            { model
+                | transfersStatus =
+                    Transfer.getTransfers maybeTransfers
+                        |> List.map (\transfer -> ( transfer, Profile.Summary.init False ))
+                        |> (\transfers -> Loaded (previousTransfers ++ transfers) maybePageInfo)
+            }
+                |> UR.init
+
+        CompletedLoadUserTransfers (RemoteData.Failure err) ->
+            { model | transfersStatus = FailedLoading err }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when trying to load user's transfers on profile"
+                    { moduleName = "Page.Profile", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
+
+        CompletedLoadUserTransfers RemoteData.Loading ->
+            UR.init model
+
+        CompletedLoadUserTransfers RemoteData.NotAsked ->
             UR.init model
 
         ToggleDeleteKycModal ->
@@ -460,6 +521,33 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
 
+        GotTransferCardProfileSummaryMsg transferId subMsg ->
+            let
+                updateTransfers transfers =
+                    transfers
+                        |> List.updateIf
+                            (\( transfer, _ ) -> transfer.id == transferId)
+                            (\( transfer, profileSummary ) ->
+                                ( transfer, Profile.Summary.update subMsg profileSummary )
+                            )
+            in
+            case model.transfersStatus of
+                Loaded transfers pageInfo ->
+                    { model | transfersStatus = Loaded (updateTransfers transfers) pageInfo }
+                        |> UR.init
+
+                Loading transfers ->
+                    { model | transfersStatus = Loading (updateTransfers transfers) }
+                        |> UR.init
+
+                FailedLoading _ ->
+                    model
+                        |> UR.init
+
+        ClickedTransferCard transferId ->
+            UR.init model
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
+
 
 
 -- VIEW
@@ -534,9 +622,10 @@ view loggedIn model =
 view_ : LoggedIn.Model -> Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Html Msg
 view_ loggedIn model profile balance graphqlInfo =
     div [ class "flex flex-grow bg-gray-100 relative" ]
-        [ div [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
+        [ div
+            [ class "z-10 flex flex-col w-full bg-grey-100 md:container md:mx-auto md:flex-row md:relative" ]
             [ viewProfile loggedIn profile
-            , viewDetails loggedIn profile balance graphqlInfo
+            , viewDetails loggedIn profile balance graphqlInfo model
             ]
         , div [ class "z-0 absolute w-full h-full md:w-1/2 md:bg-white" ] []
         , viewNewPinModal loggedIn.shared model
@@ -684,8 +773,8 @@ viewProfile loggedIn profile =
         ]
 
 
-viewDetails : LoggedIn.Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Html Msg
-viewDetails loggedIn profile balance graphqlInfo =
+viewDetails : LoggedIn.Model -> Profile.Model -> Community.Balance -> GraphqlInfo -> Model -> Html Msg
+viewDetails loggedIn profile balance graphqlInfo model =
     let
         text_ =
             text << loggedIn.shared.translators.t
@@ -701,7 +790,8 @@ viewDetails loggedIn profile balance graphqlInfo =
                 _ ->
                     False
     in
-    div [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
+    div
+        [ class "w-full bg-gray-100 md:w-1/2 md:overflow-y-auto md:right-0 md:absolute md:h-full" ]
         [ div [ class "w-full bg-white md:bg-gray-100" ]
             [ div [ class "px-4" ]
                 [ ul [ class "container mx-auto divide-y divide-gray-500 w-full mb-4 bg-white md:bg-gray-100" ]
@@ -755,6 +845,11 @@ viewDetails loggedIn profile balance graphqlInfo =
             text ""
         , if isProfileOwner || isCommunityAdmin then
             viewHistory loggedIn.shared.translators balance graphqlInfo
+
+          else
+            text ""
+        , if isProfileOwner || isCommunityAdmin then
+            viewLatestTransactions loggedIn model
 
           else
             text ""
@@ -906,6 +1001,91 @@ viewSettings loggedIn profile =
                 ]
             ]
         ]
+
+
+viewLatestTransactions : LoggedIn.Model -> Model -> Html Msg
+viewLatestTransactions loggedIn model =
+    let
+        text_ =
+            text << loggedIn.shared.translators.t
+
+        viewInfiniteList : Maybe Api.Relay.PageInfo -> List (Html Msg) -> Html Msg
+        viewInfiniteList maybePageInfo =
+            View.Components.infiniteList
+                { onRequestedItems =
+                    maybePageInfo
+                        |> Maybe.andThen
+                            (\pageInfo ->
+                                if pageInfo.hasNextPage then
+                                    -- Just RequestedMoreTransfers
+                                    Nothing
+
+                                else
+                                    Nothing
+                            )
+                , distanceToRequest = 1000
+                , elementToTrack = View.Components.TrackSelf
+                }
+                [ class "w-full mt-2 divide-y" ]
+    in
+    div [ class "p-4 bg-white md:px-3 md:bg-transparent" ]
+        [ p [ class "text-heading" ]
+            [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
+            , text " "
+            , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+            ]
+        , case model.transfersStatus of
+            FailedLoading _ ->
+                Page.viewCardEmpty
+                    [ div [ class "text-gray-900 text-sm" ]
+                        [ text_ "transfer.loading_error" ]
+                    ]
+
+            Loading transfers ->
+                viewInfiniteList Nothing
+                    (viewTransactionList loggedIn transfers
+                        ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
+                    )
+
+            Loaded transfers maybePageInfo ->
+                viewTransactionList loggedIn transfers
+                    |> viewInfiniteList maybePageInfo
+        ]
+
+
+viewTransactionList : LoggedIn.Model -> List ( Transfer.Transfer, Profile.Summary.Model ) -> List (Html Msg)
+viewTransactionList loggedIn transfers =
+    transfers
+        |> List.groupWhile
+            (\( t1, _ ) ( t2, _ ) ->
+                Utils.areSameDay loggedIn.shared.timezone
+                    (Utils.fromDateTime t1.blockTime)
+                    (Utils.fromDateTime t2.blockTime)
+            )
+        |> List.map
+            (\( ( t1, _ ) as first, rest ) ->
+                div []
+                    [ div [ class "mt-4 mx-4" ]
+                        [ View.Components.dateViewer
+                            [ class "uppercase text-caption text-black tracking-wider" ]
+                            identity
+                            loggedIn.shared
+                            (Utils.fromDateTime t1.blockTime)
+                        ]
+                    , first
+                        :: rest
+                        |> List.map
+                            (\( transfer, profileSummary ) ->
+                                Transfer.view loggedIn
+                                    transfer
+                                    profileSummary
+                                    (GotTransferCardProfileSummaryMsg transfer.id)
+                                    (ClickedTransferCard transfer.id)
+                                    [ class "md:hover:bg-gray-200" ]
+                            )
+                        |> div [ class "divide-y" ]
+                    ]
+            )
 
 
 viewHistory : Translators -> Community.Balance -> GraphqlInfo -> Html msg
@@ -1069,6 +1249,28 @@ networkSelectionSet =
             )
 
 
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Cmd Msg
+fetchTransfers loggedIn community maybeCursor =
+    Api.Graphql.query loggedIn.shared
+        (Just loggedIn.authToken)
+        (Transfer.transfersUserQuery
+            loggedIn.accountName
+            (\args ->
+                { args
+                    | first = Present 10
+                    , after = OptionalArgument.fromMaybe maybeCursor
+                    , filter =
+                        Present
+                            { communityId = Present (Eos.symbolToString community.symbol)
+                            , date = Absent
+                            , direction = Absent
+                            }
+                }
+            )
+        )
+        CompletedLoadUserTransfers
+
+
 
 -- UTILS
 
@@ -1122,6 +1324,9 @@ msgToString msg =
         CompletedLoadGraphqlInfo r ->
             [ "CompletedLoadGraphqlInfo", UR.remoteDataToString r ]
 
+        CompletedLoadUserTransfers r ->
+            [ "CompletedLoadUserTransfers", UR.remoteDataToString r ]
+
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
 
@@ -1154,3 +1359,9 @@ msgToString msg =
 
         PinChanged ->
             [ "PinChanged" ]
+
+        GotTransferCardProfileSummaryMsg _ subMsg ->
+            "GotTransferCardProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
+
+        ClickedTransferCard _ ->
+            [ "ClickedTransferCard" ]

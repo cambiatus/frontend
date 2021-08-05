@@ -242,8 +242,9 @@ view :
     -> Profile.Summary.Model
     -> (Profile.Summary.Msg -> msg)
     -> msg
+    -> List (Html.Attribute msg)
     -> Html msg
-view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
+view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
     let
         { t } =
             loggedIn.shared.translators
@@ -256,9 +257,10 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
                 ( transfer.from, False )
     in
     div
-        [ class "flex hover:bg-gray-100 p-4 cursor-pointer"
-        , onClick onClickMsg
-        ]
+        (class "flex hover:bg-gray-100 p-4 cursor-pointer"
+            :: onClick onClickMsg
+            :: attrs
+        )
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-14 h-14"

@@ -654,6 +654,7 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                                         profileSummary
                                         (GotTransferCardProfileSummaryMsg transfer.id)
                                         (ClickedTransferCard transfer.id)
+                                        []
                                 )
                                 (first :: rest)
                             )
@@ -1175,27 +1176,30 @@ update msg model ({ shared, accountName } as loggedIn) =
                     model |> UR.init
 
         GotTransferCardProfileSummaryMsg transferId subMsg ->
+            let
+                updateTransfers transfers =
+                    transfers
+                        |> List.updateIf
+                            (\( transfer, _ ) -> transfer.id == transferId)
+                            (\( transfer, profileSummary ) ->
+                                ( transfer, Profile.Summary.update subMsg profileSummary )
+                            )
+            in
             case model.transfers of
                 LoadedGraphql transfers pageInfo ->
-                    let
-                        newTransfers =
-                            transfers
-                                |> List.updateIf
-                                    (\( transfer, _ ) -> transfer.id == transferId)
-                                    (\( transfer, profileSummary ) ->
-                                        ( transfer
-                                        , Profile.Summary.update subMsg profileSummary
-                                        )
-                                    )
-                    in
+                    { model | transfers = LoadedGraphql (updateTransfers transfers) pageInfo }
+                        |> UR.init
+
+                LoadingGraphql maybeTransfers ->
                     { model
                         | transfers =
-                            LoadedGraphql newTransfers
-                                pageInfo
+                            maybeTransfers
+                                |> Maybe.map updateTransfers
+                                |> LoadingGraphql
                     }
                         |> UR.init
 
-                _ ->
+                FailedGraphql _ ->
                     model
                         |> UR.init
 
