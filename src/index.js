@@ -15,6 +15,22 @@ import pdfFonts from './vfs_fonts'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 import * as paypalJs from '@paypal/paypal-js'
 
+// =========================================
+// Initial constants
+// =========================================
+
+let eos = null
+const USER_KEY = 'bespiral.user'
+const LANGUAGE_KEY = 'bespiral.language'
+const PUSH_PREF = 'bespiral.push.pref'
+const AUTH_TOKEN = 'bespiral.auth_token'
+const RECENT_SEARCHES = 'bespiral.recent_search'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const env = process.env.NODE_ENV || 'development'
+const graphqlSecret = process.env.GRAPHQL_SECRET || ''
+const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
+const config = configuration[env]
+
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
@@ -30,7 +46,7 @@ window.customElements.define('paypal-buttons',
       const communityName = this.getAttribute('elm-community-name')
 
       // TODO - Use real client-id
-      paypalJs.loadScript({ 'client-id': 'sb' })
+      paypalJs.loadScript({ 'client-id': config.paypal.clientId, currency: 'USD' })
         .then((paypal) => {
           paypal.Buttons({
             style: {
@@ -60,9 +76,8 @@ window.customElements.define('paypal-buttons',
               this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
             },
 
-            onError: (err) => {
+            onError: () => {
               this.dispatchEvent(new CustomEvent('paypal-error', {}))
-              console.error(err)
             }
           }).render(`#${this.id}`)
         })
@@ -289,18 +304,6 @@ window.customElements.define('bg-no-scroll',
 // =========================================
 // App startup
 // =========================================
-
-let eos = null
-const USER_KEY = 'bespiral.user'
-const LANGUAGE_KEY = 'bespiral.language'
-const PUSH_PREF = 'bespiral.push.pref'
-const AUTH_TOKEN = 'bespiral.auth_token'
-const RECENT_SEARCHES = 'bespiral.recent_search'
-const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
-const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
-const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
-const config = configuration[env]
 
 const hostnameInfo = () => {
   const environments = ['staging', 'demo']
