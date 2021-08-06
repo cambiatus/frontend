@@ -57,7 +57,7 @@ import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
-import View.SponsorModal as SponsorModal
+import View.Sponsorship as Sponsorship
 
 
 
@@ -104,7 +104,7 @@ type alias Model =
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
     , isModalRequestingSponsorVisible : Bool
-    , sponsorModal : SponsorModal.Model
+    , sponsorModal : Sponsorship.SponsorModal
     }
 
 
@@ -133,7 +133,7 @@ initModel shared =
 
     -- TODO - Check if user has seen this modal before
     , isModalRequestingSponsorVisible = True
-    , sponsorModal = SponsorModal.init
+    , sponsorModal = Sponsorship.initModal
     }
 
 
@@ -243,7 +243,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
-                        , SponsorModal.view loggedIn community model.sponsorModal
+                        , Sponsorship.viewModal loggedIn community model.sponsorModal
                             |> Html.map GotSponsorModalMsg
                         , viewModalRequestingSponsor shared community model
                         , viewTransferFilters loggedIn community.members model
@@ -980,7 +980,7 @@ type Msg
     | ToggleAnalysisSorting
     | ClosedModalRequestingSponsor
     | ClickedSponsorCommunity
-    | GotSponsorModalMsg SponsorModal.Msg
+    | GotSponsorModalMsg Sponsorship.ModalMsg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1574,7 +1574,7 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         ClickedSponsorCommunity ->
             { model
-                | sponsorModal = SponsorModal.show model.sponsorModal
+                | sponsorModal = Sponsorship.showModal model.sponsorModal
                 , isModalRequestingSponsorVisible = False
             }
                 |> UR.init
@@ -1582,7 +1582,7 @@ update msg model ({ shared, accountName } as loggedIn) =
         GotSponsorModalMsg subMsg ->
             let
                 ( newSubmodel, subCmd, maybeFeedback ) =
-                    SponsorModal.update loggedIn subMsg model.sponsorModal
+                    Sponsorship.updateModal loggedIn subMsg model.sponsorModal
 
                 showFeedback =
                     case maybeFeedback of
@@ -1922,4 +1922,4 @@ msgToString msg =
             [ "ClickedSponsorCommunity" ]
 
         GotSponsorModalMsg subMsg ->
-            "GotSponsorModalMsg" :: SponsorModal.msgToString subMsg
+            "GotSponsorModalMsg" :: Sponsorship.modalMsgToString subMsg

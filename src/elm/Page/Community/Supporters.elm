@@ -5,6 +5,7 @@ import Html.Attributes exposing (class)
 import Page
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
+import View.Sponsorship as Sponsorship
 
 
 
@@ -77,28 +78,15 @@ view_ =
                 |> List.map
                     (\day ->
                         div []
+                            -- TODO - Fix text
                             [ span [ class "text-caption text-black uppercase" ] [ text "today" ]
-                            , div [ class "divide-y" ] (List.map (\_ -> viewSupporter) day)
+                            , div [ class "divide-y" ]
+                                (List.map (\_ -> Sponsorship.viewSupporter) day)
                             ]
                     )
             )
         ]
     ]
-
-
-viewSupporter : Html Msg
-viewSupporter =
-    div [ class "flex py-3" ]
-        [ div [ class "bg-gray-500 rounded-full w-14 h-14" ] []
-        , div [ class "ml-4" ]
-            [ p [ class "font-bold text-sm md:text-base" ] [ text "Cecília Braga" ]
-            , p [ class "text-green" ]
-                [ span [ class "text-heading font-bold mr-1" ] [ text "10" ]
-                , span [ class "uppercase text-caption md:text-xs" ] [ text "dollars" ]
-                ]
-            ]
-        , span [ class "ml-auto uppercase text-caption text-gray-900" ] [ text "22 feb 2021" ]
-        ]
 
 
 

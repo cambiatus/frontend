@@ -1,4 +1,4 @@
-module View.SponsorModal exposing (Model, Msg, init, msgToString, show, update, view)
+module View.Sponsorship exposing (ModalMsg, SponsorModal, initModal, modalMsgToString, showModal, updateModal, viewModal, viewSupporter)
 
 import Community
 import Eos
@@ -15,18 +15,18 @@ import View.PaypalButtons as PaypalButtons
 
 
 
--- MODEL
+-- MODAL
 
 
-type alias Model =
+type alias SponsorModal =
     { isVisible : Bool
     , amount : String
     , amountProblem : Maybe ( String, I18Next.Replacements )
     }
 
 
-init : Model
-init =
+initModal : SponsorModal
+initModal =
     { isVisible = False
     , amount = "0"
     , amountProblem = Nothing
@@ -37,7 +37,7 @@ init =
 -- TYPES
 
 
-type Msg
+type ModalMsg
     = ClosedModal
     | EnteredAmount String
     | PaypalApproved
@@ -49,8 +49,8 @@ type Msg
 -- UPDATE
 
 
-update : LoggedIn.Model -> Msg -> Model -> ( Model, Cmd Msg, Maybe ( Feedback.Status, String ) )
-update loggedIn msg model =
+updateModal : LoggedIn.Model -> ModalMsg -> SponsorModal -> ( SponsorModal, Cmd ModalMsg, Maybe ( Feedback.Status, String ) )
+updateModal loggedIn msg model =
     case msg of
         ClosedModal ->
             ( { model | isVisible = False }, Cmd.none, Nothing )
@@ -113,8 +113,8 @@ update loggedIn msg model =
 -- VIEW
 
 
-view : LoggedIn.Model -> Community.Model -> Model -> Html Msg
-view loggedIn community model =
+viewModal : LoggedIn.Model -> Community.Model -> SponsorModal -> Html ModalMsg
+viewModal loggedIn community model =
     let
         dollarSymbol =
             Eos.symbolFromString "2,USD"
@@ -171,13 +171,13 @@ view loggedIn community model =
 -- UTILS
 
 
-show : Model -> Model
-show model =
+showModal : SponsorModal -> SponsorModal
+showModal model =
     { model | isVisible = True }
 
 
-msgToString : Msg -> List String
-msgToString msg =
+modalMsgToString : ModalMsg -> List String
+modalMsgToString msg =
     case msg of
         ClosedModal ->
             [ "ClosedModal" ]
@@ -193,3 +193,23 @@ msgToString msg =
 
         PaypalErrored _ ->
             [ "PaypalErrored" ]
+
+
+
+-- OTHER COMPONENTS
+-- TODO - Use supporter
+
+
+viewSupporter : Html msg
+viewSupporter =
+    div [ class "flex py-4" ]
+        [ div [ class "bg-gray-500 rounded-full w-14 h-14" ] []
+        , div [ class "ml-4" ]
+            [ p [ class "font-bold text-sm md:text-base" ] [ text "Cecília Braga" ]
+            , p [ class "text-green" ]
+                [ span [ class "text-heading font-bold mr-1" ] [ text "10" ]
+                , span [ class "uppercase text-caption md:text-xs" ] [ text "dollars" ]
+                ]
+            ]
+        , span [ class "ml-auto uppercase text-caption text-gray-900" ] [ text "22 feb 2021" ]
+        ]

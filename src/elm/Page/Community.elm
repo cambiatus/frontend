@@ -13,7 +13,7 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
-import Html exposing (Html, a, button, div, img, p, span, text)
+import Html exposing (Html, a, button, div, h3, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
 import Http
@@ -21,6 +21,7 @@ import Icons
 import Log
 import Page
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Task
@@ -29,6 +30,7 @@ import Token
 import UpdateResult as UR
 import Utils
 import View.Components
+import View.Sponsorship as Sponsorship
 
 
 
@@ -46,6 +48,7 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { openObjectiveId = Nothing
     , tokenInfo = RemoteData.Loading
+    , sponsorModal = Sponsorship.initModal
     }
 
 
@@ -56,6 +59,7 @@ initModel _ =
 type alias Model =
     { openObjectiveId : Maybe Int
     , tokenInfo : RemoteData Http.Error Token.Model
+    , sponsorModal : Sponsorship.SponsorModal
     }
 
 
@@ -122,6 +126,10 @@ view loggedIn model =
                               else
                                 text ""
                             , viewCommunityStats loggedIn.shared.translators community model
+                            , viewAllSupporters
+                            , viewSponsorCTA
+                            , Sponsorship.viewModal loggedIn community model.sponsorModal
+                                |> Html.map GotSponsorModalMsg
                             ]
                         ]
     in
@@ -144,7 +152,7 @@ viewCommunityStats { t, tr } community model =
             RemoteData.isSuccess model.tokenInfo
     in
     div
-        [ class "container mx-auto px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
+        [ class "container mx-auto px-4 mb-4 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3"
         , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
         [ case model.tokenInfo of
@@ -213,6 +221,60 @@ viewCommunityStats { t, tr } community model =
                     [ text <| t "community.index.transfers" ]
                 ]
             , Icons.arrowsLeft "w-full"
+            ]
+        ]
+
+
+viewAllSupporters : Html Msg
+viewAllSupporters =
+    let
+        -- TODO - Use real supporters
+        supporters =
+            List.repeat 3 ()
+    in
+    -- TODO - I18N
+    div
+        [ class "container mx-auto px-4 mb-4" ]
+        [ div [ class "bg-white rounded p-4 space-y-4" ]
+            [ h3 [ class "text-heading text-gray-900 font-light" ]
+                [ text "Our "
+                , span [ class "text-indigo-500 font-medium" ] [ text "Supporters" ]
+                ]
+            , p [ class "text-black text-sm" ]
+                [ text "See the latest members who supported us" ]
+            , div [ class "divide-y divide-gray-500" ]
+                (supporters
+                    |> List.map
+                        (\_ -> Sponsorship.viewSupporter)
+                )
+            , a
+                [ class "button button-primary w-full"
+                , Route.href Route.CommunitySupporters
+                ]
+                [ text "See all supporters" ]
+            ]
+        ]
+
+
+viewSponsorCTA : Html Msg
+viewSponsorCTA =
+    -- TODO - I18N
+    -- TODO - Use community name
+    div [ class "container mx-auto px-4 mb-4" ]
+        [ div [ class "bg-white rounded p-4" ]
+            [ h3 [ class "text-heading text-gray-900 font-light" ]
+                [ text "Sponsor "
+                , span [ class "text-indigo-500 font-medium" ] [ text "Verdes" ]
+                ]
+            , p [ class "text-sm text-black mt-4" ]
+                [ text "Help us achieve our goals by sponsoring us. Click on the button below to be redirected to PayPal. "
+                , a [ class "text-orange-300 underline" ] [ text "Why sponsor Verdes?" ]
+                ]
+            , button
+                [ class "button button-primary w-full mt-6"
+                , onClick OpenedSponsorModal
+                ]
+                [ text "Sponsor Verdes" ]
             ]
         ]
 
@@ -324,6 +386,9 @@ type Msg
     | RequestedReloadCommunity
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
+      -- Sponsorship
+    | OpenedSponsorModal
+    | GotSponsorModalMsg Sponsorship.ModalMsg
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -357,6 +422,28 @@ update msg model loggedIn =
                     { moduleName = "Page.Community", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
+
+        OpenedSponsorModal ->
+            { model | sponsorModal = Sponsorship.showModal model.sponsorModal }
+                |> UR.init
+
+        GotSponsorModalMsg subMsg ->
+            let
+                ( newSubmodel, subCmd, maybeFeedback ) =
+                    Sponsorship.updateModal loggedIn subMsg model.sponsorModal
+
+                showFeedback =
+                    case maybeFeedback of
+                        Nothing ->
+                            identity
+
+                        Just ( feedbackStatus, feedbackMsg ) ->
+                            UR.addExt (LoggedIn.ShowFeedback feedbackStatus feedbackMsg)
+            in
+            { model | sponsorModal = newSubmodel }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotSponsorModalMsg subCmd)
+                |> showFeedback
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -399,6 +486,12 @@ msgToString msg =
 
         GotTokenInfo r ->
             [ "GotTokenInfo", UR.resultToString r ]
+
+        OpenedSponsorModal ->
+            [ "OpenedSponsorModal" ]
+
+        GotSponsorModalMsg subMsg ->
+            "GotSponsorModalMsg" :: Sponsorship.modalMsgToString subMsg
 
         GotActionMsg _ ->
             [ "GotActionMsg" ]
