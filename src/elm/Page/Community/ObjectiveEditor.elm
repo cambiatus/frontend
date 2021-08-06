@@ -13,7 +13,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, style, type_, value)
+import Html.Attributes exposing (class, disabled, placeholder, required, rows, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
@@ -251,7 +251,6 @@ viewForm { shared } formStatus =
                     , onInput EnteredDescription
                     , value objForm.description
                     , required True
-                    , maxlength 254
                     , placeholder (t "community.objectives.editor.description_placeholder")
                     ]
                     []

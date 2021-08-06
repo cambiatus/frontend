@@ -271,20 +271,28 @@ viewObjective loggedIn model metadata index objective =
     else
         div [ class "my-2" ]
             [ div
-                [ class "px-3 py-4 bg-indigo-500 flex flex-col sm:flex-row sm:items-center sm:h-10 cursor-pointer"
+                [ class "px-3 bg-indigo-500 flex flex-col sm:flex-row sm:items-center cursor-pointer"
+                , classList [ ( "py-4 sm:h-10", not isOpen ) ]
                 , if isOpen then
                     onClick ClickedCloseObjective
 
                   else
                     onClick (ClickedOpenObjective index)
                 ]
-                [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
+                [ div
+                    [ class "sm:flex-grow-7 sm:w-5/12"
+                    , classList [ ( "my-4 sm:my-2", isOpen ) ]
+                    ]
                     [ div
-                        [ class "truncate overflow-hidden whitespace-nowrap text-white font-medium text-sm overflow-hidden sm:flex-grow-8 sm:leading-normal sm:text-lg"
+                        [ class "text-white font-medium text-sm sm:flex-grow-8 sm:leading-6 sm:text-lg"
+                        , classList [ ( "truncate", not isOpen ) ]
                         ]
                         [ text objective.description ]
                     ]
-                , div [ class ("flex flex-row justify-end mt-5 sm:mt-0" ++ arrowStyle) ]
+                , div
+                    [ class ("flex flex-row justify-end" ++ arrowStyle)
+                    , classList [ ( "mt-1 sm:mt-0 pb-4 sm:pb-0", isOpen ), ( "mt-5 sm:mt-0", not isOpen ) ]
+                    ]
                     [ button
                         [ class ""
                         , if isOpen then

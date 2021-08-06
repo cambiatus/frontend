@@ -331,8 +331,7 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
                     , problems = listErrors shared.translations form.description |> Just
                     , translators = shared.translators
                     }
-                    |> Input.withAttrs [ maxlength 255, required True, rows 5 ]
-                    |> Input.withCounter 255
+                    |> Input.withAttrs [ required True, rows 5 ]
                     |> Input.withInputType Input.TextArea
                     |> Input.toHtml
                 , Select.init
@@ -674,16 +673,12 @@ update msg model loggedIn =
                 |> UR.init
 
         EnteredDescription description ->
-            if String.length description > 255 then
-                UR.init model
-
-            else
-                model
-                    |> updateForm
-                        (\form ->
-                            { form | description = updateInput description form.description }
-                        )
-                    |> UR.init
+            model
+                |> updateForm
+                    (\form ->
+                        { form | description = updateInput description form.description }
+                    )
+                |> UR.init
 
         EnteredTrackStock trackStock ->
             model

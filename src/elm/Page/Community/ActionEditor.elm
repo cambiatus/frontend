@@ -26,7 +26,6 @@ import DataValidator
         , listErrors
         , longerThan
         , newValidator
-        , shorterThan
         , updateInput
         , validate
         )
@@ -59,7 +58,6 @@ import View.Feedback as Feedback
 import View.Form
 import View.Form.Checkbox as Checkbox
 import View.Form.Input as Input
-import View.Form.InputCounter
 import View.Form.Radio as Radio
 import View.Form.Toggle as Toggle
 
@@ -271,7 +269,6 @@ defaultDescription : Validator String
 defaultDescription =
     []
         |> longerThan 10
-        |> shorterThan 256
         |> newValidator "" (\v -> Just v) True
 
 
@@ -279,7 +276,6 @@ defaultInstructions : Validator String
 defaultInstructions =
     []
         |> longerThan 10
-        |> shorterThan 256
         |> newValidator "" (\v -> Just v) True
 
 
@@ -667,35 +663,19 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd cmd
 
         EnteredDescription val ->
-            let
-                limitedDescription =
-                    if String.length val < 255 then
-                        val
-
-                    else
-                        String.slice 0 255 val
-            in
             { model
                 | form =
                     { oldForm
-                        | description = updateInput limitedDescription model.form.description
+                        | description = updateInput val model.form.description
                     }
             }
                 |> UR.init
 
         EnteredInstructions val ->
-            let
-                limitedInstructions =
-                    if String.length val < 255 then
-                        val
-
-                    else
-                        String.slice 0 255 val
-            in
             { model
                 | form =
                     { oldForm
-                        | instructions = updateInput limitedInstructions model.form.instructions
+                        | instructions = updateInput val model.form.instructions
                     }
             }
                 |> UR.init
@@ -1445,7 +1425,6 @@ viewDescription { shared } form =
             , value (getInput form.description)
             ]
             []
-        , View.Form.InputCounter.view shared.translators.tr 256 (getInput form.description)
         , viewFieldErrors (listErrors shared.translations form.description)
         ]
 
@@ -1811,7 +1790,6 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                     , value (getInput model.form.instructions)
                                     ]
                                     []
-                                , View.Form.InputCounter.view shared.translators.tr 256 (getInput model.form.instructions)
                                 , viewFieldErrors (listErrors shared.translations model.form.instructions)
                                 ]
                             ]

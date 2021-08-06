@@ -447,7 +447,7 @@ viewClaimCard loggedIn profileSummaries claim =
                         text ""
                 ]
             , div [ class "mb-6" ]
-                [ p [ class "text-body overflow-ellipsis overflow-hidden mb-2" ]
+                [ p [ class "text-body truncate mb-2" ]
                     [ text claim.action.description ]
                 , div [ class "flex w-full" ]
                     [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
