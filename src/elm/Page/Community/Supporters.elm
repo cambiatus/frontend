@@ -5,6 +5,7 @@ import Html.Attributes exposing (class)
 import Page
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
+import View.Components
 import View.Sponsorship as Sponsorship
 
 
@@ -26,7 +27,7 @@ init _ =
 
 
 type Msg
-    = Ignored
+    = RequestedMoreSupporters
 
 
 type alias UpdateResult =
@@ -39,6 +40,7 @@ type alias UpdateResult =
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update _ model _ =
+    -- TODO - update model
     UR.init model
 
 
@@ -54,39 +56,45 @@ view loggedIn _ =
 
         content =
             div [ class "flex flex-col flex-grow" ]
-                (Page.viewHeader loggedIn title
-                    :: view_
-                )
+                [ Page.viewHeader loggedIn title
+                , view_
+                ]
     in
     { title = title
     , content = content
     }
 
 
-view_ : List (Html Msg)
+view_ : Html Msg
 view_ =
-    [ div [ class "container mx-auto px-4" ]
-        [ p [ class "text-heading py-4" ]
-            [ span [ class "text-gray-900" ] [ text "Our " ]
-            , span [ class "text-indigo-500 font-bold" ] [ text "Supporters" ]
+    View.Components.infiniteList
+        { onRequestedItems = Just RequestedMoreSupporters
+        , distanceToRequest = 1000
+        , elementToTrack = View.Components.TrackWindow
+        }
+        []
+        [ div [ class "container mx-auto px-4" ]
+            [ p [ class "text-heading py-4" ]
+                [ span [ class "text-gray-900" ] [ text "Our " ]
+                , span [ class "text-indigo-500 font-bold" ] [ text "Supporters" ]
+                ]
+            ]
+        , div [ class "w-full bg-white flex-grow pt-5" ]
+            [ div [ class "container mx-auto px-4 space-y-4" ]
+                (List.repeat 3 ()
+                    |> List.repeat 2
+                    |> List.map
+                        (\day ->
+                            div []
+                                -- TODO - Fix text
+                                [ span [ class "text-caption text-black uppercase" ] [ text "today" ]
+                                , div [ class "divide-y" ]
+                                    (List.map (\_ -> Sponsorship.viewSupporter) day)
+                                ]
+                        )
+                )
             ]
         ]
-    , div [ class "w-full bg-white flex-grow pt-5" ]
-        [ div [ class "container mx-auto px-4 space-y-4" ]
-            (List.repeat 3 ()
-                |> List.repeat 2
-                |> List.map
-                    (\day ->
-                        div []
-                            -- TODO - Fix text
-                            [ span [ class "text-caption text-black uppercase" ] [ text "today" ]
-                            , div [ class "divide-y" ]
-                                (List.map (\_ -> Sponsorship.viewSupporter) day)
-                            ]
-                    )
-            )
-        ]
-    ]
 
 
 
@@ -95,5 +103,5 @@ view_ =
 
 msgToString : Msg -> List String
 msgToString _ =
-    -- TODO
-    Debug.todo "Implement msgToString"
+    -- TODO - Implement new Msgs
+    [ "RequestedMoreSupporters" ]
