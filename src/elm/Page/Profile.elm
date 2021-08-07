@@ -1065,7 +1065,7 @@ viewLatestTransactions loggedIn model =
                 , viewList False
                 ]
     in
-    div [ class "p-4 bg-white max-w-screen md:max-w-auto md:px-3 md:bg-transparent" ]
+    div [ class "p-4 bg-white max-w-screen md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
             [ p [ class "text-heading" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]

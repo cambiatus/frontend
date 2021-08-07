@@ -302,7 +302,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     text ""
 
                 Just memo ->
-                    p [ class "text-xs text-gray-900 break-words" ]
+                    p [ class "text-xs text-gray-900 break-all" ]
                         [ text <| t memo ]
             ]
         ]
