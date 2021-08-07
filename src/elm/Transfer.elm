@@ -266,7 +266,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
             |> Profile.Summary.withImageSize "w-14 h-14"
             |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
             |> Html.map profileSummaryToMsg
-        , div [ class "ml-4 w-full truncate" ]
+        , div [ class "ml-4 w-full overflow-ellipsis overflow-hidden" ]
             [ p
                 [ class "font-sm flex flex-wrap"
                 , classList
@@ -302,7 +302,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     text ""
 
                 Just memo ->
-                    span [ class "text-xs text-gray-900" ]
+                    p [ class "text-xs text-gray-900 break-words" ]
                         [ text <| t memo ]
             ]
         ]

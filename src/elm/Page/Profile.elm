@@ -806,7 +806,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
                     False
     in
     div
-        [ class "bg-gray-100 w-full flex flex-col" ]
+        [ class "bg-gray-100 w-full md:flex md:flex-col" ]
         [ div
             [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
             , id "transfer-scroll-container"
@@ -1065,7 +1065,7 @@ viewLatestTransactions loggedIn model =
                 , viewList False
                 ]
     in
-    div [ class "p-4 bg-white md:px-3 md:bg-transparent" ]
+    div [ class "p-4 bg-white w-screen md:w-auto md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
             [ p [ class "text-heading" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
