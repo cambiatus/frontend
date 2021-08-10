@@ -60,6 +60,7 @@ import View.Form.Checkbox as Checkbox
 import View.Form.Input as Input
 import View.Form.Radio as Radio
 import View.Form.Toggle as Toggle
+import Html exposing (node)
 
 
 
@@ -1364,6 +1365,7 @@ viewForm ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
             [ viewLoading model
+            , node "markdown-editor" [] []
             , viewDescription loggedIn model.form
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model

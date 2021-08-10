@@ -12,6 +12,7 @@ import * as AbsintheSocket from '@absinthe/socket'
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import Quill from 'quill'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -21,6 +22,53 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // Custom elements
 // =========================================
 /* global HTMLElement, CustomEvent */
+
+window.customElements.define('markdown-editor',
+  class MarkdownEditor extends HTMLElement {
+    constructor () {
+      super()
+
+      // this._shadow = this.attachShadow({ mode: 'open' })
+      this._quillContainer = document.createElement('div')
+      this._parentContainer = document.createElement('div')
+      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
+    }
+
+    connectedCallback () {
+      this.appendChild(this._parentContainer)
+      this._parentContainer.appendChild(this._quillContainer)
+      /* eslint-disable no-new */
+      const quill = new Quill(this._quillContainer,
+        {
+          modules: {
+            toolbar: [
+              ['bold', 'italic', 'underline', 'strike', 'code-block'],
+              ['link'],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }]
+            ]
+          },
+          formats: ['bold', 'code', 'italic', 'link', 'strike', 'underline', 'header', 'list', 'code-block'],
+          placeholder: 'Compose an epic...',
+          theme: 'snow'
+        }
+      )
+
+      const toolbar = quill.getModule('toolbar')
+      toolbar.addHandler('link', function (value) {
+        const range = this.quill.getSelection()
+        if (range) {
+          const text = this.quill.getText(range.index, range.length)
+          const href = window.prompt(`Enter the URL for ${text}`)
+          if (href === '' || text === '') {
+            this.quill.format('link', false)
+          } else {
+            this.quill.format('link', href)
+          }
+        }
+      })
+    }
+  }
+)
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {

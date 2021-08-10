@@ -6,12 +6,13 @@
   --white: #f6f6f6;
   --black: #4a4a4a;
   --gray: #eee;
+  --font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
 }
 
 /* Typography */
 body {
   background-color: #f6f6f6;
-  font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
+  font-family: var(--font-family);
   color: var(--black);
 }
 
@@ -112,7 +113,7 @@ textarea.input {
 }
 
 .textarea-input {
-  @apply block rounded-sm;
+  @apply block;
 }
 
 .field-with-error,
@@ -469,6 +470,63 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of Button Modifiers */
+
+/* QuillJS classes */
+
+@import '../../node_modules/quill/dist/quill.snow.css';
+
+.ql-toolbar.ql-snow {
+  @apply bg-white border-0 border-b border-gray-500 rounded-t-md px-3 py-2;
+}
+
+.ql-container.ql-snow {
+  @apply border-none;
+}
+
+.ql-editor {
+  @apply bg-white text-black text-sm rounded-b-md px-3 py-2 min-h-36 max-h-48 focus:outline-none;
+
+  font-family: var(--font-family);
+}
+
+.ql-editor.ql-blank::before {
+  @apply text-gray-400;
+}
+
+.ql-stroke {
+  stroke: currentColor !important;
+}
+
+.ql-snow .ql-fill {
+  fill: currentColor !important;
+}
+
+.ql-stroke, .ql-fill {
+  @apply text-gray-600;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button:focus .ql-stroke,
+.ql-snow.ql-toolbar button:focus .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-fill {
+  @apply text-purple-500;
+}
+
+.ql-snow .ql-tooltip {
+  @apply rounded shadow-lg;
+}
+
+.ql-snow .ql-tooltip[data-mode="link"]::before {
+  content: attr(data-define-url-text);
+}
+
+.ql-snow .ql-tooltip::before {
+  content: attr(data-visit-url-text)
+}
+
+/* End of QuillJS classes */
 
 /* Legacy CSS leftover */
 
