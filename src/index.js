@@ -43,20 +43,38 @@ window.customElements.define('infinite-list',
 
       let scrolling = false
       const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
-      if (!isHidden) {
-        if (this.getAttribute('elm-element-to-track') === 'track-window') {
-          window.addEventListener('scroll', () => { scrolling = true })
-        } else {
-          this.addEventListener('scroll', () => { scrolling = true })
-        }
+      if (isHidden) {
+        return
       }
 
+      const whatToTrack = this.getAttribute('elm-element-to-track')
+      if (!whatToTrack) {
+        return
+      }
+
+      let elementToTrack
+      let elementToListen
+      if (whatToTrack === 'track-window') {
+        elementToTrack = this
+        elementToListen = window
+      } else if (whatToTrack === 'track-self') {
+        elementToTrack = this
+        elementToListen = this
+      } else {
+        elementToTrack = document.querySelector(whatToTrack)
+        elementToListen = elementToTrack
+      }
+
+      if (!elementToTrack) {
+        return
+      }
+
+      elementToListen.addEventListener('scroll', () => { scrolling = true })
       const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
       this._scrollInterval = setInterval(() => {
         if (scrolling) {
           scrolling = false
-          const boundingRect = this.getBoundingClientRect()
-          if (this.scrollTop >= this.scrollHeight - distanceToRequest - boundingRect.height) {
+          if (elementToTrack.scrollTop >= elementToTrack.scrollHeight - distanceToRequest - elementToTrack.getBoundingClientRect().height) {
             this.dispatchEvent(new CustomEvent('requested-items', {}))
           }
         }

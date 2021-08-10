@@ -528,7 +528,7 @@ viewHeader page ({ shared } as model) profile_ =
                     ]
                     [ a
                         [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
-                        , Route.href Route.Profile
+                        , Route.href (Route.Profile model.accountName)
                         , onClick (ShowUserNav False)
                         , onClick SearchClosed
                         ]

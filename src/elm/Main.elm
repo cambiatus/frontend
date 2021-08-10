@@ -35,7 +35,6 @@ import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Editor as ProfileEditor
-import Page.Profile.Public as ProfilePublic
 import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
@@ -167,7 +166,6 @@ type Status
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
     | Profile Profile.Model
-    | ProfilePublic String ProfilePublic.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
@@ -208,7 +206,6 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
-    | GotProfilePublicMsg ProfilePublic.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -409,11 +406,6 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
-        ( GotProfilePublicMsg subMsg, ProfilePublic profileName subModel ) ->
-            ProfilePublic.update subMsg subModel
-                >> updateLoggedInUResult (ProfilePublic profileName) GotProfilePublicMsg model
-                |> withLoggedIn
-
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
@@ -603,6 +595,10 @@ broadcast broadcastMessage status =
                 ProfileEditor _ ->
                     ProfileEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileEditorMsg
+
+                Profile _ ->
+                    Profile.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileMsg
 
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
@@ -914,11 +910,8 @@ statusToRoute status session =
             in
             Just (Route.Login maybeInvitation maybeRedirect)
 
-        Profile _ ->
-            Just Route.Profile
-
-        ProfilePublic profileName _ ->
-            Just (Route.ProfilePublic profileName)
+        Profile subModel ->
+            Just (Route.Profile subModel.profileName)
 
         ProfileEditor _ ->
             Just Route.ProfileEditor
@@ -1171,15 +1164,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
-        Just (Route.ProfilePublic account) ->
-            (\loggedIn -> ProfilePublic.init loggedIn account)
-                >> updateStatusWith (ProfilePublic account) GotProfilePublicMsg model
-                |> withLoggedIn (Route.ProfilePublic account)
-
-        Just Route.Profile ->
-            Profile.init
+        Just (Route.Profile profileName) ->
+            (\loggedIn -> Profile.init loggedIn profileName)
                 >> updateStatusWith Profile GotProfileMsg model
-                |> withLoggedIn Route.Profile
+                |> withLoggedIn (Route.Profile profileName)
 
         Just Route.ProfileEditor ->
             ProfileEditor.init
@@ -1452,9 +1440,6 @@ msgToString msg =
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
 
-        GotProfilePublicMsg subMsg ->
-            "GotProfilePublicMsg" :: ProfilePublic.msgToString subMsg
-
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
 
@@ -1648,9 +1633,6 @@ view model =
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
-
-        ProfilePublic _ subModel ->
-            viewLoggedIn subModel LoggedIn.ProfilePublic GotProfilePublicMsg ProfilePublic.view
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view

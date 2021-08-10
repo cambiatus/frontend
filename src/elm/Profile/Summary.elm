@@ -143,15 +143,7 @@ viewUserImg shared loggedInAccount profile isMobile model =
                 button (onClickNoBubble OpenedInfo :: attrs)
 
             else
-                let
-                    route =
-                        if loggedInAccount == profile.account then
-                            Route.Profile
-
-                        else
-                            Route.ProfilePublic (Eos.nameToString profile.account)
-                in
-                a (Route.href route :: attrs)
+                a (Route.href (Route.Profile profile.account) :: attrs)
     in
     div [ class "flex flex-col items-center" ]
         [ div [ class ("rounded-full " ++ model.imageSize) ]
@@ -209,7 +201,7 @@ viewUserInfo profile =
             (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
         , a
             [ class "button button-primary w-full mt-6 cursor-pointer"
-            , Route.href (Route.ProfilePublic account)
+            , Route.href (Route.Profile profile.account)
             ]
             [ text "View full profile" ]
         ]

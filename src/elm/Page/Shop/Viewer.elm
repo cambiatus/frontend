@@ -623,7 +623,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
         , text_ "shop.sold_by"
         , a
             [ class "font-bold ml-1"
-            , Route.href (Route.ProfilePublic <| Eos.nameToString sale.creator.account)
+            , Route.href (Route.Profile sale.creator.account)
             ]
             [ Profile.viewProfileName shared currentName sale.creator ]
         ]

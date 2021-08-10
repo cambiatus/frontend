@@ -74,7 +74,10 @@ update msg model ({ shared, authToken } as loggedIn) =
                                                         |> LoggedIn.ExternalBroadcast
                                                     )
                                                 |> (if shouldRedirect then
-                                                        UR.addCmd (Route.replaceUrl shared.navKey Route.Profile)
+                                                        UR.addCmd
+                                                            (Route.replaceUrl shared.navKey
+                                                                (Route.Profile loggedIn.accountName)
+                                                            )
 
                                                     else
                                                         identity
