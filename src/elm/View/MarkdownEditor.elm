@@ -1,11 +1,14 @@
-module View.MarkdownEditor exposing (Model, Msg, init, msgToString, update, view)
+module View.MarkdownEditor exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
+import Browser.Dom
+import Browser.Events
 import Html exposing (Html, button, div, node, text)
 import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Ports
 import Session.Shared exposing (Translators)
+import Task
 import View.Form.Input as Input
 import View.Modal as Modal
 
@@ -38,7 +41,9 @@ type LinkModalState
 
 
 type Msg
-    = ClickedIncludeLink Link
+    = Ignored
+    | KeyDown String
+    | ClickedIncludeLink Link
     | ClosedLinkModal
     | EnteredLinkLabel String
     | EnteredLinkUrl String
@@ -49,11 +54,24 @@ type Msg
 -- UPDATE
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Ignored ->
+            ( model, Cmd.none )
+
+        KeyDown key ->
+            if key == "Enter" then
+                update ClickedAcceptLink model
+
+            else
+                ( model, Cmd.none )
+
         ClickedIncludeLink link ->
-            ( { model | linkModalState = Editing link }, Cmd.none )
+            ( { model | linkModalState = Editing link }
+            , Browser.Dom.focus "link-modal-label"
+                |> Task.attempt (\_ -> Ignored)
+            )
 
         ClosedLinkModal ->
             ( { model | linkModalState = NotShowing }, Cmd.none )
@@ -148,6 +166,20 @@ view translators model =
 
 
 
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.linkModalState of
+        Editing _ ->
+            Sub.map KeyDown (Browser.Events.onKeyDown (Json.Decode.field "key" Json.Decode.string))
+
+        NotShowing ->
+            Sub.none
+
+
+
 -- UTILS
 
 
@@ -163,6 +195,12 @@ linkDecoder =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        Ignored ->
+            [ "Ignored" ]
+
+        KeyDown _ ->
+            [ "KeyDown" ]
+
         ClickedIncludeLink _ ->
             [ "ClickedIncludeLink" ]
 

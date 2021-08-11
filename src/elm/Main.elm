@@ -130,6 +130,10 @@ subscriptions model =
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
 
+            ActionEditor subModel ->
+                ActionEditor.subscriptions subModel
+                    |> Sub.map GotActionEditorMsg
+
             _ ->
                 Sub.none
         ]
