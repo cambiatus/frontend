@@ -29,7 +29,6 @@ window.customElements.define('markdown-editor',
     constructor () {
       super()
 
-      // this._shadow = this.attachShadow({ mode: 'open' })
       this._quillContainer = document.createElement('div')
       this._parentContainer = document.createElement('div')
       this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
@@ -53,32 +52,66 @@ window.customElements.define('markdown-editor',
         }
       )
 
-      const toolbar = quill.getModule('toolbar')
-      const thisComponent = this
-      toolbar.addHandler('link', function (value) {
-        const thisQuill = this.quill
-        const range = thisQuill.getSelection()
-        const text = thisQuill.getText(range)
-        const currentFormat = thisQuill.getFormat(range)
-        thisComponent.dispatchEvent(new CustomEvent('clicked-include-link',
-          {
-            detail: {
-              label: text,
-              url: currentFormat.link || ''
-            }
-          }
-        ))
-
-        const markdownLinkHandler = function (link) {
-          thisQuill.updateContents(new QuillDelta()
-            .retain(range.index)
-            .delete(range.length)
-            .insert(link.label, { ...currentFormat, link: link.url })
-          )
-          app.ports.markdownLink.unsubscribe(markdownLinkHandler)
-        }
-        app.ports.markdownLink.subscribe(markdownLinkHandler)
+      // Remove default click handler and add our custom one
+      const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
+      const editButton = oldEditButton.cloneNode(true)
+      oldEditButton.parentNode.replaceChild(editButton, oldEditButton)
+      editButton.addEventListener('click', (e) => {
+        this.querySelector('.ql-tooltip').classList.add('ql-hidden')
+        this.linkHandler(quill)
       })
+
+      // Set translated texts on the edit and remove buttons on the tooltip
+      editButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
+      this.querySelector('.ql-tooltip a.ql-remove')
+        .setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+
+      const toolbar = quill.getModule('toolbar')
+      toolbar.addHandler('link', () => { this.linkHandler(quill) })
+    }
+
+    linkHandler (quill) {
+      let range = quill.getSelection(true)
+      if (range.length === 0) {
+        range = this.getFormattedRange(quill, range.index)
+      }
+      const text = quill.getText(range)
+      const currentFormat = quill.getFormat(range)
+      this.dispatchEvent(new CustomEvent('clicked-include-link',
+        {
+          detail: {
+            label: text,
+            url: currentFormat.link || ''
+          }
+        }
+      ))
+
+      const markdownLinkPortHandler = function (link) {
+        quill.updateContents(new QuillDelta()
+          .retain(range.index)
+          .delete(range.length)
+          .insert(link.label, { ...currentFormat, link: link.url })
+        )
+        app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+      }
+      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
+    }
+
+    /** Gets the range from the formatting that the `index` position is affected
+    by. Useful when the user has their caret in the middle of a link, but isn't
+    actually selecting it (selection length is 0)
+    */
+    getFormattedRange (quill, index) {
+      let currentIndex = 0
+      for (const content of quill.getContents().ops) {
+        const initialIndex = currentIndex
+        const finalIndex = initialIndex + content.insert.length - 1
+        currentIndex = finalIndex + 1
+        if (initialIndex <= index && index <= finalIndex) {
+          return { index: initialIndex, length: finalIndex - initialIndex + 1 }
+        }
+      }
+      return { index: 0, length: 0 }
     }
   }
 )

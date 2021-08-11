@@ -118,6 +118,8 @@ view translators model =
     div []
         [ node "markdown-editor"
             [ attribute "elm-placeholder" "Placeholder placeholder"
+            , attribute "elm-edit-text" "Edit"
+            , attribute "elm-remove-text" "Remove Link"
             , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
             ]
             []

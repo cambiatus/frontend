@@ -515,20 +515,47 @@ https://tailwindcss.com/docs/adding-new-utilities */
 .ql-snow.ql-toolbar button:focus .ql-fill,
 .ql-snow.ql-toolbar button.ql-active .ql-stroke,
 .ql-snow.ql-toolbar button.ql-active .ql-fill {
-  @apply text-purple-500;
+  @apply text-indigo-500;
 }
 
 .ql-snow .ql-tooltip {
-  @apply rounded shadow-lg;
+  @apply rounded-md border border-gray-200 shadow-lg z-10 py-2 px-4;
+
+  font-family: var(--font-family);
 }
 
-/* TODO - Do we need these? */
 .ql-snow .ql-tooltip[data-mode="link"]::before {
-  content: attr(data-define-url-text);
+  content: '';
 }
 
 .ql-snow .ql-tooltip::before {
-  content: attr(data-visit-url-text);
+  content: '';
+}
+
+.ql-snow .ql-tooltip:not(.ql-hidden) {
+  @apply grid gap-2 md:grid-cols-2;
+}
+
+.ql-snow .ql-tooltip a.ql-preview {
+  @apply max-w-full text-center w-full text-orange-500 no-underline hover:underline md:col-span-2;
+}
+
+.ql-snow .ql-tooltip a.ql-action {
+  @apply button button-primary;
+}
+
+.ql-snow .ql-tooltip a.ql-action::after {
+  @apply border-0 mr-0;
+
+  content: attr(data-edit-text)
+}
+
+.ql-snow .ql-tooltip a.ql-remove {
+  @apply button button-secondary;
+}
+
+.ql-snow .ql-tooltip a.ql-remove::before {
+  content: attr(data-remove-text)
 }
 
 /* End of QuillJS classes */
