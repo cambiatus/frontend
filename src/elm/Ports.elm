@@ -7,7 +7,6 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
-    , markdownLink
     , sendMarkdownLink
     , storeAuthToken
     , storeLanguage
@@ -100,7 +99,7 @@ sendMarkdownLink { label, url } =
         |> markdownLink
 
 
-port markdownLink : Encode.Value -> Cmd msg
+port markdownLink : Value -> Cmd msg
 
 
 

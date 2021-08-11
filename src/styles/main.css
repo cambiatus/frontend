@@ -498,15 +498,15 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 .ql-stroke {
+  @apply text-gray-600;
+
   stroke: currentColor !important;
 }
 
 .ql-snow .ql-fill {
-  fill: currentColor !important;
-}
-
-.ql-stroke, .ql-fill {
   @apply text-gray-600;
+
+  fill: currentColor !important;
 }
 
 .ql-snow.ql-toolbar button:hover .ql-stroke,
@@ -522,12 +522,13 @@ https://tailwindcss.com/docs/adding-new-utilities */
   @apply rounded shadow-lg;
 }
 
+/* TODO - Do we need these? */
 .ql-snow .ql-tooltip[data-mode="link"]::before {
   content: attr(data-define-url-text);
 }
 
 .ql-snow .ql-tooltip::before {
-  content: attr(data-visit-url-text)
+  content: attr(data-visit-url-text);
 }
 
 /* End of QuillJS classes */

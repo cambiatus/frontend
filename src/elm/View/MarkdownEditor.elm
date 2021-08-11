@@ -162,4 +162,18 @@ linkDecoder =
 
 msgToString : Msg -> List String
 msgToString msg =
-    Debug.todo "TODO - Add msgs"
+    case msg of
+        ClickedIncludeLink _ ->
+            [ "ClickedIncludeLink" ]
+
+        ClosedLinkModal ->
+            [ "ClosedLinkModal" ]
+
+        EnteredLinkLabel _ ->
+            [ "EnteredLinkLabel" ]
+
+        EnteredLinkUrl _ ->
+            [ "EnteredLinkUrl" ]
+
+        ClickedAcceptLink ->
+            [ "ClickedAcceptLink" ]
