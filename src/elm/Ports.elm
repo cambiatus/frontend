@@ -7,6 +7,8 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , markdownLink
+    , sendMarkdownLink
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -85,6 +87,20 @@ port storeAuthToken : String -> Cmd msg
 `USE_SUBDOMAIN = false`
 -}
 port storeSelectedCommunitySymbol : String -> Cmd msg
+
+
+{-| Send info about a link in a MarkdownEditor to be treated on JS
+-}
+sendMarkdownLink : { label : String, url : String } -> Cmd msg
+sendMarkdownLink { label, url } =
+    Encode.object
+        [ ( "label", Encode.string label )
+        , ( "url", Encode.string url )
+        ]
+        |> markdownLink
+
+
+port markdownLink : Encode.Value -> Cmd msg
 
 
 

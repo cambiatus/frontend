@@ -489,6 +489,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
   font-family: var(--font-family);
 }
 
+.ql-snow .ql-editor a {
+  @apply text-orange-500 no-underline hover:underline;
+}
+
 .ql-editor.ql-blank::before {
   @apply text-gray-400;
 }

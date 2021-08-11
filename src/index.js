@@ -13,6 +13,7 @@ import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from './vfs_fonts'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 import Quill from 'quill'
+import QuillDelta from 'quill-delta'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -37,7 +38,6 @@ window.customElements.define('markdown-editor',
     connectedCallback () {
       this.appendChild(this._parentContainer)
       this._parentContainer.appendChild(this._quillContainer)
-      /* eslint-disable no-new */
       const quill = new Quill(this._quillContainer,
         {
           modules: {
@@ -47,24 +47,37 @@ window.customElements.define('markdown-editor',
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
-          formats: ['bold', 'code', 'italic', 'link', 'strike', 'underline', 'header', 'list', 'code-block'],
-          placeholder: 'Compose an epic...',
+          formats: ['bold', 'code', 'italic', 'link', 'strike', 'underline', 'list', 'code-block'],
+          placeholder: this.getAttribute('elm-placeholder'),
           theme: 'snow'
         }
       )
 
       const toolbar = quill.getModule('toolbar')
+      const thisComponent = this
       toolbar.addHandler('link', function (value) {
-        const range = this.quill.getSelection()
-        if (range) {
-          const text = this.quill.getText(range.index, range.length)
-          const href = window.prompt(`Enter the URL for ${text}`)
-          if (href === '' || text === '') {
-            this.quill.format('link', false)
-          } else {
-            this.quill.format('link', href)
+        const thisQuill = this.quill
+        const range = thisQuill.getSelection()
+        const text = thisQuill.getText(range)
+        const currentFormat = thisQuill.getFormat(range)
+        thisComponent.dispatchEvent(new CustomEvent('clicked-include-link',
+          {
+            detail: {
+              label: text,
+              url: currentFormat.link || ''
+            }
           }
+        ))
+
+        const markdownLinkHandler = function (link) {
+          thisQuill.updateContents(new QuillDelta()
+            .retain(range.index)
+            .delete(range.length)
+            .insert(link.label, { ...currentFormat, link: link.url })
+          )
+          app.ports.markdownLink.unsubscribe(markdownLinkHandler)
         }
+        app.ports.markdownLink.subscribe(markdownLinkHandler)
       })
     }
   }

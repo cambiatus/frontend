@@ -60,7 +60,7 @@ import View.Form.Checkbox as Checkbox
 import View.Form.Input as Input
 import View.Form.Radio as Radio
 import View.Form.Toggle as Toggle
-import Html exposing (node)
+import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -82,6 +82,7 @@ init loggedIn objectiveId actionId =
       , actionId = actionId
       , form = initForm
       , multiSelectState = Select.newState ""
+      , descriptionMarkdownEditor = MarkdownEditor.init
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -97,6 +98,7 @@ type alias Model =
     , actionId : Maybe ActionId
     , form : Form
     , multiSelectState : Select.State
+    , descriptionMarkdownEditor : MarkdownEditor.Model
     }
 
 
@@ -480,6 +482,7 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | GotProfileSummaryMsg Int Profile.Summary.Msg
+    | GotMarkdownEditorMsg MarkdownEditor.Msg
 
 
 
@@ -1164,6 +1167,15 @@ update msg model ({ shared } as loggedIn) =
                 Automatic ->
                     UR.init model
 
+        GotMarkdownEditorMsg subMsg ->
+            let
+                ( subModel, subCmd ) =
+                    MarkdownEditor.update subMsg model.descriptionMarkdownEditor
+            in
+            { model | descriptionMarkdownEditor = subModel }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotMarkdownEditorMsg subCmd)
+
 
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
 upsertAction loggedIn community model isoDate =
@@ -1365,8 +1377,7 @@ viewForm ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
             [ viewLoading model
-            , node "markdown-editor" [] []
-            , viewDescription loggedIn model.form
+            , viewDescription loggedIn model.descriptionMarkdownEditor model.form
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model
             , viewVerifications loggedIn model community
@@ -1407,8 +1418,8 @@ viewLoading model =
             text ""
 
 
-viewDescription : LoggedIn.Model -> Form -> Html Msg
-viewDescription { shared } form =
+viewDescription : LoggedIn.Model -> MarkdownEditor.Model -> Form -> Html Msg
+viewDescription { shared } descriptionMarkdownEditor form =
     let
         { t } =
             shared.translators
@@ -1428,6 +1439,8 @@ viewDescription { shared } form =
             ]
             []
         , viewFieldErrors (listErrors shared.translations form.description)
+        , MarkdownEditor.view shared.translators descriptionMarkdownEditor
+            |> Html.map GotMarkdownEditorMsg
         ]
 
 
@@ -2021,3 +2034,6 @@ msgToString msg =
 
         GotProfileSummaryMsg _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
+
+        GotMarkdownEditorMsg subMsg ->
+            "GotMarkdownEditorMsg" :: MarkdownEditor.msgToString subMsg
