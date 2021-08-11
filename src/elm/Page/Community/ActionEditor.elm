@@ -1431,6 +1431,8 @@ viewDescription { shared } descriptionMarkdownEditor form =
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.description_label" ]
+
+        -- TODO - Remove textarea
         , textarea
             [ class "input textarea-input w-full"
             , classList [ ( "border-red", hasErrors form.description ) ]
@@ -1440,7 +1442,7 @@ viewDescription { shared } descriptionMarkdownEditor form =
             ]
             []
         , viewFieldErrors (listErrors shared.translations form.description)
-        , MarkdownEditor.view shared.translators descriptionMarkdownEditor
+        , MarkdownEditor.view shared.translators Nothing descriptionMarkdownEditor
             |> Html.map GotMarkdownEditorMsg
         ]
 

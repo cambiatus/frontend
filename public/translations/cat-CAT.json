@@ -1108,5 +1108,16 @@
       "cancel": "No",
       "accept": "Sí"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Afegeix un enllaç",
+      "label": "Text",
+      "url": "Enllaç"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Elimina l'enllaç"
+    }
   }
 }

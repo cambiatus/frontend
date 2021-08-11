@@ -1067,5 +1067,16 @@
       "cancel": "አይ",
       "accept": "አዎ"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "አገናኝ አክል",
+      "label": "ጽሑፍ",
+      "url": "አገናኝ"
+    },
+    "link_tooltip": {
+      "edit": "ለማርትዕ",
+      "remove": "አገናኝን ያስወግዱ"
+    }
   }
 }

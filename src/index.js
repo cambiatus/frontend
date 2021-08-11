@@ -26,6 +26,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text' ] }
+
     constructor () {
       super()
 
@@ -61,13 +63,26 @@ window.customElements.define('markdown-editor',
         this.linkHandler(quill)
       })
 
-      // Set translated texts on the edit and remove buttons on the tooltip
-      editButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
-      this.querySelector('.ql-tooltip a.ql-remove')
-        .setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
-
       const toolbar = quill.getModule('toolbar')
       toolbar.addHandler('link', () => { this.linkHandler(quill) })
+
+      this.setTooltipTexts()
+    }
+
+    attributeChangedCallback () {
+      this.setTooltipTexts()
+    }
+
+    setTooltipTexts () {
+      const actionButton = this.querySelector('.ql-tooltip a.ql-action')
+      if (actionButton) {
+        actionButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
+      }
+
+      const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
+      if (removeButton) {
+        removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+      }
     }
 
     linkHandler (quill) {

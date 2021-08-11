@@ -1106,5 +1106,16 @@
       "cancel": "No",
       "accept": "Yes"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Add link",
+      "label": "Text",
+      "url": "Link"
+    },
+    "link_tooltip": {
+      "edit": "Edit",
+      "remove": "Remove link"
+    }
   }
 }

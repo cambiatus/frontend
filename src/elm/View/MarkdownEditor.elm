@@ -111,15 +111,13 @@ update msg model =
 -- VIEW
 
 
-view : Translators -> Model -> Html Msg
-view translators model =
-    -- TODO - I18N
-    -- TODO - Pass in options
+view : Translators -> Maybe String -> Model -> Html Msg
+view ({ t } as translators) placeholder model =
     div []
         [ node "markdown-editor"
-            [ attribute "elm-placeholder" "Placeholder placeholder"
-            , attribute "elm-edit-text" "Edit"
-            , attribute "elm-remove-text" "Remove Link"
+            [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
+            , attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
+            , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
             , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
             ]
             []
@@ -129,10 +127,10 @@ view translators model =
                     { closeMsg = ClosedLinkModal
                     , isVisible = True
                     }
-                    |> Modal.withHeader "Add link"
+                    |> Modal.withHeader (t "markdown.link_form.header")
                     |> Modal.withBody
                         [ Input.init
-                            { label = "Enter a label"
+                            { label = t "markdown.link_form.label"
                             , id = "link-modal-label"
                             , onInput = EnteredLinkLabel
                             , disabled = False
@@ -143,7 +141,7 @@ view translators model =
                             }
                             |> Input.toHtml
                         , Input.init
-                            { label = "Enter a URL"
+                            { label = t "markdown.link_form.url"
                             , id = "link-modal-url"
                             , onInput = EnteredLinkUrl
                             , disabled = False
@@ -156,9 +154,9 @@ view translators model =
                         ]
                     |> Modal.withFooter
                         [ button [ class "modal-cancel", onClick ClosedLinkModal ]
-                            [ text "Cancel" ]
+                            [ text <| t "menu.cancel" ]
                         , button [ class "modal-accept", onClick ClickedAcceptLink ]
-                            [ text "Save" ]
+                            [ text <| t "menu.save" ]
                         ]
                     |> Modal.toHtml
 
