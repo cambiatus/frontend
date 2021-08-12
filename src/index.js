@@ -1,19 +1,19 @@
+import * as AbsintheSocket from '@absinthe/socket'
+import * as Sentry from '@sentry/browser'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
-import sjcl from 'sjcl'
-import './styles/main.css'
-import mnemonic from './scripts/mnemonic.js'
-import configuration from './scripts/config.js'
-// import registerServiceWorker from './scripts/registerServiceWorker'
-import pdfDefinition from './scripts/pdfDefinition'
-import { Elm } from './elm/Main.elm'
-import * as Sentry from '@sentry/browser'
-import * as AbsintheSocket from '@absinthe/socket'
-import pdfMake from 'pdfmake/build/pdfmake'
-import pdfFonts from './vfs_fonts'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import pdfMake from 'pdfmake/build/pdfmake'
 import Quill from 'quill'
 import QuillDelta from 'quill-delta'
+import sjcl from 'sjcl'
+import { Elm } from './elm/Main.elm'
+import configuration from './scripts/config.js'
+import mnemonic from './scripts/mnemonic.js'
+// import registerServiceWorker from './scripts/registerServiceWorker'
+import pdfDefinition from './scripts/pdfDefinition'
+import './styles/main.css'
+import pdfFonts from './vfs_fonts'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -43,16 +43,24 @@ window.customElements.define('markdown-editor',
         {
           modules: {
             toolbar: [
-              ['bold', 'italic', 'underline', 'strike', 'code-block'],
+              ['bold', 'italic', 'underline', 'strike'],
               ['link'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
-          formats: ['bold', 'code', 'italic', 'link', 'strike', 'underline', 'list', 'code-block'],
+          formats: ['bold', 'code', 'italic', 'link', 'strike', 'underline', 'list'],
           placeholder: this.getAttribute('elm-placeholder'),
           theme: 'snow'
         }
       )
+
+      quill.on('text-change', (delta, oldDelta, source) => {
+        const contents = quill.getContents()
+        console.log('=====================')
+        console.log('=============CONTENTS', contents)
+        console.log('=====================')
+        this.dispatchEvent(new CustomEvent('text-change', { detail: contents }))
+      })
 
       // Remove default click handler and add our custom one
       const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
