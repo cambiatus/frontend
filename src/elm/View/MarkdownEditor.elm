@@ -5,6 +5,8 @@ module View.MarkdownEditor exposing
     , QuillOp
     , init
     , msgToString
+    , quillOpFromMarkdown
+    , quillOpToMarkdown
     , subscriptions
     , update
     , view
@@ -17,6 +19,10 @@ import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
+import Markdown.Block
+import Markdown.Parser
+import Parser
+import Parser.Advanced
 import Ports
 import Session.Shared exposing (Translators)
 import Task
@@ -121,13 +127,9 @@ update msg model =
         ChangedText result ->
             let
                 _ =
-                    Debug.log "Changed text" result
-
-                _ =
                     result
                         |> List.map quillOpToMarkdown
                         |> String.concat
-                        |> Debug.log "AS MARKDOWN"
             in
             ( model, Cmd.none )
 
@@ -198,7 +200,6 @@ view ({ t } as translators) placeholder model =
 type Formatting
     = Bold
     | Italic
-    | Underline
     | Strike
     | LinkFormatting String
     | OrderedList
@@ -223,7 +224,6 @@ textChangeDecoder =
                     Err err ->
                         err
                             |> Json.Decode.errorToString
-                            |> Debug.log "ERROR"
                             |> Json.Decode.fail
             )
 
@@ -242,13 +242,12 @@ formattingDecoder =
             Decode.optional key (Json.Decode.succeed (Just formatting)) Nothing
     in
     Json.Decode.succeed
-        (\bold italic underline strike link list ->
-            [ bold, italic, underline, strike, link, list ]
+        (\bold italic strike link list ->
+            [ bold, italic, strike, link, list ]
                 |> List.filterMap identity
         )
         |> optionalFormatting "bold" Bold
         |> optionalFormatting "italic" Italic
-        |> optionalFormatting "underline" Underline
         |> optionalFormatting "strike" Strike
         |> Decode.optional "link"
             (Json.Decode.string
@@ -273,42 +272,118 @@ formattingDecoder =
             Nothing
 
 
+formatStrings : Formatting -> ( String, String )
+formatStrings formatting =
+    case formatting of
+        Bold ->
+            ( "**", "**" )
+
+        Italic ->
+            ( "*", "*" )
+
+        Strike ->
+            ( "~~", "~~" )
+
+        LinkFormatting link ->
+            ( "[", "](" ++ link ++ ")" )
+
+        OrderedList ->
+            ( "1. ", "" )
+
+        UnorderedList ->
+            ( "- ", "" )
+
+
 quillOpToMarkdown : QuillOp -> String
 quillOpToMarkdown quillOp =
     let
-        formatString : Formatting -> ( String, String )
-        formatString formatting =
-            case formatting of
-                Bold ->
-                    ( "**", "**" )
-
-                Italic ->
-                    ( "*", "*" )
-
-                Underline ->
-                    ( "__", "__" )
-
-                Strike ->
-                    ( "~~", "~~" )
-
-                LinkFormatting link ->
-                    ( "[", "](" ++ link ++ ")" )
-
-                OrderedList ->
-                    ( "1. ", "" )
-
-                UnorderedList ->
-                    ( "- ", "" )
-
         addFormatting : Formatting -> String -> String
         addFormatting formatting unformattedText =
             let
                 ( formatBefore, formatAfter ) =
-                    formatString formatting
+                    formatStrings formatting
             in
             formatBefore ++ unformattedText ++ formatAfter
     in
-    List.foldl addFormatting quillOp.insert quillOp.attributes
+    List.foldr addFormatting quillOp.insert quillOp.attributes
+
+
+quillOpFromMarkdown : String -> Result (List (Parser.Advanced.DeadEnd String Parser.Problem)) (List QuillOp)
+quillOpFromMarkdown markdown =
+    Markdown.Parser.parse markdown
+        |> Result.map
+            (List.map quillOpFromMarkdownBlock
+                >> List.concat
+            )
+
+
+quillOpFromMarkdownBlock : Markdown.Block.Block -> List QuillOp
+quillOpFromMarkdownBlock block =
+    let
+        addEverySecond : a -> List a -> List a
+        addEverySecond sep items =
+            List.foldr
+                (\currItem separatedList -> currItem :: sep :: separatedList)
+                []
+                items
+    in
+    case block of
+        Markdown.Block.UnorderedList children ->
+            let
+                listItemToList : Markdown.Block.ListItem children -> List children
+                listItemToList (Markdown.Block.ListItem _ children_) =
+                    children_
+            in
+            children
+                |> List.map (listItemToList >> List.map quillOpFromMarkdownInline)
+                |> List.concat
+                |> List.concat
+                |> addEverySecond { insert = "\n", attributes = [ UnorderedList ] }
+
+        Markdown.Block.OrderedList _ children ->
+            children
+                |> List.map (List.map quillOpFromMarkdownInline)
+                |> List.concat
+                |> List.concat
+                |> addEverySecond { insert = "\n", attributes = [ OrderedList ] }
+
+        Markdown.Block.Paragraph children ->
+            children
+                |> List.map quillOpFromMarkdownInline
+                |> List.concat
+
+        _ ->
+            []
+
+
+quillOpFromMarkdownInline : Markdown.Block.Inline -> List QuillOp
+quillOpFromMarkdownInline inline =
+    let
+        addFormatting children formatting =
+            children
+                |> List.map quillOpFromMarkdownInline
+                |> List.concat
+                |> List.map (\quillOp -> { quillOp | attributes = formatting :: quillOp.attributes })
+    in
+    case inline of
+        Markdown.Block.Link link _ children ->
+            LinkFormatting link
+                |> addFormatting children
+
+        Markdown.Block.Emphasis children ->
+            addFormatting children Italic
+
+        Markdown.Block.Strong children ->
+            addFormatting children Bold
+
+        Markdown.Block.Strikethrough children ->
+            addFormatting children Strike
+
+        Markdown.Block.Text content ->
+            [ { insert = content, attributes = [] } ]
+
+        _ ->
+            []
 
 
 

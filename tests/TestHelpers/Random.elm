@@ -9,6 +9,7 @@ module TestHelpers.Random exposing
     , dateTime
     , dimex
     , expiryOptsData
+    , markdownString
     , maybe
     , name
     , nite
@@ -449,3 +450,59 @@ phone =
         |> append (digits 3)
         |> append (Random.Extra.choice "" "-")
         |> append (digits 4)
+
+
+
+-- MARKDOWN EDITOR
+
+
+type MarkdownBlackListItem
+    = Strike
+      -- The markdown parser doesn't support strong and emphasis together
+    | EmphasisAndStrong
+    | Link
+
+
+markdownString : Random.Generator String
+markdownString =
+    let
+        choices : List MarkdownBlackListItem -> List ( MarkdownBlackListItem, Random.Generator String )
+        choices blackList =
+            [ ( EmphasisAndStrong
+              , Random.constant "**"
+                    |> append (Random.lazy (\_ -> helper (EmphasisAndStrong :: blackList)))
+                    |> append (Random.constant "**")
+              )
+            , ( EmphasisAndStrong
+              , Random.constant "*"
+                    |> append (Random.lazy (\_ -> helper (EmphasisAndStrong :: blackList)))
+                    |> append (Random.constant "*")
+              )
+            , ( Strike
+              , Random.constant "~~"
+                    |> append (Random.lazy (\_ -> helper (Strike :: blackList)))
+                    |> append (Random.constant "~~")
+              )
+            , ( Link
+              , Random.constant "["
+                    |> append (Random.lazy (\_ -> helper (Link :: blackList)))
+                    |> append (Random.constant "](")
+                    |> append (url [] |> Random.map Url.toString)
+                    |> append (Random.constant ")")
+              )
+            ]
+
+        helper : List MarkdownBlackListItem -> Random.Generator String
+        helper blackList =
+            choices blackList
+                |> List.filterMap
+                    (\( listItem, generator ) ->
+                        if List.member listItem blackList then
+                            Nothing
+
+                        else
+                            Just generator
+                    )
+                |> Random.Extra.choices string
+    in
+    helper []
