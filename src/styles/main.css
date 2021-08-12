@@ -547,7 +547,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
 .ql-snow .ql-tooltip a.ql-action::after {
   @apply border-0 mr-0;
 
-  content: attr(data-edit-text)
+  content: attr(data-edit-text);
 }
 
 .ql-snow .ql-tooltip a.ql-remove {
@@ -555,7 +555,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 .ql-snow .ql-tooltip a.ql-remove::before {
-  content: attr(data-remove-text)
+  content: attr(data-remove-text);
 }
 
 /* End of QuillJS classes */
