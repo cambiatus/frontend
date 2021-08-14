@@ -34,12 +34,9 @@ window.customElements.define('markdown-editor',
       this._quillContainer = document.createElement('div')
       this._parentContainer = document.createElement('div')
       this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
-    }
 
-    connectedCallback () {
-      this.appendChild(this._parentContainer)
       this._parentContainer.appendChild(this._quillContainer)
-      const quill = new Quill(this._quillContainer,
+      this._quill = new Quill(this._quillContainer,
         {
           modules: {
             toolbar: [
@@ -54,13 +51,19 @@ window.customElements.define('markdown-editor',
         }
       )
 
-      quill.on('text-change', (delta, oldDelta, source) => {
-        const contents = quill.getContents()
-        console.log('=====================')
-        console.log('=============CONTENTS', contents)
-        console.log('=====================')
+      app.ports.setMarkdown.subscribe((data) => { this.setMarkdownListener(data) })
+
+      this._quill.on('text-change', (delta, oldDelta, source) => {
+        const contents = this._quill.getContents()
         this.dispatchEvent(new CustomEvent('text-change', { detail: contents }))
       })
+
+      const toolbar = this._quill.getModule('toolbar')
+      toolbar.addHandler('link', () => { this.linkHandler() })
+    }
+
+    connectedCallback () {
+      this.appendChild(this._parentContainer)
 
       // Remove default click handler and add our custom one
       const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
@@ -68,11 +71,8 @@ window.customElements.define('markdown-editor',
       oldEditButton.parentNode.replaceChild(editButton, oldEditButton)
       editButton.addEventListener('click', (e) => {
         this.querySelector('.ql-tooltip').classList.add('ql-hidden')
-        this.linkHandler(quill)
+        this.linkHandler()
       })
-
-      const toolbar = quill.getModule('toolbar')
-      toolbar.addHandler('link', () => { this.linkHandler(quill) })
 
       this.setTooltipTexts()
     }
@@ -93,13 +93,13 @@ window.customElements.define('markdown-editor',
       }
     }
 
-    linkHandler (quill) {
-      let range = quill.getSelection(true)
+    linkHandler () {
+      let range = this._quill.getSelection(true)
       if (range.length === 0) {
-        range = this.getFormattedRange(quill, range.index)
+        range = this.getFormattedRange(range.index)
       }
-      const text = quill.getText(range)
-      const currentFormat = quill.getFormat(range)
+      const text = this._quill.getText(range)
+      const currentFormat = this._quill.getFormat(range)
       this.dispatchEvent(new CustomEvent('clicked-include-link',
         {
           detail: {
@@ -109,13 +109,15 @@ window.customElements.define('markdown-editor',
         }
       ))
 
-      const markdownLinkPortHandler = function (link) {
-        quill.updateContents(new QuillDelta()
-          .retain(range.index)
-          .delete(range.length)
-          .insert(link.label, { ...currentFormat, link: link.url })
-        )
-        app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+      const markdownLinkPortHandler = (link) => {
+        if (link.id === this.id) {
+          this._quill.updateContents(new QuillDelta()
+            .retain(range.index)
+            .delete(range.length)
+            .insert(link.label, { ...currentFormat, link: link.url })
+          )
+          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+        }
       }
       app.ports.markdownLink.subscribe(markdownLinkPortHandler)
     }
@@ -124,9 +126,9 @@ window.customElements.define('markdown-editor',
     by. Useful when the user has their caret in the middle of a link, but isn't
     actually selecting it (selection length is 0)
     */
-    getFormattedRange (quill, index) {
+    getFormattedRange (index) {
       let currentIndex = 0
-      for (const content of quill.getContents().ops) {
+      for (const content of this._quill.getContents().ops) {
         const initialIndex = currentIndex
         const finalIndex = initialIndex + content.insert.length - 1
         currentIndex = finalIndex + 1
@@ -135,6 +137,13 @@ window.customElements.define('markdown-editor',
         }
       }
       return { index: 0, length: 0 }
+    }
+
+    setMarkdownListener (data) {
+      if (data.id === this.id) {
+        console.log('=============SETTING CONTENT', data)
+        this._quill.setContents(data.content)
+      }
     }
   }
 )

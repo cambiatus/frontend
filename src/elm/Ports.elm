@@ -8,6 +8,7 @@ port module Ports exposing
     , javascriptOutCmd
     , mapAddress
     , sendMarkdownLink
+    , setMarkdownContent
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -90,16 +91,29 @@ port storeSelectedCommunitySymbol : String -> Cmd msg
 
 {-| Send info about a link in a MarkdownEditor to be treated on JS
 -}
-sendMarkdownLink : { label : String, url : String } -> Cmd msg
-sendMarkdownLink { label, url } =
+sendMarkdownLink : { id : String, label : String, url : String } -> Cmd msg
+sendMarkdownLink { id, label, url } =
     Encode.object
-        [ ( "label", Encode.string label )
+        [ ( "id", Encode.string id )
+        , ( "label", Encode.string label )
         , ( "url", Encode.string url )
         ]
         |> markdownLink
 
 
 port markdownLink : Value -> Cmd msg
+
+
+setMarkdownContent : { id : String, content : Value } -> Cmd msg
+setMarkdownContent { id, content } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "content", content )
+        ]
+        |> setMarkdown
+
+
+port setMarkdown : Value -> Cmd msg
 
 
 

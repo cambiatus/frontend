@@ -7,6 +7,7 @@ module View.MarkdownEditor exposing
     , msgToString
     , quillOpFromMarkdown
     , quillOpToMarkdown
+    , setContents
     , subscriptions
     , update
     , view
@@ -15,10 +16,11 @@ module View.MarkdownEditor exposing
 import Browser.Dom
 import Browser.Events
 import Html exposing (Html, button, div, node, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
+import Json.Encode
 import Markdown.Block
 import Markdown.Parser
 import Parser
@@ -36,12 +38,17 @@ import View.Modal as Modal
 
 type alias Model =
     { linkModalState : LinkModalState
+    , id : String
+    , contents : String
     }
 
 
-init : Model
-init =
-    { linkModalState = NotShowing }
+init : String -> Model
+init id =
+    { linkModalState = NotShowing
+    , id = id
+    , contents = ""
+    }
 
 
 
@@ -116,21 +123,38 @@ update msg model =
 
         ClickedAcceptLink ->
             case model.linkModalState of
-                Editing editingState ->
+                Editing { label, url } ->
                     ( { model | linkModalState = NotShowing }
-                    , Ports.sendMarkdownLink editingState
+                    , Ports.sendMarkdownLink { id = model.id, label = label, url = url }
                     )
 
                 NotShowing ->
                     ( model, Cmd.none )
 
         ChangedText result ->
-            let
-                _ =
+            ( { model
+                | contents =
                     result
                         |> List.map quillOpToMarkdown
                         |> String.concat
-            in
+              }
+            , Cmd.none
+            )
+
+
+setContents : String -> Model -> ( Model, Cmd msg )
+setContents contents model =
+    case quillOpFromMarkdown contents of
+        Ok validQuillOps ->
+            ( { model | contents = contents }
+            , Ports.setMarkdownContent
+                { id = model.id
+                , content = Json.Encode.list encodeQuillOp validQuillOps
+                }
+            )
+
+        Err deadEnds ->
+            -- TODO - Log to sentry
             ( model, Cmd.none )
 
 
@@ -147,6 +171,7 @@ view ({ t } as translators) placeholder model =
             , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
             , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
             , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
+            , id model.id
             ]
             []
         , case model.linkModalState of
@@ -402,6 +427,39 @@ subscriptions model =
 
 
 -- UTILS
+
+
+encodeQuillOp : QuillOp -> Json.Encode.Value
+encodeQuillOp quillOp =
+    Json.Encode.object
+        [ ( "insert", Json.Encode.string quillOp.insert )
+        , ( "attributes"
+          , Json.Encode.object
+                (List.map encodeFormatting quillOp.attributes)
+          )
+        ]
+
+
+encodeFormatting : Formatting -> ( String, Json.Encode.Value )
+encodeFormatting formatting =
+    case formatting of
+        Bold ->
+            ( "bold", Json.Encode.bool True )
+
+        Italic ->
+            ( "italic", Json.Encode.bool True )
+
+        Strike ->
+            ( "strike", Json.Encode.bool True )
+
+        LinkFormatting url ->
+            ( "link", Json.Encode.string url )
+
+        OrderedList ->
+            ( "list", Json.Encode.string "ordered" )
+
+        UnorderedList ->
+            ( "list", Json.Encode.string "bullet" )
 
 
 linkDecoder : Json.Decode.Decoder Link

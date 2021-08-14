@@ -36,6 +36,7 @@ import Eos.Account as Eos
 import Html exposing (Html, b, button, div, label, p, span, text, textarea)
 import Html.Attributes exposing (class, classList, placeholder, rows, value)
 import Html.Events exposing (onClick, onInput)
+import I18Next
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
@@ -83,7 +84,6 @@ init loggedIn objectiveId actionId =
       , actionId = actionId
       , form = initForm
       , multiSelectState = Select.newState ""
-      , descriptionMarkdownEditor = MarkdownEditor.init
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
@@ -99,7 +99,6 @@ type alias Model =
     , actionId : Maybe ActionId
     , form : Form
     , multiSelectState : Select.State
-    , descriptionMarkdownEditor : MarkdownEditor.Model
     }
 
 
@@ -142,7 +141,8 @@ type SaveStatus
 
 
 type alias Form =
-    { description : Validator String
+    { description : MarkdownEditor.Model
+    , descriptionError : Maybe ( String, I18Next.Replacements )
     , reward : Validator String
     , validation : ActionValidation
     , verification : Verification
@@ -156,7 +156,8 @@ type alias Form =
 
 initForm : Form
 initForm =
-    { description = defaultDescription
+    { description = MarkdownEditor.init "action-description"
+    , descriptionError = Nothing
     , reward = defaultReward
     , validation = NoValidation
     , verification = Automatic
@@ -168,7 +169,7 @@ initForm =
     }
 
 
-editForm : Shared -> Form -> Action -> Form
+editForm : Shared -> Form -> Action -> ( Form, Cmd msg )
 editForm shared form action =
     let
         dateValidator : Maybe (Validator String)
@@ -257,23 +258,21 @@ editForm shared form action =
 
                 Nothing ->
                     form.instructions
+
+        ( newDescription, descriptionCmd ) =
+            MarkdownEditor.setContents action.description form.description
     in
-    { form
-        | description = updateInput action.description form.description
+    ( { form
+        | description = newDescription
         , reward = updateInput (String.fromFloat action.reward) form.reward
         , validation = validation
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
         , isCompleted = action.isCompleted
         , instructions = instructions
-    }
-
-
-defaultDescription : Validator String
-defaultDescription =
-    []
-        |> longerThan 10
-        |> newValidator "" (\v -> Just v) True
+      }
+    , descriptionCmd
+    )
 
 
 defaultInstructions : Validator String
@@ -376,9 +375,19 @@ validateForm form =
                             , verifierRewardValidator = validate m.verifierRewardValidator
                             , minVotesValidator = validate m.minVotesValidator
                         }
+
+        descriptionError =
+            if String.length form.description.contents < 10 then
+                Just
+                    ( "error.validator.text.longer_than"
+                    , [ ( "base", String.fromInt 10 ) ]
+                    )
+
+            else
+                Nothing
     in
     { form
-        | description = validate form.description
+        | descriptionError = descriptionError
         , reward = validate form.reward
         , validation = validation
         , verification = verification
@@ -399,8 +408,11 @@ isFormValid form =
                 Automatic ->
                     -- Automatic verification never has validation errors
                     False
+
+        hasDescriptionErrors =
+            String.length form.description.contents < 10
     in
-    hasErrors form.description
+    hasDescriptionErrors
         || hasErrors form.reward
         || verificationHasErrors
         |> not
@@ -460,7 +472,6 @@ type Msg
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
-    | EnteredDescription String
     | EnteredInstructions String
     | EnteredReward String
     | EnteredDeadline String
@@ -576,11 +587,16 @@ update msg model ({ shared } as loggedIn) =
                         in
                         case maybeAction of
                             Just action ->
+                                let
+                                    ( editedForm, formCmd ) =
+                                        editForm shared model.form action
+                                in
                                 { model
                                     | status = Authorized
-                                    , form = editForm shared model.form action
+                                    , form = editedForm
                                 }
                                     |> UR.init
+                                    |> UR.addCmd formCmd
 
                             Nothing ->
                                 { model | status = NotFound }
@@ -666,15 +682,6 @@ update msg model ({ shared } as loggedIn) =
             { model | multiSelectState = updated }
                 |> UR.init
                 |> UR.addCmd cmd
-
-        EnteredDescription val ->
-            { model
-                | form =
-                    { oldForm
-                        | description = updateInput val model.form.description
-                    }
-            }
-                |> UR.init
 
         EnteredInstructions val ->
             { model
@@ -1171,9 +1178,9 @@ update msg model ({ shared } as loggedIn) =
         GotMarkdownEditorMsg subMsg ->
             let
                 ( subModel, subCmd ) =
-                    MarkdownEditor.update subMsg model.descriptionMarkdownEditor
+                    MarkdownEditor.update subMsg model.form.description
             in
-            { model | descriptionMarkdownEditor = subModel }
+            { model | form = { oldForm | description = subModel } }
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotMarkdownEditorMsg subCmd)
 
@@ -1280,7 +1287,7 @@ upsertAction loggedIn community model isoDate =
                       , data =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
-                            , description = getInput model.form.description
+                            , description = model.form.description.contents
                             , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
                             , verifierReward = verifierReward
                             , deadline = isoDate
@@ -1378,7 +1385,7 @@ viewForm ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
             [ viewLoading model
-            , viewDescription loggedIn model.descriptionMarkdownEditor model.form
+            , viewDescription loggedIn model.form
             , viewReward loggedIn community model.form
             , viewValidations loggedIn model
             , viewVerifications loggedIn model community
@@ -1419,10 +1426,10 @@ viewLoading model =
             text ""
 
 
-viewDescription : LoggedIn.Model -> MarkdownEditor.Model -> Form -> Html Msg
-viewDescription { shared } descriptionMarkdownEditor form =
+viewDescription : LoggedIn.Model -> Form -> Html Msg
+viewDescription { shared } form =
     let
-        { t } =
+        { t, tr } =
             shared.translators
 
         text_ s =
@@ -1431,19 +1438,16 @@ viewDescription { shared } descriptionMarkdownEditor form =
     div [ class "mb-10" ]
         [ span [ class "input-label" ]
             [ text_ "community.actions.form.description_label" ]
-
-        -- TODO - Remove textarea
-        , textarea
-            [ class "input textarea-input w-full"
-            , classList [ ( "border-red", hasErrors form.description ) ]
-            , rows 5
-            , onInput EnteredDescription
-            , value (getInput form.description)
-            ]
-            []
-        , viewFieldErrors (listErrors shared.translations form.description)
-        , MarkdownEditor.view shared.translators Nothing descriptionMarkdownEditor
+        , MarkdownEditor.view shared.translators Nothing form.description
             |> Html.map GotMarkdownEditorMsg
+        , case form.descriptionError of
+            Nothing ->
+                text ""
+
+            Just ( key, replacements ) ->
+                tr key replacements
+                    |> List.singleton
+                    |> viewFieldErrors
         ]
 
 
@@ -1912,7 +1916,7 @@ viewVerifierSelect loggedIn model isDisabled =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    MarkdownEditor.subscriptions model.descriptionMarkdownEditor
+    MarkdownEditor.subscriptions model.form.description
         |> Sub.map GotMarkdownEditorMsg
 
 
@@ -1975,9 +1979,6 @@ msgToString msg =
 
         OnRemoveVerifier _ ->
             [ "OnRemoveVerifier" ]
-
-        EnteredDescription _ ->
-            [ "EnteredDescription" ]
 
         EnteredInstructions _ ->
             [ "EnteredInstructions" ]
