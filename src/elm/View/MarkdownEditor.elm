@@ -15,6 +15,8 @@ module View.MarkdownEditor exposing
 
 import Browser.Dom
 import Browser.Events
+import Dict
+import Eos.Account
 import Html exposing (Html, button, div, node, text)
 import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on, onClick)
@@ -22,6 +24,7 @@ import Json.Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode
 import List.Extra as List
+import Log
 import Markdown.Block
 import Markdown.Parser
 import Parser
@@ -138,8 +141,8 @@ update msg model =
             )
 
 
-setContents : String -> Model -> ( Model, Cmd msg )
-setContents contents model =
+setContents : String -> Maybe Eos.Account.Name -> Log.Location -> msg -> (msg -> List String) -> Model -> ( Model, Cmd msg )
+setContents contents maybeUsername location transaction transactionToString model =
     case quillOpFromMarkdown contents of
         Ok validQuillOps ->
             ( { model | contents = contents }
@@ -150,8 +153,33 @@ setContents contents model =
             )
 
         Err deadEnds ->
-            -- TODO - Log to sentry
-            ( model, Cmd.none )
+            ( model
+            , { username = maybeUsername
+              , message = "Got an error when "
+              , tags = [ Log.TypeTag Log.MarkdownError ]
+              , location = location
+              , contexts =
+                    [ { name = "Markdown info"
+                      , extras =
+                            (( "Received", Json.Encode.string contents )
+                                :: (deadEnds
+                                        |> List.indexedMap
+                                            (\index deadEnd ->
+                                                ( "Problem " ++ String.fromInt index
+                                                , Markdown.Parser.deadEndToString deadEnd
+                                                    |> Json.Encode.string
+                                                )
+                                            )
+                                   )
+                            )
+                                |> Dict.fromList
+                      }
+                    ]
+              , transaction = transaction
+              , level = Log.Error
+              }
+                |> Log.send transactionToString
+            )
 
 
 

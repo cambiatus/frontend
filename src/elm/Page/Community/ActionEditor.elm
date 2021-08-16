@@ -169,8 +169,8 @@ initForm =
     }
 
 
-editForm : Shared -> Form -> Action -> ( Form, Cmd msg )
-editForm shared form action =
+editForm : LoggedIn.Model -> Msg -> Form -> Action -> ( Form, Cmd Msg )
+editForm ({ shared } as loggedIn) msg form action =
     let
         dateValidator : Maybe (Validator String)
         dateValidator =
@@ -260,7 +260,12 @@ editForm shared form action =
                     form.instructions
 
         ( newDescription, descriptionCmd ) =
-            MarkdownEditor.setContents action.description form.description
+            MarkdownEditor.setContents action.description
+                (Just loggedIn.accountName)
+                { moduleName = "Page.Community.ActionEditor", function = "editForm" }
+                msg
+                msgToString
+                form.description
     in
     ( { form
         | description = newDescription
@@ -589,7 +594,7 @@ update msg model ({ shared } as loggedIn) =
                             Just action ->
                                 let
                                     ( editedForm, formCmd ) =
-                                        editForm shared model.form action
+                                        editForm loggedIn msg model.form action
                                 in
                                 { model
                                     | status = Authorized
