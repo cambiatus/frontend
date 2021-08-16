@@ -141,7 +141,6 @@ window.customElements.define('markdown-editor',
 
     setMarkdownListener (data) {
       if (data.id === this.id) {
-        console.log('=============SETTING CONTENT', data)
         this._quill.setContents(data.content)
       }
     }

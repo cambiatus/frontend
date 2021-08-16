@@ -21,6 +21,7 @@ import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode
+import List.Extra as List
 import Markdown.Block
 import Markdown.Parser
 import Parser
@@ -132,12 +133,7 @@ update msg model =
                     ( model, Cmd.none )
 
         ChangedText result ->
-            ( { model
-                | contents =
-                    result
-                        |> List.map quillOpToMarkdown
-                        |> String.concat
-              }
+            ( { model | contents = quillOpsToMarkdown result }
             , Cmd.none
             )
 
@@ -313,10 +309,93 @@ formatStrings formatting =
             ( "[", "](" ++ link ++ ")" )
 
         OrderedList ->
-            ( "1. ", "" )
+            ( "\n1. ", "" )
 
         UnorderedList ->
-            ( "- ", "" )
+            ( "\n- ", "" )
+
+
+quillOpsToMarkdown : List QuillOp -> String
+quillOpsToMarkdown quillOps =
+    let
+        foldFn :
+            QuillOp
+            -> { previousItems : List QuillOp, currString : String }
+            -> { previousItems : List QuillOp, currString : String }
+        foldFn currItem { previousItems, currString } =
+            if List.member OrderedList currItem.attributes then
+                { previousItems = []
+                , currString =
+                    currString
+                        ++ "1. "
+                        ++ (previousItems
+                                |> List.reverse
+                                |> List.map quillOpToMarkdown
+                                |> String.concat
+                           )
+                        ++ "\n"
+                }
+
+            else if List.member UnorderedList currItem.attributes then
+                { previousItems = []
+                , currString =
+                    currString
+                        ++ "- "
+                        ++ (previousItems
+                                |> List.reverse
+                                |> List.map quillOpToMarkdown
+                                |> String.concat
+                           )
+                        ++ "\n"
+                }
+
+            else if String.endsWith "\n" currItem.insert then
+                { previousItems = []
+                , currString =
+                    currString
+                        ++ ((previousItems ++ [ currItem ])
+                                |> List.map quillOpToMarkdown
+                                |> String.concat
+                           )
+                }
+
+            else
+                let
+                    currItems : List QuillOp
+                    currItems =
+                        currItem.insert
+                            |> String.split "\n"
+                            |> List.map
+                                (\insert ->
+                                    { insert = insert
+                                    , attributes = currItem.attributes
+                                    }
+                                )
+
+                    ( firstItems, lastItem ) =
+                        ( List.take (List.length currItems - 1) currItems
+                            |> List.map quillOpToMarkdown
+                        , List.last currItems
+                        )
+                in
+                { previousItems =
+                    case lastItem of
+                        Nothing ->
+                            []
+
+                        Just lastItem_ ->
+                            lastItem_ :: previousItems
+                , currString =
+                    if List.isEmpty firstItems then
+                        currString
+
+                    else
+                        currString ++ String.join "\n" firstItems ++ "\n"
+                }
+    in
+    quillOps
+        |> List.foldl foldFn { previousItems = [], currString = "" }
+        |> .currString
 
 
 quillOpToMarkdown : QuillOp -> String
@@ -345,37 +424,41 @@ quillOpFromMarkdown markdown =
 quillOpFromMarkdownBlock : Markdown.Block.Block -> List QuillOp
 quillOpFromMarkdownBlock block =
     let
-        addEverySecond : a -> List a -> List a
-        addEverySecond sep items =
-            List.foldr
-                (\currItem separatedList -> currItem :: sep :: separatedList)
-                []
-                items
+        parseList listType children =
+            children
+                |> List.map
+                    (List.map quillOpFromMarkdownInline
+                        >> List.concat
+                        >> (\line -> line ++ [ { insert = "\n", attributes = [ listType ] } ])
+                    )
+                |> List.concat
     in
     case block of
         Markdown.Block.UnorderedList children ->
             let
-                listItemToList : Markdown.Block.ListItem children -> List children
                 listItemToList (Markdown.Block.ListItem _ children_) =
                     children_
             in
             children
-                |> List.map (listItemToList >> List.map quillOpFromMarkdownInline)
-                |> List.concat
-                |> List.concat
-                |> addEverySecond { insert = "\n", attributes = [ UnorderedList ] }
+                |> List.map listItemToList
+                |> parseList UnorderedList
 
         Markdown.Block.OrderedList _ children ->
             children
-                |> List.map (List.map quillOpFromMarkdownInline)
-                |> List.concat
-                |> List.concat
-                |> addEverySecond { insert = "\n", attributes = [ OrderedList ] }
+                |> parseList OrderedList
 
         Markdown.Block.Paragraph children ->
             children
                 |> List.map quillOpFromMarkdownInline
                 |> List.concat
+                |> List.map
+                    (\op ->
+                        if String.endsWith "\n" op.insert then
+                            op
+
+                        else
+                            { op | insert = op.insert ++ "\n" }
+                    )
 
         _ ->
             []
