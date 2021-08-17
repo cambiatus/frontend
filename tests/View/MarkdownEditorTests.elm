@@ -27,6 +27,6 @@ markdownCompatibility =
         , fuzz Fuzz.markdownString "Parsing and reading markdown shouldn't change the content" <|
             \fuzzMarkdownString ->
                 MarkdownEditor.quillOpFromMarkdown fuzzMarkdownString
-                    |> Result.map (List.map MarkdownEditor.quillOpToMarkdown >> String.concat)
+                    |> Result.map (List.map MarkdownEditor.quillOpToMarkdown >> String.concat >> String.trim)
                     |> Expect.equal (Ok fuzzMarkdownString)
         ]
