@@ -20,8 +20,8 @@ import Browser.Dom
 import Browser.Events
 import Dict
 import Eos.Account
-import Html exposing (Html, button, div, node, p, text)
-import Html.Attributes exposing (attribute, class, id, type_)
+import Html exposing (Html, a, button, div, node, p, text)
+import Html.Attributes exposing (attribute, class, href, id, target, type_)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
@@ -201,7 +201,29 @@ viewReadOnly : List (Html.Attribute msg) -> String -> Html msg
 viewReadOnly attributes content =
     case Markdown.Parser.parse content of
         Ok blocks ->
-            case Markdown.Renderer.render Markdown.Renderer.defaultHtmlRenderer blocks of
+            let
+                defaultRenderer =
+                    Markdown.Renderer.defaultHtmlRenderer
+
+                renderer =
+                    { defaultRenderer
+                        | link =
+                            \link linkContent ->
+                                case link.title of
+                                    Just title ->
+                                        a
+                                            [ href link.destination
+                                            , Html.Attributes.title title
+                                            , target "_blank"
+                                            ]
+                                            linkContent
+
+                                    Nothing ->
+                                        a [ href link.destination, target "_blank" ]
+                                            linkContent
+                    }
+            in
+            case Markdown.Renderer.render renderer blocks of
                 Ok asHtml ->
                     p (class "markdown-viewer" :: attributes) asHtml
 
