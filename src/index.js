@@ -110,8 +110,8 @@ window.customElements.define('markdown-editor',
 
     linkHandler () {
       let range = this._quill.getSelection(true)
-      if (range.length === 0) {
-        // TODO - Take into account if caret is in the middle of a link
+      const isLink = this._quill.getFormat(range).link !== undefined
+      if (range.length === 0 && isLink) {
         range = this.getFormattedRange(range.index)
       }
       const text = this._quill.getText(range)
