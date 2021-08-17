@@ -19,7 +19,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Document
 import Graphql.Http
-import Html exposing (Html, button, div, label, p, span, text)
+import Html exposing (Html, button, div, label, span, text)
 import Html.Attributes exposing (class, classList, disabled, for, maxlength, minlength, required, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Http

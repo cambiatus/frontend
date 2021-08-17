@@ -16,7 +16,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
-import Markdown.Block
 import Page
 import Profile
 import Profile.Summary

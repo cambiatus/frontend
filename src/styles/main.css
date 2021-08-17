@@ -479,6 +479,22 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
 /* End of Button Modifiers */
 
+/* Markdown Viewer classes */
+
+.markdown-viewer ul {
+  @apply list-disc list-inside;
+}
+
+.markdown-viewer ol {
+  @apply list-decimal list-inside;
+}
+
+.markdown-viewer a {
+  @apply underline hover:opacity-80;
+}
+
+/* End of Markdown Viewer classes
+
 /* QuillJS classes */
 
 @import '../../node_modules/quill/dist/quill.snow.css';
@@ -491,14 +507,14 @@ https://tailwindcss.com/docs/adding-new-utilities */
   @apply border-none;
 }
 
-.ql-container.ql-snow.ql-disabled .ql-editor {
-  @apply bg-gray-500;
-}
-
 .ql-editor {
   @apply bg-white text-black text-sm rounded-b-md px-3 py-2 min-h-36 max-h-48 focus:outline-none;
 
   font-family: var(--font-family);
+}
+
+.ql-container.ql-snow.ql-disabled .ql-editor {
+  @apply bg-gray-500;
 }
 
 .ql-snow .ql-editor a {
@@ -571,22 +587,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of QuillJS classes */
-
-/* Markdown Viewer classes */
-
-.markdown-viewer ul {
-  @apply list-disc list-inside;
-}
-
-.markdown-viewer ol {
-  @apply list-decimal list-inside;
-}
-
-.markdown-viewer a {
-  @apply underline hover:opacity-80;
-}
-
-/* End of Markdown Viewer classes
 
 /* Legacy CSS leftover */
 

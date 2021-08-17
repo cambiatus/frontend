@@ -25,7 +25,6 @@ import DataValidator
         , isOdd
         , lengthGreaterThanOrEqual
         , listErrors
-        , longerThan
         , newValidator
         , updateInput
         , validate
@@ -33,9 +32,9 @@ import DataValidator
 import Dict
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, label, p, span, text, textarea)
-import Html.Attributes exposing (class, classList, placeholder, rows, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, b, button, div, p, span, text)
+import Html.Attributes exposing (class, classList, placeholder)
+import Html.Events exposing (onClick)
 import I18Next
 import Icons
 import Json.Decode as Json exposing (Value)
@@ -1446,9 +1445,6 @@ viewDescription { shared } form =
     let
         { t, tr } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
     MarkdownEditor.view
         { translators = shared.translators
@@ -2066,7 +2062,7 @@ msgToString msg =
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
 
         GotDescriptionEditorMsg subMsg ->
-            "GotMarkdownEditorMsg" :: MarkdownEditor.msgToString subMsg
+            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         GotInstructionsEditorMsg subMsg ->
             "GotInstructionsEditorMsg" :: MarkdownEditor.msgToString subMsg

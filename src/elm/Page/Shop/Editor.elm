@@ -21,7 +21,7 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, p, span, text)
-import Html.Attributes exposing (class, disabled, id, maxlength, required, rows, value)
+import Html.Attributes exposing (class, disabled, id, maxlength, required, value)
 import Html.Events exposing (onClick)
 import Http
 import I18Next
@@ -29,7 +29,6 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
 import Page
-import Process
 import RemoteData exposing (RemoteData)
 import Result exposing (Result)
 import Route
