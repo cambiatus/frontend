@@ -52,6 +52,7 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -751,8 +752,13 @@ viewProfile loggedIn profile =
                       else
                         text ""
                     ]
-                , p [ class "text-sm text-gray-900" ]
-                    [ text (Maybe.withDefault "" profile.bio) ]
+                , case profile.bio of
+                    Nothing ->
+                        text ""
+
+                    Just bio ->
+                        View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
+                            bio
                 ]
                 :: (if isProfileOwner then
                         []

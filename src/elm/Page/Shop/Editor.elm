@@ -471,7 +471,6 @@ type Msg
     | EnteredImage (List File)
     | EnteredTitle String
     | GotDescriptionEditorMsg MarkdownEditor.Msg
-    | LoadedInitialDescription String
     | EnteredTrackStock String
     | EnteredUnits String
     | EnteredPrice String
@@ -551,16 +550,13 @@ update msg model loggedIn =
                                 { form
                                     | image = updateInput sale.image form.image
                                     , title = updateInput sale.title form.title
+                                    , description = MarkdownEditor.setContents sale.description form.description
                                     , trackStock = updateInput (Just trackStock) form.trackStock
                                     , units = updateInput (String.fromInt sale.units) form.units
                                     , price = updateInput (String.fromFloat sale.price) form.price
                                 }
                             )
                         |> UR.init
-                        |> UR.addCmd
-                            (Task.succeed sale.description
-                                |> Task.perform LoadedInitialDescription
-                            )
 
                 ( _, _ ) ->
                     model
@@ -710,32 +706,6 @@ update msg model loggedIn =
                         |> updateForm (\form_ -> { form_ | description = descriptionInput })
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
-
-        LoadedInitialDescription description ->
-            case maybeForm model of
-                Nothing ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Loaded the initial description, but model doesn't have a form"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-                Just form ->
-                    let
-                        ( descriptionInput, descriptionCmd ) =
-                            MarkdownEditor.setContents description
-                                (Just loggedIn.accountName)
-                                { moduleName = "Page.Shop.Editor", function = "update" }
-                                msg
-                                msgToString
-                                form.description
-                    in
-                    model
-                        |> updateForm (\form_ -> { form_ | description = descriptionInput })
-                        |> UR.init
-                        |> UR.addCmd descriptionCmd
 
         EnteredTrackStock trackStock ->
             model
@@ -1370,9 +1340,6 @@ msgToString msg =
 
         GotDescriptionEditorMsg subMsg ->
             "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
-
-        LoadedInitialDescription _ ->
-            [ "LoadedInitialDescription" ]
 
         EnteredTrackStock _ ->
             [ "EnteredTrackStock" ]

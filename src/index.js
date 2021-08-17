@@ -63,6 +63,12 @@ window.customElements.define('markdown-editor',
     }
 
     connectedCallback () {
+      // If we dont include the timeout, we get some annoying bugs in
+      // development where the text is cleared, and hot reloading bugs out and
+      // crashes the app
+      window.setTimeout(() => {
+        this.dispatchEvent(new CustomEvent('component-loaded', {}))
+      }, 0)
       this.appendChild(this._parentContainer)
 
       // Remove default click handler and add our custom one

@@ -170,7 +170,7 @@ initForm =
     }
 
 
-editForm : LoggedIn.Model -> Msg -> Form -> Action -> ( Form, Cmd Msg )
+editForm : LoggedIn.Model -> Msg -> Form -> Action -> Form
 editForm ({ shared } as loggedIn) msg form action =
     let
         dateValidator : Maybe (Validator String)
@@ -251,39 +251,22 @@ editForm ({ shared } as loggedIn) msg form action =
                     , photoProof = photoProof
                     , profileSummaries = profileSummaries
                     }
-
-        ( newInstructions, instructionsCmd ) =
-            case action.photoProofInstructions of
-                Just instructions_ ->
-                    MarkdownEditor.setContents instructions_
-                        (Just loggedIn.accountName)
-                        { moduleName = "Page.Community.ActionEditor", function = "editForm" }
-                        msg
-                        msgToString
-                        form.instructions
-
-                Nothing ->
-                    ( form.instructions, Cmd.none )
-
-        ( newDescription, descriptionCmd ) =
-            MarkdownEditor.setContents action.description
-                (Just loggedIn.accountName)
-                { moduleName = "Page.Community.ActionEditor", function = "editForm" }
-                msg
-                msgToString
-                form.description
     in
-    ( { form
-        | description = newDescription
+    { form
+        | description = MarkdownEditor.setContents action.description form.description
         , reward = updateInput (String.fromFloat action.reward) form.reward
         , validation = validation
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
         , isCompleted = action.isCompleted
-        , instructions = newInstructions
-      }
-    , Cmd.batch [ descriptionCmd, instructionsCmd ]
-    )
+        , instructions =
+            case action.photoProofInstructions of
+                Just instructions_ ->
+                    MarkdownEditor.setContents instructions_ form.instructions
+
+                Nothing ->
+                    form.instructions
+    }
 
 
 defaultReward : Validator String
@@ -601,16 +584,11 @@ update msg model ({ shared } as loggedIn) =
                         in
                         case maybeAction of
                             Just action ->
-                                let
-                                    ( editedForm, formCmd ) =
-                                        editForm loggedIn msg model.form action
-                                in
                                 { model
                                     | status = Authorized
-                                    , form = editedForm
+                                    , form = editForm loggedIn msg model.form action
                                 }
                                     |> UR.init
-                                    |> UR.addCmd formCmd
 
                             Nothing ->
                                 { model | status = NotFound }

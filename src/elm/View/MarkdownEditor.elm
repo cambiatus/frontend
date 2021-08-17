@@ -83,6 +83,7 @@ type Msg
     | EnteredLinkUrl String
     | ClickedAcceptLink
     | ChangedText (List QuillOp)
+    | OnLoadCalled
 
 
 
@@ -146,54 +147,96 @@ update msg model =
             , Cmd.none
             )
 
-
-setContents : String -> Maybe Eos.Account.Name -> Log.Location -> msg -> (msg -> List String) -> Model -> ( Model, Cmd msg )
-setContents contents maybeUsername location transaction transactionToString model =
-    case quillOpFromMarkdown contents of
-        Ok validQuillOps ->
-            ( { model | contents = contents }
-            , Ports.setMarkdownContent
-                { id = model.id
-                , content = Json.Encode.list encodeQuillOp validQuillOps
-                }
-            )
-
-        Err deadEnds ->
+        OnLoadCalled ->
             ( model
-            , { username = maybeUsername
-              , message = "Got an error when "
-              , tags = [ Log.TypeTag Log.MarkdownError ]
-              , location = location
-              , contexts =
-                    [ { name = "Markdown info"
-                      , extras =
-                            (( "Received", Json.Encode.string contents )
-                                :: (deadEnds
-                                        |> List.indexedMap
-                                            (\index deadEnd ->
-                                                ( "Problem " ++ String.fromInt index
-                                                , Markdown.Parser.deadEndToString deadEnd
-                                                    |> Json.Encode.string
+            , case quillOpFromMarkdown model.contents of
+                Ok validQuillOps ->
+                    Ports.setMarkdownContent
+                        { id = model.id
+                        , content = Json.Encode.list encodeQuillOp validQuillOps
+                        }
+
+                Err deadEnds ->
+                    { username = Nothing
+                    , message = "Got an error when parsing markdown"
+                    , tags = [ Log.TypeTag Log.MarkdownError ]
+                    , location = { moduleName = "View.MarkdownEditor", function = "update" }
+                    , contexts =
+                        [ { name = "Markdown info"
+                          , extras =
+                                (( "Received", Json.Encode.string model.contents )
+                                    :: (deadEnds
+                                            |> List.indexedMap
+                                                (\index deadEnd ->
+                                                    ( "Problem " ++ String.fromInt index
+                                                    , Markdown.Parser.deadEndToString deadEnd
+                                                        |> Json.Encode.string
+                                                    )
                                                 )
-                                            )
-                                   )
-                            )
-                                |> Dict.fromList
-                      }
-                    , { name = "Editor info"
-                      , extras =
-                            [ ( "id", Json.Encode.string model.id ) ]
-                                |> Dict.fromList
-                      }
-                    ]
-              , transaction = transaction
-              , level = Log.Error
-              }
-                |> Log.send transactionToString
+                                       )
+                                )
+                                    |> Dict.fromList
+                          }
+                        , { name = "Editor info"
+                          , extras =
+                                [ ( "id", Json.Encode.string model.id ) ]
+                                    |> Dict.fromList
+                          }
+                        ]
+                    , transaction = msg
+                    , level = Log.Error
+                    }
+                        |> Log.send msgToString
             )
 
 
+setContents : String -> Model -> Model
+setContents contents model =
+    { model | contents = contents }
 
+
+
+-- case quillOpFromMarkdown contents of
+--     Ok validQuillOps ->
+--         ( { model | contents = contents }
+--         , Ports.setMarkdownContent
+--             { id = model.id
+--             , content = Json.Encode.list encodeQuillOp validQuillOps
+--             }
+--         )
+--     Err deadEnds ->
+--         ( model
+--         , { username = maybeUsername
+--           , message = "Got an error when parsing markdown"
+--           , tags = [ Log.TypeTag Log.MarkdownError ]
+--           , location = location
+--           , contexts =
+--                 [ { name = "Markdown info"
+--                   , extras =
+--                         (( "Received", Json.Encode.string contents )
+--                             :: (deadEnds
+--                                     |> List.indexedMap
+--                                         (\index deadEnd ->
+--                                             ( "Problem " ++ String.fromInt index
+--                                             , Markdown.Parser.deadEndToString deadEnd
+--                                                 |> Json.Encode.string
+--                                             )
+--                                         )
+--                                )
+--                         )
+--                             |> Dict.fromList
+--                   }
+--                 , { name = "Editor info"
+--                   , extras =
+--                         [ ( "id", Json.Encode.string model.id ) ]
+--                             |> Dict.fromList
+--                   }
+--                 ]
+--           , transaction = transaction
+--           , level = Log.Error
+--           }
+--             |> Log.send transactionToString
+--         )
 -- VIEW
 
 
@@ -269,6 +312,7 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                     )
                 , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
+                , on "component-loaded" (Json.Decode.succeed OnLoadCalled)
                 , id model.id
                 ]
                 []
@@ -735,3 +779,6 @@ msgToString msg =
 
         ChangedText _ ->
             [ "ChangedText" ]
+
+        OnLoadCalled ->
+            [ "OnLoadCalled" ]

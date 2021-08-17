@@ -142,6 +142,10 @@ subscriptions model =
                 ObjectiveEditor.subscriptions subModel
                     |> Sub.map GotObjectiveEditorMsg
 
+            ProfileEditor subModel ->
+                ProfileEditor.subscriptions subModel
+                    |> Sub.map GotProfileEditorMsg
+
             _ ->
                 Sub.none
         ]

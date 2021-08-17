@@ -127,19 +127,10 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         CompletedLoadCommunity community ->
-            let
-                ( descriptionInput, descriptionCmd ) =
-                    MarkdownEditor.setContents community.description
-                        (Just loggedIn.accountName)
-                        { moduleName = "Page.Community.Settings.Info", function = "update" }
-                        msg
-                        msgToString
-                        model.descriptionInput
-            in
             { model
                 | logo = RemoteData.Success community.logo
                 , nameInput = community.name
-                , descriptionInput = descriptionInput
+                , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
                 , coverPhoto =
                     case List.head community.uploads of
                         Just photo ->
@@ -159,7 +150,6 @@ update msg model ({ shared } as loggedIn) =
                 , websiteInput = Maybe.withDefault "" community.website
             }
                 |> UR.init
-                |> UR.addCmd descriptionCmd
 
         ClosedAuthModal ->
             { model | isLoading = False }

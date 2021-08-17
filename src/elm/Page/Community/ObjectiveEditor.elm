@@ -396,26 +396,18 @@ update msg model loggedIn =
                         Just objectiveId ->
                             case List.find (\o -> o.id == objectiveId) community.objectives of
                                 Just objective ->
-                                    let
-                                        ( objectiveDescription, objectiveFormCmd ) =
-                                            MarkdownEditor.setContents objective.description
-                                                (Just loggedIn.accountName)
-                                                { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
-                                                msg
-                                                msgToString
-                                                (MarkdownEditor.init "objective-description")
-                                    in
                                     { model
                                         | status =
                                             Editing
                                                 |> EditingObjective objective
-                                                    { description = objectiveDescription
+                                                    { description =
+                                                        MarkdownEditor.init "objective-description"
+                                                            |> MarkdownEditor.setContents objective.description
                                                     , isCompleted = objective.isCompleted
                                                     }
                                                 |> Authorized
                                     }
                                         |> UR.init
-                                        |> UR.addCmd objectiveFormCmd
 
                                 Nothing ->
                                     { model | status = NotFound }
