@@ -731,8 +731,7 @@
         "unitEmpty": "ክፍሎች ባዶ መሆን አይችሉም",
         "unitTooLow": "ክፍሉ በጣም ትንሽ ነዉ, ቢያንስ 1 መሆን አለበት ",
         "unitTooHigh": "በቂ ክፍሎች የሉም",
-        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል",
-        "memoEmpty": "ማስታወሻ ባዶ መሆን የለበትም"
+        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል"
       }
     },
     "delete": "ሰርዝ",

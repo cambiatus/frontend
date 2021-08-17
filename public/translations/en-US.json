@@ -770,8 +770,7 @@
         "unitEmpty": "Unit cannot be empty",
         "unitTooLow": "Unit is too low, must be at least 1",
         "unitTooHigh": "Not enough units available",
-        "unitNotOnlyNumbers": "Only numbers are allowed",
-        "memoEmpty": "Memo cannot be empty"
+        "unitNotOnlyNumbers": "Only numbers are allowed"
       }
     },
     "delete": "Delete",

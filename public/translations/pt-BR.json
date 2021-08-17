@@ -777,8 +777,7 @@
         "unitEmpty": "Unidade não pode estar vazia",
         "unitTooLow": "A unidade é muito baixa, deve ser pelo menos 1",
         "unitTooHigh": "Unidades insuficientes disponíveis",
-        "unitNotOnlyNumbers": "Somente números são permitidos",
-        "memoEmpty": "O memorando não pode estar vazio"
+        "unitNotOnlyNumbers": "Somente números são permitidos"
       }
     },
     "delete": "Excluir",

@@ -773,8 +773,7 @@
         "unitEmpty": "La unitat no pot estar buida",
         "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
         "unitTooHigh": "No hi ha prou unitats disponibles",
-        "unitNotOnlyNumbers": "Només es permeten números",
-        "memoEmpty": "La nota no pot estar buida"
+        "unitNotOnlyNumbers": "Només es permeten números"
       }
     },
     "delete": "Eliminar",

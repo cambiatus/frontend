@@ -773,8 +773,7 @@
         "unitEmpty": "La unidad no puede estar vacía",
         "unitTooLow": "La unidad es demasiado baja, debe ser al menos 1",
         "unitTooHigh": "No hay suficientes unidades disponibles",
-        "unitNotOnlyNumbers": "Solo se permiten números",
-        "memoEmpty": "La nota no puede estar vacía"
+        "unitNotOnlyNumbers": "Solo se permiten números"
       }
     },
     "delete": "Eliminar",

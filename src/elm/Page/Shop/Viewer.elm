@@ -134,7 +134,6 @@ type FormError
     = UnitEmpty
     | UnitTooLow
     | UnitTooHigh
-    | MemoEmpty
     | UnitNotOnlyNumbers
 
 
@@ -860,9 +859,6 @@ getError validation =
 
                         UnitNotOnlyNumbers ->
                             "shop.transfer.errors.unitNotOnlyNumbers"
-
-                        MemoEmpty ->
-                            "shop.transfer.errors.memoEmpty"
             in
             Just [ translationString ]
 
