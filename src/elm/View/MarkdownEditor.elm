@@ -4,6 +4,7 @@ module View.MarkdownEditor exposing
     , Model
     , Msg
     , QuillOp
+    , forceSetContents
     , init
     , msgToString
     , quillOpFromMarkdown
@@ -19,7 +20,6 @@ module View.MarkdownEditor exposing
 import Browser.Dom
 import Browser.Events
 import Dict
-import Eos.Account
 import Html exposing (Html, a, button, div, node, p, text)
 import Html.Attributes exposing (attribute, class, href, id, target, type_)
 import Html.Events exposing (on, onClick)
@@ -195,48 +195,14 @@ setContents contents model =
     { model | contents = contents }
 
 
+forceSetContents : String -> Model -> ( Model, Cmd Msg )
+forceSetContents contents model =
+    model
+        |> setContents contents
+        |> update OnLoadCalled
 
--- case quillOpFromMarkdown contents of
---     Ok validQuillOps ->
---         ( { model | contents = contents }
---         , Ports.setMarkdownContent
---             { id = model.id
---             , content = Json.Encode.list encodeQuillOp validQuillOps
---             }
---         )
---     Err deadEnds ->
---         ( model
---         , { username = maybeUsername
---           , message = "Got an error when parsing markdown"
---           , tags = [ Log.TypeTag Log.MarkdownError ]
---           , location = location
---           , contexts =
---                 [ { name = "Markdown info"
---                   , extras =
---                         (( "Received", Json.Encode.string contents )
---                             :: (deadEnds
---                                     |> List.indexedMap
---                                         (\index deadEnd ->
---                                             ( "Problem " ++ String.fromInt index
---                                             , Markdown.Parser.deadEndToString deadEnd
---                                                 |> Json.Encode.string
---                                             )
---                                         )
---                                )
---                         )
---                             |> Dict.fromList
---                   }
---                 , { name = "Editor info"
---                   , extras =
---                         [ ( "id", Json.Encode.string model.id ) ]
---                             |> Dict.fromList
---                   }
---                 ]
---           , transaction = transaction
---           , level = Log.Error
---           }
---             |> Log.send transactionToString
---         )
+
+
 -- VIEW
 
 

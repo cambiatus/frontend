@@ -285,6 +285,11 @@ update msg session =
                 |> updateShared session
                 |> UR.init
                 |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
+                |> UR.addExt
+                    (LoggedIn.TranslationsLoaded
+                        |> LoggedIn.Broadcast
+                        |> LoggedInExternalMsg
+                    )
 
         ( CompletedLoadTranslation _ (Err err), _ ) ->
             Shared.loadTranslation (Err err)

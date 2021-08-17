@@ -2,10 +2,11 @@ module Page.Shop.Viewer exposing
     ( LoggedInModel
     , LoggedInMsg
     , Model
-    , Msg
+    , Msg(..)
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveLoggedInBroadcast
     , update
     , view
     )
@@ -52,6 +53,7 @@ init session saleId =
                 { status = RemoteData.Loading
                 , viewing = ViewingCard
                 , form = initForm
+                , hasChangedDefaultMemo = False
                 , balances = []
                 , isBuyButtonDisabled = False
                 }
@@ -93,6 +95,7 @@ type alias LoggedInModel =
     { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
     , viewing : ViewState
     , form : Form
+    , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
     }
@@ -164,6 +167,7 @@ type LoggedInMsg
     | EnteredUnit String
     | GotMemoEditorMsg View.MarkdownEditor.Msg
     | GotTransferResult (Result (Maybe Value) String)
+    | CompletedLoadTranslations
 
 
 type alias UpdateResult =
@@ -415,7 +419,14 @@ updateAsLoggedIn msg model loggedIn =
                 ( memo, memoCmd ) =
                     View.MarkdownEditor.update subMsg oldForm.memo
             in
-            { model | form = { oldForm | memo = memo } }
+            { model
+                | form = { oldForm | memo = memo }
+                , hasChangedDefaultMemo =
+                    ((String.trim memo.contents == defaultMemoKey)
+                        || (String.trim memo.contents == t defaultMemoKey)
+                    )
+                        |> not
+            }
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
 
@@ -428,6 +439,24 @@ updateAsLoggedIn msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
+
+        CompletedLoadTranslations ->
+            if not model.hasChangedDefaultMemo then
+                let
+                    oldForm =
+                        model.form
+
+                    ( memo, memoCmd ) =
+                        View.MarkdownEditor.forceSetContents (t defaultMemoKey)
+                            oldForm.memo
+                in
+                { model | form = { oldForm | memo = memo } }
+                    |> UR.init
+                    |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
+
+            else
+                model
+                    |> UR.init
 
 
 
@@ -892,6 +921,16 @@ isFormValid form =
 -- UTILS
 
 
+receiveLoggedInBroadcast : LoggedIn.BroadcastMsg -> Maybe LoggedInMsg
+receiveLoggedInBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.TranslationsLoaded ->
+            Just CompletedLoadTranslations
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -941,6 +980,9 @@ loggedInMsgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        CompletedLoadTranslations ->
+            [ "CompletedLoadTranslations" ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

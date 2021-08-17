@@ -564,6 +564,10 @@ broadcast broadcastMessage status =
                     Shop.receiveBroadcast broadcastMessage
                         |> Maybe.map GotShopMsg
 
+                ShopViewer _ _ ->
+                    ShopViewer.receiveLoggedInBroadcast broadcastMessage
+                        |> Maybe.map (ShopViewer.AsLoggedInMsg >> GotShopViewerMsg)
+
                 Transfer _ ->
                     Transfer.receiveBroadcast broadcastMessage
                         |> Maybe.map GotTransferMsg
