@@ -524,7 +524,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
   font-family: var(--font-family);
 }
 
-.ql-snow .ql-tooltip[data-mode="link"]::before {
+.ql-snow .ql-tooltip[data-mode='link']::before {
   content: '';
 }
 
@@ -559,6 +559,22 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of QuillJS classes */
+
+/* Markdown Viewer classes */
+
+.markdown-viewer ul {
+  @apply list-disc list-inside;
+}
+
+.markdown-viewer ol {
+  @apply list-decimal list-inside;
+}
+
+.markdown-viewer a {
+  @apply underline;
+}
+
+/* End of Markdown Viewer classes
 
 /* Legacy CSS leftover */
 

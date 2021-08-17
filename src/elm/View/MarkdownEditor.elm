@@ -11,13 +11,14 @@ module View.MarkdownEditor exposing
     , subscriptions
     , update
     , view
+    , viewReadOnly
     )
 
 import Browser.Dom
 import Browser.Events
 import Dict
 import Eos.Account
-import Html exposing (Html, button, div, node, text)
+import Html exposing (Html, button, div, node, p, text)
 import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on, onClick)
 import Json.Decode
@@ -27,6 +28,7 @@ import List.Extra as List
 import Log
 import Markdown.Block
 import Markdown.Parser
+import Markdown.Renderer
 import Parser
 import Parser.Advanced
 import Ports
@@ -184,6 +186,21 @@ setContents contents maybeUsername location transaction transactionToString mode
 
 
 -- VIEW
+
+
+viewReadOnly : List (Html.Attribute msg) -> String -> Html msg
+viewReadOnly attributes content =
+    case Markdown.Parser.parse content of
+        Ok blocks ->
+            case Markdown.Renderer.render Markdown.Renderer.defaultHtmlRenderer blocks of
+                Ok asHtml ->
+                    p (class "markdown-viewer" :: attributes) asHtml
+
+                Err _ ->
+                    text ""
+
+        Err _ ->
+            text ""
 
 
 view : Translators -> Maybe String -> Model -> Html Msg
