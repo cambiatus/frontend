@@ -151,11 +151,11 @@ viewObjective ({ shared } as loggedIn) model _ index objective =
                 , onClick (OpenObjective index)
                 ]
                 [ div [ class "overflow-hidden" ]
-                    [ p
+                    [ View.MarkdownEditor.viewReadOnly
                         [ class "text-sm"
-                        , classList [ ( "truncate", not isOpen ) ]
+                        , classList [ ( "truncate-children", not isOpen ) ]
                         ]
-                        [ text objective.description ]
+                        objective.description
                     , p [ class "text-gray-900 text-caption uppercase mt-2" ]
                         [ text
                             (shared.translators.tr

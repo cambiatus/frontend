@@ -1,5 +1,6 @@
 module View.MarkdownEditor exposing
     ( Formatting(..)
+    , LinkModalState(..)
     , Model
     , Msg
     , QuillOp
@@ -7,6 +8,7 @@ module View.MarkdownEditor exposing
     , msgToString
     , quillOpFromMarkdown
     , quillOpToMarkdown
+    , removeFormatting
     , setContents
     , subscriptions
     , update
@@ -19,7 +21,7 @@ import Browser.Events
 import Dict
 import Eos.Account
 import Html exposing (Html, button, div, node, p, text)
-import Html.Attributes exposing (attribute, class, id)
+import Html.Attributes exposing (attribute, class, id, type_)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
@@ -29,11 +31,13 @@ import Log
 import Markdown.Block
 import Markdown.Parser
 import Markdown.Renderer
+import Maybe.Extra
 import Parser
 import Parser.Advanced
 import Ports
 import Session.Shared exposing (Translators)
 import Task
+import View.Form
 import View.Form.Input as Input
 import View.Modal as Modal
 
@@ -176,6 +180,11 @@ setContents contents maybeUsername location transaction transactionToString mode
                             )
                                 |> Dict.fromList
                       }
+                    , { name = "Editor info"
+                      , extras =
+                            [ ( "id", Json.Encode.string model.id ) ]
+                                |> Dict.fromList
+                      }
                     ]
               , transaction = transaction
               , level = Log.Error
@@ -203,18 +212,51 @@ viewReadOnly attributes content =
             text ""
 
 
-view : Translators -> Maybe String -> Model -> Html Msg
-view ({ t } as translators) placeholder model =
+view :
+    { translators : Translators
+    , placeholder : Maybe String
+    , label : String
+    , problem : Maybe String
+    , disabled : Bool
+    }
+    -> List (Html.Attribute Msg)
+    -> Model
+    -> Html Msg
+view { translators, placeholder, label, problem, disabled } attributes model =
+    let
+        { t } =
+            translators
+    in
     div []
-        [ node "markdown-editor"
-            [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
-            , attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
-            , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
-            , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
-            , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
-            , id model.id
+        [ div (class "mb-10" :: attributes)
+            [ if String.isEmpty label then
+                text ""
+
+              else
+                View.Form.label model.id label
+            , node "markdown-editor"
+                [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
+                , attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
+                , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
+                , attribute "elm-disabled"
+                    (if disabled then
+                        "true"
+
+                     else
+                        "false"
+                    )
+                , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
+                , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
+                , id model.id
+                ]
+                []
+            , case problem of
+                Nothing ->
+                    text ""
+
+                Just problem_ ->
+                    p [ class "form-error" ] [ text problem_ ]
             ]
-            []
         , case model.linkModalState of
             Editing linkModal ->
                 Modal.initWith
@@ -247,9 +289,17 @@ view ({ t } as translators) placeholder model =
                             |> Input.toHtml
                         ]
                     |> Modal.withFooter
-                        [ button [ class "modal-cancel", onClick ClosedLinkModal ]
+                        [ button
+                            [ class "modal-cancel"
+                            , onClick ClosedLinkModal
+                            , type_ "button"
+                            ]
                             [ text <| t "menu.cancel" ]
-                        , button [ class "modal-accept", onClick ClickedAcceptLink ]
+                        , button
+                            [ class "modal-accept"
+                            , onClick ClickedAcceptLink
+                            , type_ "button"
+                            ]
                             [ text <| t "menu.save" ]
                         ]
                     |> Modal.toHtml
@@ -280,18 +330,8 @@ type alias QuillOp =
 
 textChangeDecoder : Json.Decode.Decoder (List QuillOp)
 textChangeDecoder =
-    Json.Decode.value
-        |> Json.Decode.andThen
-            (\event ->
-                case Json.Decode.decodeValue (Json.Decode.list quillOpDecoder |> Json.Decode.at [ "detail", "ops" ]) event of
-                    Ok val ->
-                        Json.Decode.succeed val
-
-                    Err err ->
-                        err
-                            |> Json.Decode.errorToString
-                            |> Json.Decode.fail
-            )
+    Json.Decode.list quillOpDecoder
+        |> Json.Decode.at [ "detail", "ops" ]
 
 
 quillOpDecoder : Json.Decode.Decoder QuillOp
@@ -398,7 +438,8 @@ quillOpsToMarkdown quillOps =
                 { previousItems = []
                 , currString =
                     currString
-                        ++ ((previousItems ++ [ currItem ])
+                        ++ ((currItem :: previousItems)
+                                |> List.reverse
                                 |> List.map quillOpToMarkdown
                                 |> String.concat
                            )
@@ -429,13 +470,24 @@ quillOpsToMarkdown quillOps =
                             []
 
                         Just lastItem_ ->
-                            lastItem_ :: previousItems
+                            if List.isEmpty firstItems then
+                                lastItem_ :: previousItems
+
+                            else
+                                [ lastItem_ ]
                 , currString =
                     if List.isEmpty firstItems then
                         currString
 
                     else
-                        currString ++ String.join "\n" firstItems ++ "\n"
+                        currString
+                            ++ (previousItems
+                                    |> List.reverse
+                                    |> List.map quillOpToMarkdown
+                                    |> String.concat
+                               )
+                            ++ String.join "\n" firstItems
+                            ++ "\n"
                 }
     in
     quillOps
@@ -496,14 +548,7 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.map quillOpFromMarkdownInline
                 |> List.concat
-                |> List.map
-                    (\op ->
-                        if String.endsWith "\n" op.insert then
-                            op
-
-                        else
-                            { op | insert = op.insert ++ "\n" }
-                    )
+                |> (\l -> l ++ [ { insert = "\n", attributes = [] } ])
 
         _ ->
             []
@@ -555,6 +600,50 @@ subscriptions model =
 
 
 -- UTILS
+
+
+removeFormatting : String -> String
+removeFormatting markdownString =
+    case Markdown.Parser.parse markdownString of
+        Ok blocks ->
+            blocks
+                |> List.map removeFormattingFromBlock
+                |> Maybe.Extra.combine
+                |> Maybe.map (String.join "\n")
+                |> Maybe.withDefault markdownString
+
+        Err _ ->
+            markdownString
+
+
+removeFormattingFromBlock : Markdown.Block.Block -> Maybe String
+removeFormattingFromBlock block =
+    case block of
+        Markdown.Block.UnorderedList children ->
+            children
+                |> List.map (\(Markdown.Block.ListItem _ children_) -> children_)
+                |> List.map (\child -> "- " ++ Markdown.Block.extractInlineText child ++ "\n")
+                |> String.concat
+                |> Just
+
+        Markdown.Block.OrderedList _ children ->
+            children
+                |> List.indexedMap
+                    (\index child ->
+                        String.fromInt index
+                            ++ ". "
+                            ++ Markdown.Block.extractInlineText child
+                            ++ "\n"
+                    )
+                |> String.concat
+                |> Just
+
+        Markdown.Block.Paragraph inlines ->
+            Markdown.Block.extractInlineText inlines
+                |> Just
+
+        _ ->
+            Nothing
 
 
 encodeQuillOp : QuillOp -> Json.Encode.Value

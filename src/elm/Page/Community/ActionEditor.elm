@@ -150,7 +150,8 @@ type alias Form =
     , isCompleted : Bool
     , deadlineState : MaskedDate.State
     , saveStatus : SaveStatus
-    , instructions : Validator String
+    , instructions : MarkdownEditor.Model
+    , instructionsError : Maybe ( String, I18Next.Replacements )
     }
 
 
@@ -165,7 +166,8 @@ initForm =
     , isCompleted = False
     , deadlineState = MaskedDate.initialState
     , saveStatus = NotAsked
-    , instructions = defaultInstructions
+    , instructions = MarkdownEditor.init "photo-proof-instructions"
+    , instructionsError = Nothing
     }
 
 
@@ -251,13 +253,18 @@ editForm ({ shared } as loggedIn) msg form action =
                     , profileSummaries = profileSummaries
                     }
 
-        instructions =
+        ( newInstructions, instructionsCmd ) =
             case action.photoProofInstructions of
-                Just i ->
-                    updateInput i form.instructions
+                Just instructions_ ->
+                    MarkdownEditor.setContents instructions_
+                        (Just loggedIn.accountName)
+                        { moduleName = "Page.Community.ActionEditor", function = "editForm" }
+                        msg
+                        msgToString
+                        form.instructions
 
                 Nothing ->
-                    form.instructions
+                    ( form.instructions, Cmd.none )
 
         ( newDescription, descriptionCmd ) =
             MarkdownEditor.setContents action.description
@@ -274,17 +281,10 @@ editForm ({ shared } as loggedIn) msg form action =
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)
         , isCompleted = action.isCompleted
-        , instructions = instructions
+        , instructions = newInstructions
       }
-    , descriptionCmd
+    , Cmd.batch [ descriptionCmd, instructionsCmd ]
     )
-
-
-defaultInstructions : Validator String
-defaultInstructions =
-    []
-        |> longerThan 10
-        |> newValidator "" (\v -> Just v) True
 
 
 defaultReward : Validator String
@@ -390,13 +390,23 @@ validateForm form =
 
             else
                 Nothing
+
+        instructionsError =
+            if String.length form.instructions.contents < 10 then
+                Just
+                    ( "error.validator.text.longer_than"
+                    , [ ( "base", String.fromInt 10 ) ]
+                    )
+
+            else
+                Nothing
     in
     { form
         | descriptionError = descriptionError
         , reward = validate form.reward
         , validation = validation
         , verification = verification
-        , instructions = validate form.instructions
+        , instructionsError = instructionsError
     }
 
 
@@ -477,7 +487,6 @@ type Msg
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
-    | EnteredInstructions String
     | EnteredReward String
     | EnteredDeadline String
     | DeadlineChanged MaskedDate.State
@@ -499,7 +508,8 @@ type Msg
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | GotProfileSummaryMsg Int Profile.Summary.Msg
-    | GotMarkdownEditorMsg MarkdownEditor.Msg
+    | GotDescriptionEditorMsg MarkdownEditor.Msg
+    | GotInstructionsEditorMsg MarkdownEditor.Msg
 
 
 
@@ -687,15 +697,6 @@ update msg model ({ shared } as loggedIn) =
             { model | multiSelectState = updated }
                 |> UR.init
                 |> UR.addCmd cmd
-
-        EnteredInstructions val ->
-            { model
-                | form =
-                    { oldForm
-                        | instructions = updateInput val model.form.instructions
-                    }
-            }
-                |> UR.init
 
         EnteredReward val ->
             { model | form = { oldForm | reward = updateInput val model.form.reward } }
@@ -1180,14 +1181,23 @@ update msg model ({ shared } as loggedIn) =
                 Automatic ->
                     UR.init model
 
-        GotMarkdownEditorMsg subMsg ->
+        GotDescriptionEditorMsg subMsg ->
             let
                 ( subModel, subCmd ) =
                     MarkdownEditor.update subMsg model.form.description
             in
             { model | form = { oldForm | description = subModel } }
                 |> UR.init
-                |> UR.addCmd (Cmd.map GotMarkdownEditorMsg subCmd)
+                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg subCmd)
+
+        GotInstructionsEditorMsg subMsg ->
+            let
+                ( subModel, subCmd ) =
+                    MarkdownEditor.update subMsg model.form.instructions
+            in
+            { model | form = { oldForm | instructions = subModel } }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotInstructionsEditorMsg subCmd)
 
 
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
@@ -1271,7 +1281,7 @@ upsertAction loggedIn community model isoDate =
 
         instructions =
             if hasProofPhoto then
-                getInput model.form.instructions
+                model.form.instructions.contents
 
             else
                 ""
@@ -1440,20 +1450,18 @@ viewDescription { shared } form =
         text_ s =
             text (t s)
     in
-    div [ class "mb-10" ]
-        [ span [ class "input-label" ]
-            [ text_ "community.actions.form.description_label" ]
-        , MarkdownEditor.view shared.translators Nothing form.description
-            |> Html.map GotMarkdownEditorMsg
-        , case form.descriptionError of
-            Nothing ->
-                text ""
-
-            Just ( key, replacements ) ->
-                tr key replacements
-                    |> List.singleton
-                    |> viewFieldErrors
-        ]
+    MarkdownEditor.view
+        { translators = shared.translators
+        , placeholder = Nothing
+        , label = t "community.actions.form.description_label"
+        , problem =
+            form.descriptionError
+                |> Maybe.map (\( key, replacements ) -> tr key replacements)
+        , disabled = False
+        }
+        []
+        form.description
+        |> Html.map GotDescriptionEditorMsg
 
 
 viewReward : LoggedIn.Model -> Community.Model -> Form -> Html Msg
@@ -1806,19 +1814,21 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 }
                                 |> Checkbox.withContainerAttrs [ class "flex text-body" ]
                                 |> Checkbox.toHtml
-                            , div [ class "mt-6" ]
-                                [ label [ class "input-label" ]
-                                    [ text (t "community.actions.form.verification_instructions") ]
-                                , textarea
-                                    [ class "input textarea-input w-full"
-                                    , classList [ ( "border-red", hasErrors model.form.instructions ) ]
-                                    , rows 5
-                                    , onInput EnteredInstructions
-                                    , value (getInput model.form.instructions)
-                                    ]
-                                    []
-                                , viewFieldErrors (listErrors shared.translations model.form.instructions)
-                                ]
+                            , MarkdownEditor.view
+                                { translators = shared.translators
+                                , placeholder = Nothing
+                                , label = t "community.actions.form.verification_instructions"
+                                , problem =
+                                    model.form.instructionsError
+                                        |> Maybe.map
+                                            (\( key, replacements ) ->
+                                                tr key replacements
+                                            )
+                                , disabled = False
+                                }
+                                [ class "mt-6" ]
+                                model.form.instructions
+                                |> Html.map GotInstructionsEditorMsg
                             ]
 
                       else
@@ -1921,8 +1931,12 @@ viewVerifierSelect loggedIn model isDisabled =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    MarkdownEditor.subscriptions model.form.description
-        |> Sub.map GotMarkdownEditorMsg
+    Sub.batch
+        [ MarkdownEditor.subscriptions model.form.description
+            |> Sub.map GotDescriptionEditorMsg
+        , MarkdownEditor.subscriptions model.form.instructions
+            |> Sub.map GotInstructionsEditorMsg
+        ]
 
 
 
@@ -1984,9 +1998,6 @@ msgToString msg =
 
         OnRemoveVerifier _ ->
             [ "OnRemoveVerifier" ]
-
-        EnteredInstructions _ ->
-            [ "EnteredInstructions" ]
 
         EnteredReward _ ->
             [ "EnteredReward" ]
@@ -2054,5 +2065,8 @@ msgToString msg =
         GotProfileSummaryMsg _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
 
-        GotMarkdownEditorMsg subMsg ->
+        GotDescriptionEditorMsg subMsg ->
             "GotMarkdownEditorMsg" :: MarkdownEditor.msgToString subMsg
+
+        GotInstructionsEditorMsg subMsg ->
+            "GotInstructionsEditorMsg" :: MarkdownEditor.msgToString subMsg

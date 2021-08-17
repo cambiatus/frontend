@@ -27,6 +27,7 @@
             "elm/url": "1.0.0",
             "elm-community/list-extra": "8.2.4",
             "elm-community/maybe-extra": "5.2.0",
+            "elm-community/string-extra": "4.0.1",
             "jfmengels/elm-review": "2.3.2",
             "justinmimbs/date": "3.2.1",
             "krisajenkins/remotedata": "6.0.1",

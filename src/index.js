@@ -26,7 +26,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text' ] }
+    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
 
     constructor () {
       super()
@@ -75,10 +75,15 @@ window.customElements.define('markdown-editor',
       })
 
       this.setTooltipTexts()
+      this.setDisabled()
     }
 
-    attributeChangedCallback () {
-      this.setTooltipTexts()
+    attributeChangedCallback (name) {
+      if (name === 'elm-disabled') {
+        this.setDisabled()
+      } else {
+        this.setTooltipTexts()
+      }
     }
 
     setTooltipTexts () {
@@ -93,9 +98,20 @@ window.customElements.define('markdown-editor',
       }
     }
 
+    setDisabled () {
+      const isDisabled = this.getAttribute('elm-disabled') === 'true'
+
+      if (isDisabled) {
+        this._quill.disable()
+      } else {
+        this._quill.enable()
+      }
+    }
+
     linkHandler () {
       let range = this._quill.getSelection(true)
       if (range.length === 0) {
+        // TODO - Take into account if caret is in the middle of a link
         range = this.getFormattedRange(range.index)
       }
       const text = this._quill.getText(range)

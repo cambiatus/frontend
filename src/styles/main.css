@@ -448,6 +448,14 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .flex-basis-0 {
     flex-basis: 0;
   }
+
+  .truncate-children > :first-child {
+    @apply truncate;
+  }
+
+  .truncate-children > :not(:first-child) {
+    @apply hidden;
+  }
 }
 
 /* End of extra utilities */
@@ -481,6 +489,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
 .ql-container.ql-snow {
   @apply border-none;
+}
+
+.ql-container.ql-snow.ql-disabled .ql-editor {
+  @apply bg-gray-500;
 }
 
 .ql-editor {
@@ -571,7 +583,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 .markdown-viewer a {
-  @apply underline;
+  @apply underline hover:opacity-80;
 }
 
 /* End of Markdown Viewer classes

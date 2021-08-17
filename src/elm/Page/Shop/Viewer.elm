@@ -37,6 +37,7 @@ import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Input as Input
+import View.MarkdownEditor
 
 
 
@@ -617,8 +618,9 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                 |> Maybe.withDefault (Eos.stringToName "")
     in
     [ div [ class "font-medium text-3xl w-full" ] [ text sale.title ]
-    , div [ class "text-gray w-full md:text-sm" ] [ text sale.description ]
-    , div [ class "w-full flex items-center text-sm" ]
+    , View.MarkdownEditor.viewReadOnly [ class "text-gray w-full md:text-sm" ]
+        sale.description
+    , div [ class "w-full flex items-center text-sm mt-4" ]
         [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
         , text_ "shop.sold_by"
         , a
