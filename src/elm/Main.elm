@@ -146,6 +146,10 @@ subscriptions model =
                 ProfileEditor.subscriptions subModel
                     |> Sub.map GotProfileEditorMsg
 
+            Transfer subModel ->
+                Transfer.subscriptions subModel
+                    |> Sub.map GotTransferMsg
+
             _ ->
                 Sub.none
         ]

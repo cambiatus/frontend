@@ -5,6 +5,7 @@ module Page.Community.Transfer exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
+    , subscriptions
     , update
     , view
     )
@@ -17,7 +18,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Document
 import Html exposing (Html, button, div, form, span, text)
-import Html.Attributes exposing (class, classList, disabled, maxlength, rows, type_, value)
+import Html.Attributes exposing (class, classList, disabled, type_, value)
 import Html.Events exposing (onSubmit)
 import Http
 import I18Next
@@ -37,6 +38,7 @@ import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Input as Input
+import View.MarkdownEditor as MarkdownEditor
 
 
 init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
@@ -95,8 +97,7 @@ type alias Form =
     , selectedProfileValidation : Validation
     , amount : String
     , amountValidation : Validation
-    , memo : String
-    , memoValidation : Validation
+    , memo : MarkdownEditor.Model
     }
 
 
@@ -106,8 +107,7 @@ emptyForm =
     , selectedProfileValidation = Valid
     , amount = ""
     , amountValidation = Valid
-    , memo = ""
-    , memoValidation = Valid
+    , memo = MarkdownEditor.init "memo-editor"
     }
 
 
@@ -186,36 +186,17 @@ validateAmount symbol maxAmountStatus form =
     }
 
 
-validateMemo : Form -> Form
-validateMemo form =
-    { form
-        | memoValidation =
-            if String.length form.memo <= memoMaxLength then
-                Valid
-
-            else
-                Invalid "transfer.memo_too_long" (Just [ ( "maxlength", String.fromInt memoMaxLength ) ])
-    }
-
-
 validateForm : Eos.Name -> RemoteData MaxAmountError Float -> Symbol -> Form -> Form
 validateForm currentAccount maxAmount symbol form =
     form
         |> validateSelectedProfile currentAccount
         |> validateAmount symbol maxAmount
-        |> validateMemo
 
 
 isFormValid : Form -> Bool
 isFormValid form =
     (form.selectedProfileValidation == Valid)
         && (form.amountValidation == Valid)
-        && (form.memoValidation == Valid)
-
-
-memoMaxLength : Int
-memoMaxLength =
-    255
 
 
 
@@ -315,22 +296,16 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                         [ ( "balance", Eos.assetToString currBalance ) ]
                     )
                 ]
-            , Input.init
-                { label = shared.translators.t "account.my_wallet.transfer.memo"
-                , id = "transfer-memo-field"
-                , onInput = EnteredMemo
-                , disabled = isDisabled
-                , value = f.memo
+            , MarkdownEditor.view
+                { translators = shared.translators
                 , placeholder = Nothing
-                , problems =
-                    validationToString shared.translators f.memoValidation
-                        |> Maybe.map List.singleton
-                , translators = shared.translators
+                , label = shared.translators.t "account.my_wallet.transfer.memo"
+                , problem = Nothing
+                , disabled = isDisabled
                 }
-                |> Input.withInputType Input.TextArea
-                |> Input.withAttrs [ rows 5, maxlength memoMaxLength ]
-                |> Input.withCounter 255
-                |> Input.toHtml
+                []
+                f.memo
+                |> Html.map GotMemoEditorMsg
             , div [ class "mt-6" ]
                 [ button
                     [ class "button button-primary w-full"
@@ -414,7 +389,7 @@ type Msg
     | OnSelect (Maybe Profile.Minimal)
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
-    | EnteredMemo String
+    | GotMemoEditorMsg MarkdownEditor.Msg
     | SubmitForm
     | PushTransaction
     | GotTransferResult (Result (Maybe Value) String)
@@ -561,17 +536,16 @@ update msg model ({ shared } as loggedIn) =
                 _ ->
                     model |> UR.init
 
-        EnteredMemo value ->
+        GotMemoEditorMsg subMsg ->
             case model.transferStatus of
                 EditingTransfer form ->
-                    { model
-                        | transferStatus =
-                            EditingTransfer
-                                ({ form | memo = value }
-                                    |> validateMemo
-                                )
-                    }
+                    let
+                        ( memo, memoCmd ) =
+                            MarkdownEditor.update subMsg form.memo
+                    in
+                    { model | transferStatus = EditingTransfer { form | memo = memo } }
                         |> UR.init
+                        |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
 
                 _ ->
                     model |> UR.init
@@ -655,7 +629,7 @@ update msg model ({ shared } as loggedIn) =
                                                         |> Maybe.withDefault 0.0
                                                 , symbol = community.symbol
                                                 }
-                                            , memo = form.memo
+                                            , memo = form.memo.contents
                                             }
                                                 |> Transfer.encodeEosActionData
                                       }
@@ -777,6 +751,17 @@ maxTransferAmount model =
         (RemoteData.mapError TokenError model.token)
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.transferStatus of
+        EditingTransfer form ->
+            MarkdownEditor.subscriptions form.memo
+                |> Sub.map GotMemoEditorMsg
+
+        _ ->
+            Sub.none
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -849,8 +834,8 @@ msgToString msg =
         EnteredAmount _ ->
             [ "EnteredAmount" ]
 
-        EnteredMemo _ ->
-            [ "EnteredMemo" ]
+        GotMemoEditorMsg subMsg ->
+            "GotMemoEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         SubmitForm ->
             [ "SubmitForm" ]

@@ -101,9 +101,8 @@ type alias LoggedInModel =
 type alias Form =
     { price : String
     , unitValidation : Validation
-    , memoValidation : Validation
     , units : String
-    , memo : String
+    , memo : View.MarkdownEditor.Model
     }
 
 
@@ -116,9 +115,10 @@ initForm : Form
 initForm =
     { price = ""
     , units = ""
-    , memo = defaultMemoKey
+    , memo =
+        View.MarkdownEditor.init "memo-editor"
+            |> View.MarkdownEditor.setContents defaultMemoKey
     , unitValidation = Valid
-    , memoValidation = Valid
     }
 
 
@@ -132,7 +132,6 @@ type FormError
     | UnitTooLow
     | UnitTooHigh
     | MemoEmpty
-    | MemoTooLong
     | UnitNotOnlyNumbers
 
 
@@ -163,7 +162,7 @@ type LoggedInMsg
     | ClickedEdit Product
     | ClickedTransfer Product
     | EnteredUnit String
-    | EnteredMemo String
+    | GotMemoEditorMsg View.MarkdownEditor.Msg
     | GotTransferResult (Result (Maybe Value) String)
 
 
@@ -352,7 +351,7 @@ updateAsLoggedIn msg model loggedIn =
                                         { from = loggedIn.accountName
                                         , to = sale.creatorId
                                         , value = value
-                                        , memo = model.form.memo
+                                        , memo = model.form.memo.contents
                                         }
                                             |> Transfer.encodeEosActionData
                                   }
@@ -408,16 +407,17 @@ updateAsLoggedIn msg model loggedIn =
                             { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
                             []
 
-        EnteredMemo m ->
+        GotMemoEditorMsg subMsg ->
             let
-                currentForm =
+                oldForm =
                     model.form
 
-                newForm =
-                    { currentForm | memo = m }
+                ( memo, memoCmd ) =
+                    View.MarkdownEditor.update subMsg oldForm.memo
             in
-            { model | form = newForm }
+            { model | form = { oldForm | memo = memo } }
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
 
         CompletedLoadBalances res ->
             case res of
@@ -793,24 +793,16 @@ viewTransferForm { shared } sale model =
             ]
         , p []
             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
-        , Input.init
-            { label = t "shop.transfer.memo_label"
-            , id = fieldId.memo
-            , onInput = EnteredMemo
-            , disabled = False
-            , value =
-                if form.memo == defaultMemoKey then
-                    t form.memo
-
-                else
-                    form.memo
+        , View.MarkdownEditor.view
+            { translators = shared.translators
             , placeholder = Just (t defaultMemoKey)
-            , problems = getError form.memoValidation
-            , translators = shared.translators
+            , label = t "shop.transfer.memo_label"
+            , problem = Nothing
+            , disabled = False
             }
-            |> Input.withInputType Input.TextArea
-            |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
-            |> Input.toHtml
+            []
+            form.memo
+            |> Html.map GotMemoEditorMsg
         ]
 
 
@@ -842,9 +834,6 @@ getError validation =
 
                         MemoEmpty ->
                             "shop.transfer.errors.memoEmpty"
-
-                        MemoTooLong ->
-                            "shop.transfer.errors.memoTooLong"
             in
             Just [ translationString ]
 
@@ -888,26 +877,15 @@ validateForm sale form =
 
                     Nothing ->
                         Invalid UnitNotOnlyNumbers
-
-        memoValidation =
-            if form.memo == "" then
-                Invalid MemoEmpty
-
-            else if String.length form.memo > 256 then
-                Invalid MemoTooLong
-
-            else
-                Valid
     in
     { form
         | unitValidation = unitValidation
-        , memoValidation = memoValidation
     }
 
 
 isFormValid : Form -> Bool
 isFormValid form =
-    form.unitValidation == Valid && form.memoValidation == Valid
+    form.unitValidation == Valid
 
 
 
@@ -958,8 +936,8 @@ loggedInMsgToString msg =
         EnteredUnit u ->
             [ "EnteredUnit", u ]
 
-        EnteredMemo m ->
-            [ "EnteredMemo", m ]
+        GotMemoEditorMsg subMsg ->
+            "GotMemoEditorMsg" :: View.MarkdownEditor.msgToString subMsg
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]

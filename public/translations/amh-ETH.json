@@ -732,8 +732,7 @@
         "unitTooLow": "ክፍሉ በጣም ትንሽ ነዉ, ቢያንስ 1 መሆን አለበት ",
         "unitTooHigh": "በቂ ክፍሎች የሉም",
         "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል",
-        "memoEmpty": "ማስታወሻ ባዶ መሆን የለበትም",
-        "memoTooLong": "ማስታወሻ በጣም ረዘመ, ቢበዛ 256 ፊደል ይሁን "
+        "memoEmpty": "ማስታወሻ ባዶ መሆን የለበትም"
       }
     },
     "delete": "ሰርዝ",

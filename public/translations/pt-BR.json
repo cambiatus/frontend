@@ -778,8 +778,7 @@
         "unitTooLow": "A unidade é muito baixa, deve ser pelo menos 1",
         "unitTooHigh": "Unidades insuficientes disponíveis",
         "unitNotOnlyNumbers": "Somente números são permitidos",
-        "memoEmpty": "O memorando não pode estar vazio",
-        "memoTooLong": "O memorando é muito longo, o máximo é 256 caracteres"
+        "memoEmpty": "O memorando não pode estar vazio"
       }
     },
     "delete": "Excluir",
