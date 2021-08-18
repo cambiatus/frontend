@@ -973,7 +973,7 @@ viewCoverPhoto { translators } model =
             }
             |> FileUploader.withAttrs [ class "w-full" ]
             |> FileUploader.toHtml translators
-        , p [ class "mt-2 text-center text-gray-900 uppercase text-caption tracking-wide" ]
+        , p [ class "mt-2 text-center text-gray-900 uppercase text-sm tracking-wide" ]
             [ text (translators.t "Be sure to add a picture that has good quality") ]
         ]
 

@@ -295,7 +295,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                 ]
                 [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
                 , text " "
-                , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
+                , span [ class "text-sm" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             , case transfer.memo of
                 Nothing ->

@@ -194,7 +194,7 @@ viewLarge ({ t } as translators) options =
                     ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
     in
     div options.extraAttrs
-        [ span [ class "input-label" ] [ text (t options.label) ]
+        [ span [ class "label" ] [ text (t options.label) ]
         , label
             [ class "relative w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
             , class backgroundColor
@@ -260,7 +260,7 @@ viewSmall { t } options =
                     div [ class (imgClasses ++ " bg-gray-500") ] []
     in
     div options.extraAttrs
-        [ div [ class "input-label" ]
+        [ div [ class "label" ]
             [ text (t options.label) ]
         , div [ class "mt-2 m-auto w-20 h-20 relative" ]
             [ input

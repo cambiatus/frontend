@@ -226,7 +226,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
         , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
             [ Icons.arrowDown arrowClass
             , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
-                [ span [ class "text-gray-900 text-caption uppercase" ]
+                [ span [ class "text-gray-900 text-sm uppercase" ]
                     [ text <|
                         case transferDirection of
                             TransferDirectionValue.Receiving ->
@@ -241,7 +241,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                             |> Eos.formatSymbolAmount transfer.community.symbol
                             |> text
                         ]
-                    , span [ class "text-caption ml-2 mb-2 self-end" ]
+                    , span [ class "text-sm ml-2 mb-2" ]
                         [ transfer.community.symbol
                             |> Eos.symbolToSymbolCodeString
                             |> text
@@ -257,10 +257,8 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
 viewDetail : String -> Html Msg -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
-        [ h5 [ class "input-label mb-2" ]
-            [ text title ]
-        , p [ class "text-body" ]
-            [ content ]
+        [ h5 [ class "label" ] [ text title ]
+        , p [ class "text-body" ] [ content ]
         ]
 
 

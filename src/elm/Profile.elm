@@ -14,6 +14,7 @@ module Profile exposing
     , selectFilter
     , selectionSet
     , upsertKycMutation
+    , userContactSelectionSet
     , viewEmpty
     , viewProfileName
     , viewProfileNameTag
@@ -288,7 +289,7 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
 viewProfileNameTag shared loggedInAccount profile =
     div [ class "flex items-center bg-black rounded-label p-1" ]
-        [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption text-center" ]
+        [ p [ class "mx-2 uppercase font-bold text-white text-sm text-center" ]
             [ viewProfileName shared loggedInAccount profile ]
         ]
 
@@ -312,7 +313,7 @@ viewEmpty shared =
     div
         []
         [ p
-            [ class "uppercase text-gray-900 text-caption" ]
+            [ class "uppercase text-gray-900 text-sm" ]
             [ text (shared.translators.t "profile.no_one") ]
         ]
 

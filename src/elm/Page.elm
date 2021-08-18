@@ -182,7 +182,7 @@ viewCardEmpty content =
 viewTitle : String -> Html msg
 viewTitle text_ =
     p
-        [ class "heading-bold" ]
+        [ class "text-lg font-bold my-3" ]
         [ text text_ ]
 
 

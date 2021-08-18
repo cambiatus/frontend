@@ -203,7 +203,8 @@ isLogoUploaded model =
 viewDescription : Shared -> Bool -> String -> List Error -> Html Msg
 viewDescription ({ translators } as shared) isDisabled defVal errors =
     div []
-        [ span [ class "input-label" ] [ text (translators.t "community.create.labels.description") ]
+        [ span [ class "label" ]
+            [ text (translators.t "community.create.labels.description") ]
         , Input.init
             { label = translators.t "community.create.tooltips.description"
             , id = "comm-description"

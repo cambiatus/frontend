@@ -175,7 +175,7 @@ toHtml { t } options =
                     viewOptionAsCircled options ( option, view )
     in
     div options.extraAttrs
-        [ span [ class "input-label" ] [ text (t options.label) ]
+        [ span [ class "label" ] [ text (t options.label) ]
         , div
             (class "flex mt-6"
                 :: classList

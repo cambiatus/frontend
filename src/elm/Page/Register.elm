@@ -301,7 +301,7 @@ viewAccountTypeSelector translators model =
     case model.country of
         Just country ->
             div []
-                [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
+                [ View.Form.label "radio" (translators.t "register.form.register_tooltip")
                 , div [ class "flex space-x-2" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
@@ -388,7 +388,7 @@ viewAccountCreated ({ t } as translators) model keys =
                         []
                     ]
                 , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
-                    [ p [ class "input-label" ]
+                    [ p [ class "label" ]
                         [ text (t "register.account_created.twelve_words")
                         , if model.isPassphraseCopiedToClipboard then
                             strong [ class "uppercase ml-1" ]

@@ -166,7 +166,7 @@ viewProofs { t } claim =
             case claim.proofCode of
                 Just proofCode ->
                     div [ class "ml-4" ]
-                        [ label [ class "input-label block" ]
+                        [ p [ class "label" ]
                             [ text (t "community.actions.form.verification_code") ]
                         , strong [ class "text-lg block" ] [ text proofCode ]
                         ]
@@ -299,13 +299,9 @@ viewDetails { shared } model claim =
     div []
         [ Claim.viewVotingProgress shared completionStatus
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.action" ]
-            , div [ class "mb-2" ]
-                [ p [ class "pt-2" ]
-                    [ text claim.action.description ]
-                ]
+            [ p [ class "label" ] [ text_ "claim.action" ]
+            , p [ class "mb-2" ]
+                [ text claim.action.description ]
             , if claim.action.isCompleted then
                 div [ class "flex mb-2" ]
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
@@ -325,9 +321,8 @@ viewDetails { shared } model claim =
             [ div
                 [ class "flex justify-between lg:justify-start" ]
                 [ div [ class "mr-6" ]
-                    [ p [ class "text-caption uppercase text-green" ]
-                        [ text_ "claim.date" ]
-                    , p [ class "pt-2" ]
+                    [ p [ class "label" ] [ text_ "claim.date" ]
+                    , p []
                         [ text
                             (claim.createdAt
                                 |> Utils.fromDateTime
@@ -336,13 +331,8 @@ viewDetails { shared } model claim =
                         ]
                     ]
                 , div []
-                    [ p
-                        [ class "text-caption uppercase text-green" ]
-                        [ text_ "claim.claimer_reward" ]
-                    , p
-                        [ class "pt-2"
-                        , classList [ ( "text-red line-through", isRejected ) ]
-                        ]
+                    [ p [ class "label" ] [ text_ "claim.claimer_reward" ]
+                    , p [ classList [ ( "text-red line-through", isRejected ) ] ]
                         [ text
                             (String.fromFloat claim.action.reward
                                 ++ " "
@@ -353,20 +343,12 @@ viewDetails { shared } model claim =
                 ]
             ]
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.objective" ]
-            , p
-                [ class "pt-2" ]
-                [ text claim.action.objective.description
-                ]
+            [ p [ class "label" ] [ text_ "claim.objective" ]
+            , p [] [ text claim.action.objective.description ]
             ]
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.your_reward" ]
-            , p
-                [ class "pt-2" ]
+            [ p [ class "label" ] [ text_ "claim.your_reward" ]
+            , p []
                 [ text
                     (String.fromFloat claim.action.verifierReward
                         ++ " "
@@ -385,80 +367,67 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
     in
     div []
         [ div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.approved_by" ]
-            , div []
-                [ if List.isEmpty claim.checks then
-                    div [ class "flex mb-10" ]
-                        [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
-                        ]
+            [ p [ class "label" ] [ text_ "claim.approved_by" ]
+            , if List.isEmpty claim.checks then
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared ]
 
-                  else
-                    div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.map3
-                            (\profileSummary index c ->
-                                if c.isApproved then
-                                    div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
-                                            |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                        ]
+              else
+                div [ class "flex flex-wrap -mx-2" ]
+                    (List.map3
+                        (\profileSummary index c ->
+                            if c.isApproved then
+                                div [ class "px-2" ]
+                                    [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
+                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
+                                    ]
 
-                                else
-                                    text ""
-                            )
-                            profileSummaries.voter
-                            (List.range 0 (List.length profileSummaries.voter))
-                            claim.checks
+                            else
+                                text ""
                         )
-                ]
+                        profileSummaries.voter
+                        (List.range 0 (List.length profileSummaries.voter))
+                        claim.checks
+                    )
             ]
         , div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.disapproved_by" ]
-            , div [ class "flex mb-10 " ]
-                [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+            [ p [ class "label" ] [ text_ "claim.disapproved_by" ]
+            , if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared ]
 
-                  else
-                    div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.map3
-                            (\profileSummary index c ->
-                                if not c.isApproved then
-                                    div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
-                                            |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                        ]
+              else
+                div [ class "flex flex-wrap mb-10 -mx-2 pt-2" ]
+                    (List.map3
+                        (\profileSummary index c ->
+                            if not c.isApproved then
+                                div [ class "px-2" ]
+                                    [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
+                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
+                                    ]
 
-                                else
-                                    text ""
-                            )
-                            profileSummaries.voter
-                            (List.range 0 (List.length profileSummaries.voter))
-                            claim.checks
+                            else
+                                text ""
                         )
-                ]
+                        profileSummaries.voter
+                        (List.range 0 (List.length profileSummaries.voter))
+                        claim.checks
+                    )
             ]
         , div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.pending" ]
-            , div [ class "pt-2" ]
-                [ if List.length claim.checks == claim.action.verifications then
-                    div [ class "flex" ]
-                        [ Profile.viewEmpty shared
-                        ]
+            [ p [ class "label" ] [ text_ "claim.pending" ]
+            , if List.length claim.checks == claim.action.verifications then
+                div [ class "flex" ] [ Profile.viewEmpty shared ]
 
-                  else
-                    div [ class "flex flex-row flex-wrap space-x-6" ]
-                        (pendingValidators claim
-                            |> List.map3
-                                (\profileSummary index v ->
-                                    Profile.Summary.view shared loggedIn.accountName v profileSummary
-                                        |> Html.map (GotProfileSummaryMsg (PendingSummary index))
-                                )
-                                profileSummaries.pending
-                                (List.range 0 (List.length profileSummaries.pending))
-                        )
-                ]
+              else
+                div [ class "flex flex-row flex-wrap space-x-6" ]
+                    (pendingValidators claim
+                        |> List.map3
+                            (\profileSummary index v ->
+                                Profile.Summary.view shared loggedIn.accountName v profileSummary
+                                    |> Html.map (GotProfileSummaryMsg (PendingSummary index))
+                            )
+                            profileSummaries.pending
+                            (List.range 0 (List.length profileSummaries.pending))
+                    )
             ]
         ]
 

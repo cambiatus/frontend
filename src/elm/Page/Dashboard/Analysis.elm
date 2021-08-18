@@ -315,7 +315,7 @@ viewFiltersModal ({ shared } as loggedIn) model =
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
             [ div []
-                (span [ class "input-label" ]
+                (span [ class "label" ]
                     [ text (t "all_analysis.filter.user") ]
                     :: (case loggedIn.selectedCommunity of
                             RemoteData.Success community ->

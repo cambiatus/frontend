@@ -1415,7 +1415,7 @@ viewDescription { shared } form =
             text (t s)
     in
     div [ class "mb-10" ]
-        [ span [ class "input-label" ]
+        [ span [ class "label" ]
             [ text_ "community.actions.form.description_label" ]
         , textarea
             [ class "input textarea-input w-full"
@@ -1513,7 +1513,7 @@ viewValidations { shared } model =
                     case dateValidation of
                         Just validation ->
                             div []
-                                [ span [ class "input-label" ]
+                                [ span [ class "label" ]
                                     [ text_ "community.actions.form.date_label" ]
                                 , div [ class "mb-10" ]
                                     [ MaskedDate.input
@@ -1731,7 +1731,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     |> Radio.withOptions minVotesOptions
                     |> Radio.withVariant Radio.Simplified
                     |> Radio.toHtml shared.translators
-                , span [ class "input-label" ]
+                , span [ class "label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator |> String.fromInt ) ]) ]
                 , div []
                     [ viewVerifierSelect loggedIn model False
@@ -1780,7 +1780,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 |> Checkbox.withContainerAttrs [ class "flex text-body" ]
                                 |> Checkbox.toHtml
                             , div [ class "mt-6" ]
-                                [ label [ class "input-label" ]
+                                [ label [ class "label" ]
                                     [ text (t "community.actions.form.verification_instructions") ]
                                 , textarea
                                     [ class "input textarea-input w-full"

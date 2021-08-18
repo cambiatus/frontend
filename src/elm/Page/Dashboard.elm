@@ -273,7 +273,7 @@ addContactModal shared ({ contactModel } as model) =
 
         header =
             div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-sm uppercase" ]
                     [ text_ "contact_modal.new" ]
                 , p [ class "text-heading font-bold mt-2" ]
                     [ text_ "contact_modal.title" ]
@@ -291,7 +291,7 @@ addContactModal shared ({ contactModel } as model) =
             [ header
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
-            , p [ class "text-caption text-center uppercase my-4" ]
+            , p [ class "text-sm text-center uppercase my-4" ]
                 [ text_ "contact_modal.footer" ]
             ]
         |> Modal.withSize Modal.FullScreen
@@ -350,7 +350,7 @@ viewInvitationModal { shared } model =
                     [ p [ class "text-center text-red" ] [ text err ] ]
 
                 InviteModalLoaded invitationId ->
-                    [ div [ class "mt-3 input-label" ]
+                    [ div [ class "mt-3 label" ]
                         [ text_ "community.invite.label" ]
                     , p [ class "py-2 md:text-heading text-black" ]
                         [ text (url invitationId) ]
@@ -641,7 +641,7 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                     div []
                         [ div [ class "mt-4 mx-4" ]
                             [ View.Components.dateViewer
-                                [ class "uppercase text-caption text-black tracking-wider" ]
+                                [ class "uppercase text-sm text-black tracking-wide" ]
                                 identity
                                 loggedIn.shared
                                 (Utils.fromDateTime t1.blockTime)
@@ -729,7 +729,7 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
+            [ span [ class "label" ] [ text (t "payment_history.pick_date") ]
             , div [ class "flex space-x-4" ]
                 [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
                     (datePickerSettings shared)
@@ -809,7 +809,7 @@ viewBalance shared balance =
             text << shared.translators.t
     in
     div [ class "bg-white rounded p-4 md:p-6" ]
-        [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
+        [ p [ class "label" ] [ text_ "account.my_wallet.balances.current" ]
         , p [ class "text-indigo-500 mt-3" ]
             [ span [ class "font-bold text-3xl" ]
                 [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]

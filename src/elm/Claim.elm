@@ -450,12 +450,12 @@ viewClaimCard loggedIn profileSummaries claim =
                 [ p [ class "text-body truncate mb-2" ]
                     [ text claim.action.description ]
                 , div [ class "flex w-full" ]
-                    [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
+                    [ View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                         identity
                         loggedIn.shared
                         (Utils.fromDateTime claim.createdAt)
                     , p
-                        [ class "ml-auto text-purple-500 text-caption uppercase" ]
+                        [ class "ml-auto text-purple-500 text-sm uppercase" ]
                         [ text claimAgingText ]
                     ]
                 ]
@@ -976,7 +976,7 @@ viewPhotoModal loggedIn claim =
                 , case claim.proofCode of
                     Just proofCode ->
                         div []
-                            [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
+                            [ label [ class "mt-4 md:mt-0 label md:text-xl block" ]
                                 [ text (t "community.actions.form.verification_code")
                                 ]
                             , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]

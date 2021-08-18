@@ -55,21 +55,29 @@ module.exports = {
       xl: '1280px'
     },
     // Needed after updating to tailwind 2.0
+    // fontSize: {
+    //   caption: '0.625rem',
+    //   xs: '0.75rem',
+    //   sm: '0.875rem',
+    //   menu: '0.9125rem',
+    //   body: '0.9rem',
+    //   base: '1rem',
+    //   lg: '1.125rem',
+    //   xl: '1.25rem',
+    //   heading: '1.375rem',
+    //   '2xl': '1.5rem',
+    //   '3xl': '1.875rem',
+    //   '4xl': '2.25rem'
+    // },
+    // The second item in the list is the default line-height
     fontSize: {
-      caption: '0.625rem',
-      xs: '0.75rem',
-      sm: '0.875rem',
-      menu: '0.9125rem',
-      body: '0.9rem',
-      base: '1rem',
-      lg: '1.125rem',
-      xl: '1.25rem',
-      heading: '1.375rem',
-      '2xl': '1.5rem',
-      '3xl': '1.875rem',
-      '4xl': '2.25rem',
-      '5xl': '3rem',
-      '6xl': '4rem'
+      sm: ['0.75rem', '0.9375rem'],
+      base: ['0.9375rem', '1.375rem'],
+      lg: ['1.375rem', '1.875rem'],
+      xl: ['1.875rem', '2.5625rem'],
+      '2xl': ['2.375rem', '3.25rem'],
+      '3xl': ['2.875rem', '3.9375rem'],
+      '4xl': ['3.375rem', '4.625rem']
     },
     // Customizing BorderRadius sizes
     borderRadius: {

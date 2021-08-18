@@ -242,7 +242,7 @@ viewForm { shared } formStatus =
             [ Html.form
                 [ class "mb-10"
                 ]
-                [ span [ class "input-label" ]
+                [ span [ class "label" ]
                     [ text (t "community.objectives.editor.description_label") ]
                 , textarea
                     [ class "input textarea-input w-full"

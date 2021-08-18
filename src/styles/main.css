@@ -9,14 +9,15 @@
 }
 
 /* Typography */
+
 body {
   background-color: #f6f6f6;
   font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
   color: var(--black);
 }
 
-.heading-bold {
-  @apply font-medium text-black text-heading my-3;
+body * {
+  @apply text-base;
 }
 
 /* End of Typography */
@@ -25,7 +26,7 @@ body {
 
 @layer components {
   .button {
-    @apply uppercase text-sm flex items-center justify-center leading-none w-40 h-10 px-2;
+    @apply uppercase text-base leading-5 flex items-center justify-center w-40 h-10 px-2;
   }
 
   .button:disabled {
@@ -33,7 +34,7 @@ body {
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white text-body rounded-super font-medium hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
+    @apply bg-orange-300 text-white rounded-super font-medium hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
   }
 
   .button-secondary {
@@ -49,7 +50,7 @@ body {
   }
 
   .button-success {
-    @apply bg-green text-white rounded-full text-body;
+    @apply bg-green text-white rounded-full;
   }
 }
 
@@ -121,15 +122,11 @@ textarea.input {
 }
 
 .input-counter {
-  @apply text-purple-100 uppercase font-bold float-right mt-1 text-caption;
+  @apply text-purple-100 uppercase font-bold float-right mt-1 text-sm;
 }
 
-.input-label {
-  @apply text-green text-caption uppercase font-sans;
-}
-
-.input-token {
-  @apply text-white font-sans items-center justify-center bg-indigo-500 px-4 py-3 text-body rounded-r;
+.label {
+  @apply text-black font-bold uppercase text-sm mb-2;
 }
 
 /* End of Input */
@@ -230,18 +227,18 @@ textarea.input {
 }
 
 .modal-header {
-  @apply w-full font-medium text-heading p-4 pb-2 flex justify-center;
+  @apply w-full font-medium text-lg p-4 pb-2 flex justify-center;
 }
 
 .modal-body {
-  @apply p-4 pt-0 text-body overflow-y-auto;
+  @apply p-4 pt-0 overflow-y-auto;
 
   min-height: 4rem;
   max-height: 60vh;
 }
 
 .modal-body-lg {
-  @apply p-4 pt-0 text-body overflow-y-auto;
+  @apply p-4 pt-0 overflow-y-auto;
 
   min-height: 4rem;
   max-height: 70vh;
@@ -280,7 +277,7 @@ textarea.input {
   }
 
   .modal-body-lg {
-    @apply px-4 py-0 text-body overflow-y-auto;
+    @apply px-4 py-0 overflow-y-auto;
 
     min-height: 4rem;
     max-height: 60vh;
@@ -308,7 +305,7 @@ textarea.input {
 /* Tag */
 
 .tag {
-  @apply uppercase rounded text-caption py-1 px-5;
+  @apply uppercase rounded text-sm py-1 px-5;
 }
 
 /* End of Tag */
@@ -350,7 +347,7 @@ textarea.input {
 @layer utilities {
   .form-error {
     /* validation message for the field */
-    @apply text-red text-caption uppercase tracking-wide block mt-1;
+    @apply text-red text-sm uppercase tracking-wide block mt-1;
   }
 }
 
@@ -452,8 +449,9 @@ https://tailwindcss.com/docs/adding-new-utilities */
 /* End of extra utilities */
 
 /* Button Modifiers (must be below all other button's styles) */
+
 .button-disabled {
-  @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
+  @apply bg-gray-500 text-gray-900 rounded-super pointer-events-none;
 }
 
 .button-disabled:hover {

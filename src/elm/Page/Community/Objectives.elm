@@ -155,7 +155,7 @@ viewObjective ({ shared } as loggedIn) model _ index objective =
                         , classList [ ( "truncate", not isOpen ) ]
                         ]
                         [ text objective.description ]
-                    , p [ class "text-gray-900 text-caption uppercase mt-2" ]
+                    , p [ class "text-gray-900 text-sm uppercase mt-2" ]
                         [ text
                             (shared.translators.tr
                                 "community.objectives.action_count"
@@ -242,7 +242,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             [ p [ class "text-white truncate" ] [ text action.description ]
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
                 [ div [ class "mx-2 mb-2 text-white" ]
-                    [ p [ class "input-label" ]
+                    [ p [ class "label text-green" ]
                         [ text_ "community.actions.reward" ]
                     , p [ class "uppercase text-body" ]
                         [ String.fromFloat action.reward
@@ -253,7 +253,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 , if validationType == "CLAIMABLE" then
                     div [ class "mx-2 mb-2" ]
-                        [ p [ class "input-label" ]
+                        [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
                         , p [ class "uppercase text-body text-white" ]
                             [ String.fromFloat action.verifierReward
@@ -270,7 +270,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
 
                   else
                     div [ class "mx-2 mb-2" ]
-                        [ p [ class "input-label" ]
+                        [ p [ class "label text-green" ]
                             [ text_ "community.actions.available_until" ]
                         , p [ class "text-body" ]
                             [ if action.usages > 0 then
@@ -296,9 +296,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                     text ""
                             ]
                         ]
-                , div [ class "mx-2 mb-2" ]
+                , div [ class "mx-4 mb-2 mt-auto" ]
                     [ if action.isCompleted then
-                        div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+                        div [ class "tag bg-green" ]
+                            [ text_ "community.actions.completed" ]
 
                       else if isClosed then
                         div [ class "tag bg-gray-500 text-red" ] [ text_ "community.actions.closed" ]
@@ -309,7 +310,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 ]
             , div [ class "flex flex-wrap justify-between items-end" ]
                 [ div [ class "w-full sm:w-4/5" ]
-                    [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
+                    [ p [ class "label text-green" ] [ text_ "community.actions.verifiers" ]
                     , if validationType == "AUTOMATIC" then
                         div [ class "flex items-center" ]
                             [ p [ class "text-body text-white" ] [ text_ "community.actions.automatic_analyzers" ]

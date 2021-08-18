@@ -171,7 +171,7 @@ viewPassphrase ({ shared } as guest) model =
     [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
         [ viewIllustration "login_key.svg"
         , p [ class "text-white text-body mb-5" ]
-            [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
+            [ span [ class "text-green text-sm tracking-wide uppercase block mb-1" ]
                 [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
             , span [ class "text-white block leading-relaxed" ]
                 [ text (t "auth.login.wordsMode.input.description") ]

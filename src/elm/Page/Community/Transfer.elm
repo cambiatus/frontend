@@ -286,7 +286,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
         , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
-                [ span [ class "input-label" ]
+                [ span [ class "label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div []
                     [ viewAutoCompleteAccount shared model f isDisabled community ]

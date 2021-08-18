@@ -1106,7 +1106,7 @@ viewTransactionList loggedIn transfers =
                 div []
                     [ div [ class "mt-4" ]
                         [ View.Components.dateViewer
-                            [ class "uppercase text-caption text-black tracking-wider" ]
+                            [ class "uppercase text-sm text-black tracking-wide" ]
                             identity
                             loggedIn.shared
                             (Utils.fromDateTime t1.blockTime)
@@ -1140,13 +1140,13 @@ viewHistory shared balance graphqlInfo =
             text << t
 
         viewHistoryItem title number translation =
-            li [ class "flex items-center py-4 text-sm leading-6" ]
+            li [ class "flex items-center py-4 text-sm" ]
                 [ div [ class "flex items-center" ]
                     title
                 , div [ class "ml-auto" ]
                     [ span [ class "mr-1 text-indigo-500 font-bold" ]
                         [ number ]
-                    , span [ class "text-caption text-gray-900 uppercase" ]
+                    , span [ class "text-sm text-gray-900 uppercase" ]
                         [ translation ]
                     ]
                 ]

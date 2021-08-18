@@ -584,7 +584,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
-            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
+            [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
             , p [ class "mb-4" ]
                 [ text (Maybe.withDefault "" action.photoProofInstructions) ]
             , case proofCode of
@@ -666,7 +666,7 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
     div [ class "mb-4" ]
-        [ span [ class "input-label block mb-1" ]
+        [ span [ class "label block" ]
             [ text (t "community.actions.form.verification_code") ]
         , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
             [ text proofCode ]
