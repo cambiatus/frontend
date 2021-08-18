@@ -273,20 +273,16 @@ viewObjective loggedIn model metadata index objective =
     else
         div [ class "my-2" ]
             [ div
-                [ class "px-3 bg-indigo-500 flex flex-col sm:flex-row sm:items-center cursor-pointer"
-                , classList [ ( "py-4 sm:h-10", not isOpen ) ]
+                [ class "px-3 bg-indigo-500 flex flex-col py-4 cursor-pointer sm:flex-row sm:items-center"
                 , if isOpen then
                     onClick ClickedCloseObjective
 
                   else
                     onClick (ClickedOpenObjective index)
                 ]
-                [ div
-                    [ class "sm:flex-grow-7 sm:w-5/12"
-                    , classList [ ( "my-4 sm:my-2", isOpen ) ]
-                    ]
+                [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ View.MarkdownEditor.viewReadOnly
-                        [ class "text-white font-medium text-sm sm:leading-6 sm:text-lg"
+                        [ class "text-white font-medium"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
                         objective.description
