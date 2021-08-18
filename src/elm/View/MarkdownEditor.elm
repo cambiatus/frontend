@@ -350,6 +350,7 @@ type Formatting
     | Italic
     | Strike
     | LinkFormatting String
+    | Header Int
     | OrderedList
     | UnorderedList
 
@@ -380,8 +381,8 @@ formattingDecoder =
             Decode.optional key (Json.Decode.succeed (Just formatting)) Nothing
     in
     Json.Decode.succeed
-        (\bold italic strike link list ->
-            [ bold, italic, strike, link, list ]
+        (\bold italic strike link header list ->
+            [ bold, italic, strike, link, header, list ]
                 |> List.filterMap identity
         )
         |> optionalFormatting "bold" Bold
@@ -390,6 +391,11 @@ formattingDecoder =
         |> Decode.optional "link"
             (Json.Decode.string
                 |> Json.Decode.map (LinkFormatting >> Just)
+            )
+            Nothing
+        |> Decode.optional "header"
+            (Json.Decode.int
+                |> Json.Decode.map (Header >> Just)
             )
             Nothing
         |> Decode.optional "list"
@@ -425,6 +431,9 @@ formatStrings formatting =
         LinkFormatting link ->
             ( "[", "](" ++ link ++ ")" )
 
+        Header level ->
+            ( String.repeat level "#" ++ " ", "" )
+
         OrderedList ->
             ( "\n1. ", "" )
 
@@ -435,6 +444,29 @@ formatStrings formatting =
 quillOpsToMarkdown : List QuillOp -> String
 quillOpsToMarkdown quillOps =
     let
+        isHeader : Formatting -> Bool
+        isHeader formatting =
+            case formatting of
+                Header _ ->
+                    True
+
+                _ ->
+                    False
+
+        headerLevel : List Formatting -> Maybe Int
+        headerLevel formattings =
+            List.filterMap
+                (\formatting ->
+                    case formatting of
+                        Header level ->
+                            Just level
+
+                        _ ->
+                            Nothing
+                )
+                formattings
+                |> List.head
+
         foldFn :
             QuillOp
             -> { previousItems : List QuillOp, currString : String }
@@ -458,6 +490,23 @@ quillOpsToMarkdown quillOps =
                 , currString =
                     currString
                         ++ "- "
+                        ++ (previousItems
+                                |> List.reverse
+                                |> List.map quillOpToMarkdown
+                                |> String.concat
+                           )
+                        ++ "\n"
+                }
+
+            else if List.any isHeader currItem.attributes then
+                { previousItems = []
+                , currString =
+                    currString
+                        ++ (headerLevel currItem.attributes
+                                |> Maybe.withDefault 0
+                                |> (\level -> String.repeat level "#")
+                           )
+                        ++ " "
                         ++ (previousItems
                                 |> List.reverse
                                 |> List.map quillOpToMarkdown
@@ -575,6 +624,12 @@ quillOpFromMarkdownBlock block =
         Markdown.Block.OrderedList _ children ->
             children
                 |> parseList OrderedList
+
+        Markdown.Block.Heading headingLevel children ->
+            children
+                |> List.map quillOpFromMarkdownInline
+                |> List.concat
+                |> (\l -> l ++ [ { insert = "\n", attributes = [ Header (Markdown.Block.headingLevelToInt headingLevel) ] } ])
 
         Markdown.Block.Paragraph children ->
             children
@@ -703,6 +758,9 @@ encodeFormatting formatting =
 
         LinkFormatting url ->
             ( "link", Json.Encode.string url )
+
+        Header level ->
+            ( "header", Json.Encode.int level )
 
         OrderedList ->
             ( "list", Json.Encode.string "ordered" )
