@@ -1,7 +1,6 @@
 module Session.SharedTests exposing (all)
 
 import Expect
-import Flags
 import Session.Shared as Shared
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
