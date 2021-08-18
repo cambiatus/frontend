@@ -46,11 +46,10 @@ import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared, Translators)
 import Time
 import Transfer exposing (QueryTransfers)
 import UpdateResult as UR
-import Url.Builder
 import Utils
 import View.Components
 import View.Feedback as Feedback
