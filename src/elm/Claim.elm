@@ -447,7 +447,7 @@ viewClaimCard loggedIn profileSummaries claim =
                         text ""
                 ]
             , div [ class "mb-6" ]
-                [ p [ class "text-body truncate mb-2" ]
+                [ p [ class "truncate mb-2" ]
                     [ text claim.action.description ]
                 , div [ class "flex w-full" ]
                     [ View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
@@ -839,7 +839,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             [ div
                                 [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
                                 [ p [ class "text-sm text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
-                                , p [ class "text-base font-bold font-normal text-left w-full" ] [ text proofCode ]
+                                , p [ class "font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]
                             , View.Components.pdfViewer
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)

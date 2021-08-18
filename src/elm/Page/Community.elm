@@ -604,7 +604,7 @@ viewAction shared canEdit date action isDisabled =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
                         , span [ class "font-medium" ] [ text rewardStr ]
                         ]

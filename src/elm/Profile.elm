@@ -352,7 +352,7 @@ viewAutoCompleteItem _ { avatar, name, account } =
     div [ class "flex flex-row items-center z-30" ]
         [ div [ class "pt-4 pr-4 pb-4 pl-4" ] [ Avatar.view avatar "h-10 w-10" ]
         , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
-            [ span [ class "text-white text-body font-bold leading-loose" ]
+            [ span [ class "text-white font-bold" ]
                 [ text <| Maybe.withDefault "" name ]
             , span [ class "font-light text-white" ]
                 [ text (Eos.nameToString account) ]

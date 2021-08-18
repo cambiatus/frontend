@@ -322,7 +322,7 @@ viewForm ({ t } as translators) model =
                 }
                 |> Input.withContainerAttrs [ class "!m-0" ]
                 |> Input.withAttrs
-                    [ class "rounded-full bg-gray-100 border-0 pl-10 text-base h-10"
+                    [ class "rounded-full bg-gray-100 border-0 pl-10 h-10"
                     , onFocus InputFocused
                     , minlength 3
                     , required True

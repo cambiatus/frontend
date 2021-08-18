@@ -244,7 +244,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 [ div [ class "mx-2 mb-2 text-white" ]
                     [ p [ class "label text-green" ]
                         [ text_ "community.actions.reward" ]
-                    , p [ class "uppercase text-body" ]
+                    , p [ class "uppercase" ]
                         [ String.fromFloat action.reward
                             ++ " "
                             ++ Eos.symbolToString symbol
@@ -255,7 +255,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     div [ class "mx-2 mb-2" ]
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
-                        , p [ class "uppercase text-body text-white" ]
+                        , p [ class "uppercase next-white" ]
                             [ String.fromFloat action.verifierReward
                                 ++ " "
                                 ++ Eos.symbolToString symbol
@@ -272,7 +272,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     div [ class "mx-2 mb-2" ]
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.available_until" ]
-                        , p [ class "text-body" ]
+                        , p []
                             [ if action.usages > 0 then
                                 p [ classList [ ( "text-red", action.usagesLeft == 0 ), ( "text-white", action.usagesLeft /= 1 ) ] ]
                                     [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
@@ -313,7 +313,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     [ p [ class "label text-green" ] [ text_ "community.actions.verifiers" ]
                     , if validationType == "AUTOMATIC" then
                         div [ class "flex items-center" ]
-                            [ p [ class "text-body text-white" ] [ text_ "community.actions.automatic_analyzers" ]
+                            [ p [ class "text-white" ] [ text_ "community.actions.automatic_analyzers" ]
                             , Icons.exclamation "ml-2 text-white fill-current"
                             ]
 

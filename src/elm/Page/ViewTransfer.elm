@@ -258,7 +258,7 @@ viewDetail : String -> Html Msg -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
         [ h5 [ class "label" ] [ text title ]
-        , p [ class "text-body" ] [ content ]
+        , p [] [ content ]
         ]
 
 

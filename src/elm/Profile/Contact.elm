@@ -742,7 +742,7 @@ viewFlagsSelect { t } basic =
 
         flag classes supportedCountry =
             button
-                [ class ("w-full flex items-center space-x-2 text-menu " ++ classes)
+                [ class ("w-full flex items-center space-x-2 " ++ classes)
                 , onClick (SelectedCountry basic.contactType supportedCountry)
                 , type_ "button"
                 ]

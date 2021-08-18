@@ -1503,7 +1503,7 @@ viewValidations { shared } model =
                 , disabled = False
                 , onCheck = ToggleDeadline
                 }
-                |> Checkbox.withContainerAttrs [ class "flex text-body mb-3" ]
+                |> Checkbox.withContainerAttrs [ class "flex mb-3" ]
                 |> Checkbox.toHtml
             , case model.form.validation of
                 NoValidation ->
@@ -1544,7 +1544,7 @@ viewValidations { shared } model =
                 , disabled = False
                 , onCheck = ToggleUsages
                 }
-                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                |> Checkbox.withContainerAttrs [ class "flex" ]
                 |> Checkbox.toHtml
             ]
         , case model.form.validation of
@@ -1762,7 +1762,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         , disabled = False
                         , onCheck = TogglePhotoProof
                         }
-                        |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                        |> Checkbox.withContainerAttrs [ class "flex" ]
                         |> Checkbox.toHtml
                     , if isPhotoProofEnabled then
                         div [ class "mt-6" ]
@@ -1777,7 +1777,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 , disabled = False
                                 , onCheck = TogglePhotoProofNumber
                                 }
-                                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                                |> Checkbox.withContainerAttrs [ class "flex" ]
                                 |> Checkbox.toHtml
                             , div [ class "mt-6" ]
                                 [ label [ class "label" ]

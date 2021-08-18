@@ -213,7 +213,7 @@ viewOptionAsDefault options ( option, view ) =
             ]
             []
         , span
-            [ class "flex ml-2 text-body"
+            [ class "flex ml-2"
             , classList
                 [ ( "text-green", isActive options option && not options.isDisabled )
                 , ( "text-gray-600", options.isDisabled )

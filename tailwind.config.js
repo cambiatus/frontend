@@ -71,13 +71,13 @@ module.exports = {
     // },
     // The second item in the list is the default line-height
     fontSize: {
-      sm: ['0.75rem', '0.9375rem'],
-      base: ['0.9375rem', '1.375rem'],
-      lg: ['1.375rem', '1.875rem'],
-      xl: ['1.875rem', '2.5625rem'],
-      '2xl': ['2.375rem', '3.25rem'],
-      '3xl': ['2.875rem', '3.9375rem'],
-      '4xl': ['3.375rem', '4.625rem']
+      sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
+      base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
+      lg: ['1.375rem', '1.875rem'], // ['22px', '30px']
+      xl: ['1.875rem', '2.5625rem'], // ['30px', '41px']
+      '2xl': ['2.375rem', '3.25rem'], // ['38px', '52px']
+      '3xl': ['2.875rem', '3.9375rem'], // ['46px', '63px']
+      '4xl': ['3.375rem', '4.625rem'] // ['54px', '74px']
     },
     // Customizing BorderRadius sizes
     borderRadius: {

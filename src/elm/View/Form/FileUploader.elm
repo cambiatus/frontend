@@ -229,7 +229,7 @@ viewLarge ({ t } as translators) options =
                         ]
 
                 _ ->
-                    div [ class "text-body font-bold text-center" ]
+                    div [ class "font-bold text-center" ]
                         [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
                         , div [] [ text (t "community.actions.proof.upload_hint") ]
                         ]

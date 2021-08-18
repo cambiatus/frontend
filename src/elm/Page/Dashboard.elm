@@ -460,11 +460,13 @@ viewAnalysisList loggedIn model =
                     , if isVoted claims then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
                             [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                            , p [ class "flex text-body text-gray-600" ]
-                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
+                            , p [ class "flex text-gray-600" ]
+                                [ p [ class "font-bold" ]
+                                    [ text_ "dashboard.analysis.empty.1" ]
                                 , text_ "dashboard.analysis.empty.2"
                                 ]
-                            , p [ class "text-body text-gray-600" ] [ text_ "dashboard.analysis.empty.3" ]
+                            , p [ class "text-gray-600" ]
+                                [ text_ "dashboard.analysis.empty.3" ]
                             ]
 
                       else

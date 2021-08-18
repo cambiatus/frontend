@@ -101,7 +101,7 @@ body * {
 /* Input */
 
 .input {
-  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
+  @apply form-input h-12 outline-none transition-colors duration-100 text-black;
 }
 
 .input:disabled {

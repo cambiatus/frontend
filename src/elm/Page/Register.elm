@@ -364,7 +364,7 @@ viewAccountCreated ({ t } as translators) model keys =
         ]
         [ div
             [ class "sf-wrapper"
-            , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
+            , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white"
             ]
             [ div [ class "sf-content" ]
                 [ p
@@ -470,7 +470,7 @@ viewTitleForStep { t, tr } s =
                     "2"
     in
     p
-        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ class "ml-4 py-4 mb-4 border-b border-dotted text-grey border-grey-500" ]
         [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
         , strong

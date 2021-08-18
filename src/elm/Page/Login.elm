@@ -170,7 +170,7 @@ viewPassphrase ({ shared } as guest) model =
     in
     [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
         [ viewIllustration "login_key.svg"
-        , p [ class "text-white text-body mb-5" ]
+        , p [ class "text-white mb-5" ]
             [ span [ class "text-green text-sm tracking-wide uppercase block mb-1" ]
                 [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
             , span [ class "text-white block leading-relaxed" ]
@@ -191,7 +191,7 @@ viewPassphrase ({ shared } as guest) model =
             }
             |> Input.withInputType Input.TextArea
             |> Input.withAttrs
-                [ class "min-w-full block text-base"
+                [ class "min-w-full block"
                 , classList
                     [ ( "field-with-error", not (List.isEmpty model.problems) )
                     , ( "pb-16", shared.canReadClipboard )
@@ -222,7 +222,7 @@ viewPassphrase ({ shared } as guest) model =
         ]
     , div [ class "sf-footer" ]
         [ if showRegisterLink then
-            p [ class "text-white text-body text-center mb-6 block" ]
+            p [ class "text-white text-center mb-6 block" ]
                 [ text (t "auth.login.register")
                 , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
                     [ text (t "auth.login.registerLink")
@@ -250,7 +250,7 @@ viewPin { shared } model =
             shared.translators
     in
     [ viewIllustration "login_pin.svg"
-    , p [ class "text-white text-body mb-5" ]
+    , p [ class "text-white mb-5" ]
         [ text (t (trPrefix "nowCreate"))
         , text " "
         , strong [] [ text (t (trPrefix "sixDigitPin")) ]

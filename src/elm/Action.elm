@@ -670,7 +670,7 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
             [ text (t "community.actions.form.verification_code") ]
         , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
             [ text proofCode ]
-        , span [ class "whitespace-nowrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+        , span [ class "whitespace-nowrap rounded-full bg-lightred px-3 py-1 text-white" ]
             [ text (t "community.actions.proof.code_period_label")
             , text " "
             , text timer

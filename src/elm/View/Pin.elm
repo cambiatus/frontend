@@ -181,7 +181,7 @@ viewField field model ({ t } as translators) =
         |> View.Form.Input.withElements [ viewToggleVisibility field model translators ]
         |> View.Form.Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
         |> View.Form.Input.withAttrs
-            [ class "form-input text-base text-body-black tracking-widest"
+            [ class "form-input text-body-black tracking-widest"
             , classList
                 [ ( "field-with-error"
                   , model.problems
