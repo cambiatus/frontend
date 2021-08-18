@@ -662,6 +662,7 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
+    "block_explorer": "Veure a explorador de blocs",
     "12words": {
       "title": "Les meves 12 paraules",
       "button": "Descarregar"

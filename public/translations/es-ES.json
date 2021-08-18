@@ -662,6 +662,7 @@
     "edit_success": "Perfil guardado con éxito",
     "locations": "Localización",
     "interests": "Intereses",
+    "block_explorer": "Ver en el explorador de bloques",
     "12words": {
       "title": "Mis 12 palabras",
       "button": "Descargar"

@@ -763,7 +763,7 @@ viewProfile loggedIn profile =
                 , target "_blank"
                 , href blockExplorerUrl
                 ]
-                [ text "See on block explorer" ]
+                [ text_ "profile.block_explorer" ]
     in
     div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
         [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
