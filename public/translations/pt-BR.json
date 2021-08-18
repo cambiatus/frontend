@@ -666,7 +666,6 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
-    "block_explorer": "Ver no explorador de blocos",
     "12words": {
       "title": "Minhas 12 palavras",
       "button": "Baixar"
@@ -1113,5 +1112,8 @@
       "cancel": "Não",
       "accept": "Sim"
     }
+  },
+  "block_explorer": {
+    "see": "Ver no explorador de blocos"
   }
 }

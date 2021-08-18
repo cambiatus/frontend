@@ -658,7 +658,6 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
-    "block_explorer": "See on block explorer",
     "12words": {
       "title": "My 12 words",
       "button": "Download"
@@ -1107,5 +1106,8 @@
       "cancel": "No",
       "accept": "Yes"
     }
+  },
+  "block_explorer": {
+    "see": "See on block explorer"
   }
 }

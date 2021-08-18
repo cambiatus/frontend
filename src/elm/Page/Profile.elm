@@ -23,6 +23,7 @@ import Cambiatus.Query
 import Community
 import Eos
 import Eos.Account as Eos
+import Eos.Explorer
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
@@ -732,27 +733,6 @@ viewProfile loggedIn profile =
         text_ =
             text << loggedIn.shared.translators.t
 
-        blockExplorerNodeUrl =
-            case loggedIn.shared.environment of
-                Shared.Production ->
-                    "https://app.cambiatus.io"
-
-                Shared.Demo ->
-                    "https://demo.cambiatus.io"
-
-                Shared.Staging ->
-                    "https://staging.cambiatus.io"
-
-                Shared.Development ->
-                    "https://staging.cambiatus.io"
-
-        blockExplorerUrl =
-            Url.Builder.crossOrigin "https://local.bloks.io"
-                [ "account", Eos.nameToString profile.account ]
-                [ Url.Builder.string "nodeUrl" blockExplorerNodeUrl
-                , Url.Builder.string "systemDomain" "eosio"
-                ]
-
         blockExplorerButton =
             a
                 [ class "button w-full mt-4"
@@ -761,9 +741,12 @@ viewProfile loggedIn profile =
                     , ( "button-secondary", not isProfileOwner )
                     ]
                 , target "_blank"
-                , href blockExplorerUrl
+                , profile.account
+                    |> Eos.Explorer.Profile
+                    |> Eos.Explorer.link loggedIn.shared.environment
+                    |> href
                 ]
-                [ text_ "profile.block_explorer" ]
+                [ text_ "block_explorer.see" ]
     in
     div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
         [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]

@@ -619,7 +619,6 @@
     "edit_success": "መገለጫ በትክክል ተቀምጧል",
     "locations": "መገኛ",
     "interests": "ወለድ",
-    "block_explorer": "በብሎክ አሳሽ ውስጥ ይመልከቱ",
     "12words": {
       "title": "የእኔ 12 ቃላት",
       "button": "አዉርድ"
@@ -1068,5 +1067,8 @@
       "cancel": "አይ",
       "accept": "አዎ"
     }
+  },
+  "block_explorer": {
+    "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
   }
 }
