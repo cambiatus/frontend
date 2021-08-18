@@ -1,6 +1,5 @@
 module Flags exposing
     ( Endpoints
-    , Environment(..)
     , Flags
     , decode
     , default
@@ -13,8 +12,7 @@ import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
 
 
 type alias Flags =
-    { environment : Environment
-    , language : String
+    { language : String
     , maybeAccount : Maybe ( Eos.Name, Bool )
     , endpoints : Endpoints
     , logo : String
@@ -33,8 +31,7 @@ type alias Flags =
 
 default : Flags
 default =
-    { environment = Development
-    , language = "en-US"
+    { language = "en-US"
     , maybeAccount = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.png"
@@ -54,7 +51,6 @@ default =
 decode : Decoder Flags
 decode =
     Decode.succeed Flags
-        |> required "env" decodeEnvironment
         |> required "language" Decode.string
         |> DecodePipeline.custom
             (Decode.succeed
@@ -99,21 +95,3 @@ decodeEndpoints =
         |> required "eosio" Decode.string
         |> required "api" Decode.string
         |> required "graphql" Decode.string
-
-
-type Environment
-    = Development
-    | Production
-
-
-decodeEnvironment : Decoder Environment
-decodeEnvironment =
-    Decode.map
-        (\env ->
-            if env == "development" then
-                Development
-
-            else
-                Production
-        )
-        Decode.string

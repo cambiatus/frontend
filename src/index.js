@@ -601,7 +601,6 @@ function flags () {
   }
 
   return {
-    env: env,
     graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),

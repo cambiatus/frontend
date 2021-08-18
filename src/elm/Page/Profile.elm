@@ -45,10 +45,11 @@ import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Time
 import Transfer exposing (QueryTransfers)
 import UpdateResult as UR
+import Url.Builder
 import Utils
 import View.Components
 import View.Feedback as Feedback
@@ -730,6 +731,39 @@ viewProfile loggedIn profile =
 
         text_ =
             text << loggedIn.shared.translators.t
+
+        blockExplorerNodeUrl =
+            case loggedIn.shared.environment of
+                Shared.Production ->
+                    "https://app.cambiatus.io"
+
+                Shared.Demo ->
+                    "https://demo.cambiatus.io"
+
+                Shared.Staging ->
+                    "https://staging.cambiatus.io"
+
+                Shared.Development ->
+                    "https://staging.cambiatus.io"
+
+        blockExplorerUrl =
+            Url.Builder.crossOrigin "https://local.bloks.io"
+                [ "account", Eos.nameToString profile.account ]
+                [ Url.Builder.string "nodeUrl" blockExplorerNodeUrl
+                , Url.Builder.string "systemDomain" "eosio"
+                ]
+
+        blockExplorerButton =
+            a
+                [ class "button w-full mt-4"
+                , classList
+                    [ ( "button-primary", isProfileOwner )
+                    , ( "button-secondary", not isProfileOwner )
+                    ]
+                , target "_blank"
+                , href blockExplorerUrl
+                ]
+                [ text "See on block explorer" ]
     in
     div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
         [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
@@ -755,16 +789,15 @@ viewProfile loggedIn profile =
                     [ text (Maybe.withDefault "" profile.bio) ]
                 ]
                 :: (if isProfileOwner then
-                        []
+                        [ blockExplorerButton ]
 
                     else
-                        [ div [ class "mt-3 mb-2" ]
-                            [ a
-                                [ class "button button-primary w-full"
-                                , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
-                                ]
-                                [ text_ "transfer.title" ]
+                        [ a
+                            [ class "button button-primary w-full mt-4"
+                            , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
                             ]
+                            [ text_ "transfer.title" ]
+                        , blockExplorerButton
                         , profile.contacts
                             |> List.map
                                 (\contact ->
