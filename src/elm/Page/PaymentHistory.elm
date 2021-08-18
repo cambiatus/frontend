@@ -795,7 +795,7 @@ viewTransfer shared payment =
             [ avatarImg ]
         , p [ class "text-black mt-2" ]
             [ text userName ]
-        , p [ class "uppercase text-gray-900 text-xs my-1" ]
+        , p [ class "uppercase text-gray-900 text-sm my-1" ]
             [ text time ]
         , p [ class "text-green text-4xl my-3" ]
             [ text amount ]

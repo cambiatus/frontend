@@ -134,9 +134,9 @@ viewTransfer loggedIn transfer direction =
                     ]
                 , div
                     [ class "flex flex-wrap w-full p-4 mt-4 mx-2 bg-black bg-opacity-10 rounded-lg" ]
-                    [ p [ class "w-full text-xs text-white uppercase font-bold" ]
+                    [ p [ class "w-full text-sm text-white uppercase font-bold" ]
                         [ text (t "transfer_result.transaction_id.title") ]
-                    , p [ class "w-full text-xs text-white uppercase" ]
+                    , p [ class "w-full text-sm text-white uppercase" ]
                         [ text (t "transfer_result.transaction_id.body") ]
                     , p [ class "w-full tracking-widest text-center text-4xl mt-4" ]
                         [ text (Emoji.encode transfer.createdTx) ]

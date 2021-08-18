@@ -597,7 +597,7 @@ viewInformativeFields ({ t, tr } as translators) community =
             (symbolExample
                 ++ [ span [ class "ml-4 text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ] ]
             )
-        , span [ class "uppercase text-black text-xs tracking-widest" ]
+        , span [ class "uppercase text-black text-sm tracking-widest" ]
             [ text (t "settings.community_currency.format")
             , br [] []
             , text (tr "settings.community_currency.supports_decimal_places" [ ( "amount", String.fromInt precision ) ])

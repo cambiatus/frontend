@@ -122,7 +122,7 @@ settingCard title action description route =
         , style "grid-column" "1 / 4"
         ]
         [ span [ class "text-sm font-medium" ] [ text title ]
-        , span [ class "text-xs text-gray-900 uppercase" ] [ text description ]
+        , span [ class "text-sm text-gray-900 uppercase" ] [ text description ]
         , a [ Route.href route ]
             [ button
                 [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"

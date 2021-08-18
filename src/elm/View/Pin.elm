@@ -221,7 +221,7 @@ viewToggleVisibility field model { t } =
             t >> text
     in
     button
-        [ class "absolute inset-y-0 uppercase text-xs right-0 mr-3 text-orange-300"
+        [ class "absolute inset-y-0 uppercase text-sm right-0 mr-3 text-orange-300"
         , onClick (ToggledPinVisibility field)
         , attribute "tabindex" "-1"
         ]

@@ -1010,7 +1010,7 @@ viewSettings loggedIn profile =
                                 viewDetailsItem
                                     (div []
                                         [ kycLabel
-                                        , span [ class "uppercase text-red pt-2 text-xs" ]
+                                        , span [ class "uppercase text-red pt-2 text-sm" ]
                                             [ text_ "community.kyc.delete.warning" ]
                                         ]
                                     )

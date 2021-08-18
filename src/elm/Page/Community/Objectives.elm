@@ -163,7 +163,7 @@ viewObjective ({ shared } as loggedIn) model _ index objective =
                             )
                         ]
                     , if objective.isCompleted then
-                        p [ class "bg-green rounded-sm text-center inline-block px-7 py-1 text-xs text-black uppercase mt-4 tracking-wide" ]
+                        p [ class "bg-green rounded-sm text-center inline-block px-7 py-1 text-sm text-black uppercase mt-4 tracking-wide" ]
                             [ text_ "community.objectives.complete" ]
 
                       else

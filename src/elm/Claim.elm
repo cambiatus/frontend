@@ -627,11 +627,8 @@ viewVotingProgress shared completionStatus =
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimModal { shared, accountName } profileSummaries claim =
     let
-        { t, tr } =
+        { t } =
             shared.translators
-
-        greenTextTitleClass =
-            "uppercase text-green text-xs"
 
         claimVerifiersSectionClass =
             "block my-6 h-auto space-y-4"
@@ -676,7 +673,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
             in
             div [ class "block" ]
-                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                [ View.Components.dateViewer [ class "text-sm uppercase block" ]
                     (\translations ->
                         { translations
                             | today = t "claim.claimed_today"
@@ -707,11 +704,11 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ div
                     []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
-                    , p [ class greenTextTitleClass ] [ text (t "community.actions.reward") ]
+                    , p [ class "text-sm text-green uppercase" ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
-                    , p [ class greenTextTitleClass ] [ text (t "claim.analyst_reward") ]
+                    , p [ class "text-sm text-green uppercase" ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]
 
@@ -726,7 +723,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.approved_by") ]
+                [ p [ class "label" ] [ text (t "claim.approved_by") ]
                 , div []
                     [ if List.isEmpty claim.checks then
                         profileSummaryEmpty
@@ -762,7 +759,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.disapproved_by") ]
+                [ p [ class "label" ] [ text (t "claim.disapproved_by") ]
                 , div []
                     [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
                         profileSummaryEmpty
@@ -798,7 +795,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.pending_vote") ]
+                [ p [ class "label" ] [ text (t "claim.pending_vote") ]
                 , div []
                     [ if List.length claim.checks == claim.action.verifications then
                         profileSummaryEmpty
@@ -831,7 +828,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class "block mt-6" ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.action") ]
+                [ p [ class "label" ] [ text (t "claim.action") ]
                 , p [ class "text-left mt-2 mb-6 text-lg w-full" ] [ text claim.action.description ]
                 , case claim.proofPhoto of
                     Just url ->
@@ -841,7 +838,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             ]
                             [ div
                                 [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
-                                [ p [ class "text-xs text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
+                                [ p [ class "text-sm text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
                                 , p [ class "text-base font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]
                             , View.Components.pdfViewer

@@ -545,7 +545,7 @@ communityPreviewImage isLeftSide { translators } community =
             ]
         , div [ class "absolute inset-0 flex flex-col items-center justify-center text-white uppercase px-5" ]
             [ span [ class "font-medium text-xl" ] [ text community.name ]
-            , span [ class "text-xs mt-2" ]
+            , span [ class "text-sm mt-2" ]
                 [ text
                     (translators.tr "community.join.member_count"
                         [ ( "member_count", String.fromInt community.memberCount ) ]

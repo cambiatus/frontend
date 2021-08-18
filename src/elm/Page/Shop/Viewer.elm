@@ -641,7 +641,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
 
                 Just asset ->
                     div [ class "flex" ]
-                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
+                        [ div [ class "bg-gray-100 uppercase text-sm px-2" ]
                             [ text
                                 (shared.translators.tr
                                     "account.my_wallet.your_current_balance"

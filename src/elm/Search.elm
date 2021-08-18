@@ -558,7 +558,7 @@ viewOffers translators symbol offers =
                         p [ class "px-3 leading-none" ]
                             [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
                             , br [] []
-                            , span [ class "text-gray-300 text-xs" ]
+                            , span [ class "text-gray-900 text-sm" ]
                                 [ text <| Eos.symbolToSymbolCodeString symbol
                                 ]
                             ]

@@ -255,7 +255,7 @@ viewLanguageItems shared toMsg =
         |> List.map
             (\lang ->
                 button
-                    [ class "flex px-4 py-2 text-gray justify-between items-center text-xs uppercase"
+                    [ class "flex px-4 py-2 text-gray justify-between items-center text-sm uppercase"
                     , onClick (toMsg lang)
                     ]
                     [ langFlag lang

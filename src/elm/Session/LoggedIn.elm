@@ -474,7 +474,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
                 [ Icons.notification "fill-current text-black"
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-xs rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-sm rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
@@ -491,7 +491,7 @@ viewHeader page ({ shared } as model) profile_ =
                     ]
                     [ Avatar.view profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
-                        [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
+                        [ p [ class "w-full font-sans uppercase text-gray-900 text-sm overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
                             [ text (shared.translators.t "menu.my_account") ]
@@ -545,7 +545,7 @@ viewHeader page ({ shared } as model) profile_ =
                     , if model.showLanguageItems then
                         div [ class "ml-10 mb-2" ]
                             (button
-                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-sm uppercase"
                                 ]
                                 [ Shared.langFlag shared.language
                                 , text (Translation.languageToLanguageCode shared.language)
@@ -646,7 +646,7 @@ viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
+            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-sm text-gray-700 hover:text-indigo-500"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
