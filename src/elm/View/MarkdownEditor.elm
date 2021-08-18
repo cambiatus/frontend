@@ -83,7 +83,7 @@ type Msg
     | EnteredLinkUrl String
     | ClickedAcceptLink
     | ChangedText (List QuillOp)
-    | OnLoadCalled
+    | RequestedSetContents
 
 
 
@@ -147,7 +147,7 @@ update msg model =
             , Cmd.none
             )
 
-        OnLoadCalled ->
+        RequestedSetContents ->
             ( model
             , case quillOpFromMarkdown model.contents of
                 Ok validQuillOps ->
@@ -199,7 +199,7 @@ forceSetContents : String -> Model -> ( Model, Cmd Msg )
 forceSetContents contents model =
     model
         |> setContents contents
-        |> update OnLoadCalled
+        |> update RequestedSetContents
 
 
 
@@ -278,7 +278,7 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                     )
                 , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
-                , on "component-loaded" (Json.Decode.succeed OnLoadCalled)
+                , on "component-loaded" (Json.Decode.succeed RequestedSetContents)
                 , id model.id
                 ]
                 []
@@ -804,5 +804,5 @@ msgToString msg =
         ChangedText _ ->
             [ "ChangedText" ]
 
-        OnLoadCalled ->
-            [ "OnLoadCalled" ]
+        RequestedSetContents ->
+            [ "RequestedSetContents" ]
