@@ -330,7 +330,7 @@ viewForm ({ t } as translators) model =
                     ]
                 |> Input.withElements
                     [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 mt-1 left-0 ml-2 fill-current " ++ iconColor
+                    , Icons.search <| "absolute top-0 mt-[6px] left-0 ml-2 fill-current " ++ iconColor
                     ]
                 |> Input.toHtml
             ]

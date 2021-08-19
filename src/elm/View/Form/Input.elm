@@ -106,18 +106,8 @@ init options =
 -}
 toHtml : InputOptions a -> Html a
 toHtml options =
-    let
-        hasCounter =
-            case options.maximumCounterValue of
-                Just _ ->
-                    True
-
-                Nothing ->
-                    False
-    in
     div
-        (class "relative"
-            :: classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
+        (class "relative mb-10"
             :: options.containerAttrs
         )
         [ if String.isEmpty options.label then
@@ -166,6 +156,14 @@ input options =
             (id options.id
                 :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
+                :: classList
+                    [ ( "input-with-error"
+                      , options.problems
+                            |> Maybe.map List.length
+                            |> Maybe.withDefault 0
+                            |> (\length -> length > 0)
+                      )
+                    ]
                 :: disabled options.disabled
                 :: value options.value
                 :: placeholder (Maybe.withDefault "" options.placeholder)

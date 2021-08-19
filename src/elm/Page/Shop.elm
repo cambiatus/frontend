@@ -216,7 +216,7 @@ viewShopFilter loggedIn filter =
             loggedIn.shared.translators.t
 
         buttonClass =
-            "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 text-sm font-light text-gray"
+            "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 font-light text-gray"
     in
     div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2 justify-center" ]
         [ button

@@ -60,7 +60,11 @@ body > * {
 
 @layer components {
   .focused-input {
-    @apply focus:ring focus:ring-offset-0 focus:ring-blue-600 focus:ring-opacity-50 focus:border-blue-600;
+    @apply focus:ring-0;
+  }
+
+  .focused-input:not(.input-with-error) {
+    @apply focus:ring focus:ring-offset-0 focus:ring-green focus:ring-opacity-50 focus:border-green;
   }
 
   .form-input {
@@ -94,44 +98,42 @@ body > * {
   .form-radio:checked:disabled {
     background-image: url('/icons/radio-disabled.svg');
   }
-}
 
-/* End of form */
+  .input {
+    @apply form-input h-12 outline-none transition-colors duration-100 text-black;
+  }
 
-/* Input */
+  .input:disabled {
+    @apply bg-gray-500;
+  }
 
-.input {
-  @apply form-input h-12 outline-none transition-colors duration-100 text-black;
-}
+  textarea.input {
+    @apply h-40;
+  }
 
-.input:disabled {
-  @apply bg-gray-500;
-}
+  .textarea-input {
+    @apply block rounded-sm;
+  }
 
-textarea.input {
-  @apply h-40;
-}
+  .input.input-with-error {
+    @apply border-red text-red;
+  }
 
-.textarea-input {
-  @apply block rounded-sm;
-}
+  .field-with-error,
+  .field-with-error:focus {
+    @apply border-red text-red;
+  }
 
-.field-with-error,
-.field-with-error:focus {
-  @apply border-red text-red;
-}
+  .input-counter {
+    @apply text-purple-100 uppercase font-bold float-right mt-1 text-sm;
+  }
 
-.input-counter {
-  @apply text-purple-100 uppercase font-bold float-right mt-1 text-sm;
-}
-
-@layer components {
   .label {
     @apply text-black font-bold uppercase text-sm mb-2 block;
   }
 }
 
-/* End of Input */
+/* End of form */
 
 /* Select */
 
@@ -349,7 +351,7 @@ textarea.input {
 @layer utilities {
   .form-error {
     /* validation message for the field */
-    @apply text-red text-sm uppercase tracking-wide block mt-1;
+    @apply text-red text-sm uppercase tracking-wide block mt-2;
   }
 }
 
