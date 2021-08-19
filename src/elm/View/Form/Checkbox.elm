@@ -33,7 +33,7 @@ module View.Form.Checkbox exposing
 -}
 
 import Html exposing (Html, input, label)
-import Html.Attributes exposing (checked, class, type_)
+import Html.Attributes exposing (checked, class, classList, disabled, type_)
 import Html.Events exposing (onCheck)
 
 
@@ -98,12 +98,20 @@ withContainerAttrs attrs options =
 -}
 toHtml : Options msg -> Html msg
 toHtml options =
-    label (class "block" :: options.containerAttrs)
+    label
+        (class "block"
+            :: classList
+                [ ( "text-green", options.value )
+                , ( "text-gray-900", options.disabled )
+                ]
+            :: options.containerAttrs
+        )
         [ input
             [ type_ "checkbox"
             , class "form-checkbox mr-2"
             , checked options.value
             , onCheck options.onCheck
+            , disabled options.disabled
             ]
             []
         , options.description

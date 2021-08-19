@@ -216,7 +216,7 @@ viewOptionAsDefault options ( option, view ) =
             [ class "flex ml-2"
             , classList
                 [ ( "text-green", isActive options option && not options.isDisabled )
-                , ( "text-gray-600", options.isDisabled )
+                , ( "text-gray-900", options.isDisabled )
                 ]
             ]
             [ view (isActive options option) ]
