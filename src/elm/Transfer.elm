@@ -1,9 +1,11 @@
 module Transfer exposing
     ( ConnectionTransfer
+    , CreatedTx
     , EdgeTransfer
     , ProfileSummaries
     , QueryTransfers
     , Transfer
+    , createdTxToString
     , encodeEosActionData
     , getTransfers
     , transferConnectionSelectionSet
@@ -47,8 +49,17 @@ type alias Transfer =
     , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
-    , createdTx : String
+    , createdTx : CreatedTx
     }
+
+
+type CreatedTx
+    = CreatedTx String
+
+
+createdTxToString : CreatedTx -> String
+createdTxToString (CreatedTx tx) =
+    tx
 
 
 type alias CommunityId =
@@ -110,7 +121,7 @@ transferItemSelectionSet =
             )
         |> with (Cambiatus.Object.Transfer.community communitySelectionSet)
         |> with Cambiatus.Object.Transfer.createdAt
-        |> with Cambiatus.Object.Transfer.createdTx
+        |> with (SelectionSet.map CreatedTx Cambiatus.Object.Transfer.createdTx)
 
 
 communitySelectionSet : SelectionSet Cmm Cambiatus.Object.Community

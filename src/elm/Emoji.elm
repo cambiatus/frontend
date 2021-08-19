@@ -3,13 +3,15 @@ module Emoji exposing (encode)
 import Dict exposing (Dict)
 import Hashids
 import Murmur3
+import Transfer
 
 
 {-| Convert Transfer identifier (64 symbols) to emoji sequence (8 symbols)
 -}
-encode : String -> String
+encode : Transfer.CreatedTx -> String
 encode transferId =
     transferId
+        |> Transfer.createdTxToString
         |> Murmur3.hashString salt
         -- make 32 bit number
         |> Hashids.encode hashidsCtx

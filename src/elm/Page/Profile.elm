@@ -23,6 +23,7 @@ import Cambiatus.Query
 import Community
 import Eos
 import Eos.Account as Eos
+import Eos.Explorer
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
@@ -730,6 +731,21 @@ viewProfile loggedIn profile =
 
         text_ =
             text << loggedIn.shared.translators.t
+
+        blockExplorerButton =
+            a
+                [ class "button w-full mt-4"
+                , classList
+                    [ ( "button-primary", isProfileOwner )
+                    , ( "button-secondary", not isProfileOwner )
+                    ]
+                , target "_blank"
+                , profile.account
+                    |> Eos.Explorer.Profile
+                    |> Eos.Explorer.link loggedIn.shared.environment
+                    |> href
+                ]
+                [ text_ "block_explorer.see" ]
     in
     div [ class "p-4 bg-white border-white border-r w-full flex md:border-gray-500" ]
         [ div [ class "w-full container mx-auto self-center md:max-w-lg" ]
@@ -755,16 +771,15 @@ viewProfile loggedIn profile =
                     [ text (Maybe.withDefault "" profile.bio) ]
                 ]
                 :: (if isProfileOwner then
-                        []
+                        [ blockExplorerButton ]
 
                     else
-                        [ div [ class "mt-3 mb-2" ]
-                            [ a
-                                [ class "button button-primary w-full"
-                                , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
-                                ]
-                                [ text_ "transfer.title" ]
+                        [ a
+                            [ class "button button-primary w-full mt-4"
+                            , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
                             ]
+                            [ text_ "transfer.title" ]
+                        , blockExplorerButton
                         , profile.contacts
                             |> List.map
                                 (\contact ->
