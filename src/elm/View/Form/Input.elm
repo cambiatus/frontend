@@ -4,7 +4,7 @@ module View.Form.Input exposing
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withInputType, withType, withCounterType, asNumeric
     , toHtml
-    , FieldType(..), InputType(..)
+    , CounterType(..), FieldType(..), InputType(..)
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
@@ -57,9 +57,9 @@ import Eos
 import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
+import I18Next
 import Session.Shared exposing (Translators)
 import View.Form
-import View.Form.InputCounter
 
 
 {-| Required options for an input
@@ -98,7 +98,7 @@ init options =
     , errorAttrs = []
     , inputType = Input
     , fieldType = Text
-    , counterType = View.Form.InputCounter.CountLetters
+    , counterType = CountLetters
     }
 
 
@@ -124,7 +124,7 @@ toHtml options =
                 )
             , case options.maximumCounterValue of
                 Just number ->
-                    View.Form.InputCounter.viewWithAttrs options.translators.tr
+                    inputCounterviewWithAttrs options.translators.tr
                         number
                         options.value
                         options.counterAttrs
@@ -261,7 +261,7 @@ withType fieldType options =
 
 {-| Determines the counting strategy for the input
 -}
-withCounterType : View.Form.InputCounter.CounterType -> InputOptions a -> InputOptions a
+withCounterType : CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
 
@@ -272,6 +272,35 @@ asNumeric : InputOptions a -> InputOptions a
 asNumeric options =
     options
         |> withAttrs [ attribute "inputmode" "numeric" ]
+
+
+{-| Creates a Cambiatus-style input counter.
+-}
+inputCounterviewWithAttrs : (String -> I18Next.Replacements -> String) -> Int -> String -> List (Html.Attribute msg) -> CounterType -> Html msg
+inputCounterviewWithAttrs tr max str attrs counterType =
+    let
+        currentLength =
+            case counterType of
+                CountLetters ->
+                    String.length str
+
+                CountWords ->
+                    String.words str
+                        |> List.filter (not << String.isEmpty)
+                        |> List.length
+    in
+    div (class "text-purple-100 mt-2 uppercase font-bold text-sm" :: attrs)
+        [ text <|
+            tr "edit.input_counter"
+                [ ( "current", String.fromInt currentLength )
+                , ( "max", String.fromInt max )
+                ]
+        ]
+
+
+type CounterType
+    = CountLetters
+    | CountWords
 
 
 
@@ -329,7 +358,7 @@ type alias InputOptions a =
     , errorAttrs : List (Html.Attribute a)
     , inputType : InputType
     , fieldType : FieldType
-    , counterType : View.Form.InputCounter.CounterType
+    , counterType : CounterType
     }
 
 
