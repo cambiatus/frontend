@@ -60,15 +60,21 @@ body > * {
 
 @layer components {
   .focused-input {
-    @apply focus:ring-0;
+    @apply focus:ring focus:ring-offset-0;
   }
 
-  .focused-input:not(.input-with-error) {
-    @apply focus:ring focus:ring-offset-0 focus:ring-green focus:ring-opacity-50 focus:border-green;
+  .focused-input:not(.with-error) {
+    @apply focus:ring-green focus:border-green focus:ring-opacity-50;
+  }
+
+  .focused-input.with-error {
+    @apply focus:ring-red focus:ring-opacity-30;
   }
 
   .form-input {
-    @apply bg-white border border-gray-500 rounded-md px-3 py-2 placeholder-gray-400 focused-input;
+    @apply bg-white border border-gray-500 rounded-md px-3 py-2 placeholder-gray-400 focused-input ring-0 duration-100;
+
+    transition-property: box-shadow, color, border-color;
   }
 
   .form-checkbox {
@@ -102,7 +108,7 @@ body > * {
   }
 
   .input {
-    @apply form-input h-12 outline-none transition-colors duration-100 text-black;
+    @apply form-input h-12 outline-none text-black;
   }
 
   .input:disabled {
@@ -124,10 +130,6 @@ body > * {
   .field-with-error,
   .field-with-error:focus {
     @apply border-red text-red;
-  }
-
-  .input-counter {
-    @apply text-purple-100 uppercase font-bold float-right mt-1 text-sm;
   }
 
   .label {
@@ -345,7 +347,7 @@ body > * {
 @layer utilities {
   .form-error {
     /* validation message for the field */
-    @apply text-red text-sm uppercase tracking-wide block mt-2;
+    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in;
   }
 }
 

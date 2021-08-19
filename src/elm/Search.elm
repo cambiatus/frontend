@@ -441,7 +441,7 @@ viewTabs { tr } results activeTab =
                 [ class "rounded-sm flex-1 text-center cursor-pointer capitalize py-3"
                 , classList
                     [ ( "bg-orange-300 text-white font-bold", activeTab == tabKind )
-                    , ( "bg-gray-100", activeTab /= tabKind )
+                    , ( "bg-gray-100 hover:bg-gray-200", activeTab /= tabKind )
                     ]
                 , if count > 0 then
                     onClick clickMsg

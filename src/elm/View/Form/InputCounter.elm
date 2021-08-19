@@ -21,7 +21,7 @@ viewWithAttrs tr max str attrs counterType =
                         |> List.filter (not << String.isEmpty)
                         |> List.length
     in
-    div (class "input-counter" :: attrs)
+    div (class "text-purple-100 mt-2 uppercase font-bold text-sm" :: attrs)
         [ text <|
             tr "edit.input_counter"
                 [ ( "current", String.fromInt currentLength )

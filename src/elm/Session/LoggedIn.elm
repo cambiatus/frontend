@@ -80,7 +80,6 @@ init shared accountName authToken =
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
-        , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -122,8 +121,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     in
     ( initModel shared maybePrivateKey_ profile_.account authToken
     , Cmd.batch
-        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
-        , loadedProfile
+        [ loadedProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         ]
@@ -1065,6 +1063,7 @@ update msg model =
             in
             UR.init newModel
                 |> UR.addCmd cmd
+                |> UR.addCmd (Ports.getRecentSearches ())
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb

@@ -116,25 +116,23 @@ toHtml options =
           else
             View.Form.label options.labelAttrs options.id options.label
         , input options
-        , case options.maximumCounterValue of
-            Just number ->
-                View.Form.InputCounter.viewWithAttrs options.translators.tr
-                    number
-                    options.value
-                    options.counterAttrs
-                    options.counterType
+        , div [ class "flex w-full px-1" ]
+            [ ul [ class "inline-block mr-auto" ]
+                (options.problems
+                    |> Maybe.withDefault []
+                    |> List.map (viewFieldProblem options.errorAttrs)
+                )
+            , case options.maximumCounterValue of
+                Just number ->
+                    View.Form.InputCounter.viewWithAttrs options.translators.tr
+                        number
+                        options.value
+                        options.counterAttrs
+                        options.counterType
 
-            Nothing ->
-                text ""
-        , case options.problems of
-            Nothing ->
-                text ""
-
-            Just problems ->
-                ul []
-                    (problems
-                        |> List.map (viewFieldProblem options.errorAttrs)
-                    )
+                Nothing ->
+                    text ""
+            ]
         ]
 
 
@@ -156,14 +154,7 @@ input options =
             (id options.id
                 :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
-                :: classList
-                    [ ( "with-error"
-                      , options.problems
-                            |> Maybe.map List.length
-                            |> Maybe.withDefault 0
-                            |> (\length -> length > 0)
-                      )
-                    ]
+                :: classList [ ( "with-error", hasErrors options ) ]
                 :: disabled options.disabled
                 :: value options.value
                 :: placeholder (Maybe.withDefault "" options.placeholder)
@@ -287,9 +278,17 @@ asNumeric options =
 --- INTERNAL
 
 
+hasErrors : InputOptions a -> Bool
+hasErrors options =
+    options.problems
+        |> Maybe.withDefault []
+        |> List.length
+        |> (\length -> length > 0)
+
+
 viewFieldProblem : List (Html.Attribute a) -> String -> Html a
 viewFieldProblem attrs problem =
-    li (class "form-error absolute mr-10" :: attrs) [ text problem ]
+    li (class "form-error" :: attrs) [ text problem ]
 
 
 viewCurrencyElement : Eos.Symbol -> Html a

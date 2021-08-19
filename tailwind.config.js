@@ -166,6 +166,15 @@ module.exports = {
       opacity: {
         '10': '0.1',
         '60': '0.6'
+      },
+      animation: {
+        'fade-in': 'appear 75ms ease-out'
+      },
+      keyframes: {
+        appear: {
+          '0%': { opacity: 0, transform: 'translate(0, -5px)' },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        }
       }
     }
   },
