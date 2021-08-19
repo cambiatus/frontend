@@ -1109,5 +1109,8 @@
       "cancel": "No",
       "accept": "Sí"
     }
+  },
+  "block_explorer": {
+    "see": "Ver en el explorador de bloques"
   }
 }

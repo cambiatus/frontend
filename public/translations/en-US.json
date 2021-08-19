@@ -1106,5 +1106,8 @@
       "cancel": "No",
       "accept": "Yes"
     }
+  },
+  "block_explorer": {
+    "see": "See on block explorer"
   }
 }
