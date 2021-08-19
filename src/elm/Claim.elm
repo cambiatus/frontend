@@ -728,7 +728,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ class claimVerifiersSectionClass ]
                 [ p [ class greenTextTitleClass ] [ text (t "claim.approved_by") ]
                 , div []
-                    [ if List.isEmpty claim.checks then
+                    [ if List.filter (\check -> check.isApproved) claim.checks |> List.isEmpty then
                         profileSummaryEmpty
 
                       else
