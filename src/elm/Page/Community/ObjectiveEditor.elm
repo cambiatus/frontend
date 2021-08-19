@@ -12,9 +12,9 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, disabled, placeholder, required, rows, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, button, div, span, text)
+import Html.Attributes exposing (class, disabled, required, rows, style, type_)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -27,6 +27,7 @@ import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
+import View.Form.Input as Input
 import View.Modal as Modal
 
 
@@ -240,20 +241,20 @@ viewForm { shared } formStatus =
     div [ class "bg-white w-full p-10" ]
         [ div [ class "container mx-auto" ]
             [ Html.form
-                [ class "mb-10"
-                ]
-                [ span [ class "label" ]
-                    [ text (t "community.objectives.editor.description_label") ]
-                , textarea
-                    [ class "input textarea-input w-full"
-                    , rows 5
-                    , disabled isDisabled
-                    , onInput EnteredDescription
-                    , value objForm.description
-                    , required True
-                    , placeholder (t "community.objectives.editor.description_placeholder")
-                    ]
-                    []
+                []
+                [ Input.init
+                    { label = t "community.objectives.editor.description_label"
+                    , id = "description-input"
+                    , onInput = EnteredDescription
+                    , disabled = False
+                    , value = objForm.description
+                    , placeholder = Just <| t "community.objectives.editor.description_placeholder"
+                    , problems = Nothing
+                    , translators = shared.translators
+                    }
+                    |> Input.withInputType Input.TextArea
+                    |> Input.withAttrs [ rows 5, required True ]
+                    |> Input.toHtml
                 ]
             , div [ class "flex flex-col w-full space-y-4 md:space-y-0 md:flex-row md:justify-between" ]
                 [ button

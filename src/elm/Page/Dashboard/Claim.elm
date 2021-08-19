@@ -9,7 +9,7 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Html exposing (Html, button, div, h3, label, p, span, strong, text)
+import Html exposing (Html, button, div, h3, p, span, strong, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)

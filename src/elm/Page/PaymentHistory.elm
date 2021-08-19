@@ -25,7 +25,7 @@ import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
+import Html exposing (Html, a, button, div, h1, h2, p, text, ul)
 import Html.Attributes as Attrs exposing (class, style)
 import Html.Events exposing (onClick)
 import Icons

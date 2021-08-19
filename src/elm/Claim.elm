@@ -38,7 +38,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, label, p, span, strong, text)
+import Html exposing (Html, a, button, div, p, span, strong, text)
 import Html.Attributes exposing (class, classList, disabled, href, id, style, target)
 import Html.Events exposing (onClick)
 import Icons
@@ -683,9 +683,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     )
                     shared
                     (Utils.fromDateTime claim.createdAt)
-                , label [ class "text-2xl font-bold" ]
-                    [ text claimStatusPhrase
-                    ]
+                , p [ class "text-2xl font-bold" ]
+                    [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
 
@@ -973,9 +972,8 @@ viewPhotoModal loggedIn claim =
                 , case claim.proofCode of
                     Just proofCode ->
                         div []
-                            [ label [ class "mt-4 md:mt-0 label md:text-xl block" ]
-                                [ text (t "community.actions.form.verification_code")
-                                ]
+                            [ p [ class "mt-4 md:mt-0 label md:text-xl block" ]
+                                [ text (t "community.actions.form.verification_code") ]
                             , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]
                             ]
 

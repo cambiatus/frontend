@@ -32,9 +32,9 @@ import DataValidator
 import Dict
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, label, p, span, text, textarea)
-import Html.Attributes exposing (class, classList, placeholder, rows, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, b, button, div, p, span, text)
+import Html.Attributes exposing (class, classList, id, placeholder, rows)
+import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
@@ -1410,23 +1410,22 @@ viewDescription { shared } form =
     let
         { t } =
             shared.translators
-
-        text_ s =
-            text (t s)
     in
-    div [ class "mb-10" ]
-        [ span [ class "label" ]
-            [ text_ "community.actions.form.description_label" ]
-        , textarea
-            [ class "input textarea-input w-full"
-            , classList [ ( "border-red", hasErrors form.description ) ]
-            , rows 5
-            , onInput EnteredDescription
-            , value (getInput form.description)
-            ]
-            []
-        , viewFieldErrors (listErrors shared.translations form.description)
-        ]
+    Input.init
+        { label = t "community.actions.form.description_label"
+        , id = "action-description-input"
+        , onInput = EnteredDescription
+        , disabled = False
+        , value = getInput form.description
+        , placeholder = Nothing
+        , problems =
+            listErrors shared.translations form.description
+                |> Just
+        , translators = shared.translators
+        }
+        |> Input.withInputType Input.TextArea
+        |> Input.withAttrs [ rows 5 ]
+        |> Input.toHtml
 
 
 viewReward : LoggedIn.Model -> Community.Model -> Form -> Html Msg
@@ -1779,19 +1778,20 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 }
                                 |> Checkbox.withContainerAttrs [ class "flex" ]
                                 |> Checkbox.toHtml
-                            , div [ class "mt-6" ]
-                                [ label [ class "label" ]
-                                    [ text (t "community.actions.form.verification_instructions") ]
-                                , textarea
-                                    [ class "input textarea-input w-full"
-                                    , classList [ ( "border-red", hasErrors model.form.instructions ) ]
-                                    , rows 5
-                                    , onInput EnteredInstructions
-                                    , value (getInput model.form.instructions)
-                                    ]
-                                    []
-                                , viewFieldErrors (listErrors shared.translations model.form.instructions)
-                                ]
+                            , Input.init
+                                { label = t "community.actions.form.verification_instructions"
+                                , id = "verification-instructions-input"
+                                , onInput = EnteredInstructions
+                                , disabled = False
+                                , value = getInput model.form.instructions
+                                , placeholder = Nothing
+                                , problems = listErrors shared.translations model.form.instructions |> Just
+                                , translators = shared.translators
+                                }
+                                |> Input.withInputType Input.TextArea
+                                |> Input.withContainerAttrs [ class "mt-6" ]
+                                |> Input.withAttrs [ rows 5 ]
+                                |> Input.toHtml
                             ]
 
                       else
