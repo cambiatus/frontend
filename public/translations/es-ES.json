@@ -1117,6 +1117,9 @@
     "link_tooltip": {
       "edit": "Editar",
       "remove": "Remover enlace"
+    },
+    "block_explorer": {
+      "see": "Ver en el explorador de bloques"
     }
   }
 }

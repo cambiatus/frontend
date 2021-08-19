@@ -1,7 +1,6 @@
 module Session.SharedTests exposing (all)
 
 import Expect
-import Flags
 import Session.Shared as Shared
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
@@ -10,7 +9,10 @@ import Url
 
 all : Test
 all =
-    describe "Session.Shared" [ communityDomain ]
+    describe "Session.Shared"
+        [ communityDomain
+        , deploymentEnvironment
+        ]
 
 
 
@@ -39,7 +41,7 @@ communityDomainOnProduction =
             }
 
         makeInput url =
-            { url = url, environment = Flags.Production }
+            { url = url, environment = Shared.Production }
     in
     describe "when environment is production"
         [ describe "when on production"
@@ -104,7 +106,7 @@ communityDomainOnDevelopment =
             }
 
         makeInput url =
-            { url = url, environment = Flags.Development }
+            { url = url, environment = Shared.Staging }
     in
     describe "when environment is development"
         [ describe "when on production"
@@ -181,5 +183,89 @@ communityDomainOnDevelopment =
                         |> makeInput
                         |> Shared.communityDomain
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
+            ]
+        ]
+
+
+
+-- DEPLOYMENT ENVIRONMENT
+
+
+deploymentEnvironment : Test
+deploymentEnvironment =
+    let
+        makeUrl : String -> Url.Url
+        makeUrl host =
+            { protocol = Url.Https
+            , host = host
+            , port_ = Nothing
+            , path = "/"
+            , query = Nothing
+            , fragment = Nothing
+            }
+    in
+    describe "deploymentEnvironment"
+        [ describe "when on production"
+            [ test "correctly identifies muda" <|
+                \() ->
+                    makeUrl "muda.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Production
+            , test "correctly identifies verdes" <|
+                \() ->
+                    makeUrl "verdes.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Production
+            , fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io")) "correctly identifies prod communities" <|
+                \urlFuzz ->
+                    Shared.environmentFromUrl urlFuzz
+                        |> Expect.equal Shared.Production
+            ]
+        , describe "when on demo"
+            [ test "correctly identifies cmbx" <|
+                \() ->
+                    makeUrl "cmbx.demo.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Demo
+            , test "correctly identifies cmbgo" <|
+                \() ->
+                    makeUrl "cmbgo.demo.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Demo
+            , fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io")) "correctly identifies demo communities" <|
+                \urlFuzz ->
+                    Shared.environmentFromUrl urlFuzz
+                        |> Expect.equal Shared.Demo
+            ]
+        , describe "when on staging"
+            [ test "correctly identifies buss" <|
+                \() ->
+                    makeUrl "buss.staging.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Staging
+            , test "correctly identifies mizu" <|
+                \() ->
+                    makeUrl "mizu.staging.cambiatus.io"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Staging
+            , fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io")) "correctly identifies staging communities" <|
+                \urlFuzz ->
+                    Shared.environmentFromUrl urlFuzz
+                        |> Expect.equal Shared.Staging
+            ]
+        , fuzz (Fuzz.cambiatusUrl (Just ".netlify.app")) "correctly identifies netlify links as staging" <|
+            \urlFuzz ->
+                Shared.environmentFromUrl urlFuzz
+                    |> Expect.equal Shared.Staging
+        , describe "when on localhost"
+            [ test "correctly identifies buss" <|
+                \() ->
+                    makeUrl "buss.staging.localhost"
+                        |> Shared.environmentFromUrl
+                        |> Expect.equal Shared.Development
+            , fuzz (Fuzz.cambiatusUrl (Just ".staging.localhost")) "correctly identifies localhost communities" <|
+                \urlFuzz ->
+                    Shared.environmentFromUrl urlFuzz
+                        |> Expect.equal Shared.Development
             ]
         ]

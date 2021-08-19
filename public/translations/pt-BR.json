@@ -1120,6 +1120,9 @@
     "link_tooltip": {
       "edit": "Editar",
       "remove": "Remover link"
+    },
+    "block_explorer": {
+      "see": "Ver no explorador de blocos"
     }
   }
 }
