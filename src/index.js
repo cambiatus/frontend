@@ -349,6 +349,7 @@ const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
@@ -615,7 +616,8 @@ function flags () {
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
     useSubdomain: useSubdomain,
-    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY)
+    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
+    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false
   }
 }
 
@@ -709,6 +711,18 @@ app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
     category: 'storeSelectedCommunitySymbol',
     message: 'Stored selected community\'s symbol',
     data: { symbol },
+    localData: {},
+    level: 'debug'
+  })
+})
+
+app.ports.storePinVisibility.subscribe(pinVisibility => {
+  setItem(PIN_VISIBILITY_KEY, pinVisibility)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storePinVisibility',
+    message: 'Stored pin visibility',
+    data: { pinVisibility },
     localData: {},
     level: 'debug'
   })

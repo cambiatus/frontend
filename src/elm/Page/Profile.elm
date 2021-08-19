@@ -110,6 +110,7 @@ init loggedIn profileName =
                 , withConfirmation = False
                 , submitLabel = "profile.pin.button"
                 , submittingLabel = "profile.pin.button"
+                , pinVisibility = loggedIn.shared.pinVisibility
                 }
       , currentPin = Nothing
       }
@@ -473,7 +474,14 @@ update msg model loggedIn =
                 |> UR.init
 
         ClickedChangePin ->
-            { model | isNewPinModalVisible = True }
+            let
+                oldPinInputModel =
+                    model.pinInputModel
+            in
+            { model
+                | isNewPinModalVisible = True
+                , pinInputModel = { oldPinInputModel | isPinVisible = loggedIn.auth.pinModel.isPinVisible }
+            }
                 |> UR.init
                 |> LoggedIn.withAuthentication loggedIn
                     model
@@ -487,10 +495,14 @@ update msg model loggedIn =
             let
                 ( newPinModel, submitStatus ) =
                     Pin.update subMsg model.pinInputModel
+
+                ( newShared, submitCmd ) =
+                    Pin.postSubmitAction newPinModel submitStatus loggedIn.shared SubmittedNewPin
             in
             { model | pinInputModel = newPinModel }
                 |> UR.init
-                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedNewPin)
+                |> UR.addCmd submitCmd
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
 
         SubmittedNewPin newPin ->
             let

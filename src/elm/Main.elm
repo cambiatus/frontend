@@ -747,6 +747,11 @@ updateGuestUResult toStatus toMsg model uResult =
                             ( { m | session = Page.Guest { guest | feedback = feedback } }
                             , cmds_
                             )
+
+                        Guest.UpdatedShared newShared ->
+                            ( { m | session = Page.Guest { guest | shared = newShared } }
+                            , cmds_
+                            )
         )
         ( { model | status = toStatus uResult.model }
         , []

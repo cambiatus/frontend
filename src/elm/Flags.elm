@@ -26,6 +26,7 @@ type alias Flags =
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
+    , pinVisibility : Bool
     }
 
 
@@ -45,6 +46,7 @@ default =
     , canReadClipboard = False
     , useSubdomain = True
     , selectedCommunity = Nothing
+    , pinVisibility = False
     }
 
 
@@ -72,6 +74,7 @@ decode =
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
+        |> required "pinVisibility" Decode.bool
 
 
 type alias Endpoints =
