@@ -41,7 +41,6 @@ import Validate exposing (Validator)
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Input as Input
-import View.Form.InputCounter as InputCounter
 import View.Pin as Pin
 
 
@@ -214,7 +213,7 @@ viewPassphrase ({ shared } as guest) model =
                     )
                 ]
             |> Input.withCounter 12
-            |> Input.withCounterType InputCounter.CountWords
+            |> Input.withCounterType Input.CountWords
             |> Input.withCounterAttrs [ class "text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
             |> Input.withElements [ viewPasteButton ]
