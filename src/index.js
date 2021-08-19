@@ -488,8 +488,12 @@ const cookieKey = (key) => {
 }
 
 const getItem = (key) => {
-  const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
-  return result ? result.pop() : null
+  if (useSubdomain) {
+    const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
+    return result ? result.pop() : null
+  }
+
+  return window.localStorage.getItem(cookieKey(key)) || null
 }
 
 const removeItem = (key) => {
@@ -498,22 +502,28 @@ const removeItem = (key) => {
 }
 
 const setItem = (key, value) => {
-  // This is the maximum possible expiration date for some browsers, because
-  // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
-  // This is equivalent to the date 2038-01-19 04:14:07
-  const maxExpirationDate = 2147483647
-  document.cookie = `${cookieKey(key)}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
+  if (useSubdomain) {
+    // This is the maximum possible expiration date for some browsers, because
+    // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
+    // This is equivalent to the date 2038-01-19 04:14:07
+    const maxExpirationDate = 2147483647
+    document.cookie = `${cookieKey(key)}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
+  } else {
+    window.localStorage.setItem(cookieKey(key), value)
+  }
 }
 
 const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
-storedKeys.forEach((key) => {
-  const localStorageValue = window.localStorage.getItem(key)
-  if (localStorageValue !== null) {
-    setItem(key, localStorageValue)
-    window.localStorage.removeItem(key)
-  }
-})
+if (useSubdomain) {
+  storedKeys.forEach((key) => {
+    const localStorageValue = window.localStorage.getItem(key)
+    if (localStorageValue !== null) {
+      setItem(key, localStorageValue)
+      window.localStorage.removeItem(key)
+    }
+  })
+}
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
