@@ -12,7 +12,7 @@
 
 body {
   background-color: #f6f6f6;
-  font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
+  font-family: 'Nunito Sans', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
   color: var(--black);
 }
 
@@ -80,10 +80,10 @@ body > * {
   }
 
   .form-select {
-    @apply form-input pr-10 bg-no-repeat focus:outline-none;
+    @apply input pr-10 bg-no-repeat focus:outline-none;
 
     background-position: right 0.5rem center;
-    background-size: 1.5em;
+    background-size: 2rem;
     background-image: url('/icons/select-arrow.svg');
   }
 
@@ -115,7 +115,7 @@ body > * {
     @apply block rounded-sm;
   }
 
-  .input.input-with-error {
+  .input.with-error {
     @apply border-red text-red;
   }
 
@@ -134,14 +134,6 @@ body > * {
 }
 
 /* End of form */
-
-/* Select */
-
-.select {
-  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100 focus:border-purple-500;
-}
-
-/* End of Select */
 
 /* Elm Select */
 

@@ -107,8 +107,16 @@ toHtml select =
     Html.div (class "mb-10" :: select.containerAttrs)
         [ View.Form.label [] select.id select.label
         , Html.select
-            (class "form-select select w-full"
-                :: classList [ ( "bg-gray-500", select.disabled ) ]
+            (class "form-select w-full"
+                :: classList
+                    [ ( "bg-gray-500", select.disabled )
+                    , ( "with-error"
+                      , select.problems
+                            |> Maybe.map List.length
+                            |> Maybe.withDefault 0
+                            |> (\length -> length > 0)
+                      )
+                    ]
                 :: onInput onInput_
                 :: disabled select.disabled
                 :: select.extraAttrs

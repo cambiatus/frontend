@@ -771,7 +771,7 @@ viewFlagsSelect { t } basic =
             text ""
         , View.Form.label [] id (t "contact_form.country")
         , button
-            [ class "form-select select relative"
+            [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
             , onClick (ClickedToggleContactFlags basic.contactType)
             , type_ "button"

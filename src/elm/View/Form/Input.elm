@@ -157,7 +157,7 @@ input options =
                 :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
                 :: classList
-                    [ ( "input-with-error"
+                    [ ( "with-error"
                       , options.problems
                             |> Maybe.map List.length
                             |> Maybe.withDefault 0
