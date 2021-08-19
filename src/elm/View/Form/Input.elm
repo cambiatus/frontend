@@ -1,7 +1,7 @@
 module View.Form.Input exposing
     ( init
     , withCounter, withElements, withCurrency
-    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
+    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withInputType, withType, withCounterType, asNumeric
     , toHtml
     , FieldType(..), InputType(..)
@@ -39,7 +39,7 @@ and character counters.
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
+@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
 
 
 ## Changing types
@@ -81,6 +81,7 @@ type alias RequiredInputOptions a =
 init : RequiredInputOptions a -> InputOptions a
 init options =
     { label = options.label
+    , labelAttrs = []
     , id = options.id
     , onInput = options.onInput
     , disabled = options.disabled
@@ -123,7 +124,7 @@ toHtml options =
             text ""
 
           else
-            View.Form.label options.id options.label
+            View.Form.label options.labelAttrs options.id options.label
         , input options
         , case options.maximumCounterValue of
             Just number ->
@@ -185,6 +186,13 @@ For more information, see the InputCounter module
 withCounter : Int -> InputOptions a -> InputOptions a
 withCounter maximum options =
     { options | maximumCounterValue = Just maximum }
+
+
+{-| Adds attributes to the label
+-}
+withLabelAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withLabelAttrs attrs options =
+    { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 {-| Adds attributes to the counter
@@ -307,6 +315,7 @@ fieldTypeToString fieldType =
 
 type alias InputOptions a =
     { label : String
+    , labelAttrs : List (Html.Attribute a)
     , id : String
     , onInput : String -> a
     , disabled : Bool

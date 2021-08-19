@@ -245,7 +245,7 @@ view ({ shared, accountName } as loggedIn) model =
 
 viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-heading" ]
+    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-lg" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
             , span [ class "text-indigo-500 font-medium" ]
@@ -275,7 +275,7 @@ addContactModal shared ({ contactModel } as model) =
             div [ class "mt-4" ]
                 [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-sm uppercase" ]
                     [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
+                , p [ class "text-lg font-bold mt-2" ]
                     [ text_ "contact_modal.title" ]
                 ]
 
@@ -352,7 +352,7 @@ viewInvitationModal { shared } model =
                 InviteModalLoaded invitationId ->
                     [ div [ class "mt-3 label" ]
                         [ text_ "community.invite.label" ]
-                    , p [ class "py-2 md:text-heading text-black" ]
+                    , p [ class "py-2 md:text-lg text-black" ]
                         [ text (url invitationId) ]
                     , Input.init
                         { label = ""
@@ -436,11 +436,10 @@ viewAnalysisList loggedIn model =
             div [ class "w-full flex mb-10 md:mb-40" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex flex-wrap mr-4" ]
+                    [ div [ class "flex justify-between text-gray-600 text-lg font-light flex mt-4 mb-4" ]
+                        [ div [ class "flex flex-wrap mr-4 text-lg" ]
                             [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                                [ text_ "dashboard.analysis.title.1"
-                                ]
+                                [ text_ "dashboard.analysis.title.1" ]
                             , text_ "dashboard.analysis.title.2"
                             ]
                         , div [ class "flex xs-max:flex-col xs-max:space-x-0 justify-between space-x-4" ]
@@ -555,13 +554,13 @@ viewTransfers loggedIn model isMobile =
     in
     outerContainer
         [ div [ class "flex justify-between items-center p-4 pb-0" ]
-            [ p [ class "text-heading" ]
+            [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
                 , text " "
                 , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
                 ]
             , button
-                [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
+                [ class "flex items-center text-lg lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
                 , onClick ClickedOpenTransferFilters
                 ]
                 [ text <| t "all_analysis.filter.title"
@@ -765,7 +764,7 @@ viewTransferFilters ({ shared } as loggedIn) users model =
                     }
                 |> Select.withContainerAttrs [ class "mt-10" ]
                 |> Select.toHtml
-            , View.Form.label "other-account-select" (t directionText)
+            , View.Form.label [] "other-account-select" (t directionText)
             , model.transfersFiltersBeingEdited.filters.otherAccount
                 |> Maybe.map List.singleton
                 |> Maybe.withDefault []

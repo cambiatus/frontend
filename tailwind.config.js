@@ -54,22 +54,8 @@ module.exports = {
       lg: '1024px',
       xl: '1280px'
     },
-    // Needed after updating to tailwind 2.0
-    // fontSize: {
-    //   caption: '0.625rem',
-    //   xs: '0.75rem',
-    //   sm: '0.875rem',
-    //   menu: '0.9125rem',
-    //   body: '0.9rem',
-    //   base: '1rem',
-    //   lg: '1.125rem',
-    //   xl: '1.25rem',
-    //   heading: '1.375rem',
-    //   '2xl': '1.5rem',
-    //   '3xl': '1.875rem',
-    //   '4xl': '2.25rem'
-    // },
-    // The second item in the list is the default line-height
+    // The first item in each list is the font size, and the second item is the
+    // default line height for that font size
     fontSize: {
       sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
       base: ['0.9375rem', '1.375rem'], // ['15px', '22px']

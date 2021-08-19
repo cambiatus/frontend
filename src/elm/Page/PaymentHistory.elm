@@ -665,7 +665,7 @@ viewSplash p =
 viewUserAutocomplete : LoggedIn.Model -> Model -> Html Msg
 viewUserAutocomplete loggedIn model =
     div [ class "my-4" ]
-        [ View.Form.label "elm-select-input" (loggedIn.shared.translators.t "payment_history.user")
+        [ View.Form.label [] "elm-select-input" (loggedIn.shared.translators.t "payment_history.user")
         , viewPayerAutocomplete loggedIn model False
         ]
 
@@ -745,7 +745,7 @@ selectFilter minChars toLabel q items =
 viewDatePicker : Shared -> Model -> Html Msg
 viewDatePicker shared model =
     div [ class "my-4" ]
-        [ View.Form.label "date-picker" (shared.translators.t "payment_history.date")
+        [ View.Form.label [] "date-picker" (shared.translators.t "payment_history.date")
         , div [ class "relative" ]
             [ DatePicker.view
                 model.selectedDate
@@ -821,7 +821,7 @@ viewTransfers shared model =
                     ]
 
         Nothing ->
-            div [ class "text-center leading-10 h-48" ]
+            div [ class "text-center h-48" ]
                 [ div [ class "m-auto spinner" ] []
                 , text (shared.translators.t "menu.loading")
                 ]

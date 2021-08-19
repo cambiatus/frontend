@@ -769,7 +769,7 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label id (t "contact_form.country")
+        , View.Form.label [] id (t "contact_form.country")
         , button
             [ class "form-select select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]

@@ -59,7 +59,7 @@ loadingLogoWithCustomText : Translators -> String -> String -> Html msg
 loadingLogoWithCustomText { t } customTextKey class_ =
     div [ class ("w-full text-center " ++ class_) ]
         [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
-        , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
+        , p [ class "font-bold text-xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t customTextKey ]
         ]
 

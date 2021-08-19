@@ -1030,7 +1030,7 @@ viewSubdomain shared model =
 viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
-        [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
+        [ View.Form.label [] "invitation_toggle" (translators.t "settings.community_info.invitation.title")
         , View.Form.Toggle.init
             { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "invitation_toggle"

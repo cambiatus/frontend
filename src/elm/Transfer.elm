@@ -293,7 +293,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                [ span [ class "font-bold text-lg" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
                 , text " "
                 , span [ class "text-sm" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]

@@ -239,7 +239,7 @@ viewTitle shared model claim =
         text_ s =
             text (shared.translators.t s)
     in
-    div [ class "text-heading font-bold text-center mb-4" ]
+    div [ class "text-lg font-bold text-center mb-4" ]
         [ case claim.status of
             Claim.Approved ->
                 div [ class "inline-block" ]

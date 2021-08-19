@@ -11,6 +11,7 @@ module View.Pin exposing
     , view
     , withAttrs
     , withDisabled
+    , withLabelAttrs
     , withProblem
     )
 
@@ -54,6 +55,7 @@ type alias Model =
     , isSubmitting : Bool
     , submitLabel : String
     , submittingLabel : String
+    , labelAttrs : List (Html.Attribute Msg)
     , extraAttrs : List (Html.Attribute Msg)
     }
 
@@ -94,6 +96,7 @@ init { label, id, withConfirmation, submitLabel, submittingLabel } =
     , isSubmitting = False
     , submitLabel = submitLabel
     , submittingLabel = submittingLabel
+    , labelAttrs = []
     , extraAttrs = []
     }
 
@@ -211,6 +214,7 @@ viewField field model ({ t } as translators) =
                         )
                 )
             ]
+        |> View.Form.Input.withLabelAttrs model.labelAttrs
         |> View.Form.Input.toHtml
 
 
@@ -333,6 +337,11 @@ withProblem field problem model =
 withAttrs : List (Html.Attribute Msg) -> Model -> Model
 withAttrs attrs model =
     { model | extraAttrs = attrs }
+
+
+withLabelAttrs : List (Html.Attribute Msg) -> Model -> Model
+withLabelAttrs attrs model =
+    { model | labelAttrs = model.labelAttrs ++ attrs }
 
 
 {-| The length of a PIN

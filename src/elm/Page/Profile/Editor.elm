@@ -184,7 +184,7 @@ viewInterests interests =
     let
         viewInterest interest =
             div [ class "bg-green px-3 h-8 rounded-sm text-sm mr-4 mb-1 flex" ]
-                [ span [ class "m-auto mr-3 leading-none text-white uppercase" ] [ text interest ]
+                [ span [ class "m-auto mr-3 text-white uppercase" ] [ text interest ]
                 , button
                     [ class "m-auto"
                     , onClickPreventDefault (RemoveInterest interest)

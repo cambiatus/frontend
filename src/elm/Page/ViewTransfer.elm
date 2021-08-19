@@ -236,7 +236,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                                 t "transfer_result.transferred"
                     ]
                 , div [ class "flex text-green" ]
-                    [ span [ class "font-medium text-heading" ]
+                    [ span [ class "font-medium text-lg" ]
                         [ transfer.value
                             |> Eos.formatSymbolAmount transfer.community.symbol
                             |> text

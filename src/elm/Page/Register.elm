@@ -301,7 +301,7 @@ viewAccountTypeSelector translators model =
     case model.country of
         Just country ->
             div []
-                [ View.Form.label "radio" (translators.t "register.form.register_tooltip")
+                [ View.Form.label [] "radio" (translators.t "register.form.register_tooltip")
                 , div [ class "flex space-x-2" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
@@ -333,7 +333,7 @@ viewAccountTypeButton title accountType status =
                     False
     in
     div
-        [ class "w-1/2 leading-10 text-center cursor-pointer rounded-sm cursor-pointer mb-4"
+        [ class "w-1/2 text-center cursor-pointer rounded-sm cursor-pointer mb-4"
         , class
             (if isSelected then
                 "bg-orange-300 text-white"
@@ -400,7 +400,7 @@ viewAccountCreated ({ t } as translators) model keys =
                             text ""
                         ]
                     , p
-                        [ class "pb-2 leading-tight" ]
+                        [ class "pb-2" ]
                         [ span [ class "select-all", id passphraseTextId ] [ text keys.words ]
 
                         -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method

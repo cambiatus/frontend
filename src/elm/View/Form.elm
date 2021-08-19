@@ -8,12 +8,13 @@ type alias LabelId =
     String
 
 
-label : LabelId -> String -> Html a
-label id_ labelText =
+label : List (Html.Attribute a) -> LabelId -> String -> Html a
+label attrs id_ labelText =
     Html.label
-        [ class "label"
-        , for id_
-        ]
+        (class "label"
+            :: for id_
+            :: attrs
+        )
         [ text labelText ]
 
 

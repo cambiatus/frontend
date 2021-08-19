@@ -886,7 +886,7 @@ viewDetailsItem label content verticalAlign =
                 , ( "items-center", verticalAlign == Center )
                 ]
             ]
-            [ span [ class "text-sm leading-6 mr-4" ]
+            [ span [ class "text-sm mr-4" ]
                 [ label ]
             , span [ class "text-indigo-500 font-medium text-sm text-right" ]
                 [ content ]
@@ -1067,7 +1067,7 @@ viewLatestTransactions loggedIn model =
     in
     div [ class "p-4 bg-white max-w-screen md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
-            [ p [ class "text-heading" ]
+            [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
                 , text " "
                 , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]

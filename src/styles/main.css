@@ -16,7 +16,7 @@ body {
   color: var(--black);
 }
 
-body * {
+body > * {
   @apply text-base;
 }
 
@@ -125,8 +125,10 @@ textarea.input {
   @apply text-purple-100 uppercase font-bold float-right mt-1 text-sm;
 }
 
-.label {
-  @apply text-black font-bold uppercase text-sm mb-2;
+@layer components {
+  .label {
+    @apply text-black font-bold uppercase text-sm mb-2 block;
+  }
 }
 
 /* End of Input */

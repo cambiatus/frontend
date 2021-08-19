@@ -300,7 +300,7 @@ viewForm ({ t } as translators) model =
 
                 _ ->
                     span
-                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer lowercase"
+                        [ class "text-orange-300 pl-3 cursor-pointer lowercase"
                         , onClick CancelClicked
                         ]
                         [ text (t "menu.cancel") ]
@@ -330,7 +330,7 @@ viewForm ({ t } as translators) model =
                     ]
                 |> Input.withElements
                     [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current " ++ " " ++ iconColor
+                    , Icons.search <| "absolute top-0 mt-1 left-0 ml-2 fill-current " ++ iconColor
                     ]
                 |> Input.toHtml
             ]
@@ -414,7 +414,7 @@ viewRecentQueries { t } recentQueries =
     let
         viewItem q =
             li
-                [ class "leading-10 hover:text-orange-500 cursor-pointer"
+                [ class "hover:text-orange-500 cursor-pointer"
                 , onClick (RecentQueryClicked q)
                 ]
                 [ Icons.clock "inline-block align-middle mr-3 fill-current text-gray-900"
@@ -423,7 +423,7 @@ viewRecentQueries { t } recentQueries =
     in
     div [ class "w-full p-4 bg-white" ]
         [ strong [] [ text (t "menu.search.recentlyHeader") ]
-        , ul [ class "text-gray-900" ]
+        , ul [ class "text-gray-900 mt-4 space-y-2" ]
             (List.map viewItem recentQueries)
         ]
 
@@ -438,9 +438,9 @@ viewTabs { tr } results activeTab =
                     List.length foundItems
             in
             li
-                [ class "rounded-sm flex-1 text-center cursor-pointer capitalize"
+                [ class "rounded-sm flex-1 text-center cursor-pointer capitalize py-3"
                 , classList
-                    [ ( "bg-orange-300 text-white", activeTab == tabKind )
+                    [ ( "bg-orange-300 text-white font-bold", activeTab == tabKind )
                     , ( "bg-gray-100", activeTab /= tabKind )
                     ]
                 , if count > 0 then
@@ -451,7 +451,7 @@ viewTabs { tr } results activeTab =
                 ]
                 [ text <| tr label [ ( "count", String.fromInt count ) ] ]
     in
-    ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
+    ul [ class "space-x-2 flex items-stretch p-4 pb-2 bg-white" ]
         [ viewTab OffersTab
             "menu.search.offers_title"
             results.offers
@@ -550,12 +550,12 @@ viewOffers translators symbol offers =
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
                     , if offer.units == 0 && offer.trackStock then
-                        p [ class "px-3 leading-none text-xl text-red" ]
+                        p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]
 
                       else
-                        p [ class "px-3 leading-none" ]
+                        p [ class "px-3" ]
                             [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
                             , br [] []
                             , span [ class "text-gray-900 text-sm" ]
@@ -577,7 +577,7 @@ viewMembers { t } members =
                 [ div [ class "grid grid-cols-3 px-4" ]
                     [ Avatar.view member.avatar "h-20 w-20 my-auto"
                     , div [ class "flex flex-col col-span-2" ]
-                        [ span [ class "text-heading font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
+                        [ span [ class "text-lg font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (member.email |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (Eos.Account.nameToString member.account) ]
                         ]

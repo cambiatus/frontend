@@ -1464,7 +1464,7 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ View.Form.label "expiration-toggle" (t "community.actions.form.validity_label")
+            [ View.Form.label [] "expiration-toggle" (t "community.actions.form.validity_label")
             , Toggle.init
                 { label =
                     p [ class "text-green" ]

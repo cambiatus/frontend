@@ -248,7 +248,7 @@ viewContent { t } { creator, community } innerContent =
             ]
         , div [ class "px-4" ]
             [ div [ class "mt-6" ]
-                [ div [ class "text-heading text-center" ]
+                [ div [ class "text-lg text-center" ]
                     [ span [ class "font-medium" ]
                         [ text inviter
                         ]

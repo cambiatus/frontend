@@ -171,9 +171,9 @@ viewPassphrase ({ shared } as guest) model =
     [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
         [ viewIllustration "login_key.svg"
         , p [ class "text-white mb-5" ]
-            [ span [ class "text-green text-sm tracking-wide uppercase block mb-1" ]
+            [ span [ class "label text-green" ]
                 [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
-            , span [ class "text-white block leading-relaxed" ]
+            , span [ class "text-white block" ]
                 [ text (t "auth.login.wordsMode.input.description") ]
             ]
         , Input.init
@@ -218,6 +218,7 @@ viewPassphrase ({ shared } as guest) model =
             |> Input.withCounterAttrs [ class "text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
             |> Input.withElements [ viewPasteButton ]
+            |> Input.withLabelAttrs [ class "text-green" ]
             |> Input.toHtml
         ]
     , div [ class "sf-footer" ]
@@ -261,7 +262,9 @@ viewPin { shared } model =
         , text " "
         , text <| t (trPrefix "eachLogin")
         ]
-    , Pin.withAttrs [ class "mb-8" ] model.pinModel
+    , model.pinModel
+        |> Pin.withAttrs [ class "mb-8" ]
+        |> Pin.withLabelAttrs [ class "text-green" ]
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]

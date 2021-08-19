@@ -646,7 +646,7 @@ viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-sm text-gray-700 hover:text-indigo-500"
+            "mx-4 w-48 font-sans uppercase flex items-center justify-center text-sm text-gray-700 hover:text-indigo-500"
 
         activeClass =
             "border-orange-100 border-b-2 text-indigo-500 font-medium"
