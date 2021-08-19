@@ -174,7 +174,7 @@ textarea.input {
 
 /* Icon Tooltip */
 .icon-tooltip {
-  @apply relative inline-block align-middle leading-none;
+  @apply relative inline-block align-middle;
 }
 
 .icon-tooltip .icon-tooltip-content {
@@ -314,7 +314,7 @@ textarea.input {
 
 /* CHECKBOX TOGGLE SWITCH */
 .form-switch {
-  @apply relative select-none w-10 mr-2 leading-normal;
+  @apply relative select-none w-10 mr-2;
 }
 
 .form-switch-checkbox {
