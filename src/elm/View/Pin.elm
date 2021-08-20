@@ -10,6 +10,7 @@ module View.Pin exposing
     , update
     , view
     , withAttrs
+    , withCounterAttrs
     , withDisabled
     , withLabelAttrs
     , withProblem
@@ -57,6 +58,7 @@ type alias Model =
     , submittingLabel : String
     , labelAttrs : List (Html.Attribute Msg)
     , extraAttrs : List (Html.Attribute Msg)
+    , counterAttrs : List (Html.Attribute Msg)
     }
 
 
@@ -98,6 +100,7 @@ init { label, id, withConfirmation, submitLabel, submittingLabel } =
     , submittingLabel = submittingLabel
     , labelAttrs = []
     , extraAttrs = []
+    , counterAttrs = []
     }
 
 
@@ -180,9 +183,8 @@ viewField field model ({ t } as translators) =
         , translators = translators
         }
         |> View.Form.Input.withCounter pinLength
-        |> View.Form.Input.withCounterAttrs [ class "text-white" ]
+        |> View.Form.Input.withCounterAttrs model.counterAttrs
         |> View.Form.Input.withElements [ viewToggleVisibility field model translators ]
-        |> View.Form.Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
         |> View.Form.Input.withAttrs
             [ class "form-input text-body-black tracking-widest"
             , classList
@@ -342,6 +344,11 @@ withAttrs attrs model =
 withLabelAttrs : List (Html.Attribute Msg) -> Model -> Model
 withLabelAttrs attrs model =
     { model | labelAttrs = model.labelAttrs ++ attrs }
+
+
+withCounterAttrs : List (Html.Attribute Msg) -> Model -> Model
+withCounterAttrs attrs model =
+    { model | counterAttrs = model.counterAttrs ++ attrs }
 
 
 {-| The length of a PIN

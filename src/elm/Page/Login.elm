@@ -214,7 +214,7 @@ viewPassphrase ({ shared } as guest) model =
                 ]
             |> Input.withCounter 12
             |> Input.withCounterType Input.CountWords
-            |> Input.withCounterAttrs [ class "text-white" ]
+            |> Input.withCounterAttrs [ class "!text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
             |> Input.withElements [ viewPasteButton ]
             |> Input.withLabelAttrs [ class "text-green" ]
@@ -264,6 +264,7 @@ viewPin { shared } model =
     , model.pinModel
         |> Pin.withAttrs [ class "mb-8" ]
         |> Pin.withLabelAttrs [ class "text-green" ]
+        |> Pin.withCounterAttrs [ class "!text-white" ]
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]
