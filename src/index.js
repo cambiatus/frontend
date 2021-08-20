@@ -862,6 +862,14 @@ app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
   })
 })
 
+app.ports.addPlausibleScriptPort.subscribe(({ domain, src }) => {
+  const plausibleScript = document.createElement('script')
+  plausibleScript.setAttribute('src', src)
+  plausibleScript.dataset.domain = domain
+
+  document.head.appendChild(plausibleScript)
+})
+
 // STORE PIN
 
 function storePin (data, pin) {

@@ -1,6 +1,7 @@
 port module Ports exposing
     ( JavascriptOut
     , JavascriptOutModel
+    , addPlausibleScript
     , getRecentSearches
     , gotRecentSearches
     , javascriptInPort
@@ -114,6 +115,22 @@ setMarkdownContent { id, content } =
 
 
 port setMarkdown : Value -> Cmd msg
+
+
+{-| Add a Plausible script so we can track usage metrics. We have it here so we
+can dynamically tell plausible which community we're in (and if we're not in
+production, we don't even need to include it)
+-}
+addPlausibleScript : { domain : String, src : String } -> Cmd msg
+addPlausibleScript { domain, src } =
+    Encode.object
+        [ ( "domain", Encode.string domain )
+        , ( "src", Encode.string src )
+        ]
+        |> addPlausibleScriptPort
+
+
+port addPlausibleScriptPort : Value -> Cmd msg
 
 
 
