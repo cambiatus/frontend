@@ -592,8 +592,52 @@ quillOpToMarkdown quillOp =
             let
                 ( formatBefore, formatAfter ) =
                     formatStrings formatting
+
+                shouldAddSurroundingSpaces =
+                    case formatting of
+                        Bold ->
+                            True
+
+                        Italic ->
+                            True
+
+                        Strike ->
+                            True
+
+                        _ ->
+                            False
+
+                spacesBefore =
+                    if shouldAddSurroundingSpaces then
+                        String.toList unformattedText
+                            |> List.takeWhile ((==) ' ')
+                            |> List.length
+
+                    else
+                        0
+
+                spacesAfter =
+                    if shouldAddSurroundingSpaces then
+                        String.toList unformattedText
+                            |> List.reverse
+                            |> List.takeWhile ((==) ' ')
+                            |> List.length
+
+                    else
+                        0
+
+                maybeTrim =
+                    if shouldAddSurroundingSpaces then
+                        String.trim
+
+                    else
+                        identity
             in
-            formatBefore ++ unformattedText ++ formatAfter
+            String.repeat spacesBefore " "
+                ++ formatBefore
+                ++ maybeTrim unformattedText
+                ++ formatAfter
+                ++ String.repeat spacesAfter " "
     in
     List.foldr addFormatting quillOp.insert quillOp.attributes
 
