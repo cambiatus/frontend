@@ -698,6 +698,7 @@ removeFormatting markdownString =
                 |> Maybe.Extra.combine
                 |> Maybe.map (String.join "\n")
                 |> Maybe.withDefault markdownString
+                |> String.trim
 
         Err _ ->
             markdownString
@@ -723,6 +724,10 @@ removeFormattingFromBlock block =
                             ++ "\n"
                     )
                 |> String.concat
+                |> Just
+
+        Markdown.Block.Heading _ inlines ->
+            Markdown.Block.extractInlineText inlines
                 |> Just
 
         Markdown.Block.Paragraph inlines ->
