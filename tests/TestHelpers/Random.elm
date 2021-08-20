@@ -458,8 +458,8 @@ phone =
 
 type MarkdownBlackListItem
     = Strike
-      -- The markdown parser doesn't support strong and emphasis together
-    | EmphasisAndStrong
+    | Emphasis
+    | Strong
     | Link
 
 
@@ -468,15 +468,15 @@ markdownString =
     let
         choices : List MarkdownBlackListItem -> List ( MarkdownBlackListItem, Random.Generator String )
         choices blackList =
-            [ ( EmphasisAndStrong
+            [ ( Strong
               , Random.constant "**"
-                    |> append (Random.lazy (\_ -> helper (EmphasisAndStrong :: blackList)))
+                    |> append (Random.lazy (\_ -> helper (Strong :: blackList)))
                     |> append (Random.constant "**")
               )
-            , ( EmphasisAndStrong
-              , Random.constant "*"
-                    |> append (Random.lazy (\_ -> helper (EmphasisAndStrong :: blackList)))
-                    |> append (Random.constant "*")
+            , ( Emphasis
+              , Random.constant "_"
+                    |> append (Random.lazy (\_ -> helper (Emphasis :: blackList)))
+                    |> append (Random.constant "_")
               )
             , ( Strike
               , Random.constant "~~"
