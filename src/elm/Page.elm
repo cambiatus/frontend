@@ -57,7 +57,7 @@ import View.Components
 init : Flags -> Nav.Key -> Url -> UpdateResult
 init flags navKey url =
     let
-        shared =
+        ( shared, sharedCmd ) =
             Shared.init flags navKey url
     in
     case ( shared.maybeAccount, flags.authToken ) of
@@ -70,6 +70,7 @@ init flags navKey url =
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addCmd fetchTimezone
+                |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -89,6 +90,7 @@ init flags navKey url =
                 |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addCmd fetchTimezone
                 |> UR.addCmd signedInCmd
+                |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -106,6 +108,7 @@ init flags navKey url =
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addCmd fetchTimezone
+                |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
