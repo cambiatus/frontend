@@ -1075,9 +1075,9 @@
     "link_tooltip": {
       "edit": "ለማርትዕ",
       "remove": "አገናኝን ያስወግዱ"
-    },
-    "block_explorer": {
-      "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
     }
+  },
+  "block_explorer": {
+    "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
   }
 }
