@@ -657,14 +657,14 @@ quillOpFromMarkdownBlock block =
         parseList listType children =
             children
                 |> List.map
-                    (List.map quillOpFromMarkdownInline
+                    (List.map quillOpFromMarkdownBlock
                         >> List.concat
                         >> (\line -> line ++ [ { insert = "\n", attributes = [ listType ] } ])
                     )
                 |> List.concat
     in
     case block of
-        Markdown.Block.UnorderedList children ->
+        Markdown.Block.UnorderedList _ children ->
             let
                 listItemToList (Markdown.Block.ListItem _ children_) =
                     children_
@@ -673,7 +673,7 @@ quillOpFromMarkdownBlock block =
                 |> List.map listItemToList
                 |> parseList UnorderedList
 
-        Markdown.Block.OrderedList _ children ->
+        Markdown.Block.OrderedList _ _ children ->
             children
                 |> parseList OrderedList
 
@@ -767,24 +767,29 @@ removeFormatting markdownString =
 
 removeFormattingFromBlock : Markdown.Block.Block -> Maybe String
 removeFormattingFromBlock block =
+    let
+        removeFormattingFromList : (Int -> String) -> List (List Markdown.Block.Block) -> String
+        removeFormattingFromList lineStarter blocks =
+            blocks
+                |> List.indexedMap
+                    (\index blockChild ->
+                        List.map removeFormattingFromBlock blockChild
+                            |> List.filterMap identity
+                            |> List.map (\line -> lineStarter index ++ line)
+                            |> String.concat
+                    )
+                |> String.join "\n"
+    in
     case block of
-        Markdown.Block.UnorderedList children ->
+        Markdown.Block.UnorderedList _ children ->
             children
                 |> List.map (\(Markdown.Block.ListItem _ children_) -> children_)
-                |> List.map (\child -> "- " ++ Markdown.Block.extractInlineText child ++ "\n")
-                |> String.concat
+                |> removeFormattingFromList (\_ -> "- ")
                 |> Just
 
-        Markdown.Block.OrderedList _ children ->
+        Markdown.Block.OrderedList _ _ children ->
             children
-                |> List.indexedMap
-                    (\index child ->
-                        String.fromInt index
-                            ++ ". "
-                            ++ Markdown.Block.extractInlineText child
-                            ++ "\n"
-                    )
-                |> String.concat
+                |> removeFormattingFromList (\index -> String.fromInt (index + 1) ++ ". ")
                 |> Just
 
         Markdown.Block.Heading _ inlines ->
