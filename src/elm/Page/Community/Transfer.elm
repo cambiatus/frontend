@@ -755,8 +755,8 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.transferStatus of
         EditingTransfer form ->
-            MarkdownEditor.subscriptions form.memo
-                |> Sub.map GotMemoEditorMsg
+            Sub.none
+                |> MarkdownEditor.withSubscription form.memo GotMemoEditorMsg
 
         _ ->
             Sub.none

@@ -455,8 +455,8 @@ modelToProfile model profile =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    MarkdownEditor.subscriptions model.bio
-        |> Sub.map GotBioEditorMsg
+    Sub.none
+        |> MarkdownEditor.withSubscription model.bio GotBioEditorMsg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

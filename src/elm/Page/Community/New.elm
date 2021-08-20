@@ -63,13 +63,8 @@ init _ =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.description.linkModalState of
-        MarkdownEditor.NotShowing ->
-            Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
-
-        MarkdownEditor.Editing _ ->
-            MarkdownEditor.subscriptions model.description
-                |> Sub.map GotDescriptionEditorMsg
+    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+        |> MarkdownEditor.withSubscription model.description GotDescriptionEditorMsg
 
 
 

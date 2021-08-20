@@ -1116,8 +1116,8 @@ symbolPlaceholder symbol amount =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    MarkdownEditor.subscriptions model.descriptionInput
-        |> Sub.map GotDescriptionEditorMsg
+    Sub.none
+        |> MarkdownEditor.withSubscription model.descriptionInput GotDescriptionEditorMsg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

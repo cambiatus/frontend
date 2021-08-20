@@ -34,7 +34,6 @@ import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Product, ProductId)
-import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import View.Feedback as Feedback
@@ -74,13 +73,8 @@ subscriptions model =
             Sub.none
 
         Just form ->
-            case form.description.linkModalState of
-                MarkdownEditor.NotShowing ->
-                    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
-
-                MarkdownEditor.Editing _ ->
-                    MarkdownEditor.subscriptions form.description
-                        |> Sub.map GotDescriptionEditorMsg
+            Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
 
 
 
@@ -1030,10 +1024,7 @@ update msg model loggedIn =
         PressedEnter val ->
             if val then
                 UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ClickedSave
-                            |> Task.perform identity
-                        )
+                    |> UR.addMsg ClickedSave
 
             else
                 UR.init model

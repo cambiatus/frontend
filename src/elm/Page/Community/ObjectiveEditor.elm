@@ -880,12 +880,12 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.status of
         Authorized (CreatingObjective form _) ->
-            MarkdownEditor.subscriptions form.description
-                |> Sub.map GotDescriptionEditorMsg
+            Sub.none
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
 
         Authorized (EditingObjective _ form _) ->
-            MarkdownEditor.subscriptions form.description
-                |> Sub.map GotDescriptionEditorMsg
+            Sub.none
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
 
         _ ->
             Sub.none

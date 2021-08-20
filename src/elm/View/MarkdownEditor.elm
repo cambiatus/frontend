@@ -11,10 +11,10 @@ module View.MarkdownEditor exposing
     , quillOpToMarkdown
     , removeFormatting
     , setContents
-    , subscriptions
     , update
     , view
     , viewReadOnly
+    , withSubscription
     )
 
 import Browser.Dom
@@ -50,6 +50,7 @@ type alias Model =
     { linkModalState : LinkModalState
     , id : String
     , contents : String
+    , isFocused : Bool
     }
 
 
@@ -58,6 +59,7 @@ init id =
     { linkModalState = NotShowing
     , id = id
     , contents = ""
+    , isFocused = False
     }
 
 
@@ -84,6 +86,7 @@ type Msg
     | ClickedAcceptLink
     | ChangedText (List QuillOp)
     | RequestedSetContents
+    | ChangedFocus Bool
 
 
 
@@ -189,6 +192,9 @@ update msg model =
                         |> Log.send msgToString
             )
 
+        ChangedFocus isFocused ->
+            ( { model | isFocused = isFocused }, Cmd.none )
+
 
 setContents : String -> Model -> Model
 setContents contents model =
@@ -279,6 +285,8 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                 , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
                 , on "component-loaded" (Json.Decode.succeed RequestedSetContents)
+                , on "focus" (Json.Decode.succeed (ChangedFocus True))
+                , on "blur" (Json.Decode.succeed (ChangedFocus False))
                 , id model.id
                 ]
                 []
@@ -675,14 +683,23 @@ quillOpFromMarkdownInline inline =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+{-| We do this so pages that listen to an `Enter` keypress don't fire that event
+when the editor is focused. This is useful because users expect to add a new
+line when they press `Enter`, not to submit the form.
+-}
+withSubscription : Model -> (Msg -> msg) -> Sub msg -> Sub msg
+withSubscription model toMsg parentSubscription =
     case model.linkModalState of
         Editing _ ->
             Sub.map KeyDown (Browser.Events.onKeyDown (Json.Decode.field "key" Json.Decode.string))
+                |> Sub.map toMsg
 
         NotShowing ->
-            Sub.none
+            if model.isFocused then
+                Sub.none
+
+            else
+                parentSubscription
 
 
 
@@ -811,3 +828,6 @@ msgToString msg =
 
         RequestedSetContents ->
             [ "RequestedSetContents" ]
+
+        ChangedFocus _ ->
+            [ "ChangedFocus" ]

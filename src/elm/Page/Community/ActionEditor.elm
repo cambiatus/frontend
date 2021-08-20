@@ -1905,12 +1905,9 @@ viewVerifierSelect loggedIn model isDisabled =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ MarkdownEditor.subscriptions model.form.description
-            |> Sub.map GotDescriptionEditorMsg
-        , MarkdownEditor.subscriptions model.form.instructions
-            |> Sub.map GotInstructionsEditorMsg
-        ]
+    Sub.none
+        |> MarkdownEditor.withSubscription model.form.description GotDescriptionEditorMsg
+        |> MarkdownEditor.withSubscription model.form.instructions GotInstructionsEditorMsg
 
 
 
