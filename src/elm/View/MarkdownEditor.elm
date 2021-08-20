@@ -423,7 +423,7 @@ formatStrings formatting =
             ( "**", "**" )
 
         Italic ->
-            ( "*", "*" )
+            ( "_", "_" )
 
         Strike ->
             ( "~~", "~~" )
