@@ -314,7 +314,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     text ""
 
                 Just memo ->
-                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 truncate-children" ]
+                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 break-all" ]
                         (t memo)
             ]
         ]
