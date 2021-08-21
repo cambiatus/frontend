@@ -322,7 +322,7 @@ viewFieldProblem attrs problem =
 
 viewCurrencyElement : Eos.Symbol -> Html a
 viewCurrencyElement symbol =
-    span [ class "absolute right-0 rounded-r-sm border-gray border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
+    span [ class "absolute right-0 rounded-r-sm border-transparent border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
         [ text <| Eos.symbolToSymbolCodeString symbol ]
 
 

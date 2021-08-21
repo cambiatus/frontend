@@ -8,6 +8,8 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , sendMarkdownLink
+    , setMarkdownContent
     , storeAuthToken
     , storeLanguage
     , storeRecentSearches
@@ -86,6 +88,33 @@ port storeAuthToken : String -> Cmd msg
 `USE_SUBDOMAIN = false`
 -}
 port storeSelectedCommunitySymbol : String -> Cmd msg
+
+
+{-| Send info about a link in a MarkdownEditor to be treated on JS
+-}
+sendMarkdownLink : { id : String, label : String, url : String } -> Cmd msg
+sendMarkdownLink { id, label, url } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "label", Encode.string label )
+        , ( "url", Encode.string url )
+        ]
+        |> markdownLink
+
+
+port markdownLink : Value -> Cmd msg
+
+
+setMarkdownContent : { id : String, content : Value } -> Cmd msg
+setMarkdownContent { id, content } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "content", content )
+        ]
+        |> setMarkdown
+
+
+port setMarkdown : Value -> Cmd msg
 
 
 {-| Add a Plausible script so we can track usage metrics. We have it here so we

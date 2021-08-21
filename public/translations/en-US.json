@@ -770,9 +770,7 @@
         "unitEmpty": "Unit cannot be empty",
         "unitTooLow": "Unit is too low, must be at least 1",
         "unitTooHigh": "Not enough units available",
-        "unitNotOnlyNumbers": "Only numbers are allowed",
-        "memoEmpty": "Memo cannot be empty",
-        "memoTooLong": "Memo is too long, max is 256 characters"
+        "unitNotOnlyNumbers": "Only numbers are allowed"
       }
     },
     "delete": "Delete",
@@ -1105,6 +1103,17 @@
       "body": "Do you really want to delete your contact information?",
       "cancel": "No",
       "accept": "Yes"
+    }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Add link",
+      "label": "Text",
+      "url": "Link"
+    },
+    "link_tooltip": {
+      "edit": "Edit",
+      "remove": "Remove link"
     }
   },
   "block_explorer": {

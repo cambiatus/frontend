@@ -79,6 +79,7 @@ type EventType
     | GraphqlErrorType
     | UnknownError
     | JsonValue
+    | MarkdownError
     | UnsupportedFeature
 
 
@@ -196,7 +197,7 @@ type alias Location =
 {-| Perform a command to add a Breadcrumb to Sentry. This **does not** send data
 over to Sentry, it only add the breadcrumb information on the Sentry object
 handled by JS. If you want to send an event to Sentry, use
-[`sendEvent`](#sendEvent)!
+[`send`](#send)!
 
 On development, just logs to the console.
 
@@ -219,7 +220,7 @@ breadcrums added since the previous event.
 On development, just logs to the console.
 
 -}
-send : (msg -> List String) -> Event msg -> Cmd msg
+send : (msg -> List String) -> Event msg -> Cmd msg2
 send msgToString event =
     Encode.object
         [ ( "user"
@@ -646,6 +647,9 @@ encodeTag tag =
 
                         JsonValue ->
                             "json value"
+
+                        MarkdownError ->
+                            "markdown error"
 
                         UnsupportedFeature ->
                             "unsupported feature"

@@ -49,6 +49,7 @@ import Time
 import UpdateResult as UR
 import Utils
 import View.Form.FileUploader as FileUploader
+import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -585,8 +586,8 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
             [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
-            , p [ class "mb-4" ]
-                [ text (Maybe.withDefault "" action.photoProofInstructions) ]
+            , MarkdownEditor.viewReadOnly [ class "mb-4" ]
+                (Maybe.withDefault "" action.photoProofInstructions)
             , case proofCode of
                 Just { code_, secondsAfterClaim, availabilityPeriod } ->
                     case code_ of

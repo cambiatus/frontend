@@ -43,6 +43,7 @@ import View.Form
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Form.Toggle as Toggle
+import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -61,8 +62,9 @@ init _ =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+        |> MarkdownEditor.withSubscription model.description GotDescriptionEditorMsg
 
 
 
@@ -71,7 +73,7 @@ subscriptions _ =
 
 type alias Model =
     { name : String
-    , description : String
+    , description : MarkdownEditor.Model
     , subdomain : String
     , symbol : String
     , logoSelected : Int
@@ -89,7 +91,7 @@ type alias Model =
 initModel : Model
 initModel =
     { name = ""
-    , description = ""
+    , description = MarkdownEditor.init "description-editor"
     , subdomain = ""
     , symbol = ""
     , logoSelected = 0
@@ -200,24 +202,21 @@ isLogoUploaded model =
             False
 
 
-viewDescription : Shared -> Bool -> String -> List Error -> Html Msg
+viewDescription : Shared -> Bool -> MarkdownEditor.Model -> List Error -> Html Msg
 viewDescription ({ translators } as shared) isDisabled defVal errors =
     div []
         [ span [ class "label" ]
             [ text (translators.t "community.create.labels.description") ]
-        , Input.init
-            { label = translators.t "community.create.tooltips.description"
-            , id = "comm-description"
-            , onInput = EnteredDescription
-            , disabled = isDisabled
-            , value = defVal
+        , MarkdownEditor.view
+            { translators = translators
             , placeholder = Nothing
-            , problems = Just (getFieldProblems shared Description errors)
-            , translators = translators
+            , label = translators.t "community.create.tooltips.description"
+            , problem = getFieldProblems shared Description errors |> List.head
+            , disabled = isDisabled
             }
-            |> Input.withInputType Input.TextArea
-            |> Input.withAttrs [ maxlength 255, class "h-40" ]
-            |> Input.toHtml
+            []
+            defVal
+            |> Html.map GotDescriptionEditorMsg
         ]
 
 
@@ -554,7 +553,7 @@ validateModel shared accountName model =
                         , symbol = symbol
                         , logoUrl = logoUrl
                         , name = name
-                        , description = model.description
+                        , description = model.description.contents
                         , subdomain = Route.communityFullDomain shared model.subdomain
                         , inviterReward = inviterReward
                         , invitedReward = invitedReward
@@ -658,7 +657,7 @@ type alias UpdateResult =
 
 type Msg
     = EnteredName String
-    | EnteredDescription String
+    | GotDescriptionEditorMsg MarkdownEditor.Msg
     | EnteredSubdomain String
     | EnteredSymbol String
     | EnteredInviterReward String
@@ -690,9 +689,14 @@ update msg model loggedIn =
                 |> validateField validateName CurrencyName
                 |> UR.init
 
-        EnteredDescription description ->
-            { model | description = description }
+        GotDescriptionEditorMsg subMsg ->
+            let
+                ( descriptionInput, descriptionCmd ) =
+                    MarkdownEditor.update subMsg model.description
+            in
+            { model | description = descriptionInput }
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
 
         EnteredSubdomain subdomain ->
             { model | subdomain = subdomain }
@@ -994,8 +998,8 @@ msgToString msg =
         EnteredName _ ->
             [ "EnteredName" ]
 
-        EnteredDescription _ ->
-            [ "EnteredDescription" ]
+        GotDescriptionEditorMsg subMsg ->
+            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         EnteredSubdomain _ ->
             [ "EnteredSubdomain" ]

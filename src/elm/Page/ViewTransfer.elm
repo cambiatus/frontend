@@ -19,6 +19,7 @@ import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
 import View.Components
+import View.MarkdownEditor
 
 
 
@@ -177,7 +178,8 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                 , case transfer.memo of
                     Just memo ->
                         if String.length memo > 0 then
-                            viewDetail (t "transfer_result.message") (text memo)
+                            View.MarkdownEditor.viewReadOnly [] memo
+                                |> viewDetail (t "transfer_result.message")
 
                         else
                             text ""

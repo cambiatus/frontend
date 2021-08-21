@@ -29,6 +29,7 @@ import Token
 import UpdateResult as UR
 import Utils
 import View.Components
+import View.MarkdownEditor
 
 
 
@@ -106,7 +107,8 @@ view loggedIn model =
                                     [ p [ class "text-4xl font-bold" ]
                                         [ text community.name ]
                                     ]
-                                , p [ class "text-grey-200 text-sm" ] [ text community.description ]
+                                , View.MarkdownEditor.viewReadOnly [ class "text-sm" ]
+                                    community.description
                                 ]
                             ]
                         , div [ class "container mx-auto" ]
@@ -271,23 +273,19 @@ viewObjective loggedIn model metadata index objective =
     else
         div [ class "my-2" ]
             [ div
-                [ class "px-3 bg-indigo-500 flex flex-col sm:flex-row sm:items-center cursor-pointer"
-                , classList [ ( "py-4 sm:h-10", not isOpen ) ]
+                [ class "px-3 bg-indigo-500 flex flex-col py-4 cursor-pointer sm:flex-row sm:items-center"
                 , if isOpen then
                     onClick ClickedCloseObjective
 
                   else
                     onClick (ClickedOpenObjective index)
                 ]
-                [ div
-                    [ class "sm:flex-grow-7 sm:w-5/12"
-                    , classList [ ( "my-4 sm:my-2", isOpen ) ]
-                    ]
-                    [ div
-                        [ class "text-white font-medium text-sm sm:flex-grow-8 sm:leading-6 sm:text-lg"
-                        , classList [ ( "truncate", not isOpen ) ]
+                [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
+                    [ View.MarkdownEditor.viewReadOnly
+                        [ class "text-white font-medium"
+                        , classList [ ( "truncate-children", not isOpen ) ]
                         ]
-                        [ text objective.description ]
+                        objective.description
                     ]
                 , div
                     [ class ("flex flex-row justify-end" ++ arrowStyle)
@@ -564,8 +562,8 @@ viewAction shared canEdit date action isDisabled =
     else
         div [ class "py-6 px-2" ]
             [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
-                [ span [ class "text-text-grey text-sm sm:text-base" ]
-                    [ text action.description ]
+                [ View.MarkdownEditor.viewReadOnly [ class "text-text-grey text-sm sm:text-base" ]
+                    action.description
                 , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                     [ div [ class "text-sm mt-5 sm:w-1/3" ]
                         [ case action.deadline of

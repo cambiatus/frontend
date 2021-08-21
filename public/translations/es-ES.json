@@ -773,9 +773,7 @@
         "unitEmpty": "La unidad no puede estar vacía",
         "unitTooLow": "La unidad es demasiado baja, debe ser al menos 1",
         "unitTooHigh": "No hay suficientes unidades disponibles",
-        "unitNotOnlyNumbers": "Solo se permiten números",
-        "memoEmpty": "La nota no puede estar vacía",
-        "memoTooLong": "La nota es demasiado larga, el máximo es de 256 caracteres"
+        "unitNotOnlyNumbers": "Solo se permiten números"
       }
     },
     "delete": "Eliminar",
@@ -1108,6 +1106,17 @@
       "body": "¿Realmente desea eliminar su información de contacto?",
       "cancel": "No",
       "accept": "Sí"
+    }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Añadir enlace",
+      "label": "Texto",
+      "url": "Enlace"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Remover enlace"
     }
   },
   "block_explorer": {

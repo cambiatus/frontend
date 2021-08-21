@@ -52,6 +52,7 @@ import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
+import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -447,8 +448,8 @@ viewClaimCard loggedIn profileSummaries claim =
                         text ""
                 ]
             , div [ class "mb-6" ]
-                [ p [ class "truncate mb-2" ]
-                    [ text claim.action.description ]
+                [ View.MarkdownEditor.viewReadOnly [ class "truncate-children mb-2" ]
+                    claim.action.description
                 , div [ class "flex w-full" ]
                     [ View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                         identity
@@ -828,7 +829,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             div
                 [ class "block mt-6" ]
                 [ p [ class "label" ] [ text (t "claim.action") ]
-                , p [ class "text-left mt-2 mb-6 text-lg w-full" ] [ text claim.action.description ]
+                , View.MarkdownEditor.viewReadOnly [ class "text-left mt-2 mb-6 text-lg w-full" ]
+                    claim.action.description
                 , case claim.proofPhoto of
                     Just url ->
                         div

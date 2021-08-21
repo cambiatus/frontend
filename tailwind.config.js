@@ -139,6 +139,7 @@ module.exports = {
         '108': '27rem'
       },
       minHeight: {
+        '36': '9rem',
         '48': '12rem'
       },
       lineHeight: {

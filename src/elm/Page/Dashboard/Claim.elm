@@ -23,10 +23,12 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External)
 import Session.Shared exposing (Shared, Translators)
 import Strftime
+import String.Extra
 import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor
 
 
 
@@ -94,6 +96,8 @@ view ({ shared } as loggedIn) model =
             case model.statusClaim of
                 Loaded claim _ ->
                     claim.action.description
+                        |> View.MarkdownEditor.removeFormatting
+                        |> String.Extra.softEllipsis 20
 
                 _ ->
                     ""
@@ -106,7 +110,7 @@ view ({ shared } as loggedIn) model =
 
                     Loaded claim profileSummaries ->
                         div [ class "bg-gray-100" ]
-                            [ Page.viewHeader loggedIn claim.action.description
+                            [ Page.viewHeader loggedIn title
                             , div [ class "mt-10 mb-8 flex items-center justify-center" ]
                                 [ Profile.Summary.view shared loggedIn.accountName claim.claimer profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)
@@ -300,8 +304,8 @@ viewDetails { shared } model claim =
         [ Claim.viewVotingProgress shared completionStatus
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.action" ]
-            , p [ class "mb-2" ]
-                [ text claim.action.description ]
+            , View.MarkdownEditor.viewReadOnly [ class "mb-2" ]
+                claim.action.description
             , if claim.action.isCompleted then
                 div [ class "flex mb-2" ]
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
@@ -344,7 +348,8 @@ viewDetails { shared } model claim =
             ]
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.objective" ]
-            , p [] [ text claim.action.objective.description ]
+            , View.MarkdownEditor.viewReadOnly []
+                claim.action.objective.description
             ]
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.your_reward" ]
