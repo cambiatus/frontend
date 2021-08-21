@@ -843,6 +843,9 @@ updateExternal externalMsg ({ shared } as model) =
                         , broadcastMsg = Just broadcastMsg
                     }
 
+                TranslationsLoaded ->
+                    { defaultResult | broadcastMsg = Just broadcastMsg }
+
         ReloadResource CommunityResource ->
             let
                 ( _, cmd ) =
@@ -894,6 +897,7 @@ type BroadcastMsg
     = CommunityLoaded Community.Model
     | ProfileLoaded Profile.Model
     | GotTime Time.Posix
+    | TranslationsLoaded
 
 
 type Msg
@@ -978,6 +982,7 @@ update msg model =
                 RemoteData.Success _ ->
                     UR.init { model | shared = Shared.loadTranslation (Ok ( lang, transl )) shared }
                         |> UR.addCmd (Ports.storeLanguage (Translation.languageToLocale lang))
+                        |> UR.addExt (Broadcast TranslationsLoaded)
 
                 _ ->
                     UR.init model

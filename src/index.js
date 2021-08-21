@@ -1,17 +1,19 @@
+import * as AbsintheSocket from '@absinthe/socket'
+import * as Sentry from '@sentry/browser'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
+import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import pdfMake from 'pdfmake/build/pdfmake'
+import Quill from 'quill'
+import QuillDelta from 'quill-delta'
 import sjcl from 'sjcl'
-import './styles/main.css'
-import mnemonic from './scripts/mnemonic.js'
+import { Elm } from './elm/Main.elm'
 import configuration from './scripts/config.js'
+import mnemonic from './scripts/mnemonic.js'
 // import registerServiceWorker from './scripts/registerServiceWorker'
 import pdfDefinition from './scripts/pdfDefinition'
-import { Elm } from './elm/Main.elm'
-import * as Sentry from '@sentry/browser'
-import * as AbsintheSocket from '@absinthe/socket'
-import pdfMake from 'pdfmake/build/pdfmake'
+import './styles/main.css'
 import pdfFonts from './vfs_fonts'
-import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -21,6 +23,158 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // Custom elements
 // =========================================
 /* global HTMLElement, CustomEvent */
+
+window.customElements.define('markdown-editor',
+  class MarkdownEditor extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
+
+    constructor () {
+      super()
+
+      this._quillContainer = document.createElement('div')
+      this._parentContainer = document.createElement('div')
+      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
+
+      this._parentContainer.appendChild(this._quillContainer)
+      this._quill = new Quill(this._quillContainer,
+        {
+          modules: {
+            toolbar: [
+              [{ 'header': 1 }, { 'header': 2 }],
+              [ 'bold', 'italic', 'strike' ],
+              [ 'link' ],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }]
+            ]
+          },
+          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'list'],
+          placeholder: this.getAttribute('elm-placeholder'),
+          theme: 'snow'
+        }
+      )
+
+      app.ports.setMarkdown.subscribe((data) => { this.setMarkdownListener(data) })
+
+      this._quill.on('text-change', (delta, oldDelta, source) => {
+        const contents = this._quill.getContents()
+        this.dispatchEvent(new CustomEvent('text-change', { detail: contents }))
+      })
+
+      const toolbar = this._quill.getModule('toolbar')
+      toolbar.addHandler('link', () => { this.linkHandler() })
+    }
+
+    connectedCallback () {
+      // If we dont include the timeout, we get some annoying bugs in
+      // development where the text is cleared, and hot reloading bugs out and
+      // crashes the app
+      window.setTimeout(() => {
+        this.dispatchEvent(new CustomEvent('component-loaded', {}))
+      }, 0)
+      this.appendChild(this._parentContainer)
+
+      // Remove default click handler and add our custom one
+      const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
+      const editButton = oldEditButton.cloneNode(true)
+      oldEditButton.parentNode.replaceChild(editButton, oldEditButton)
+      editButton.addEventListener('click', (e) => {
+        this.querySelector('.ql-tooltip').classList.add('ql-hidden')
+        this.linkHandler()
+      })
+
+      const editor = this.querySelector('.ql-editor')
+      if (editor) {
+        editor.addEventListener('focus', () => { this.dispatchEvent(new CustomEvent('focus', {})) })
+        editor.addEventListener('blur', () => { this.dispatchEvent(new CustomEvent('blur', {})) })
+      }
+
+      this.setTooltipTexts()
+      this.setDisabled()
+    }
+
+    attributeChangedCallback (name) {
+      if (name === 'elm-disabled') {
+        this.setDisabled()
+      } else {
+        this.setTooltipTexts()
+      }
+    }
+
+    setTooltipTexts () {
+      const actionButton = this.querySelector('.ql-tooltip a.ql-action')
+      if (actionButton) {
+        actionButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
+      }
+
+      const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
+      if (removeButton) {
+        removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+      }
+    }
+
+    setDisabled () {
+      const isDisabled = this.getAttribute('elm-disabled') === 'true'
+
+      if (isDisabled) {
+        this._quill.disable()
+      } else {
+        this._quill.enable()
+      }
+    }
+
+    linkHandler () {
+      let range = this._quill.getSelection(true)
+      const isLink = this._quill.getFormat(range).link !== undefined
+      if (range.length === 0 && isLink) {
+        range = this.getFormattedRange(range.index)
+      }
+      const text = this._quill.getText(range)
+      const currentFormat = this._quill.getFormat(range)
+      this.dispatchEvent(new CustomEvent('clicked-include-link',
+        {
+          detail: {
+            label: text,
+            url: currentFormat.link || ''
+          }
+        }
+      ))
+
+      const markdownLinkPortHandler = (link) => {
+        if (link.id === this.id) {
+          this._quill.updateContents(new QuillDelta()
+            .retain(range.index)
+            .delete(range.length)
+            .insert(link.label, { ...currentFormat, link: link.url })
+          )
+          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+        }
+      }
+      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
+    }
+
+    /** Gets the range from the formatting that the `index` position is affected
+    by. Useful when the user has their caret in the middle of a link, but isn't
+    actually selecting it (selection length is 0)
+    */
+    getFormattedRange (index) {
+      let currentIndex = 0
+      for (const content of this._quill.getContents().ops) {
+        const initialIndex = currentIndex
+        const finalIndex = initialIndex + content.insert.length - 1
+        currentIndex = finalIndex + 1
+        if (initialIndex <= index && index <= finalIndex) {
+          return { index: initialIndex, length: finalIndex - initialIndex + 1 }
+        }
+      }
+      return { index: 0, length: 0 }
+    }
+
+    setMarkdownListener (data) {
+      if (data.id === this.id) {
+        this._quill.setContents(data.content)
+      }
+    }
+  }
+)
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {

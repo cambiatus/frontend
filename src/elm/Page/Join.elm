@@ -16,6 +16,7 @@ import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor
 
 
 
@@ -230,8 +231,8 @@ view_ isGuest ({ translators } as shared) community model =
         [ div [ class "bg-white rounded-b md:rounded md:w-4/5 lg:w-7/12" ]
             [ Community.communityPreviewImage False shared community
             , div [ class "p-4" ]
-                (span [ class "text-gray-900 text-sm block mb-7" ]
-                    [ text community.description ]
+                (View.MarkdownEditor.viewReadOnly [ class "text-gray-900 text-sm block mb-7" ]
+                    community.description
                     :: (if community.hasAutoInvite then
                             [ button
                                 [ class "button button-primary w-full cursor-pointer"
