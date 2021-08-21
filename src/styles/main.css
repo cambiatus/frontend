@@ -6,12 +6,13 @@
   --white: #f6f6f6;
   --black: #4a4a4a;
   --gray: #eee;
+  --font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
 }
 
 /* Typography */
 body {
   background-color: #f6f6f6;
-  font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
+  font-family: var(--font-family);
   color: var(--black);
 }
 
@@ -112,7 +113,7 @@ textarea.input {
 }
 
 .textarea-input {
-  @apply block rounded-sm;
+  @apply block;
 }
 
 .field-with-error,
@@ -447,6 +448,14 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .flex-basis-0 {
     flex-basis: 0;
   }
+
+  .truncate-children > :first-child {
+    @apply truncate;
+  }
+
+  .truncate-children > :not(:first-child) {
+    @apply hidden;
+  }
 }
 
 /* End of extra utilities */
@@ -469,6 +478,123 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of Button Modifiers */
+
+/* Markdown Viewer classes */
+
+.markdown-viewer ul {
+  @apply list-disc list-inside;
+}
+
+.markdown-viewer ol {
+  @apply list-decimal list-inside;
+}
+
+.markdown-viewer a {
+  @apply underline hover:opacity-80;
+}
+
+.markdown-viewer h1 {
+  @apply text-4xl;
+}
+
+.markdown-viewer h2 {
+  @apply text-2xl;
+}
+
+/* End of Markdown Viewer classes
+
+/* QuillJS classes */
+
+@import '../../node_modules/quill/dist/quill.snow.css';
+
+.ql-toolbar.ql-snow {
+  @apply bg-white border-0 border-b border-gray-500 rounded-t-md px-3 py-2;
+}
+
+.ql-container.ql-snow {
+  @apply border-none;
+}
+
+.ql-editor {
+  @apply bg-white text-black text-sm rounded-b-md px-3 py-2 min-h-36 max-h-48 focus:outline-none;
+
+  font-family: var(--font-family);
+}
+
+.ql-container.ql-snow.ql-disabled .ql-editor {
+  @apply bg-gray-500;
+}
+
+.ql-snow .ql-editor a {
+  @apply text-orange-500 no-underline hover:underline;
+}
+
+.ql-editor.ql-blank::before {
+  @apply text-gray-400;
+}
+
+.ql-stroke {
+  @apply text-gray-600;
+
+  stroke: currentColor !important;
+}
+
+.ql-snow .ql-fill {
+  @apply text-gray-600;
+
+  fill: currentColor !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button:focus .ql-stroke,
+.ql-snow.ql-toolbar button:focus .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-fill {
+  @apply text-indigo-500;
+}
+
+.ql-snow .ql-tooltip {
+  @apply rounded-md border border-gray-200 shadow-lg z-10 py-2 px-4;
+
+  font-family: var(--font-family);
+}
+
+.ql-snow .ql-tooltip[data-mode='link']::before {
+  content: '';
+}
+
+.ql-snow .ql-tooltip::before {
+  content: '';
+}
+
+.ql-snow .ql-tooltip:not(.ql-hidden) {
+  @apply grid gap-2 md:grid-cols-2;
+}
+
+.ql-snow .ql-tooltip a.ql-preview {
+  @apply max-w-full text-center w-full text-orange-500 no-underline hover:underline md:col-span-2;
+}
+
+.ql-snow .ql-tooltip a.ql-action {
+  @apply button button-primary;
+}
+
+.ql-snow .ql-tooltip a.ql-action::after {
+  @apply border-0 mr-0;
+
+  content: attr(data-edit-text);
+}
+
+.ql-snow .ql-tooltip a.ql-remove {
+  @apply button button-secondary;
+}
+
+.ql-snow .ql-tooltip a.ql-remove::before {
+  content: attr(data-remove-text);
+}
+
+/* End of QuillJS classes */
 
 /* Legacy CSS leftover */
 

@@ -773,9 +773,7 @@
         "unitEmpty": "La unitat no pot estar buida",
         "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
         "unitTooHigh": "No hi ha prou unitats disponibles",
-        "unitNotOnlyNumbers": "Només es permeten números",
-        "memoEmpty": "La nota no pot estar buida",
-        "memoTooLong": "La nota és massa llarga i el màxim de 256 caràcters"
+        "unitNotOnlyNumbers": "Només es permeten números"
       }
     },
     "delete": "Eliminar",
@@ -1107,6 +1105,17 @@
       "body": "Confirmes que vols suprimir la teva informació de contacte?",
       "cancel": "No",
       "accept": "Sí"
+    }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Afegeix un enllaç",
+      "label": "Text",
+      "url": "Enllaç"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Elimina l'enllaç"
     }
   },
   "block_explorer": {

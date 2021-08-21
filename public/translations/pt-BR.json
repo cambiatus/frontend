@@ -777,9 +777,7 @@
         "unitEmpty": "Unidade não pode estar vazia",
         "unitTooLow": "A unidade é muito baixa, deve ser pelo menos 1",
         "unitTooHigh": "Unidades insuficientes disponíveis",
-        "unitNotOnlyNumbers": "Somente números são permitidos",
-        "memoEmpty": "O memorando não pode estar vazio",
-        "memoTooLong": "O memorando é muito longo, o máximo é 256 caracteres"
+        "unitNotOnlyNumbers": "Somente números são permitidos"
       }
     },
     "delete": "Excluir",
@@ -1111,6 +1109,17 @@
       "body": "Quer mesmo excluir sua informação de contato?",
       "cancel": "Não",
       "accept": "Sim"
+    }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Adicionar link",
+      "label": "Texto",
+      "url": "Link"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Remover link"
     }
   },
   "block_explorer": {

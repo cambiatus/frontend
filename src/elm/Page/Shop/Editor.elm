@@ -21,9 +21,10 @@ import Eos.Account as Eos
 import File exposing (File)
 import Graphql.Http
 import Html exposing (Html, button, div, p, span, text)
-import Html.Attributes exposing (class, disabled, id, maxlength, required, rows, value)
+import Html.Attributes exposing (class, disabled, id, maxlength, required, value)
 import Html.Events exposing (onClick)
 import Http
+import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
@@ -33,13 +34,13 @@ import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Shop exposing (Product, ProductId)
-import Task
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
 import View.Feedback as Feedback
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Form.Select as Select
+import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -66,8 +67,14 @@ initUpdate productId loggedIn =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+subscriptions model =
+    case maybeForm model of
+        Nothing ->
+            Sub.none
+
+        Just form ->
+            Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
 
 
 
@@ -111,7 +118,8 @@ type alias ImageStatus =
 type alias Form =
     { image : Validator (Maybe String)
     , title : Validator String
-    , description : Validator String
+    , description : MarkdownEditor.Model
+    , descriptionError : Maybe ( String, I18Next.Replacements )
     , trackStock : Validator (Maybe String)
     , units : Validator String
     , price : Validator String
@@ -129,8 +137,13 @@ trackNo =
     "no"
 
 
-initForm : Form
-initForm =
+initDescriptionEditor : MarkdownEditor.Model
+initDescriptionEditor =
+    MarkdownEditor.init "description-editor"
+
+
+initForm : MarkdownEditor.Model -> Form
+initForm descriptionInput =
     let
         image =
             newValidator Nothing identity False []
@@ -138,11 +151,6 @@ initForm =
         title =
             []
                 |> longerThan 3
-                |> newValidator "" (\v -> Just v) True
-
-        description =
-            []
-                |> longerThan 10
                 |> newValidator "" (\v -> Just v) True
 
         trackStock =
@@ -163,7 +171,8 @@ initForm =
     in
     { image = image
     , title = title
-    , description = description
+    , description = descriptionInput
+    , descriptionError = Nothing
     , trackStock = trackStock
     , units = units
     , price = price
@@ -262,8 +271,8 @@ view loggedIn model =
 viewForm : LoggedIn.Model -> ImageStatus -> Bool -> Bool -> DeleteModalStatus -> Form -> Html Msg
 viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form =
     let
-        t =
-            shared.translators.t
+        { t, tr } =
+            shared.translators
 
         fieldId s =
             "shop-editor-" ++ s
@@ -321,19 +330,18 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
                     }
                     |> Input.withAttrs [ maxlength 255, required True ]
                     |> Input.toHtml
-                , Input.init
-                    { label = t "shop.description_label"
-                    , id = fieldId "description"
-                    , onInput = EnteredDescription
-                    , disabled = isDisabled
-                    , value = getInput form.description
+                , MarkdownEditor.view
+                    { translators = shared.translators
                     , placeholder = Nothing
-                    , problems = listErrors shared.translations form.description |> Just
-                    , translators = shared.translators
+                    , label = t "shop.description_label"
+                    , problem =
+                        form.descriptionError
+                            |> Maybe.map (\( key, replacements ) -> tr key replacements)
+                    , disabled = isDisabled
                     }
-                    |> Input.withAttrs [ required True, rows 5 ]
-                    |> Input.withInputType Input.TextArea
-                    |> Input.toHtml
+                    []
+                    form.description
+                    |> Html.map GotDescriptionEditorMsg
                 , Select.init
                     { id = fieldId "trackStock"
                     , label = t "shop.track_stock_label"
@@ -456,7 +464,7 @@ type Msg
     | CompletedImageUpload (Result Http.Error String)
     | EnteredImage (List File)
     | EnteredTitle String
-    | EnteredDescription String
+    | GotDescriptionEditorMsg MarkdownEditor.Msg
     | EnteredTrackStock String
     | EnteredUnits String
     | EnteredPrice String
@@ -480,7 +488,7 @@ update msg model loggedIn =
         CompletedBalancesLoad (Ok balances) ->
             case model of
                 LoadingBalancesCreate ->
-                    EditingCreate balances RemoteData.NotAsked initForm
+                    EditingCreate balances RemoteData.NotAsked (initForm initDescriptionEditor)
                         |> UR.init
 
                 LoadingBalancesUpdate saleId ->
@@ -530,13 +538,13 @@ update msg model loggedIn =
                             else
                                 trackNo
                     in
-                    EditingUpdate balances sale RemoteData.NotAsked Closed initForm
+                    EditingUpdate balances sale RemoteData.NotAsked Closed (initForm initDescriptionEditor)
                         |> updateForm
                             (\form ->
                                 { form
                                     | image = updateInput sale.image form.image
                                     , title = updateInput sale.title form.title
-                                    , description = updateInput sale.description form.description
+                                    , description = MarkdownEditor.setContents sale.description form.description
                                     , trackStock = updateInput (Just trackStock) form.trackStock
                                     , units = updateInput (String.fromInt sale.units) form.units
                                     , price = updateInput (String.fromFloat sale.price) form.price
@@ -672,13 +680,26 @@ update msg model loggedIn =
                     )
                 |> UR.init
 
-        EnteredDescription description ->
-            model
-                |> updateForm
-                    (\form ->
-                        { form | description = updateInput description form.description }
-                    )
-                |> UR.init
+        GotDescriptionEditorMsg subMsg ->
+            case maybeForm model of
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Got a description editor msg, but model doesn't have a form"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
+                Just form ->
+                    let
+                        ( descriptionInput, descriptionCmd ) =
+                            MarkdownEditor.update subMsg form.description
+                    in
+                    model
+                        |> updateForm (\form_ -> { form_ | description = descriptionInput })
+                        |> UR.init
+                        |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
 
         EnteredTrackStock trackStock ->
             model
@@ -1003,10 +1024,7 @@ update msg model loggedIn =
         PressedEnter val ->
             if val then
                 UR.init model
-                    |> UR.addCmd
-                        (Task.succeed ClickedSave
-                            |> Task.perform identity
-                        )
+                    |> UR.addMsg ClickedSave
 
             else
                 UR.init model
@@ -1019,6 +1037,28 @@ update msg model loggedIn =
 
                 _ ->
                     UR.init model
+
+
+maybeForm : Model -> Maybe Form
+maybeForm model =
+    case model of
+        EditingCreate _ _ form ->
+            Just form
+
+        Creating _ _ form ->
+            Just form
+
+        EditingUpdate _ _ _ _ form ->
+            Just form
+
+        Saving _ _ _ form ->
+            Just form
+
+        Deleting _ _ _ form ->
+            Just form
+
+        _ ->
+            Nothing
 
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
@@ -1066,10 +1106,18 @@ updateForm transform model =
 
 validateForm : Form -> Form
 validateForm form =
+    let
+        validateDescription description =
+            if String.length description < 10 then
+                Just ( "error.validator.text.longer_than", [ ( "base", String.fromInt 10 ) ] )
+
+            else
+                Nothing
+    in
     { form
         | image = validate form.image
         , title = validate form.title
-        , description = validate form.description
+        , descriptionError = validateDescription form.description.contents
         , trackStock = validate form.trackStock
         , units = validate form.units
         , price = validate form.price
@@ -1078,9 +1126,18 @@ validateForm form =
 
 isValidForm : Form -> Bool
 isValidForm form =
+    let
+        hasDescriptionError =
+            case form.descriptionError of
+                Nothing ->
+                    False
+
+                Just _ ->
+                    True
+    in
     hasErrors form.image
         || hasErrors form.title
-        || hasErrors form.description
+        || hasDescriptionError
         || hasErrors form.trackStock
         || hasErrors form.units
         || hasErrors form.price
@@ -1103,8 +1160,7 @@ encodeCreateForm loggedIn form =
                 |> Encode.string
 
         description =
-            form.description
-                |> getInput
+            form.description.contents
                 |> Encode.string
 
         price =
@@ -1168,8 +1224,7 @@ encodeUpdateForm product form selectedCommunity =
                 |> Encode.string
 
         description =
-            form.description
-                |> getInput
+            form.description.contents
                 |> Encode.string
 
         price =
@@ -1274,8 +1329,8 @@ msgToString msg =
         EnteredTitle _ ->
             [ "EnteredTitle" ]
 
-        EnteredDescription _ ->
-            [ "EnteredDescription" ]
+        GotDescriptionEditorMsg subMsg ->
+            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         EnteredTrackStock _ ->
             [ "EnteredTrackStock" ]

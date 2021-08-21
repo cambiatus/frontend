@@ -38,6 +38,7 @@ import Json.Encode as Encode exposing (Value)
 import Profile
 import Profile.Summary
 import Session.LoggedIn as LoggedIn
+import View.MarkdownEditor
 
 
 type alias Transfer =
@@ -313,7 +314,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     text ""
 
                 Just memo ->
-                    p [ class "text-xs text-gray-900 break-all" ]
-                        [ text <| t memo ]
+                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 break-all" ]
+                        (t memo)
             ]
         ]

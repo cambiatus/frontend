@@ -126,9 +126,29 @@ subscriptions model =
                 CommunityEditor.subscriptions subModel
                     |> Sub.map GotCommunityEditorMsg
 
+            CommunitySettingsInfo subModel ->
+                CommunitySettingsInfo.subscriptions subModel
+                    |> Sub.map GotCommunitySettingsInfoMsg
+
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
+
+            ActionEditor subModel ->
+                ActionEditor.subscriptions subModel
+                    |> Sub.map GotActionEditorMsg
+
+            ObjectiveEditor subModel ->
+                ObjectiveEditor.subscriptions subModel
+                    |> Sub.map GotObjectiveEditorMsg
+
+            ProfileEditor subModel ->
+                ProfileEditor.subscriptions subModel
+                    |> Sub.map GotProfileEditorMsg
+
+            Transfer subModel ->
+                Transfer.subscriptions subModel
+                    |> Sub.map GotTransferMsg
 
             _ ->
                 Sub.none
@@ -543,6 +563,10 @@ broadcast broadcastMessage status =
                 Shop _ _ ->
                     Shop.receiveBroadcast broadcastMessage
                         |> Maybe.map GotShopMsg
+
+                ShopViewer _ _ ->
+                    ShopViewer.receiveLoggedInBroadcast broadcastMessage
+                        |> Maybe.map (ShopViewer.AsLoggedInMsg >> GotShopViewerMsg)
 
                 Transfer _ ->
                     Transfer.receiveBroadcast broadcastMessage

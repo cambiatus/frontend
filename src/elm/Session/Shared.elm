@@ -26,6 +26,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
+import Ports
 import Time exposing (Posix)
 import Translation
 import Url exposing (Url)
@@ -55,40 +56,51 @@ type alias Shared =
     }
 
 
-init : Flags -> Nav.Key -> Url -> Shared
+init : Flags -> Nav.Key -> Url -> ( Shared, Cmd msg )
 init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
-    { navKey = navKey
-    , language =
-        -- We need to try parsing with `fromLanguageCode` first for
-        -- backwards-compatiblity. In some time, we should switch to just trying
-        -- with `languageFromLocale`
-        case flags.language |> Translation.languageFromLanguageCode of
-            Just lang ->
-                lang
+    let
+        environment =
+            environmentFromUrl url
+    in
+    ( { navKey = navKey
+      , language =
+            -- We need to try parsing with `fromLanguageCode` first for
+            -- backwards-compatiblity. In some time, we should switch to just trying
+            -- with `languageFromLocale`
+            case flags.language |> Translation.languageFromLanguageCode of
+                Just lang ->
+                    lang
 
-            Nothing ->
-                flags.language
-                    |> Translation.languageFromLocale
-                    |> Maybe.withDefault Translation.defaultLanguage
-    , translations = initialTranslations
-    , translators = makeTranslators initialTranslations
-    , translationsStatus = LoadingTranslation
-    , environment = environmentFromUrl url
-    , maybeAccount = maybeAccount
-    , endpoints = endpoints
-    , logo = flags.logo
-    , logoMobile = flags.logoMobile
-    , now = Time.millisToPosix flags.now
-    , timezone = Time.utc
-    , allowCommunityCreation = allowCommunityCreation
-    , url = url
-    , contracts = { token = tokenContract, community = communityContract }
-    , graphqlSecret = flags.graphqlSecret
-    , canReadClipboard = flags.canReadClipboard
-    , useSubdomain = flags.useSubdomain
-    , selectedCommunity = flags.selectedCommunity
-    , pinVisibility = flags.pinVisibility
-    }
+                Nothing ->
+                    flags.language
+                        |> Translation.languageFromLocale
+                        |> Maybe.withDefault Translation.defaultLanguage
+      , translations = initialTranslations
+      , translators = makeTranslators initialTranslations
+      , translationsStatus = LoadingTranslation
+      , environment = environment
+      , maybeAccount = maybeAccount
+      , endpoints = endpoints
+      , logo = flags.logo
+      , logoMobile = flags.logoMobile
+      , now = Time.millisToPosix flags.now
+      , timezone = Time.utc
+      , allowCommunityCreation = allowCommunityCreation
+      , url = url
+      , contracts = { token = tokenContract, community = communityContract }
+      , graphqlSecret = flags.graphqlSecret
+      , canReadClipboard = flags.canReadClipboard
+      , useSubdomain = flags.useSubdomain
+      , selectedCommunity = flags.selectedCommunity
+      , pinVisibility = flags.pinVisibility
+      }
+    , case environment of
+        Production ->
+            Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
+
+        _ ->
+            Cmd.none
+    )
 
 
 type TranslationStatus
