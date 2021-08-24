@@ -63,8 +63,8 @@ initPassphraseModel =
     }
 
 
-initPinModel : String -> PinModel
-initPinModel passphrase =
+initPinModel : Bool -> String -> PinModel
+initPinModel pinVisibility passphrase =
     { isSigningIn = False
     , passphrase = passphrase
     , pinModel =
@@ -74,6 +74,7 @@ initPinModel passphrase =
             , withConfirmation = True
             , submitLabel = "auth.login.submit"
             , submittingLabel = "auth.login.submitting"
+            , pinVisibility = pinVisibility
             }
     }
 
@@ -353,7 +354,7 @@ update msg model guest =
         ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
             Validate.fromValid validPassphrase
                 |> .passphrase
-                |> initPinModel
+                |> initPinModel guest.shared.pinVisibility
                 |> EnteringPin
                 |> UR.init
                 |> UR.addCmd
@@ -612,10 +613,14 @@ updateWithPin msg model ({ shared } as guest) =
             let
                 ( pinModel, submitStatus ) =
                     Pin.update subMsg model.pinModel
+
+                ( newShared, submitCmd ) =
+                    Pin.postSubmitAction pinModel submitStatus shared SubmittedPinWithSuccess
             in
             { model | pinModel = pinModel }
                 |> UR.init
-                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPinWithSuccess)
+                |> UR.addCmd submitCmd
+                |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
 
 
 

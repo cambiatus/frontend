@@ -318,6 +318,7 @@ viewPageHeader model shared =
 type External
     = LoggedIn Eos.PrivateKey Auth.SignInResponse
     | SetFeedback Feedback.Model
+    | UpdatedShared Shared
 
 
 type BroadcastMsg

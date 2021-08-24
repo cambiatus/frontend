@@ -56,8 +56,8 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Maybe Eos.PrivateKey -> Model
-init maybePrivateKey_ =
+init : Bool -> Maybe Eos.PrivateKey -> Model
+init pinVisibility maybePrivateKey_ =
     let
         status =
             case maybePrivateKey_ of
@@ -69,7 +69,7 @@ init maybePrivateKey_ =
     in
     { status = status
     , error = Nothing
-    , pinModel = initPinModel status
+    , pinModel = initPinModel pinVisibility status
     }
 
 
@@ -84,14 +84,15 @@ type alias Model =
     }
 
 
-initPinModel : Status -> Pin.Model
-initPinModel status =
+initPinModel : Bool -> Status -> Pin.Model
+initPinModel pinVisibility status =
     Pin.init
         { label = "auth.pinPopup.label"
         , id = "pinPopup"
         , withConfirmation = False
         , submitLabel = "auth.login.continue"
         , submittingLabel = "auth.login.continue"
+        , pinVisibility = pinVisibility
         }
         |> Pin.withDisabled
             (case status of
@@ -182,6 +183,7 @@ type alias SignInResponse =
 
 type ExternalMsg
     = CompletedAuth SignInResponse Model
+    | UpdatedShared Shared
 
 
 update : Msg -> Shared -> Model -> UpdateResult
@@ -194,10 +196,14 @@ update msg shared model =
             let
                 ( newPinModel, submitStatus ) =
                     Pin.update subMsg model.pinModel
+
+                ( newShared, submitCmd ) =
+                    Pin.postSubmitAction newPinModel submitStatus shared SubmittedPin
             in
             { model | pinModel = newPinModel }
                 |> UR.init
-                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPin)
+                |> UR.addCmd submitCmd
+                |> UR.addExt (UpdatedShared newShared)
 
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             let
@@ -311,7 +317,7 @@ authFailed error model =
         | status = WithoutPrivateKey
         , error = Nothing
         , pinModel =
-            initPinModel model.status
+            initPinModel model.pinModel.isPinVisible model.status
                 |> Pin.withProblem Pin.Pin error
     }
         |> UR.init

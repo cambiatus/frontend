@@ -52,6 +52,7 @@ type alias Shared =
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
+    , pinVisibility : Bool
     }
 
 
@@ -91,6 +92,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , canReadClipboard = flags.canReadClipboard
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
+      , pinVisibility = flags.pinVisibility
       }
     , case environment of
         Production ->

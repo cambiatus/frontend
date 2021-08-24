@@ -181,7 +181,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     , notification = Notification.init
     , unreadCount = 0
     , showAuthModal = False
-    , auth = Auth.init maybePrivateKey_
+    , auth = Auth.init shared.pinVisibility maybePrivateKey_
     , feedback = Feedback.Hidden
     , showCommunitySelector = False
     , searchModel = Search.init
@@ -1190,6 +1190,10 @@ update msg model =
                                         , data = Dict.fromList [ ( "username", Eos.encodeName user.account ) ]
                                         , level = Log.Info
                                         }
+
+                            Auth.UpdatedShared newShared ->
+                                uResult
+                                    |> UR.mapModel (\m -> { m | shared = newShared })
                     )
 
         CompletedLoadUnread payload ->

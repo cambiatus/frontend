@@ -5,8 +5,8 @@ module View.Pin exposing
     , RequiredOptions
     , SubmitStatus(..)
     , init
-    , maybeSubmitCmd
     , msgToString
+    , postSubmitAction
     , update
     , view
     , withAttrs
@@ -27,7 +27,8 @@ import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (attribute, autocomplete, class, classList, disabled, maxlength, required, type_)
 import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
-import Session.Shared exposing (Translators)
+import Ports
+import Session.Shared exposing (Shared, Translators)
 import Task
 import Validate
 import View.Form.Input
@@ -74,13 +75,14 @@ type alias RequiredOptions =
     , withConfirmation : Bool
     , submitLabel : String
     , submittingLabel : String
+    , pinVisibility : Bool
     }
 
 
 {-| Initializes a `Model` with some initial `RequiredOptions`
 -}
 init : RequiredOptions -> Model
-init { label, id, withConfirmation, submitLabel, submittingLabel } =
+init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility } =
     { label = label
     , disabled = False
     , id = id
@@ -93,8 +95,8 @@ init { label, id, withConfirmation, submitLabel, submittingLabel } =
             Nothing
     , placeholder = String.repeat pinLength "*"
     , problems = []
-    , isPinVisible = True
-    , isPinConfirmationVisible = True
+    , isPinVisible = pinVisibility
+    , isPinConfirmationVisible = pinVisibility
     , isSubmitting = False
     , submitLabel = submitLabel
     , submittingLabel = submittingLabel
@@ -312,18 +314,23 @@ update msg model =
 -- UTILS
 
 
-maybeSubmitCmd : SubmitStatus -> (String -> msg) -> Cmd msg
-maybeSubmitCmd status toMsg =
+postSubmitAction : Model -> SubmitStatus -> Shared -> (String -> msg) -> ( Shared, Cmd msg )
+postSubmitAction model status shared toMsg =
     case status of
         NotAsked ->
-            Cmd.none
+            ( shared, Cmd.none )
 
         WithError ->
-            Cmd.none
+            ( shared, Cmd.none )
 
         Success pin ->
-            Task.succeed pin
-                |> Task.perform toMsg
+            ( { shared | pinVisibility = model.isPinVisible }
+            , Cmd.batch
+                [ Task.succeed pin
+                    |> Task.perform toMsg
+                , Ports.storePinVisibility model.isPinVisible
+                ]
+            )
 
 
 withDisabled : Bool -> Model -> Model
