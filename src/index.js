@@ -652,7 +652,7 @@ const getItem = (key) => {
 
 const removeItem = (key) => {
   document.cookie = `${cookieKey(key)}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
-  window.localStorage.removeItem(key)
+  window.localStorage.removeItem(cookieKey(key))
 }
 
 const setItem = (key, value) => {
