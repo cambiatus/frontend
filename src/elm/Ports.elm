@@ -12,6 +12,7 @@ port module Ports exposing
     , setMarkdownContent
     , storeAuthToken
     , storeLanguage
+    , storePinVisibility
     , storeRecentSearches
     , storeSelectedCommunitySymbol
     )
@@ -69,12 +70,12 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 port storeLanguage : String -> Cmd msg
 
 
-{-| Store recent searches to the `localStorage`.
+{-| Store recent searches
 -}
 port storeRecentSearches : String -> Cmd msg
 
 
-{-| Ping JS to send back the recent searches from the `localStorage`.
+{-| Ping JS to send back the recent searches
 -}
 port getRecentSearches : () -> Cmd msg
 
@@ -88,6 +89,11 @@ port storeAuthToken : String -> Cmd msg
 `USE_SUBDOMAIN = false`
 -}
 port storeSelectedCommunitySymbol : String -> Cmd msg
+
+
+{-| Store whether to show or hide the pin by default
+-}
+port storePinVisibility : Bool -> Cmd msg
 
 
 {-| Send info about a link in a MarkdownEditor to be treated on JS
