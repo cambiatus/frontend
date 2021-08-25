@@ -2,7 +2,7 @@ module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..)
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap
 
 -}
 
@@ -279,7 +279,7 @@ subscriptions (because it would add a lot of complexity). Can be useful in
 "stateless" components, such as modals.
 -}
 keyListener :
-    { onKeyDown : { acceptedKeys : List Key, toMsg : Key -> msg, preventDefault : Bool } }
+    { onKeyDown : { acceptedKeys : List Key, toMsg : Key -> msg, stopPropagation : Bool } }
     -> Html msg
 keyListener { onKeyDown } =
     let
@@ -314,9 +314,16 @@ keyListener { onKeyDown } =
     in
     node "key-listener"
         [ on "listener-keydown" (keyDecoder onKeyDown.acceptedKeys onKeyDown.toMsg)
-        , attribute "keydown-prevent-default" (boolToString onKeyDown.preventDefault)
+        , attribute "keydown-stop-propagation" (boolToString onKeyDown.stopPropagation)
         ]
         []
+
+
+focusTrap : { firstFocusContainer : Maybe String } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+focusTrap { firstFocusContainer } attrs children =
+    node "focus-trap"
+        (optionalAttr "first-focus-container" firstFocusContainer :: attrs)
+        children
 
 
 

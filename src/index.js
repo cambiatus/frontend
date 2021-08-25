@@ -24,24 +24,74 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 /* global HTMLElement, CustomEvent */
 
+window.customElements.define('focus-trap',
+  class FocusTrap extends HTMLElement {
+    constructor () {
+      super()
+
+      this._previouslyFocusedElement = document.activeElement
+
+      this._keydownListener = (e) => {
+        const isTab = e.key === 'Tab' || e.keyCode === 9
+
+        if (!isTab) {
+          return
+        }
+
+        const focusables = this.focusables(this)
+        const firstFocusable = focusables[0]
+        const lastFocusable = focusables[focusables.length - 1]
+
+        if (e.shiftKey && document.activeElement === firstFocusable) {
+          e.preventDefault()
+          lastFocusable.focus()
+        } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+          e.preventDefault()
+          firstFocusable.focus()
+        }
+      }
+    }
+
+    connectedCallback () {
+      const firstFocusContainer = this.getAttribute('first-focus-container')
+      if (firstFocusContainer) {
+        const container = this.querySelector(firstFocusContainer)
+        this.focusables(container)[0].focus()
+      } else {
+        this.focusables(this)[0].focus()
+      }
+      document.addEventListener('keydown', this._keydownListener)
+    }
+
+    disconnectedCallback () {
+      this._previouslyFocusedElement.focus()
+      document.removeEventListener('keydown', this._keydownListener)
+    }
+
+    focusables (parent) {
+      return parent.querySelectorAll('a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled]), [contenteditable="true"]')
+    }
+  }
+)
+
 window.customElements.define('key-listener',
   class KeyListener extends HTMLElement {
-    static get observedAttributes () { return ['keydown-prevent-default'] }
+    static get observedAttributes () { return ['keydown-stop-propagation'] }
 
     constructor () {
       super()
 
       this._keydownListener = (e) => {
-        if (this._keydownPreventDefault) {
-          e.preventDefault()
+        if (this._keydownStopPropagation) {
+          e.stopPropagation()
         }
         this.dispatchEvent(new CustomEvent('listener-keydown', { detail: { key: e.key } }))
       }
     }
 
     attributeChangedCallback (name, oldValue, newValue) {
-      if (name === 'keydown-prevent-default') {
-        this._keydownPreventDefault = newValue === 'true'
+      if (name === 'keydown-stop-propagation') {
+        this._keydownStopPropagation = newValue === 'true'
       }
     }
 
