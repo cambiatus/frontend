@@ -177,11 +177,11 @@ module.exports = {
       keyframes: {
         appear: {
           '0%': {
-            'opacity': '0',
+            opacity: '0',
             'pointer-events': 'none'
           },
           '100%': {
-            'opacity': '1',
+            opacity: '1',
             'pointer-events': 'auto'
           }
         }
