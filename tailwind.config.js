@@ -187,8 +187,7 @@ module.exports = {
         }
       },
       animation: {
-        fadeIn:
-          'appear 50ms linear 400ms both'
+        'fade-in': 'appear 50ms linear 400ms both'
       }
     }
   },
