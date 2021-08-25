@@ -24,6 +24,37 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 /* global HTMLElement, CustomEvent */
 
+window.customElements.define('key-listener',
+  class KeyListener extends HTMLElement {
+    static get observedAttributes () { return ['keydown-prevent-default'] }
+
+    constructor () {
+      super()
+
+      this._keydownListener = (e) => {
+        if (this._keydownPreventDefault) {
+          e.preventDefault()
+        }
+        this.dispatchEvent(new CustomEvent('listener-keydown', { detail: { key: e.key } }))
+      }
+    }
+
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'keydown-prevent-default') {
+        this._keydownPreventDefault = newValue === 'true'
+      }
+    }
+
+    connectedCallback () {
+      document.addEventListener('keydown', this._keydownListener)
+    }
+
+    disconnectedCallback () {
+      document.removeEventListener('keydown', this._keydownListener)
+    }
+  }
+)
+
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
     static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }

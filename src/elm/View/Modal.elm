@@ -195,18 +195,22 @@ viewModalDetails options =
                 FullScreen ->
                     "modal-content modal-content-full"
     in
-    div
-        [ class "modal fade-in" ]
+    div [ class "modal fade-in" ]
         [ View.Components.bgNoScroll
             [ class "modal-bg"
             , onClickNoBubble options.closeMsg
             ]
             options.preventScrolling
-        , div
-            [ class content
-            ]
+        , div [ class content ]
             [ header
             , body
             , footer
             ]
+        , View.Components.keyListener
+            { onKeyDown =
+                { acceptedKeys = [ View.Components.Escape ]
+                , toMsg = \_ -> options.closeMsg
+                , preventDefault = True
+                }
+            }
         ]

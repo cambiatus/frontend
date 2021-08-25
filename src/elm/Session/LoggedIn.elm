@@ -28,7 +28,6 @@ import Api.Graphql
 import Auth
 import Avatar
 import Browser.Dom as Dom
-import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -137,8 +136,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
-        , Sub.map GotSearchMsg Search.subscriptions
+        [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         ]
 
@@ -914,7 +912,6 @@ type Msg
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
-    | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
     | SelectedCommunity Profile.CommunityInfo
@@ -1212,14 +1209,6 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             []
                             err
-
-        KeyDown key ->
-            if key == "Esc" || key == "Escape" then
-                UR.init { closeAllModals | showUserNav = False }
-
-            else
-                model
-                    |> UR.init
 
         GotFeedbackMsg subMsg ->
             { model | feedback = Feedback.update subMsg model.feedback }
@@ -1627,9 +1616,6 @@ msgToString msg =
 
         CompletedLoadUnread _ ->
             [ "CompletedLoadUnread" ]
-
-        KeyDown _ ->
-            [ "KeyDown" ]
 
         OpenCommunitySelector ->
             [ "OpenCommunitySelector" ]

@@ -2,7 +2,7 @@ module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
-    , bgNoScroll, PreventScroll(..)
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..)
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll
+@docs bgNoScroll, PreventScroll, keyListener, Key
 
 -}
 
@@ -269,8 +269,67 @@ type PreventScroll
     | PreventScrollAlways
 
 
+type Key
+    = Escape
+
+
+{-| A node that attaches an event listener on the document to listen for keys.
+Useful when we want to listen for keypresses, but don't want to use
+subscriptions (because it would add a lot of complexity). Can be useful in
+"stateless" components, such as modals.
+-}
+keyListener :
+    { onKeyDown : { acceptedKeys : List Key, toMsg : Key -> msg, preventDefault : Bool } }
+    -> Html msg
+keyListener { onKeyDown } =
+    let
+        keyFromString : String -> Maybe Key
+        keyFromString rawKey =
+            case rawKey of
+                "Esc" ->
+                    Just Escape
+
+                "Escape" ->
+                    Just Escape
+
+                _ ->
+                    Nothing
+
+        keyDecoder : List Key -> (Key -> msg) -> Json.Decode.Decoder msg
+        keyDecoder acceptedKeys toMsg =
+            Json.Decode.at [ "detail", "key" ] Json.Decode.string
+                |> Json.Decode.andThen
+                    (\rawKey ->
+                        case keyFromString rawKey of
+                            Just key ->
+                                if List.member key acceptedKeys then
+                                    Json.Decode.succeed (toMsg key)
+
+                                else
+                                    Json.Decode.fail "This key is not being listened to"
+
+                            Nothing ->
+                                Json.Decode.fail "The given key is not registered as a Key that the keyListener can listen to"
+                    )
+    in
+    node "key-listener"
+        [ on "listener-keydown" (keyDecoder onKeyDown.acceptedKeys onKeyDown.toMsg)
+        , attribute "keydown-prevent-default" (boolToString onKeyDown.preventDefault)
+        ]
+        []
+
+
 
 -- INTERNALS
+
+
+boolToString : Bool -> String
+boolToString b =
+    if b then
+        "true"
+
+    else
+        "false"
 
 
 optionalAttr : String -> Maybe String -> Html.Attribute msg
