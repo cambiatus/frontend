@@ -163,7 +163,7 @@ viewUserImg profile isMobile model =
             [ container [] [ Avatar.view profile.avatar model.imageSize ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble
-                    { class_ = "w-120 animate-fadeIn opacity-0"
+                    { class_ = "w-120 animate-fade-in opacity-0"
                     , relativeSelector = model.relativeSelector
                     , scrollSelector = model.scrollSelector
                     }
