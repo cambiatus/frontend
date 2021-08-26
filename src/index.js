@@ -53,13 +53,19 @@ window.customElements.define('focus-trap',
     }
 
     connectedCallback () {
-      const firstFocusContainer = this.getAttribute('first-focus-container')
-      if (firstFocusContainer) {
-        const container = this.querySelector(firstFocusContainer)
-        this.focusables(container)[0].focus()
-      } else {
-        this.focusables(this)[0].focus()
+      let elementToFocus = this.focusables(this)[0]
+      const firstFocusableContainer = this.querySelector(this.getAttribute('first-focus-container'))
+      if (firstFocusableContainer !== null) {
+        const focusables = this.focusables(firstFocusableContainer)
+        if (focusables.length > 0) {
+          elementToFocus = focusables[0]
+        }
       }
+
+      if (elementToFocus) {
+        elementToFocus.focus()
+      }
+
       document.addEventListener('keydown', this._keydownListener)
     }
 
@@ -69,7 +75,18 @@ window.customElements.define('focus-trap',
     }
 
     focusables (parent) {
-      return parent.querySelectorAll('a[href]:not([disabled]), button:not([disabled]), textarea:not([disabled]), input[type="text"]:not([disabled]), input[type="radio"]:not([disabled]), input[type="checkbox"]:not([disabled]), select:not([disabled]), [contenteditable="true"]')
+      const tabbableElements = [
+        'a[href]',
+        'button',
+        'textarea',
+        'input[type="text"]',
+        'input[type="radio"]',
+        'input[type="checkbox"]',
+        'select',
+        '[contenteditable="true"]'
+      ].map((selector) => `${selector}:not([disabled]):not([tabindex="-1"])`)
+
+      return parent.querySelectorAll(tabbableElements.join(', '))
     }
   }
 )

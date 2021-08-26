@@ -39,7 +39,7 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, nav, p, text)
+import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
 import Html.Attributes exposing (class, classList, src, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -604,12 +604,14 @@ communitySelectorModal model =
 
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
-            div
-                [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
-                , onClick <| SelectedCommunity c
-                ]
-                [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
-                , text c.name
+            li [ class "flex" ]
+                [ button
+                    [ class "w-full flex items-center p-3 m-1 text-body rounded-sm hover:text-black hover:bg-gray-100 focus:outline-none focus:ring"
+                    , onClick <| SelectedCommunity c
+                    ]
+                    [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
+                    , text c.name
+                    ]
                 ]
     in
     if model.showCommunitySelector then
@@ -628,7 +630,7 @@ communitySelectorModal model =
                             [ p []
                                 [ text_ "menu.community_selector.body"
                                 ]
-                            , div [ class "w-full overflow-y-auto divide-y divide-gray-300" ]
+                            , ul [ class "w-full flex flex-col overflow-y-auto divide-y divide-gray-300" ]
                                 (List.map viewCommunityItem pro.communities)
                             ]
                         |> Modal.toHtml
