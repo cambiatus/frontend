@@ -54,11 +54,12 @@ window.customElements.define('focus-trap',
 
     connectedCallback () {
       let elementToFocus = this.focusables(this)[0]
-      const firstFocusableContainer = this.querySelector(this.getAttribute('first-focus-container'))
-      if (firstFocusableContainer !== null) {
-        const focusables = this.focusables(firstFocusableContainer)
+      const firstFocusableContainers = this.querySelectorAll(this.getAttribute('first-focus-container'))
+      for (const container of firstFocusableContainers) {
+        const focusables = this.focusables(container)
         if (focusables.length > 0) {
           elementToFocus = focusables[0]
+          break
         }
       }
 
