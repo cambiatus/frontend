@@ -19,7 +19,7 @@ module View.Form.Select exposing
 -}
 
 import Html exposing (Html, li, text, ul)
-import Html.Attributes exposing (class, classList, disabled, selected, value)
+import Html.Attributes exposing (class, classList, disabled, selected, tabindex, value)
 import Html.Events exposing (onInput)
 import View.Form
 
@@ -90,6 +90,13 @@ toHtml select =
             Html.option
                 [ value (select.valueToString option.value)
                 , selected (select.value == option.value)
+                , tabindex
+                    (if select.value == option.value then
+                        0
+
+                     else
+                        -1
+                    )
                 ]
                 [ text option.label ]
 
