@@ -27,7 +27,7 @@ import Api
 import Api.Graphql
 import Auth
 import Avatar
-import Browser.Dom as Dom
+import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -138,6 +138,21 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
+        , if model.showUserNav then
+            Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Esc" || key == "Escape" then
+                            Decode.succeed ()
+
+                        else
+                            Decode.fail "Expecting Escape key"
+                    )
+                |> Browser.Events.onKeyDown
+                |> Sub.map (\_ -> ShowUserNav False)
+
+          else
+            Sub.none
         ]
 
 
@@ -518,49 +533,52 @@ viewHeader page ({ shared } as model) profile_ =
 
                   else
                     text ""
-                , nav
-                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50"
-                    , classList
-                        [ ( "hidden", not model.showUserNav )
-                        ]
-                    ]
-                    [ a
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
-                        , Route.href (Route.Profile model.accountName)
-                        , onClick (ShowUserNav False)
-                        , onClick SearchClosed
-                        ]
-                        [ Icons.profile "mr-4"
-                        , text_ "menu.profile"
-                        ]
-                    , button
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
-                        , onClick ToggleLanguageItems
-                        ]
-                        [ Icons.languages "mr-4"
-                        , text_ "menu.languages"
-                        ]
-                    , if model.showLanguageItems then
-                        div [ class "ml-10 mb-2" ]
-                            (button
-                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                , if model.showUserNav then
+                    View.Components.focusTrap { firstFocusContainer = Nothing }
+                        []
+                        [ nav
+                            [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
+                            [ a
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
+                                , Route.href (Route.Profile model.accountName)
+                                , onClick (ShowUserNav False)
+                                , onClick SearchClosed
                                 ]
-                                [ Shared.langFlag shared.language
-                                , text (Translation.languageToLanguageCode shared.language)
+                                [ Icons.profile "mr-4"
+                                , text_ "menu.profile"
                                 ]
-                                :: Shared.viewLanguageItems shared ClickedLanguage
-                            )
+                            , button
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                , onClick ToggleLanguageItems
+                                ]
+                                [ Icons.languages "mr-4"
+                                , text_ "menu.languages"
+                                ]
+                            , if model.showLanguageItems then
+                                div [ class "ml-10 mb-2" ]
+                                    (button
+                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                                        ]
+                                        [ Shared.langFlag shared.language
+                                        , text (Translation.languageToLanguageCode shared.language)
+                                        ]
+                                        :: Shared.viewLanguageItems shared ClickedLanguage
+                                    )
 
-                      else
-                        text ""
-                    , button
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
-                        , onClick ClickedLogout
+                              else
+                                text ""
+                            , button
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                , onClick ClickedLogout
+                                ]
+                                [ Icons.close "fill-current text-red mr-4"
+                                , text_ "menu.logout"
+                                ]
+                            ]
                         ]
-                        [ Icons.close "fill-current text-red mr-4"
-                        , text_ "menu.logout"
-                        ]
-                    ]
+
+                  else
+                    text ""
                 ]
             ]
         ]
@@ -930,15 +948,6 @@ update msg model =
         shared =
             model.shared
 
-        focusMainContent b alternative =
-            if b then
-                Dom.focus "main-content"
-                    |> Task.attempt (\_ -> NoOp)
-
-            else
-                Dom.focus alternative
-                    |> Task.attempt (\_ -> NoOp)
-
         closeAllModals =
             { model
                 | showNotificationModal = False
@@ -1134,7 +1143,6 @@ update msg model =
 
         ShowUserNav b ->
             UR.init { closeAllModals | showUserNav = b }
-                |> UR.addCmd (focusMainContent (not b) "user-nav")
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }

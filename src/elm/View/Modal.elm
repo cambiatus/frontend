@@ -146,7 +146,7 @@ viewModalDetails options =
                     Nothing ->
                         text ""
                 , button
-                    [ class "ml-auto text-gray-400 focus:text-red focus:outline-none"
+                    [ class "ml-auto text-gray-400 hover:text-red focus:text-red focus:outline-none"
                     , onClickNoBubble options.closeMsg
                     ]
                     [ Icons.close "fill-current"
@@ -201,7 +201,7 @@ viewModalDetails options =
             , onClickNoBubble options.closeMsg
             ]
             options.preventScrolling
-        , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg" }
+        , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg, .modal-footer" }
             [ class content ]
             [ header
             , body
