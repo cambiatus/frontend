@@ -173,6 +173,21 @@ module.exports = {
       opacity: {
         '10': '0.1',
         '60': '0.6'
+      },
+      keyframes: {
+        appear: {
+          '0%': {
+            opacity: '0',
+            'pointer-events': 'none'
+          },
+          '100%': {
+            opacity: '1',
+            'pointer-events': 'auto'
+          }
+        }
+      },
+      animation: {
+        'fade-in': 'appear 50ms linear 400ms both'
       }
     }
   },
