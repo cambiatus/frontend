@@ -919,8 +919,7 @@ type BroadcastMsg
 
 
 type Msg
-    = NoOp
-    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    = CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -957,9 +956,6 @@ update msg model =
             }
     in
     case msg of
-        NoOp ->
-            UR.init model
-
         GotTimeInternal time ->
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
@@ -1576,9 +1572,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
