@@ -17,6 +17,7 @@ module Profile.Contact exposing
     )
 
 import Api.Graphql
+import Browser.Dom
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -28,15 +29,17 @@ import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Attribute, Html, a, button, div, img, p, text)
-import Html.Attributes exposing (class, classList, disabled, href, src, style, type_)
+import Html.Attributes exposing (class, classList, disabled, href, src, style, tabindex, type_)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
+import Json.Decode
 import List.Extra as LE
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared, Translators)
+import Task
 import Validate
 import View.Components
 import View.Form
@@ -97,6 +100,7 @@ type alias Basic =
     , contact : String
     , errors : Maybe (List String)
     , showFlags : Bool
+    , focusedFlag : Maybe SupportedCountry
     }
 
 
@@ -107,6 +111,7 @@ initBasic contactType =
     , contact = ""
     , errors = Nothing
     , showFlags = False
+    , focusedFlag = Nothing
     }
 
 
@@ -209,7 +214,8 @@ type ContactResponse
 
 
 type Msg
-    = SelectedCountry ContactType SupportedCountry
+    = NoOp
+    | SelectedCountry ContactType SupportedCountry
     | ClickedToggleContactFlags ContactType
     | EnteredContactText ContactType String
     | ClickedDeleteContact ContactType
@@ -219,19 +225,32 @@ type Msg
     | ClickedSubmit
     | CompletedUpdateContact UpdatedData
     | CompletedDeleteContact UpdatedData
+    | PressedUpArrowOnFlagSelect ContactType
+    | PressedDownArrowOnFlagSelect ContactType
 
 
 update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
 update msg model ({ translators } as shared) authToken profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
-            { contact | showFlags = not showFlags }
+            { contact
+                | showFlags = not showFlags
+                , focusedFlag =
+                    if showFlags then
+                        Nothing
+
+                    else
+                        contact.focusedFlag
+            }
 
         setCountry newCountry contact =
-            { contact | supportedCountry = newCountry, errors = Nothing }
+            { contact | supportedCountry = newCountry, errors = Nothing, focusedFlag = Nothing }
 
         setContact newContact contact =
             { contact | contact = newContact }
+
+        setFocusedFlag supportedCountry contact =
+            { contact | focusedFlag = Just supportedCountry }
 
         updateKind contactType updateFn =
             { model
@@ -253,17 +272,51 @@ update msg model ({ translators } as shared) authToken profileContacts =
 
                 Multiple _ ->
                     "multiple"
+
+        currentFocusedFlag : ContactType -> SupportedCountry
+        currentFocusedFlag contactType =
+            case model.kind of
+                Single contact ->
+                    contact.focusedFlag
+                        |> Maybe.withDefault defaultCountry
+
+                Multiple contacts ->
+                    contacts
+                        |> List.filter (.contactType >> (==) contactType)
+                        |> List.head
+                        |> Maybe.andThen .focusedFlag
+                        |> Maybe.withDefault defaultCountry
+
+        currentCountry : ContactType -> SupportedCountry
+        currentCountry contactType =
+            case model.kind of
+                Single contact ->
+                    contact.supportedCountry
+
+                Multiple contacts ->
+                    contacts
+                        |> List.filter (.contactType >> (==) contactType)
+                        |> List.head
+                        |> Maybe.map .supportedCountry
+                        |> Maybe.withDefault defaultCountry
     in
     case msg of
+        NoOp ->
+            ( model, Cmd.none, NotAsked )
+
         SelectedCountry contactType country ->
             ( updateKind contactType (setCountry country)
-            , Cmd.none
+            , flagSelectorId contactType
+                |> Browser.Dom.focus
+                |> Task.attempt (\_ -> NoOp)
             , NotAsked
             )
 
         ClickedToggleContactFlags contactType ->
             ( updateKind contactType toggleFlags
-            , Cmd.none
+            , flagSelectorId contactType
+                |> Browser.Dom.focus
+                |> Task.attempt (\_ -> NoOp)
             , NotAsked
             )
 
@@ -417,6 +470,62 @@ update msg model ({ translators } as shared) authToken profileContacts =
 
                 RemoteData.Loading ->
                     NotAsked
+            )
+
+        PressedUpArrowOnFlagSelect contactType ->
+            let
+                countries =
+                    currentCountry contactType
+                        |> countryOptions
+
+                nextCountry : SupportedCountry
+                nextCountry =
+                    countries
+                        |> LE.elemIndex (currentFocusedFlag contactType)
+                        |> Maybe.map
+                            (\nextIndex ->
+                                if nextIndex <= 0 then
+                                    List.length countries - 1
+
+                                else
+                                    nextIndex - 1
+                            )
+                        |> Maybe.andThen (\index -> LE.getAt index countries)
+                        |> Maybe.withDefault defaultCountry
+            in
+            ( updateKind contactType (setFocusedFlag nextCountry)
+            , flagId nextCountry contactType
+                |> Browser.Dom.focus
+                |> Task.attempt (\_ -> NoOp)
+            , NotAsked
+            )
+
+        PressedDownArrowOnFlagSelect contactType ->
+            let
+                countries =
+                    currentCountry contactType
+                        |> countryOptions
+
+                nextCountry : SupportedCountry
+                nextCountry =
+                    countries
+                        |> LE.elemIndex (currentFocusedFlag contactType)
+                        |> Maybe.map
+                            (\nextIndex ->
+                                if nextIndex >= List.length countries - 1 then
+                                    0
+
+                                else
+                                    nextIndex + 1
+                            )
+                        |> Maybe.andThen (\index -> LE.getAt index countries)
+                        |> Maybe.withDefault defaultCountry
+            in
+            ( updateKind contactType (setFocusedFlag nextCountry)
+            , flagId nextCountry contactType
+                |> Browser.Dom.focus
+                |> Task.attempt (\_ -> NoOp)
+            , NotAsked
             )
 
 
@@ -733,18 +842,54 @@ viewContactTypeSelect translators contactType =
                 |> Select.toHtml
 
 
+flagId : SupportedCountry -> ContactType -> String
+flagId supportedCountry contactType =
+    "flag-" ++ supportedCountry.country.id ++ "-" ++ ContactType.toString contactType
+
+
+flagSelectorId : ContactType -> String
+flagSelectorId contactType =
+    ContactType.toString contactType ++ "_select"
+
+
+countryOptions : SupportedCountry -> List SupportedCountry
+countryOptions supportedCountry =
+    supportedCountry
+        :: List.filter (\country -> country /= supportedCountry) supportedCountries
+
+
 viewFlagsSelect : Translators -> Basic -> Html Msg
 viewFlagsSelect { t } basic =
     let
-        countryOptions =
-            basic.supportedCountry
-                :: List.filter (\country -> country /= basic.supportedCountry) supportedCountries
+        escListener =
+            Html.Events.custom "keydown"
+                (Json.Decode.field "key" Json.Decode.string
+                    |> Json.Decode.andThen
+                        (\key ->
+                            if key == "Esc" || key == "Escape" then
+                                Json.Decode.succeed
+                                    { message = ClickedToggleContactFlags basic.contactType
+                                    , stopPropagation = True
+                                    , preventDefault = True
+                                    }
 
-        flag classes supportedCountry =
+                            else
+                                Json.Decode.fail "Expecting Esc"
+                        )
+                )
+
+        flag addId classes supportedCountry =
             button
-                [ class ("w-full flex items-center space-x-2 text-menu " ++ classes)
+                [ class ("w-full flex items-center space-x-2 text-menu rounded-sm focus:outline-none focus:ring focus:ring-offset-2 " ++ classes)
                 , onClick (SelectedCountry basic.contactType supportedCountry)
                 , type_ "button"
+                , tabindex -1
+                , escListener
+                , if addId then
+                    Html.Attributes.id (flagId supportedCountry basic.contactType)
+
+                  else
+                    class ""
                 ]
                 [ img
                     [ class "w-7"
@@ -755,32 +900,78 @@ viewFlagsSelect { t } basic =
                     [ text ("+" ++ supportedCountry.country.countryCode) ]
                 ]
 
-        id =
-            ContactType.toString basic.contactType ++ "_select"
+        withPreventAll message =
+            { message = message, preventDefault = True, stopPropagation = True }
     in
-    div [ class "mb-10 flex-shrink-0", Html.Attributes.id id ]
+    div [ class "mb-10 flex-shrink-0" ]
         [ if basic.showFlags then
             button
-                [ class "fixed top-0 left-0 h-screen w-screen cursor-default z-40"
+                [ class "fixed top-0 left-0 w-full h-full cursor-default z-40"
                 , onClick (ClickedToggleContactFlags basic.contactType)
                 , type_ "button"
+                , tabindex -1
                 ]
                 []
 
           else
             text ""
-        , View.Form.label id (t "contact_form.country")
+        , View.Form.label (flagSelectorId basic.contactType) (t "contact_form.country")
         , button
             [ class "form-select select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
             , onClick (ClickedToggleContactFlags basic.contactType)
+            , Html.Attributes.id (flagSelectorId basic.contactType)
             , type_ "button"
+            , Html.Events.custom "keydown"
+                (Json.Decode.field "key" Json.Decode.string
+                    |> Json.Decode.andThen
+                        (\key ->
+                            case key of
+                                "ArrowUp" ->
+                                    PressedUpArrowOnFlagSelect basic.contactType
+                                        |> withPreventAll
+                                        |> Json.Decode.succeed
+
+                                "ArrowDown" ->
+                                    PressedDownArrowOnFlagSelect basic.contactType
+                                        |> withPreventAll
+                                        |> Json.Decode.succeed
+
+                                "Esc" ->
+                                    ClickedToggleContactFlags basic.contactType
+                                        |> withPreventAll
+                                        |> Json.Decode.succeed
+
+                                "Escape" ->
+                                    ClickedToggleContactFlags basic.contactType
+                                        |> withPreventAll
+                                        |> Json.Decode.succeed
+
+                                "Tab" ->
+                                    if basic.showFlags then
+                                        Json.Decode.succeed
+                                            { message = ClickedToggleContactFlags basic.contactType
+                                            , preventDefault = False
+                                            , stopPropagation = False
+                                            }
+
+                                    else
+                                        Json.Decode.fail "Only listen to tab when dropdown is open"
+
+                                _ ->
+                                    Json.Decode.fail "Expected arrow up or arrow down"
+                        )
+                )
             ]
-            [ flag "" basic.supportedCountry
+            [ flag False "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto" ]
-                    (List.map (flag "mt-1") countryOptions)
+                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
+                    , tabindex -1
+                    ]
+                    (countryOptions basic.supportedCountry
+                        |> List.map (flag True "mt-1")
+                    )
 
               else
                 text ""

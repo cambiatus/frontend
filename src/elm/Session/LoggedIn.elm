@@ -27,7 +27,6 @@ import Api
 import Api.Graphql
 import Auth
 import Avatar
-import Browser.Dom as Dom
 import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
@@ -40,7 +39,7 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, nav, p, text)
+import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
 import Html.Attributes exposing (class, classList, src, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -137,9 +136,23 @@ initLogin shared maybePrivateKey_ profile_ authToken =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
-        , Sub.map GotSearchMsg Search.subscriptions
+        [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
+        , if model.showUserNav then
+            Decode.field "key" Decode.string
+                |> Decode.andThen
+                    (\key ->
+                        if key == "Esc" || key == "Escape" then
+                            Decode.succeed ()
+
+                        else
+                            Decode.fail "Expecting Escape key"
+                    )
+                |> Browser.Events.onKeyDown
+                |> Sub.map (\_ -> ShowUserNav False)
+
+          else
+            Sub.none
         ]
 
 
@@ -520,48 +533,51 @@ viewHeader page ({ shared } as model) profile_ =
 
                   else
                     text ""
-                , nav
-                    [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50"
-                    , classList
-                        [ ( "hidden", not model.showUserNav )
-                        ]
-                    ]
-                    [ a
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
-                        , Route.href (Route.Profile model.accountName)
-                        , onClick ClickedProfileIcon
-                        ]
-                        [ Icons.profile "mr-4"
-                        , text_ "menu.profile"
-                        ]
-                    , button
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
-                        , onClick ToggleLanguageItems
-                        ]
-                        [ Icons.languages "mr-4"
-                        , text_ "menu.languages"
-                        ]
-                    , if model.showLanguageItems then
-                        div [ class "ml-10 mb-2" ]
-                            (button
-                                [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                , if model.showUserNav then
+                    View.Components.focusTrap { firstFocusContainer = Nothing }
+                        []
+                        [ nav
+                            [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
+                            [ a
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
+                                , Route.href (Route.Profile model.accountName)
+                                , onClick ClickedProfileIcon
                                 ]
-                                [ Shared.langFlag shared.language
-                                , text (Translation.languageToLanguageCode shared.language)
+                                [ Icons.profile "mr-4"
+                                , text_ "menu.profile"
                                 ]
-                                :: Shared.viewLanguageItems shared ClickedLanguage
-                            )
+                            , button
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                , onClick ToggleLanguageItems
+                                ]
+                                [ Icons.languages "mr-4"
+                                , text_ "menu.languages"
+                                ]
+                            , if model.showLanguageItems then
+                                div [ class "ml-10 mb-2" ]
+                                    (button
+                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                                        ]
+                                        [ Shared.langFlag shared.language
+                                        , text (Translation.languageToLanguageCode shared.language)
+                                        ]
+                                        :: Shared.viewLanguageItems shared ClickedLanguage
+                                    )
 
-                      else
-                        text ""
-                    , button
-                        [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
-                        , onClick ClickedLogout
+                              else
+                                text ""
+                            , button
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                , onClick ClickedLogout
+                                ]
+                                [ Icons.close "fill-current text-red mr-4"
+                                , text_ "menu.logout"
+                                ]
+                            ]
                         ]
-                        [ Icons.close "fill-current text-red mr-4"
-                        , text_ "menu.logout"
-                        ]
-                    ]
+
+                  else
+                    text ""
                 ]
             ]
         ]
@@ -605,12 +621,14 @@ communitySelectorModal model =
 
         viewCommunityItem : Profile.CommunityInfo -> Html Msg
         viewCommunityItem c =
-            div
-                [ class "flex items-center p-4 text-body cursor-pointer hover:text-black hover:bg-gray-100"
-                , onClick <| SelectedCommunity c
-                ]
-                [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
-                , text c.name
+            li [ class "flex" ]
+                [ button
+                    [ class "w-full flex items-center p-3 m-1 text-body rounded-sm hover:text-black hover:bg-gray-100 focus:outline-none focus:ring"
+                    , onClick <| SelectedCommunity c
+                    ]
+                    [ img [ src c.logo, class "h-16 w-16 mr-5 object-scale-down" ] []
+                    , text c.name
+                    ]
                 ]
     in
     if model.showCommunitySelector then
@@ -629,7 +647,7 @@ communitySelectorModal model =
                             [ p []
                                 [ text_ "menu.community_selector.body"
                                 ]
-                            , div [ class "w-full overflow-y-auto divide-y divide-gray-300" ]
+                            , ul [ class "w-full flex flex-col overflow-y-auto divide-y divide-gray-300" ]
                                 (List.map viewCommunityItem pro.communities)
                             ]
                         |> Modal.toHtml
@@ -900,8 +918,7 @@ type BroadcastMsg
 
 
 type Msg
-    = NoOp
-    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    = CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -913,7 +930,6 @@ type Msg
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
-    | KeyDown String
     | OpenCommunitySelector
     | CloseCommunitySelector
     | SelectedCommunity Profile.CommunityInfo
@@ -931,15 +947,6 @@ update msg model =
         shared =
             model.shared
 
-        focusMainContent b alternative =
-            if b then
-                Dom.focus "main-content"
-                    |> Task.attempt (\_ -> NoOp)
-
-            else
-                Dom.focus alternative
-                    |> Task.attempt (\_ -> NoOp)
-
         closeAllModals =
             { model
                 | showNotificationModal = False
@@ -949,9 +956,6 @@ update msg model =
             }
     in
     case msg of
-        NoOp ->
-            UR.init model
-
         GotTimeInternal time ->
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
@@ -1139,7 +1143,6 @@ update msg model =
 
         ShowUserNav b ->
             UR.init { closeAllModals | showUserNav = b }
-                |> UR.addCmd (focusMainContent (not b) "user-nav")
 
         ToggleLanguageItems ->
             UR.init { model | showLanguageItems = not model.showLanguageItems }
@@ -1216,14 +1219,6 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             []
                             err
-
-        KeyDown key ->
-            if key == "Esc" || key == "Escape" then
-                UR.init { closeAllModals | showUserNav = False }
-
-            else
-                model
-                    |> UR.init
 
         GotFeedbackMsg subMsg ->
             { model | feedback = Feedback.update subMsg model.feedback }
@@ -1581,9 +1576,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
@@ -1634,9 +1626,6 @@ msgToString msg =
 
         CompletedLoadUnread _ ->
             [ "CompletedLoadUnread" ]
-
-        KeyDown _ ->
-            [ "KeyDown" ]
 
         OpenCommunitySelector ->
             [ "OpenCommunitySelector" ]

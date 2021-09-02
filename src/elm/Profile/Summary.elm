@@ -197,7 +197,7 @@ viewUserInfo profile =
                 [ ul [ class "text-sm text-gray-900" ]
                     [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
                         [ text userName ]
-                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                    , li [] [ a [ href <| "mailto:" ++ email, class "hover:underline hover:text-orange-300 focus:outline-none focus:underline focus:text-orange-300" ] [ text email ] ]
                     , li [] [ text account ]
                     ]
                 ]
