@@ -297,6 +297,10 @@ withCounterType counterType options =
 withMask : { mask : String, replace : Char } -> InputOptions a -> InputOptions a
 withMask mask options =
     { options | mask = Just (StringMask mask) }
+        |> withElements
+            (Html.node "masked-input-helper" [ Html.Attributes.attribute "target-id" options.id ] []
+                :: options.extraElements
+            )
 
 
 {-| Adds a number mask to the input
@@ -304,6 +308,10 @@ withMask mask options =
 withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
 withNumberMask mask options =
     { options | mask = Just (NumberMask mask) }
+        |> withElements
+            (Html.node "masked-input-helper" [ Html.Attributes.attribute "target-id" options.id ] []
+                :: options.extraElements
+            )
 
 
 {-| Defines the input as a numeric input

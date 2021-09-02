@@ -24,6 +24,51 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 /* global HTMLElement, CustomEvent */
 
+window.customElements.define('masked-input-helper',
+  class MaskedInputHelper extends HTMLElement {
+    connectedCallback () {
+      this.className = 'hidden'
+
+      const targetElement = document.getElementById(this.getAttribute('target-id'))
+
+      if (!targetElement) throw 'Couldn\'t find target element for masked-input-helper'
+
+      let previousSelectionStart = targetElement.selectionStart
+      let previousValue = targetElement.value
+
+      targetElement.addEventListener('input', (e) => {
+        const newSelectionStart = targetElement.selectionStart
+
+        if (Math.abs(previousSelectionStart - newSelectionStart) > 1 && previousSelectionStart != previousValue.length) {
+          const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + 1
+          targetElement.setSelectionRange(newIndex, newIndex)
+        }
+
+        previousSelectionStart = newSelectionStart
+        previousValue = targetElement.value
+      })
+
+      targetElement.addEventListener('keydown', () => {
+        previousSelectionStart = targetElement.selectionStart
+      })
+
+      targetElement.addEventListener('click', () => {
+        previousSelectionStart = targetElement.selectionStart
+      })
+    }
+
+    firstIndexAfter (stringValue, baseIndex, element) {
+      for (let index = 0; index < stringValue.length; index++) {
+        if (stringValue[index] === element && index >= baseIndex) {
+          return index
+        }
+      }
+
+      return baseIndex
+    }
+  }
+)
+
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
     static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
