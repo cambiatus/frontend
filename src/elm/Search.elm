@@ -26,7 +26,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src)
+import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src, type_)
 import Html.Events exposing (onClick, onFocus, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -39,6 +39,7 @@ import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
+import Utils
 import View.Components
 import View.Form.Input as Input
 
@@ -160,7 +161,15 @@ update shared authToken symbol model msg =
             ( model, Cmd.none )
 
         CurrentQueryChanged q ->
-            ( { model | currentQuery = q }, Cmd.none )
+            if String.isEmpty q then
+                ( { model | currentQuery = q, state = RecentSearchesShowed }
+                , Cmd.none
+                )
+
+            else
+                ( { model | currentQuery = q }
+                , sendSearchQuery symbol shared q authToken
+                )
 
         FoundItemClicked ->
             ( { model
@@ -194,7 +203,12 @@ update shared authToken symbol model msg =
 
         GotSearchResults res ->
             ( { model
-                | state = ResultsShowed res Nothing
+                | state =
+                    if String.isEmpty model.currentQuery then
+                        model.state
+
+                    else
+                        ResultsShowed res Nothing
               }
             , Cmd.none
             )
@@ -215,6 +229,7 @@ update shared authToken symbol model msg =
         ClearSearchIconClicked ->
             ( { model
                 | currentQuery = ""
+                , state = RecentSearchesShowed
               }
             , Dom.focus "searchInput"
                 |> Task.attempt (\_ -> NoOp)
@@ -222,7 +237,13 @@ update shared authToken symbol model msg =
 
         InputFocused ->
             ( { model
-                | state = RecentSearchesShowed
+                | state =
+                    case model.state of
+                        Inactive ->
+                            RecentSearchesShowed
+
+                        _ ->
+                            model.state
               }
             , Cmd.none
             )
@@ -299,8 +320,9 @@ viewForm ({ t } as translators) model =
                     text ""
 
                 _ ->
-                    span
-                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer lowercase"
+                    button
+                        [ class "text-orange-300 ml-3 leading-10 cursor-pointer lowercase hover:underline focus:outline-none focus:underline"
+                        , type_ "button"
                         , onClick CancelClicked
                         ]
                         [ text (t "menu.cancel") ]
@@ -600,7 +622,10 @@ viewMembers { t } members =
 
 subscriptions : Sub Msg
 subscriptions =
-    Ports.gotRecentSearches GotRecentSearches
+    Sub.batch
+        [ Ports.gotRecentSearches GotRecentSearches
+        , Utils.escSubscription CancelClicked
+        ]
 
 
 
