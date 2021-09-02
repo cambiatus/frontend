@@ -316,8 +316,8 @@ withMask mask options =
     { options | mask = Just (StringMask mask) }
         |> withElements
             (Html.node "masked-input-helper"
-                [ Html.Attributes.attribute "target-id" options.id
-                , Html.Attributes.attribute "mask-type" "string"
+                [ attribute "target-id" options.id
+                , attribute "mask-type" "string"
                 ]
                 []
                 :: options.extraElements
@@ -331,8 +331,8 @@ withNumberMask mask options =
     { options | mask = Just (NumberMask mask) }
         |> withElements
             (Html.node "masked-input-helper"
-                [ Html.Attributes.attribute "target-id" options.id
-                , Html.Attributes.attribute "mask-type" "number"
+                [ attribute "target-id" options.id
+                , attribute "mask-type" "number"
                 ]
                 []
                 :: options.extraElements
