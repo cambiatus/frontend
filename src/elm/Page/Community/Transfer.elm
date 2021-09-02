@@ -518,18 +518,11 @@ update msg model ({ shared } as loggedIn) =
         EnteredAmount value ->
             case ( loggedIn.selectedCommunity, model.transferStatus ) of
                 ( RemoteData.Success selectedCommunity, EditingTransfer form ) ->
-                    let
-                        getNumericValues : String -> String
-                        getNumericValues =
-                            String.filter (validAmountCharacter selectedCommunity.symbol)
-                    in
                     { model
                         | transferStatus =
-                            EditingTransfer
-                                ({ form | amount = getNumericValues value }
-                                    |> validateAmount selectedCommunity.symbol
-                                        (maxTransferAmount model)
-                                )
+                            { form | amount = value }
+                                |> validateAmount selectedCommunity.symbol (maxTransferAmount model)
+                                |> EditingTransfer
                     }
                         |> UR.init
 

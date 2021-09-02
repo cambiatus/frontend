@@ -805,6 +805,19 @@ viewPhoneInput ({ t, tr } as translators) basic =
             , problems = basic.errors
             , translators = translators
             }
+            |> Input.withMask
+                { mask =
+                    basic.supportedCountry.phonePlaceholder
+                        |> String.map
+                            (\phoneChar ->
+                                if Char.isDigit phoneChar then
+                                    '#'
+
+                                else
+                                    phoneChar
+                            )
+                , replace = '#'
+                }
             |> Input.toHtml
         ]
 

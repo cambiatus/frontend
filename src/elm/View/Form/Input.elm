@@ -3,6 +3,7 @@ module View.Form.Input exposing
     , withCounter, withElements, withCurrency
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
     , withInputType, withType, withCounterType, asNumeric
+    , withMask
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -47,6 +48,11 @@ and character counters.
 @docs withInputType, withType, withCounterType, asNumeric
 
 
+## Masks
+
+@docs withMask
+
+
 # Converting to HTML
 
 @docs toHtml
@@ -58,6 +64,7 @@ import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import I18Next
+import Mask
 import Session.Shared exposing (Translators)
 import View.Form
 
@@ -98,6 +105,7 @@ init options =
     , inputType = Input
     , fieldType = Text
     , counterType = CountLetters
+    , mask = Nothing
     }
 
 
@@ -159,11 +167,25 @@ input options =
 
                 TextArea ->
                     ( Html.textarea, "form-input", class "" )
+
+        beforeInputFunction =
+            case options.mask of
+                Nothing ->
+                    identity
+
+                Just (StringMask mask) ->
+                    Mask.string mask
+
+                Just (NumberMask decimalDigits) ->
+                    \v ->
+                        v
+                            |> Mask.floatString decimalDigits
+                            |> Maybe.withDefault v
     in
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput options.onInput
+                :: onInput (beforeInputFunction >> options.onInput)
                 :: class ("w-full " ++ inputClass)
                 :: disabled options.disabled
                 :: value options.value
@@ -246,6 +268,7 @@ withCurrency symbol options =
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
         |> withType Number
+        |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
 
 
 {-| Determines the type of the input
@@ -267,6 +290,20 @@ withType fieldType options =
 withCounterType : CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
+
+
+{-| Adds a regular string mask to the input
+-}
+withMask : { mask : String, replace : Char } -> InputOptions a -> InputOptions a
+withMask mask options =
+    { options | mask = Just (StringMask mask) }
+
+
+{-| Adds a number mask to the input
+-}
+withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
+withNumberMask mask options =
+    { options | mask = Just (NumberMask mask) }
 
 
 {-| Defines the input as a numeric input
@@ -304,6 +341,21 @@ inputCounterviewWithAttrs tr max str attrs counterType =
 type CounterType
     = CountLetters
     | CountWords
+
+
+{-| A mask formats the input as the user writes in it. A common place to find
+them is on phone inputs. Here is an example for a BR phone number:
+
+    StringMask { mask = "(##) ####-####", replace = '#' }
+
+We can also use them to limit inputs that are meant to only receive numbers. In
+that case, we can limit the number of decimal digits. A NumberMask is already
+applied on symbol/currency inputs, based on that symbol's precision.
+
+-}
+type Mask
+    = NumberMask Mask.DecimalDigits
+    | StringMask { mask : String, replace : Char }
 
 
 
@@ -353,6 +405,7 @@ type alias InputOptions a =
     , inputType : InputType
     , fieldType : FieldType
     , counterType : CounterType
+    , mask : Maybe Mask
     }
 
 

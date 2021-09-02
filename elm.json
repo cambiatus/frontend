@@ -7,6 +7,7 @@
     "dependencies": {
         "direct": {
             "CurrySoftware/elm-datepicker": "4.0.0",
+            "NeoVier/elm-mask": "1.0.0",
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
             "abadi199/elm-input-extra": "5.2.4",
