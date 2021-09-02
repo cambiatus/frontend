@@ -38,6 +38,8 @@ window.customElements.define('masked-input-helper',
 
       this.inputListener = (e) => {
         if (maskType === 'number' && e.data === '.') {
+          if (targetElement.value.indexOf('.') === -1) return
+
           const newSelectionStart = targetElement.value.indexOf('.') + 1
           previousSelectionStart = newSelectionStart
           previousValue = targetElement.value
