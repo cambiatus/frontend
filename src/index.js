@@ -30,31 +30,55 @@ window.customElements.define('masked-input-helper',
       this.className = 'hidden'
 
       const targetElement = document.getElementById(this.getAttribute('target-id'))
+      if (!targetElement) throw new Error('Couldn\'t find target element for masked-input-helper')
 
-      if (!targetElement) throw 'Couldn\'t find target element for masked-input-helper'
+      const maskType = this.getAttribute('mask-type')
+      let previousSelectionStart = targetElement.selectionStart || 0
+      let previousValue = targetElement.value || ''
 
-      let previousSelectionStart = targetElement.selectionStart
-      let previousValue = targetElement.value
+      this.inputListener = (e) => {
+        if (maskType === 'number' && e.data === '.') {
+          const newSelectionStart = targetElement.value.indexOf('.') + 1
+          previousSelectionStart = newSelectionStart
+          previousValue = targetElement.value
+          targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
+          return
+        }
 
-      targetElement.addEventListener('input', (e) => {
-        const newSelectionStart = targetElement.selectionStart
+        const newSelectionStart = targetElement.selectionStart || 0
+        const isAtEnd = maskType === 'string' ? previousSelectionStart === previousValue.length : false
+        const isDeletingNumber = e.data === null && maskType === 'number'
+        const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
 
-        if (Math.abs(previousSelectionStart - newSelectionStart) > 1 && previousSelectionStart != previousValue.length) {
-          const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + 1
+        if ((isDeletingNumber || isChangingMask) && !isAtEnd) {
+          const sumFactor = e.data !== null && targetElement.value.length >= previousValue.length
+            ? +1
+            : -1
+          const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + sumFactor
           targetElement.setSelectionRange(newIndex, newIndex)
         }
 
         previousSelectionStart = newSelectionStart
         previousValue = targetElement.value
-      })
+      }
 
-      targetElement.addEventListener('keydown', () => {
+      this.selectionListener = () => {
         previousSelectionStart = targetElement.selectionStart
-      })
+      }
 
-      targetElement.addEventListener('click', () => {
-        previousSelectionStart = targetElement.selectionStart
-      })
+      targetElement.addEventListener('input', this.inputListener)
+      targetElement.addEventListener('keydown', this.selectionListener)
+      targetElement.addEventListener('click', this.selectionListener)
+    }
+
+    disconnectedCallback () {
+      const targetElement = document.getElementById(this.getAttribute('target-id'))
+
+      if (!targetElement) return
+
+      targetElement.removeEventListener('input', this.inputListener)
+      targetElement.removeEventListener('keydown', this.selectionListener)
+      targetElement.removeEventListener('click', this.selectionListener)
     }
 
     firstIndexAfter (stringValue, baseIndex, element) {

@@ -180,7 +180,25 @@ input options =
                     \v ->
                         v
                             |> Mask.floatString decimalDigits
-                            |> Maybe.withDefault v
+                            |> Maybe.map
+                                (\formattedString ->
+                                    if String.contains "." options.value && not (String.contains "." v) then
+                                        case String.split "." formattedString of
+                                            [ beforeSeparator, afterSeparator ] ->
+                                                if String.endsWith "00" beforeSeparator then
+                                                    String.dropRight 2 beforeSeparator ++ "." ++ afterSeparator
+
+                                                else
+                                                    beforeSeparator ++ "." ++ afterSeparator
+
+                                            _ ->
+                                                -- IMPOSSIBLE CASE
+                                                formattedString
+
+                                    else
+                                        formattedString
+                                )
+                            |> Maybe.withDefault options.value
     in
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
@@ -252,7 +270,7 @@ withInputContainerAttrs attrs options =
 -}
 withElements : List (Html a) -> InputOptions a -> InputOptions a
 withElements elements options =
-    { options | extraElements = elements }
+    { options | extraElements = elements ++ options.extraElements }
 
 
 {-| Displays the currency symbol in the input field
@@ -267,7 +285,6 @@ withCurrency symbol options =
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
-        |> withType Number
         |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
 
 
@@ -298,7 +315,11 @@ withMask : { mask : String, replace : Char } -> InputOptions a -> InputOptions a
 withMask mask options =
     { options | mask = Just (StringMask mask) }
         |> withElements
-            (Html.node "masked-input-helper" [ Html.Attributes.attribute "target-id" options.id ] []
+            (Html.node "masked-input-helper"
+                [ Html.Attributes.attribute "target-id" options.id
+                , Html.Attributes.attribute "mask-type" "string"
+                ]
+                []
                 :: options.extraElements
             )
 
@@ -309,7 +330,11 @@ withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
 withNumberMask mask options =
     { options | mask = Just (NumberMask mask) }
         |> withElements
-            (Html.node "masked-input-helper" [ Html.Attributes.attribute "target-id" options.id ] []
+            (Html.node "masked-input-helper"
+                [ Html.Attributes.attribute "target-id" options.id
+                , Html.Attributes.attribute "mask-type" "number"
+                ]
+                []
                 :: options.extraElements
             )
 
