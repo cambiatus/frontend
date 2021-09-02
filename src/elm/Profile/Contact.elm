@@ -818,6 +818,7 @@ viewPhoneInput ({ t, tr } as translators) basic =
                             )
                 , replace = '#'
                 }
+            |> Input.withType Input.Telephone
             |> Input.toHtml
         ]
 
