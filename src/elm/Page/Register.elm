@@ -470,7 +470,7 @@ viewTitleForStep { t, tr } s =
                     "2"
     in
     p
-        [ class "md:ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500 md:ml-6" ]
         [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
         , strong
