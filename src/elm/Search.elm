@@ -139,9 +139,16 @@ offersSelectionSet =
 storeRecentSearches : List String -> Cmd msg
 storeRecentSearches recentSearches =
     recentSearches
+        |> List.unique
+        |> List.take maximumRecentSearches
         |> Encode.list Encode.string
         |> Encode.encode 0
         |> Ports.storeRecentSearches
+
+
+maximumRecentSearches : Int
+maximumRecentSearches =
+    10
 
 
 
@@ -200,13 +207,19 @@ update shared authToken symbol model msg =
         TabActivated activeTab ->
             case model.state of
                 ResultsShowed r previousActiveTab ->
-                    ( { model | state = ResultsShowed r (Just activeTab) }
-                    , case previousActiveTab of
-                        Nothing ->
+                    let
+                        newRecentQueries =
                             (model.currentQuery :: model.recentQueries)
                                 |> List.unique
-                                |> List.take 3
-                                |> storeRecentSearches
+                                |> List.take maximumRecentSearches
+                    in
+                    ( { model
+                        | state = ResultsShowed r (Just activeTab)
+                        , recentQueries = newRecentQueries
+                      }
+                    , case previousActiveTab of
+                        Nothing ->
+                            storeRecentSearches newRecentQueries
 
                         Just _ ->
                             Cmd.none
@@ -268,7 +281,7 @@ update shared authToken symbol model msg =
                 newRecentSearches =
                     (model.currentQuery :: model.recentQueries)
                         |> List.unique
-                        |> List.take 3
+                        |> List.take maximumRecentSearches
             in
             ( { model
                 | recentQueries = newRecentSearches
@@ -480,7 +493,7 @@ viewTabs { tr } results activeTab =
                         onClick clickMsg
 
                       else
-                        class ""
+                        tabindex -1
                     , if activeTab == tabKind then
                         tabindex -1
 
