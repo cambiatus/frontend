@@ -17,7 +17,6 @@ module Session.Guest exposing
 
 import Api.Graphql
 import Auth
-import Browser.Events
 import Browser.Navigation
 import Community
 import Dict
