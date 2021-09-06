@@ -915,7 +915,7 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label (flagSelectorId basic.contactType) (t "contact_form.country")
+        , View.Form.label [] (flagSelectorId basic.contactType) (t "contact_form.country")
         , button
             [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
