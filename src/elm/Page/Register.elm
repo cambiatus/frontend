@@ -11,7 +11,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, p, span, strong, text)
-import Html.Attributes exposing (class, disabled, id, src)
+import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
@@ -264,8 +264,8 @@ viewFooter { t } isSubmitEnabled guest =
                 ]
                 [ text (t "auth.login.continue") ]
     in
-    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
-        [ span []
+    div [ class "mt-auto flex flex-col items-center text-gray-333" ]
+        [ span [ class "mb-6" ]
             [ text (t "register.login")
             , a
                 [ class "underline text-orange-300"
@@ -468,20 +468,21 @@ viewTitleForStep { t, tr } s =
 
                 SavePassphrase ->
                     "2"
+
+        isSavingPassphrase =
+            case s of
+                FillForm ->
+                    False
+
+                SavePassphrase ->
+                    True
     in
     p
-        [ class "ml-4 py-4 mb-4 border-b border-dotted text-grey border-grey-500 md:ml-6" ]
+        [ class "mx-4 py-4 text-gray-333 border-t border-gray-500 font-bold md:mx-6" ]
         [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
-        , strong
-            [ class <|
-                case s of
-                    FillForm ->
-                        "text-black"
-
-                    SavePassphrase ->
-                        "text-white"
-            ]
+        , span
+            [ classList [ ( "text-white", isSavingPassphrase ) ] ]
             [ text <| t ("register.form.step" ++ stepNum ++ "_title") ]
         ]
 
