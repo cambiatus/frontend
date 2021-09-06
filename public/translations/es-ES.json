@@ -11,7 +11,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Bienvenido a {{community_name}}",
+    "welcome_to": "Bienvenido de nuevo,",
     "my_communities": "Bienvenido a ",
     "dashboard": "Inicio",
     "news": "Noticias",
@@ -190,7 +190,7 @@
       "wordsMode": {
         "input": {
           "description": "Ingrese sus 12 palabras, que ha copiado y pegado en el registro.",
-          "label": "Sus 12 palabras (que guardó al crear su cuenta)",
+          "label": "Sus 12 palabras",
           "placeholder": "Escriba sus 12 palabras aquí",
           "tooltip": "También puedes usar tu CLAVE PRIVADA",
           "toggle": "Quiero usar la clave privada",
@@ -801,7 +801,7 @@
     "scan": "Escanea",
     "or_choose_list": "o escoge de la lista",
     "choose_one_option": "Escoge una de las opciones",
-    "next": "Siguiente",
+    "continue": "Continuar",
     "your_action": "Tu acción:",
     "add_comment": "Agrega un comentario",
     "claim": "Reclamar",

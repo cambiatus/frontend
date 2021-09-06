@@ -61,7 +61,7 @@ body > * {
 
 @layer components {
   .form-input {
-    @apply bg-white px-3 py-2 placeholder-gray-400 input-border;
+    @apply bg-white px-3 py-2 placeholder-gray-900 input-border text-base;
   }
 
   .input-border {

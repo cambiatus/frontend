@@ -11,7 +11,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Welcome to {{community_name}}",
+    "welcome_to": "Welcome back,",
     "my_communities": "Welcome to ",
     "dashboard": "Dashboard",
     "news": "News",
@@ -190,7 +190,7 @@
       "wordsMode": {
         "input": {
           "description": "Enter your 12 words, that you've copied and pasted on registration.",
-          "label": "Your 12 words (you saved when creating your account)",
+          "label": "Your 12 words",
           "placeholder": "Type your 12 words here",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
@@ -798,7 +798,7 @@
     "scan": "Scan",
     "or_choose_list": "Or choose from the list",
     "choose_one_option": "Choose one of the options",
-    "next": "Next",
+    "continue": "Continue",
     "your_action": "Your Action:",
     "add_comment": "Add a comment",
     "claim": "Claim",
