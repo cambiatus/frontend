@@ -251,7 +251,7 @@ viewPin { shared } model =
             shared.translators
     in
     [ viewIllustration "login_pin.svg"
-    , p [ class "text-white mb-5" ]
+    , p [ class "text-white mb-6" ]
         [ text (t (trPrefix "nowCreate"))
         , text " "
         , strong [] [ text (t (trPrefix "sixDigitPin")) ]
@@ -263,8 +263,8 @@ viewPin { shared } model =
         , text <| t (trPrefix "eachLogin")
         ]
     , model.pinModel
-        |> Pin.withAttrs [ class "mb-8" ]
-        |> Pin.withLabelAttrs [ class "text-green" ]
+        |> Pin.withAttrs []
+        |> Pin.withLabelAttrs [ class "text-white" ]
         |> Pin.withCounterAttrs [ class "!text-white" ]
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
