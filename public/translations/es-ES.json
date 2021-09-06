@@ -342,8 +342,7 @@
       "title": "Oh-oh. Algo salió mal mientras creabamos tu cuenta"
     },
     "account_created": {
-      "greet": "Oye",
-      "last_step": "es el último paso y el más importante",
+      "greet": "Oye {{name}},",
       "copy": "Copiar",
       "i_saved_words": "Copié y pegué en un lugar seguro las 12 palabras como Cambiatus me indicó",
       "words_copied": "fueron copiadas al portapapeles",

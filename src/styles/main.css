@@ -398,21 +398,6 @@ body > * {
   min-height: stretch;
 }
 
-/* Sticky Footer, https://css-tricks.com/couple-takes-sticky-footer/#article-header-id-3 */
-.sf-wrapper {
-  @apply flex flex-col;
-}
-
-.sf-content {
-  flex: 1 0 auto;
-}
-
-.sf-footer {
-  flex-shrink: 0;
-}
-
-/* End of Sticky Footer */
-
 /* Objectives */
 .action-verifier svg {
   fill: #eee;

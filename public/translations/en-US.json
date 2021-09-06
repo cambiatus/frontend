@@ -338,8 +338,7 @@
       "title": "Uoh. Something went wrong while creating your account"
     },
     "account_created": {
-      "greet": "Hey",
-      "last_step": "it is the last step, and the most important",
+      "greet": "Hey {{name}},",
       "copy": "copy",
       "i_saved_words": "I've copied and pasted on a secure place the 12 words as Cambiatus asked",
       "words_copied": "were copied to clipboard",

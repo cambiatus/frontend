@@ -1683,7 +1683,7 @@ async function handleJavascriptPort (arg) {
       document.querySelector('#' + arg.data.id).select()
       document.execCommand('copy')
 
-      return {}
+      return { copied: true }
     }
     case 'readClipboard': {
       if (canReadClipboard()) {

@@ -342,8 +342,7 @@
       "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
     },
     "account_created": {
-      "greet": "Ei",
-      "last_step": "és l’últim pas i el més important",
+      "greet": "Ei {{name}},",
       "copy": "copieu",
       "i_saved_words": "He copiat i enganxat en un lloc segur les 12 paraules que va demanar Cambiatus",
       "words_copied": "es van copiar al porta-retalls",
