@@ -593,7 +593,7 @@ viewInformativeFields ({ t, tr } as translators) community =
             ]
         ]
     , div [ class "bg-gray-100 py-4 text-center mb-10" ]
-        [ div [ class "text-xl font-medium mb-4" ]
+        [ div [ class "text-xl font-semibold mb-4" ]
             (symbolExample
                 ++ [ span [ class "ml-4 text-green" ] [ text (Eos.symbolToSymbolCodeString community.symbol) ] ]
             )

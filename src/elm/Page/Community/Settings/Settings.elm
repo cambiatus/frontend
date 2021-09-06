@@ -121,11 +121,11 @@ settingCard title action description route =
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
         , style "grid-column" "1 / 4"
         ]
-        [ span [ class "text-sm font-medium" ] [ text title ]
+        [ span [ class "text-sm font-semibold" ] [ text title ]
         , span [ class "text-sm text-gray-900 uppercase" ] [ text description ]
         , a [ Route.href route ]
             [ button
-                [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"
+                [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-semibold h-8"
                 ]
                 [ text action ]
             ]

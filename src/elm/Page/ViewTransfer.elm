@@ -125,7 +125,7 @@ viewTransfer loggedIn transfer direction =
                     , src "/images/transfer-doggo.svg"
                     ]
                     []
-                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
+                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-semibold text-white" ]
                     [ text <|
                         case direction of
                             TransferDirectionValue.Sending ->
@@ -247,7 +247,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                                 t "transfer_result.transferred"
                     ]
                 , div [ class "flex text-green" ]
-                    [ span [ class "font-medium text-lg" ]
+                    [ span [ class "font-semibold text-lg" ]
                         [ transfer.value
                             |> Eos.formatSymbolAmount transfer.community.symbol
                             |> text

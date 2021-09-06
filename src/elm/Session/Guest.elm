@@ -249,7 +249,12 @@ viewPageHeader model shared =
     header
         [ class "flex items-center justify-between pl-4 py-4 md:pl-6 bg-white" ]
         [ a [ Route.href (Route.Login model.maybeInvitation model.afterLoginRedirect) ]
-            [ img [ class "h-10 w-10", src logo ] [] ]
+            [ if String.isEmpty logo then
+                text ""
+
+              else
+                img [ class "h-10 w-10", src logo ] []
+            ]
         , div [ class "relative z-50" ]
             [ button
                 [ type_ "button"

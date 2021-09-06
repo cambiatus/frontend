@@ -687,7 +687,7 @@ view translators model =
 viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
-        [ div [ class "font-menu font-medium flex items-center mb-4 justify-between" ]
+        [ div [ class "font-menu font-semibold flex items-center mb-4 justify-between" ]
             [ div [ class "flex items-center" ]
                 [ contactTypeToIcon "mr-2" False basic.contactType
                 , text (contactTypeToString translators basic.contactType)

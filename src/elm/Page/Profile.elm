@@ -767,7 +767,7 @@ viewProfile loggedIn profile =
                     [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                     , div [ class "flex flex-grow items-center justify-between" ]
                         [ ul [ class "text-sm text-gray-900" ]
-                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                            [ li [ class "font-semibold text-body-black text-2xl xs-max:text-xl" ]
                                 [ text (Maybe.withDefault "" profile.name) ]
                             , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
                             , li [] [ text (Eos.nameToString profile.account) ]
@@ -921,7 +921,7 @@ viewDetailsItem label content verticalAlign =
             ]
             [ span [ class "text-sm mr-4" ]
                 [ label ]
-            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+            , span [ class "text-indigo-500 font-semibold text-sm text-right" ]
                 [ content ]
             ]
         ]
@@ -1103,7 +1103,7 @@ viewLatestTransactions loggedIn model =
             [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+                , span [ class "text-indigo-500 font-semibold" ] [ text_ "transfer.transfers" ]
                 ]
             , case model.transfersStatus of
                 FailedLoading ->

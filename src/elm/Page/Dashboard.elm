@@ -248,7 +248,7 @@ viewHeader loggedIn community isCommunityAdmin =
     div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-lg" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
-            , span [ class "text-indigo-500 font-medium" ]
+            , span [ class "text-indigo-500 font-semibold" ]
                 [ text community.name
                 ]
             ]
@@ -438,7 +438,7 @@ viewAnalysisList loggedIn model =
                     [ class "w-full" ]
                     [ div [ class "flex justify-between text-gray-600 text-lg font-light flex mt-4 mb-4" ]
                         [ div [ class "flex flex-wrap mr-4 text-lg" ]
-                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
+                            [ div [ class "text-indigo-500 mr-2 font-semibold" ]
                                 [ text_ "dashboard.analysis.title.1" ]
                             , text_ "dashboard.analysis.title.2"
                             ]
@@ -450,7 +450,7 @@ viewAnalysisList loggedIn model =
                                 [ Icons.sortDirection ""
                                 ]
                             , a
-                                [ class "button button-secondary font-medium "
+                                [ class "button button-secondary font-semibold "
                                 , Route.href Route.Analysis
                                 ]
                                 [ text_ "dashboard.analysis.all" ]
@@ -557,7 +557,7 @@ viewTransfers loggedIn model isMobile =
             [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
+                , span [ class "text-indigo-500 font-semibold" ] [ text <| t "transfer.transfers" ]
                 ]
             , button
                 [ class "flex items-center text-lg lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"

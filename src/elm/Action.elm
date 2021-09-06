@@ -564,7 +564,7 @@ viewSearchActions ({ t } as translators) today actions =
                             [ p []
                                 [ text (t "menu.search.gain")
                                 , br [] []
-                                , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                                , span [ class "text-green font-semibold" ] [ text <| String.fromFloat action.reward ]
                                 , text " "
                                 , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]

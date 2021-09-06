@@ -485,7 +485,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
                 [ Icons.notification "fill-current text-black"
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-sm rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-semibold text-sm rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
@@ -665,7 +665,7 @@ viewMainMenu page model =
             "mx-4 w-48 font-sans uppercase flex items-center justify-center text-sm text-gray-700 hover:text-indigo-500"
 
         activeClass =
-            "border-orange-100 border-b-2 text-indigo-500 font-medium"
+            "border-orange-100 border-b-2 text-indigo-500 font-semibold"
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"

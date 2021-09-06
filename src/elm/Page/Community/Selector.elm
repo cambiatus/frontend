@@ -60,7 +60,7 @@ view_ shared model profile =
     div [ class "flex-grow flex flex-col" ]
         [ div [ class "flex flex-col items-center" ]
             [ img [ src "/images/map.svg" ] []
-            , span [ class "font-medium text-black text-xl" ] [ text "Welcome" ]
+            , span [ class "font-semibold text-black text-xl" ] [ text "Welcome" ]
             , span [ class "text-black text-sm" ] [ text "Choose the community you would like to join" ]
             ]
         , div [ class "bg-white flex-grow mt-8" ]

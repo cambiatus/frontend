@@ -282,7 +282,7 @@ viewObjective loggedIn model metadata index objective =
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ View.MarkdownEditor.viewReadOnly
-                        [ class "text-white font-medium"
+                        [ class "text-white font-semibold"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
                         objective.description
@@ -604,7 +604,7 @@ viewAction shared canEdit date action isDisabled =
                 , div [ class "mt-5 flex flex-row items-baseline" ]
                     [ div [ class ("text-green mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
-                        , span [ class "font-medium" ] [ text rewardStr ]
+                        , span [ class "font-semibold" ] [ text rewardStr ]
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
                         [ if validationType == "CLAIMABLE" then

@@ -469,7 +469,7 @@ viewClaimCard loggedIn profileSummaries claim =
                     || Action.isPastDeadline claim.action loggedIn.shared.now
               then
                 button
-                    [ class "button button-secondary w-full font-medium mb-2"
+                    [ class "button button-secondary w-full font-semibold mb-2"
                     , Utils.onClickNoBubble (GotExternalMsg OpenClaimModal)
                     ]
                     [ text (t "all_analysis.more_details") ]

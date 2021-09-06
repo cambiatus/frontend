@@ -75,13 +75,6 @@ module.exports = {
       'full': '9999px',
       'large': '12px'
     },
-    // Overwriting since the current font family only have these weights
-    fontWeight: {
-      light: 300,
-      normal: 400,
-      medium: 600,
-      bold: 700
-    },
     // transform keys
     rotate: {
       '-90': '-90deg',
@@ -139,6 +132,7 @@ module.exports = {
         '108': '27rem'
       },
       minHeight: {
+        '25': '6.25rem',
         '36': '9rem',
         '48': '12rem'
       },

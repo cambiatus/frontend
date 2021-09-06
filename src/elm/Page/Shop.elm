@@ -190,15 +190,15 @@ viewHeader loggedIn =
     div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:mx-auto lg:py-12" ]
         [ div [ class "flex w-full container mx-auto" ]
             [ div [ class "w-1/2" ]
-                [ p [ class "text-white w-full text-xl font-medium mx-8 font-light mb-2 uppercase" ]
+                [ p [ class "text-white w-full text-xl font-semibold mx-8 font-light mb-2 uppercase" ]
                     [ text (t "shop.title") ]
-                , p [ class "hidden lg:visible lg:flex text-white text-3xl mx-8 mb-4 font-medium" ]
+                , p [ class "hidden lg:visible lg:flex text-white text-3xl mx-8 mb-4 font-semibold" ]
                     [ text (t "shop.subtitle") ]
                 , p [ class "hidden lg:visible lg:flex text-white mx-8 font-light text-sm" ]
                     [ text (t "shop.description") ]
                 , a
                     [ Route.href Route.NewSale
-                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-medium"
+                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-semibold"
                     ]
                     [ text (t "shop.create_offer") ]
                 ]
@@ -314,7 +314,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     []
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
-                [ p [ class "font-medium pt-2 w-full" ] [ text card.product.title ]
+                [ p [ class "font-semibold pt-2 w-full" ] [ text card.product.title ]
                 , viewProfileNameTag shared loggedIn.accountName card.product.creator
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.product.units == 0 && card.product.trackStock then
@@ -326,7 +326,7 @@ viewCard model ({ shared } as loggedIn) index card =
 
                       else
                         div [ class "flex flex-none w-full items-center" ]
-                            [ p [ class "text-green text-2xl font-medium" ] [ text (String.fromFloat card.product.price) ]
+                            [ p [ class "text-green text-2xl font-semibold" ] [ text (String.fromFloat card.product.price) ]
                             , div [ class "uppercase text-sm ml-2 font-extralight font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
                             ]
                     , div [ class "w-full h-4" ]

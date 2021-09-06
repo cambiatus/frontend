@@ -195,7 +195,7 @@ viewUserInfo profile =
             [ Avatar.view profile.avatar "w-20 h-20 mr-6 flex-shrink-0"
             , div [ class "flex items-center justify-between" ]
                 [ ul [ class "text-sm text-gray-900" ]
-                    [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                    [ li [ class "font-semibold text-body-black text-2xl xs-max:text-xl" ]
                         [ text userName ]
                     , li [] [ a [ href <| "mailto:" ++ email, class "hover:underline hover:text-orange-300 focus:outline-none focus:underline focus:text-orange-300" ] [ text email ] ]
                     , li [] [ text account ]

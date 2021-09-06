@@ -249,13 +249,13 @@ viewContent { t } { creator, community } innerContent =
         , div [ class "px-4" ]
             [ div [ class "mt-6" ]
                 [ div [ class "text-lg text-center" ]
-                    [ span [ class "font-medium" ]
+                    [ span [ class "font-semibold" ]
                         [ text inviter
                         ]
                     , text " "
                     , text (t "community.invitation.title")
                     , text " "
-                    , span [ class "font-medium" ]
+                    , span [ class "font-semibold" ]
                         [ text community.name ]
                     ]
                 ]
