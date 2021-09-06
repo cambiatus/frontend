@@ -348,7 +348,7 @@ body > * {
 @layer utilities {
   .form-error {
     /* validation message for the field */
-    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in;
+    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in-from-above;
   }
 }
 

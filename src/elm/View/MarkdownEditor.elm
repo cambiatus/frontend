@@ -17,7 +17,6 @@ module View.MarkdownEditor exposing
     , withSubscription
     )
 
-import Browser.Dom
 import Browser.Events
 import Dict
 import Html exposing (Html, a, button, div, node, p, text)
@@ -36,7 +35,6 @@ import Parser
 import Parser.Advanced
 import Ports
 import Session.Shared exposing (Translators)
-import Task
 import View.Form
 import View.Form.Input as Input
 import View.Modal as Modal
@@ -77,8 +75,7 @@ type LinkModalState
 
 
 type Msg
-    = Ignored
-    | KeyDown String
+    = KeyDown String
     | ClickedIncludeLink Link
     | ClosedLinkModal
     | EnteredLinkLabel String
@@ -96,9 +93,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Ignored ->
-            ( model, Cmd.none )
-
         KeyDown key ->
             if key == "Enter" then
                 update ClickedAcceptLink model
@@ -107,10 +101,7 @@ update msg model =
                 ( model, Cmd.none )
 
         ClickedIncludeLink link ->
-            ( { model | linkModalState = Editing link }
-            , Browser.Dom.focus "link-modal-label"
-                |> Task.attempt (\_ -> Ignored)
-            )
+            ( { model | linkModalState = Editing link }, Cmd.none )
 
         ClosedLinkModal ->
             ( { model | linkModalState = NotShowing }, Cmd.none )
@@ -146,9 +137,7 @@ update msg model =
                     ( model, Cmd.none )
 
         ChangedText result ->
-            ( { model | contents = quillOpsToMarkdown result }
-            , Cmd.none
-            )
+            ( { model | contents = quillOpsToMarkdown result }, Cmd.none )
 
         RequestedSetContents ->
             ( model
@@ -851,9 +840,6 @@ linkDecoder =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         KeyDown _ ->
             [ "KeyDown" ]
 

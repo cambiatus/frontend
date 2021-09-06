@@ -113,7 +113,8 @@ view shared loggedInAccount profile model =
 mobileView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 mobileView shared loggedInAccount profile model =
     div [ class "md:hidden cursor-auto" ]
-        [ viewUserImg shared loggedInAccount profile True model
+        [ viewUserImg profile True model
+        , viewUserNameTag shared loggedInAccount profile model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
             |> Modal.withBody
                 [ div [ class "pt-14" ]
@@ -127,16 +128,28 @@ mobileView shared loggedInAccount profile model =
 desktopView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 desktopView shared loggedInAccount profile model =
     div
-        [ class "mx-auto hidden md:block"
-        , onMouseEnter OpenedInfo
-        , onMouseLeave ClosedInfo
-        ]
-        [ viewUserImg shared loggedInAccount profile False model
+        [ class "mx-auto hidden md:block" ]
+        [ div
+            [ onMouseEnter OpenedInfo
+            , onMouseLeave ClosedInfo
+            ]
+            [ viewUserImg profile False model ]
+        , viewUserNameTag shared loggedInAccount profile model
         ]
 
 
-viewUserImg : Shared -> Eos.Name -> Profile.Basic profile -> Bool -> Model -> Html Msg
-viewUserImg shared loggedInAccount profile isMobile model =
+viewUserNameTag : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+viewUserNameTag shared loggedInAccount profile model =
+    if model.showNameTag then
+        div [ class "mt-2" ]
+            [ Profile.viewProfileNameTag shared loggedInAccount profile ]
+
+    else
+        text ""
+
+
+viewUserImg : Profile.Basic profile -> Bool -> Model -> Html Msg
+viewUserImg profile isMobile model =
     let
         container attrs =
             if isMobile then
@@ -150,7 +163,7 @@ viewUserImg shared loggedInAccount profile isMobile model =
             [ container [] [ Avatar.view profile.avatar model.imageSize ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble
-                    { class_ = "w-120"
+                    { class_ = "w-120 animate-fade-in opacity-0"
                     , relativeSelector = model.relativeSelector
                     , scrollSelector = model.scrollSelector
                     }
@@ -159,12 +172,6 @@ viewUserImg shared loggedInAccount profile isMobile model =
               else
                 text ""
             ]
-        , if model.showNameTag then
-            div [ class "mt-2" ]
-                [ Profile.viewProfileNameTag shared loggedInAccount profile ]
-
-          else
-            text ""
         ]
 
 
@@ -190,7 +197,7 @@ viewUserInfo profile =
                 [ ul [ class "text-sm text-gray-900" ]
                     [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
                         [ text userName ]
-                    , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
+                    , li [] [ a [ href <| "mailto:" ++ email, class "hover:underline hover:text-orange-300 focus:outline-none focus:underline focus:text-orange-300" ] [ text email ] ]
                     , li [] [ text account ]
                     ]
                 ]
