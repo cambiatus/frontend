@@ -192,7 +192,7 @@ viewCreateAccount guest model =
             guest.shared
 
         formClasses =
-            "flex flex-grow flex-col bg-white px-4 md:px-0 md:max-w-sm self-center w-full"
+            "flex flex-grow flex-col bg-white px-4 md:px-0 md:pt-20 md:max-w-sm self-center w-full"
 
         backgroundColor =
             case model.step of
@@ -257,7 +257,7 @@ viewFooter { t } isSubmitEnabled guest =
                 ]
                 [ text (t "auth.login.continue") ]
     in
-    div [ class "mt-auto flex flex-col items-center text-gray-333" ]
+    div [ class "mt-auto flex flex-col items-center text-gray-333 md:mt-0" ]
         [ span [ class "mb-6" ]
             [ text (t "register.login")
             , a
@@ -295,7 +295,7 @@ viewAccountTypeSelector translators model =
         Just country ->
             div []
                 [ View.Form.label [] "radio" (translators.t "register.form.register_tooltip")
-                , div [ class "flex space-x-2" ]
+                , div [ class "flex space-x-2 mb-4" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
                         NaturalAccount
@@ -326,14 +326,11 @@ viewAccountTypeButton title accountType status =
                     False
     in
     div
-        [ class "w-1/2 text-center cursor-pointer rounded-sm cursor-pointer mb-4"
-        , class
-            (if isSelected then
-                "bg-orange-300 text-white"
-
-             else
-                "bg-gray-100 text-black"
-            )
+        [ class "w-1/2 text-center cursor-pointer rounded-sm cursor-pointer mb-4 py-2"
+        , classList
+            [ ( "bg-orange-300 text-white font-bold", isSelected )
+            , ( "bg-gray-100 text-black", not isSelected )
+            ]
         , onClick (AccountTypeSelected accountType)
         ]
         [ text title ]
