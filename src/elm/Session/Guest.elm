@@ -232,17 +232,6 @@ loginLeftCol =
 viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
     let
-        imageElement url =
-            img
-                [ class "h-6"
-                , src url
-                ]
-                []
-
-        loadingSpinner =
-            div [ class "full-spinner-container h-full" ]
-                [ div [ class "spinner spinner--delay" ] [] ]
-
         logo =
             case model.community of
                 RemoteData.Loading ->
@@ -258,15 +247,9 @@ viewPageHeader model shared =
                     shared.logo
     in
     header
-        [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
+        [ class "flex items-center justify-between pl-4 py-4 md:pl-6 bg-white" ]
         [ a [ Route.href (Route.Login model.maybeInvitation model.afterLoginRedirect) ]
-            [ case model.community of
-                RemoteData.Loading ->
-                    loadingSpinner
-
-                _ ->
-                    imageElement logo
-            ]
+            [ img [ class "h-10 w-10", src logo ] [] ]
         , div [ class "relative z-50" ]
             [ button
                 [ type_ "button"
