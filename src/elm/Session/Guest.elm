@@ -253,7 +253,7 @@ viewPageHeader model shared =
                 text ""
 
               else
-                img [ class "h-10 w-10", src logo ] []
+                img [ class "h-10", src logo ] []
             ]
         , div [ class "relative z-50" ]
             [ button
