@@ -458,7 +458,16 @@
       "claims": "Claims",
       "products": "Shop sales",
       "orders": "Shop purchases",
-      "transfers": "Transactions"
+      "transfers": "Transactions",
+      "our_supporters": "Our",
+      "supporters": "Supporters",
+      "our_messages": "Our",
+      "messages": "Messages",
+      "you": "You",
+      "your_turn": "{{community}} supported you, now it's your turn!",
+      "support_us": "Support us",
+      "see_supporters": "See the latest members who supported us.",
+      "see_all_supporters": "See all supporters"
     },
     "invite": {
       "title": "Invite your friends",
@@ -652,7 +661,7 @@
     },
     "thank_you": {
       "title": "Thank You!",
-      "headline": "Thank you for sponsoring this community!",
+      "headline": "Thank you for sponsoring {{community}}!",
       "importance": "Your contribution is very important for the people in this community.",
       "all_supporters": "See the list of all supporters"
     }

@@ -462,7 +462,16 @@
       "claims": "Reclamacions",
       "products": "Venda de botigues",
       "orders": "Compra de botigues",
-      "transfers": "Transaccions"
+      "transfers": "Transaccions",
+      "our_supporters": "Els nostres",
+      "supporters": "Seguidors",
+      "our_messages": "Els nostres",
+      "messages": "Missatges",
+      "you": "Tu",
+      "your_turn": "{{community}} t’ha ajudat, ara és el teu torn!",
+      "support_us": "recolza’ns",
+      "see_supporters": "Consulteu els darrers membres que ens van donar suport.",
+      "see_all_supporters": "Veure tots els seguidors"
     },
     "invite": {
       "title": "Convida als teus amics",
@@ -656,7 +665,7 @@
     },
     "thank_you": {
       "title": "Gràcies!",
-      "headline": "Gràcies per patrocinar aquesta comunitat!",
+      "headline": "Gràcies per patrocinar {{community}}!",
       "importance": "La vostra contribució és molt important per a la gent d’aquesta comunitat.",
       "all_supporters": "Consulteu la llista de tots els partidaris"
     }

@@ -462,7 +462,16 @@
       "claims": "Reivindicaciones",
       "products": "Ventas de la tienda",
       "orders": "Compras en la tienda",
-      "transfers": "Transacciónes"
+      "transfers": "Transacciónes",
+      "our_supporters": "Nuestros",
+      "supporters": "Partidarios",
+      "our_messages": "Nuestros",
+      "messages": "Mensajes",
+      "you": "Tú",
+      "your_turn": "{{community}} te ayudó, ¡ahora te toca a ti!",
+      "support_us": "Apoyanos",
+      "see_supporters": "Vea los miembros más recientes que nos apoyaron.",
+      "see_all_supporters": "Ver todos los partidarios"
     },
     "invite": {
       "title": "Invita a un amigo",
@@ -656,7 +665,7 @@
     },
     "thank_you": {
       "title": "¡Gracias!",
-      "headline": "¡Gracias por patrocinar esta comunidad!",
+      "headline": "¡Gracias por patrocinar {{community}}!",
       "importance": "Tu contribución es muy importante para las personas de esta comunidad.",
       "all_supporters": "Ver la lista de todos los patrocinadores"
     }

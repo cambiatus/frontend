@@ -13,7 +13,7 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
-import Html exposing (Html, a, button, div, h3, img, p, span, text)
+import Html exposing (Html, a, button, div, h2, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
 import Http
@@ -31,7 +31,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.MarkdownEditor
-import View.Sponsorship as Sponsorship
 
 
 
@@ -49,7 +48,6 @@ initModel : LoggedIn.Model -> Model
 initModel _ =
     { openObjectiveId = Nothing
     , tokenInfo = RemoteData.Loading
-    , sponsorModal = Sponsorship.initModal
     }
 
 
@@ -60,7 +58,6 @@ initModel _ =
 type alias Model =
     { openObjectiveId : Maybe Int
     , tokenInfo : RemoteData Http.Error Token.Model
-    , sponsorModal : Sponsorship.SponsorModal
     }
 
 
@@ -127,11 +124,8 @@ view loggedIn model =
 
                               else
                                 text ""
+                            , viewSponsorCards loggedIn.shared.translators community
                             , viewCommunityStats loggedIn.shared.translators community model
-                            , viewAllSupporters
-                            , viewSponsorCTA
-                            , Sponsorship.viewModal loggedIn community model.sponsorModal
-                                |> Html.map GotSponsorModalMsg
                             ]
                         ]
     in
@@ -142,6 +136,71 @@ view loggedIn model =
             [ id "communityPage" ]
             [ content ]
     }
+
+
+viewSponsorCards : Translators -> Community.Model -> Html msg
+viewSponsorCards { t, tr } community =
+    let
+        text_ =
+            text << t
+    in
+    div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
+        [ div [ class "w-full bg-white rounded p-4" ]
+            -- TODO - Check if has donated
+            -- TODO - Use new typography text-size class
+            [ h2 [ class "text-[22px] font-bold mb-6" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
+                ]
+            , div [ class "flex items-center mb-4" ]
+                [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                    [ text_ "community.index.you" ]
+                , p [ class "ml-4" ]
+                    [ text <|
+                        tr "community.index.your_turn"
+                            [ ( "community", community.name ) ]
+                    ]
+                ]
+            , a
+                [ class "button button-primary w-full mb-6"
+                , Route.href Route.CommunitySponsor
+                ]
+                [ text_ "community.index.support_us" ]
+            , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
+            , div [ class "flex mb-4" ]
+                -- TODO - Use supporters
+                (List.repeat 5 ()
+                    |> List.map
+                        (\_ ->
+                            div
+                                [ class "bg-gray-400 w-14 h-14 object-cover rounded-full -mr-2 border border-white" ]
+                                []
+                        )
+                )
+            , a
+                [ class "button button-secondary w-full"
+                , Route.href Route.CommunitySupporters
+                ]
+                [ text_ "community.index.see_all_supporters" ]
+            ]
+        , div [ class "w-full bg-white rounded p-4 relative hidden md:block" ]
+            -- TODO - Use new typography text-size class
+            [ h2 [ class "text-[22px] font-bold" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.messages" ]
+                ]
+
+            -- TODO - Use new typography text-size class
+            , p [ class "text-center text-gray-900 mt-24 font-bold text-[22px]" ] [ text_ "menu.coming_soon" ]
+            , img
+                [ class "absolute bottom-0 right-0 rounded-br"
+                , src "images/woman_announcer.svg"
+                ]
+                []
+            ]
+        ]
 
 
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
@@ -159,7 +218,7 @@ viewCommunityStats { t, tr } community model =
         ]
         [ case model.tokenInfo of
             RemoteData.Success { supply } ->
-                card [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white" ]
+                card [ class "col-span-2 flex items-center bg-green text-white" ]
                     [ Icons.coin "mr-6"
                     , div []
                         [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount supply.symbol supply.amount) ]
@@ -176,7 +235,7 @@ viewCommunityStats { t, tr } community model =
                 text ""
         , case model.tokenInfo of
             RemoteData.Success { minBalance } ->
-                card [ class "col-span-2 flex items-center px-6 py-5" ]
+                card [ class "col-span-2 flex items-center" ]
                     [ Icons.coin "mr-6"
                     , div []
                         [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount minBalance.symbol minBalance.amount) ]
@@ -223,60 +282,6 @@ viewCommunityStats { t, tr } community model =
                     [ text <| t "community.index.transfers" ]
                 ]
             , Icons.arrowsLeft "w-full"
-            ]
-        ]
-
-
-viewAllSupporters : Html Msg
-viewAllSupporters =
-    let
-        -- TODO - Use real supporters
-        supporters =
-            List.repeat 3 ()
-    in
-    -- TODO - I18N
-    div
-        [ class "container mx-auto px-4 mb-4" ]
-        [ div [ class "bg-white rounded p-4 space-y-4" ]
-            [ h3 [ class "text-heading text-gray-900 font-light" ]
-                [ text "Our "
-                , span [ class "text-indigo-500 font-medium" ] [ text "Supporters" ]
-                ]
-            , p [ class "text-black text-sm" ]
-                [ text "See the latest members who supported us" ]
-            , div [ class "divide-y divide-gray-500" ]
-                (supporters
-                    |> List.map
-                        (\_ -> Sponsorship.viewSupporter)
-                )
-            , a
-                [ class "button button-primary w-full"
-                , Route.href Route.CommunitySupporters
-                ]
-                [ text "See all supporters" ]
-            ]
-        ]
-
-
-viewSponsorCTA : Html Msg
-viewSponsorCTA =
-    -- TODO - I18N
-    -- TODO - Use community name
-    div [ class "container mx-auto px-4 mb-4" ]
-        [ div [ class "bg-white rounded p-4" ]
-            [ h3 [ class "text-heading text-gray-900 font-light" ]
-                [ text "Sponsor "
-                , span [ class "text-indigo-500 font-medium" ] [ text "Verdes" ]
-                ]
-            , p [ class "text-sm text-black mt-4" ]
-                [ text "Help us achieve our goals by sponsoring us. Click on the button below to be redirected to PayPal. "
-                , a [ class "text-orange-300 underline" ] [ text "Why sponsor Verdes?" ]
-                ]
-            , button
-                [ class "button button-primary w-full mt-6"
-                , onClick OpenedSponsorModal
-                ]
-                [ text "Sponsor Verdes" ]
             ]
         ]
 
@@ -392,9 +397,6 @@ type Msg
     | RequestedReloadCommunity
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
-      -- Sponsorship
-    | OpenedSponsorModal
-    | GotSponsorModalMsg Sponsorship.ModalMsg
       -- Objective
     | ClickedOpenObjective Int
     | ClickedCloseObjective
@@ -428,28 +430,6 @@ update msg model loggedIn =
                     { moduleName = "Page.Community", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
-
-        OpenedSponsorModal ->
-            { model | sponsorModal = Sponsorship.showModal model.sponsorModal }
-                |> UR.init
-
-        GotSponsorModalMsg subMsg ->
-            let
-                ( newSubmodel, subCmd, maybeFeedback ) =
-                    Sponsorship.updateModal loggedIn subMsg model.sponsorModal
-
-                showFeedback =
-                    case maybeFeedback of
-                        Nothing ->
-                            identity
-
-                        Just ( feedbackStatus, feedbackMsg ) ->
-                            UR.addExt (LoggedIn.ShowFeedback feedbackStatus feedbackMsg)
-            in
-            { model | sponsorModal = newSubmodel }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotSponsorModalMsg subCmd)
-                |> showFeedback
 
         GotActionMsg (Action.ClaimButtonClicked action) ->
             model
@@ -492,12 +472,6 @@ msgToString msg =
 
         GotTokenInfo r ->
             [ "GotTokenInfo", UR.resultToString r ]
-
-        OpenedSponsorModal ->
-            [ "OpenedSponsorModal" ]
-
-        GotSponsorModalMsg subMsg ->
-            "GotSponsorModalMsg" :: Sponsorship.modalMsgToString subMsg
 
         GotActionMsg _ ->
             [ "GotActionMsg" ]

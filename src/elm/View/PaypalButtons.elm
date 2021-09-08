@@ -1,7 +1,7 @@
 module View.PaypalButtons exposing (Error(..), view)
 
 import Html exposing (Html, node)
-import Html.Attributes exposing (attribute, id)
+import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on)
 import Json.Decode
 import Utils
@@ -65,6 +65,7 @@ view attrs options =
                 )
             :: on "paypal-load-error" (Json.Decode.succeed (options.onError LoadError))
             :: id options.id
+            :: class "z-0"
             :: attrs
         )
         []

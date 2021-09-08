@@ -234,6 +234,7 @@ type Page
     | CommunityEditor
     | CommunitySelector
     | CommunityThankYou
+    | CommunitySponsor
     | CommunitySupporters
     | Objectives
     | ObjectiveEditor

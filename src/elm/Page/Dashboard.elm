@@ -57,7 +57,6 @@ import View.Form
 import View.Form.Input as Input
 import View.Form.Select as Select
 import View.Modal as Modal
-import View.Sponsorship as Sponsorship
 
 
 
@@ -104,7 +103,6 @@ type alias Model =
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
     , isModalRequestingSponsorVisible : Bool
-    , sponsorModal : Sponsorship.SponsorModal
     }
 
 
@@ -133,7 +131,6 @@ initModel shared =
 
     -- TODO - Check if user has seen this modal before
     , isModalRequestingSponsorVisible = True
-    , sponsorModal = Sponsorship.initModal
     }
 
 
@@ -243,8 +240,6 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
-                        , Sponsorship.viewModal loggedIn community model.sponsorModal
-                            |> Html.map GotSponsorModalMsg
                         , viewModalRequestingSponsor shared community model
                         , viewTransferFilters loggedIn community.members model
                         ]
@@ -305,9 +300,9 @@ viewModalRequestingSponsor shared community model =
                         [ text_ "sponsorship.dashboard_modal.subtitle" ]
                     , p [ class "text-center" ]
                         [ text_ "sponsorship.dashboard_modal.explanation" ]
-                    , button
+                    , a
                         [ class "button button-primary w-full md:mt-8"
-                        , onClick ClickedSponsorCommunity
+                        , Route.href Route.CommunitySponsor
                         ]
                         [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
                     ]
@@ -980,8 +975,6 @@ type Msg
     | CopiedToClipboard
     | ToggleAnalysisSorting
     | ClosedModalRequestingSponsor
-    | ClickedSponsorCommunity
-    | GotSponsorModalMsg Sponsorship.ModalMsg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1576,31 +1569,6 @@ update msg model ({ shared, accountName } as loggedIn) =
             { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
                 |> UR.init
 
-        ClickedSponsorCommunity ->
-            { model
-                | sponsorModal = Sponsorship.showModal model.sponsorModal
-                , isModalRequestingSponsorVisible = False
-            }
-                |> UR.init
-
-        GotSponsorModalMsg subMsg ->
-            let
-                ( newSubmodel, subCmd, maybeFeedback ) =
-                    Sponsorship.updateModal loggedIn subMsg model.sponsorModal
-
-                showFeedback =
-                    case maybeFeedback of
-                        Nothing ->
-                            identity
-
-                        Just ( feedbackStatus, feedbackMsg ) ->
-                            UR.addExt (LoggedIn.ShowFeedback feedbackStatus feedbackMsg)
-            in
-            { model | sponsorModal = newSubmodel }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotSponsorModalMsg subCmd)
-                |> showFeedback
-
 
 
 -- HELPERS
@@ -1621,7 +1589,6 @@ shouldShowContactModal loggedIn model =
             showContactModalFromDate
                 && List.isEmpty profile.contacts
                 && not model.isModalRequestingSponsorVisible
-                && not model.sponsorModal.isVisible
 
         _ ->
             False
@@ -1921,9 +1888,3 @@ msgToString msg =
 
         ClosedModalRequestingSponsor ->
             [ "ClosedModalRequestingSponsor" ]
-
-        ClickedSponsorCommunity ->
-            [ "ClickedSponsorCommunity" ]
-
-        GotSponsorModalMsg subMsg ->
-            "GotSponsorModalMsg" :: Sponsorship.modalMsgToString subMsg

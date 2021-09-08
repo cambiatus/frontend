@@ -420,7 +420,16 @@
       "claims": "የይገባኛል ጥያቄዎች",
       "products": "የሱቅ ሽያጭ",
       "orders": "የሱቅ ግዢዎች",
-      "transfers": "ግብይቶች"
+      "transfers": "ግብይቶች",
+      "our_supporters": "የእኛ",
+      "supporters": "ደጋፊዎች",
+      "our_messages": "የእኛ",
+      "messages": "መልእክቶች",
+      "you": "አንቺ",
+      "your_turn": "{{community}} ረድቶዎታል ፣ አሁን የእርስዎ ተራ ነው!",
+      "support_us": "ይደግፉን",
+      "see_supporters": "እኛን የሚደግፉን የቅርብ ጊዜ አባላትን ይመልከቱ።",
+      "see_all_supporters": "ሁሉንም ደጋፊዎች ይመልከቱ"
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",
@@ -613,7 +622,7 @@
     },
     "thank_you": {
       "title": "አመሰግናለሁ!",
-      "headline": "ይህንን ማህበረሰብ ስፖንሰር ስላደረጉ እናመሰግናለን!",
+      "headline": "{{community}} ን ስፖንሰር ስላደረጉ እናመሰግናለን!",
       "importance": "በዚህ ማህበረሰብ ውስጥ ላሉ ሰዎች የእርስዎ አስተዋፅዖ በጣም አስፈላጊ ነው።",
       "all_supporters": "የሁሉንም ደጋፊዎች ዝርዝር ይመልከቱ"
     }

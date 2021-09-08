@@ -21,6 +21,7 @@ import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
+import Page.Community.Sponsor as CommunitySponsor
 import Page.Community.Supporters as CommunitySupporters
 import Page.Community.ThankYou as CommunityThankYou
 import Page.Community.Transfer as Transfer
@@ -181,6 +182,7 @@ type Status
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySelector CommunitySelector.Model
     | CommunityThankYou
+    | CommunitySponsor CommunitySponsor.Model
     | CommunitySupporters CommunitySupporters.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
@@ -222,6 +224,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
+    | GotCommunitySponsorMsg CommunitySponsor.Msg
     | GotCommunitySupportersMsg CommunitySupporters.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
@@ -474,6 +477,11 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySponsorMsg subMsg, CommunitySponsor subModel ) ->
+            CommunitySponsor.update subMsg subModel
+                >> updateLoggedInUResult CommunitySponsor GotCommunitySponsorMsg model
                 |> withLoggedIn
 
         ( GotCommunitySupportersMsg subMsg, CommunitySupporters subModel ) ->
@@ -912,6 +920,9 @@ statusToRoute status session =
         CommunityThankYou ->
             Just Route.CommunityThankYou
 
+        CommunitySponsor _ ->
+            Just Route.CommunitySponsor
+
         CommunitySupporters _ ->
             Just Route.CommunitySupporters
 
@@ -1274,6 +1285,11 @@ changeRouteTo maybeRoute model =
                 |> updateStatus model
                 |> noCmd
 
+        Just Route.CommunitySponsor ->
+            CommunitySponsor.init
+                >> updateStatusWith CommunitySponsor GotCommunitySponsorMsg model
+                |> withLoggedIn Route.CommunitySponsor
+
         Just Route.CommunitySupporters ->
             CommunitySupporters.init
                 >> updateStatusWith CommunitySupporters GotCommunitySupportersMsg model
@@ -1473,6 +1489,9 @@ msgToString msg =
 
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
+
+        GotCommunitySponsorMsg subMsg ->
+            "GotCommunitySponsorMsg" :: CommunitySponsor.msgToString subMsg
 
         GotCommunitySupportersMsg subMsg ->
             "GotCommunitySupportersMsg" :: CommunitySupporters.msgToString subMsg
@@ -1676,6 +1695,9 @@ view model =
 
         CommunityThankYou ->
             viewLoggedIn () LoggedIn.CommunityThankYou (\_ -> Ignored) (\l () -> CommunityThankYou.view l)
+
+        CommunitySponsor subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySponsor GotCommunitySponsorMsg CommunitySponsor.view
 
         CommunitySupporters subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySupporters GotCommunitySupportersMsg CommunitySupporters.view
