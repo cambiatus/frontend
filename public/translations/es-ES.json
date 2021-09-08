@@ -29,17 +29,22 @@
     "more": "Mas",
     "logout": "Salir",
     "search": {
-      "placeholder": "Encuentra acciones y ofertas",
+      "placeholder": "Encuentra acciones, ofertas y personas",
       "recentlyHeader": "Buscado recientemente",
       "notFoundLabel": "Usted buscó",
       "notFoundResults": "No se encontraron resultados",
       "overviewHeader": "Esto es lo que encontramos",
       "overviewShow": "mostrar",
       "overviewFound": "Nosotros encontramos",
-      "offer": "oferta",
-      "offers": "ofertas",
-      "action": "acción",
-      "actions": "acciónes",
+      "offer": "1 oferta",
+      "offers": "{{count}} ofertas",
+      "offers_title": "Ofertas ({{count}})",
+      "action": "1 acción",
+      "actions": "{{count}} acciónes",
+      "actions_title": "Acciones ({{count}})",
+      "member": "1 miembro",
+      "members": "{{count}} miembros",
+      "members_title": "Miembros ({{count}})",
       "gain": "Tu ganas"
     },
     "explore": "Explorar",
@@ -673,6 +678,18 @@
     },
     "changePin": "¡Cambia tu pin!",
     "newPin": "Nuevo PIN de seguridad",
+    "changePinPrompt": "Ingrese su nuevo PIN de seguridad de 6 dígitos.",
+    "history": {
+      "balance": "Balance total",
+      "transfers_number": "Numero de transferencias",
+      "transfers": "Transferencias",
+      "claims_number": "Número de reivindicaciones",
+      "claims": "Reivindicaciones",
+      "products": "Artículos en la tienda",
+      "items": "Artículos",
+      "registration_date": "Miembro desde",
+      "last_transaction": "Última transacción"
+    },
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
@@ -762,9 +779,7 @@
         "unitEmpty": "La unidad no puede estar vacía",
         "unitTooLow": "La unidad es demasiado baja, debe ser al menos 1",
         "unitTooHigh": "No hay suficientes unidades disponibles",
-        "unitNotOnlyNumbers": "Solo se permiten números",
-        "memoEmpty": "La nota no puede estar vacía",
-        "memoTooLong": "La nota es demasiado larga, el máximo es de 256 caracteres"
+        "unitNotOnlyNumbers": "Solo se permiten números"
       }
     },
     "delete": "Eliminar",
@@ -1111,5 +1126,19 @@
       "explanation": "Haga su contribución en efectivo haciendo clic en el botón de abajo. Serás redirigido a PayPal para completar tu transacción.",
       "sponsor": "Patrocinar {{community_name}}"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Añadir enlace",
+      "label": "Texto",
+      "url": "Enlace"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Remover enlace"
+    }
+  },
+  "block_explorer": {
+    "see": "Ver en el explorador de bloques"
   }
 }

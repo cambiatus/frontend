@@ -97,7 +97,7 @@ update msg model loggedIn =
                             model
                                 |> UR.init
                                 |> UR.addCmd
-                                    (Route.Profile
+                                    (Route.Profile loggedIn.accountName
                                         |> Route.replaceUrl loggedIn.shared.navKey
                                     )
                                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.ProfileResource)

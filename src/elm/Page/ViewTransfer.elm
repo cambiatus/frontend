@@ -5,9 +5,10 @@ import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing 
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
 import Eos
+import Eos.Explorer
 import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
-import Html.Attributes exposing (class, src)
+import Html.Attributes exposing (class, href, src, target)
 import Icons
 import Page
 import Profile.Summary
@@ -18,6 +19,7 @@ import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
 import View.Components
+import View.MarkdownEditor
 
 
 
@@ -176,14 +178,23 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                 , case transfer.memo of
                     Just memo ->
                         if String.length memo > 0 then
-                            viewDetail (t "transfer_result.message") (text memo)
+                            View.MarkdownEditor.viewReadOnly [] memo
+                                |> viewDetail (t "transfer_result.message")
 
                         else
                             text ""
 
                     Nothing ->
                         text ""
-                , a [ class "button button-secondary w-full mt-10", Route.href Route.Dashboard ]
+                , a
+                    [ class "button button-primary w-full mt-10"
+                    , Eos.Explorer.Transfer transfer.createdTx
+                        |> Eos.Explorer.link shared.environment
+                        |> href
+                    , target "_blank"
+                    ]
+                    [ text (t "block_explorer.see") ]
+                , a [ class "button button-secondary w-full mt-4", Route.href Route.Dashboard ]
                     [ text (t "transfer_result.my_balance") ]
                 ]
             ]

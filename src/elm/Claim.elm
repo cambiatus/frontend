@@ -52,6 +52,7 @@ import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
+import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -447,8 +448,8 @@ viewClaimCard loggedIn profileSummaries claim =
                         text ""
                 ]
             , div [ class "mb-6" ]
-                [ p [ class "text-body overflow-ellipsis overflow-hidden mb-2" ]
-                    [ text claim.action.description ]
+                [ View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2" ]
+                    claim.action.description
                 , div [ class "flex w-full" ]
                     [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
                         identity
@@ -627,7 +628,7 @@ viewVotingProgress shared completionStatus =
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
 viewClaimModal { shared, accountName } profileSummaries claim =
     let
-        { t, tr } =
+        { t } =
             shared.translators
 
         greenTextTitleClass =
@@ -728,7 +729,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ class claimVerifiersSectionClass ]
                 [ p [ class greenTextTitleClass ] [ text (t "claim.approved_by") ]
                 , div []
-                    [ if List.isEmpty claim.checks then
+                    [ if List.any .isApproved claim.checks |> not then
                         profileSummaryEmpty
 
                       else
@@ -832,7 +833,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             div
                 [ class "block mt-6" ]
                 [ p [ class greenTextTitleClass ] [ text (t "claim.action") ]
-                , p [ class "text-left mt-2 mb-6 text-lg w-full" ] [ text claim.action.description ]
+                , View.MarkdownEditor.viewReadOnly [ class "mt-2 mb-6 text-lg w-full" ]
+                    claim.action.description
                 , case claim.proofPhoto of
                     Just url ->
                         div

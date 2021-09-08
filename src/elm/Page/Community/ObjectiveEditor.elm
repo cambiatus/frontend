@@ -1,4 +1,4 @@
-module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
+module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, subscriptions, update, view)
 
 import Action
 import Api.Graphql
@@ -12,9 +12,9 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, span, text, textarea)
-import Html.Attributes exposing (class, disabled, maxlength, placeholder, required, rows, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, button, div, span, text)
+import Html.Attributes exposing (class, disabled, style, type_)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
@@ -27,6 +27,7 @@ import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -93,7 +94,7 @@ type alias CompletionStatus =
 
 
 type alias ObjectiveForm =
-    { description : String
+    { description : MarkdownEditor.Model
     , isCompleted : Bool
     }
 
@@ -112,7 +113,7 @@ type alias UpdateResult =
 type Msg
     = CompletedLoadCommunity Community.Model
     | ClosedAuthModal
-    | EnteredDescription String
+    | GotDescriptionEditorMsg MarkdownEditor.Msg
     | ClickedSaveObjective
     | ClickedCompleteObjective
     | DeniedCompleteObjective
@@ -124,7 +125,7 @@ type Msg
 
 initObjectiveForm : ObjectiveForm
 initObjectiveForm =
-    { description = ""
+    { description = MarkdownEditor.init "objective-description"
     , isCompleted = False
     }
 
@@ -242,19 +243,16 @@ viewForm { shared } formStatus =
             [ Html.form
                 [ class "mb-10"
                 ]
-                [ span [ class "input-label" ]
-                    [ text (t "community.objectives.editor.description_label") ]
-                , textarea
-                    [ class "input textarea-input w-full"
-                    , rows 5
-                    , disabled isDisabled
-                    , onInput EnteredDescription
-                    , value objForm.description
-                    , required True
-                    , maxlength 254
-                    , placeholder (t "community.objectives.editor.description_placeholder")
-                    ]
+                [ MarkdownEditor.view
+                    { translators = shared.translators
+                    , placeholder = Just (t "community.objectives.editor.description_placeholder")
+                    , label = t "community.objectives.editor.description_label"
+                    , problem = Nothing
+                    , disabled = False
+                    }
                     []
+                    objForm.description
+                    |> Html.map GotDescriptionEditorMsg
                 ]
             , div [ class "flex flex-col w-full space-y-4 md:space-y-0 md:flex-row md:justify-between" ]
                 [ button
@@ -384,44 +382,6 @@ completeObjectiveSelectionSet objectiveId =
         objectiveSelectionSet
 
 
-loadObjectiveForm : Community.Objective -> ObjectiveForm
-loadObjectiveForm objective =
-    { description = objective.description
-    , isCompleted = objective.isCompleted
-    }
-
-
-updateObjectiveForm : Msg -> (ObjectiveForm -> ObjectiveForm) -> UpdateResult -> UpdateResult
-updateObjectiveForm msg fn uResult =
-    case uResult.model.status of
-        Authorized (CreatingObjective objForm Creating) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | status =
-                            Authorized (CreatingObjective (fn objForm) Creating)
-                    }
-                )
-                uResult
-
-        Authorized (EditingObjective objective objForm Editing) ->
-            UR.mapModel
-                (\m ->
-                    { m
-                        | status = Authorized (EditingObjective objective (fn objForm) Editing)
-                    }
-                )
-                uResult
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg
-                    "Tried updating the objective form, but isn't authorized"
-                    Nothing
-                    { moduleName = "Page.Community.ObjectiveEditor", function = "updateObjectiveForm" }
-                    []
-
-
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     let
@@ -439,7 +399,12 @@ update msg model loggedIn =
                                     { model
                                         | status =
                                             Editing
-                                                |> EditingObjective objective (loadObjectiveForm objective)
+                                                |> EditingObjective objective
+                                                    { description =
+                                                        MarkdownEditor.init "objective-description"
+                                                            |> MarkdownEditor.setContents objective.description
+                                                    , isCompleted = objective.isCompleted
+                                                    }
                                                 |> Authorized
                                     }
                                         |> UR.init
@@ -483,9 +448,43 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
                             []
 
-        EnteredDescription val ->
-            UR.init model
-                |> updateObjectiveForm msg (\o -> { o | description = val })
+        GotDescriptionEditorMsg subMsg ->
+            case model.status of
+                Authorized (CreatingObjective objForm Creating) ->
+                    let
+                        ( newDescription, descriptionCmd ) =
+                            MarkdownEditor.update subMsg objForm.description
+                    in
+                    UR.init
+                        { model
+                            | status =
+                                CreatingObjective
+                                    { objForm | description = newDescription }
+                                    Creating
+                                    |> Authorized
+                        }
+                        |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
+
+                Authorized (EditingObjective objective objForm Editing) ->
+                    let
+                        ( newDescription, descriptionCmd ) =
+                            MarkdownEditor.update subMsg objForm.description
+                    in
+                    UR.init
+                        { model
+                            | status =
+                                EditingObjective objective { objForm | description = newDescription } Editing
+                                    |> Authorized
+                        }
+                        |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Tried updating the objective form, but isn't authorized"
+                            Nothing
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         ClickedCompleteObjective ->
             case model.status of
@@ -736,7 +735,7 @@ update msg model loggedIn =
                                             }
                                       , data =
                                             { asset = Eos.Asset 0 community.symbol
-                                            , description = objForm.description
+                                            , description = objForm.description.contents
                                             , creator = loggedIn.accountName
                                             }
                                                 |> Community.encodeCreateObjectiveAction
@@ -763,7 +762,7 @@ update msg model loggedIn =
                                             }
                                       , data =
                                             { objectiveId = objective.id
-                                            , description = objForm.description
+                                            , description = objForm.description.contents
                                             , editor = loggedIn.accountName
                                             }
                                                 |> Community.encodeUpdateObjectiveAction
@@ -877,6 +876,21 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.status of
+        Authorized (CreatingObjective form _) ->
+            Sub.none
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
+
+        Authorized (EditingObjective _ form _) ->
+            Sub.none
+                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
+
+        _ ->
+            Sub.none
+
+
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
@@ -928,8 +942,8 @@ msgToString msg =
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
 
-        EnteredDescription _ ->
-            [ "EnteredDescription" ]
+        GotDescriptionEditorMsg subMsg ->
+            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         ClickedSaveObjective ->
             [ "ClickedSaveObjective" ]

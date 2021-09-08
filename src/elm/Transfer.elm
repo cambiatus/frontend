@@ -1,9 +1,11 @@
 module Transfer exposing
     ( ConnectionTransfer
+    , CreatedTx
     , EdgeTransfer
     , ProfileSummaries
     , QueryTransfers
     , Transfer
+    , createdTxToString
     , encodeEosActionData
     , getTransfers
     , transferConnectionSelectionSet
@@ -36,6 +38,7 @@ import Json.Encode as Encode exposing (Value)
 import Profile
 import Profile.Summary
 import Session.LoggedIn as LoggedIn
+import View.MarkdownEditor
 
 
 type alias Transfer =
@@ -47,8 +50,17 @@ type alias Transfer =
     , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
-    , createdTx : String
+    , createdTx : CreatedTx
     }
+
+
+type CreatedTx
+    = CreatedTx String
+
+
+createdTxToString : CreatedTx -> String
+createdTxToString (CreatedTx tx) =
+    tx
 
 
 type alias CommunityId =
@@ -110,7 +122,7 @@ transferItemSelectionSet =
             )
         |> with (Cambiatus.Object.Transfer.community communitySelectionSet)
         |> with Cambiatus.Object.Transfer.createdAt
-        |> with Cambiatus.Object.Transfer.createdTx
+        |> with (SelectionSet.map CreatedTx Cambiatus.Object.Transfer.createdTx)
 
 
 communitySelectionSet : SelectionSet Cmm Cambiatus.Object.Community
@@ -242,8 +254,9 @@ view :
     -> Profile.Summary.Model
     -> (Profile.Summary.Msg -> msg)
     -> msg
+    -> List (Html.Attribute msg)
     -> Html msg
-view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
+view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
     let
         { t } =
             loggedIn.shared.translators
@@ -256,15 +269,16 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
                 ( transfer.from, False )
     in
     div
-        [ class "flex hover:bg-gray-100 p-4 cursor-pointer"
-        , onClick onClickMsg
-        ]
+        (class "flex hover:bg-gray-100 p-4 cursor-pointer"
+            :: onClick onClickMsg
+            :: attrs
+        )
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-14 h-14"
             |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
             |> Html.map profileSummaryToMsg
-        , div [ class "ml-4 w-full truncate" ]
+        , div [ class "ml-4 w-full overflow-ellipsis overflow-hidden" ]
             [ p
                 [ class "font-sm flex flex-wrap"
                 , classList
@@ -300,7 +314,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg =
                     text ""
 
                 Just memo ->
-                    span [ class "text-xs text-gray-900" ]
-                        [ text <| t memo ]
+                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 break-all" ]
+                        (t memo)
             ]
         ]

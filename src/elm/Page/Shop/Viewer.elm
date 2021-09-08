@@ -2,10 +2,11 @@ module Page.Shop.Viewer exposing
     ( LoggedInModel
     , LoggedInMsg
     , Model
-    , Msg
+    , Msg(..)
     , init
     , jsAddressToMsg
     , msgToString
+    , receiveLoggedInBroadcast
     , update
     , view
     )
@@ -37,6 +38,7 @@ import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Input as Input
+import View.MarkdownEditor
 
 
 
@@ -51,6 +53,7 @@ init session saleId =
                 { status = RemoteData.Loading
                 , viewing = ViewingCard
                 , form = initForm
+                , hasChangedDefaultMemo = False
                 , balances = []
                 , isBuyButtonDisabled = False
                 }
@@ -92,6 +95,7 @@ type alias LoggedInModel =
     { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
     , viewing : ViewState
     , form : Form
+    , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
     }
@@ -100,9 +104,8 @@ type alias LoggedInModel =
 type alias Form =
     { price : String
     , unitValidation : Validation
-    , memoValidation : Validation
     , units : String
-    , memo : String
+    , memo : View.MarkdownEditor.Model
     }
 
 
@@ -115,9 +118,10 @@ initForm : Form
 initForm =
     { price = ""
     , units = ""
-    , memo = defaultMemoKey
+    , memo =
+        View.MarkdownEditor.init "memo-editor"
+            |> View.MarkdownEditor.setContents defaultMemoKey
     , unitValidation = Valid
-    , memoValidation = Valid
     }
 
 
@@ -130,8 +134,6 @@ type FormError
     = UnitEmpty
     | UnitTooLow
     | UnitTooHigh
-    | MemoEmpty
-    | MemoTooLong
     | UnitNotOnlyNumbers
 
 
@@ -162,8 +164,9 @@ type LoggedInMsg
     | ClickedEdit Product
     | ClickedTransfer Product
     | EnteredUnit String
-    | EnteredMemo String
+    | GotMemoEditorMsg View.MarkdownEditor.Msg
     | GotTransferResult (Result (Maybe Value) String)
+    | CompletedLoadTranslations
 
 
 type alias UpdateResult =
@@ -351,7 +354,7 @@ updateAsLoggedIn msg model loggedIn =
                                         { from = loggedIn.accountName
                                         , to = sale.creatorId
                                         , value = value
-                                        , memo = model.form.memo
+                                        , memo = model.form.memo.contents
                                         }
                                             |> Transfer.encodeEosActionData
                                   }
@@ -407,16 +410,24 @@ updateAsLoggedIn msg model loggedIn =
                             { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
                             []
 
-        EnteredMemo m ->
+        GotMemoEditorMsg subMsg ->
             let
-                currentForm =
+                oldForm =
                     model.form
 
-                newForm =
-                    { currentForm | memo = m }
+                ( memo, memoCmd ) =
+                    View.MarkdownEditor.update subMsg oldForm.memo
             in
-            { model | form = newForm }
+            { model
+                | form = { oldForm | memo = memo }
+                , hasChangedDefaultMemo =
+                    ((String.trim memo.contents == defaultMemoKey)
+                        || (String.trim memo.contents == t defaultMemoKey)
+                    )
+                        |> not
+            }
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
 
         CompletedLoadBalances res ->
             case res of
@@ -427,6 +438,24 @@ updateAsLoggedIn msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
+
+        CompletedLoadTranslations ->
+            if not model.hasChangedDefaultMemo then
+                let
+                    oldForm =
+                        model.form
+
+                    ( memo, memoCmd ) =
+                        View.MarkdownEditor.forceSetContents (t defaultMemoKey)
+                            oldForm.memo
+                in
+                { model | form = { oldForm | memo = memo } }
+                    |> UR.init
+                    |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
+
+            else
+                model
+                    |> UR.init
 
 
 
@@ -617,13 +646,14 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                 |> Maybe.withDefault (Eos.stringToName "")
     in
     [ div [ class "font-medium text-3xl w-full" ] [ text sale.title ]
-    , div [ class "text-gray w-full md:text-sm" ] [ text sale.description ]
-    , div [ class "w-full flex items-center text-sm" ]
+    , View.MarkdownEditor.viewReadOnly [ class "text-gray w-full md:text-sm" ]
+        sale.description
+    , div [ class "w-full flex items-center text-sm mt-4" ]
         [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
         , text_ "shop.sold_by"
         , a
             [ class "font-bold ml-1"
-            , Route.href (Route.ProfilePublic <| Eos.nameToString sale.creator.account)
+            , Route.href (Route.Profile sale.creator.account)
             ]
             [ Profile.viewProfileName shared currentName sale.creator ]
         ]
@@ -791,24 +821,16 @@ viewTransferForm { shared } sale model =
             ]
         , p []
             [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
-        , Input.init
-            { label = t "shop.transfer.memo_label"
-            , id = fieldId.memo
-            , onInput = EnteredMemo
-            , disabled = False
-            , value =
-                if form.memo == defaultMemoKey then
-                    t form.memo
-
-                else
-                    form.memo
+        , View.MarkdownEditor.view
+            { translators = shared.translators
             , placeholder = Just (t defaultMemoKey)
-            , problems = getError form.memoValidation
-            , translators = shared.translators
+            , label = t "shop.transfer.memo_label"
+            , problem = Nothing
+            , disabled = False
             }
-            |> Input.withInputType Input.TextArea
-            |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
-            |> Input.toHtml
+            []
+            form.memo
+            |> Html.map GotMemoEditorMsg
         ]
 
 
@@ -837,12 +859,6 @@ getError validation =
 
                         UnitNotOnlyNumbers ->
                             "shop.transfer.errors.unitNotOnlyNumbers"
-
-                        MemoEmpty ->
-                            "shop.transfer.errors.memoEmpty"
-
-                        MemoTooLong ->
-                            "shop.transfer.errors.memoTooLong"
             in
             Just [ translationString ]
 
@@ -886,30 +902,29 @@ validateForm sale form =
 
                     Nothing ->
                         Invalid UnitNotOnlyNumbers
-
-        memoValidation =
-            if form.memo == "" then
-                Invalid MemoEmpty
-
-            else if String.length form.memo > 256 then
-                Invalid MemoTooLong
-
-            else
-                Valid
     in
     { form
         | unitValidation = unitValidation
-        , memoValidation = memoValidation
     }
 
 
 isFormValid : Form -> Bool
 isFormValid form =
-    form.unitValidation == Valid && form.memoValidation == Valid
+    form.unitValidation == Valid
 
 
 
 -- UTILS
+
+
+receiveLoggedInBroadcast : LoggedIn.BroadcastMsg -> Maybe LoggedInMsg
+receiveLoggedInBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.TranslationsLoaded ->
+            Just CompletedLoadTranslations
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -956,11 +971,14 @@ loggedInMsgToString msg =
         EnteredUnit u ->
             [ "EnteredUnit", u ]
 
-        EnteredMemo m ->
-            [ "EnteredMemo", m ]
+        GotMemoEditorMsg subMsg ->
+            "GotMemoEditorMsg" :: View.MarkdownEditor.msgToString subMsg
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        CompletedLoadTranslations ->
+            [ "CompletedLoadTranslations" ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

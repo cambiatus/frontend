@@ -1,4 +1,13 @@
-module Page.Profile.Editor exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
+module Page.Profile.Editor exposing
+    ( Model
+    , Msg
+    , init
+    , msgToString
+    , receiveBroadcast
+    , subscriptions
+    , update
+    , view
+    )
 
 import Api
 import Api.Graphql
@@ -23,6 +32,7 @@ import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
+import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -43,7 +53,7 @@ init loggedIn =
 type alias Model =
     { fullName : String
     , email : String
-    , bio : String
+    , bio : MarkdownEditor.Model
     , location : String
     , interests : List String
     , interest : String
@@ -55,7 +65,7 @@ initModel : Model
 initModel =
     { fullName = ""
     , email = ""
-    , bio = ""
+    , bio = MarkdownEditor.init "bio-editor"
     , location = ""
     , interests = []
     , interest = ""
@@ -120,7 +130,16 @@ view_ loggedIn model profile =
             [ viewAvatar translators model.avatar
             , viewInput translators isFullNameDisabled FullName model.fullName
             , viewInput translators False Email model.email
-            , viewInput translators False Bio model.bio
+            , MarkdownEditor.view
+                { translators = translators
+                , placeholder = Nothing
+                , label = t "profile.edit.labels.bio"
+                , problem = Nothing
+                , disabled = False
+                }
+                [ class "text-sm text-black" ]
+                model.bio
+                |> Html.map GotBioEditorMsg
             , viewInput translators False Location model.location
             , viewInput translators False Interest model.interest
             , viewInterests model.interests
@@ -139,14 +158,6 @@ viewInput translators isDisabled field currentValue =
 
                 Email ->
                     ( "profile.edit.labels.email", "email_input", identity )
-
-                Bio ->
-                    ( "profile.edit.labels.bio"
-                    , "bio_input"
-                    , Input.withInputType Input.TextArea
-                        >> Input.withCounter 255
-                        >> Input.withAttrs [ class "h-40 text-sm text-black" ]
-                    )
 
                 Location ->
                     ( "profile.edit.labels.localization", "location_input", identity )
@@ -239,6 +250,7 @@ viewAvatar translators avatar =
 type Msg
     = CompletedLoadProfile Profile.Model
     | OnFieldInput Field String
+    | GotBioEditorMsg MarkdownEditor.Msg
     | AddInterest
     | RemoveInterest String
     | ClickedSave
@@ -250,7 +262,6 @@ type Msg
 type Field
     = FullName
     | Email
-    | Bio
     | Location
     | Interest
 
@@ -275,7 +286,7 @@ update msg model loggedIn =
                 { model
                     | fullName = nullable profile.name
                     , email = nullable profile.email
-                    , bio = nullable profile.bio
+                    , bio = MarkdownEditor.setContents (nullable profile.bio) model.bio
                     , location = nullable profile.localization
                     , interests = profile.interests
                     , avatar =
@@ -297,20 +308,6 @@ update msg model loggedIn =
                         Email ->
                             { model | email = data }
 
-                        Bio ->
-                            let
-                                limit =
-                                    255
-
-                                limitedBio =
-                                    if String.length data < limit then
-                                        data
-
-                                    else
-                                        String.slice 0 limit data
-                            in
-                            { model | bio = limitedBio }
-
                         Location ->
                             { model | location = data }
 
@@ -318,6 +315,15 @@ update msg model loggedIn =
                             { model | interest = data }
             in
             UR.init newModel
+
+        GotBioEditorMsg subMsg ->
+            let
+                ( bio, bioCmd ) =
+                    MarkdownEditor.update subMsg model.bio
+            in
+            { model | bio = bio }
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotBioEditorMsg bioCmd)
 
         AddInterest ->
             let
@@ -369,7 +375,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt (LoggedIn.ProfileLoaded profile |> LoggedIn.ExternalBroadcast)
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "profile.edit_success"))
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Profile)
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Profile loggedIn.accountName))
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
@@ -439,12 +445,18 @@ modelToProfile model profile =
         , email = Just model.email
         , localization = Just model.location
         , interests = model.interests
-        , bio = Just model.bio
+        , bio = Just model.bio.contents
         , avatar =
             model.avatar
                 |> RemoteData.map Avatar.fromString
                 |> RemoteData.withDefault profile.avatar
     }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+        |> MarkdownEditor.withSubscription model.bio GotBioEditorMsg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -465,6 +477,9 @@ msgToString msg =
 
         OnFieldInput _ _ ->
             [ "OnFieldInput" ]
+
+        GotBioEditorMsg subMsg ->
+            "GotBioEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         AddInterest ->
             [ "AddInterest" ]

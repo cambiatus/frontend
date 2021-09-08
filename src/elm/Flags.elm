@@ -1,6 +1,5 @@
 module Flags exposing
     ( Endpoints
-    , Environment(..)
     , Flags
     , decode
     , default
@@ -13,8 +12,7 @@ import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
 
 
 type alias Flags =
-    { environment : Environment
-    , language : String
+    { language : String
     , maybeAccount : Maybe ( Eos.Name, Bool )
     , endpoints : Endpoints
     , logo : String
@@ -28,13 +26,13 @@ type alias Flags =
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
+    , pinVisibility : Bool
     }
 
 
 default : Flags
 default =
-    { environment = Development
-    , language = "en-US"
+    { language = "en-US"
     , maybeAccount = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.png"
@@ -48,13 +46,13 @@ default =
     , canReadClipboard = False
     , useSubdomain = True
     , selectedCommunity = Nothing
+    , pinVisibility = False
     }
 
 
 decode : Decoder Flags
 decode =
     Decode.succeed Flags
-        |> required "env" decodeEnvironment
         |> required "language" Decode.string
         |> DecodePipeline.custom
             (Decode.succeed
@@ -76,6 +74,7 @@ decode =
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
+        |> required "pinVisibility" Decode.bool
 
 
 type alias Endpoints =
@@ -99,21 +98,3 @@ decodeEndpoints =
         |> required "eosio" Decode.string
         |> required "api" Decode.string
         |> required "graphql" Decode.string
-
-
-type Environment
-    = Development
-    | Production
-
-
-decodeEnvironment : Decoder Environment
-decodeEnvironment =
-    Decode.map
-        (\env ->
-            if env == "development" then
-                Development
-
-            else
-                Production
-        )
-        Decode.string

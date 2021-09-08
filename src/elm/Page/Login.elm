@@ -41,7 +41,6 @@ import Validate exposing (Validator)
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Input as Input
-import View.Form.InputCounter as InputCounter
 import View.Pin as Pin
 
 
@@ -64,8 +63,8 @@ initPassphraseModel =
     }
 
 
-initPinModel : String -> PinModel
-initPinModel passphrase =
+initPinModel : Bool -> String -> PinModel
+initPinModel pinVisibility passphrase =
     { isSigningIn = False
     , passphrase = passphrase
     , pinModel =
@@ -75,6 +74,7 @@ initPinModel passphrase =
             , withConfirmation = True
             , submitLabel = "auth.login.submit"
             , submittingLabel = "auth.login.submitting"
+            , pinVisibility = pinVisibility
             }
     }
 
@@ -214,7 +214,7 @@ viewPassphrase ({ shared } as guest) model =
                     )
                 ]
             |> Input.withCounter 12
-            |> Input.withCounterType InputCounter.CountWords
+            |> Input.withCounterType Input.CountWords
             |> Input.withCounterAttrs [ class "text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
             |> Input.withElements [ viewPasteButton ]
@@ -350,7 +350,7 @@ update msg model guest =
         ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
             Validate.fromValid validPassphrase
                 |> .passphrase
-                |> initPinModel
+                |> initPinModel guest.shared.pinVisibility
                 |> EnteringPin
                 |> UR.init
                 |> UR.addCmd
@@ -609,10 +609,14 @@ updateWithPin msg model ({ shared } as guest) =
             let
                 ( pinModel, submitStatus ) =
                     Pin.update subMsg model.pinModel
+
+                ( newShared, submitCmd ) =
+                    Pin.postSubmitAction pinModel submitStatus shared SubmittedPinWithSuccess
             in
             { model | pinModel = pinModel }
                 |> UR.init
-                |> UR.addCmd (Pin.maybeSubmitCmd submitStatus SubmittedPinWithSuccess)
+                |> UR.addCmd submitCmd
+                |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
 
 
 

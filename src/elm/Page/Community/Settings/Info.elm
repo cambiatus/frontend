@@ -5,6 +5,7 @@ module Page.Community.Settings.Info exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
+    , subscriptions
     , update
     , view
     )
@@ -38,6 +39,7 @@ import View.Form
 import View.Form.FileUploader as FileUploader
 import View.Form.Input as Input
 import View.Form.Toggle
+import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -48,7 +50,7 @@ type alias Model =
     { logo : RemoteData Http.Error String
     , nameInput : String
     , nameErrors : List String
-    , descriptionInput : String
+    , descriptionInput : MarkdownEditor.Model
     , descriptionErrors : List String
     , websiteInput : String
     , websiteErrors : List String
@@ -70,7 +72,7 @@ init loggedIn =
     ( { logo = RemoteData.Loading
       , nameInput = ""
       , nameErrors = []
-      , descriptionInput = ""
+      , descriptionInput = MarkdownEditor.init "description-editor"
       , descriptionErrors = []
       , websiteInput = ""
       , websiteErrors = []
@@ -100,7 +102,7 @@ type Msg
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
     | EnteredName String
-    | EnteredDescription String
+    | GotDescriptionEditorMsg MarkdownEditor.Msg
     | EnteredWebsite String
     | EnteredCoverPhoto (List File)
     | CompletedCoverPhotoUpload (Result Http.Error String)
@@ -128,7 +130,7 @@ update msg model ({ shared } as loggedIn) =
             { model
                 | logo = RemoteData.Success community.logo
                 , nameInput = community.name
-                , descriptionInput = community.description
+                , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
                 , coverPhoto =
                     case List.head community.uploads of
                         Just photo ->
@@ -183,10 +185,15 @@ update msg model ({ shared } as loggedIn) =
                 |> validateName
                 |> UR.init
 
-        EnteredDescription description ->
-            { model | descriptionInput = description }
+        GotDescriptionEditorMsg subMsg ->
+            let
+                ( descriptionInput, descriptionCmd ) =
+                    MarkdownEditor.update subMsg model.descriptionInput
+            in
+            { model | descriptionInput = descriptionInput }
                 |> validateDescription
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
 
         EnteredWebsite website ->
             { model | websiteInput = website }
@@ -368,7 +375,7 @@ update msg model ({ shared } as loggedIn) =
                                             { asset = asset 0
                                             , logo = RemoteData.withDefault community.logo model.logo
                                             , name = model.nameInput
-                                            , description = model.descriptionInput
+                                            , description = model.descriptionInput.contents
                                             , subdomain = Route.communityFullDomain shared model.subdomainInput
                                             , inviterReward =
                                                 String.toFloat model.inviterRewardInput
@@ -538,7 +545,7 @@ update msg model ({ shared } as loggedIn) =
                                 (LoggedIn.CommunityLoaded
                                     { community
                                         | name = model.nameInput
-                                        , description = model.descriptionInput
+                                        , description = model.descriptionInput.contents
                                         , website =
                                             if String.isEmpty model.websiteInput then
                                                 Nothing
@@ -684,7 +691,7 @@ validateDescription : Model -> Model
 validateDescription model =
     { model
         | descriptionErrors =
-            if String.isEmpty model.descriptionInput then
+            if String.isEmpty model.descriptionInput.contents then
                 [ error DescriptionField "blank" ]
 
             else
@@ -922,22 +929,19 @@ viewDescription shared model =
         { t } =
             shared.translators
     in
-    Input.init
-        { label = t "settings.community_info.fields.description"
-        , id = fieldId DescriptionField
-        , onInput = EnteredDescription
-        , disabled = model.isLoading
-        , value = model.descriptionInput
+    MarkdownEditor.view
+        { translators = shared.translators
         , placeholder = Just (t "settings.community_info.placeholders.description")
-        , problems =
-            List.map t model.descriptionErrors
+        , label = t "settings.community_info.fields.description"
+        , problem =
+            model.descriptionErrors
                 |> List.head
-                |> Maybe.map List.singleton
-        , translators = shared.translators
+                |> Maybe.map t
+        , disabled = model.isLoading
         }
-        |> Input.withInputType Input.TextArea
-        |> Input.withAttrs [ required True ]
-        |> Input.toHtml
+        []
+        model.descriptionInput
+        |> Html.map GotDescriptionEditorMsg
 
 
 viewWebsite : Shared -> Model -> Html Msg
@@ -1110,6 +1114,12 @@ symbolPlaceholder symbol amount =
         String.fromInt amount ++ "." ++ String.concat (List.repeat precision "0")
 
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+        |> MarkdownEditor.withSubscription model.descriptionInput GotDescriptionEditorMsg
+
+
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
@@ -1161,8 +1171,8 @@ msgToString msg =
         EnteredName _ ->
             [ "EnteredName" ]
 
-        EnteredDescription _ ->
-            [ "EnteredDescription" ]
+        GotDescriptionEditorMsg subMsg ->
+            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         EnteredWebsite _ ->
             [ "EnteredWebsite" ]

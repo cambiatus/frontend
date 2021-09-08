@@ -37,7 +37,6 @@ import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
 import Page.Profile.Editor as ProfileEditor
-import Page.Profile.Public as ProfilePublic
 import Page.Register as Register
 import Page.Shop as Shop
 import Page.Shop.Editor as ShopEditor
@@ -129,9 +128,29 @@ subscriptions model =
                 CommunityEditor.subscriptions subModel
                     |> Sub.map GotCommunityEditorMsg
 
+            CommunitySettingsInfo subModel ->
+                CommunitySettingsInfo.subscriptions subModel
+                    |> Sub.map GotCommunitySettingsInfoMsg
+
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
+
+            ActionEditor subModel ->
+                ActionEditor.subscriptions subModel
+                    |> Sub.map GotActionEditorMsg
+
+            ObjectiveEditor subModel ->
+                ObjectiveEditor.subscriptions subModel
+                    |> Sub.map GotObjectiveEditorMsg
+
+            ProfileEditor subModel ->
+                ProfileEditor.subscriptions subModel
+                    |> Sub.map GotProfileEditorMsg
+
+            Transfer subModel ->
+                Transfer.subscriptions subModel
+                    |> Sub.map GotTransferMsg
 
             _ ->
                 Sub.none
@@ -171,7 +190,6 @@ type Status
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
     | Profile Profile.Model
-    | ProfilePublic String ProfilePublic.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
@@ -213,7 +231,6 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
-    | GotProfilePublicMsg ProfilePublic.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -414,11 +431,6 @@ update msg model =
                 >> updateLoggedInUResult Dashboard GotDashboardMsg model
                 |> withLoggedIn
 
-        ( GotProfilePublicMsg subMsg, ProfilePublic profileName subModel ) ->
-            ProfilePublic.update subMsg subModel
-                >> updateLoggedInUResult (ProfilePublic profileName) GotProfilePublicMsg model
-                |> withLoggedIn
-
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
@@ -562,6 +574,10 @@ broadcast broadcastMessage status =
                     Shop.receiveBroadcast broadcastMessage
                         |> Maybe.map GotShopMsg
 
+                ShopViewer _ _ ->
+                    ShopViewer.receiveLoggedInBroadcast broadcastMessage
+                        |> Maybe.map (ShopViewer.AsLoggedInMsg >> GotShopViewerMsg)
+
                 Transfer _ ->
                     Transfer.receiveBroadcast broadcastMessage
                         |> Maybe.map GotTransferMsg
@@ -613,6 +629,10 @@ broadcast broadcastMessage status =
                 ProfileEditor _ ->
                     ProfileEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileEditorMsg
+
+                Profile _ ->
+                    Profile.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileMsg
 
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
@@ -759,6 +779,11 @@ updateGuestUResult toStatus toMsg model uResult =
 
                         Guest.SetFeedback feedback ->
                             ( { m | session = Page.Guest { guest | feedback = feedback } }
+                            , cmds_
+                            )
+
+                        Guest.UpdatedShared newShared ->
+                            ( { m | session = Page.Guest { guest | shared = newShared } }
                             , cmds_
                             )
         )
@@ -930,11 +955,8 @@ statusToRoute status session =
             in
             Just (Route.Login maybeInvitation maybeRedirect)
 
-        Profile _ ->
-            Just Route.Profile
-
-        ProfilePublic profileName _ ->
-            Just (Route.ProfilePublic profileName)
+        Profile subModel ->
+            Just (Route.Profile subModel.profileName)
 
         ProfileEditor _ ->
             Just Route.ProfileEditor
@@ -1187,15 +1209,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
-        Just (Route.ProfilePublic account) ->
-            (\loggedIn -> ProfilePublic.init loggedIn account)
-                >> updateStatusWith (ProfilePublic account) GotProfilePublicMsg model
-                |> withLoggedIn (Route.ProfilePublic account)
-
-        Just Route.Profile ->
-            Profile.init
+        Just (Route.Profile profileName) ->
+            (\loggedIn -> Profile.init loggedIn profileName)
                 >> updateStatusWith Profile GotProfileMsg model
-                |> withLoggedIn Route.Profile
+                |> withLoggedIn (Route.Profile profileName)
 
         Just Route.ProfileEditor ->
             ProfileEditor.init
@@ -1481,9 +1498,6 @@ msgToString msg =
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
 
-        GotProfilePublicMsg subMsg ->
-            "GotProfilePublicMsg" :: ProfilePublic.msgToString subMsg
-
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
 
@@ -1683,9 +1697,6 @@ view model =
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view
-
-        ProfilePublic _ subModel ->
-            viewLoggedIn subModel LoggedIn.ProfilePublic GotProfilePublicMsg ProfilePublic.view
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view

@@ -7,6 +7,7 @@ module.exports = {
   theme: {
     // Colors used on the 'Design System'
     colors: {
+      transparent: 'transparent',
       black: '#000000',
       white: '#FFFFFF',
       gray: {
@@ -144,6 +145,7 @@ module.exports = {
         '108': '27rem'
       },
       minHeight: {
+        '36': '9rem',
         '48': '12rem'
       },
       lineHeight: {
@@ -171,6 +173,21 @@ module.exports = {
       opacity: {
         '10': '0.1',
         '60': '0.6'
+      },
+      keyframes: {
+        appear: {
+          '0%': {
+            opacity: '0',
+            'pointer-events': 'none'
+          },
+          '100%': {
+            opacity: '1',
+            'pointer-events': 'auto'
+          }
+        }
+      },
+      animation: {
+        'fade-in': 'appear 50ms linear 400ms both'
       }
     }
   },

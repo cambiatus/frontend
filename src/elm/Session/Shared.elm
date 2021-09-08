@@ -1,8 +1,10 @@
 module Session.Shared exposing
-    ( Shared
+    ( Environment(..)
+    , Shared
     , TranslationStatus(..)
     , Translators
     , communityDomain
+    , environmentFromUrl
     , init
     , langFlag
     , loadTranslation
@@ -17,13 +19,14 @@ module Session.Shared exposing
 import Browser.Navigation as Nav
 import Eos
 import Eos.Account as Eos
-import Flags exposing (Endpoints, Environment, Flags)
+import Flags exposing (Endpoints, Flags)
 import Graphql.Http
 import Html exposing (Html, button, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
+import Ports
 import Time exposing (Posix)
 import Translation
 import Url exposing (Url)
@@ -49,42 +52,55 @@ type alias Shared =
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
+    , pinVisibility : Bool
     }
 
 
-init : Flags -> Nav.Key -> Url -> Shared
-init ({ environment, maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
-    { navKey = navKey
-    , language =
-        -- We need to try parsing with `fromLanguageCode` first for
-        -- backwards-compatiblity. In some time, we should switch to just trying
-        -- with `languageFromLocale`
-        case flags.language |> Translation.languageFromLanguageCode of
-            Just lang ->
-                lang
+init : Flags -> Nav.Key -> Url -> ( Shared, Cmd msg )
+init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
+    let
+        environment =
+            environmentFromUrl url
+    in
+    ( { navKey = navKey
+      , language =
+            -- We need to try parsing with `fromLanguageCode` first for
+            -- backwards-compatiblity. In some time, we should switch to just trying
+            -- with `languageFromLocale`
+            case flags.language |> Translation.languageFromLanguageCode of
+                Just lang ->
+                    lang
 
-            Nothing ->
-                flags.language
-                    |> Translation.languageFromLocale
-                    |> Maybe.withDefault Translation.defaultLanguage
-    , translations = initialTranslations
-    , translators = makeTranslators initialTranslations
-    , translationsStatus = LoadingTranslation
-    , environment = environment
-    , maybeAccount = maybeAccount
-    , endpoints = endpoints
-    , logo = flags.logo
-    , logoMobile = flags.logoMobile
-    , now = Time.millisToPosix flags.now
-    , timezone = Time.utc
-    , allowCommunityCreation = allowCommunityCreation
-    , url = url
-    , contracts = { token = tokenContract, community = communityContract }
-    , graphqlSecret = flags.graphqlSecret
-    , canReadClipboard = flags.canReadClipboard
-    , useSubdomain = flags.useSubdomain
-    , selectedCommunity = flags.selectedCommunity
-    }
+                Nothing ->
+                    flags.language
+                        |> Translation.languageFromLocale
+                        |> Maybe.withDefault Translation.defaultLanguage
+      , translations = initialTranslations
+      , translators = makeTranslators initialTranslations
+      , translationsStatus = LoadingTranslation
+      , environment = environment
+      , maybeAccount = maybeAccount
+      , endpoints = endpoints
+      , logo = flags.logo
+      , logoMobile = flags.logoMobile
+      , now = Time.millisToPosix flags.now
+      , timezone = Time.utc
+      , allowCommunityCreation = allowCommunityCreation
+      , url = url
+      , contracts = { token = tokenContract, community = communityContract }
+      , graphqlSecret = flags.graphqlSecret
+      , canReadClipboard = flags.canReadClipboard
+      , useSubdomain = flags.useSubdomain
+      , selectedCommunity = flags.selectedCommunity
+      , pinVisibility = flags.pinVisibility
+      }
+    , case environment of
+        Production ->
+            Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
+
+        _ ->
+            Cmd.none
+    )
 
 
 type TranslationStatus
@@ -123,13 +139,38 @@ makeTranslators translations =
     }
 
 
-
--- INFO
-
-
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
+
+
+
+-- ENVIRONMENT
+
+
+type Environment
+    = Development
+    | Staging
+    | Demo
+    | Production
+
+
+environmentFromUrl : Url -> Environment
+environmentFromUrl url =
+    if String.endsWith ".localhost" url.host then
+        Development
+
+    else if String.endsWith ".staging.cambiatus.io" url.host then
+        Staging
+
+    else if String.endsWith ".demo.cambiatus.io" url.host then
+        Demo
+
+    else if String.endsWith ".cambiatus.io" url.host then
+        Production
+
+    else
+        Staging
 
 
 {-| Get the community subdomain and the current environment, based on current
@@ -147,38 +188,40 @@ communitySubdomainParts url environment =
     let
         allParts =
             url.host |> String.split "."
+
+        isStaging =
+            case environmentFromUrl url of
+                Development ->
+                    True
+
+                Staging ->
+                    True
+
+                _ ->
+                    False
+
+        addStaging parts =
+            if isStaging then
+                parts ++ [ "staging" ]
+
+            else
+                parts
     in
-    case environment of
-        Flags.Development ->
-            case allParts of
-                [] ->
-                    [ "cambiatus", "staging" ]
+    case allParts of
+        [] ->
+            addStaging [ "cambiatus" ]
 
-                [ subdomain ] ->
-                    [ subdomain, "staging" ]
+        [ subdomain ] ->
+            addStaging [ subdomain ]
 
-                subdomain :: "localhost" :: _ ->
-                    [ subdomain, "staging" ]
+        subdomain :: "localhost" :: _ ->
+            [ subdomain, "staging" ]
 
-                subdomain :: "cambiatus" :: _ ->
-                    [ subdomain ]
+        subdomain :: "cambiatus" :: _ ->
+            [ subdomain ]
 
-                subdomain :: env :: _ ->
-                    [ subdomain, env ]
-
-        Flags.Production ->
-            case allParts of
-                [] ->
-                    [ "cambiatus" ]
-
-                [ subdomain ] ->
-                    [ subdomain ]
-
-                subdomain :: "cambiatus" :: _ ->
-                    [ subdomain ]
-
-                subdomain :: env :: _ ->
-                    [ subdomain, env ]
+        subdomain :: env :: _ ->
+            [ subdomain, env ]
 
 
 {-| Returns the full `subdomain` of a community based on the current url

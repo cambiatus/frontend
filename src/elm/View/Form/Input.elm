@@ -4,7 +4,7 @@ module View.Form.Input exposing
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
     , withInputType, withType, withCounterType, asNumeric
     , toHtml
-    , FieldType(..), InputType(..)
+    , CounterType(..), FieldType(..), InputType(..)
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting, placeholders, localization
@@ -57,10 +57,9 @@ import Eos
 import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
+import I18Next
 import Session.Shared exposing (Translators)
-import Utils
 import View.Form
-import View.Form.InputCounter
 
 
 {-| Required options for an input
@@ -98,8 +97,7 @@ init options =
     , errorAttrs = []
     , inputType = Input
     , fieldType = Text
-    , counterType = View.Form.InputCounter.CountLetters
-    , beforeInputMsg = identity
+    , counterType = CountLetters
     }
 
 
@@ -129,7 +127,7 @@ toHtml options =
         , input options
         , case options.maximumCounterValue of
             Just number ->
-                View.Form.InputCounter.viewWithAttrs options.translators.tr
+                inputCounterviewWithAttrs options.translators.tr
                     number
                     options.value
                     options.counterAttrs
@@ -165,7 +163,7 @@ input options =
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput (options.beforeInputMsg >> options.onInput)
+                :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
                 :: disabled options.disabled
                 :: value options.value
@@ -243,50 +241,7 @@ is valid and has the symbol's precision
 -}
 withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
 withCurrency symbol options =
-    let
-        beforeInputMsg value =
-            let
-                symbolPrecision =
-                    Eos.getSymbolPrecision symbol
-
-                newAmount =
-                    case String.toFloat value of
-                        Nothing ->
-                            if value == "" then
-                                "0"
-
-                            else
-                                options.value
-
-                        Just floatAmount ->
-                            if floatAmount == 0 then
-                                "0"
-
-                            else
-                                case String.toList value of
-                                    '0' :: rest ->
-                                        String.fromList rest
-
-                                    _ ->
-                                        value
-            in
-            if newAmount == "" then
-                Utils.formatFloat 0 symbolPrecision False
-
-            else
-                newAmount
-                    |> String.toFloat
-                    |> Maybe.withDefault 0
-                    |> Utils.formatFloatWithMaxCases symbolPrecision False
-                    |> (\newValue ->
-                            if String.endsWith "." newValue then
-                                String.dropRight 1 newValue
-
-                            else
-                                newValue
-                       )
-    in
-    { options | beforeInputMsg = beforeInputMsg }
+    options
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
@@ -309,7 +264,7 @@ withType fieldType options =
 
 {-| Determines the counting strategy for the input
 -}
-withCounterType : View.Form.InputCounter.CounterType -> InputOptions a -> InputOptions a
+withCounterType : CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
 
@@ -320,6 +275,35 @@ asNumeric : InputOptions a -> InputOptions a
 asNumeric options =
     options
         |> withAttrs [ attribute "inputmode" "numeric" ]
+
+
+{-| Creates a Cambiatus-style input counter.
+-}
+inputCounterviewWithAttrs : (String -> I18Next.Replacements -> String) -> Int -> String -> List (Html.Attribute msg) -> CounterType -> Html msg
+inputCounterviewWithAttrs tr max str attrs counterType =
+    let
+        currentLength =
+            case counterType of
+                CountLetters ->
+                    String.length str
+
+                CountWords ->
+                    String.words str
+                        |> List.filter (not << String.isEmpty)
+                        |> List.length
+    in
+    div (class "input-counter" :: attrs)
+        [ text <|
+            tr "edit.input_counter"
+                [ ( "current", String.fromInt currentLength )
+                , ( "max", String.fromInt max )
+                ]
+        ]
+
+
+type CounterType
+    = CountLetters
+    | CountWords
 
 
 
@@ -368,8 +352,7 @@ type alias InputOptions a =
     , errorAttrs : List (Html.Attribute a)
     , inputType : InputType
     , fieldType : FieldType
-    , counterType : View.Form.InputCounter.CounterType
-    , beforeInputMsg : String -> String
+    , counterType : CounterType
     }
 
 

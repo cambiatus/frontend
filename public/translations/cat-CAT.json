@@ -29,17 +29,22 @@
     "more": "Més",
     "logout": "Sortir",
     "search": {
-      "placeholder": "Cerqueu accions i ofertes",
+      "placeholder": "Cerqueu accions, ofertes i persones",
       "recentlyHeader": "Cercat recentment",
       "notFoundLabel": "Heu cercat",
       "notFoundResults": "No s'han trobat resultats",
       "overviewHeader": "Això és el que hem trobat",
       "overviewShow": "Espectacle",
       "overviewFound": "Trobem",
-      "offer": "oferta",
-      "offers": "ofertes",
-      "action": "acció",
-      "actions": "ações",
+      "offer": "1 oferta",
+      "offers": "{{count}} ofertes",
+      "offers_title": "Ofertes ({{count}})",
+      "action": "1 acció",
+      "actions": "{{count}} accions",
+      "actions_title": "Accions ({{count}})",
+      "member": "1 membre",
+      "members": "{{count}} membres",
+      "members_title": "Membres ({{count}})",
       "gain": "Guanyeu"
     },
     "explore": "Explorar",
@@ -674,6 +679,17 @@
     "changePin": "Canvieu el PIN!",
     "newPin": "Nou PIN de seguretat",
     "changePinPrompt": "Introduïu el vostre nou PIN de seguretat de 6 dígits.",
+    "history": {
+      "balance": "Saldo total",
+      "transfers_number": "Nombre de transferències",
+      "transfers": "Transferències",
+      "claims_number": "Nombre de reclamacions",
+      "claims": "Reclamacions",
+      "products": "Articles a la botiga",
+      "items": "Articles",
+      "registration_date": "Membre des de",
+      "last_transaction": "Darrera transacció"
+    },
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
@@ -763,9 +779,7 @@
         "unitEmpty": "La unitat no pot estar buida",
         "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
         "unitTooHigh": "No hi ha prou unitats disponibles",
-        "unitNotOnlyNumbers": "Només es permeten números",
-        "memoEmpty": "La nota no pot estar buida",
-        "memoTooLong": "La nota és massa llarga i el màxim de 256 caràcters"
+        "unitNotOnlyNumbers": "Només es permeten números"
       }
     },
     "delete": "Eliminar",
@@ -1111,5 +1125,19 @@
       "explanation": "Feu la vostra contribució fent clic al botó següent. Se us redirigirà a PayPal per completar la transacció.",
       "sponsor": "Patrocina {{community_name}}"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "Afegeix un enllaç",
+      "label": "Text",
+      "url": "Enllaç"
+    },
+    "link_tooltip": {
+      "edit": "Editar",
+      "remove": "Elimina l'enllaç"
+    }
+  },
+  "block_explorer": {
+    "see": "Veure a explorador de blocs"
   }
 }

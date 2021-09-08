@@ -1,17 +1,19 @@
+import * as AbsintheSocket from '@absinthe/socket'
+import * as Sentry from '@sentry/browser'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
+import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
+import pdfMake from 'pdfmake/build/pdfmake'
+import Quill from 'quill'
+import QuillDelta from 'quill-delta'
 import sjcl from 'sjcl'
-import './styles/main.css'
-import mnemonic from './scripts/mnemonic.js'
+import { Elm } from './elm/Main.elm'
 import configuration from './scripts/config.js'
+import mnemonic from './scripts/mnemonic.js'
 // import registerServiceWorker from './scripts/registerServiceWorker'
 import pdfDefinition from './scripts/pdfDefinition'
-import { Elm } from './elm/Main.elm'
-import * as Sentry from '@sentry/browser'
-import * as AbsintheSocket from '@absinthe/socket'
-import pdfMake from 'pdfmake/build/pdfmake'
+import './styles/main.css'
 import pdfFonts from './vfs_fonts'
-import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 import * as paypalJs from '@paypal/paypal-js'
 
 // =========================================
@@ -25,6 +27,7 @@ const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
@@ -93,6 +96,257 @@ window.customElements.define('paypal-buttons',
   }
 )
 
+window.customElements.define('focus-trap',
+  class FocusTrap extends HTMLElement {
+    constructor () {
+      super()
+
+      this._previouslyFocusedElement = document.activeElement
+
+      this._keydownListener = (e) => {
+        const isTab = e.key === 'Tab' || e.keyCode === 9
+
+        if (!isTab) {
+          return
+        }
+
+        const focusables = this.focusables(this)
+        const firstFocusable = focusables[0]
+        const lastFocusable = focusables[focusables.length - 1]
+
+        if (e.shiftKey && document.activeElement === firstFocusable) {
+          e.preventDefault()
+          lastFocusable.focus()
+        } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+          e.preventDefault()
+          firstFocusable.focus()
+        }
+      }
+    }
+
+    connectedCallback () {
+      let elementToFocus = this.focusables(this)[0]
+      const firstFocusableContainers = this.querySelectorAll(this.getAttribute('first-focus-container'))
+      for (const container of firstFocusableContainers) {
+        const focusables = this.focusables(container)
+        if (focusables.length > 0) {
+          elementToFocus = focusables[0]
+          break
+        }
+      }
+
+      if (elementToFocus) {
+        elementToFocus.focus()
+      }
+
+      document.addEventListener('keydown', this._keydownListener)
+    }
+
+    disconnectedCallback () {
+      this._previouslyFocusedElement.focus()
+      document.removeEventListener('keydown', this._keydownListener)
+    }
+
+    focusables (parent) {
+      const tabbableElements = [
+        'a[href]',
+        'button',
+        'textarea',
+        'input[type="text"]',
+        'input[type="radio"]',
+        'input[type="checkbox"]',
+        'select',
+        '[contenteditable="true"]'
+      ].map((selector) => `${selector}:not([disabled]):not([tabindex="-1"])`)
+
+      return parent.querySelectorAll(tabbableElements.join(', '))
+    }
+  }
+)
+
+window.customElements.define('key-listener',
+  class KeyListener extends HTMLElement {
+    static get observedAttributes () { return ['keydown-stop-propagation'] }
+
+    constructor () {
+      super()
+
+      this._keydownListener = (e) => {
+        if (this._keydownStopPropagation) {
+          e.stopPropagation()
+        }
+        this.dispatchEvent(new CustomEvent('listener-keydown', { detail: { key: e.key } }))
+      }
+    }
+
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'keydown-stop-propagation') {
+        this._keydownStopPropagation = newValue === 'true'
+      }
+    }
+
+    connectedCallback () {
+      document.addEventListener('keydown', this._keydownListener)
+    }
+
+    disconnectedCallback () {
+      document.removeEventListener('keydown', this._keydownListener)
+    }
+  }
+)
+
+window.customElements.define('markdown-editor',
+  class MarkdownEditor extends HTMLElement {
+    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
+
+    constructor () {
+      super()
+
+      this._quillContainer = document.createElement('div')
+      this._parentContainer = document.createElement('div')
+      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
+
+      this._parentContainer.appendChild(this._quillContainer)
+      this._quill = new Quill(this._quillContainer,
+        {
+          modules: {
+            toolbar: [
+              [{ 'header': 1 }, { 'header': 2 }],
+              [ 'bold', 'italic', 'strike' ],
+              [ 'link' ],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }]
+            ]
+          },
+          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'list'],
+          placeholder: this.getAttribute('elm-placeholder'),
+          theme: 'snow'
+        }
+      )
+
+      app.ports.setMarkdown.subscribe((data) => { this.setMarkdownListener(data) })
+
+      this._quill.on('text-change', (delta, oldDelta, source) => {
+        const contents = this._quill.getContents()
+        this.dispatchEvent(new CustomEvent('text-change', { detail: contents }))
+      })
+
+      const toolbar = this._quill.getModule('toolbar')
+      toolbar.addHandler('link', () => { this.linkHandler() })
+    }
+
+    connectedCallback () {
+      // If we dont include the timeout, we get some annoying bugs in
+      // development where the text is cleared, and hot reloading bugs out and
+      // crashes the app
+      window.setTimeout(() => {
+        this.dispatchEvent(new CustomEvent('component-loaded', {}))
+      }, 0)
+      this.appendChild(this._parentContainer)
+
+      // Remove default click handler and add our custom one
+      const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
+      const editButton = oldEditButton.cloneNode(true)
+      oldEditButton.parentNode.replaceChild(editButton, oldEditButton)
+      editButton.addEventListener('click', (e) => {
+        this.querySelector('.ql-tooltip').classList.add('ql-hidden')
+        this.linkHandler()
+      })
+
+      const editor = this.querySelector('.ql-editor')
+      if (editor) {
+        editor.addEventListener('focus', () => { this.dispatchEvent(new CustomEvent('focus', {})) })
+        editor.addEventListener('blur', () => { this.dispatchEvent(new CustomEvent('blur', {})) })
+      }
+
+      this.setTooltipTexts()
+      this.setDisabled()
+    }
+
+    attributeChangedCallback (name) {
+      if (name === 'elm-disabled') {
+        this.setDisabled()
+      } else {
+        this.setTooltipTexts()
+      }
+    }
+
+    setTooltipTexts () {
+      const actionButton = this.querySelector('.ql-tooltip a.ql-action')
+      if (actionButton) {
+        actionButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
+      }
+
+      const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
+      if (removeButton) {
+        removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+      }
+    }
+
+    setDisabled () {
+      const isDisabled = this.getAttribute('elm-disabled') === 'true'
+
+      if (isDisabled) {
+        this._quill.disable()
+      } else {
+        this._quill.enable()
+      }
+    }
+
+    linkHandler () {
+      let range = this._quill.getSelection(true)
+      const isLink = this._quill.getFormat(range).link !== undefined
+      if (range.length === 0 && isLink) {
+        range = this.getFormattedRange(range.index)
+      }
+      const text = this._quill.getText(range)
+      const currentFormat = this._quill.getFormat(range)
+      this.dispatchEvent(new CustomEvent('clicked-include-link',
+        {
+          detail: {
+            label: text,
+            url: currentFormat.link || ''
+          }
+        }
+      ))
+
+      const markdownLinkPortHandler = (link) => {
+        if (link.id === this.id) {
+          this._quill.updateContents(new QuillDelta()
+            .retain(range.index)
+            .delete(range.length)
+            .insert(link.label, { ...currentFormat, link: link.url })
+          )
+          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+        }
+      }
+      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
+    }
+
+    /** Gets the range from the formatting that the `index` position is affected
+    by. Useful when the user has their caret in the middle of a link, but isn't
+    actually selecting it (selection length is 0)
+    */
+    getFormattedRange (index) {
+      let currentIndex = 0
+      for (const content of this._quill.getContents().ops) {
+        const initialIndex = currentIndex
+        const finalIndex = initialIndex + content.insert.length - 1
+        currentIndex = finalIndex + 1
+        if (initialIndex <= index && index <= finalIndex) {
+          return { index: initialIndex, length: finalIndex - initialIndex + 1 }
+        }
+      }
+      return { index: 0, length: 0 }
+    }
+
+    setMarkdownListener (data) {
+      if (data.id === this.id) {
+        this._quill.setContents(data.content)
+      }
+    }
+  }
+)
+
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {
     static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
@@ -114,20 +368,38 @@ window.customElements.define('infinite-list',
 
       let scrolling = false
       const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
-      if (!isHidden) {
-        if (this.getAttribute('elm-element-to-track') === 'track-window') {
-          window.addEventListener('scroll', () => { scrolling = true })
-        } else {
-          this.addEventListener('scroll', () => { scrolling = true })
-        }
+      if (isHidden) {
+        return
       }
 
+      const whatToTrack = this.getAttribute('elm-element-to-track')
+      if (!whatToTrack) {
+        return
+      }
+
+      let elementToTrack
+      let elementToListen
+      if (whatToTrack === 'track-window') {
+        elementToTrack = this
+        elementToListen = window
+      } else if (whatToTrack === 'track-self') {
+        elementToTrack = this
+        elementToListen = this
+      } else {
+        elementToTrack = document.querySelector(whatToTrack)
+        elementToListen = elementToTrack
+      }
+
+      if (!elementToTrack) {
+        return
+      }
+
+      elementToListen.addEventListener('scroll', () => { scrolling = true })
       const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
       this._scrollInterval = setInterval(() => {
         if (scrolling) {
           scrolling = false
-          const boundingRect = this.getBoundingClientRect()
-          if (this.scrollTop >= this.scrollHeight - distanceToRequest - boundingRect.height) {
+          if (elementToTrack.scrollTop >= elementToTrack.scrollHeight - distanceToRequest - elementToTrack.getBoundingClientRect().height) {
             this.dispatchEvent(new CustomEvent('requested-items', {}))
           }
         }
@@ -528,32 +800,42 @@ const cookieKey = (key) => {
 }
 
 const getItem = (key) => {
-  const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
-  return result ? result.pop() : null
+  if (useSubdomain) {
+    const result = document.cookie.match('(^|[^;]+)\\s*' + cookieKey(key) + '\\s*=\\s*([^;]+)')
+    return result ? result.pop() : null
+  }
+
+  return window.localStorage.getItem(cookieKey(key)) || null
 }
 
 const removeItem = (key) => {
   document.cookie = `${cookieKey(key)}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
-  window.localStorage.removeItem(key)
+  window.localStorage.removeItem(cookieKey(key))
 }
 
 const setItem = (key, value) => {
-  // This is the maximum possible expiration date for some browsers, because
-  // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
-  // This is equivalent to the date 2038-01-19 04:14:07
-  const maxExpirationDate = 2147483647
-  document.cookie = `${cookieKey(key)}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
+  if (useSubdomain) {
+    // This is the maximum possible expiration date for some browsers, because
+    // they use 32 bits to represent this field (maxExpirationDate === 2^31 - 1).
+    // This is equivalent to the date 2038-01-19 04:14:07
+    const maxExpirationDate = 2147483647
+    document.cookie = `${cookieKey(key)}=${value}; expires=${new Date(maxExpirationDate * 1000).toUTCString()}; ${cookieDomain()}; path=/; SameSite=Strict; Secure`
+  } else {
+    window.localStorage.setItem(cookieKey(key), value)
+  }
 }
 
 const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
-storedKeys.forEach((key) => {
-  const localStorageValue = window.localStorage.getItem(key)
-  if (localStorageValue !== null) {
-    setItem(key, localStorageValue)
-    window.localStorage.removeItem(key)
-  }
-})
+if (useSubdomain) {
+  storedKeys.forEach((key) => {
+    const localStorageValue = window.localStorage.getItem(key)
+    if (localStorageValue !== null) {
+      setItem(key, localStorageValue)
+      window.localStorage.removeItem(key)
+    }
+  })
+}
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 pdfMake.fonts = {
@@ -642,7 +924,6 @@ function flags () {
   }
 
   return {
-    env: env,
     graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
@@ -657,7 +938,8 @@ function flags () {
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
     useSubdomain: useSubdomain,
-    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY)
+    selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
+    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false
   }
 }
 
@@ -754,6 +1036,26 @@ app.ports.storeSelectedCommunitySymbol.subscribe(symbol => {
     localData: {},
     level: 'debug'
   })
+})
+
+app.ports.storePinVisibility.subscribe(pinVisibility => {
+  setItem(PIN_VISIBILITY_KEY, pinVisibility)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storePinVisibility',
+    message: 'Stored pin visibility',
+    data: { pinVisibility },
+    localData: {},
+    level: 'debug'
+  })
+})
+
+app.ports.addPlausibleScriptPort.subscribe(({ domain, src }) => {
+  const plausibleScript = document.createElement('script')
+  plausibleScript.setAttribute('src', src)
+  plausibleScript.dataset.domain = domain
+
+  document.head.appendChild(plausibleScript)
 })
 
 // STORE PIN

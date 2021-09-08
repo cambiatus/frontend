@@ -31,11 +31,10 @@ type Route
     | Notification
     | ProfileEditor
     | ProfileAddKyc
-    | ProfilePublic String
     | ProfileClaims String
     | ProfileAddContact
     | PaymentHistory Eos.Account.Name
-    | Profile
+    | Profile Eos.Account.Name
     | Dashboard
     | Community
     | NewCommunity
@@ -95,11 +94,10 @@ parser url =
                         (Query.string "redirect")
             )
         , Url.map Logout (s "logout")
-        , Url.map Profile (s "profile")
         , Url.map ProfileEditor (s "profile" </> s "edit")
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
-        , Url.map ProfilePublic (s "profile" </> string)
+        , Url.map Profile (s "profile" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
@@ -369,9 +367,6 @@ routeToString route =
                 ProfileAddKyc ->
                     ( [ "profile", "add-kyc" ], [] )
 
-                ProfilePublic accountName ->
-                    ( [ "profile", accountName ], [] )
-
                 ProfileClaims account ->
                     ( [ "profile", account, "claims" ], [] )
 
@@ -381,8 +376,8 @@ routeToString route =
                 PaymentHistory accountName ->
                     ( [ "payments", Eos.Account.nameToString accountName ], [] )
 
-                Profile ->
-                    ( [ "profile" ], [] )
+                Profile accountName ->
+                    ( [ "profile", Eos.Account.nameToString accountName ], [] )
 
                 Dashboard ->
                     ( [ "dashboard" ], [] )

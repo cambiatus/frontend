@@ -1,14 +1,18 @@
 port module Ports exposing
     ( JavascriptOut
     , JavascriptOutModel
+    , addPlausibleScript
     , getRecentSearches
     , gotRecentSearches
     , javascriptInPort
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , sendMarkdownLink
+    , setMarkdownContent
     , storeAuthToken
     , storeLanguage
+    , storePinVisibility
     , storeRecentSearches
     , storeSelectedCommunitySymbol
     )
@@ -66,12 +70,12 @@ port javascriptInPort : (Value -> msg) -> Sub msg
 port storeLanguage : String -> Cmd msg
 
 
-{-| Store recent searches to the `localStorage`.
+{-| Store recent searches
 -}
 port storeRecentSearches : String -> Cmd msg
 
 
-{-| Ping JS to send back the recent searches from the `localStorage`.
+{-| Ping JS to send back the recent searches
 -}
 port getRecentSearches : () -> Cmd msg
 
@@ -85,6 +89,54 @@ port storeAuthToken : String -> Cmd msg
 `USE_SUBDOMAIN = false`
 -}
 port storeSelectedCommunitySymbol : String -> Cmd msg
+
+
+{-| Store whether to show or hide the pin by default
+-}
+port storePinVisibility : Bool -> Cmd msg
+
+
+{-| Send info about a link in a MarkdownEditor to be treated on JS
+-}
+sendMarkdownLink : { id : String, label : String, url : String } -> Cmd msg
+sendMarkdownLink { id, label, url } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "label", Encode.string label )
+        , ( "url", Encode.string url )
+        ]
+        |> markdownLink
+
+
+port markdownLink : Value -> Cmd msg
+
+
+setMarkdownContent : { id : String, content : Value } -> Cmd msg
+setMarkdownContent { id, content } =
+    Encode.object
+        [ ( "id", Encode.string id )
+        , ( "content", content )
+        ]
+        |> setMarkdown
+
+
+port setMarkdown : Value -> Cmd msg
+
+
+{-| Add a Plausible script so we can track usage metrics. We have it here so we
+can dynamically tell plausible which community we're in (and if we're not in
+production, we don't even need to include it)
+-}
+addPlausibleScript : { domain : String, src : String } -> Cmd msg
+addPlausibleScript { domain, src } =
+    Encode.object
+        [ ( "domain", Encode.string domain )
+        , ( "src", Encode.string src )
+        ]
+        |> addPlausibleScriptPort
+
+
+port addPlausibleScriptPort : Value -> Cmd msg
 
 
 

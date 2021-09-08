@@ -28,9 +28,14 @@ account object_ =
 
 community :
     SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Network
+    -> SelectionSet decodesTo Cambiatus.Object.Network
 community object_ =
-    Object.selectionForCompositeField "community" [] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "community" [] object_ identity
+
+
+communityId : SelectionSet String Cambiatus.Object.Network
+communityId =
+    Object.selectionForField "String" "communityId" [] Decode.string
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Network

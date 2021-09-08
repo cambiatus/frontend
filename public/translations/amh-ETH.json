@@ -29,17 +29,22 @@
     "more": "ተጨማሪ",
     "logout": "መዉጫ",
     "search": {
-      "placeholder": "እርምጃዎችን እና ቅናሾችን ያግኙ",
+      "placeholder": "እርምጃዎችን ፣ ቅናሾችን እና ሰዎችን ያግኙ",
       "recentlyHeader": "በቅርቡ ተፈልጓል",
       "notFoundLabel": "ፈልገዋል",
       "notFoundResults": "ምንም ውጤት አልተገኘም",
       "overviewHeader": "ያገኘነው እነሆ",
       "overviewShow": "አሳይ",
       "overviewFound": "አግኝተናል",
-      "offer": "አቅርብ",
-      "offers": "አቅርቦቶች",
-      "action": "ተግባር",
-      "actions": "እርምጃዎች",
+      "offer": "1 ቅናሽ",
+      "offers": "{{count}} ቅናሾች",
+      "offers_title": "ቅናሾች ({{count}})",
+      "action": "1 እርምጃ",
+      "actions": "{{count}} እርምጃዎች",
+      "actions_title": "እርምጃዎች ({{count}})",
+      "member": "1 አባል",
+      "members": "2 አባላት",
+      "members_title": "አባላት ({{count}})",
       "gain": "ታገኛለህ"
     },
     "explore": "ያስሱ",
@@ -632,6 +637,17 @@
     "changePin": "የሚስጢር ቁጥሩን ቀይር",
     "newPin": "አዲስ የሚስጢር ቁጥር",
     "changePinPrompt": "በለ 6 ቁጥር ሚስጢራዊ ቁጥር አስገባ.",
+    "history": {
+      "balance": "ጠቅላላ ሚዛን",
+      "transfers_number": "የዝውውር ብዛት",
+      "transfers": "ማስተላለፎች",
+      "claims_number": "የይገባኛል ጥያቄዎች ብዛት",
+      "claims": "የይገባኛል ጥያቄዎች",
+      "products": "ዕቃዎች በሱቅ ላይ",
+      "items": "ዕቃዎች",
+      "registration_date": "አባል ጀምሮ",
+      "last_transaction": "የመጨረሻው ግብይት"
+    },
     "actions": {
       "edit": "አርትዕ",
       "viewPrivatekey": "የግል ቁልፍ ተመለከት"
@@ -721,9 +737,7 @@
         "unitEmpty": "ክፍሎች ባዶ መሆን አይችሉም",
         "unitTooLow": "ክፍሉ በጣም ትንሽ ነዉ, ቢያንስ 1 መሆን አለበት ",
         "unitTooHigh": "በቂ ክፍሎች የሉም",
-        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል",
-        "memoEmpty": "ማስታወሻ ባዶ መሆን የለበትም",
-        "memoTooLong": "ማስታወሻ በጣም ረዘመ, ቢበዛ 256 ፊደል ይሁን "
+        "unitNotOnlyNumbers": "፤አባላት ብቻ ይፈቀዳል"
       }
     },
     "delete": "ሰርዝ",
@@ -1070,5 +1084,19 @@
       "explanation": "ከታች ያለውን አዝራር ጠቅ በማድረግ አስተዋፅኦዎን ያበርክቱ። ግብይትዎን ለማጠናቀቅ ወደ PayPal ይዛወራሉ።",
       "sponsor": "ስፖንሰር {{community_name}}"
     }
+  },
+  "markdown": {
+    "link_form": {
+      "header": "አገናኝ አክል",
+      "label": "ጽሑፍ",
+      "url": "አገናኝ"
+    },
+    "link_tooltip": {
+      "edit": "ለማርትዕ",
+      "remove": "አገናኝን ያስወግዱ"
+    }
+  },
+  "block_explorer": {
+    "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
   }
 }

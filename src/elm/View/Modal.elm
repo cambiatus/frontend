@@ -32,7 +32,7 @@ and call `toHtml` at the end of the pipeline:
 -}
 
 import Html exposing (Html, button, div, h3, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, tabindex)
 import Icons
 import Utils exposing (onClickNoBubble)
 import View.Components
@@ -151,10 +151,10 @@ viewModalDetails options =
                     Nothing ->
                         text ""
                 , button
-                    [ class "ml-auto"
+                    [ class "ml-auto text-gray-400 hover:text-red focus:text-red focus:outline-none"
                     , onClickNoBubble options.closeMsg
                     ]
-                    [ Icons.close "text-gray-400 fill-current"
+                    [ Icons.close "fill-current"
                     ]
                 ]
 
@@ -164,17 +164,17 @@ viewModalDetails options =
                     case options.size of
                         Default ->
                             div
-                                [ class "modal-body" ]
+                                [ class "modal-body", tabindex -1 ]
                                 b
 
                         Large ->
                             div
-                                [ class "modal-body-lg" ]
+                                [ class "modal-body-lg", tabindex -1 ]
                                 b
 
                         FullScreen ->
                             div
-                                [ class "modal-body modal-body-full" ]
+                                [ class "modal-body modal-body-full", tabindex -1 ]
                                 b
 
                 Nothing ->
@@ -200,18 +200,23 @@ viewModalDetails options =
                 FullScreen ->
                     "modal-content modal-content-full"
     in
-    div
-        [ class "modal fade-in" ]
+    div [ class "modal fade-in" ]
         [ View.Components.bgNoScroll
             [ class "modal-bg"
             , onClickNoBubble options.closeMsg
             ]
             options.preventScrolling
-        , div
-            [ class content
-            ]
+        , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg, .modal-footer" }
+            [ class content ]
             [ header
             , body
             , footer
             ]
+        , View.Components.keyListener
+            { onKeyDown =
+                { acceptedKeys = [ View.Components.Escape ]
+                , toMsg = \_ -> options.closeMsg
+                , stopPropagation = True
+                }
+            }
         ]
