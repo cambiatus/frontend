@@ -1,4 +1,5 @@
 import * as AbsintheSocket from '@absinthe/socket'
+import * as paypalJs from '@paypal/paypal-js'
 import * as Sentry from '@sentry/browser'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
@@ -14,7 +15,6 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
-import * as paypalJs from '@paypal/paypal-js'
 
 // =========================================
 // Initial constants
