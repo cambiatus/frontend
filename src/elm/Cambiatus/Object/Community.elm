@@ -34,6 +34,15 @@ claimCount =
     Object.selectionForField "Int" "claimCount" [] Decode.int
 
 
+{-| List of contributions this community received
+-}
+contributions :
+    SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+contributions object_ =
+    Object.selectionForCompositeField "contributions" [] object_ (identity >> Decode.list)
+
+
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
 createdAt =
     Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)

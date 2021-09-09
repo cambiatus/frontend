@@ -45,6 +45,10 @@ type Contact
     = Contact
 
 
+type Contribution
+    = Contribution
+
+
 type Country
     = Country
 
