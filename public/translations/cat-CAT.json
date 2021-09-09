@@ -1123,11 +1123,14 @@
     }
   },
   "sponsorship": {
-    "sponsor": "Patrocina ",
+    "sponsor": "Patrocina",
+    "enter_amount": "Introduïu l'import que voleu contribuir",
     "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} USD",
     "amount_too_big": "L'import ha de ser màxim d'{{maximum}} USD",
+    "invalid_amount": "Valor no vàlid",
     "unknown_error": "S'ha produït un error en processar el vostre pagament",
     "load_error": "S'ha produït un problema en connectar amb PayPal, torneu-ho a provar més tard",
+    "contribution_error": "S'ha produït un error en preparar la vostra contribució",
     "dashboard_modal": {
       "title": "Patrocina la teva Comunitat",
       "subtitle": "Ara podeu patrocinar aquesta comunitat.",

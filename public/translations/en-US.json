@@ -1121,11 +1121,14 @@
     }
   },
   "sponsorship": {
-    "sponsor": "Sponsor ",
+    "sponsor": "Sponsor",
+    "enter_amount": "Enter the amount you want to contribute",
     "amount_too_small": "The amount must be at least {{minimum}} USD",
     "amount_too_big": "The amount must be a maximum of {{maximum}} USD",
+    "invalid_amount": "Invalid amount",
     "unknown_error": "There was an error processing your payment",
     "load_error": "There was a problem conecting to PayPal, please try again later",
+    "contribution_error": "Something went wrong when setting up your contribution",
     "dashboard_modal": {
       "title": "Sponsor your Community",
       "subtitle": "Now you can sponsor this community.",

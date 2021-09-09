@@ -1127,11 +1127,14 @@
     }
   },
   "sponsorship": {
-    "sponsor": "Patrocinar ",
+    "sponsor": "Patrocinar",
+    "enter_amount": "Digite o valor que deseja contribuir",
     "amount_too_small": "O valor deve ser ao menos {{minimum}} USD",
     "amount_too_big": "O valor deve ser no máximo {{maximum}} USD",
+    "invalid_amount": "Valor inválido",
     "unknown_error": "Houve um erro ao processar seu pagamento",
     "load_error": "Houve um problema ao conectar com o PayPal, por favor tente novamente mais tarde",
+    "contribution_error": "Algo de errado aconteceu ao preparar sua contribuição",
     "dashboard_modal": {
       "title": "Patrocine sua Comunidade",
       "subtitle": "Agora você pode patrocinar esta comunidade.",

@@ -44,25 +44,50 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('paypal-buttons',
   class PaypalButtons extends HTMLElement {
-    connectedCallback () {
-      const communityName = this.getAttribute('elm-community-name')
+    constructor () {
+      super()
 
+      const shadow = this.attachShadow({ mode: 'open' })
+      this._paypalContainer = document.createElement('div')
+      shadow.appendChild(this._paypalContainer)
+    }
+
+    connectedCallback () {
       paypalJs.loadScript({ 'client-id': config.paypal.clientId, currency: 'USD' })
         .then((paypal) => {
           paypal.Buttons({
             style: {
               shape: 'pill'
             },
-            createOrder: (data, actions) => {
+            createOrder: async (data, actions) => {
+              const valueAttribute = this.getAttribute('elm-value')
+              if (valueAttribute === '') {
+                throw new Error('Amount could not be parsed as a float by Elm')
+              }
+
+              app.ports.requestPaypalInfoFromJs.send(this.id)
+              const paypalInfo = await usePortAsPromise(app.ports.paypalInfo, (paypalInfo) => {
+                if (paypalInfo.targetId !== this.id) {
+                  return { unsubscribeFromPort: false }
+                }
+
+                return paypalInfo
+              })
+
+              if (paypalInfo.error) {
+                throw new Error('Elm got an error creating contribution')
+              }
+
               return actions.order.create({
                 purchase_units: [{
+                  invoice_id: paypalInfo.invoiceId,
                   amount: {
-                    value: this.getAttribute('elm-value'),
-                    currency_code: 'USD'
+                    value: paypalInfo.amount,
+                    currency_code: paypalInfo.currency
                   }
                 }],
                 application_context: {
-                  brand_name: communityName,
+                  brand_name: paypalInfo.communityName,
                   shipping_preference: 'NO_SHIPPING'
                 }
               })
@@ -76,21 +101,15 @@ window.customElements.define('paypal-buttons',
               this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
             },
 
-            onError: () => {
-              this.dispatchEvent(new CustomEvent('paypal-error', {}))
+            onError: (err) => {
+              if (err.message !== 'Elm got an error creating contribution') {
+                this.dispatchEvent(new CustomEvent('paypal-error', { error: err }))
+              }
             }
-          }).render(`#${this.id}`)
+          }).render(this._paypalContainer)
         })
         .catch((err) => {
-          logEvent({
-            user: null,
-            message: 'Error when loading PayPal buttons',
-            tags: { 'cambiatus.kind': 'paypal' },
-            contexts: [{ name: 'Error details', extras: { error: err } }],
-            transaction: 'paypal-buttons.load',
-            level: 'error'
-          })
-          this.dispatchEvent(new CustomEvent('paypal-load-error', {}))
+          this.dispatchEvent(new CustomEvent('paypal-load-error', { error: err }))
         })
     }
   }
@@ -309,17 +328,19 @@ window.customElements.define('markdown-editor',
         }
       ))
 
-      const markdownLinkPortHandler = (link) => {
+      usePortAsPromise(app.ports.markdownLink, (link) => {
         if (link.id === this.id) {
           this._quill.updateContents(new QuillDelta()
             .retain(range.index)
             .delete(range.length)
             .insert(link.label, { ...currentFormat, link: link.url })
           )
-          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+
+          this._quill.setSelection(range.index + link.label.length, 0, 'silent')
+        } else {
+          return { unsubscribeFromPort: false }
         }
-      }
-      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
+      })
     }
 
     /** Gets the range from the formatting that the `index` position is affected
@@ -959,6 +980,30 @@ addBreadcrumb({
 
 // Register Service Worker After App
 // registerServiceWorker()
+
+/**
+ * Subscribe to a port to consume it only once and unsubcribe from it.
+ * It's good practice to have an id to check if that port is actually supposed
+ * to communicate with the component that requested it. In case it's not, the
+ * `handler` should return `{ unsubscribeFromPort: false }` (that way the
+ * component doesn't unsubscribe from the port)
+ * @param {*} port an elm port
+ * @param {*} handler a function to act as the port's subscription
+ * @returns a promise that resolves with the result of `handler`
+ */
+const usePortAsPromise = (port, handler) => {
+  return new Promise((resolve, reject) => {
+    const internalHandler = (...args) => {
+      const result = handler(...args)
+      if (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false) {
+        port.unsubscribe(internalHandler)
+        resolve(result)
+      }
+    }
+
+    port.subscribe(internalHandler)
+  })
+}
 
 // Ports error Reporter
 app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)

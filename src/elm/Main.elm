@@ -133,6 +133,10 @@ subscriptions model =
                 CommunitySettingsInfo.subscriptions subModel
                     |> Sub.map GotCommunitySettingsInfoMsg
 
+            CommunitySponsor subModel ->
+                CommunitySponsor.subscriptions subModel
+                    |> Sub.map GotCommunitySponsorMsg
+
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg

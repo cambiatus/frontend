@@ -1,14 +1,23 @@
-module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, subscriptions, update, view)
 
+import Api.Graphql
 import Browser.Dom
+import Cambiatus.Enum.CurrencyType
+import Cambiatus.Mutation
+import Cambiatus.Object.Community
+import Cambiatus.Object.Contribution
 import Community
+import Dict
 import Eos
+import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, div, h1, img, label, text)
 import Html.Attributes exposing (class, for, src)
-import I18Next
 import Log
 import Page
-import RemoteData
+import Ports
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
@@ -17,7 +26,7 @@ import UpdateResult as UR
 import Utils
 import View.Feedback
 import View.Form.Input as Input
-import View.PaypalButtons
+import View.PaypalButtons as PaypalButtons
 
 
 
@@ -26,18 +35,37 @@ import View.PaypalButtons
 
 type alias Model =
     { amount : String
-    , amountProblem : Maybe ( String, I18Next.Replacements )
+    , amountProblem : Maybe AmountProblem
+    , isCreatingOrder : Bool
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
+init _ =
     ( { amount = ""
       , amountProblem = Nothing
+      , isCreatingOrder = False
       }
-    , Browser.Dom.focus amountFieldId
-        |> Task.attempt (\_ -> NoOp)
+    , focusAmountField
     )
+
+
+
+-- TYPES
+
+
+type alias Contribution =
+    { amount : Float
+    , communityName : String
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    , id : String
+    }
+
+
+type AmountProblem
+    = InvalidAmount
+    | AmountTooSmall
+    | AmountTooBig
 
 
 
@@ -47,9 +75,11 @@ init loggedIn =
 type Msg
     = NoOp
     | EnteredAmount String
+    | RequestedPaypalInfoFromJs String
+    | CreatedContribution String (RemoteData (Graphql.Http.Error (Maybe Contribution)) (Maybe Contribution))
     | PaypalApproved
     | PaypalCanceled
-    | PaypalErrored View.PaypalButtons.Error
+    | PaypalErrored PaypalButtons.Error
 
 
 type alias UpdateResult =
@@ -63,57 +93,164 @@ update msg model loggedIn =
             UR.init model
 
         EnteredAmount amount ->
-            { model | amount = amount }
+            { model
+                | amount = amount
+                , amountProblem =
+                    case String.toFloat amount of
+                        Nothing ->
+                            Just InvalidAmount
+
+                        Just value ->
+                            if value < PaypalButtons.minimumAmount then
+                                Just AmountTooSmall
+
+                            else if value > PaypalButtons.maximumAmount then
+                                Just AmountTooBig
+
+                            else
+                                Nothing
+            }
+                |> UR.init
+
+        RequestedPaypalInfoFromJs id ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    case String.toFloat model.amount of
+                        Nothing ->
+                            -- We handle this case on JS. If the amount is not a
+                            -- valid `Float`, we get an `InvalidAmount` error
+                            model
+                                |> UR.init
+
+                        Just amount ->
+                            { model | isCreatingOrder = True }
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Api.Graphql.mutation loggedIn.shared
+                                        (Just loggedIn.authToken)
+                                        (createContributionSelectionSet
+                                            { amount = amount
+                                            , communityId = community.symbol
+                                            , currency = Cambiatus.Enum.CurrencyType.Usd
+                                            }
+                                        )
+                                        (CreatedContribution id)
+                                    )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Tried creating a contribution, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Sponsor", function = "update" }
+                            []
+
+        CreatedContribution id (RemoteData.Success (Just contribution)) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Ports.sendPaypalInfo
+                        (Ports.SuccessfulContribution
+                            { amount = contribution.amount
+                            , communityName = contribution.communityName
+                            , targetId = id
+                            , invoiceId = contribution.id
+                            , currency = contribution.currency
+                            }
+                        )
+                    )
+
+        CreatedContribution _ (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.addCmd (Ports.sendPaypalInfo Ports.ContributionWithError)
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "sponsorship.contribution_error"))
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when creating a contribution"
+                    { moduleName = "Page.Community.Sponsor", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
+
+        CreatedContribution _ _ ->
+            model
                 |> UR.init
 
         PaypalApproved ->
-            UR.init model
+            { model | isCreatingOrder = False }
+                |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunityThankYou)
 
         PaypalCanceled ->
-            -- TODO - Check this
-            UR.init model
-
-        PaypalErrored error ->
-            case error of
-                View.PaypalButtons.AmountTooSmall { minimumAmount } ->
-                    { model
-                        | amountProblem =
-                            Just
-                                ( "sponsorship.amount_too_small"
-                                , [ ( "minimum", Utils.formatFloat minimumAmount 2 False ) ]
-                                )
+            { model | isCreatingOrder = False }
+                |> UR.init
+                |> UR.addCmd focusAmountField
+                |> UR.addBreadcrumb
+                    { type_ = Log.InfoBreadcrumb
+                    , category = msg
+                    , message = "Canceled PayPal contribution"
+                    , data = Dict.empty
+                    , level = Log.Info
                     }
-                        |> UR.init
 
-                View.PaypalButtons.AmountTooBig { maximumAmount } ->
-                    { model
-                        | amountProblem =
-                            Just
-                                ( "sponsorship.amount_too_big"
-                                , [ ( "maximum", Utils.formatFloat maximumAmount 2 False ) ]
-                                )
+        PaypalErrored PaypalButtons.AmountTooSmall ->
+            { model
+                | amountProblem = Just AmountTooSmall
+                , isCreatingOrder = False
+            }
+                |> UR.init
+                |> UR.addCmd focusAmountField
+
+        PaypalErrored PaypalButtons.AmountTooBig ->
+            { model
+                | amountProblem = Just AmountTooBig
+                , isCreatingOrder = False
+            }
+                |> UR.init
+                |> UR.addCmd focusAmountField
+
+        PaypalErrored PaypalButtons.InvalidAmount ->
+            { model
+                | amountProblem = Just InvalidAmount
+                , isCreatingOrder = False
+            }
+                |> UR.init
+                |> UR.addCmd focusAmountField
+
+        PaypalErrored (PaypalButtons.LoadError loadError) ->
+            { model | isCreatingOrder = False }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "sponsorship.load_error"))
+                |> UR.logEvent
+                    { username = Just loggedIn.accountName
+                    , message = "Error loading paypal buttons"
+                    , tags = [ Log.TypeTag Log.PaypalError ]
+                    , location = { moduleName = "Page.Community.Sponsor", function = "update" }
+                    , contexts =
+                        [ Log.contextFromCommunity loggedIn.selectedCommunity
+                        , { name = "Paypal Error", extras = Dict.fromList [ ( "JSON error", loadError ) ] }
+                        ]
+                    , transaction = msg
+                    , level = Log.Error
                     }
-                        |> UR.init
 
-                View.PaypalButtons.LoadError ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "sponsorship.load_error"))
-                        |> UR.logEvent
-                            { username = Just loggedIn.accountName
-                            , message = "Error loading paypal buttons"
-                            , tags = [ Log.TypeTag Log.PaypalError ]
-                            , location = { moduleName = "Page.Community.Sponsor", function = "update" }
-                            , contexts = [ Log.contextFromCommunity loggedIn.selectedCommunity ]
-                            , transaction = msg
-                            , level = Log.Error
-                            }
-
-                View.PaypalButtons.UnknownError ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "sponsorship.unknown_error"))
+        PaypalErrored (PaypalButtons.UnknownError unknownError) ->
+            { model | isCreatingOrder = False }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "sponsorship.unknown_error"))
+                |> UR.logEvent
+                    { username = Just loggedIn.accountName
+                    , message = "Something went wrong with PayPal buttons"
+                    , tags = [ Log.TypeTag Log.PaypalError ]
+                    , location = { moduleName = "Page.Community.Sponsor", function = "update" }
+                    , contexts =
+                        [ Log.contextFromCommunity loggedIn.selectedCommunity
+                        , { name = "Paypal Error", extras = Dict.fromList [ ( "JSON error", unknownError ) ] }
+                        ]
+                    , transaction = msg
+                    , level = Log.Error
+                    }
 
 
 amountFieldId : String
@@ -129,7 +266,6 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         title =
-            -- TODO - I18N
             loggedIn.shared.translators.t "sponsorship.sponsor"
 
         content =
@@ -155,7 +291,7 @@ view loggedIn model =
 
 
 view_ : Translators -> Community.Model -> Model -> Html Msg
-view_ ({ t, tr } as translators) community model =
+view_ translators community model =
     let
         dollarSymbol =
             Eos.symbolFromString "2,USD"
@@ -170,41 +306,33 @@ view_ ({ t, tr } as translators) community model =
                 -- TODO - Use new typography text-size class
                 , h1 [ class "font-bold text-black text-[46px] mb-8" ] [ text community.name ]
                 , label
-                    [ for "sponsor-amount-input"
+                    [ for amountFieldId
 
                     -- TODO - Move this to the input's label, use new typography text-size class
                     , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
                     ]
-                    -- TODO - I18N
-                    [ text "Digite o valor que deseja contribuir" ]
+                    [ text <| translators.t "sponsorship.enter_amount" ]
                 , Input.init
                     { label = ""
-                    , id = "sponsor-amount-input"
+                    , id = amountFieldId
                     , onInput = EnteredAmount
-
-                    -- TODO - Check disabled
-                    , disabled = False
+                    , disabled = model.isCreatingOrder
                     , value = model.amount
                     , placeholder = Nothing
                     , problems =
                         model.amountProblem
                             |> Maybe.map
-                                (\( translation, replacements ) ->
-                                    [ tr translation replacements ]
+                                (amountProblemToString translators
+                                    >> List.singleton
                                 )
                     , translators = translators
                     }
-                    |> Input.withContainerAttrs [ class "w-full lg:w-1/2" ]
+                    |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
                     |> Input.withCurrency dollarSymbol
                     |> Input.toHtml
-                , View.PaypalButtons.view [ class "w-full" ]
+                , PaypalButtons.view [ class "w-full" ]
                     { id = "sponsorship-paypal-buttons"
-                    , value =
-                        model.amount
-                            |> String.toFloat
-                            -- TODO - Check if we can use default 0
-                            |> Maybe.withDefault 0
-                    , communityName = community.name
+                    , value = String.toFloat model.amount
                     , onApprove = PaypalApproved
                     , onCancel = PaypalCanceled
                     , onError = PaypalErrored
@@ -214,8 +342,54 @@ view_ ({ t, tr } as translators) community model =
         ]
 
 
+amountProblemToString : Translators -> AmountProblem -> String
+amountProblemToString translators amountProblem =
+    case amountProblem of
+        InvalidAmount ->
+            translators.t "sponsorship.invalid_amount"
+
+        AmountTooSmall ->
+            translators.tr "sponsorship.amount_too_small"
+                [ ( "minimum", Utils.formatFloat PaypalButtons.minimumAmount 2 False ) ]
+
+        AmountTooBig ->
+            translators.tr "sponsorship.amount_too_big"
+                [ ( "maximum", Utils.formatFloat PaypalButtons.maximumAmount 2 False ) ]
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Ports.requestPaypalInfoFromJs RequestedPaypalInfoFromJs
+
+
+
+-- GRAPHQL
+
+
+createContributionSelectionSet : { amount : Float, communityId : Eos.Symbol, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> SelectionSet (Maybe Contribution) RootMutation
+createContributionSelectionSet { amount, communityId, currency } =
+    Cambiatus.Mutation.contribution
+        { amount = amount, communityId = Eos.symbolToString communityId, currency = currency }
+        (SelectionSet.succeed Contribution
+            |> SelectionSet.with Cambiatus.Object.Contribution.amount
+            |> SelectionSet.with (Cambiatus.Object.Contribution.community Cambiatus.Object.Community.name)
+            |> SelectionSet.with Cambiatus.Object.Contribution.currency
+            |> SelectionSet.with Cambiatus.Object.Contribution.id
+        )
+
+
 
 -- UTILS
+
+
+focusAmountField : Cmd Msg
+focusAmountField =
+    Browser.Dom.focus amountFieldId
+        |> Task.attempt (\_ -> NoOp)
 
 
 msgToString : Msg -> List String
@@ -226,6 +400,12 @@ msgToString msg =
 
         EnteredAmount _ ->
             [ "EnteredAmount" ]
+
+        RequestedPaypalInfoFromJs _ ->
+            [ "RequestedPaypalInfoFromJs" ]
+
+        CreatedContribution _ _ ->
+            [ "CreatedContribution" ]
 
         PaypalApproved ->
             [ "PaypalApproved" ]

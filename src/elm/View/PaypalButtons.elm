@@ -1,10 +1,9 @@
-module View.PaypalButtons exposing (Error(..), view)
+module View.PaypalButtons exposing (Error(..), maximumAmount, minimumAmount, view)
 
 import Html exposing (Html, node)
 import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on)
 import Json.Decode
-import Utils
 
 
 
@@ -12,10 +11,11 @@ import Utils
 
 
 type Error
-    = AmountTooSmall { enteredAmount : Float, minimumAmount : Float }
-    | AmountTooBig { enteredAmount : Float, maximumAmount : Float }
-    | LoadError
-    | UnknownError
+    = AmountTooSmall
+    | AmountTooBig
+    | InvalidAmount
+    | LoadError Json.Decode.Value
+    | UnknownError Json.Decode.Value
 
 
 
@@ -26,8 +26,7 @@ view :
     List (Html.Attribute msg)
     ->
         { id : String
-        , value : Float
-        , communityName : String
+        , value : Maybe Float
         , onApprove : msg
         , onCancel : msg
         , onError : Error -> msg
@@ -35,51 +34,52 @@ view :
     -> Html msg
 view attrs options =
     node "paypal-buttons"
-        (attribute "elm-value" (Utils.formatFloat options.value 2 False)
-            :: attribute "elm-community-name" options.communityName
-            :: on "paypal-approve" (Json.Decode.succeed options.onApprove)
+        (on "paypal-approve" (Json.Decode.succeed options.onApprove)
             :: on "paypal-cancel" (Json.Decode.succeed options.onCancel)
             :: on "paypal-error"
-                (if options.value < paypalMinimumAmount then
-                    Json.Decode.succeed
-                        (options.onError
-                            (AmountTooSmall
-                                { enteredAmount = options.value
-                                , minimumAmount = paypalMinimumAmount
-                                }
-                            )
-                        )
+                (case options.value of
+                    Nothing ->
+                        Json.Decode.succeed (options.onError InvalidAmount)
 
-                 else if options.value > paypalMaximumAmount then
-                    Json.Decode.succeed
-                        (options.onError
-                            (AmountTooBig
-                                { enteredAmount = options.value
-                                , maximumAmount = paypalMaximumAmount
-                                }
-                            )
-                        )
+                    Just value ->
+                        if value < minimumAmount then
+                            Json.Decode.succeed (options.onError AmountTooSmall)
 
-                 else
-                    Json.Decode.succeed (options.onError UnknownError)
+                        else if value > maximumAmount then
+                            Json.Decode.succeed (options.onError AmountTooBig)
+
+                        else
+                            Json.Decode.value
+                                |> Json.Decode.map (UnknownError >> options.onError)
                 )
-            :: on "paypal-load-error" (Json.Decode.succeed (options.onError LoadError))
+            :: on "paypal-load-error"
+                (Json.Decode.value
+                    |> Json.Decode.map (LoadError >> options.onError)
+                )
             :: id options.id
             :: class "z-0"
+            :: attribute "elm-value"
+                (case options.value of
+                    Nothing ->
+                        ""
+
+                    Just value ->
+                        String.fromFloat value
+                )
             :: attrs
         )
         []
 
 
 
--- INTERNAL HELPERS
+-- EXTERNAL HELPERS
 
 
-paypalMinimumAmount : Float
-paypalMinimumAmount =
+minimumAmount : Float
+minimumAmount =
     1
 
 
-paypalMaximumAmount : Float
-paypalMaximumAmount =
+maximumAmount : Float
+maximumAmount =
     9999999.99
