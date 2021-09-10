@@ -42,6 +42,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 /* global HTMLElement, CustomEvent */
 
+console.log(config.paypal.clientId)
+
 window.customElements.define('paypal-buttons',
   class PaypalButtons extends HTMLElement {
     constructor () {
@@ -94,7 +96,9 @@ window.customElements.define('paypal-buttons',
             },
 
             onApprove: (data, actions) => {
-              this.dispatchEvent(new CustomEvent('paypal-approve', {}))
+              return actions.order.capture().then(() => {
+                this.dispatchEvent(new CustomEvent('paypal-approve', {}))
+              })
             },
 
             onCancel: () => {
