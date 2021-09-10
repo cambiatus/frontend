@@ -42,8 +42,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // =========================================
 /* global HTMLElement, CustomEvent */
 
-console.log(config.paypal.clientId)
-
 window.customElements.define('paypal-buttons',
   class PaypalButtons extends HTMLElement {
     constructor () {

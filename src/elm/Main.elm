@@ -630,6 +630,10 @@ broadcast broadcastMessage status =
                     CommunitySettings.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsMsg
 
+                CommunitySupporters _ ->
+                    CommunitySupporters.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySupportersMsg
+
                 ObjectiveEditor _ ->
                     ObjectiveEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotObjectiveEditorMsg
