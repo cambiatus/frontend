@@ -26,6 +26,7 @@ import Route
 import Session.Shared exposing (Shared)
 import Utils exposing (onClickNoBubble)
 import View.Components
+import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -229,8 +230,8 @@ viewUserInfo profile =
                     ]
                 ]
             ]
-        , p [ class "text-sm text-gray-900" ]
-            [ text bio ]
+        , MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
+            bio
         , div [ class "flex justify-evenly mt-6" ]
             (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
         , a
