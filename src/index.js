@@ -23,11 +23,11 @@ import pdfFonts from './vfs_fonts'
 let eos = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
-const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
+const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
@@ -851,7 +851,7 @@ const setItem = (key, value) => {
   }
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
+const storedKeys = [USER_KEY, LANGUAGE_KEY, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
 if (useSubdomain) {
   storedKeys.forEach((key) => {
@@ -965,7 +965,8 @@ function flags () {
     canReadClipboard: canReadClipboard(),
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
-    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false
+    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
+    hasSeenSponsorModal: getItem(HAS_SEEN_SPONSOR_MODAL_KEY) || false
   }
 }
 

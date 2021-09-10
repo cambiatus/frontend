@@ -14,6 +14,7 @@ port module Ports exposing
     , sendPaypalInfo
     , setMarkdownContent
     , storeAuthToken
+    , storeHasSeenSponsorModal
     , storeLanguage
     , storePinVisibility
     , storeRecentSearches
@@ -98,6 +99,11 @@ port storeSelectedCommunitySymbol : String -> Cmd msg
 {-| Store whether to show or hide the pin by default
 -}
 port storePinVisibility : Bool -> Cmd msg
+
+
+{-| Store whether or not the user has seen the sponsor modal
+-}
+port storeHasSeenSponsorModal : Bool -> Cmd msg
 
 
 {-| Send info about a link in a MarkdownEditor to be treated on JS

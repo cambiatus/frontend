@@ -36,6 +36,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Page
+import Ports
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
@@ -128,9 +129,7 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
-
-    -- TODO - Check if user has seen this modal before
-    , isModalRequestingSponsorVisible = True
+    , isModalRequestingSponsorVisible = not shared.hasSeenSponsorModal
     }
 
 
@@ -988,6 +987,11 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         CompletedLoadCommunity community ->
+            let
+                markSponsorModalAsSeen =
+                    UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
+                        >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
+            in
             UR.init
                 { model
                     | balance = RemoteData.Loading
@@ -996,6 +1000,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
                 |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
+                |> markSponsorModalAsSeen
 
         CompletedLoadProfile ->
             { model | showContactModal = shouldShowContactModal loggedIn model }

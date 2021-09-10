@@ -27,6 +27,7 @@ type alias Flags =
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
+    , hasSeenSponsorModal : Bool
     }
 
 
@@ -47,6 +48,7 @@ default =
     , useSubdomain = True
     , selectedCommunity = Nothing
     , pinVisibility = False
+    , hasSeenSponsorModal = False
     }
 
 
@@ -75,6 +77,7 @@ decode =
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
         |> required "pinVisibility" Decode.bool
+        |> required "hasSeenSponsorModal" Decode.bool
 
 
 type alias Endpoints =
