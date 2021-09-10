@@ -301,12 +301,12 @@ view_ translators community model =
             [ div [ class "flex flex-col items-center w-full px-4 py-7 bg-white md:w-1/2 md:mx-auto" ]
                 [ img [ class "h-10", src community.logo ] []
 
-                -- TODO - Use new typography text-size class
+                -- TODO - Use new typography text-size class (#622)
                 , h1 [ class "font-bold text-black text-[46px] mb-8" ] [ text community.name ]
                 , label
                     [ for amountFieldId
 
-                    -- TODO - Move this to the input's label, use new typography text-size class
+                    -- TODO - Move this to the input's label, use new typography text-size class (#622)
                     , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
                     ]
                     [ text <| translators.t "sponsorship.enter_amount" ]

@@ -153,7 +153,7 @@ viewSponsorCards loggedIn community =
     in
     div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
         [ div [ class "w-full bg-white rounded p-4" ]
-            -- TODO - Use new typography text-size class
+            -- TODO - Use new typography text-size class (#622)
             [ h2 [ class "text-[22px] font-bold mb-6" ]
                 [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
                 , text " "
@@ -193,14 +193,14 @@ viewSponsorCards loggedIn community =
                 [ text_ "community.index.see_all_supporters" ]
             ]
         , div [ class "w-full bg-white rounded p-4 relative hidden md:block" ]
-            -- TODO - Use new typography text-size class
+            -- TODO - Use new typography text-size class (#622)
             [ h2 [ class "text-[22px] font-bold" ]
                 [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
                 , text " "
                 , span [ class "text-purple-500" ] [ text_ "community.index.messages" ]
                 ]
 
-            -- TODO - Use new typography text-size class
+            -- TODO - Use new typography text-size class (#622)
             , p [ class "text-center text-gray-900 mt-24 font-bold text-[22px]" ] [ text_ "menu.coming_soon" ]
             , img
                 [ class "absolute bottom-0 right-0 rounded-br"
