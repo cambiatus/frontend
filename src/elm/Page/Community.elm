@@ -124,7 +124,7 @@ view loggedIn model =
 
                               else
                                 text ""
-                            , viewSponsorCards loggedIn.shared.translators community
+                            , viewSponsorCards loggedIn community
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
@@ -138,30 +138,40 @@ view loggedIn model =
     }
 
 
-viewSponsorCards : Translators -> Community.Model -> Html msg
-viewSponsorCards { t, tr } community =
+viewSponsorCards : LoggedIn.Model -> Community.Model -> Html msg
+viewSponsorCards loggedIn community =
     let
+        { t, tr } =
+            loggedIn.shared.translators
+
         text_ =
             text << t
+
+        hasContributed =
+            community.contributions
+                |> List.any (\contribution -> contribution.user.account == loggedIn.accountName)
     in
     div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
         [ div [ class "w-full bg-white rounded p-4" ]
-            -- TODO - Check if has donated
             -- TODO - Use new typography text-size class
             [ h2 [ class "text-[22px] font-bold mb-6" ]
                 [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
                 , text " "
                 , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
                 ]
-            , div [ class "flex items-center mb-4" ]
-                [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
-                    [ text_ "community.index.you" ]
-                , p [ class "ml-4" ]
-                    [ text <|
-                        tr "community.index.your_turn"
-                            [ ( "community", community.name ) ]
+            , if not hasContributed then
+                div [ class "flex items-center mb-4" ]
+                    [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                        [ text_ "community.index.you" ]
+                    , p [ class "ml-4" ]
+                        [ text <|
+                            tr "community.index.your_turn"
+                                [ ( "community", community.name ) ]
+                        ]
                     ]
-                ]
+
+              else
+                text ""
             , a
                 [ class "button button-primary w-full mb-6"
                 , Route.href Route.CommunitySponsor
@@ -169,13 +179,11 @@ viewSponsorCards { t, tr } community =
                 [ text_ "community.index.support_us" ]
             , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
             , div [ class "flex mb-4" ]
-                -- TODO - Use supporters
-                (List.repeat 5 ()
+                (community.contributions
+                    |> List.take 5
                     |> List.map
-                        (\_ ->
-                            div
-                                [ class "bg-gray-400 w-14 h-14 object-cover rounded-full -mr-2 border border-white" ]
-                                []
+                        (\contribution ->
+                            Avatar.view contribution.user.avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white"
                         )
                 )
             , a

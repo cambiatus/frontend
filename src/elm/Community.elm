@@ -32,6 +32,7 @@ import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
+import Cambiatus.Object.Contribution
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -95,6 +96,7 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
+    , contributions : List Contribution
     , objectives : List Objective
     , hasObjectives : Bool
     , hasShop : Bool
@@ -141,6 +143,7 @@ communitySelectionSet =
         |> with Community.productCount
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
+        |> with (Community.contributions contributionSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.hasObjectives
         |> with Community.hasShop
@@ -270,6 +273,21 @@ encodeUpdateObjectiveAction c =
         , ( "description", Encode.string c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
+
+
+
+-- CONTRIBUTION
+
+
+type alias Contribution =
+    { user : Profile.Minimal
+    }
+
+
+contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contribution
+contributionSelectionSet =
+    SelectionSet.succeed Contribution
+        |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
 
 
 
