@@ -20,7 +20,7 @@ const dev = {
     socket: 'wss://staging.cambiatus.io/socket'
   },
   paypal: {
-    clientId: 'AUJX_psBE0gKXhdCusKWrnFIS4tL78N7tpyBAxvX9xwf_wq2aJJxR8FsRKUAFp0QsMcnuR-qgOP4WkUx'
+    clientId: 'AbuWni_NhYfoUDAre0hl0IFxpGFUSRT2lW6HaHBevn1YxbOHq8qtxk-1_6xsXM8XJtUnFBBR4sfNkOU4'
   },
   logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',

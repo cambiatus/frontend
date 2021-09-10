@@ -131,7 +131,7 @@ update msg model loggedIn =
                                         (createContributionSelectionSet
                                             { amount = amount
                                             , communityId = community.symbol
-                                            , currency = Cambiatus.Enum.CurrencyType.Usd
+                                            , currency = Cambiatus.Enum.CurrencyType.Brl
                                             }
                                         )
                                         (CreatedContribution id)
@@ -293,10 +293,8 @@ view loggedIn model =
 view_ : Translators -> Community.Model -> Model -> Html Msg
 view_ translators community model =
     let
-        dollarSymbol =
-            Eos.symbolFromString "2,USD"
-                -- We know the above symbol string can be parsed
-                |> Maybe.withDefault community.symbol
+        defaultCurrency =
+            PaypalButtons.BRL
     in
     div [ class "m-4 bg-white rounded md:m-0 md:bg-white md:flex-grow" ]
         [ div [ class "container mx-auto" ]
@@ -322,17 +320,30 @@ view_ translators community model =
                     , problems =
                         model.amountProblem
                             |> Maybe.map
-                                (amountProblemToString translators
+                                (amountProblemToString translators defaultCurrency
                                     >> List.singleton
                                 )
                     , translators = translators
                     }
                     |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                    |> Input.withCurrency dollarSymbol
+                    |> Input.withCurrency (PaypalButtons.currencyToSymbol defaultCurrency)
                     |> Input.toHtml
                 , PaypalButtons.view [ class "w-full" ]
                     { id = "sponsorship-paypal-buttons"
-                    , value = String.toFloat model.amount
+                    , value =
+                        String.toFloat model.amount
+                            |> Maybe.andThen
+                                (\amount ->
+                                    if amount < PaypalButtons.minimumAmount then
+                                        Nothing
+
+                                    else if amount > PaypalButtons.maximumAmount then
+                                        Nothing
+
+                                    else
+                                        Just amount
+                                )
+                    , currency = defaultCurrency
                     , onApprove = PaypalApproved
                     , onCancel = PaypalCanceled
                     , onError = PaypalErrored
@@ -342,19 +353,23 @@ view_ translators community model =
         ]
 
 
-amountProblemToString : Translators -> AmountProblem -> String
-amountProblemToString translators amountProblem =
+amountProblemToString : Translators -> PaypalButtons.Currency -> AmountProblem -> String
+amountProblemToString translators currency amountProblem =
     case amountProblem of
         InvalidAmount ->
             translators.t "sponsorship.invalid_amount"
 
         AmountTooSmall ->
             translators.tr "sponsorship.amount_too_small"
-                [ ( "minimum", Utils.formatFloat PaypalButtons.minimumAmount 2 False ) ]
+                [ ( "minimum", Utils.formatFloat PaypalButtons.minimumAmount 2 False )
+                , ( "currency", PaypalButtons.currencyToString currency )
+                ]
 
         AmountTooBig ->
             translators.tr "sponsorship.amount_too_big"
-                [ ( "maximum", Utils.formatFloat PaypalButtons.maximumAmount 2 False ) ]
+                [ ( "maximum", Utils.formatFloat PaypalButtons.maximumAmount 2 False )
+                , ( "currency", PaypalButtons.currencyToString currency )
+                ]
 
 
 

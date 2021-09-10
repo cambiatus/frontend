@@ -1,5 +1,14 @@
-module View.PaypalButtons exposing (Error(..), maximumAmount, minimumAmount, view)
+module View.PaypalButtons exposing
+    ( Currency(..)
+    , Error(..)
+    , currencyToString
+    , currencyToSymbol
+    , maximumAmount
+    , minimumAmount
+    , view
+    )
 
+import Eos
 import Html exposing (Html, node)
 import Html.Attributes exposing (attribute, class, id)
 import Html.Events exposing (on)
@@ -18,6 +27,33 @@ type Error
     | UnknownError Json.Decode.Value
 
 
+type Currency
+    = BRL
+    | USD
+
+
+currencyToString : Currency -> String
+currencyToString currency =
+    case currency of
+        BRL ->
+            "BRL"
+
+        USD ->
+            "USD"
+
+
+currencyToSymbol : Currency -> Eos.Symbol
+currencyToSymbol currency =
+    case currency of
+        BRL ->
+            Eos.symbolFromString "2,BRL"
+                |> Maybe.withDefault Eos.cambiatusSymbol
+
+        USD ->
+            Eos.symbolFromString "2,USD"
+                |> Maybe.withDefault Eos.cambiatusSymbol
+
+
 
 -- VIEW
 
@@ -27,6 +63,7 @@ view :
     ->
         { id : String
         , value : Maybe Float
+        , currency : Currency
         , onApprove : msg
         , onCancel : msg
         , onError : Error -> msg
@@ -66,6 +103,7 @@ view attrs options =
                     Just value ->
                         String.fromFloat value
                 )
+            :: attribute "elm-currency" (currencyToString options.currency)
             :: attrs
         )
         []

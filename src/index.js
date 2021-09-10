@@ -53,7 +53,10 @@ window.customElements.define('paypal-buttons',
     }
 
     connectedCallback () {
-      paypalJs.loadScript({ 'client-id': config.paypal.clientId, currency: 'USD' })
+      paypalJs.loadScript({
+        'client-id': config.paypal.clientId,
+        currency: this.getAttribute('elm-currency') || 'USD'
+      })
         .then((paypal) => {
           paypal.Buttons({
             style: {

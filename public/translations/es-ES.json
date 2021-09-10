@@ -1126,8 +1126,8 @@
   "sponsorship": {
     "sponsor": "Patrocinar",
     "enter_amount": "Ingrese la cantidad que desea contribuir",
-    "amount_too_small": "El monto debe ser de al menos {{minimum}} USD",
-    "amount_too_big": "El monto debe ser máximo {{maximum}} USD",
+    "amount_too_small": "El monto debe ser de al menos {{minimum}} {{currency}}",
+    "amount_too_big": "El monto debe ser máximo {{maximum}} {{currency}}",
     "invalid_amount": "Valor no válido",
     "unknown_error": "Hubo un error al procesar su pago",
     "load_error": "Hubo un problema al conectarse a PayPal, vuelva a intentarlo más tarde.",

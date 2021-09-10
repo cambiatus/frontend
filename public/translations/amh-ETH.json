@@ -1084,8 +1084,8 @@
   "sponsorship": {
     "sponsor": "ስፖንሰር",
     "enter_amount": "እርስዎ ለማበርከት የሚፈልጉትን መጠን ያስገቡ",
-    "amount_too_small": "መጠኑ ቢያንስ {{minimum}} ዶላር መሆን አለበት",
-    "amount_too_big": "መጠኑ ከፍተኛው {{maximum}} ዶላር መሆን አለበት",
+    "amount_too_small": "መጠኑ ቢያንስ {{minimum}} {{currency}} መሆን አለበት",
+    "amount_too_big": "መጠኑ ከፍተኛው {{maximum}} {{currency}} መሆን አለበት",
     "invalid_amount": "ልክ ያልሆነ እሴት",
     "unknown_error": "ክፍያዎን ማስኬድ ላይ ስህተት ነበር",
     "load_error": "ከ PayPal ጋር መገናኘት ላይ ችግር ነበር ፣ እባክዎ ቆይተው እንደገና ይሞክሩ",
