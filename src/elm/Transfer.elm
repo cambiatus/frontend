@@ -305,16 +305,16 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                [ span [ class "font-bold text-lg" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
                 , text " "
-                , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
+                , span [ class "text-sm" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             , case transfer.memo of
                 Nothing ->
                     text ""
 
                 Just memo ->
-                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 break-all" ]
+                    View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900 break-all" ]
                         (t memo)
             ]
         ]

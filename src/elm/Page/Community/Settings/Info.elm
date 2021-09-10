@@ -977,7 +977,7 @@ viewCoverPhoto { translators } model =
             }
             |> FileUploader.withAttrs [ class "w-full" ]
             |> FileUploader.toHtml translators
-        , p [ class "mt-2 text-center text-gray-900 uppercase text-caption tracking-wide" ]
+        , p [ class "mt-2 text-center text-gray-900 uppercase text-sm tracking-wide" ]
             [ text (translators.t "Be sure to add a picture that has good quality") ]
         ]
 
@@ -1013,9 +1013,9 @@ viewSubdomain shared model =
                 ]
             |> Input.withElements
                 [ span
-                    [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
+                    [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2 transition-opacity"
                     , classList
-                        [ ( "hidden", String.isEmpty model.subdomainInput )
+                        [ ( "opacity-0", String.isEmpty model.subdomainInput )
                         , ( "bg-gray-500", model.isLoading )
                         ]
                     ]
@@ -1034,7 +1034,7 @@ viewSubdomain shared model =
 viewInvitation : Shared -> Model -> Html Msg
 viewInvitation { translators } model =
     div [ class "flex flex-col" ]
-        [ View.Form.label "" (translators.t "settings.community_info.invitation.title")
+        [ View.Form.label [] "invitation_toggle" (translators.t "settings.community_info.invitation.title")
         , View.Form.Toggle.init
             { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "invitation_toggle"

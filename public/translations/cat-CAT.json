@@ -11,7 +11,7 @@
   },
   "menu": {
     "title": "Menú",
-    "welcome_to": "Benvingut a {{community_name}}",
+    "welcome_to": "Benvingut de nou,",
     "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
@@ -190,7 +190,7 @@
       "wordsMode": {
         "input": {
           "description": "Escriviu les 12 paraules que heu copiat i enganxat al registre.",
-          "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
+          "label": "Les vostres 12 paraules",
           "placeholder": "Escriviu les vostres 12 paraules aquí",
           "tooltip": "També podeu fer servir la tecla PRIVADA",
           "toggle": "Vull utilitzar la clau privada",
@@ -342,8 +342,7 @@
       "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
     },
     "account_created": {
-      "greet": "Ei",
-      "last_step": "és l’últim pas i el més important",
+      "greet": "Ei {{name}},",
       "copy": "copieu",
       "i_saved_words": "He copiat i enganxat en un lloc segur les 12 paraules que va demanar Cambiatus",
       "words_copied": "es van copiar al porta-retalls",
@@ -801,7 +800,7 @@
     "scan": "Escanejar",
     "or_choose_list": "O escull de la llista",
     "choose_one_option": "tria una de les opcions",
-    "next": "Pròxim",
+    "continue": "Continua",
     "your_action": "La teva acció:",
     "add_comment": "Afegeix un comentari",
     "claim": "Reclamar",

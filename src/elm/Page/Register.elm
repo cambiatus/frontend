@@ -10,8 +10,8 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
-import Html exposing (Html, a, button, div, img, p, span, strong, text)
-import Html.Attributes exposing (class, disabled, id, src)
+import Html exposing (Html, a, button, div, img, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick, onSubmit)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
@@ -92,7 +92,7 @@ type Status
     = Loading
     | AccountTypeSelectorShowed
     | FormShowed FormModel
-    | AccountCreated
+    | AccountCreated AccountKeys
     | ErrorShowed
     | NotFound
 
@@ -192,7 +192,7 @@ viewCreateAccount guest model =
             guest.shared
 
         formClasses =
-            "flex flex-grow flex-col bg-white px-4 md:px-0 md:max-w-sm sf-wrapper self-center w-full"
+            "flex flex-grow flex-col bg-white px-4 md:px-0 md:pt-20 md:max-w-sm self-center w-full"
 
         backgroundColor =
             case model.step of
@@ -225,19 +225,12 @@ viewCreateAccount guest model =
                     , onSubmit (ValidateForm formModel)
                     ]
                     [ viewAccountTypeSelector translators model
-                    , div [ class "sf-content" ]
-                        [ viewRegistrationForm translators formModel ]
+                    , viewRegistrationForm translators formModel
                     , viewFooter translators True guest
                     ]
 
-            AccountCreated ->
-                case model.accountKeys of
-                    Just keys ->
-                        viewAccountCreated translators model keys
-
-                    Nothing ->
-                        -- TODO: This should never happen
-                        text ""
+            AccountCreated accountKeys ->
+                viewAccountCreated translators model accountKeys
 
             ErrorShowed ->
                 Page.fullPageNotFound (translators.t "error.unknown") ""
@@ -264,8 +257,8 @@ viewFooter { t } isSubmitEnabled guest =
                 ]
                 [ text (t "auth.login.continue") ]
     in
-    div [ class "mt-auto flex flex-col justify-between items-center h-32" ]
-        [ span []
+    div [ class "mt-auto flex flex-col items-center text-gray-333 md:mt-0" ]
+        [ span [ class "mb-6" ]
             [ text (t "register.login")
             , a
                 [ class "underline text-orange-300"
@@ -301,8 +294,8 @@ viewAccountTypeSelector translators model =
     case model.country of
         Just country ->
             div []
-                [ View.Form.primaryLabel "radio" (translators.t "register.form.register_tooltip")
-                , div [ class "flex space-x-2" ]
+                [ View.Form.label [] "radio" (translators.t "register.form.register_tooltip")
+                , div [ class "flex space-x-2 mb-4" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
                         NaturalAccount
@@ -333,21 +326,18 @@ viewAccountTypeButton title accountType status =
                     False
     in
     div
-        [ class "w-1/2 leading-10 text-center cursor-pointer rounded-sm cursor-pointer mb-4"
-        , class
-            (if isSelected then
-                "bg-orange-300 text-white"
-
-             else
-                "bg-gray-100 text-black"
-            )
+        [ class "w-1/2 text-center cursor-pointer rounded-sm cursor-pointer mb-4 py-2"
+        , classList
+            [ ( "bg-orange-300 text-white font-bold", isSelected )
+            , ( "bg-gray-100 text-black", not isSelected )
+            ]
         , onClick (AccountTypeSelected accountType)
         ]
         [ text title ]
 
 
 viewAccountCreated : Translators -> Model -> AccountKeys -> Html Msg
-viewAccountCreated ({ t } as translators) model keys =
+viewAccountCreated ({ t, tr } as translators) model keys =
     let
         name =
             Eos.nameToString keys.accountName
@@ -363,19 +353,12 @@ viewAccountCreated ({ t } as translators) model keys =
         [ class "flex-grow bg-purple-500 flex md:block"
         ]
         [ div
-            [ class "sf-wrapper"
-            , class "px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white text-body"
-            ]
-            [ div [ class "sf-content" ]
+            [ class "flex flex-col justify-between px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0 text-white" ]
+            [ div []
                 [ p
-                    [ class "text-xl mb-3" ]
-                    [ text (t "register.account_created.greet")
-                    , text " "
-                    , strong [] [ text name ]
-                    , text ", "
-                    , text (t "register.account_created.last_step")
-                    ]
-                , p [ class "mb-3" ]
+                    [ class "font-bold mb-2" ]
+                    [ text (tr "register.account_created.greet" [ ( "name", name ) ]) ]
+                , p [ class "mb-6" ]
                     [ text (t "register.account_created.instructions")
                     ]
                 , div [ class "w-1/4 m-auto relative left-1" ]
@@ -387,11 +370,11 @@ viewAccountCreated ({ t } as translators) model keys =
                         ]
                         []
                     ]
-                , div [ class "bg-white text-black text-2xl mb-12 p-4 rounded-lg" ]
-                    [ p [ class "input-label" ]
+                , div [ class "bg-white text-black text-2xl p-4 rounded-lg" ]
+                    [ p [ class "text-sm font-bold mb-4 text-black" ]
                         [ text (t "register.account_created.twelve_words")
                         , if model.isPassphraseCopiedToClipboard then
-                            strong [ class "uppercase ml-1" ]
+                            span [ class "ml-1" ]
                                 [ text (t "register.account_created.words_copied")
                                 , text " ✔"
                                 ]
@@ -400,8 +383,9 @@ viewAccountCreated ({ t } as translators) model keys =
                             text ""
                         ]
                     , p
-                        [ class "pb-2 leading-tight" ]
-                        [ span [ class "select-all", id passphraseTextId ] [ text keys.words ]
+                        [ class "pb-4" ]
+                        [ span [ class "select-all text-lg block font-bold", id passphraseTextId ]
+                            [ text keys.words ]
 
                         -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
                         -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
@@ -427,7 +411,7 @@ viewAccountCreated ({ t } as translators) model keys =
                         [ text (t "register.account_created.copy") ]
                     ]
                 ]
-            , div [ class "sf-footer" ]
+            , div []
                 [ Checkbox.init
                     { description = text (t "register.account_created.i_saved_words" ++ " 💜")
                     , id = "agreed_save_passphrase"
@@ -435,7 +419,7 @@ viewAccountCreated ({ t } as translators) model keys =
                     , disabled = False
                     , onCheck = AgreedToSave12Words
                     }
-                    |> Checkbox.withContainerAttrs [ class "my-4" ]
+                    |> Checkbox.withContainerAttrs [ class "my-6 font-bold" ]
                     |> Checkbox.toHtml
                 , button
                     [ onClick <|
@@ -443,7 +427,7 @@ viewAccountCreated ({ t } as translators) model keys =
                             { passphrase = keys.words
                             , accountName = Eos.nameToString keys.accountName
                             }
-                    , class "button button-primary w-full mb-8"
+                    , class "button button-primary w-full mb-4"
                     , disabled (not model.hasAgreedToSavePassphrase)
                     , class <|
                         if model.hasAgreedToSavePassphrase then
@@ -468,21 +452,25 @@ viewTitleForStep { t, tr } s =
 
                 SavePassphrase ->
                     "2"
+
+        isSavingPassphrase =
+            case s of
+                FillForm ->
+                    False
+
+                SavePassphrase ->
+                    True
     in
     p
-        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500 md:ml-6" ]
+        [ class "mx-4 py-4 font-bold md:mx-6"
+        , classList
+            [ ( "text-gray-333 border-t border-gray-500", not isSavingPassphrase )
+            , ( "text-white", isSavingPassphrase )
+            ]
+        ]
         [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
-        , strong
-            [ class <|
-                case s of
-                    FillForm ->
-                        "text-black"
-
-                    SavePassphrase ->
-                        "text-white"
-            ]
-            [ text <| t ("register.form.step" ++ stepNum ++ "_title") ]
+        , text (t ("register.form.step" ++ stepNum ++ "_title"))
         ]
 
 
@@ -821,11 +809,22 @@ update _ msg model ({ shared } as guest) =
         CompletedSignUp (RemoteData.Success resp) ->
             case resp of
                 Just _ ->
-                    { model
-                        | status = AccountCreated
-                        , step = SavePassphrase
-                    }
-                        |> UR.init
+                    case model.accountKeys of
+                        Nothing ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Completed signing up, but didn't have account keys"
+                                    Nothing
+                                    { moduleName = "Page.Register", function = "update" }
+                                    []
+
+                        Just accountKeys ->
+                            { model
+                                | status = AccountCreated accountKeys
+                                , step = SavePassphrase
+                            }
+                                |> UR.init
 
                 Nothing ->
                     model

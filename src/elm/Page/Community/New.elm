@@ -205,7 +205,8 @@ isLogoUploaded model =
 viewDescription : Shared -> Bool -> MarkdownEditor.Model -> List Error -> Html Msg
 viewDescription ({ translators } as shared) isDisabled defVal errors =
     div []
-        [ span [ class "input-label" ] [ text (translators.t "community.create.labels.description") ]
+        [ span [ class "label" ]
+            [ text (translators.t "community.create.labels.description") ]
         , MarkdownEditor.view
             { translators = translators
             , placeholder = Nothing
@@ -279,7 +280,7 @@ viewWebsite { translators } isDisabled defVal _ =
 viewAutoInvite : Shared -> Bool -> Bool -> List Error -> Html Msg
 viewAutoInvite { translators } isDisabled defVal _ =
     div [ class "flex flex-col" ]
-        [ View.Form.label "comm-autoinvite-title" (translators.t "settings.community_info.invitation.title")
+        [ View.Form.label [] "comm-autoinvite-title" (translators.t "settings.community_info.invitation.title")
         , Toggle.init
             { label = text (translators.t "settings.community_info.fields.invitation")
             , id = "comm-autoinvite"

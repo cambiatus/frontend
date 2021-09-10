@@ -33,7 +33,7 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Html exposing (Html, b, button, div, p, span, text)
-import Html.Attributes exposing (class, classList, placeholder)
+import Html.Attributes exposing (class, classList, id, placeholder)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -1473,7 +1473,7 @@ viewValidations { shared } model =
     in
     div []
         [ div [ class "mb-6" ]
-            [ View.Form.label "expiration-toggle" (t "community.actions.form.validity_label")
+            [ View.Form.label [] "expiration-toggle" (t "community.actions.form.validity_label")
             , Toggle.init
                 { label =
                     p [ class "text-green" ]
@@ -1512,7 +1512,7 @@ viewValidations { shared } model =
                 , disabled = False
                 , onCheck = ToggleDeadline
                 }
-                |> Checkbox.withContainerAttrs [ class "flex text-body mb-3" ]
+                |> Checkbox.withContainerAttrs [ class "flex mb-3" ]
                 |> Checkbox.toHtml
             , case model.form.validation of
                 NoValidation ->
@@ -1522,7 +1522,7 @@ viewValidations { shared } model =
                     case dateValidation of
                         Just validation ->
                             div []
-                                [ span [ class "input-label" ]
+                                [ span [ class "label" ]
                                     [ text_ "community.actions.form.date_label" ]
                                 , div [ class "mb-10" ]
                                     [ MaskedDate.input
@@ -1553,7 +1553,7 @@ viewValidations { shared } model =
                 , disabled = False
                 , onCheck = ToggleUsages
                 }
-                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                |> Checkbox.withContainerAttrs [ class "flex" ]
                 |> Checkbox.toHtml
             ]
         , case model.form.validation of
@@ -1740,7 +1740,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     |> Radio.withOptions minVotesOptions
                     |> Radio.withVariant Radio.Simplified
                     |> Radio.toHtml shared.translators
-                , span [ class "input-label" ]
+                , span [ class "label" ]
                     [ text (tr "community.actions.form.verifiers_label_count" [ ( "count", getInput minVotesValidator |> String.fromInt ) ]) ]
                 , div []
                     [ viewVerifierSelect loggedIn model False
@@ -1771,7 +1771,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                         , disabled = False
                         , onCheck = TogglePhotoProof
                         }
-                        |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                        |> Checkbox.withContainerAttrs [ class "flex" ]
                         |> Checkbox.toHtml
                     , if isPhotoProofEnabled then
                         div [ class "mt-6" ]
@@ -1786,7 +1786,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                                 , disabled = False
                                 , onCheck = TogglePhotoProofNumber
                                 }
-                                |> Checkbox.withContainerAttrs [ class "flex text-body" ]
+                                |> Checkbox.withContainerAttrs [ class "flex" ]
                                 |> Checkbox.toHtml
                             , MarkdownEditor.view
                                 { translators = shared.translators

@@ -645,7 +645,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
             maybeCurrentName
                 |> Maybe.withDefault (Eos.stringToName "")
     in
-    [ div [ class "font-medium text-3xl w-full" ] [ text sale.title ]
+    [ div [ class "font-semibold text-3xl w-full" ] [ text sale.title ]
     , View.MarkdownEditor.viewReadOnly [ class "text-gray w-full md:text-sm" ]
         sale.description
     , div [ class "w-full flex items-center text-sm mt-4" ]
@@ -660,7 +660,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
     , div [ class "flex flex-wrap w-full justify-between items-center" ]
         [ div []
             [ div [ class "flex items-center" ]
-                [ div [ class "text-2xl text-green font-medium" ]
+                [ div [ class "text-2xl text-green font-semibold" ]
                     [ text (String.fromFloat sale.price) ]
                 , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
                     [ text (Eos.symbolToSymbolCodeString sale.symbol) ]
@@ -671,7 +671,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
 
                 Just asset ->
                     div [ class "flex" ]
-                        [ div [ class "bg-gray-100 uppercase text-xs px-2" ]
+                        [ div [ class "bg-gray-100 uppercase text-sm px-2" ]
                             [ text
                                 (shared.translators.tr
                                     "account.my_wallet.your_current_balance"

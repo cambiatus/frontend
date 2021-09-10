@@ -225,13 +225,13 @@ type alias GenericCommunity community =
 view_ : Bool -> Shared -> GenericCommunity community -> Model -> Html Msg
 view_ isGuest ({ translators } as shared) community model =
     div
-        [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 md:p-0"
+        [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 lg:p-0"
         , classList [ ( "w-1/2", not isGuest ) ]
         ]
-        [ div [ class "bg-white rounded-b md:rounded md:w-4/5 lg:w-7/12" ]
+        [ div [ class "bg-white rounded-b md:rounded lg:w-4/5 xl:w-7/12" ]
             [ Community.communityPreviewImage False shared community
             , div [ class "p-4" ]
-                (View.MarkdownEditor.viewReadOnly [ class "text-gray-900 text-sm block mb-7" ]
+                (View.MarkdownEditor.viewReadOnly [ class "text-gray-333 block mb-7" ]
                     community.description
                     :: (if community.hasAutoInvite then
                             [ button
@@ -247,7 +247,7 @@ view_ isGuest ({ translators } as shared) community model =
                             ]
 
                         else
-                            [ span [ class "block text-center text-sm" ]
+                            [ span [ class "block text-center text-black font-bold" ]
                                 [ text (translators.t "community.join.only_invited") ]
                             , a
                                 [ class "button button-primary w-full mt-4"

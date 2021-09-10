@@ -79,7 +79,6 @@ init shared accountName authToken =
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
-        , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -121,8 +120,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     in
     ( initModel shared maybePrivateKey_ profile_.account authToken
     , Cmd.batch
-        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
-        , loadedProfile
+        [ loadedProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         ]
@@ -487,7 +485,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
                 [ Icons.notification "fill-current text-black"
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-xs rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-semibold text-sm rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
@@ -504,7 +502,7 @@ viewHeader page ({ shared } as model) profile_ =
                     ]
                     [ Avatar.view profile_.avatar "h-8 w-8"
                     , div [ class "flex flex-wrap text-left pl-2" ]
-                        [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
+                        [ p [ class "w-full font-sans uppercase text-gray-900 text-sm overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
                         , p [ class "w-full font-sans text-indigo-500 text-sm" ]
                             [ text (shared.translators.t "menu.my_account") ]
@@ -664,10 +662,10 @@ viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
         menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
+            "mx-4 w-48 font-sans uppercase flex items-center justify-center text-sm text-gray-700 hover:text-indigo-500"
 
         activeClass =
-            "border-orange-100 border-b-2 text-indigo-500 font-medium"
+            "border-orange-100 border-b-2 text-indigo-500 font-semibold"
 
         iconClass =
             "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
@@ -1074,6 +1072,7 @@ update msg model =
             in
             UR.init newModel
                 |> UR.addCmd cmd
+                |> UR.addCmd (Ports.getRecentSearches ())
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb

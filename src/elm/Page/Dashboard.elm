@@ -245,10 +245,10 @@ view ({ shared, accountName } as loggedIn) model =
 
 viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
 viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-heading" ]
+    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-lg" ]
         [ div []
             [ text (loggedIn.shared.translators.t "menu.my_communities")
-            , span [ class "text-indigo-500 font-medium" ]
+            , span [ class "text-indigo-500 font-semibold" ]
                 [ text community.name
                 ]
             ]
@@ -273,9 +273,9 @@ addContactModal shared ({ contactModel } as model) =
 
         header =
             div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-sm uppercase" ]
                     [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
+                , p [ class "text-lg font-bold mt-2" ]
                     [ text_ "contact_modal.title" ]
                 ]
 
@@ -291,7 +291,7 @@ addContactModal shared ({ contactModel } as model) =
             [ header
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
-            , p [ class "text-caption text-center uppercase my-4" ]
+            , p [ class "text-sm text-center uppercase my-4" ]
                 [ text_ "contact_modal.footer" ]
             ]
         |> Modal.withSize Modal.FullScreen
@@ -350,9 +350,9 @@ viewInvitationModal { shared } model =
                     [ p [ class "text-center text-red" ] [ text err ] ]
 
                 InviteModalLoaded invitationId ->
-                    [ div [ class "mt-3 input-label" ]
+                    [ div [ class "mt-3 label" ]
                         [ text_ "community.invite.label" ]
-                    , p [ class "py-2 md:text-heading text-black" ]
+                    , p [ class "py-2 md:text-lg text-black" ]
                         [ text (url invitationId) ]
                     , Input.init
                         { label = ""
@@ -436,11 +436,10 @@ viewAnalysisList loggedIn model =
             div [ class "w-full flex mb-10 md:mb-40" ]
                 [ div
                     [ class "w-full" ]
-                    [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex flex-wrap mr-4" ]
-                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                                [ text_ "dashboard.analysis.title.1"
-                                ]
+                    [ div [ class "flex justify-between text-gray-600 text-lg font-light flex mt-4 mb-4" ]
+                        [ div [ class "flex flex-wrap mr-4 text-lg" ]
+                            [ div [ class "text-indigo-500 mr-2 font-semibold" ]
+                                [ text_ "dashboard.analysis.title.1" ]
                             , text_ "dashboard.analysis.title.2"
                             ]
                         , div [ class "flex xs-max:flex-col xs-max:space-x-0 justify-between space-x-4" ]
@@ -451,7 +450,7 @@ viewAnalysisList loggedIn model =
                                 [ Icons.sortDirection ""
                                 ]
                             , a
-                                [ class "button button-secondary font-medium "
+                                [ class "button button-secondary font-semibold "
                                 , Route.href Route.Analysis
                                 ]
                                 [ text_ "dashboard.analysis.all" ]
@@ -460,11 +459,13 @@ viewAnalysisList loggedIn model =
                     , if isVoted claims then
                         div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
                             [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                            , p [ class "flex text-body text-gray-600" ]
-                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
+                            , p [ class "flex text-gray-600" ]
+                                [ p [ class "font-bold" ]
+                                    [ text_ "dashboard.analysis.empty.1" ]
                                 , text_ "dashboard.analysis.empty.2"
                                 ]
-                            , p [ class "text-body text-gray-600" ] [ text_ "dashboard.analysis.empty.3" ]
+                            , p [ class "text-gray-600" ]
+                                [ text_ "dashboard.analysis.empty.3" ]
                             ]
 
                       else
@@ -553,13 +554,13 @@ viewTransfers loggedIn model isMobile =
     in
     outerContainer
         [ div [ class "flex justify-between items-center p-4 pb-0" ]
-            [ p [ class "text-heading" ]
+            [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
+                , span [ class "text-indigo-500 font-semibold" ] [ text <| t "transfer.transfers" ]
                 ]
             , button
-                [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
+                [ class "flex items-center text-lg lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
                 , onClick ClickedOpenTransferFilters
                 ]
                 [ text <| t "all_analysis.filter.title"
@@ -641,7 +642,7 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                     div []
                         [ div [ class "mt-4 mx-4" ]
                             [ View.Components.dateViewer
-                                [ class "uppercase text-caption text-black tracking-wider" ]
+                                [ class "uppercase text-sm text-black tracking-wide" ]
                                 identity
                                 loggedIn.shared
                                 (Utils.fromDateTime t1.blockTime)
@@ -729,7 +730,7 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
+            [ span [ class "label" ] [ text (t "payment_history.pick_date") ]
             , div [ class "flex space-x-4" ]
                 [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
                     (datePickerSettings shared)
@@ -763,7 +764,7 @@ viewTransferFilters ({ shared } as loggedIn) users model =
                     }
                 |> Select.withContainerAttrs [ class "mt-10" ]
                 |> Select.toHtml
-            , View.Form.label "other-account-select" (t directionText)
+            , View.Form.label [] "other-account-select" (t directionText)
             , model.transfersFiltersBeingEdited.filters.otherAccount
                 |> Maybe.map List.singleton
                 |> Maybe.withDefault []
@@ -809,7 +810,7 @@ viewBalance shared balance =
             text << shared.translators.t
     in
     div [ class "bg-white rounded p-4 md:p-6" ]
-        [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
+        [ p [ class "label" ] [ text_ "account.my_wallet.balances.current" ]
         , p [ class "text-indigo-500 mt-3" ]
             [ span [ class "font-bold text-3xl" ]
                 [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]

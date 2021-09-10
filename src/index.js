@@ -132,7 +132,7 @@ window.customElements.define('markdown-editor',
 
       this._quillContainer = document.createElement('div')
       this._parentContainer = document.createElement('div')
-      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
+      this._parentContainer.className = 'placeholder-gray-400 input-border'
 
       this._parentContainer.appendChild(this._quillContainer)
       this._quill = new Quill(this._quillContainer,
@@ -1683,7 +1683,7 @@ async function handleJavascriptPort (arg) {
       document.querySelector('#' + arg.data.id).select()
       document.execCommand('copy')
 
-      return {}
+      return { copied: true }
     }
     case 'readClipboard': {
       if (canReadClipboard()) {

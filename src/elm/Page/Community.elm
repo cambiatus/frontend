@@ -282,7 +282,7 @@ viewObjective loggedIn model metadata index objective =
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
                     [ View.MarkdownEditor.viewReadOnly
-                        [ class "text-white font-medium"
+                        [ class "text-white font-semibold"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
                         objective.description
@@ -511,7 +511,7 @@ viewAction shared canEdit date action isDisabled =
                             vals
                                 ++ [ div
                                         [ class "h-10 w-10 flex flex-col border-white border-4 bg-grey rounded-full -ml-5" ]
-                                        [ p [ class "text-date-purple m-auto text-xs font-black leading-none tracking-wide" ]
+                                        [ p [ class "m-auto text-sm font-black" ]
                                             [ text ("+" ++ String.fromInt (numValidators - 3)) ]
                                         ]
                                    ]
@@ -565,7 +565,7 @@ viewAction shared canEdit date action isDisabled =
                 [ View.MarkdownEditor.viewReadOnly [ class "text-text-grey text-sm sm:text-base" ]
                     action.description
                 , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
-                    [ div [ class "text-xs mt-5 sm:w-1/3" ]
+                    [ div [ class "text-sm mt-5 sm:w-1/3" ]
                         [ case action.deadline of
                             Just _ ->
                                 div []
@@ -592,7 +592,7 @@ viewAction shared canEdit date action isDisabled =
                                 validatorAvatars
 
                              else
-                                [ span [ class "text-date-purple uppercase text-sm mr-1" ]
+                                [ span [ class "uppercase text-sm mr-1" ]
                                     [ text_ "community.actions.automatic_analyzers" ]
                                 , img [ src "/icons/tooltip.svg" ] []
                                 ]
@@ -602,9 +602,9 @@ viewAction shared canEdit date action isDisabled =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-green text-base mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green mt-5 flex-grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
-                        , span [ class "font-medium" ] [ text rewardStr ]
+                        , span [ class "font-semibold" ] [ text rewardStr ]
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
                         [ if validationType == "CLAIMABLE" then

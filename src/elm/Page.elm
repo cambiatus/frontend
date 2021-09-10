@@ -185,16 +185,16 @@ viewCardEmpty content =
 viewTitle : String -> Html msg
 viewTitle text_ =
     p
-        [ class "heading-bold" ]
+        [ class "text-lg font-bold my-3" ]
         [ text text_ ]
 
 
 viewHeader : LoggedIn.Model -> String -> Html msg
 viewHeader { shared, routeHistory } title =
     div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
-        [ div [ class "flex container mx-auto" ]
+        [ div [ class "flex items-center container mx-auto relative" ]
             [ a
-                [ class "flex items-center mr-4"
+                [ class "flex items-center mr-4 absolute sm:left-0 sm:inset-y-0"
                 , routeHistory
                     |> List.drop 1
                     |> List.head
@@ -205,7 +205,7 @@ viewHeader { shared, routeHistory } title =
                 , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
                     [ text (shared.translators.t "back") ]
                 ]
-            , p [ class "mx-auto text-white truncate ..." ] [ text title ]
+            , p [ class "mx-auto text-white truncate pl-10 sm:pl-0" ] [ text title ]
             ]
         ]
 

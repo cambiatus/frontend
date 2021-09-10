@@ -267,7 +267,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
         , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
             [ div [ class "mb-10" ]
-                [ span [ class "input-label" ]
+                [ span [ class "label" ]
                     [ text_ "account.my_wallet.transfer.send_to" ]
                 , div []
                     [ viewAutoCompleteAccount shared model f isDisabled community ]
@@ -290,7 +290,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
                 |> Input.withContainerAttrs [ class "mb-4" ]
                 |> Input.withCurrency community.symbol
                 |> Input.toHtml
-            , div [ class "bg-gray-100 uppercase text-xs px-2 inline-block mb-10" ]
+            , div [ class "bg-gray-100 uppercase text-sm px-2 inline-block mb-10" ]
                 [ text
                     (shared.translators.tr "account.my_wallet.your_current_balance"
                         [ ( "balance", Eos.assetToString currBalance ) ]

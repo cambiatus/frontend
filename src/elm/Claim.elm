@@ -38,7 +38,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, a, button, div, label, p, span, strong, text)
+import Html exposing (Html, a, button, div, p, span, strong, text)
 import Html.Attributes exposing (class, classList, disabled, href, id, style, target)
 import Html.Events exposing (onClick)
 import Icons
@@ -448,15 +448,15 @@ viewClaimCard loggedIn profileSummaries claim =
                         text ""
                 ]
             , div [ class "mb-6" ]
-                [ View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2" ]
+                [ View.MarkdownEditor.viewReadOnly [ class "truncate-children mb-2" ]
                     claim.action.description
                 , div [ class "flex w-full" ]
-                    [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
+                    [ View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                         identity
                         loggedIn.shared
                         (Utils.fromDateTime claim.createdAt)
                     , p
-                        [ class "ml-auto text-purple-500 text-caption uppercase" ]
+                        [ class "ml-auto text-purple-500 text-sm uppercase" ]
                         [ text claimAgingText ]
                     ]
                 ]
@@ -469,7 +469,7 @@ viewClaimCard loggedIn profileSummaries claim =
                     || Action.isPastDeadline claim.action loggedIn.shared.now
               then
                 button
-                    [ class "button button-secondary w-full font-medium mb-2"
+                    [ class "button button-secondary w-full font-semibold mb-2"
                     , Utils.onClickNoBubble (GotExternalMsg OpenClaimModal)
                     ]
                     [ text (t "all_analysis.more_details") ]
@@ -631,9 +631,6 @@ viewClaimModal { shared, accountName } profileSummaries claim =
         { t } =
             shared.translators
 
-        greenTextTitleClass =
-            "uppercase text-green text-xs"
-
         claimVerifiersSectionClass =
             "block my-6 h-auto space-y-4"
 
@@ -677,7 +674,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                                 ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
             in
             div [ class "block" ]
-                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                [ View.Components.dateViewer [ class "text-sm uppercase block" ]
                     (\translations ->
                         { translations
                             | today = t "claim.claimed_today"
@@ -687,9 +684,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     )
                     shared
                     (Utils.fromDateTime claim.createdAt)
-                , label [ class "text-2xl font-bold" ]
-                    [ text claimStatusPhrase
-                    ]
+                , p [ class "text-2xl font-bold" ]
+                    [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
 
@@ -708,11 +704,11 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ div
                     []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
-                    , p [ class greenTextTitleClass ] [ text (t "community.actions.reward") ]
+                    , p [ class "text-sm text-green uppercase" ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
-                    , p [ class greenTextTitleClass ] [ text (t "claim.analyst_reward") ]
+                    , p [ class "text-sm text-green uppercase" ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]
 
@@ -727,7 +723,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.approved_by") ]
+                [ p [ class "label" ] [ text (t "claim.approved_by") ]
                 , div []
                     [ if List.any .isApproved claim.checks |> not then
                         profileSummaryEmpty
@@ -763,7 +759,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.disapproved_by") ]
+                [ p [ class "label" ] [ text (t "claim.disapproved_by") ]
                 , div []
                     [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
                         profileSummaryEmpty
@@ -799,7 +795,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class claimVerifiersSectionClass ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.pending_vote") ]
+                [ p [ class "label" ] [ text (t "claim.pending_vote") ]
                 , div []
                     [ if List.length claim.checks == claim.action.verifications then
                         profileSummaryEmpty
@@ -832,8 +828,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             in
             div
                 [ class "block mt-6" ]
-                [ p [ class greenTextTitleClass ] [ text (t "claim.action") ]
-                , View.MarkdownEditor.viewReadOnly [ class "mt-2 mb-6 text-lg w-full" ]
+                [ p [ class "label" ] [ text (t "claim.action") ]
+                , View.MarkdownEditor.viewReadOnly [ class "text-left mt-2 mb-6 text-lg w-full" ]
                     claim.action.description
                 , case claim.proofPhoto of
                     Just url ->
@@ -843,8 +839,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             ]
                             [ div
                                 [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
-                                [ p [ class "text-xs text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
-                                , p [ class "text-base font-bold font-normal text-left w-full" ] [ text proofCode ]
+                                [ p [ class "text-sm text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
+                                , p [ class "font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]
                             , View.Components.pdfViewer
                                 [ Utils.onClickNoBubble (OpenPhotoModal claim)
@@ -978,9 +974,8 @@ viewPhotoModal loggedIn claim =
                 , case claim.proofCode of
                     Just proofCode ->
                         div []
-                            [ label [ class "mt-4 md:mt-0 input-label md:text-xl block" ]
-                                [ text (t "community.actions.form.verification_code")
-                                ]
+                            [ p [ class "mt-4 md:mt-0 label md:text-xl block" ]
+                                [ text (t "community.actions.form.verification_code") ]
                             , strong [ class "text-xl md:text-3xl" ] [ text proofCode ]
                             ]
 
