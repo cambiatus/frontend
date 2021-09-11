@@ -20,7 +20,7 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Translators)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import Utils
@@ -131,7 +131,7 @@ update msg model loggedIn =
                                         (createContributionSelectionSet
                                             { amount = amount
                                             , communityId = community.symbol
-                                            , currency = Cambiatus.Enum.CurrencyType.Brl
+                                            , currency = currencyType loggedIn.shared
                                             }
                                         )
                                         (CreatedContribution id)
@@ -258,6 +258,38 @@ amountFieldId =
     "sponsor-amount-input"
 
 
+paypalCurrency : Shared -> PaypalButtons.Currency
+paypalCurrency shared =
+    case shared.environment of
+        Shared.Development ->
+            PaypalButtons.BRL
+
+        Shared.Staging ->
+            PaypalButtons.BRL
+
+        Shared.Demo ->
+            PaypalButtons.USD
+
+        Shared.Production ->
+            PaypalButtons.USD
+
+
+currencyType : Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
+currencyType shared =
+    case shared.environment of
+        Shared.Development ->
+            Cambiatus.Enum.CurrencyType.Brl
+
+        Shared.Staging ->
+            Cambiatus.Enum.CurrencyType.Brl
+
+        Shared.Demo ->
+            Cambiatus.Enum.CurrencyType.Usd
+
+        Shared.Production ->
+            Cambiatus.Enum.CurrencyType.Usd
+
+
 
 -- VIEW
 
@@ -273,7 +305,7 @@ view loggedIn model =
                 [ Page.viewHeader loggedIn title
                 , case loggedIn.selectedCommunity of
                     RemoteData.Success community ->
-                        view_ loggedIn.shared.translators community model
+                        view_ loggedIn.shared community model
 
                     RemoteData.Loading ->
                         Page.fullPageLoading loggedIn.shared
@@ -290,12 +322,8 @@ view loggedIn model =
     }
 
 
-view_ : Translators -> Community.Model -> Model -> Html Msg
-view_ translators community model =
-    let
-        defaultCurrency =
-            PaypalButtons.BRL
-    in
+view_ : Shared -> Community.Model -> Model -> Html Msg
+view_ ({ translators } as shared) community model =
     div [ class "m-4 bg-white rounded md:m-0 md:bg-white md:flex-grow" ]
         [ div [ class "container mx-auto" ]
             [ div [ class "flex flex-col items-center w-full px-4 py-7 bg-white md:w-1/2 md:mx-auto" ]
@@ -320,13 +348,13 @@ view_ translators community model =
                     , problems =
                         model.amountProblem
                             |> Maybe.map
-                                (amountProblemToString translators defaultCurrency
+                                (amountProblemToString translators (paypalCurrency shared)
                                     >> List.singleton
                                 )
                     , translators = translators
                     }
                     |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                    |> Input.withCurrency (PaypalButtons.currencyToSymbol defaultCurrency)
+                    |> Input.withCurrency (PaypalButtons.currencyToSymbol (paypalCurrency shared))
                     |> Input.toHtml
                 , PaypalButtons.view [ class "w-full" ]
                     { id = "sponsorship-paypal-buttons"
@@ -343,7 +371,7 @@ view_ translators community model =
                                     else
                                         Just amount
                                 )
-                    , currency = defaultCurrency
+                    , currency = paypalCurrency shared
                     , onApprove = PaypalApproved
                     , onCancel = PaypalCanceled
                     , onError = PaypalErrored

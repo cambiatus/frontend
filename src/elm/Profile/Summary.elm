@@ -17,7 +17,7 @@ module Profile.Summary exposing
 
 import Avatar
 import Eos.Account as Eos
-import Html exposing (Html, a, button, div, li, p, text, ul)
+import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, href)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Profile
