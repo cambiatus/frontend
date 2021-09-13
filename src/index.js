@@ -966,7 +966,7 @@ function flags () {
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
-    hasSeenSponsorModal: getItem(HAS_SEEN_SPONSOR_MODAL_KEY) || false
+    hasSeenSponsorModal: JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false
   }
 }
 
@@ -1096,6 +1096,18 @@ app.ports.storePinVisibility.subscribe(pinVisibility => {
     category: 'storePinVisibility',
     message: 'Stored pin visibility',
     data: { pinVisibility },
+    localData: {},
+    level: 'debug'
+  })
+})
+
+app.ports.storeHasSeenSponsorModal.subscribe(hasSeenSponsorModal => {
+  setItem(HAS_SEEN_SPONSOR_MODAL_KEY, hasSeenSponsorModal)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeHasSeenSponsorModal',
+    message: 'Stored whether or not the user has seen the sponsor modal',
+    data: { hasSeenSponsorModal },
     localData: {},
     level: 'debug'
   })
