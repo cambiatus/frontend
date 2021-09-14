@@ -1,6 +1,7 @@
 module Community exposing
     ( Balance
     , CommunityPreview
+    , Contribution
     , CreateCommunityData
     , CreateCommunityDataInput
     , Invite
@@ -50,6 +51,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
+import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
@@ -281,6 +283,8 @@ encodeUpdateObjectiveAction c =
 
 type alias Contribution =
     { user : Profile.Minimal
+    , id : String
+    , insertedAt : Posix
     }
 
 
@@ -288,6 +292,15 @@ contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contributi
 contributionSelectionSet =
     SelectionSet.succeed Contribution
         |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
+        |> with Cambiatus.Object.Contribution.id
+        |> with
+            (Cambiatus.Object.Contribution.insertedAt
+                |> SelectionSet.map
+                    (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
+                        Iso8601.toTime naiveDateTime
+                            |> Result.withDefault (Time.millisToPosix 0)
+                    )
+            )
 
 
 

@@ -44,6 +44,11 @@ id =
     Object.selectionForField "String" "id" [] Decode.string
 
 
+insertedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Contribution
+insertedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
+
+
 paymentMethod : SelectionSet Cambiatus.Enum.PaymentMethodType.PaymentMethodType Cambiatus.Object.Contribution
 paymentMethod =
     Object.selectionForField "Enum.PaymentMethodType.PaymentMethodType" "paymentMethod" [] Cambiatus.Enum.PaymentMethodType.decoder
@@ -52,6 +57,11 @@ paymentMethod =
 status : SelectionSet Cambiatus.Enum.ContributionStatusType.ContributionStatusType Cambiatus.Object.Contribution
 status =
     Object.selectionForField "Enum.ContributionStatusType.ContributionStatusType" "status" [] Cambiatus.Enum.ContributionStatusType.decoder
+
+
+updatedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Contribution
+updatedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "updatedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
 
 
 user :

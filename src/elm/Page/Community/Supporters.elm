@@ -14,8 +14,8 @@ import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Task
-import Time
 import UpdateResult as UR
+import Utils
 import View.Components
 
 
@@ -129,23 +129,37 @@ view_ loggedIn community model =
         , div [ class "w-full bg-white flex-grow pt-5" ]
             [ ul [ class "container mx-auto px-4 space-y-4" ]
                 (community.contributions
-                    -- TODO - Group by date
-                    |> List.repeat 2
-                    |> List.map
-                        (\day ->
-                            li []
+                    |> List.Extra.groupWhile
+                        (\c1 c2 ->
+                            Utils.areSameDay loggedIn.shared.timezone
+                                c1.insertedAt
+                                c2.insertedAt
+                        )
+                    |> List.foldl
+                        (\( firstContribution, otherContributions ) ( currentIndex, currentList ) ->
+                            let
+                                contributionsLength =
+                                    List.length (firstContribution :: otherContributions)
+                            in
+                            ( currentIndex + contributionsLength
+                            , li []
                                 [ View.Components.dateViewer [ class "text-caption text-black uppercase" ]
                                     identity
                                     loggedIn.shared
-                                    (Time.millisToPosix 123123)
+                                    firstContribution.insertedAt
                                 , ul [ class "divide-y" ]
                                     (List.map3 (viewSupporter loggedIn)
-                                        (List.range 0 (List.length model.profileSummaries))
-                                        model.profileSummaries
-                                        (List.map .user day)
+                                        (List.range currentIndex (currentIndex + contributionsLength))
+                                        (List.drop currentIndex model.profileSummaries)
+                                        (List.map .user (firstContribution :: otherContributions))
                                     )
                                 ]
+                                :: currentList
+                            )
                         )
+                        ( 0, [] )
+                    |> Tuple.second
+                    |> List.reverse
                 )
             ]
         ]
