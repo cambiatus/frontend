@@ -740,6 +740,11 @@
         "completed_action": "Reclame solo las acciones que realmente realizó;",
         "know_good_practices": "Conoce las buenas prácticas de la Comunidad"
       }
+    },
+    "contributions": {
+      "profile_contributions": "Contribuciones de {{profile_name}}",
+      "not_allowed_title": "No puede ver las contribuciones de otras personas",
+      "not_allowed": "Solo los administradores de la comunidad pueden ver las contribuciones de otras personas"
     }
   },
   "shop": {

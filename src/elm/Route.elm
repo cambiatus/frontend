@@ -35,6 +35,7 @@ type Route
     | ProfileAddContact
     | PaymentHistory Eos.Account.Name
     | Profile Eos.Account.Name
+    | ProfileContributions Eos.Account.Name
     | Dashboard
     | Community
     | NewCommunity
@@ -99,6 +100,7 @@ parser url =
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map Profile (s "profile" </> (string |> Url.map Eos.Account.stringToName))
+        , Url.map ProfileContributions (s "profile" </> (string |> Url.map Eos.Account.stringToName) </> s "contributions")
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
@@ -380,6 +382,9 @@ routeToString route =
 
                 Profile accountName ->
                     ( [ "profile", Eos.Account.nameToString accountName ], [] )
+
+                ProfileContributions accountName ->
+                    ( [ "profile", Eos.Account.nameToString accountName, "contributions" ], [] )
 
                 Dashboard ->
                     ( [ "dashboard" ], [] )

@@ -222,7 +222,7 @@ view ({ shared, accountName } as loggedIn) model =
                             , div
                                 [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
                                 [ div [ class "w-full" ]
-                                    [ viewBalance shared balance
+                                    [ viewBalance loggedIn balance
                                     , div [ class "mt-6 flex space-x-6" ]
                                         [ viewMyClaimsCard loggedIn
                                         , viewMyOffersCard loggedIn
@@ -841,8 +841,8 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewBalance : Shared -> Balance -> Html Msg
-viewBalance shared balance =
+viewBalance : LoggedIn.Model -> Balance -> Html Msg
+viewBalance ({ shared } as loggedIn) balance =
     let
         text_ =
             text << shared.translators.t
@@ -860,6 +860,11 @@ viewBalance shared balance =
             , Route.href (Route.Transfer Nothing)
             ]
             [ text_ "dashboard.transfer" ]
+        , button
+            [ class "button button-secondary w-full mt-4"
+            , onClick ClickedSupportUsButton
+            ]
+            [ text_ "community.index.support_us" ]
         , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
             [ a
                 [ class "w-full flex items-center justify-between text-gray-900 py-5"
@@ -873,6 +878,13 @@ viewBalance shared balance =
                 , onClick CreateInvite
                 ]
                 [ text_ "dashboard.invite"
+                , Icons.arrowDown "-rotate-90"
+                ]
+            , a
+                [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                , Route.href (Route.ProfileContributions loggedIn.accountName)
+                ]
+                [ text_ "dashboard.my_contributions"
                 , Icons.arrowDown "-rotate-90"
                 ]
             ]
@@ -965,6 +977,7 @@ type Msg
     | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
     | ClickedApplyTransfersFilters
     | ClickedTransferCard Int
+    | ClickedSupportUsButton
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -1438,6 +1451,10 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
 
+        ClickedSupportUsButton ->
+            { model | isModalRequestingSponsorVisible = True }
+                |> UR.init
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1866,6 +1883,9 @@ msgToString msg =
 
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
+
+        ClickedSupportUsButton ->
+            [ "ClickedSupportUsButton" ]
 
         CreateInvite ->
             [ "CreateInvite" ]

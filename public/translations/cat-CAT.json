@@ -740,6 +740,11 @@
         "completed_action": "Reclameu només accions realment realitzades;",
         "know_good_practices": "Obteniu més informació sobre les bones pràctiques de la Comunitat"
       }
+    },
+    "contributions": {
+      "profile_contributions": "Contribucions de {{profile_name}}",
+      "not_allowed_title": "No podeu veure les contribucions d'altres persones",
+      "not_allowed": "Només els administradors de la comunitat poden veure les contribucions d'altres persones"
     }
   },
   "shop": {

@@ -698,6 +698,11 @@
         "completed_action": "በትክክል ያከናወኗቸውን እርምጃዎች ብቻ ይጠይቁ;",
         "know_good_practices": "ስለ ማህበረሰቡ መልካም ልምዶች ይወቁ"
       }
+    },
+    "contributions": {
+      "profile_contributions": "አስተዋጽዖዎች ከ {{profile_name}}",
+      "not_allowed_title": "የሌሎች ሰዎችን መዋጮ ማየት አይችሉም",
+      "not_allowed": "የሌሎች ሰዎችን መዋጮ ማየት የሚችሉት የማህበረሰብ አስተዳዳሪዎች ብቻ ናቸው"
     }
   },
   "shop": {

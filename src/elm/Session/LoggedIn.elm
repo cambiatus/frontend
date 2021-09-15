@@ -246,6 +246,7 @@ type Page
     | ShopViewer
     | Profile
     | ProfilePublic
+    | ProfileContributions
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims

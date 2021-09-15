@@ -737,6 +737,11 @@
         "completed_action": "Only claim actions you have actually completed;",
         "know_good_practices": "Know the Community's good practices"
       }
+    },
+    "contributions": {
+      "profile_contributions": "{{profile_name}}'s contributions",
+      "not_allowed_title": "You're not allowed to see other people's contributions",
+      "not_allowed": "Only community admins can see other people's contributions"
     }
   },
   "shop": {

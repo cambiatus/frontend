@@ -37,6 +37,7 @@ import Page.Profile as Profile
 import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
+import Page.Profile.Contributions as ProfileContributions
 import Page.Profile.Editor as ProfileEditor
 import Page.Register as Register
 import Page.Shop as Shop
@@ -196,6 +197,7 @@ type Status
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
     | Profile Profile.Model
+    | ProfileContributions ProfileContributions.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
@@ -238,6 +240,7 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfileContributionsMsg ProfileContributions.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -441,6 +444,11 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
+                |> withLoggedIn
+
+        ( GotProfileContributionsMsg subMsg, ProfileContributions subModel ) ->
+            ProfileContributions.update subMsg subModel
+                >> updateLoggedInUResult ProfileContributions GotProfileContributionsMsg model
                 |> withLoggedIn
 
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
@@ -977,6 +985,9 @@ statusToRoute status session =
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
 
+        ProfileContributions subModel ->
+            Just (Route.ProfileContributions subModel.profileName)
+
         ProfileEditor _ ->
             Just Route.ProfileEditor
 
@@ -1232,6 +1243,11 @@ changeRouteTo maybeRoute model =
             (\loggedIn -> Profile.init loggedIn profileName)
                 >> updateStatusWith Profile GotProfileMsg model
                 |> withLoggedIn (Route.Profile profileName)
+
+        Just (Route.ProfileContributions profileName) ->
+            ProfileContributions.init profileName
+                >> updateStatusWith ProfileContributions GotProfileContributionsMsg model
+                |> withLoggedIn (Route.ProfileContributions profileName)
 
         Just Route.ProfileEditor ->
             ProfileEditor.init
@@ -1531,6 +1547,9 @@ msgToString msg =
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
+        GotProfileContributionsMsg subMsg ->
+            "GotProfileContributionsMsg" :: ProfileContributions.msgToString subMsg
+
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
@@ -1730,6 +1749,9 @@ view model =
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
+
+        ProfileContributions subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileContributions GotProfileContributionsMsg ProfileContributions.view
 
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view
