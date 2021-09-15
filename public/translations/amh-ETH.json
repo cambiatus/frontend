@@ -764,6 +764,7 @@
     "back": "ወደ ኃላ",
     "transfer": "ለጓደኛ አስተላለፍ ",
     "explore": "እንዴት እንደሚገኝ {{symbol}}",
+    "my_contributions": "የእኔ አስተዋፅዖዎች",
     "invite": "ጓደኞችህን ጋብዝ",
     "sorry": "ይቅርታ!",
     "action_rejected": "የእርሶ ተግባር ተቀባይነት አላገኘም",
@@ -1110,5 +1111,19 @@
   },
   "block_explorer": {
     "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
+  },
+  "currency": {
+    "brl_singular": "እውነተኛ",
+    "btc_singular": "ቢትኮይን",
+    "crc_singular": "ኮሎን",
+    "eos_singular": "Eos",
+    "eth_singular": "ኤቴሬም",
+    "usd_singular": "ዶላር",
+    "brl_plural": "እውነተኛ",
+    "btc_plural": "ቢትኮይን",
+    "crc_plural": "ኮሎኔሎች",
+    "eos_plural": "Eos",
+    "eth_plural": "ቢትኮይን",
+    "usd_plural": "ዶላር"
   }
 }

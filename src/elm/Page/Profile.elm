@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Avatar
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -67,6 +68,7 @@ type alias Model =
     , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
     , balance : RemoteData (QueryError Http.Error) Community.Balance
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
+    , contributionInfo : Maybe ContributionInfo
     , transfersStatus : TransfersStatus
     , isDeleteKycModalVisible : Bool
     , downloadingPdfStatus : DownloadStatus
@@ -100,6 +102,7 @@ init loggedIn profileName =
       , profile = RemoteData.Loading
       , balance = RemoteData.Loading
       , graphqlInfo = RemoteData.Loading
+      , contributionInfo = Nothing
       , transfersStatus = Loading []
       , isDeleteKycModalVisible = False
       , downloadingPdfStatus = NotDownloading
@@ -142,6 +145,12 @@ type alias GraphqlInfo =
     , totalClaims : Int
     , totalProducts : Int
     , createdDate : Maybe Time.Posix
+    }
+
+
+type alias ContributionInfo =
+    { amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
     }
 
 
@@ -260,8 +269,24 @@ update msg model loggedIn =
                                 Err error ->
                                     CompletedLoadBalance (Err (ResultWithError error))
                         )
+
+                contributionInfo : Maybe ContributionInfo
+                contributionInfo =
+                    community.contributions
+                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
+                        |> (\contributions ->
+                                List.head contributions
+                                    |> Maybe.map
+                                        (\contribution ->
+                                            { amount =
+                                                List.map .amount contributions
+                                                    |> List.sum
+                                            , currency = contribution.currency
+                                            }
+                                        )
+                           )
             in
-            model
+            { model | contributionInfo = contributionInfo }
                 |> UR.init
                 |> UR.addCmd fetchBalance
                 |> UR.addCmd
@@ -896,7 +921,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
               else
                 text ""
             , if isProfileOwner || isCommunityAdmin then
-                viewHistory loggedIn.shared balance graphqlInfo
+                viewHistory loggedIn.shared balance graphqlInfo model.contributionInfo
 
               else
                 text ""
@@ -1163,8 +1188,8 @@ viewTransactionList loggedIn transfers =
             )
 
 
-viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Html msg
-viewHistory shared balance graphqlInfo =
+viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Maybe ContributionInfo -> Html msg
+viewHistory shared balance graphqlInfo maybeContributionInfo =
     let
         { t } =
             shared.translators
@@ -1200,6 +1225,18 @@ viewHistory shared balance graphqlInfo =
                     |> Eos.symbolToSymbolCodeString
                     |> text
                 )
+            , case maybeContributionInfo of
+                Nothing ->
+                    text ""
+
+                Just contributionInfo ->
+                    viewHistoryItem [ text_ "dashboard.my_contributions" ]
+                        (Utils.formatFloat contributionInfo.amount 2 True
+                            |> text
+                        )
+                        (Community.currencyTranslationKey contributionInfo
+                            |> text_
+                        )
             , viewHistoryItem [ text_ "profile.history.transfers_number" ]
                 (graphqlInfo.totalTransfers
                     |> String.fromInt

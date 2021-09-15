@@ -806,6 +806,7 @@
     "back": "Atrás",
     "transfer": "Transferir a un(a) colega",
     "explore": "Como obtener {{symbol}}",
+    "my_contributions": "Mis contribuciones",
     "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
     "action_rejected": "Tu acción fue rechazada",
@@ -1152,5 +1153,19 @@
   },
   "block_explorer": {
     "see": "Ver en el explorador de bloques"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dólar",
+    "brl_plural": "Reales",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dolares"
   }
 }

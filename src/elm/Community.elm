@@ -14,6 +14,7 @@ module Community exposing
     , communityPreviewSymbolQuery
     , createCommunityData
     , createCommunityDataDecoder
+    , currencyTranslationKey
     , decodeBalance
     , domainAvailableQuery
     , encodeCreateCommunityData
@@ -29,6 +30,7 @@ module Community exposing
     )
 
 import Action exposing (Action)
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
@@ -283,6 +285,8 @@ encodeUpdateObjectiveAction c =
 
 type alias Contribution =
     { user : Profile.Minimal
+    , amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
     , id : String
     , insertedAt : Posix
     }
@@ -292,6 +296,8 @@ contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contributi
 contributionSelectionSet =
     SelectionSet.succeed Contribution
         |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
+        |> with Cambiatus.Object.Contribution.amount
+        |> with Cambiatus.Object.Contribution.currency
         |> with Cambiatus.Object.Contribution.id
         |> with
             (Cambiatus.Object.Contribution.insertedAt
@@ -301,6 +307,36 @@ contributionSelectionSet =
                             |> Result.withDefault (Time.millisToPosix 0)
                     )
             )
+
+
+currencyTranslationKey : { contribution | amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> String
+currencyTranslationKey { amount, currency } =
+    let
+        baseTranslation =
+            case currency of
+                Cambiatus.Enum.CurrencyType.Brl ->
+                    "currency.brl"
+
+                Cambiatus.Enum.CurrencyType.Btc ->
+                    "currency.btc"
+
+                Cambiatus.Enum.CurrencyType.Crc ->
+                    "currency.crc"
+
+                Cambiatus.Enum.CurrencyType.Eos ->
+                    "currency.eos"
+
+                Cambiatus.Enum.CurrencyType.Eth ->
+                    "currency.eth"
+
+                Cambiatus.Enum.CurrencyType.Usd ->
+                    "currency.usd"
+    in
+    if amount == 1 then
+        baseTranslation ++ "_singular"
+
+    else
+        baseTranslation ++ "_plural"
 
 
 
