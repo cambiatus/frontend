@@ -1,4 +1,4 @@
-module Page.Profile.Contributions exposing (Model, Msg, init, msgToString, update, view)
+module Page.Profile.Contributions exposing (Model, init, view)
 
 import Community
 import Eos.Account
@@ -10,7 +10,6 @@ import Page
 import RemoteData
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
-import UpdateResult as UR
 import Utils
 import View.Components
 
@@ -23,39 +22,16 @@ type alias Model =
     { profileName : Eos.Account.Name }
 
 
-init : Eos.Account.Name -> LoggedIn.Model -> ( Model, Cmd Msg )
-init profileName loggedIn =
-    ( { profileName = profileName }, Cmd.none )
-
-
-
--- TYPES
-
-
-type Msg
-    = NoOp
-
-
-type alias UpdateResult =
-    UR.UpdateResult Model Msg (LoggedIn.External Msg)
-
-
-
--- UPDATE
-
-
-update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
-    case msg of
-        NoOp ->
-            UR.init model
+init : Eos.Account.Name -> Model
+init profileName =
+    { profileName = profileName }
 
 
 
 -- VIEW
 
 
-view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
+view : LoggedIn.Model -> Model -> { title : String, content : Html msg }
 view loggedIn model =
     let
         title =
@@ -96,7 +72,7 @@ view loggedIn model =
     }
 
 
-view_ : LoggedIn.Model -> List Community.Contribution -> String -> Html Msg
+view_ : LoggedIn.Model -> List Community.Contribution -> String -> Html msg
 view_ loggedIn profileContributions title =
     div [ class "flex flex-grow flex-col" ]
         [ Page.viewHeader loggedIn title
@@ -133,7 +109,7 @@ view_ loggedIn profileContributions title =
         ]
 
 
-viewContribution : Translators -> Community.Contribution -> Html Msg
+viewContribution : Translators -> Community.Contribution -> Html msg
 viewContribution { t } contribution =
     li [ class "flex items-center px-1 py-4" ]
         [ div [ class "w-14 h-14 bg-gray-100 flex items-center justify-center rounded" ]
@@ -150,14 +126,3 @@ viewContribution { t } contribution =
                 ]
             ]
         ]
-
-
-
--- UTILS
-
-
-msgToString : Msg -> List String
-msgToString msg =
-    case msg of
-        NoOp ->
-            [ "NoOp" ]
