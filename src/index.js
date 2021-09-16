@@ -26,6 +26,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('masked-input-helper',
   class MaskedInputHelper extends HTMLElement {
+    static get observedAttributes () { return ['decimal-separator'] }
+
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'decimal-separator') {
+        this._decimalSeparator = newValue
+      }
+    }
+
     connectedCallback () {
       this.className = 'hidden'
 
@@ -45,10 +53,10 @@ window.customElements.define('masked-input-helper',
           const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
 
           if (maskType === 'number') {
-            if (e.data === '.') {
-              if (targetElement.value.indexOf('.') === -1) return
+            if (e.data === this._decimalSeparator) {
+              if (targetElement.value.indexOf(this._decimalSeparator) === -1) return
 
-              const newSelectionStart = targetElement.value.indexOf('.') + 2
+              const newSelectionStart = targetElement.value.indexOf(this._decimalSeparator) + 2
               previousSelectionStart = newSelectionStart
               previousSelectionEnd = newSelectionStart
               previousValue = targetElement.value
@@ -56,9 +64,9 @@ window.customElements.define('masked-input-helper',
               return
             }
 
-            if (previousSelectionStart === previousValue.indexOf('.') + 1 && !isDeletingNumber) {
+            if (previousSelectionStart === previousValue.indexOf(this._decimalSeparator) + 1 && !isDeletingNumber) {
               previousValue = targetElement.value
-              previousSelectionStart = targetElement.value.indexOf('.')
+              previousSelectionStart = targetElement.value.indexOf(this._decimalSeparator)
               previousSelectionEnd = previousSelectionStart
 
               targetElement.setSelectionRange(previousSelectionStart, previousSelectionStart)
@@ -95,10 +103,13 @@ window.customElements.define('masked-input-helper',
       }
 
       this.keyDownListener = (e) => {
+        let originalSelectionStart = targetElement.selectionStart
         if (Math.abs(targetElement.selectionStart - previousSelectionStart) < 2 || e.ctrlKey) {
           window.setTimeout(() => {
-            previousSelectionStart = targetElement.selectionStart
-            previousSelectionEnd = targetElement.selectionEnd
+            if (Math.abs(targetElement.selectionStart - originalSelectionStart) < 2 || e.ctrlKey) {
+              previousSelectionStart = targetElement.selectionStart
+              previousSelectionEnd = targetElement.selectionEnd
+            }
           }, 0)
         }
       }
