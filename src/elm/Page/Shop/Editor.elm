@@ -28,11 +28,13 @@ import I18Next
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
+import Mask
 import Page
 import RemoteData exposing (RemoteData)
 import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared as Shared
 import Shop exposing (Product, ProductId)
 import UpdateResult as UR
 import Utils exposing (decodeEnterKeyDown)
@@ -142,8 +144,8 @@ initDescriptionEditor =
     MarkdownEditor.init "description-editor"
 
 
-initForm : MarkdownEditor.Model -> Form
-initForm descriptionInput =
+initForm : Shared.Translators -> MarkdownEditor.Model -> Form
+initForm translators descriptionInput =
     let
         image =
             newValidator Nothing identity False []
@@ -167,7 +169,11 @@ initForm descriptionInput =
         price =
             []
                 |> greaterThanOrEqual 0
-                |> newValidator "" (\v -> Just v) True
+                |> newValidator ""
+                    (Mask.removeFloat (Shared.decimalSeparators translators)
+                        >> Just
+                    )
+                    True
     in
     { image = image
     , title = title
@@ -488,7 +494,8 @@ update msg model loggedIn =
         CompletedBalancesLoad (Ok balances) ->
             case model of
                 LoadingBalancesCreate ->
-                    EditingCreate balances RemoteData.NotAsked (initForm initDescriptionEditor)
+                    initForm loggedIn.shared.translators initDescriptionEditor
+                        |> EditingCreate balances RemoteData.NotAsked
                         |> UR.init
 
                 LoadingBalancesUpdate saleId ->
@@ -538,7 +545,8 @@ update msg model loggedIn =
                             else
                                 trackNo
                     in
-                    EditingUpdate balances sale RemoteData.NotAsked Closed (initForm initDescriptionEditor)
+                    initForm loggedIn.shared.translators initDescriptionEditor
+                        |> EditingUpdate balances sale RemoteData.NotAsked Closed
                         |> updateForm
                             (\form ->
                                 { form
@@ -726,18 +734,10 @@ update msg model loggedIn =
                 |> UR.init
 
         EnteredPrice value ->
-            let
-                trimmedPrice =
-                    if String.length value > 12 then
-                        String.left 12 value
-
-                    else
-                        value
-            in
             model
                 |> updateForm
                     (\form ->
-                        { form | price = updateInput (getNumericValues trimmedPrice) form.price }
+                        { form | price = updateInput value form.price }
                     )
                 |> UR.init
 
@@ -805,7 +805,7 @@ update msg model loggedIn =
                                     (Saving balances sale (RemoteData.Success url) form)
                                     loggedIn
                                     "updatesale"
-                                    (encodeUpdateForm sale form community.symbol)
+                                    (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -826,7 +826,7 @@ update msg model loggedIn =
                                     (Saving balances sale (RemoteData.Failure error) form)
                                     loggedIn
                                     "updatesale"
-                                    (encodeUpdateForm sale form community.symbol)
+                                    (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -847,7 +847,7 @@ update msg model loggedIn =
                                     (Saving balances sale RemoteData.NotAsked form)
                                     loggedIn
                                     "updatesale"
-                                    (encodeUpdateForm sale form community.symbol)
+                                    (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -1164,7 +1164,9 @@ encodeCreateForm loggedIn form =
                 |> Encode.string
 
         price =
-            String.toFloat (getInput form.price)
+            getInput form.price
+                |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                |> String.toFloat
 
         quantity =
             case Maybe.map2 (\p c -> Eos.Asset p c.symbol) price (RemoteData.toMaybe loggedIn.selectedCommunity) of
@@ -1208,8 +1210,8 @@ encodeCreateForm loggedIn form =
         ]
 
 
-encodeUpdateForm : Product -> Form -> Symbol -> Value
-encodeUpdateForm product form selectedCommunity =
+encodeUpdateForm : Shared.Translators -> Product -> Form -> Symbol -> Value
+encodeUpdateForm translators product form selectedCommunity =
     let
         saleId =
             Encode.int product.id
@@ -1228,7 +1230,9 @@ encodeUpdateForm product form selectedCommunity =
                 |> Encode.string
 
         price =
-            String.toFloat (getInput form.price)
+            getInput form.price
+                |> Mask.removeFloat (Shared.decimalSeparators translators)
+                |> String.toFloat
 
         quantity =
             case Maybe.map2 Eos.Asset price (Just selectedCommunity) of

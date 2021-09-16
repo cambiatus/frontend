@@ -26,7 +26,7 @@ import Ports
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Translators)
+import Session.Shared as Shared exposing (Translators)
 import Token
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -126,7 +126,7 @@ update msg model ({ shared } as loggedIn) =
         ClickedSubmit ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    case validateModel community.symbol model of
+                    case validateModel shared.translators community.symbol model of
                         Ok ( validUpdateTokenData, validExpiryOptsData ) ->
                             { model | isLoading = True }
                                 |> UR.init
@@ -303,12 +303,12 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 
-withSymbolValidation : (Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
+withSymbolValidation : (Shared.Translators -> Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
 withSymbolValidation fn field loggedIn_ model_ =
     case loggedIn_.selectedCommunity of
         RemoteData.Success community ->
             model_
-                |> setErrors field (fn community.symbol)
+                |> setErrors field (fn loggedIn_.shared.translators community.symbol)
 
         _ ->
             model_
@@ -370,15 +370,19 @@ validateIntInput numberInput =
         |> Result.fromMaybe "error.validator.text.only_numbers"
 
 
-validateSymbolInput : Eos.Symbol -> String -> Result String Eos.Asset
-validateSymbolInput symbol numberInput =
+validateSymbolInput : Shared.Translators -> Eos.Symbol -> String -> Result String Eos.Asset
+validateSymbolInput translators symbol numberInput =
     let
+        unmasked =
+            Mask.removeFloat (Shared.decimalSeparators translators) numberInput
+
         validateParsing =
-            String.toFloat numberInput
+            unmasked
+                |> String.toFloat
                 |> Maybe.map (\amount -> { symbol = symbol, amount = amount })
                 |> Result.fromMaybe "error.validator.text.only_numbers"
     in
-    case String.split "." numberInput of
+    case String.split "." unmasked of
         [] ->
             Err "error.required"
 
@@ -413,14 +417,14 @@ setErrors field modelValidation model =
     }
 
 
-validateMinimumBalance : Eos.Symbol -> Model -> Result String Eos.Asset
-validateMinimumBalance symbol model =
-    validateSymbolInput symbol model.minimumBalance
+validateMinimumBalance : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMinimumBalance translators symbol model =
+    validateSymbolInput translators symbol model.minimumBalance
 
 
-validateMaximumSupply : Eos.Symbol -> Model -> Result String Eos.Asset
-validateMaximumSupply symbol model =
-    validateSymbolInput symbol model.maximumSupply
+validateMaximumSupply : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMaximumSupply translators symbol model =
+    validateSymbolInput translators symbol model.maximumSupply
 
 
 validateNaturalExpirationPeriod : Model -> Result String Int
@@ -433,32 +437,32 @@ validateJuridicalExpirationPeriod model =
     validateIntInput model.juridicalExpirationPeriod
 
 
-validateRenovationAmount : Eos.Symbol -> Model -> Result String Eos.Asset
-validateRenovationAmount symbol model =
-    validateSymbolInput symbol model.renovationAmount
+validateRenovationAmount : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateRenovationAmount translators symbol model =
+    validateSymbolInput translators symbol model.renovationAmount
 
 
-validateModel : Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
-validateModel symbol model =
+validateModel : Shared.Translators -> Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
+validateModel translators symbol model =
     let
         tokenValidation =
             Result.map2 Token.UpdateTokenData
-                (validateMaximumSupply symbol model)
-                (validateMinimumBalance symbol model)
+                (validateMaximumSupply translators symbol model)
+                (validateMinimumBalance translators symbol model)
 
         expiryOptsValidation =
             Result.map3 (Token.ExpiryOptsData symbol)
                 (validateNaturalExpirationPeriod model)
                 (validateJuridicalExpirationPeriod model)
-                (validateRenovationAmount symbol model)
+                (validateRenovationAmount translators symbol model)
 
         modelWithErrors =
             model
-                |> setErrors MinimumBalance (validateMinimumBalance symbol)
-                |> setErrors MaximumSupply (validateMaximumSupply symbol)
+                |> setErrors MinimumBalance (validateMinimumBalance translators symbol)
+                |> setErrors MaximumSupply (validateMaximumSupply translators symbol)
                 |> setErrors NaturalExpirationPeriod validateNaturalExpirationPeriod
                 |> setErrors JuridicalExpirationPeriod validateJuridicalExpirationPeriod
-                |> setErrors RenovationAmount (validateRenovationAmount symbol)
+                |> setErrors RenovationAmount (validateRenovationAmount translators symbol)
     in
     case model.tokenType of
         Token.Mcc ->

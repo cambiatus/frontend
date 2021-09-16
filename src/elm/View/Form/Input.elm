@@ -65,8 +65,7 @@ import Html.Attributes exposing (attribute, class, classList, disabled, id, plac
 import Html.Events exposing (onInput)
 import I18Next
 import Mask
-import Session.Shared exposing (Translators)
-import Utils
+import Session.Shared as Shared exposing (Translators)
 import View.Form
 
 
@@ -180,9 +179,7 @@ input options =
                 Just (NumberMask decimalDigits) ->
                     \v ->
                         Mask.updateFloatString decimalDigits
-                            { decimalSeparator = options.translators.t "decimal_separator"
-                            , thousandsSeparator = options.translators.t "thousands_separator"
-                            }
+                            (Shared.decimalSeparators options.translators)
                             { previousValue = options.value, newValue = v }
     in
     div (class "relative" :: options.inputContainerAttrs)
@@ -325,9 +322,12 @@ withNumberMask mask options =
                 Mask.AtMost x ->
                     x
 
+        separators =
+            Shared.decimalSeparators options.translators
+
         previousDecimalSeparator =
             if decimalDigitsAmount == 0 then
-                options.translators.t "decimal_separator"
+                separators.decimalSeparator
 
             else
                 options.value
@@ -343,10 +343,7 @@ withNumberMask mask options =
         | mask = Just (NumberMask mask)
         , value =
             valueWithoutSeparator
-                |> Mask.floatString mask
-                    { decimalSeparator = options.translators.t "decimal_separator"
-                    , thousandsSeparator = options.translators.t "thousands_separator"
-                    }
+                |> Mask.floatString mask separators
                 |> Maybe.withDefault valueWithoutSeparator
     }
         |> withElements
@@ -358,7 +355,7 @@ withNumberMask mask options =
                     "masked-input-helper"
                     [ attribute "target-id" options.id
                     , attribute "mask-type" "number"
-                    , attribute "decimal-separator" (options.translators.t "decimal_separator")
+                    , attribute "decimal-separator" separators.decimalSeparator
                     ]
                     []
                     :: options.extraElements
