@@ -37,40 +37,62 @@ window.customElements.define('masked-input-helper',
       let previousValue = targetElement.value || ''
 
       this.inputListener = (e) => {
-        if (maskType === 'number' && e.data === '.') {
-          if (targetElement.value.indexOf('.') === -1) return
-
-          const newSelectionStart = targetElement.value.indexOf('.') + 1
-          previousSelectionStart = newSelectionStart
-          previousValue = targetElement.value
-          targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
-          return
-        }
-
         const newSelectionStart = targetElement.selectionStart || 0
         const isAtEnd = maskType === 'string' ? previousSelectionStart === previousValue.length : false
         const isDeletingNumber = e.data === null && maskType === 'number'
         const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
 
+        if (maskType === 'number') {
+          if (e.data === '.') {
+            if (targetElement.value.indexOf('.') === -1) return
+
+            const newSelectionStart = targetElement.value.indexOf('.') + 2
+            previousSelectionStart = newSelectionStart
+            previousValue = targetElement.value
+            targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
+            return
+          }
+
+          if (previousSelectionStart === previousValue.indexOf('.') + 1 && !isDeletingNumber) {
+            previousValue = targetElement.value
+            previousSelectionStart = targetElement.value.indexOf('.')
+
+            targetElement.setSelectionRange(previousSelectionStart, previousSelectionStart)
+            return
+          }
+        }
+
         if ((isDeletingNumber || isChangingMask) && !isAtEnd) {
           const sumFactor = e.data !== null && targetElement.value.length >= previousValue.length
             ? +1
-            : -1
+            : maskType === 'number' ? 0 : -1
           const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + sumFactor
           targetElement.setSelectionRange(newIndex, newIndex)
+
+          previousValue = targetElement.value
+          previousSelectionStart = newIndex
+          return
         }
 
         previousSelectionStart = newSelectionStart
         previousValue = targetElement.value
       }
 
-      this.selectionListener = () => {
+      this.keyDownListener = (e) => {
+        if (e.key && e.key === 'ArrowRight') {
+          previousSelectionStart = Math.min(previousValue.length, targetElement.selectionStart + 1)
+        } else if (e.key && e.key === 'ArrowLeft') {
+          previousSelectionStart = Math.max(0, targetElement.selectionStart - 1)
+        }
+      }
+
+      this.clickListener = () => {
         previousSelectionStart = targetElement.selectionStart
       }
 
       targetElement.addEventListener('input', this.inputListener)
-      targetElement.addEventListener('keydown', this.selectionListener)
-      targetElement.addEventListener('click', this.selectionListener)
+      targetElement.addEventListener('keydown', this.keyDownListener)
+      targetElement.addEventListener('click', this.clickListener)
     }
 
     disconnectedCallback () {
@@ -79,8 +101,8 @@ window.customElements.define('masked-input-helper',
       if (!targetElement) return
 
       targetElement.removeEventListener('input', this.inputListener)
-      targetElement.removeEventListener('keydown', this.selectionListener)
-      targetElement.removeEventListener('click', this.selectionListener)
+      targetElement.removeEventListener('keydown', this.keyDownListener)
+      targetElement.removeEventListener('click', this.clickListener)
     }
 
     firstIndexAfter (stringValue, baseIndex, element) {

@@ -66,6 +66,7 @@ import Html.Events exposing (onInput)
 import I18Next
 import Mask
 import Session.Shared exposing (Translators)
+import Utils
 import View.Form
 
 
@@ -178,15 +179,78 @@ input options =
 
                 Just (NumberMask decimalDigits) ->
                     \v ->
+                        let
+                            decimalDigitsAmount =
+                                case decimalDigits of
+                                    Mask.AtMost x ->
+                                        x
+
+                                    Mask.Precisely x ->
+                                        x
+
+                            -- If the user enters something after the decimal
+                            -- digits separator, multiply the number by 10, so
+                            -- that the number the user typed is registered
+                            multiplyBy10 value =
+                                case String.split "." v of
+                                    [ noSeparator ] ->
+                                        value
+
+                                    [ beforeSeparator, afterSeparator ] ->
+                                        if String.length afterSeparator > decimalDigitsAmount then
+                                            [ beforeSeparator ++ String.left 1 afterSeparator
+                                            , String.dropLeft 1 afterSeparator
+                                            ]
+                                                |> String.join "."
+
+                                        else if String.length afterSeparator < decimalDigitsAmount then
+                                            [ String.dropRight 1 beforeSeparator
+                                            , String.right 1 beforeSeparator ++ afterSeparator
+                                            ]
+                                                |> String.join "."
+
+                                        else
+                                            value
+
+                                    _ ->
+                                        value
+
+                            -- If the user types on the input when it's `0.00`,
+                            -- Remove leading/trailing 0s
+                            removeZeroes value =
+                                case String.toFloat options.value of
+                                    Nothing ->
+                                        value
+
+                                    Just floatValue ->
+                                        if floatValue == 0 then
+                                            case String.toFloat value of
+                                                Nothing ->
+                                                    String.replace "0" "" value
+
+                                                Just currentFloatValue ->
+                                                    if currentFloatValue >= 1 then
+                                                        String.replace "0" "" value
+
+                                                    else
+                                                        value
+
+                                        else
+                                            value
+                        in
                         v
+                            |> multiplyBy10
+                            |> removeZeroes
                             |> Mask.floatString decimalDigits
                             |> Maybe.map
                                 (\formattedString ->
+                                    -- If the user deletes the `.`, 0s would appear
+                                    -- This function prevents that
                                     if String.contains "." options.value && not (String.contains "." v) then
                                         case String.split "." formattedString of
                                             [ beforeSeparator, afterSeparator ] ->
-                                                if String.endsWith "00" beforeSeparator then
-                                                    String.dropRight 2 beforeSeparator ++ "." ++ afterSeparator
+                                                if String.endsWith (String.repeat decimalDigitsAmount "0") beforeSeparator then
+                                                    String.dropRight decimalDigitsAmount beforeSeparator ++ "." ++ afterSeparator
 
                                                 else
                                                     beforeSeparator ++ "." ++ afterSeparator
@@ -281,7 +345,23 @@ is valid and has the symbol's precision
 -}
 withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
 withCurrency symbol options =
-    options
+    let
+        zeroValue =
+            Utils.formatFloat 0 (Eos.getSymbolPrecision symbol) False
+    in
+    { options
+        | value =
+            case String.toFloat options.value of
+                Nothing ->
+                    zeroValue
+
+                Just floatValue ->
+                    if floatValue == 0 then
+                        zeroValue
+
+                    else
+                        options.value
+    }
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
