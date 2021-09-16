@@ -192,7 +192,7 @@ viewCreateAccount guest model =
             guest.shared
 
         formClasses =
-            "flex flex-grow flex-col bg-white px-4 px-0 md:max-w-sm sf-wrapper self-center w-full"
+            "flex flex-grow flex-col bg-white px-4 md:px-0 md:max-w-sm sf-wrapper self-center w-full"
 
         backgroundColor =
             case model.step of
@@ -470,7 +470,7 @@ viewTitleForStep { t, tr } s =
                     "2"
     in
     p
-        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500" ]
+        [ class "ml-4 py-4 mb-4 text-body border-b border-dotted text-grey border-grey-500 md:ml-6" ]
         [ text (tr "register.form.step" [ ( "stepNum", stepNum ) ])
         , text " / "
         , strong

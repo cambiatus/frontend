@@ -3,6 +3,7 @@ module Utils exposing
     , decodeEnterKeyDown
     , decodeTimestamp
     , errorToString
+    , escSubscription
     , formatFloat
     , fromDateTime
     , fromMaybeDateTime
@@ -11,6 +12,7 @@ module Utils exposing
     , previousDay
     )
 
+import Browser.Events
 import Cambiatus.Scalar exposing (DateTime(..))
 import Date
 import Graphql.Http
@@ -117,6 +119,21 @@ formatFloat number decimalCases useSeparator =
                                 "0"
                 in
                 String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
+
+
+escSubscription : msg -> Sub msg
+escSubscription toMsg =
+    Decode.field "key" Decode.string
+        |> Decode.andThen
+            (\key ->
+                if key == "Esc" || key == "Escape" then
+                    Decode.succeed ()
+
+                else
+                    Decode.fail "Expecting Escape key"
+            )
+        |> Browser.Events.onKeyDown
+        |> Sub.map (\_ -> toMsg)
 
 
 decodeTimestamp : Decode.Decoder Posix

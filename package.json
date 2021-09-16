@@ -3,7 +3,7 @@
   "version": "1.9.1",
   "private": true,
   "engines": {
-    "node": "14.8.0"
+    "node": "16.8.0"
   },
   "scripts": {
     "build": "yarn bundle",
