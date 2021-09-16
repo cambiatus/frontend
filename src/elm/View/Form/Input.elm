@@ -317,8 +317,13 @@ withMask mask options =
 withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
 withNumberMask mask options =
     let
-        currentSeparator =
-            String.filter (not << Char.isDigit) options.value
+        decimalDigitsAmount =
+            case mask of
+                Mask.Precisely x ->
+                    x
+
+                Mask.AtMost x ->
+                    x
     in
     { options
         | mask = Just (NumberMask mask)
@@ -331,13 +336,18 @@ withNumberMask mask options =
                 |> Maybe.withDefault options.value
     }
         |> withElements
-            (Html.node "masked-input-helper"
-                [ attribute "target-id" options.id
-                , attribute "mask-type" "number"
-                , attribute "decimal-separator" (options.translators.t "decimal_separator")
-                ]
-                []
-                :: options.extraElements
+            (if decimalDigitsAmount == 0 then
+                options.extraElements
+
+             else
+                Html.node
+                    "masked-input-helper"
+                    [ attribute "target-id" options.id
+                    , attribute "mask-type" "number"
+                    , attribute "decimal-separator" (options.translators.t "decimal_separator")
+                    ]
+                    []
+                    :: options.extraElements
             )
 
 
