@@ -20,6 +20,7 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Log
+import Mask
 import Page
 import Ports
 import RemoteData
@@ -188,13 +189,27 @@ update msg model ({ shared } as loggedIn) =
                     val
 
         CompletedLoadCommunity community ->
+            let
+                precision =
+                    Eos.getSymbolPrecision community.symbol
+
+                applyMask : Float -> String
+                applyMask floatValue =
+                    Mask.float (Mask.Precisely precision)
+                        { decimalSeparator = shared.translators.t "decimal_separator"
+                        , thousandsSeparator = shared.translators.t "thousands_separator"
+                        }
+                        floatValue
+            in
             { model
                 | minimumBalance =
-                    Maybe.map String.fromFloat community.minBalance
-                        |> Maybe.withDefault "0"
+                    community.minBalance
+                        |> Maybe.withDefault 0
+                        |> applyMask
                 , maximumSupply =
-                    Maybe.map String.fromFloat community.maxSupply
-                        |> Maybe.withDefault "21000000"
+                    community.maxSupply
+                        |> Maybe.withDefault 21000000
+                        |> applyMask
                 , isLoading = True
             }
                 |> UR.init
