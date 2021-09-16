@@ -324,16 +324,30 @@ withNumberMask mask options =
 
                 Mask.AtMost x ->
                     x
+
+        previousDecimalSeparator =
+            if decimalDigitsAmount == 0 then
+                options.translators.t "decimal_separator"
+
+            else
+                options.value
+                    |> String.dropRight decimalDigitsAmount
+                    |> String.right 1
+
+        valueWithoutSeparator =
+            options.value
+                |> String.filter (\char -> Char.isDigit char || String.fromList [ char ] == previousDecimalSeparator)
+                |> String.replace previousDecimalSeparator "."
     in
     { options
         | mask = Just (NumberMask mask)
         , value =
-            options.value
+            valueWithoutSeparator
                 |> Mask.floatString mask
                     { decimalSeparator = options.translators.t "decimal_separator"
                     , thousandsSeparator = options.translators.t "thousands_separator"
                     }
-                |> Maybe.withDefault options.value
+                |> Maybe.withDefault valueWithoutSeparator
     }
         |> withElements
             (if decimalDigitsAmount == 0 then
