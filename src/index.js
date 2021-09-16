@@ -34,60 +34,78 @@ window.customElements.define('masked-input-helper',
 
       const maskType = this.getAttribute('mask-type')
       let previousSelectionStart = targetElement.selectionStart || 0
+      let previousSelectionEnd = targetElement.selectionEnd || 0
       let previousValue = targetElement.value || ''
 
       this.inputListener = (e) => {
-        const newSelectionStart = targetElement.selectionStart || 0
-        const isAtEnd = maskType === 'string' ? previousSelectionStart === previousValue.length : false
-        const isDeletingNumber = e.data === null && maskType === 'number'
-        const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
+        window.setTimeout(() => {
+          const newSelectionStart = targetElement.selectionStart || 0
+          const isAtEnd = maskType === 'string' ? previousSelectionStart === previousValue.length : false
+          const isDeletingNumber = e.data === null && maskType === 'number'
+          const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
 
-        if (maskType === 'number') {
-          if (e.data === '.') {
-            if (targetElement.value.indexOf('.') === -1) return
+          if (maskType === 'number') {
+            if (e.data === '.') {
+              if (targetElement.value.indexOf('.') === -1) return
 
-            const newSelectionStart = targetElement.value.indexOf('.') + 2
-            previousSelectionStart = newSelectionStart
+              const newSelectionStart = targetElement.value.indexOf('.') + 2
+              previousSelectionStart = newSelectionStart
+              previousSelectionEnd = newSelectionStart
+              previousValue = targetElement.value
+              targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
+              return
+            }
+
+            if (previousSelectionStart === previousValue.indexOf('.') + 1 && !isDeletingNumber) {
+              previousValue = targetElement.value
+              previousSelectionStart = targetElement.value.indexOf('.')
+              previousSelectionEnd = previousSelectionStart
+
+              targetElement.setSelectionRange(previousSelectionStart, previousSelectionStart)
+              return
+            }
+          }
+
+          if (Math.abs(previousSelectionStart - previousSelectionEnd) > 0) {
+            const newSelectionIndex = Math.max(previousSelectionStart, previousSelectionEnd) + 1
+            targetElement.setSelectionRange(newSelectionIndex, newSelectionIndex)
+
             previousValue = targetElement.value
-            targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
+            previousSelectionStart = newSelectionIndex
+            previousSelectionEnd = newSelectionIndex
             return
           }
 
-          if (previousSelectionStart === previousValue.indexOf('.') + 1 && !isDeletingNumber) {
-            previousValue = targetElement.value
-            previousSelectionStart = targetElement.value.indexOf('.')
+          if ((isDeletingNumber || isChangingMask) && !isAtEnd) {
+            const sumFactor = e.data !== null && targetElement.value.length >= previousValue.length
+              ? +1
+              : maskType === 'number' ? 0 : -1
+            const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + sumFactor
+            targetElement.setSelectionRange(newIndex, newIndex)
 
-            targetElement.setSelectionRange(previousSelectionStart, previousSelectionStart)
+            previousValue = targetElement.value
+            previousSelectionStart = newIndex
+            previousSelectionEnd = newIndex
             return
           }
-        }
 
-        if ((isDeletingNumber || isChangingMask) && !isAtEnd) {
-          const sumFactor = e.data !== null && targetElement.value.length >= previousValue.length
-            ? +1
-            : maskType === 'number' ? 0 : -1
-          const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + sumFactor
-          targetElement.setSelectionRange(newIndex, newIndex)
-
+          previousSelectionStart = newSelectionStart
           previousValue = targetElement.value
-          previousSelectionStart = newIndex
-          return
-        }
-
-        previousSelectionStart = newSelectionStart
-        previousValue = targetElement.value
+        }, 0)
       }
 
       this.keyDownListener = (e) => {
-        if (e.key && e.key === 'ArrowRight') {
-          previousSelectionStart = Math.min(previousValue.length, targetElement.selectionStart + 1)
-        } else if (e.key && e.key === 'ArrowLeft') {
-          previousSelectionStart = Math.max(0, targetElement.selectionStart - 1)
+        if (Math.abs(targetElement.selectionStart - previousSelectionStart) < 2 || e.ctrlKey) {
+          window.setTimeout(() => {
+            previousSelectionStart = targetElement.selectionStart
+            previousSelectionEnd = targetElement.selectionEnd
+          }, 0)
         }
       }
 
       this.clickListener = () => {
         previousSelectionStart = targetElement.selectionStart
+        previousSelectionEnd = targetElement.selectionEnd
       }
 
       targetElement.addEventListener('input', this.inputListener)

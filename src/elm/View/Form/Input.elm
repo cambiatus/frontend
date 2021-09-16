@@ -192,9 +192,13 @@ input options =
                             -- digits separator, multiply the number by 10, so
                             -- that the number the user typed is registered
                             multiplyBy10 value =
-                                case String.split "." v of
-                                    [ noSeparator ] ->
-                                        value
+                                case String.split "." value of
+                                    [ beforeSeparator ] ->
+                                        if String.length beforeSeparator == 1 then
+                                            "0." ++ String.repeat (decimalDigitsAmount - 1) "0" ++ beforeSeparator
+
+                                        else
+                                            beforeSeparator
 
                                     [ beforeSeparator, afterSeparator ] ->
                                         if String.length afterSeparator > decimalDigitsAmount then
