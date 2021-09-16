@@ -1272,11 +1272,6 @@ encodeUpdateForm translators product form selectedCommunity =
         ]
 
 
-getNumericValues : String -> String
-getNumericValues value =
-    String.filter Char.isDigit value
-
-
 encodeDeleteForm : Product -> Value
 encodeDeleteForm product =
     Encode.object

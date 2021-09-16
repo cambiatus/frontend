@@ -324,7 +324,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-validationToString : Shared.Translators -> Validation -> Maybe String
+validationToString : Translators -> Validation -> Maybe String
 validationToString { t, tr } validation =
     case validation of
         Valid ->
@@ -337,7 +337,7 @@ validationToString { t, tr } validation =
             Just <| t e
 
 
-viewError : Shared.Translators -> Validation -> Html msg
+viewError : Translators -> Validation -> Html msg
 viewError translators validation =
     case validationToString translators validation of
         Nothing ->

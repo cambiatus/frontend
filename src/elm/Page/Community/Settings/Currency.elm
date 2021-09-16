@@ -303,7 +303,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 
-withSymbolValidation : (Shared.Translators -> Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
+withSymbolValidation : (Translators -> Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
 withSymbolValidation fn field loggedIn_ model_ =
     case loggedIn_.selectedCommunity of
         RemoteData.Success community ->
@@ -370,7 +370,7 @@ validateIntInput numberInput =
         |> Result.fromMaybe "error.validator.text.only_numbers"
 
 
-validateSymbolInput : Shared.Translators -> Eos.Symbol -> String -> Result String Eos.Asset
+validateSymbolInput : Translators -> Eos.Symbol -> String -> Result String Eos.Asset
 validateSymbolInput translators symbol numberInput =
     let
         unmasked =
@@ -417,12 +417,12 @@ setErrors field modelValidation model =
     }
 
 
-validateMinimumBalance : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMinimumBalance : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
 validateMinimumBalance translators symbol model =
     validateSymbolInput translators symbol model.minimumBalance
 
 
-validateMaximumSupply : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMaximumSupply : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
 validateMaximumSupply translators symbol model =
     validateSymbolInput translators symbol model.maximumSupply
 
@@ -437,12 +437,12 @@ validateJuridicalExpirationPeriod model =
     validateIntInput model.juridicalExpirationPeriod
 
 
-validateRenovationAmount : Shared.Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateRenovationAmount : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
 validateRenovationAmount translators symbol model =
     validateSymbolInput translators symbol model.renovationAmount
 
 
-validateModel : Shared.Translators -> Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
+validateModel : Translators -> Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
 validateModel translators symbol model =
     let
         tokenValidation =
