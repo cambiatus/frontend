@@ -529,8 +529,7 @@ viewHeader page ({ shared } as model) profile_ =
                             [ a
                                 [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
                                 , Route.href (Route.Profile model.accountName)
-                                , onClick (ShowUserNav False)
-                                , onClick SearchClosed
+                                , onClick ClickedProfileIcon
                                 ]
                                 [ Icons.profile "mr-4"
                                 , text_ "menu.profile"
@@ -926,6 +925,7 @@ type Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
+    | ClickedProfileIcon
     | GotTimeInternal Time.Posix
 
 
@@ -953,6 +953,10 @@ update msg model =
 
         SearchClosed ->
             { model | searchModel = Search.closeSearch model.searchModel }
+                |> UR.init
+
+        ClickedProfileIcon ->
+            { closeAllModals | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
@@ -1566,6 +1570,9 @@ msgToString msg =
 
         SearchClosed ->
             [ "SearchClosed" ]
+
+        ClickedProfileIcon ->
+            [ "ClickedProfileIcon" ]
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]

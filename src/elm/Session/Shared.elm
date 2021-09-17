@@ -4,6 +4,7 @@ module Session.Shared exposing
     , TranslationStatus(..)
     , Translators
     , communityDomain
+    , decimalSeparators
     , environmentFromUrl
     , init
     , langFlag
@@ -142,6 +143,13 @@ makeTranslators translations =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
+
+
+decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
+decimalSeparators { t } =
+    { decimalSeparator = t "decimal_separator"
+    , thousandsSeparator = t "thousands_separator"
+    }
 
 
 

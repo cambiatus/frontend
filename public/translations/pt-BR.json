@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Voltar",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
   "dates": {
     "today": "Hoje",
     "yesterday": "Ontem"

@@ -41,6 +41,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Mask
 import MaskedInput.Text as MaskedDate
 import Page
 import Profile
@@ -49,7 +50,7 @@ import RemoteData
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
 import Time
@@ -81,7 +82,7 @@ init loggedIn objectiveId actionId =
     ( { status = NotFound
       , objectiveId = objectiveId
       , actionId = actionId
-      , form = initForm
+      , form = initForm loggedIn.shared.translators
       , multiSelectState = Select.newState ""
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
@@ -154,11 +155,11 @@ type alias Form =
     }
 
 
-initForm : Form
-initForm =
+initForm : Shared.Translators -> Form
+initForm translators =
     { description = MarkdownEditor.init "action-description"
     , descriptionError = Nothing
-    , reward = defaultReward
+    , reward = defaultReward translators
     , validation = NoValidation
     , verification = Automatic
     , usagesLeft = Nothing
@@ -225,7 +226,7 @@ editForm ({ shared } as loggedIn) msg form action =
                             |> updateInput verifiers
 
                     verifierRewardValidator =
-                        defaultVerificationReward
+                        defaultVerificationReward shared.translators
                             |> updateInput (String.fromFloat action.verifierReward)
 
                     photoProof =
@@ -269,11 +270,10 @@ editForm ({ shared } as loggedIn) msg form action =
     }
 
 
-defaultReward : Validator String
-defaultReward =
+defaultReward : Shared.Translators -> Validator String
+defaultReward translators =
     []
-        |> greaterThanOrEqual 1.0
-        |> newValidator "" (\s -> Just s) True
+        |> newValidator "" Just True
 
 
 defaultDateValidator : Validator String
@@ -310,11 +310,15 @@ defaultUsagesLeftValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerificationReward : Validator String
-defaultVerificationReward =
+defaultVerificationReward : Shared.Translators -> Validator String
+defaultVerificationReward translators =
     []
         |> greaterThanOrEqual 0
-        |> newValidator "0" (\s -> Just s) True
+        |> newValidator "0"
+            (Mask.removeFloat (Shared.decimalSeparators translators)
+                >> Just
+            )
+            True
 
 
 minVotesLimit : Int
@@ -598,7 +602,7 @@ update msg model ({ shared } as loggedIn) =
                         -- New form
                         { model
                             | status = Authorized
-                            , form = initForm
+                            , form = initForm loggedIn.shared.translators
                         }
                             |> UR.init
 
@@ -1186,7 +1190,13 @@ upsertAction loggedIn community model isoDate =
                     Eos.Asset 0.0 community.symbol
 
                 Manual { verifierRewardValidator } ->
-                    Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
+                    Eos.Asset
+                        (getInput verifierRewardValidator
+                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                            |> String.toFloat
+                            |> Maybe.withDefault 0.0
+                        )
+                        community.symbol
 
         usages =
             case model.form.validation of
@@ -1280,7 +1290,14 @@ upsertAction loggedIn community model isoDate =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = model.form.description.contents
-                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
+                            , reward =
+                                Eos.Asset
+                                    (getInput model.form.reward
+                                        |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                                        |> String.toFloat
+                                        |> Maybe.withDefault 0.0
+                                    )
+                                    community.symbol
                             , verifierReward = verifierReward
                             , deadline = isoDate
                             , usages = usages
@@ -1659,7 +1676,7 @@ viewVerifications ({ shared } as loggedIn) model community =
             |> Radio.withOption
                 (Manual
                     { verifiersValidator = verifiersValidator
-                    , verifierRewardValidator = defaultVerificationReward
+                    , verifierRewardValidator = defaultVerificationReward shared.translators
                     , minVotesValidator = defaultMinVotes
                     , photoProof = Disabled
                     , profileSummaries = profileSummaries
