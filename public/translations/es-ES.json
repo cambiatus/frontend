@@ -84,7 +84,7 @@
         "is_odd": "El número debe ser impar"
       },
       "date": {
-        "invalid": "La fecha no es válida"
+        "invalid": "Fecha no válida, elija una fecha futura"
       },
       "text": {
         "only_numbers": "Sólo se permiten números",
