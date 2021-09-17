@@ -11,6 +11,7 @@ module Page.Community.ActionEditor exposing
     )
 
 import Action exposing (Action)
+import Browser.Dom
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community
@@ -33,8 +34,8 @@ import DatePicker
 import Dict
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList)
+import Html exposing (Html, b, button, div, img, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, src, tabindex)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -51,6 +52,7 @@ import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
+import Task
 import Time
 import Time.Extra
 import UpdateResult as UR
@@ -466,12 +468,14 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | ClosedAuthModal
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredReward String
+    | ClickedCalendar
     | GotDatePickerMsg DatePicker.Msg
     | EnteredUsages String
     | EnteredUsagesLeft String
@@ -548,6 +552,9 @@ update msg model ({ shared } as loggedIn) =
             model.form
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 -- Check the action belongs to the objective
@@ -823,6 +830,14 @@ update msg model ({ shared } as loggedIn) =
                 newModel
                     |> UR.init
 
+        ClickedCalendar ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "validity-date-input"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
+
         GotDatePickerMsg subMsg ->
             case model.form.validation of
                 NoValidation ->
@@ -1083,6 +1098,7 @@ datePickerSettings shared =
         , placeholder = shared.translators.t "payment_history.pick_date"
         , inputClassList = [ ( "input w-full", True ) ]
         , dateFormatter = Date.format "E, d MMM y"
+        , inputId = Just "validity-date-input"
     }
 
 
@@ -1431,10 +1447,19 @@ viewValidations { shared } model =
                                 [ span [ class "input-label" ]
                                     [ text_ "community.actions.form.date_label" ]
                                 , div [ class "mb-10" ]
-                                    [ DatePicker.view (Just date)
-                                        (datePickerSettings shared)
-                                        model.form.deadlinePicker
-                                        |> Html.map GotDatePickerMsg
+                                    [ div [ class "relative" ]
+                                        [ DatePicker.view (Just date)
+                                            (datePickerSettings shared)
+                                            model.form.deadlinePicker
+                                            |> Html.map GotDatePickerMsg
+                                        , img
+                                            [ class "absolute right-0 top-0 h-full cursor-pointer"
+                                            , src "/icons/calendar.svg"
+                                            , tabindex -1
+                                            , onClick ClickedCalendar
+                                            ]
+                                            []
+                                        ]
                                     , model.form.deadlineError
                                         |> Maybe.map
                                             (t
@@ -1851,6 +1876,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
@@ -1874,6 +1902,9 @@ msgToString msg =
 
         EnteredUsagesLeft _ ->
             [ "EnteredUsagesLeft" ]
+
+        ClickedCalendar ->
+            [ "ClickedCalendar" ]
 
         GotDatePickerMsg _ ->
             [ "GotDatePickerMsg" ]
