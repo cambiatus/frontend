@@ -11,6 +11,7 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
+import Browser.Dom
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
 import Cambiatus.Object
 import Cambiatus.Object.User as User
@@ -25,8 +26,8 @@ import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, h1, h2, label, p, span, text, ul)
-import Html.Attributes as Attrs exposing (class, href, style)
+import Html exposing (Html, a, button, div, h1, h2, img, label, p, span, text, ul)
+import Html.Attributes as Attrs exposing (class, href, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Icons
 import Log
@@ -37,6 +38,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
 import Strftime
+import Task
 import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
@@ -48,13 +50,15 @@ import Utils
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
     | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect (Maybe ProfileBase)
     | SelectMsg (Select.Msg ProfileBase)
     | ClearSelect
     | SetDatePicker DatePicker.Msg
+    | ClickedCalendar
     | ClearDatePicker
     | ShowMore
 
@@ -72,6 +76,9 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
@@ -95,6 +102,9 @@ msgToString msg =
 
         SetDatePicker _ ->
             [ "SetDatePicker" ]
+
+        ClickedCalendar ->
+            [ "ClickedCalendar" ]
 
         ClearDatePicker ->
             [ "ClearDatePicker" ]
@@ -254,6 +264,7 @@ datePickerSettings shared =
             ]
         , dateFormatter = Date.format "E, d MMM y"
         , firstDayOfWeek = Mon
+        , inputId = Just "date-picker-input"
         , inputAttributes =
             [ Attrs.required False
             , Attrs.readonly True
@@ -338,6 +349,9 @@ getTransfers maybeObj =
 update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
 update msg model ({ shared, authToken } as loggedIn) =
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             model
                 |> UR.init
@@ -551,6 +565,14 @@ update msg model ({ shared, authToken } as loggedIn) =
                 _ ->
                     { model | datePicker = newDatePicker }
                         |> UR.init
+
+        ClickedCalendar ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "date-picker-input"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClearDatePicker ->
             case loggedIn.selectedCommunity of
@@ -785,6 +807,13 @@ viewDatePicker shared model =
                 (datePickerSettings shared)
                 model.datePicker
                 |> Html.map SetDatePicker
+            , img
+                [ class "absolute right-0 top-0 h-full cursor-pointer"
+                , src "/icons/calendar.svg"
+                , tabindex -1
+                , onClick ClickedCalendar
+                ]
+                []
             , case model.selectedDate of
                 Just _ ->
                     button

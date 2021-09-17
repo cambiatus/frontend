@@ -1493,17 +1493,6 @@ async function handleJavascriptPort (arg) {
 
       return {}
     }
-    case 'validateDeadline': {
-      const parsedDate = new Date(arg.data.deadline)
-      const now = new Date()
-
-      if (parsedDate.toString() === 'Invalid Date' || parsedDate < now) {
-        return { error: parsedDate }
-      } else {
-        const isoDate = parsedDate.toISOString()
-        return { date: isoDate }
-      }
-    }
     case 'subscribeToNewCommunity': {
       let notifiers = []
 
