@@ -251,6 +251,10 @@ viewTitle shared model claim =
                     , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                     ]
 
+            Claim.Cancelled ->
+                -- TODO - Fill this in
+                div [] []
+
             Claim.Rejected ->
                 div [ class "inline-block" ]
                     [ text_ "claim.title_rejected.1"

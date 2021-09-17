@@ -79,6 +79,7 @@ type ClaimStatus
     = Approved
     | Rejected
     | Pending
+    | Cancelled
 
 
 type alias ClaimId =
@@ -199,6 +200,19 @@ selectionSet =
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
         |> with (SelectionSet.map emptyStringToNothing Claim.proofCode)
+        |> SelectionSet.map
+            (\claim ->
+                case claim.status of
+                    Pending ->
+                        if claim.action.isCompleted then
+                            { claim | status = Cancelled }
+
+                        else
+                            claim
+
+                    _ ->
+                        claim
+            )
 
 
 emptyStringToNothing : Maybe String -> Maybe String
@@ -549,6 +563,11 @@ viewVotingProgress shared completionStatus =
                             ]
                         ]
 
+                Cancelled ->
+                    -- TODO - Fill this in
+                    div []
+                        []
+
                 Approved ->
                     div []
                         [ p
@@ -580,6 +599,10 @@ viewVotingProgress shared completionStatus =
                     , span []
                         [ voteNumberTitleConditional completionStatus.approved ]
                     ]
+
+            Cancelled ->
+                -- TODO - Fill this in
+                p [] []
 
             Rejected ->
                 p
@@ -665,6 +688,10 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     case claim.status of
                         Approved ->
                             ( t "claim.title_approved.1", t "claim.approved", "text-2xl font-bold lowercase text-green" )
+
+                        Cancelled ->
+                            -- TODO - Fill this in
+                            ( "", "", "" )
 
                         Rejected ->
                             ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
