@@ -564,9 +564,26 @@ viewVotingProgress shared completionStatus =
                         ]
 
                 Cancelled ->
-                    -- TODO - Fill this in
                     div []
-                        []
+                        [ div [ class "flex" ]
+                            [ p [ class "w-full text-right text-gray-600" ]
+                                [ text (t "claim.cancelled") ]
+                            ]
+                        , div
+                            [ class "w-full h-2 flex bg-gray-500 rounded-full my-2" ]
+                            [ div
+                                [ class "flex rounded-full overflow-hidden h-2"
+                                , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
+                                ]
+                                [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
+                                , div
+                                    [ class "bg-red"
+                                    , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
+                                    ]
+                                    []
+                                ]
+                            ]
+                        ]
 
                 Approved ->
                     div []
@@ -599,10 +616,6 @@ viewVotingProgress shared completionStatus =
                     , span []
                         [ voteNumberTitleConditional completionStatus.approved ]
                     ]
-
-            Cancelled ->
-                -- TODO - Fill this in
-                p [] []
 
             Rejected ->
                 p
@@ -644,6 +657,13 @@ viewVotingProgress shared completionStatus =
                         , span []
                             [ voteNumberTitleConditional votingLeft ]
                         ]
+                    ]
+
+            Cancelled ->
+                p [ class "w-full text-gray-600 text-right space-x-1" ]
+                    [ span [] [ text (t "claim.cancelled_voting_bar.1") ]
+                    , span [ class "font-bold" ] [ text (String.fromInt votingLeft) ]
+                    , span [] [ text (t "claim.cancelled_voting_bar.2") ]
                     ]
         ]
 
@@ -689,19 +709,14 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                         Approved ->
                             ( t "claim.title_approved.1", t "claim.approved", "text-2xl font-bold lowercase text-green" )
 
-                        Cancelled ->
-                            -- TODO - Fill this in
-                            ( "", "", "" )
-
                         Rejected ->
                             ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
 
                         Pending ->
-                            if claim.action.isCompleted then
-                                ( t "claim.title_under_review.1", t "community.actions.completed", "text-black" )
+                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
-                            else
-                                ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+                        Cancelled ->
+                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-black" )
             in
             div [ class "block" ]
                 [ View.Components.dateViewer [ class "text-xs uppercase block" ]

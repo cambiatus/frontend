@@ -252,8 +252,8 @@ viewTitle shared model claim =
                     ]
 
             Claim.Cancelled ->
-                -- TODO - Fill this in
-                div [] []
+                div [ class "inline-block" ]
+                    [ text_ "claim.title_action_completed" ]
 
             Claim.Rejected ->
                 div [ class "inline-block" ]
@@ -262,13 +262,7 @@ viewTitle shared model claim =
                     ]
 
             Claim.Pending ->
-                if claim.action.isCompleted then
-                    div
-                        [ class "inline-block" ]
-                        [ text_ "claim.title_action_completed"
-                        ]
-
-                else if Action.isClosed claim.action shared.now then
+                if Action.isClosed claim.action shared.now then
                     div
                         [ class "inline-block" ]
                         [ text_ "claim.title_action_closed"

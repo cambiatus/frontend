@@ -889,6 +889,10 @@
       "2": "em análise",
       "3": ", outros membros ainda precisam votar"
     },
+    "title_cancelled": {
+      "1": "Esta reivindicação foi",
+      "2": "cancelada"
+    },
     "title_approved": {
       "1": "Esta reinvindicação foi",
       "2": "aprovada"
@@ -897,6 +901,10 @@
       "1": "Esta reinvindicação foi",
       "2": "rejeitada"
     },
+    "cancelled_voting_bar": {
+      "1": "tinha",
+      "2": "votos pendentes"
+    },
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
     "day_ago": "Aberto {{day_count}} dia atrás",
@@ -904,6 +912,7 @@
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendente",
+    "cancelled": "Cancelado",
     "disapproved": "Reprovado",
     "approved": "Aprovado",
     "disapproved_by": "Reprovado por",

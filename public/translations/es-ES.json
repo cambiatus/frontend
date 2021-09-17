@@ -886,6 +886,10 @@
       "2": "bajo revisión",
       "3": ", otros miembros aún necesitan votar"
     },
+    "title_cancelled": {
+      "1": "Este reclamo fue",
+      "2": "cancelado"
+    },
     "title_approved": {
       "1": "Este reclamo fue",
       "2": "aprobado"
@@ -894,6 +898,10 @@
       "1": "Este reclamo fue",
       "2": "rechazado"
     },
+    "cancelled_voting_bar": {
+      "1": "tenía",
+      "2": "votos pendientes"
+    },
     "title_action_completed": "Este reclamo está pendiente, sin embargo, dado que la acción se completó, no es posible votar",
     "title_action_closed": "Este reclamo está pendiente, sin embargo, dado que la acción está cerrada, no es posible votar.",
     "day_ago": "Abierto hace {{day_count}} día",
@@ -901,6 +909,7 @@
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendiente",
+    "cancelled": "cancelado",
     "disapproved": "Rechazado",
     "approved": "Aprobado",
     "reward": "Ganaste: {{value}}",
