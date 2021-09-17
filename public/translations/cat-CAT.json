@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
   "dates": {
     "today": "Avui",
     "yesterday": "Ahir"
