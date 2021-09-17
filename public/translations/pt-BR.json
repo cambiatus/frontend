@@ -84,7 +84,7 @@
         "is_odd": "O número deve ser ímpar"
       },
       "date": {
-        "invalid": "A data está inválida. Use 'mm/dd/aaaa'"
+        "invalid": "A data está inválida"
       },
       "text": {
         "only_numbers": "O texto deve conter apenas números",

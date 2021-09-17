@@ -11,7 +11,7 @@
 }
 
 .elm-datepicker--picker {
-  @apply absolute border-solid border border-purple-500 bg-white z-10 rounded-sm;
+  @apply absolute w-full border-solid border border-purple-500 bg-white z-10 rounded-sm;
 }
 
 .elm-datepicker--picker-header,
@@ -73,6 +73,8 @@
 }
 
 .elm-datepicker--table {
+  @apply w-full;
+
   border-spacing: 0;
   border-collapse: collapse;
   font-size: 1em;

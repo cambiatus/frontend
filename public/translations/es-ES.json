@@ -84,7 +84,7 @@
         "is_odd": "El número debe ser impar"
       },
       "date": {
-        "invalid": "La fecha no es válida, utilice 'mm/dd/aaaa'"
+        "invalid": "La fecha no es válida"
       },
       "text": {
         "only_numbers": "Sólo se permiten números",

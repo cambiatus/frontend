@@ -84,7 +84,7 @@
         "is_odd": "The number must be odd"
       },
       "date": {
-        "invalid": "The date is invalid, please use 'mm/dd/aaaa'"
+        "invalid": "The date is invalid"
       },
       "text": {
         "only_numbers": "Only numbers are allowed",

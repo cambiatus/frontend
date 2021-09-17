@@ -84,7 +84,7 @@
         "is_odd": "El nombre ha de ser imparell"
       },
       "date": {
-        "invalid": "La data no és vàlida, fes-la servir 'mm/dd/aaaa'"
+        "invalid": "La data no és vàlida"
       },
       "text": {
         "only_numbers": "Només es permeten números",
