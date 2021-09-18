@@ -15,6 +15,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, div, h1, img, label, text)
 import Html.Attributes exposing (class, for, src)
 import Log
+import Mask
 import Page
 import Ports
 import RemoteData exposing (RemoteData)
@@ -96,7 +97,11 @@ update msg model loggedIn =
             { model
                 | amount = amount
                 , amountProblem =
-                    case String.toFloat amount of
+                    case
+                        amount
+                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                            |> String.toFloat
+                    of
                         Nothing ->
                             Just InvalidAmount
 
@@ -115,7 +120,11 @@ update msg model loggedIn =
         RequestedPaypalInfoFromJs id ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    case String.toFloat model.amount of
+                    case
+                        model.amount
+                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                            |> String.toFloat
+                    of
                         Nothing ->
                             -- We handle this case on JS. If the amount is not a
                             -- valid `Float`, we get an `InvalidAmount` error
@@ -359,7 +368,9 @@ view_ ({ translators } as shared) community model =
                 , PaypalButtons.view [ class "w-full" ]
                     { id = "sponsorship-paypal-buttons"
                     , value =
-                        String.toFloat model.amount
+                        model.amount
+                            |> Mask.removeFloat (Shared.decimalSeparators translators)
+                            |> String.toFloat
                             |> Maybe.andThen
                                 (\amount ->
                                     if amount < PaypalButtons.minimumAmount then

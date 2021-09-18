@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Volver",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
   "dates": {
     "today": "Hoy",
     "yesterday": "Ayer"
@@ -84,7 +86,7 @@
         "is_odd": "El número debe ser impar"
       },
       "date": {
-        "invalid": "La fecha no es válida, utilice 'mm/dd/aaaa'"
+        "invalid": "Fecha no válida, elija una fecha futura"
       },
       "text": {
         "only_numbers": "Sólo se permiten números",

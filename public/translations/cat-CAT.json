@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
   "dates": {
     "today": "Avui",
     "yesterday": "Ahir"
@@ -84,7 +86,7 @@
         "is_odd": "El nombre ha de ser imparell"
       },
       "date": {
-        "invalid": "La data no és vàlida, fes-la servir 'mm/dd/aaaa'"
+        "invalid": "Data no vàlida, trieu una data en el futur"
       },
       "text": {
         "only_numbers": "Només es permeten números",

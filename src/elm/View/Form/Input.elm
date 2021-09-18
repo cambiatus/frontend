@@ -3,6 +3,7 @@ module View.Form.Input exposing
     , withCounter, withElements, withCurrency
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
     , withInputType, withType, withCounterType, asNumeric
+    , withMask
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -47,6 +48,11 @@ and character counters.
 @docs withInputType, withType, withCounterType, asNumeric
 
 
+## Masks
+
+@docs withMask
+
+
 # Converting to HTML
 
 @docs toHtml
@@ -58,7 +64,8 @@ import Html exposing (Html, div, li, span, text, ul)
 import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import I18Next
-import Session.Shared exposing (Translators)
+import Mask
+import Session.Shared as Shared exposing (Translators)
 import View.Form
 
 
@@ -98,6 +105,7 @@ init options =
     , inputType = Input
     , fieldType = Text
     , counterType = CountLetters
+    , mask = Nothing
     }
 
 
@@ -159,11 +167,25 @@ input options =
 
                 TextArea ->
                     ( Html.textarea, "form-input", class "" )
+
+        beforeInputFunction =
+            case options.mask of
+                Nothing ->
+                    identity
+
+                Just (StringMask mask) ->
+                    Mask.string mask
+
+                Just (NumberMask decimalDigits) ->
+                    \v ->
+                        Mask.updateFloatString decimalDigits
+                            (Shared.decimalSeparators options.translators)
+                            { previousValue = options.value, newValue = v }
     in
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput options.onInput
+                :: onInput (beforeInputFunction >> options.onInput)
                 :: class ("w-full " ++ inputClass)
                 :: disabled options.disabled
                 :: value options.value
@@ -230,7 +252,7 @@ withInputContainerAttrs attrs options =
 -}
 withElements : List (Html a) -> InputOptions a -> InputOptions a
 withElements elements options =
-    { options | extraElements = elements }
+    { options | extraElements = elements ++ options.extraElements }
 
 
 {-| Displays the currency symbol in the input field
@@ -245,7 +267,7 @@ withCurrency symbol options =
         |> withElements (viewCurrencyElement symbol :: options.extraElements)
         |> withAttrs [ class "pr-20" ]
         |> asNumeric
-        |> withType Number
+        |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
 
 
 {-| Determines the type of the input
@@ -267,6 +289,77 @@ withType fieldType options =
 withCounterType : CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
+
+
+{-| Adds a regular string mask to the input
+-}
+withMask : { mask : String, replace : Char } -> InputOptions a -> InputOptions a
+withMask mask options =
+    { options
+        | mask = Just (StringMask mask)
+        , value = Mask.string mask options.value
+    }
+        |> withElements
+            (Html.node "masked-input-helper"
+                [ attribute "target-id" options.id
+                , attribute "mask-type" "string"
+                ]
+                []
+                :: options.extraElements
+            )
+
+
+{-| Adds a number mask to the input
+-}
+withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
+withNumberMask mask options =
+    let
+        decimalDigitsAmount =
+            case mask of
+                Mask.Precisely x ->
+                    x
+
+                Mask.AtMost x ->
+                    x
+
+        separators =
+            Shared.decimalSeparators options.translators
+
+        previousDecimalSeparator =
+            if decimalDigitsAmount == 0 then
+                separators.decimalSeparator
+
+            else
+                options.value
+                    |> String.dropRight decimalDigitsAmount
+                    |> String.right 1
+
+        valueWithoutSeparator =
+            options.value
+                |> String.filter (\char -> Char.isDigit char || String.fromList [ char ] == previousDecimalSeparator)
+                |> String.replace previousDecimalSeparator "."
+    in
+    { options
+        | mask = Just (NumberMask mask)
+        , value =
+            valueWithoutSeparator
+                |> Mask.floatString mask separators
+                |> Maybe.withDefault valueWithoutSeparator
+    }
+        |> withElements
+            (if decimalDigitsAmount == 0 then
+                options.extraElements
+
+             else
+                Html.node
+                    "masked-input-helper"
+                    [ attribute "target-id" options.id
+                    , attribute "mask-type" "number"
+                    , attribute "decimal-separator" separators.decimalSeparator
+                    ]
+                    []
+                    :: options.extraElements
+            )
 
 
 {-| Defines the input as a numeric input
@@ -304,6 +397,21 @@ inputCounterviewWithAttrs tr max str attrs counterType =
 type CounterType
     = CountLetters
     | CountWords
+
+
+{-| A mask formats the input as the user writes in it. A common place to find
+them is on phone inputs. Here is an example for a BR phone number:
+
+    StringMask { mask = "(##) ####-####", replace = '#' }
+
+We can also use them to limit inputs that are meant to only receive numbers. In
+that case, we can limit the number of decimal digits. A NumberMask is already
+applied on symbol/currency inputs, based on that symbol's precision.
+
+-}
+type Mask
+    = NumberMask Mask.DecimalDigits
+    | StringMask { mask : String, replace : Char }
 
 
 
@@ -353,6 +461,7 @@ type alias InputOptions a =
     , inputType : InputType
     , fieldType : FieldType
     , counterType : CounterType
+    , mask : Maybe Mask
     }
 
 

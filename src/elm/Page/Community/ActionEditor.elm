@@ -11,13 +11,13 @@ module Page.Community.ActionEditor exposing
     )
 
 import Action exposing (Action)
+import Browser.Dom
 import Cambiatus.Enum.VerificationType as VerificationType
 import Cambiatus.Scalar exposing (DateTime(..))
 import Community
 import DataValidator
     exposing
         ( Validator
-        , addConstraints
         , getInput
         , greaterThan
         , greaterThanOrEqual
@@ -29,11 +29,13 @@ import DataValidator
         , updateInput
         , validate
         )
+import Date
+import DatePicker
 import Dict
 import Eos
 import Eos.Account as Eos
-import Html exposing (Html, b, button, div, p, span, text)
-import Html.Attributes exposing (class, classList, placeholder)
+import Html exposing (Html, b, button, div, img, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, src, tabindex)
 import Html.Events exposing (onClick)
 import I18Next
 import Icons
@@ -41,7 +43,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
-import MaskedInput.Text as MaskedDate
+import Mask
 import Page
 import Profile
 import Profile.Summary
@@ -49,10 +51,11 @@ import RemoteData
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
-import Strftime
+import Task
 import Time
+import Time.Extra
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
@@ -81,7 +84,7 @@ init loggedIn objectiveId actionId =
     ( { status = NotFound
       , objectiveId = objectiveId
       , actionId = actionId
-      , form = initForm
+      , form = initForm loggedIn.shared
       , multiSelectState = Select.newState ""
       }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
@@ -109,7 +112,7 @@ type Status
 
 type ActionValidation
     = NoValidation
-    | Validations (Maybe (Validator String)) (Maybe (Validator String)) -- Date validation, usage validate
+    | Validations (Maybe Date.Date) (Maybe (Validator String)) -- Date validation, usage validate
 
 
 type Verification
@@ -147,41 +150,40 @@ type alias Form =
     , verification : Verification
     , usagesLeft : Maybe (Validator String) -- Only available on edit
     , isCompleted : Bool
-    , deadlineState : MaskedDate.State
+    , deadlinePicker : DatePicker.DatePicker
+    , deadlineError : Maybe String
     , saveStatus : SaveStatus
     , instructions : MarkdownEditor.Model
     , instructionsError : Maybe ( String, I18Next.Replacements )
     }
 
 
-initForm : Form
-initForm =
+initForm : Shared -> Form
+initForm shared =
     { description = MarkdownEditor.init "action-description"
     , descriptionError = Nothing
-    , reward = defaultReward
+    , reward = defaultReward shared.translators
     , validation = NoValidation
     , verification = Automatic
     , usagesLeft = Nothing
     , isCompleted = False
-    , deadlineState = MaskedDate.initialState
+    , deadlinePicker = DatePicker.initFromDate (Date.fromPosix shared.timezone shared.now)
+    , deadlineError = Nothing
     , saveStatus = NotAsked
     , instructions = MarkdownEditor.init "photo-proof-instructions"
     , instructionsError = Nothing
     }
 
 
-editForm : LoggedIn.Model -> Msg -> Form -> Action -> Form
-editForm ({ shared } as loggedIn) msg form action =
+editForm : LoggedIn.Model -> Form -> Action -> Form
+editForm { shared } form action =
     let
-        dateValidator : Maybe (Validator String)
-        dateValidator =
+        maybeDeadline : Maybe Date.Date
+        maybeDeadline =
             action.deadline
-                |> Maybe.andThen
-                    (\d ->
-                        defaultDateValidator
-                            |> updateInput
-                                (d |> Utils.fromDateTime |> Strftime.format "%m%d%Y" shared.timezone)
-                            |> Just
+                |> Maybe.map
+                    (Utils.fromDateTime
+                        >> Date.fromPosix shared.timezone
                     )
 
         usagesValidator : Maybe (Validator String)
@@ -197,7 +199,7 @@ editForm ({ shared } as loggedIn) msg form action =
         validation : ActionValidation
         validation =
             if action.usages > 0 || action.deadline /= Nothing then
-                Validations dateValidator usagesValidator
+                Validations maybeDeadline usagesValidator
 
             else
                 NoValidation
@@ -225,7 +227,7 @@ editForm ({ shared } as loggedIn) msg form action =
                             |> updateInput verifiers
 
                     verifierRewardValidator =
-                        defaultVerificationReward
+                        defaultVerificationReward shared.translators
                             |> updateInput (String.fromFloat action.verifierReward)
 
                     photoProof =
@@ -269,16 +271,10 @@ editForm ({ shared } as loggedIn) msg form action =
     }
 
 
-defaultReward : Validator String
-defaultReward =
+defaultReward : Shared.Translators -> Validator String
+defaultReward translators =
     []
-        |> greaterThanOrEqual 1.0
-        |> newValidator "" (\s -> Just s) True
-
-
-defaultDateValidator : Validator String
-defaultDateValidator =
-    newValidator "" (\s -> Just s) True []
+        |> newValidator "" Just True
 
 
 defaultUsagesValidator : Validator String
@@ -310,11 +306,15 @@ defaultUsagesLeftValidator =
         |> newValidator "" (\s -> Just s) True
 
 
-defaultVerificationReward : Validator String
-defaultVerificationReward =
+defaultVerificationReward : Shared.Translators -> Validator String
+defaultVerificationReward translators =
     []
         |> greaterThanOrEqual 0
-        |> newValidator "0" (\s -> Just s) True
+        |> newValidator "0"
+            (Mask.removeFloat (Shared.decimalSeparators translators)
+                >> Just
+            )
+            True
 
 
 minVotesLimit : Int
@@ -330,25 +330,33 @@ defaultMinVotes =
         |> newValidator minVotesLimit (\s -> Just (String.fromInt s)) True
 
 
-validateForm : Form -> Form
-validateForm form =
+validateForm : Time.Zone -> Time.Posix -> Form -> Form
+validateForm timezone now form =
     let
-        validation =
+        ( validation, dateError ) =
             case form.validation of
                 NoValidation ->
-                    NoValidation
+                    ( NoValidation, Nothing )
 
                 Validations (Just dateValidation) (Just usageValidation) ->
-                    Validations (Just (validate dateValidation)) (Just (validate usageValidation))
+                    if Date.diff Date.Days (Date.fromPosix timezone now) dateValidation < 0 then
+                        ( Validations (Just dateValidation) (Just (validate usageValidation)), Just "error.validator.date.invalid" )
+
+                    else
+                        ( Validations (Just dateValidation) (Just (validate usageValidation)), Nothing )
 
                 Validations (Just dateValidation) Nothing ->
-                    Validations (Just (validate dateValidation)) Nothing
+                    if Date.diff Date.Days (Date.fromPosix timezone now) dateValidation < 0 then
+                        ( Validations (Just dateValidation) Nothing, Just "error.validator.date.invalid" )
+
+                    else
+                        ( Validations (Just dateValidation) Nothing, Nothing )
 
                 Validations Nothing (Just usageValidation) ->
-                    Validations Nothing (Just (validate usageValidation))
+                    ( Validations Nothing (Just (validate usageValidation)), Nothing )
 
                 Validations Nothing Nothing ->
-                    NoValidation
+                    ( NoValidation, Nothing )
 
         verification =
             case form.verification of
@@ -387,6 +395,7 @@ validateForm form =
         | descriptionError = descriptionError
         , reward = validate form.reward
         , validation = validation
+        , deadlineError = dateError
         , verification = verification
         , instructionsError = instructionsError
     }
@@ -395,12 +404,21 @@ validateForm form =
 isFormValid : Form -> Bool
 isFormValid form =
     let
+        hasDeadlineError =
+            case form.deadlineError of
+                Just _ ->
+                    True
+
+                Nothing ->
+                    False
+
         verificationHasErrors =
             case form.verification of
                 Manual m ->
                     hasErrors m.minVotesValidator
                         || hasErrors m.verifiersValidator
                         || hasErrors m.verifierRewardValidator
+                        || hasDeadlineError
 
                 Automatic ->
                     -- Automatic verification never has validation errors
@@ -430,16 +448,6 @@ hasDateValidation validation =
                     False
 
 
-getDateValidation : ActionValidation -> Maybe (Validator String)
-getDateValidation validation =
-    case validation of
-        NoValidation ->
-            Nothing
-
-        Validations maybeDate _ ->
-            maybeDate
-
-
 hasUnitValidation : ActionValidation -> Bool
 hasUnitValidation validation =
     case validation of
@@ -464,14 +472,15 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | ClosedAuthModal
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredReward String
-    | EnteredDeadline String
-    | DeadlineChanged MaskedDate.State
+    | ClickedCalendar
+    | GotDatePickerMsg DatePicker.Msg
     | EnteredUsages String
     | EnteredUsagesLeft String
     | EnteredVerifierReward String
@@ -484,9 +493,6 @@ type Msg
     | MarkAsCompleted
     | SetVerification Verification
     | ValidateForm
-    | ValidateDeadline
-    | GotValidDate (Result Value String)
-    | GotInvalidDate
     | SaveAction Int -- Send the date
     | GotSaveAction (Result Value String)
     | GotProfileSummaryMsg Int Profile.Summary.Msg
@@ -550,6 +556,9 @@ update msg model ({ shared } as loggedIn) =
             model.form
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 -- Check the action belongs to the objective
@@ -586,7 +595,7 @@ update msg model ({ shared } as loggedIn) =
                             Just action ->
                                 { model
                                     | status = Authorized
-                                    , form = editForm loggedIn msg model.form action
+                                    , form = editForm loggedIn model.form action
                                 }
                                     |> UR.init
 
@@ -595,10 +604,9 @@ update msg model ({ shared } as loggedIn) =
                                     |> UR.init
 
                     ( Just _, Nothing ) ->
-                        -- New form
                         { model
                             | status = Authorized
-                            , form = initForm
+                            , form = initForm shared
                         }
                             |> UR.init
 
@@ -678,67 +686,6 @@ update msg model ({ shared } as loggedIn) =
         EnteredReward val ->
             { model | form = { oldForm | reward = updateInput val model.form.reward } }
                 |> UR.init
-
-        EnteredDeadline val ->
-            case model.form.validation of
-                NoValidation ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Tried setting a deadline for action, but action has no validation"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ActionEditor", function = "update" }
-                            [ { name = "Action"
-                              , extras =
-                                    Dict.fromList
-                                        [ ( "actionId"
-                                          , case model.actionId of
-                                                Nothing ->
-                                                    Encode.null
-
-                                                Just id ->
-                                                    Encode.int id
-                                          )
-                                        , ( "tried", Encode.string val )
-                                        ]
-                              }
-                            , Log.contextFromCommunity loggedIn.selectedCommunity
-                            ]
-
-                Validations maybeDate usageValidation ->
-                    case maybeDate of
-                        Just dateValidation ->
-                            { model
-                                | form =
-                                    { oldForm
-                                        | validation = Validations (Just (updateInput val dateValidation)) usageValidation
-                                    }
-                            }
-                                |> UR.init
-
-                        Nothing ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
-                                    "Tried setting a deadline for action, but action's validation has no date"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.ActionEditor", function = "update" }
-                                    [ { name = "Action"
-                                      , extras =
-                                            Dict.fromList
-                                                [ ( "actionId"
-                                                  , case model.actionId of
-                                                        Nothing ->
-                                                            Encode.null
-
-                                                        Just id ->
-                                                            Encode.int id
-                                                  )
-                                                , ( "tried", Encode.string val )
-                                                ]
-                                      }
-                                    , Log.contextFromCommunity loggedIn.selectedCommunity
-                                    ]
 
         EnteredUsages val ->
             case model.form.validation of
@@ -855,54 +802,47 @@ update msg model ({ shared } as loggedIn) =
         ValidateForm ->
             let
                 newModel =
-                    { model | form = validateForm model.form }
+                    { model | form = validateForm shared.timezone shared.now model.form }
             in
             if isFormValid newModel.form then
-                case getDateValidation newModel.form.validation of
-                    Just _ ->
-                        update ValidateDeadline model loggedIn
+                let
+                    millis =
+                        case newModel.form.validation of
+                            NoValidation ->
+                                0
 
-                    Nothing ->
-                        update (SaveAction 0) model loggedIn
+                            Validations maybeDate _ ->
+                                maybeDate
+                                    |> Maybe.map
+                                        (\date ->
+                                            Time.Extra.partsToPosix shared.timezone
+                                                { year = Date.year date
+                                                , month = Date.month date
+                                                , day = Date.day date
+                                                , hour = 23
+                                                , minute = 59
+                                                , second = 59
+                                                , millisecond = 0
+                                                }
+                                                |> Time.posixToMillis
+                                        )
+                                    |> Maybe.withDefault 0
+                in
+                update (SaveAction millis) model loggedIn
 
             else
                 newModel
                     |> UR.init
 
-        ValidateDeadline ->
-            case model.form.validation of
-                NoValidation ->
-                    model
-                        |> UR.init
+        ClickedCalendar ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "validity-date-input"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
-                Validations maybeDate _ ->
-                    case maybeDate of
-                        Just dateValidation ->
-                            model
-                                |> UR.init
-                                |> UR.addPort
-                                    { responseAddress = ValidateDeadline
-                                    , responseData = Encode.null
-                                    , data =
-                                        Encode.object
-                                            [ ( "name", Encode.string "validateDeadline" )
-                                            , ( "deadline"
-                                              , Encode.string
-                                                    (String.join "/"
-                                                        [ String.slice 0 2 (getInput dateValidation) -- month
-                                                        , String.slice 2 4 (getInput dateValidation) -- day
-                                                        , String.slice 4 8 (getInput dateValidation) -- year
-                                                        ]
-                                                    )
-                                              )
-                                            ]
-                                    }
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-        DeadlineChanged state ->
+        GotDatePickerMsg subMsg ->
             case model.form.validation of
                 NoValidation ->
                     model
@@ -913,13 +853,34 @@ update msg model ({ shared } as loggedIn) =
                             { moduleName = "Page.Community.ActionEditor", function = "update" }
                             []
 
-                Validations maybeDate _ ->
+                Validations maybeDate usageValidator ->
                     case maybeDate of
-                        Just _ ->
+                        Just oldDate ->
+                            let
+                                ( datePicker, datePickerEvent ) =
+                                    DatePicker.update (datePickerSettings shared)
+                                        subMsg
+                                        model.form.deadlinePicker
+
+                                newDate =
+                                    case datePickerEvent of
+                                        DatePicker.Picked pickedDate ->
+                                            pickedDate
+
+                                        _ ->
+                                            oldDate
+                            in
                             { model
                                 | form =
                                     { oldForm
-                                        | deadlineState = state
+                                        | deadlinePicker = datePicker
+                                        , validation = Validations (Just newDate) usageValidator
+                                        , deadlineError =
+                                            if Date.diff Date.Days (Date.fromPosix shared.timezone shared.now) newDate < 0 then
+                                                Just "error.validator.date.invalid"
+
+                                            else
+                                                Nothing
                                     }
                             }
                                 |> UR.init
@@ -983,7 +944,7 @@ update msg model ({ shared } as loggedIn) =
             let
                 deadlineValidation =
                     if bool then
-                        Just defaultDateValidator
+                        Just (Date.fromPosix shared.timezone shared.now)
 
                     else
                         Nothing
@@ -1049,53 +1010,6 @@ update msg model ({ shared } as loggedIn) =
                     { model | form = { oldForm | isCompleted = True } }
             in
             update ValidateForm newModel loggedIn
-
-        GotInvalidDate ->
-            let
-                newValidation =
-                    case model.form.validation of
-                        NoValidation ->
-                            NoValidation
-
-                        Validations (Just dateValidation) usageValidation ->
-                            Validations
-                                (Just
-                                    (addConstraints
-                                        [ { test = \_ -> False
-                                          , defaultError = \_ -> t "error.validator.date.invalid"
-                                          }
-                                        ]
-                                        (updateInput (getInput dateValidation) defaultDateValidator)
-                                    )
-                                )
-                                usageValidation
-
-                        Validations dateValidation usageValidation ->
-                            Validations dateValidation usageValidation
-
-                newForm =
-                    { oldForm | validation = newValidation }
-            in
-            { model | form = validateForm newForm }
-                |> UR.init
-
-        GotValidDate isoDate ->
-            case isoDate of
-                Ok date ->
-                    let
-                        dateInt =
-                            if String.length date == 0 then
-                                0
-
-                            else
-                                Just (DateTime date)
-                                    |> Utils.fromMaybeDateTime
-                                    |> Time.posixToMillis
-                    in
-                    update (SaveAction dateInt) model loggedIn
-
-                Err _ ->
-                    update GotInvalidDate model loggedIn
 
         SaveAction isoDate ->
             let
@@ -1177,6 +1091,21 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd (Cmd.map GotInstructionsEditorMsg subCmd)
 
 
+datePickerSettings : Shared -> DatePicker.Settings
+datePickerSettings shared =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+    in
+    { defaultSettings
+        | changeYear = DatePicker.off
+        , placeholder = shared.translators.t "payment_history.pick_date"
+        , inputClassList = [ ( "input w-full", True ) ]
+        , dateFormatter = Date.format "E, d MMM y"
+        , inputId = Just "validity-date-input"
+    }
+
+
 upsertAction : LoggedIn.Model -> Community.Model -> Model -> Int -> UpdateResult
 upsertAction loggedIn community model isoDate =
     let
@@ -1186,7 +1115,13 @@ upsertAction loggedIn community model isoDate =
                     Eos.Asset 0.0 community.symbol
 
                 Manual { verifierRewardValidator } ->
-                    Eos.Asset (getInput verifierRewardValidator |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
+                    Eos.Asset
+                        (getInput verifierRewardValidator
+                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                            |> String.toFloat
+                            |> Maybe.withDefault 0.0
+                        )
+                        community.symbol
 
         usages =
             case model.form.validation of
@@ -1280,7 +1215,14 @@ upsertAction loggedIn community model isoDate =
                             { actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = model.form.description.contents
-                            , reward = Eos.Asset (getInput model.form.reward |> String.toFloat |> Maybe.withDefault 0.0) community.symbol
+                            , reward =
+                                Eos.Asset
+                                    (getInput model.form.reward
+                                        |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                                        |> String.toFloat
+                                        |> Maybe.withDefault 0.0
+                                    )
+                                    community.symbol
                             , verifierReward = verifierReward
                             , deadline = isoDate
                             , usages = usages
@@ -1467,9 +1409,6 @@ viewValidations { shared } model =
 
         text_ s =
             text (t s)
-
-        dateOptions =
-            MaskedDate.defaultOptions EnteredDeadline DeadlineChanged
     in
     div []
         [ div [ class "mb-6" ]
@@ -1518,25 +1457,33 @@ viewValidations { shared } model =
                 NoValidation ->
                     text ""
 
-                Validations dateValidation _ ->
-                    case dateValidation of
-                        Just validation ->
+                Validations maybeDate _ ->
+                    case maybeDate of
+                        Just date ->
                             div []
                                 [ span [ class "input-label" ]
                                     [ text_ "community.actions.form.date_label" ]
                                 , div [ class "mb-10" ]
-                                    [ MaskedDate.input
-                                        { dateOptions
-                                            | pattern = "##/##/####"
-                                            , inputCharacter = '#'
-                                        }
-                                        [ class "input w-full"
-                                        , classList [ ( "border-red", hasErrors validation ) ]
-                                        , placeholder "mm/dd/yyyy"
+                                    [ div [ class "relative" ]
+                                        [ DatePicker.view (Just date)
+                                            (datePickerSettings shared)
+                                            model.form.deadlinePicker
+                                            |> Html.map GotDatePickerMsg
+                                        , img
+                                            [ class "absolute right-0 top-0 h-full cursor-pointer"
+                                            , src "/icons/calendar.svg"
+                                            , tabindex -1
+                                            , onClick ClickedCalendar
+                                            ]
+                                            []
                                         ]
-                                        model.form.deadlineState
-                                        (getInput validation)
-                                    , viewFieldErrors (listErrors shared.translations validation)
+                                    , model.form.deadlineError
+                                        |> Maybe.map
+                                            (t
+                                                >> List.singleton
+                                                >> viewFieldErrors
+                                            )
+                                        |> Maybe.withDefault (text "")
                                     ]
                                 ]
 
@@ -1659,7 +1606,7 @@ viewVerifications ({ shared } as loggedIn) model community =
             |> Radio.withOption
                 (Manual
                     { verifiersValidator = verifiersValidator
-                    , verifierRewardValidator = defaultVerificationReward
+                    , verifierRewardValidator = defaultVerificationReward shared.translators
                     , minVotesValidator = defaultMinVotes
                     , photoProof = Disabled
                     , profileSummaries = profileSummaries
@@ -1835,10 +1782,10 @@ viewSelectedVerifiers ({ shared } as loggedIn) profileSummaries selectedVerifier
 
 viewFieldErrors : List String -> Html msg
 viewFieldErrors errors =
-    div []
+    ul []
         (List.map
             (\e ->
-                span [ class "form-error" ] [ text e ]
+                li [ class "form-error" ] [ text e ]
             )
             errors
         )
@@ -1927,18 +1874,6 @@ receiveBroadcast broadcastMsg =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ValidateDeadline" :: _ ->
-            Json.decodeValue
-                (Json.oneOf
-                    [ Json.field "date" Json.string
-                        |> Json.map Ok
-                    , Json.succeed (Err val)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotValidDate)
-                |> Result.withDefault (Just GotInvalidDate)
-
         "SaveAction" :: _ ->
             Json.decodeValue
                 (Json.oneOf
@@ -1958,6 +1893,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
@@ -1973,9 +1911,6 @@ msgToString msg =
         EnteredReward _ ->
             [ "EnteredReward" ]
 
-        EnteredDeadline _ ->
-            [ "EnteredDeadline" ]
-
         EnteredMinVotes _ ->
             [ "EnteredMinVotes" ]
 
@@ -1985,8 +1920,11 @@ msgToString msg =
         EnteredUsagesLeft _ ->
             [ "EnteredUsagesLeft" ]
 
-        DeadlineChanged _ ->
-            [ "DeadlineChanged" ]
+        ClickedCalendar ->
+            [ "ClickedCalendar" ]
+
+        GotDatePickerMsg _ ->
+            [ "GotDatePickerMsg" ]
 
         SelectMsg _ ->
             [ "SelectMsg" ]
@@ -2018,17 +1956,8 @@ msgToString msg =
         ValidateForm ->
             [ "ValidateForm" ]
 
-        ValidateDeadline ->
-            [ "ValidateDeadline" ]
-
         SaveAction _ ->
             [ "SaveAction" ]
-
-        GotValidDate _ ->
-            [ "GotValidDate" ]
-
-        GotInvalidDate ->
-            [ "GotInvalidDate" ]
 
         GotSaveAction _ ->
             [ "GotSaveAction" ]

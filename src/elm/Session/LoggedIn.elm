@@ -27,7 +27,6 @@ import Api
 import Api.Graphql
 import Auth
 import Avatar
-import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -62,6 +61,7 @@ import Task
 import Time
 import Translation
 import UpdateResult as UR
+import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -79,7 +79,6 @@ init shared accountName authToken =
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
-        , Ports.getRecentSearches () -- run on the page refresh, duplicated in `initLogin`
         , Task.perform GotTimeInternal Time.now
         ]
     )
@@ -121,8 +120,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
     in
     ( initModel shared maybePrivateKey_ profile_.account authToken
     , Cmd.batch
-        [ Ports.getRecentSearches () -- run on the passphrase login, duplicated in `init`
-        , loadedProfile
+        [ loadedProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         ]
@@ -139,17 +137,7 @@ subscriptions model =
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         , if model.showUserNav then
-            Decode.field "key" Decode.string
-                |> Decode.andThen
-                    (\key ->
-                        if key == "Esc" || key == "Escape" then
-                            Decode.succeed ()
-
-                        else
-                            Decode.fail "Expecting Escape key"
-                    )
-                |> Browser.Events.onKeyDown
-                |> Sub.map (\_ -> ShowUserNav False)
+            Utils.escSubscription (ShowUserNav False)
 
           else
             Sub.none
@@ -486,7 +474,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
         , div [ class "flex items-center float-right" ]
             [ a
-                [ class "outline-none relative mx-6"
+                [ class "outline-none relative mx-6 rounded focus:ring focus:ring-offset-4"
                 , Route.href Route.Notification
                 ]
                 [ Icons.notification "fill-current text-black"
@@ -499,7 +487,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
             , div [ class "relative z-50" ]
                 [ button
-                    [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
+                    [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex focus:outline-none focus:ring"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
@@ -516,7 +504,7 @@ viewHeader page ({ shared } as model) profile_ =
                     , Icons.arrowDown "float-right"
                     ]
                 , button
-                    [ class "h-12 z-10 py-2 px-3 flex relative lg:hidden"
+                    [ class "h-8 z-10 my-1 ml-3 flex relative lg:hidden focus:outline-none focus:ring"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
@@ -545,8 +533,7 @@ viewHeader page ({ shared } as model) profile_ =
                             [ a
                                 [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
                                 , Route.href (Route.Profile model.accountName)
-                                , onClick (ShowUserNav False)
-                                , onClick SearchClosed
+                                , onClick ClickedProfileIcon
                                 ]
                                 [ Icons.profile "mr-4"
                                 , text_ "menu.profile"
@@ -942,6 +929,7 @@ type Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
+    | ClickedProfileIcon
     | GotTimeInternal Time.Posix
 
 
@@ -969,6 +957,10 @@ update msg model =
 
         SearchClosed ->
             { model | searchModel = Search.closeSearch model.searchModel }
+                |> UR.init
+
+        ClickedProfileIcon ->
+            { closeAllModals | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
@@ -1078,6 +1070,7 @@ update msg model =
             in
             UR.init newModel
                 |> UR.addCmd cmd
+                |> UR.addCmd (Ports.getRecentSearches ())
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
@@ -1581,6 +1574,9 @@ msgToString msg =
 
         SearchClosed ->
             [ "SearchClosed" ]
+
+        ClickedProfileIcon ->
+            [ "ClickedProfileIcon" ]
 
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]

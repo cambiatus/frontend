@@ -26,13 +26,14 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Log
+import Mask
 import Page
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Token
 import Transfer
 import UpdateResult as UR
@@ -141,14 +142,18 @@ validateSelectedProfile currentAccount form =
     }
 
 
-validateAmount : Symbol -> RemoteData MaxAmountError Float -> Form -> Form
-validateAmount symbol maxAmountStatus form =
+validateAmount : Translators -> Symbol -> RemoteData MaxAmountError Float -> Form -> Form
+validateAmount translators symbol maxAmountStatus form =
     let
         symbolPrecision =
             Eos.getSymbolPrecision symbol
 
+        unmasked =
+            Mask.removeFloat (Shared.decimalSeparators translators) form.amount
+
         amountPrecision =
-            String.toList form.amount
+            unmasked
+                |> String.toList
                 |> LE.dropWhile (\c -> c /= '.')
                 |> List.drop 1
                 |> List.length
@@ -162,10 +167,10 @@ validateAmount symbol maxAmountStatus form =
                 Invalid "error.contracts.transfer.symbol precision mismatch" Nothing
 
             else if
-                String.all (validAmountCharacter symbol) form.amount
-                    && (String.length form.amount > 0)
+                String.all (validAmountCharacter symbol) unmasked
+                    && (String.length unmasked > 0)
             then
-                case String.toFloat form.amount of
+                case String.toFloat unmasked of
                     Nothing ->
                         Invalid "transfer.no_amount" Nothing
 
@@ -186,11 +191,11 @@ validateAmount symbol maxAmountStatus form =
     }
 
 
-validateForm : Eos.Name -> RemoteData MaxAmountError Float -> Symbol -> Form -> Form
-validateForm currentAccount maxAmount symbol form =
+validateForm : Translators -> Eos.Name -> RemoteData MaxAmountError Float -> Symbol -> Form -> Form
+validateForm translators currentAccount maxAmount symbol form =
     form
         |> validateSelectedProfile currentAccount
-        |> validateAmount symbol maxAmount
+        |> validateAmount translators symbol maxAmount
 
 
 isFormValid : Form -> Bool
@@ -319,7 +324,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
         ]
 
 
-validationToString : Shared.Translators -> Validation -> Maybe String
+validationToString : Translators -> Validation -> Maybe String
 validationToString { t, tr } validation =
     case validation of
         Valid ->
@@ -332,7 +337,7 @@ validationToString { t, tr } validation =
             Just <| t e
 
 
-viewError : Shared.Translators -> Validation -> Html msg
+viewError : Translators -> Validation -> Html msg
 viewError translators validation =
     case validationToString translators validation of
         Nothing ->
@@ -518,18 +523,13 @@ update msg model ({ shared } as loggedIn) =
         EnteredAmount value ->
             case ( loggedIn.selectedCommunity, model.transferStatus ) of
                 ( RemoteData.Success selectedCommunity, EditingTransfer form ) ->
-                    let
-                        getNumericValues : String -> String
-                        getNumericValues =
-                            String.filter (validAmountCharacter selectedCommunity.symbol)
-                    in
                     { model
                         | transferStatus =
-                            EditingTransfer
-                                ({ form | amount = getNumericValues value }
-                                    |> validateAmount selectedCommunity.symbol
-                                        (maxTransferAmount model)
-                                )
+                            { form | amount = value }
+                                |> validateAmount loggedIn.shared.translators
+                                    selectedCommunity.symbol
+                                    (maxTransferAmount model)
+                                |> EditingTransfer
                     }
                         |> UR.init
 
@@ -557,7 +557,8 @@ update msg model ({ shared } as loggedIn) =
                         Just to ->
                             let
                                 newForm =
-                                    validateForm loggedIn.accountName
+                                    validateForm loggedIn.shared.translators
+                                        loggedIn.accountName
                                         (maxTransferAmount model)
                                         community.symbol
                                         form
@@ -588,7 +589,8 @@ update msg model ({ shared } as loggedIn) =
                             { model
                                 | transferStatus =
                                     EditingTransfer
-                                        (validateForm loggedIn.accountName
+                                        (validateForm loggedIn.shared.translators
+                                            loggedIn.accountName
                                             (maxTransferAmount model)
                                             community.symbol
                                             form
@@ -625,7 +627,9 @@ update msg model ({ shared } as loggedIn) =
                                             , to = Eos.nameQueryUrlParser (Eos.nameToString account)
                                             , value =
                                                 { amount =
-                                                    String.toFloat form.amount
+                                                    form.amount
+                                                        |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
+                                                        |> String.toFloat
                                                         |> Maybe.withDefault 0.0
                                                 , symbol = community.symbol
                                                 }
@@ -659,7 +663,13 @@ update msg model ({ shared } as loggedIn) =
                                             |> Eos.encodeName
                                       )
                                     , ( "from", Eos.encodeName loggedIn.accountName )
-                                    , ( "amount", Encode.string form.amount )
+                                    , ( "amount"
+                                      , Encode.string
+                                            (Mask.removeFloat
+                                                (Shared.decimalSeparators loggedIn.shared.translators)
+                                                form.amount
+                                            )
+                                      )
                                     ]
                             , level = Log.DebugLevel
                             }

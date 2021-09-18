@@ -26,7 +26,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, required, src, tabindex, type_)
 import Html.Events exposing (onClick, onFocus, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -39,6 +39,7 @@ import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
+import Utils
 import View.Components
 import View.Form.Input as Input
 
@@ -135,6 +136,21 @@ offersSelectionSet =
         Cambiatus.Object.Product.trackStock
 
 
+storeRecentSearches : List String -> Cmd msg
+storeRecentSearches recentSearches =
+    recentSearches
+        |> List.unique
+        |> List.take maximumRecentSearches
+        |> Encode.list Encode.string
+        |> Encode.encode 0
+        |> Ports.storeRecentSearches
+
+
+maximumRecentSearches : Int
+maximumRecentSearches =
+    10
+
+
 
 -- UPDATE
 
@@ -160,7 +176,15 @@ update shared authToken symbol model msg =
             ( model, Cmd.none )
 
         CurrentQueryChanged q ->
-            ( { model | currentQuery = q }, Cmd.none )
+            if String.isEmpty q then
+                ( { model | currentQuery = q, state = RecentSearchesShowed }
+                , Cmd.none
+                )
+
+            else
+                ( { model | currentQuery = q }
+                , sendSearchQuery symbol shared q authToken
+                )
 
         FoundItemClicked ->
             ( { model
@@ -182,11 +206,23 @@ update shared authToken symbol model msg =
 
         TabActivated activeTab ->
             case model.state of
-                ResultsShowed r _ ->
+                ResultsShowed r previousActiveTab ->
+                    let
+                        newRecentQueries =
+                            (model.currentQuery :: model.recentQueries)
+                                |> List.unique
+                                |> List.take maximumRecentSearches
+                    in
                     ( { model
                         | state = ResultsShowed r (Just activeTab)
+                        , recentQueries = newRecentQueries
                       }
-                    , Cmd.none
+                    , case previousActiveTab of
+                        Nothing ->
+                            storeRecentSearches newRecentQueries
+
+                        Just _ ->
+                            Cmd.none
                     )
 
                 _ ->
@@ -194,7 +230,12 @@ update shared authToken symbol model msg =
 
         GotSearchResults res ->
             ( { model
-                | state = ResultsShowed res Nothing
+                | state =
+                    if String.isEmpty model.currentQuery then
+                        model.state
+
+                    else
+                        ResultsShowed res Nothing
               }
             , Cmd.none
             )
@@ -215,6 +256,7 @@ update shared authToken symbol model msg =
         ClearSearchIconClicked ->
             ( { model
                 | currentQuery = ""
+                , state = RecentSearchesShowed
               }
             , Dom.focus "searchInput"
                 |> Task.attempt (\_ -> NoOp)
@@ -222,7 +264,13 @@ update shared authToken symbol model msg =
 
         InputFocused ->
             ( { model
-                | state = RecentSearchesShowed
+                | state =
+                    case model.state of
+                        Inactive ->
+                            RecentSearchesShowed
+
+                        _ ->
+                            model.state
               }
             , Cmd.none
             )
@@ -233,21 +281,14 @@ update shared authToken symbol model msg =
                 newRecentSearches =
                     (model.currentQuery :: model.recentQueries)
                         |> List.unique
-                        |> List.take 3
-
-                storeRecentSearches : Cmd msg
-                storeRecentSearches =
-                    newRecentSearches
-                        |> Encode.list Encode.string
-                        |> Encode.encode 0
-                        |> Ports.storeRecentSearches
+                        |> List.take maximumRecentSearches
             in
             ( { model
                 | recentQueries = newRecentSearches
                 , state = ResultsShowed RemoteData.Loading Nothing
               }
             , Cmd.batch
-                [ storeRecentSearches
+                [ storeRecentSearches newRecentSearches
                 , sendSearchQuery symbol shared model.currentQuery authToken
                 ]
             )
@@ -299,8 +340,9 @@ viewForm ({ t } as translators) model =
                     text ""
 
                 _ ->
-                    span
-                        [ class "text-orange-300 pl-3 leading-10 cursor-pointer lowercase"
+                    button
+                        [ class "text-orange-300 ml-3 leading-10 cursor-pointer lowercase hover:underline focus:outline-none focus:underline"
+                        , type_ "button"
                         , onClick CancelClicked
                         ]
                         [ text (t "menu.cancel") ]
@@ -413,12 +455,14 @@ viewRecentQueries : Translators -> List String -> Html Msg
 viewRecentQueries { t } recentQueries =
     let
         viewItem q =
-            li
-                [ class "leading-10 hover:text-orange-500 cursor-pointer"
-                , onClick (RecentQueryClicked q)
-                ]
-                [ Icons.clock "inline-block align-middle mr-3 fill-current text-gray-900"
-                , span [ class "inline align-middle" ] [ text q ]
+            li []
+                [ button
+                    [ class "w-full text-left leading-10 hover:text-orange-500 focus:text-orange-500 focus:outline-none cursor-pointer"
+                    , onClick (RecentQueryClicked q)
+                    ]
+                    [ Icons.clock "inline-block align-middle mr-3 fill-current"
+                    , span [ class "inline align-middle" ] [ text q ]
+                    ]
                 ]
     in
     div [ class "w-full p-4 bg-white" ]
@@ -437,19 +481,27 @@ viewTabs { tr } results activeTab =
                 count =
                     List.length foundItems
             in
-            li
-                [ class "rounded-sm flex-1 text-center cursor-pointer capitalize"
-                , classList
-                    [ ( "bg-orange-300 text-white", activeTab == tabKind )
-                    , ( "bg-gray-100", activeTab /= tabKind )
-                    ]
-                , if count > 0 then
-                    onClick clickMsg
+            li [ class "w-full" ]
+                [ button
+                    [ class "rounded-sm flex-1 text-center cursor-pointer capitalize w-full focus:outline-none focus:ring focus:ring-gray-300"
+                    , classList
+                        [ ( "bg-orange-300 text-white", activeTab == tabKind )
+                        , ( "bg-gray-100 hover:bg-gray-200 focus:bg-gray-200", activeTab /= tabKind )
+                        , ( "cursor-not-allowed text-gray-300", count <= 0 )
+                        ]
+                    , if count > 0 then
+                        onClick clickMsg
 
-                  else
-                    class "cursor-not-allowed text-gray-300"
+                      else
+                        tabindex -1
+                    , if activeTab == tabKind then
+                        tabindex -1
+
+                      else
+                        class ""
+                    ]
+                    [ text <| tr label [ ( "count", String.fromInt count ) ] ]
                 ]
-                [ text <| tr label [ ( "count", String.fromInt count ) ] ]
     in
     ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
         [ viewTab OffersTab
@@ -487,16 +539,14 @@ viewResultsOverview { t, tr } { offers, actions, members } =
                         ]
                     ]
                 , button
-                    (class "button w-auto button-sm px-6"
-                        :: (if count == 0 then
-                                [ class "button-disabled" ]
-
-                            else
-                                [ class "button-primary"
-                                , onClick showMsg
-                                ]
-                           )
-                    )
+                    [ class "button w-auto button-sm px-6"
+                    , classList
+                        [ ( "button-disabled", count == 0 )
+                        , ( "button-primary", count /= 0 )
+                        ]
+                    , disabled (count == 0)
+                    , onClick showMsg
+                    ]
                     [ text (t "menu.search.overviewShow") ]
                 ]
     in
@@ -543,7 +593,7 @@ viewOffers translators symbol offers =
             li
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
                 [ a
-                    [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow"
+                    [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow focus:shadow focus:outline-none focus:ring focus:ring-gray-400"
                     , onClick FoundItemClicked
                     , Route.href (Route.ViewSale offer.id)
                     ]
@@ -600,7 +650,10 @@ viewMembers { t } members =
 
 subscriptions : Sub Msg
 subscriptions =
-    Ports.gotRecentSearches GotRecentSearches
+    Sub.batch
+        [ Ports.gotRecentSearches GotRecentSearches
+        , Utils.escSubscription CancelClicked
+        ]
 
 
 
