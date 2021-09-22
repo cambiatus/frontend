@@ -292,7 +292,7 @@ viewModalRequestingSponsor shared community model =
         }
         |> Modal.withHeaderElement (viewNewTag shared)
         |> Modal.withBody
-            [ div [ class "flex flex-col items-center h-full" ]
+            [ div [ class "flex flex-col items-center h-full pb-6" ]
                 [ h1 [ class "text-center text-heading font-bold" ]
                     [ text_ "sponsorship.dashboard_modal.title" ]
                 , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
@@ -309,6 +309,7 @@ viewModalRequestingSponsor shared community model =
                     ]
                 ]
             ]
+        |> Modal.withSize Modal.Large
         |> Modal.toHtml
 
 
