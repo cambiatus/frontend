@@ -28,7 +28,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, h1, img, p, span, text)
-import Html.Attributes exposing (class, classList, src, tabindex)
+import Html.Attributes exposing (class, classList, id, src, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -105,8 +105,34 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
-    , isModalRequestingSponsorVisible : Bool
+    , showModalRequestingSponsor : Bool
     }
+
+
+hasModalsOpen : Model -> Bool
+hasModalsOpen model =
+    let
+        isShowingInviteModal =
+            case model.inviteModalStatus of
+                InviteModalClosed ->
+                    False
+
+                _ ->
+                    True
+
+        isShowingClaimModal =
+            case model.claimModalStatus of
+                Claim.Closed ->
+                    False
+
+                _ ->
+                    True
+    in
+    model.showTransferFiltersModal
+        || model.showContactModal
+        || model.showModalRequestingSponsor
+        || isShowingInviteModal
+        || isShowingClaimModal
 
 
 initModel : Shared -> Model
@@ -131,7 +157,7 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
-    , isModalRequestingSponsorVisible = not shared.hasSeenSponsorModal
+    , showModalRequestingSponsor = not shared.hasSeenSponsorModal
     }
 
 
@@ -288,7 +314,7 @@ viewModalRequestingSponsor shared community model =
     in
     Modal.initWith
         { closeMsg = ClosedModalRequestingSponsor
-        , isVisible = model.isModalRequestingSponsorVisible
+        , isVisible = model.showModalRequestingSponsor
         }
         |> Modal.withHeaderElement (viewNewTag shared)
         |> Modal.withBody
@@ -420,6 +446,7 @@ viewInvitationModal { shared } model =
                             , ( "button-success", model.copied )
                             ]
                         , class "button w-full md:w-48 select-all"
+                        , id "copy-invite-button"
                         , onClick (CopyToClipboard "invitation-id")
                         ]
                         [ if model.copied then
@@ -628,20 +655,21 @@ viewTransfers loggedIn model isMobile =
                     ]
 
             LoadingGraphql (Just transfers) ->
-                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
+                viewTransferList loggedIn model transfers Nothing { isLoading = True, isMobile = isMobile }
 
             LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
+                viewTransferList loggedIn model transfers maybePageInfo { isLoading = False, isMobile = isMobile }
         ]
 
 
 viewTransferList :
     LoggedIn.Model
+    -> Model
     -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
     -> { isLoading : Bool, isMobile : Bool }
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
+viewTransferList loggedIn model transfers maybePageInfo { isLoading, isMobile } =
     let
         addLoading transfers_ =
             if isLoading then
@@ -670,7 +698,9 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
             else
                 View.Components.TrackSelf
         }
-        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
+        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4"
+        , classList [ ( "md:overflow-y-hidden", hasModalsOpen model ) ]
+        ]
         (transfers
             |> List.groupWhile
                 (\( t1, _ ) ( t2, _ ) ->
@@ -1474,7 +1504,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
 
         ClickedSupportUsButton ->
-            { model | isModalRequestingSponsorVisible = True }
+            { model | showModalRequestingSponsor = True }
                 |> UR.init
 
         CreateInvite ->
@@ -1551,6 +1581,10 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedInviteCreation (Ok invitationId) ->
             { model | inviteModalStatus = InviteModalLoaded invitationId }
                 |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "copy-invite-button"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
@@ -1608,7 +1642,7 @@ update msg model ({ shared, accountName } as loggedIn) =
         ClosedModalRequestingSponsor ->
             let
                 newModel =
-                    { model | isModalRequestingSponsorVisible = False }
+                    { model | showModalRequestingSponsor = False }
             in
             { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
                 |> UR.init
@@ -1632,7 +1666,7 @@ shouldShowContactModal loggedIn model =
             in
             showContactModalFromDate
                 && List.isEmpty profile.contacts
-                && not model.isModalRequestingSponsorVisible
+                && not model.showModalRequestingSponsor
 
         _ ->
             False
