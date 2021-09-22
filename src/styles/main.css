@@ -245,7 +245,7 @@ textarea.input {
   @apply p-4 pt-0 text-body overflow-y-auto;
 
   min-height: 4rem;
-  max-height: 70vh;
+  max-height: 80vh;
 }
 
 .modal-body-full {
@@ -278,13 +278,6 @@ textarea.input {
     @apply top-1/2;
 
     --tw-translate-y: -50%;
-  }
-
-  .modal-body-lg {
-    @apply px-4 py-0 text-body overflow-y-auto;
-
-    min-height: 4rem;
-    max-height: 60vh;
   }
 
   .modal-body-full {

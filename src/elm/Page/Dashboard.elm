@@ -318,17 +318,17 @@ viewModalRequestingSponsor shared community model =
         }
         |> Modal.withHeaderElement (viewNewTag shared)
         |> Modal.withBody
-            [ div [ class "flex flex-col items-center h-full pb-6" ]
+            [ div [ class "flex flex-col items-center h-full" ]
                 [ h1 [ class "text-center text-heading font-bold" ]
                     [ text_ "sponsorship.dashboard_modal.title" ]
                 , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
-                , div [ class "w-full mt-7 mx-auto space-y-6 md:w-5/6 lg:w-2/3" ]
-                    [ p [ class "text-center" ]
+                , div [ class "w-full mt-7 mx-auto md:w-5/6 lg:w-2/3" ]
+                    [ p [ class "text-center mb-6" ]
                         [ text_ "sponsorship.dashboard_modal.subtitle" ]
-                    , p [ class "text-center" ]
+                    , p [ class "text-center mb-6" ]
                         [ text_ "sponsorship.dashboard_modal.explanation" ]
                     , a
-                        [ class "button button-primary w-full md:mt-8"
+                        [ class "button button-primary w-full md:mt-8 mb-6"
                         , Route.href Route.CommunitySponsor
                         ]
                         [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
@@ -655,10 +655,18 @@ viewTransfers loggedIn model isMobile =
                     ]
 
             LoadingGraphql (Just transfers) ->
-                viewTransferList loggedIn model transfers Nothing { isLoading = True, isMobile = isMobile }
+                viewTransferList loggedIn
+                    model
+                    transfers
+                    Nothing
+                    { isLoading = True, isMobile = isMobile }
 
             LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn model transfers maybePageInfo { isLoading = False, isMobile = isMobile }
+                viewTransferList loggedIn
+                    model
+                    transfers
+                    maybePageInfo
+                    { isLoading = False, isMobile = isMobile }
         ]
 
 
