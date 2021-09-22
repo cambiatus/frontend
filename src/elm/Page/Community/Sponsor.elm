@@ -365,7 +365,7 @@ view_ ({ translators } as shared) community model =
                     |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
                     |> Input.withCurrency (PaypalButtons.currencyToSymbol (paypalCurrency shared))
                     |> Input.toHtml
-                , PaypalButtons.view [ class "w-full" ]
+                , PaypalButtons.view [ class "w-full lg:w-2/3" ]
                     { id = "sponsorship-paypal-buttons"
                     , value =
                         model.amount
