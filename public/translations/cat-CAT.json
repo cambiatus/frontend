@@ -596,7 +596,7 @@
         "no": "No",
         "yes": "Sí",
         "automatic": "Automàtic,",
-        "automatic_detail": " recompensa l'usuari immediatament quan ho reclama",
+        "automatic_detail": " acció no reclamable i sense la revisió i aprovació d'altres membres",
         "manual": "Manual,",
         "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",

@@ -592,7 +592,7 @@
         "no": "No",
         "yes": "Yes",
         "automatic": "Automatic,",
-        "automatic_detail": " rewards the user immediately when claimed",
+        "automatic_detail": " unclaimable action and without the review and approval of other members",
         "manual": "Manual,",
         "manual_detail": " rewards the user only after reviewed by others",
         "verifier_placeholder": "Type the username",

@@ -554,7 +554,7 @@
         "no": "አይ",
         "yes": "አዎ",
         "automatic": "አዉቶማቲክ,",
-        "automatic_detail": " ጥያቄዉ እንዳቀረበ ተጠቃሚዉ ይሸልማል",
+        "automatic_detail": " የይገባኛል ጥያቄ የማያቀርብ እርምጃ እና የሌሎች አባላት ግምገማ እና ማፅደቅ",
         "manual": "ማኑዋልይ,",
         "manual_detail": " በሌሎች እንደገና ሲታይ ተጠቃሚዉን ይሸልማል",
         "verifier_placeholder": "የተጠቃሚን ስም ፃፍ",
