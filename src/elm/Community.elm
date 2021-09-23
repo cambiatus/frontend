@@ -3,6 +3,8 @@ module Community exposing
     , CommunityPreview
     , CreateCommunityData
     , CreateCommunityDataInput
+    , Field(..)
+    , FieldValue(..)
     , Invite
     , Metadata
     , Model
@@ -23,11 +25,16 @@ module Community exposing
     , isNonExistingCommunityError
     , logoBackground
     , newCommunitySubscription
+    , objectiveSelectionSet
+    , queryForField
+    , queryForFields
+    , setFieldValue
     , subdomainQuery
     , symbolQuery
     )
 
 import Action exposing (Action)
+import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
@@ -52,7 +59,9 @@ import Html.Attributes exposing (class, classList, src)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
+import List.Extra
 import Profile
+import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
 import Utils
@@ -95,7 +104,9 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
-    , objectives : List Objective
+
+    -- TODO - Figure out a type for this
+    , objectives : RemoteData () (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
@@ -104,6 +115,21 @@ type alias Model =
     , uploads : List String
     , website : Maybe String
     }
+
+
+type Field
+    = ObjectivesField
+
+
+type FieldValue
+    = ObjectivesValue (List Objective)
+
+
+setFieldValue : FieldValue -> Model -> Model
+setFieldValue fieldValue model =
+    case fieldValue of
+        ObjectivesValue objectives ->
+            { model | objectives = RemoteData.Success objectives }
 
 
 
@@ -141,7 +167,7 @@ communitySelectionSet =
         |> with Community.productCount
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
-        |> with (Community.objectives objectiveSelectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
@@ -173,6 +199,51 @@ newCommunitySubscription symbol =
             { input = { symbol = stringSymbol } }
     in
     Subscription.newcommunity args selectionSet
+
+
+selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Community
+selectionSetForField field =
+    case field of
+        ObjectivesField ->
+            Community.objectives objectiveSelectionSet
+                |> SelectionSet.map ObjectivesValue
+
+
+queryForField :
+    Eos.Symbol
+    -> Shared
+    -> String
+    -> Field
+    -> (RemoteData (Graphql.Http.Error (Maybe FieldValue)) (Maybe FieldValue) -> msg)
+    -> Cmd msg
+queryForField symbol shared authToken field toMsg =
+    Api.Graphql.query shared
+        (Just authToken)
+        (field
+            |> selectionSetForField
+            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+        )
+        toMsg
+
+
+queryForFields :
+    Eos.Symbol
+    -> Shared
+    -> String
+    -> List Field
+    -> (RemoteData (Graphql.Http.Error (List FieldValue)) (List FieldValue) -> msg)
+    -> Cmd msg
+queryForFields symbol shared authToken fields toMsg =
+    Api.Graphql.query shared
+        (Just authToken)
+        (fields
+            |> List.Extra.unique
+            |> List.map selectionSetForField
+            |> SelectionSet.list
+            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+            |> SelectionSet.withDefault []
+        )
+        toMsg
 
 
 symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
