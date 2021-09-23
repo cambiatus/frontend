@@ -2,7 +2,7 @@ module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString,
 
 import Community
 import Eos
-import Html exposing (Html, a, button, div, span, text)
+import Html exposing (Html, a, div, span, text)
 import Html.Attributes exposing (class, style)
 import Page
 import RemoteData
@@ -123,12 +123,11 @@ settingCard title action description route =
         ]
         [ span [ class "text-sm font-medium" ] [ text title ]
         , span [ class "text-xs text-gray-900 uppercase" ] [ text description ]
-        , a [ Route.href route ]
-            [ button
-                [ class "w-full bg-orange-300 rounded-lg text-sm uppercase text-white font-medium h-8"
-                ]
-                [ text action ]
+        , a
+            [ Route.href route
+            , class "button button-primary w-full h-8"
             ]
+            [ text action ]
         ]
 
 

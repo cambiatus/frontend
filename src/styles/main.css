@@ -26,19 +26,15 @@ body {
 
 @layer components {
   .button {
-    @apply uppercase text-sm flex items-center justify-center text-center leading-none w-40 h-10 px-2;
-  }
-
-  .button:disabled {
-    @apply bg-opacity-75;
+    @apply uppercase text-sm flex items-center justify-center text-center leading-none w-40 h-10 px-2 disabled:button-disabled;
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white text-body rounded-super font-medium hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
+    @apply bg-orange-300 text-white text-body rounded-super font-medium hover:bg-orange-100 focus:ring focus:ring-offset-2 focus:ring-orange-100 focus:outline-none active:ring-0;
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border font-medium hover:border-orange-300 focus:border-orange-300 focus:outline-none;
+    @apply bg-white text-orange-300 rounded-full border font-medium hover:border-orange-300 focus:ring focus:ring-orange-100 focus:ring-opacity-40 focus:outline-none active:ring-0;
   }
 
   .button-sm {
@@ -51,6 +47,14 @@ body {
 
   .button-success {
     @apply bg-green text-white rounded-full text-body;
+  }
+
+  .button-disabled {
+    @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
+  }
+
+  .button-danger {
+    @apply button-secondary text-red focus:ring-red focus:ring-opacity-20 hover:border-red;
   }
 }
 
@@ -452,25 +456,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of extra utilities */
-
-/* Button Modifiers (must be below all other button's styles) */
-.button-disabled {
-  @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
-}
-
-.button-disabled:hover {
-  @apply bg-gray-500;
-}
-
-.button-danger {
-  @apply button-secondary text-red;
-}
-
-.button-danger:hover {
-  @apply border-red;
-}
-
-/* End of Button Modifiers */
 
 /* Markdown Viewer classes */
 

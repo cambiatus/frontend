@@ -30,7 +30,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href, id, target)
+import Html.Attributes exposing (class, classList, href, id, tabindex, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -868,6 +868,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
         [ div
             [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
             , id "transfer-scroll-container"
+            , tabindex -1
             ]
             [ div [ class "w-full bg-white md:bg-gray-100" ]
                 [ div [ class "px-4" ]
