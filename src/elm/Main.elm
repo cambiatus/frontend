@@ -823,8 +823,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                                 )
                                 updateResult.afterAuthMsg
                       }
-                    , Cmd.map toMsg updateResult.externalCmd
-                        :: Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
+                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
                         :: broadcastCmd
                         :: cmds_
                     )

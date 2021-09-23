@@ -112,6 +112,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | CompletedLoadObjectives (List Community.Objective)
     | ClosedAuthModal
     | GotDescriptionEditorMsg MarkdownEditor.Msg
     | ClickedSaveObjective
@@ -394,24 +395,26 @@ update msg model loggedIn =
                 if model.status == Loading then
                     case model.objectiveId of
                         Just objectiveId ->
-                            case List.find (\o -> o.id == objectiveId) community.objectives of
-                                Just objective ->
-                                    { model
-                                        | status =
-                                            Editing
-                                                |> EditingObjective objective
-                                                    { description =
-                                                        MarkdownEditor.init "objective-description"
-                                                            |> MarkdownEditor.setContents objective.description
-                                                    , isCompleted = objective.isCompleted
-                                                    }
-                                                |> Authorized
-                                    }
-                                        |> UR.init
-
-                                Nothing ->
-                                    { model | status = NotFound }
-                                        |> UR.init
+                            -- case List.find (\o -> o.id == objectiveId) community.objectives of
+                            --     Just objective ->
+                            --         { model
+                            --             | status =
+                            --                 Editing
+                            --                     |> EditingObjective objective
+                            --                         { description =
+                            --                             MarkdownEditor.init "objective-description"
+                            --                                 |> MarkdownEditor.setContents objective.description
+                            --                         , isCompleted = objective.isCompleted
+                            --                         }
+                            --                     |> Authorized
+                            --         }
+                            --             |> UR.init
+                            --     Nothing ->
+                            --         { model | status = NotFound }
+                            --             |> UR.init
+                            -- TODO
+                            model
+                                |> UR.init
 
                         Nothing ->
                             { model
@@ -428,6 +431,11 @@ update msg model loggedIn =
             else
                 { model | status = Unauthorized }
                     |> UR.init
+
+        CompletedLoadObjectives objectives ->
+            -- TODO
+            model
+                |> UR.init
 
         ClosedAuthModal ->
             case model.status of
@@ -688,8 +696,6 @@ update msg model loggedIn =
                                         , level = Log.Warning
                                         }
 
-                -- =======
-                -- >>>>>>> master
                 _ ->
                     model
                         |> UR.init
@@ -938,6 +944,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadObjectives _ ->
+            [ "CompletedLoadObjectives" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

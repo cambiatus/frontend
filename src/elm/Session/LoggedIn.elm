@@ -28,7 +28,9 @@ import Api.Graphql
 import Auth
 import Avatar
 import Cambiatus.Object
+import Cambiatus.Object.Community
 import Cambiatus.Object.UnreadNotifications
+import Cambiatus.Query
 import Cambiatus.Subscription as Subscription
 import Community
 import Dict
@@ -37,6 +39,7 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
 import Html.Attributes exposing (class, classList, src, type_)
@@ -167,6 +170,7 @@ type alias Model =
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , authToken : String
+    , queuedCommunityFields : List Community.Field
     }
 
 
@@ -190,6 +194,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , authToken = authToken
+    , queuedCommunityFields = []
     }
 
 
@@ -738,6 +743,7 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
+    | RequestedCommunityField Community.Field
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
@@ -761,6 +767,9 @@ mapExternal mapFn msg =
         ReloadResource resource ->
             ReloadResource resource
 
+        RequestedCommunityField field ->
+            RequestedCommunityField field
+
         RequiredAuthentication { successMsg, errorMsg } ->
             RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
 
@@ -783,7 +792,6 @@ updateExternal :
     ->
         { model : Model
         , cmd : Cmd Msg
-        , externalCmd : Cmd msg
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
         }
@@ -792,7 +800,6 @@ updateExternal externalMsg ({ shared } as model) =
         defaultResult =
             { model = model
             , cmd = Cmd.none
-            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
@@ -836,6 +843,17 @@ updateExternal externalMsg ({ shared } as model) =
                     in
                     { defaultResult | model = newModel, cmd = cmd, broadcastMsg = Just broadcastMsg }
 
+                CommunityFieldLoaded community field ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | selectedCommunity =
+                                    Community.setFieldValue field community
+                                        |> RemoteData.Success
+                            }
+                        , broadcastMsg = Just broadcastMsg
+                    }
+
                 ProfileLoaded profile_ ->
                     { defaultResult
                         | model = { model | profile = RemoteData.Success profile_ }
@@ -873,6 +891,50 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource TimeResource ->
             { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
+        RequestedCommunityField field ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        isFieldLoading =
+                            case field of
+                                Community.ObjectivesField ->
+                                    RemoteData.isLoading community.objectives
+
+                        maybeFieldValue =
+                            case field of
+                                Community.ObjectivesField ->
+                                    community.objectives
+                                        |> RemoteData.toMaybe
+                                        |> Maybe.map Community.ObjectivesValue
+                    in
+                    if isFieldLoading then
+                        defaultResult
+
+                    else
+                        case maybeFieldValue of
+                            Nothing ->
+                                -- TODO - Set field as loading
+                                { defaultResult
+                                    | cmd =
+                                        Community.queryForField community.symbol
+                                            shared
+                                            model.authToken
+                                            field
+                                            (CompletedLoadCommunityField community)
+                                }
+
+                            Just fieldValue ->
+                                { defaultResult | broadcastMsg = Just (CommunityFieldLoaded community fieldValue) }
+
+                _ ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | queuedCommunityFields =
+                                    field :: model.queuedCommunityFields
+                            }
+                    }
+
         RequiredAuthentication afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
@@ -900,6 +962,7 @@ type ExternalMsg
 
 type BroadcastMsg
     = CommunityLoaded Community.Model
+    | CommunityFieldLoaded Community.Model Community.FieldValue
     | ProfileLoaded Profile.Model
     | GotTime Time.Posix
     | TranslationsLoaded
@@ -910,6 +973,8 @@ type Msg
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedLoadCommunityField Community.Model (RemoteData (Graphql.Http.Error (Maybe Community.FieldValue)) (Maybe Community.FieldValue))
+    | CompletedLoadCommunityFields Community.Model (RemoteData (Graphql.Http.Error (List Community.FieldValue)) (List Community.FieldValue))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | ShowUserNav Bool
@@ -1068,6 +1133,14 @@ update msg model =
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
                 |> UR.addExt (CommunityLoaded community |> Broadcast)
+                -- TODO - Set fields as loading
+                |> UR.addCmd
+                    (Community.queryForFields community.symbol
+                        newModel.shared
+                        newModel.authToken
+                        newModel.queuedCommunityFields
+                        (CompletedLoadCommunityFields community)
+                    )
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
                     , category = msg
@@ -1108,6 +1181,78 @@ update msg model =
 
         CompletedLoadCommunity RemoteData.Loading ->
             UR.init { model | selectedCommunity = RemoteData.Loading }
+
+        CompletedLoadCommunityField community (RemoteData.Success (Just fieldValue)) ->
+            { model
+                | selectedCommunity =
+                    Community.setFieldValue fieldValue community
+                        |> RemoteData.Success
+            }
+                |> UR.init
+                |> UR.addExt
+                    (CommunityFieldLoaded community fieldValue
+                        |> Broadcast
+                    )
+
+        CompletedLoadCommunityField community (RemoteData.Success Nothing) ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Tried loading community field, but got Nothing in return"
+                    (Just model.accountName)
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    [ Log.contextFromCommunity (RemoteData.Success community) ]
+
+        CompletedLoadCommunityField _ (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading community field"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedLoadCommunityField _ RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadCommunityField _ RemoteData.Loading ->
+            UR.init model
+
+        CompletedLoadCommunityFields community (RemoteData.Success fieldValues) ->
+            let
+                newCommunity =
+                    List.foldl Community.setFieldValue community fieldValues
+
+                addBroadcasts uResult =
+                    List.foldl
+                        (\field ->
+                            UR.addExt
+                                (CommunityFieldLoaded community field
+                                    |> Broadcast
+                                )
+                        )
+                        uResult
+                        fieldValues
+            in
+            { model | selectedCommunity = RemoteData.Success newCommunity }
+                |> UR.init
+                |> addBroadcasts
+
+        CompletedLoadCommunityFields _ (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading multiple community fields"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedLoadCommunityFields _ RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadCommunityFields _ RemoteData.Loading ->
+            UR.init model
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = RemoteData.Loading }
@@ -1591,6 +1736,12 @@ msgToString msg =
 
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.remoteDataToString r ]
+
+        CompletedLoadCommunityField _ _ ->
+            [ "CompletedLoadCommunityField" ]
+
+        CompletedLoadCommunityFields _ _ ->
+            [ "CompletedLoadCommunityFields" ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]

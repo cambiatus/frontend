@@ -39,7 +39,7 @@ import View.MarkdownEditor
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel loggedIn
-    , Task.succeed RequestedReloadCommunity |> Task.perform identity
+    , Task.succeed RequestedCommunityObjectives |> Task.perform identity
     )
 
 
@@ -113,13 +113,18 @@ view loggedIn model =
                             ]
                         , div [ class "container mx-auto" ]
                             [ if community.hasObjectives then
-                                div [ class "px-4 pb-4" ]
-                                    [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                        (Page.viewTitle (t "community.objectives.title_plural")
-                                            :: List.indexedMap (viewObjective loggedIn model community)
-                                                community.objectives
-                                        )
-                                    ]
+                                case community.objectives of
+                                    RemoteData.Success objectives ->
+                                        div [ class "px-4 pb-4" ]
+                                            [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                                                (Page.viewTitle (t "community.objectives.title_plural")
+                                                    :: List.indexedMap (viewObjective loggedIn model community)
+                                                        objectives
+                                                )
+                                            ]
+
+                                    _ ->
+                                        text ""
 
                               else
                                 text ""
@@ -146,7 +151,7 @@ viewCommunityStats { t, tr } community model =
             RemoteData.isSuccess model.tokenInfo
     in
     div
-        [ class "container mx-auto px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
+        [ class "container mx-auto mt-4 px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
         , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
         [ case model.tokenInfo of
@@ -327,7 +332,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | RequestedReloadCommunity
+    | RequestedCommunityObjectives
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
@@ -342,9 +347,9 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
-        RequestedReloadCommunity ->
+        RequestedCommunityObjectives ->
             UR.init model
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -397,7 +402,7 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        RequestedReloadCommunity ->
+        RequestedCommunityObjectives ->
             [ "RequestedReloadCommunity" ]
 
         CompletedLoadCommunity _ ->

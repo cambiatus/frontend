@@ -564,16 +564,17 @@ update msg model ({ shared } as loggedIn) =
                 -- Check the action belongs to the objective
                 let
                     maybeObjective =
-                        List.filterMap
-                            (\o ->
-                                if o.id == model.objectiveId then
-                                    Just o
-
-                                else
-                                    Nothing
-                            )
-                            community.objectives
-                            |> List.head
+                        -- List.filterMap
+                        --     (\o ->
+                        --         if o.id == model.objectiveId then
+                        --             Just o
+                        --         else
+                        --             Nothing
+                        --     )
+                        --     community.objectives
+                        --     |> List.head
+                        -- TODO
+                        Nothing
                 in
                 case ( maybeObjective, model.actionId ) of
                     ( Just objective, Just actionId ) ->

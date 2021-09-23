@@ -81,10 +81,12 @@ view ({ shared } as loggedIn) model =
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
-                                (community.objectives
+                                -- (community.objectives
+                                -- TODO
+                                ([]
                                     |> List.sortBy .id
                                     |> List.reverse
-                                    |> List.indexedMap (viewObjective loggedIn model community)
+                                    |> List.indexedMap (viewObjective loggedIn model)
                                 )
                             ]
                         ]
@@ -126,8 +128,8 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         text ""
 
 
-viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model _ index objective =
+viewObjective : LoggedIn.Model -> Model -> Int -> Community.Objective -> Html Msg
+viewObjective ({ shared } as loggedIn) model index objective =
     let
         isOpen : Bool
         isOpen =
@@ -409,32 +411,34 @@ update msg model loggedIn =
                         }
 
             else
-                { model
-                    | openObjective = Just index
-                    , profileSummaries =
-                        loggedIn.selectedCommunity
-                            |> RemoteData.toMaybe
-                            |> Maybe.map .objectives
-                            |> Maybe.andThen (List.getAt index)
-                            |> Maybe.map .actions
-                            |> Maybe.withDefault []
-                            |> List.map
-                                (\action ->
-                                    ( action.id
-                                    , List.length action.validators
-                                        |> Profile.Summary.initMany False
-                                    )
-                                )
-                            |> Dict.fromList
-                }
-                    |> UR.init
-                    |> UR.addBreadcrumb
-                        { type_ = Log.DebugBreadcrumb
-                        , category = msg
-                        , message = "Closed objective"
-                        , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
-                        , level = Log.DebugLevel
-                        }
+                -- { model
+                --     | openObjective = Just index
+                --     , profileSummaries =
+                --         loggedIn.selectedCommunity
+                --             |> RemoteData.toMaybe
+                --             |> Maybe.map .objectives
+                --             |> Maybe.andThen (List.getAt index)
+                --             |> Maybe.map .actions
+                --             |> Maybe.withDefault []
+                --             |> List.map
+                --                 (\action ->
+                --                     ( action.id
+                --                     , List.length action.validators
+                --                         |> Profile.Summary.initMany False
+                --                     )
+                --                 )
+                --             |> Dict.fromList
+                -- }
+                --     |> UR.init
+                --     |> UR.addBreadcrumb
+                --         { type_ = Log.DebugBreadcrumb
+                --         , category = msg
+                --         , message = "Closed objective"
+                --         , data = Dict.fromList [ ( "objectiveId", Encode.int index ) ]
+                --         , level = Log.DebugLevel
+                --         }
+                -- TODO
+                UR.init model
 
         GotProfileSummaryMsg actionIndex validatorIndex subMsg ->
             { model
