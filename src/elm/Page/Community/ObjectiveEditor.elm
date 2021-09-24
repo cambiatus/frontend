@@ -395,26 +395,30 @@ update msg model loggedIn =
                 if model.status == Loading then
                     case model.objectiveId of
                         Just objectiveId ->
-                            -- case List.find (\o -> o.id == objectiveId) community.objectives of
-                            --     Just objective ->
-                            --         { model
-                            --             | status =
-                            --                 Editing
-                            --                     |> EditingObjective objective
-                            --                         { description =
-                            --                             MarkdownEditor.init "objective-description"
-                            --                                 |> MarkdownEditor.setContents objective.description
-                            --                         , isCompleted = objective.isCompleted
-                            --                         }
-                            --                     |> Authorized
-                            --         }
-                            --             |> UR.init
-                            --     Nothing ->
-                            --         { model | status = NotFound }
-                            --             |> UR.init
-                            -- TODO
-                            model
-                                |> UR.init
+                            case community.objectives of
+                                RemoteData.Success objectives ->
+                                    case List.find (\o -> o.id == objectiveId) objectives of
+                                        -- TODO - Request reload objectives
+                                        Just objective ->
+                                            { model
+                                                | status =
+                                                    Editing
+                                                        |> EditingObjective objective
+                                                            { description =
+                                                                MarkdownEditor.init "objective-description"
+                                                                    |> MarkdownEditor.setContents objective.description
+                                                            , isCompleted = objective.isCompleted
+                                                            }
+                                                        |> Authorized
+                                            }
+                                                |> UR.init
+
+                                        Nothing ->
+                                            { model | status = NotFound }
+                                                |> UR.init
+
+                                _ ->
+                                    model |> UR.init
 
                         Nothing ->
                             { model
@@ -902,6 +906,9 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
+
+        LoggedIn.CommunityFieldLoaded _ (Community.ObjectivesValue objectives) ->
+            Just (CompletedLoadObjectives objectives)
 
         _ ->
             Nothing

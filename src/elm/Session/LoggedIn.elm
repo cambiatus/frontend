@@ -28,9 +28,7 @@ import Api.Graphql
 import Auth
 import Avatar
 import Cambiatus.Object
-import Cambiatus.Object.Community
 import Cambiatus.Object.UnreadNotifications
-import Cambiatus.Query
 import Cambiatus.Subscription as Subscription
 import Community
 import Dict
@@ -39,7 +37,6 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
 import Html.Attributes exposing (class, classList, src, type_)
@@ -894,24 +891,11 @@ updateExternal externalMsg ({ shared } as model) =
         RequestedCommunityField field ->
             case model.selectedCommunity of
                 RemoteData.Success community ->
-                    let
-                        isFieldLoading =
-                            case field of
-                                Community.ObjectivesField ->
-                                    RemoteData.isLoading community.objectives
-
-                        maybeFieldValue =
-                            case field of
-                                Community.ObjectivesField ->
-                                    community.objectives
-                                        |> RemoteData.toMaybe
-                                        |> Maybe.map Community.ObjectivesValue
-                    in
-                    if isFieldLoading then
+                    if Community.isFieldLoading field community then
                         defaultResult
 
                     else
-                        case maybeFieldValue of
+                        case Community.maybeFieldValue field community of
                             Nothing ->
                                 -- TODO - Set field as loading
                                 { defaultResult
@@ -924,7 +908,11 @@ updateExternal externalMsg ({ shared } as model) =
                                 }
 
                             Just fieldValue ->
-                                { defaultResult | broadcastMsg = Just (CommunityFieldLoaded community fieldValue) }
+                                { defaultResult
+                                    | broadcastMsg =
+                                        Just
+                                            (CommunityFieldLoaded community fieldValue)
+                                }
 
                 _ ->
                     { defaultResult
@@ -1127,7 +1115,12 @@ update msg model =
         CompletedLoadCommunity (RemoteData.Success (Just community)) ->
             let
                 ( newModel, cmd ) =
-                    setCommunity community model
+                    setCommunity
+                        (Community.mergeFields model.selectedCommunity community)
+                        model
+
+                newCommunity =
+                    Community.mergeFields newModel.selectedCommunity community
             in
             UR.init newModel
                 |> UR.addCmd cmd
@@ -1139,7 +1132,7 @@ update msg model =
                         newModel.shared
                         newModel.authToken
                         newModel.queuedCommunityFields
-                        (CompletedLoadCommunityFields community)
+                        (CompletedLoadCommunityFields newCommunity)
                     )
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
@@ -1183,14 +1176,14 @@ update msg model =
             UR.init { model | selectedCommunity = RemoteData.Loading }
 
         CompletedLoadCommunityField community (RemoteData.Success (Just fieldValue)) ->
-            { model
-                | selectedCommunity =
+            let
+                newCommunity =
                     Community.setFieldValue fieldValue community
-                        |> RemoteData.Success
-            }
+            in
+            { model | selectedCommunity = RemoteData.Success newCommunity }
                 |> UR.init
                 |> UR.addExt
-                    (CommunityFieldLoaded community fieldValue
+                    (CommunityFieldLoaded newCommunity fieldValue
                         |> Broadcast
                     )
 

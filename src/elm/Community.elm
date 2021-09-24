@@ -22,10 +22,12 @@ module Community exposing
     , encodeUpdateData
     , encodeUpdateObjectiveAction
     , inviteQuery
+    , isFieldLoading
     , isNonExistingCommunityError
     , logoBackground
+    , maybeFieldValue
+    , mergeFields
     , newCommunitySubscription
-    , objectiveSelectionSet
     , queryForField
     , queryForFields
     , setFieldValue
@@ -112,17 +114,22 @@ type alias Model =
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , validators : List Eos.Name
-    , uploads : List String
+
+    -- , validators : RemoteData () (List Eos.Name)
+    -- , uploads : List String
+    , uploads : RemoteData () (List String)
     , website : Maybe String
     }
 
 
 type Field
     = ObjectivesField
+    | UploadsField
 
 
 type FieldValue
     = ObjectivesValue (List Objective)
+    | UploadsValue (List String)
 
 
 setFieldValue : FieldValue -> Model -> Model
@@ -130,6 +137,46 @@ setFieldValue fieldValue model =
     case fieldValue of
         ObjectivesValue objectives ->
             { model | objectives = RemoteData.Success objectives }
+
+        UploadsValue uploads ->
+            { model | uploads = RemoteData.Success uploads }
+
+
+isFieldLoading : Field -> Model -> Bool
+isFieldLoading field model =
+    case field of
+        ObjectivesField ->
+            RemoteData.isLoading model.objectives
+
+        UploadsField ->
+            RemoteData.isLoading model.uploads
+
+
+maybeFieldValue : Field -> Model -> Maybe FieldValue
+maybeFieldValue field model =
+    case field of
+        ObjectivesField ->
+            model.objectives
+                |> RemoteData.toMaybe
+                |> Maybe.map ObjectivesValue
+
+        UploadsField ->
+            model.uploads
+                |> RemoteData.toMaybe
+                |> Maybe.map UploadsValue
+
+
+mergeFields : RemoteData x Model -> Model -> Model
+mergeFields loadedCommunity newCommunity =
+    case loadedCommunity of
+        RemoteData.Success oldCommunity ->
+            { newCommunity
+                | objectives = oldCommunity.objectives
+                , uploads = oldCommunity.uploads
+            }
+
+        _ ->
+            newCommunity
 
 
 
@@ -173,7 +220,8 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
-        |> with (Community.uploads Upload.url)
+        -- |> with (Community.uploads Upload.url)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
 
 
@@ -207,6 +255,10 @@ selectionSetForField field =
         ObjectivesField ->
             Community.objectives objectiveSelectionSet
                 |> SelectionSet.map ObjectivesValue
+
+        UploadsField ->
+            Community.uploads Upload.url
+                |> SelectionSet.map UploadsValue
 
 
 queryForField :

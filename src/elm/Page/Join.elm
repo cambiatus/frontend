@@ -296,10 +296,11 @@ viewAsLoggedIn : String -> LoggedIn.Model -> Model -> Html Msg
 viewAsLoggedIn title loggedIn model =
     case loggedIn.selectedCommunity of
         RemoteData.Success community ->
-            div [ class "flex-grow flex" ]
-                [ Community.communityPreviewImage True loggedIn.shared community
-                , view_ False loggedIn.shared community model
-                ]
+            -- div [ class "flex-grow flex" ]
+            --     [ Community.communityPreviewImage True loggedIn.shared community
+            --     , view_ False loggedIn.shared community model
+            --     ]
+            text "TODO"
 
         RemoteData.Failure err ->
             Page.fullPageGraphQLError title err

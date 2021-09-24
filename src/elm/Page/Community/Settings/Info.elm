@@ -99,6 +99,7 @@ init loggedIn =
 type Msg
     = Ignored
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadUploads (List String)
     | ClosedAuthModal
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
@@ -128,17 +129,32 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         CompletedLoadCommunity community ->
+            let
+                ( coverPhoto, maybeRequestUploads ) =
+                    case community.uploads of
+                        RemoteData.Success uploads ->
+                            ( case List.head uploads of
+                                Just photo ->
+                                    RemoteData.Success photo
+
+                                Nothing ->
+                                    RemoteData.NotAsked
+                            , identity
+                            )
+
+                        RemoteData.Loading ->
+                            ( RemoteData.Loading, identity )
+
+                        _ ->
+                            ( RemoteData.Loading
+                            , UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
+                            )
+            in
             { model
                 | logo = RemoteData.Success community.logo
                 , nameInput = community.name
                 , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
-                , coverPhoto =
-                    case List.head community.uploads of
-                        Just photo ->
-                            RemoteData.Success photo
-
-                        Nothing ->
-                            RemoteData.NotAsked
+                , coverPhoto = coverPhoto
                 , subdomainInput =
                     community.subdomain
                         |> String.split "."
@@ -149,6 +165,19 @@ update msg model ({ shared } as loggedIn) =
                 , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
                 , websiteInput = Maybe.withDefault "" community.website
+            }
+                |> UR.init
+                |> maybeRequestUploads
+
+        CompletedLoadUploads uploads ->
+            { model
+                | coverPhoto =
+                    case List.head uploads of
+                        Just photo ->
+                            RemoteData.Success photo
+
+                        Nothing ->
+                            RemoteData.NotAsked
             }
                 |> UR.init
 
@@ -324,9 +353,12 @@ update msg model ({ shared } as loggedIn) =
             case
                 ( isModelValid shared.translators (RemoteData.toMaybe loggedIn.selectedCommunity) model
                 , loggedIn.selectedCommunity
+                , loggedIn.selectedCommunity
+                    |> RemoteData.mapError (\_ -> ())
+                    |> RemoteData.andThen .uploads
                 )
             of
-                ( True, RemoteData.Success community ) ->
+                ( True, RemoteData.Success community, RemoteData.Success communityUploads ) ->
                     let
                         authorization =
                             { actor = loggedIn.accountName
@@ -339,7 +371,8 @@ update msg model ({ shared } as loggedIn) =
                             }
 
                         newUpload =
-                            case ( model.coverPhoto, List.head community.uploads ) of
+                            -- TODO - Check this `case of`
+                            case ( model.coverPhoto, List.head communityUploads ) of
                                 ( RemoteData.Success url, Just firstUpload ) ->
                                     if url == firstUpload then
                                         Nothing
@@ -408,7 +441,7 @@ update msg model ({ shared } as loggedIn) =
                                         (Just loggedIn.authToken)
                                         (Community.addPhotosMutation
                                             community.symbol
-                                            (url :: community.uploads)
+                                            (url :: communityUploads)
                                         )
                                         (CompletedAddingCoverPhoto url)
 
@@ -535,9 +568,10 @@ update msg model ({ shared } as loggedIn) =
                                         Route.Dashboard
 
                             newUploads =
-                                case model.coverPhoto of
-                                    RemoteData.Success coverPhoto ->
-                                        coverPhoto :: community.uploads
+                                case ( community.uploads, model.coverPhoto ) of
+                                    -- TODO - Check this
+                                    ( RemoteData.Success uploads, RemoteData.Success coverPhoto ) ->
+                                        RemoteData.Success (coverPhoto :: uploads)
 
                                     _ ->
                                         community.uploads
@@ -1136,6 +1170,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.UploadsValue uploads) ->
+            Just (CompletedLoadUploads uploads)
+
         _ ->
             Nothing
 
@@ -1168,6 +1205,9 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadUploads _ ->
+            [ "CompletedLoadUploads" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

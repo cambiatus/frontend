@@ -403,7 +403,7 @@ msgToString msg =
             [ "NoOp" ]
 
         RequestedCommunityObjectives ->
-            [ "RequestedReloadCommunity" ]
+            [ "RequestedCommunityObjectives" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
