@@ -12,6 +12,7 @@ module Page.Dashboard exposing
 import Api
 import Api.Graphql
 import Api.Relay
+import Browser.Dom
 import Cambiatus.Enum.Direction
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
@@ -27,7 +28,7 @@ import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, src)
+import Html.Attributes exposing (class, classList, src, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -46,6 +47,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
 import Simple.Fuzzy
+import Task
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
@@ -676,6 +678,7 @@ datePickerSettings shared =
         , inputClassList = [ ( "input w-full", True ) ]
         , containerClassList = [ ( "relative-table w-full", True ) ]
         , dateFormatter = Date.format "E, d MMM y"
+        , inputId = Just "transfers-filters-date-input"
     }
 
 
@@ -731,10 +734,19 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.withBody
             [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
             , div [ class "flex space-x-4" ]
-                [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
-                    (datePickerSettings shared)
-                    model.transfersFiltersBeingEdited.datePicker
-                    |> Html.map TransfersFiltersDatePickerMsg
+                [ div [ class "relative w-full" ]
+                    [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
+                        (datePickerSettings shared)
+                        model.transfersFiltersBeingEdited.datePicker
+                        |> Html.map TransfersFiltersDatePickerMsg
+                    , img
+                        [ class "absolute right-0 top-0 h-12 cursor-pointer"
+                        , src "/icons/calendar.svg"
+                        , tabindex -1
+                        , onClick ClickedTransfersFiltersCalendar
+                        ]
+                        []
+                    ]
                 , button
                     [ class "h-12"
                     , onClick ClickedClearTransfersFiltersDate
@@ -919,6 +931,7 @@ type Msg
     | ClosedTransfersFilters
     | SelectedTransfersDirection (Maybe TransferDirectionValue)
     | TransfersFiltersDatePickerMsg DatePicker.Msg
+    | ClickedTransfersFiltersCalendar
     | ClickedClearTransfersFiltersDate
     | GotTransfersFiltersProfileSummaryMsg Profile.Summary.Msg
     | ClickedClearTransfersFiltersUser
@@ -1285,6 +1298,14 @@ update msg model ({ shared, accountName } as loggedIn) =
                     }
             }
                 |> UR.init
+
+        ClickedTransfersFiltersCalendar ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "transfers-filters-date-input"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClickedClearTransfersFiltersDate ->
             let
@@ -1779,6 +1800,9 @@ msgToString msg =
 
         TransfersFiltersDatePickerMsg _ ->
             [ "TransfersFiltersDatePickerMsg" ]
+
+        ClickedTransfersFiltersCalendar ->
+            [ "ClickedTransfersFiltersCalendar" ]
 
         ClickedClearTransfersFiltersDate ->
             [ "ClickedClearTransfersFiltersDate" ]
