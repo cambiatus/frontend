@@ -36,6 +36,7 @@ import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
 import Cambiatus.Object.Contribution
+import Cambiatus.Object.ContributionConfig
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -101,6 +102,7 @@ type alias Model =
     , orderCount : Int
     , members : List Profile.Minimal
     , contributions : List Contribution
+    , contributionConfiguration : Maybe ContributionConfiguration
     , objectives : List Objective
     , hasObjectives : Bool
     , hasShop : Bool
@@ -148,6 +150,7 @@ communitySelectionSet =
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
         |> with (Community.contributions contributionSelectionSet)
+        |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
         |> with (Community.objectives objectiveSelectionSet)
         |> with Community.hasObjectives
         |> with Community.hasShop
@@ -292,6 +295,14 @@ type alias Contribution =
     }
 
 
+type alias ContributionConfiguration =
+    { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
+    , paypalAccount : Maybe String
+    , thankYouDescription : Maybe String
+    , thankYouTitle : Maybe String
+    }
+
+
 contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contribution
 contributionSelectionSet =
     SelectionSet.succeed Contribution
@@ -307,6 +318,15 @@ contributionSelectionSet =
                             |> Result.withDefault (Time.millisToPosix 0)
                     )
             )
+
+
+contributionConfigurationSelectionSet : SelectionSet ContributionConfiguration Cambiatus.Object.ContributionConfig
+contributionConfigurationSelectionSet =
+    SelectionSet.succeed ContributionConfiguration
+        |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
+        |> with Cambiatus.Object.ContributionConfig.paypalAccount
+        |> with Cambiatus.Object.ContributionConfig.thankYouDescription
+        |> with Cambiatus.Object.ContributionConfig.thankYouTitle
 
 
 currencyTranslationKey : { contribution | amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> String
