@@ -1224,7 +1224,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.Community ->
             (\l -> CommunityPage.init l)
-                >> updateStatusWith Community GotCommunityMsg model
+                >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn Route.Community
 
         Just Route.CommunitySettings ->

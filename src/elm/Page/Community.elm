@@ -23,7 +23,6 @@ import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
-import Task
 import Time exposing (Posix, posixToMillis)
 import Token
 import UpdateResult as UR
@@ -36,11 +35,11 @@ import View.MarkdownEditor
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> UpdateResult
 init loggedIn =
-    ( initModel loggedIn
-    , Task.succeed RequestedReloadCommunityObjectives |> Task.perform identity
-    )
+    initModel loggedIn
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -353,7 +352,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | RequestedReloadCommunityObjectives
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
@@ -367,10 +365,6 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        RequestedReloadCommunityObjectives ->
-            UR.init model
-                |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -422,9 +416,6 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
-
-        RequestedReloadCommunityObjectives ->
-            [ "RequestedReloadCommunityObjectives" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
