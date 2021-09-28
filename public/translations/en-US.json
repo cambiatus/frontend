@@ -509,6 +509,7 @@
       "action_count": "{{actions}} actions",
       "complete": "Complete",
       "edit": "Edit objective",
+      "error_loading": "Something went wrong when loading objectives",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",

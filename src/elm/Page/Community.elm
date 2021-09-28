@@ -39,7 +39,7 @@ import View.MarkdownEditor
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel loggedIn
-    , Task.succeed RequestedCommunityObjectives |> Task.perform identity
+    , Task.succeed RequestedReloadCommunityObjectives |> Task.perform identity
     )
 
 
@@ -84,6 +84,17 @@ view loggedIn model =
                 _ ->
                     t "community.not_found"
 
+        objectivesContainer children =
+            div [ class "px-4 pb-4" ]
+                [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                    children
+                ]
+
+        viewLoading =
+            objectivesContainer
+                [ View.Components.loadingLogoAnimated loggedIn.shared.translators ""
+                ]
+
         content =
             case loggedIn.selectedCommunity of
                 RemoteData.Loading ->
@@ -115,16 +126,26 @@ view loggedIn model =
                             [ if community.hasObjectives then
                                 case community.objectives of
                                     RemoteData.Success objectives ->
-                                        div [ class "px-4 pb-4" ]
-                                            [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                                (Page.viewTitle (t "community.objectives.title_plural")
-                                                    :: List.indexedMap (viewObjective loggedIn model community)
-                                                        objectives
-                                                )
-                                            ]
+                                        objectivesContainer
+                                            (Page.viewTitle (t "community.objectives.title_plural")
+                                                :: List.indexedMap (viewObjective loggedIn model community)
+                                                    objectives
+                                            )
 
-                                    _ ->
-                                        text ""
+                                    RemoteData.Loading ->
+                                        viewLoading
+
+                                    RemoteData.NotAsked ->
+                                        viewLoading
+
+                                    RemoteData.Failure err ->
+                                        objectivesContainer
+                                            [ div [ class "w-full" ]
+                                                [ p [ class "text-2xl font-bold text-center" ] [ text (t "community.objectives.error_loading") ]
+                                                , p [ class "text-center" ] [ text (Utils.errorToString err) ]
+                                                ]
+                                            , img [ class "w-1/3 mx-auto", src "/images/error.svg" ] []
+                                            ]
 
                               else
                                 text ""
@@ -332,7 +353,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | RequestedCommunityObjectives
+    | RequestedReloadCommunityObjectives
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
@@ -347,9 +368,9 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
-        RequestedCommunityObjectives ->
+        RequestedReloadCommunityObjectives ->
             UR.init model
-                |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
+                |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -402,8 +423,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        RequestedCommunityObjectives ->
-            [ "RequestedCommunityObjectives" ]
+        RequestedReloadCommunityObjectives ->
+            [ "RequestedReloadCommunityObjectives" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

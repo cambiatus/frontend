@@ -517,6 +517,7 @@
       "action_count": "{{actions}} ações",
       "complete": "Completo",
       "edit": "Editar objetivo",
+      "error_loading": "Algo de errado aconteceu ao carregar os objetivos",
       "editor": {
         "not_found": "Não encontrado",
         "error": "Ops algo deu errado!",
