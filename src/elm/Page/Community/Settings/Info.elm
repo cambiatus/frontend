@@ -565,7 +565,6 @@ update msg model ({ shared } as loggedIn) =
 
                             newUploads =
                                 case ( community.uploads, model.coverPhoto ) of
-                                    -- TODO - Check this
                                     ( RemoteData.Success uploads, RemoteData.Success coverPhoto ) ->
                                         RemoteData.Success (coverPhoto :: uploads)
 
