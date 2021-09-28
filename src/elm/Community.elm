@@ -106,18 +106,13 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
-
-    -- TODO - Figure out a type for this
-    , objectives : RemoteData () (List Objective)
+    , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , validators : List Eos.Name
-
-    -- , validators : RemoteData () (List Eos.Name)
-    -- , uploads : List String
-    , uploads : RemoteData () (List String)
+    , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
     }
 
