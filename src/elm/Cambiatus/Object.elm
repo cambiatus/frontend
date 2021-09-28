@@ -49,6 +49,10 @@ type Contribution
     = Contribution
 
 
+type ContributionConfig
+    = ContributionConfig
+
+
 type Country
     = Country
 

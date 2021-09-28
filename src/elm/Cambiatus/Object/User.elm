@@ -90,6 +90,11 @@ contacts object_ =
     Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
 
 
+contributionCount : SelectionSet Int Cambiatus.Object.User
+contributionCount =
+    Object.selectionForField "Int" "contributionCount" [] Decode.int
+
+
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User
 createdAt =
     Object.selectionForField "(Maybe String)" "createdAt" [] (Decode.string |> Decode.nullable)

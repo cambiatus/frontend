@@ -34,6 +34,13 @@ claimCount =
     Object.selectionForField "Int" "claimCount" [] Decode.int
 
 
+contributionConfiguration :
+    SelectionSet decodesTo Cambiatus.Object.ContributionConfig
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+contributionConfiguration object_ =
+    Object.selectionForCompositeField "contributionConfiguration" [] object_ (identity >> Decode.nullable)
+
+
 {-| List of contributions this community received
 -}
 contributions :
