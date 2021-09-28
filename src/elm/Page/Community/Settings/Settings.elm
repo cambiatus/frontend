@@ -91,11 +91,8 @@ view ({ shared } as loggedIn) model =
 viewSettingsList : Shared -> Community.Model -> Html Msg
 viewSettingsList shared community =
     let
-        translate =
-            shared.translators.t
-
-        featuresDescription =
-            translate "community.objectives.title_plural" ++ ", " ++ translate "menu.shop"
+        { t } =
+            shared.translators
     in
     div
         [ class "grid my-4"
@@ -104,14 +101,14 @@ viewSettingsList shared community =
         , style "grid-template-rows" "auto"
         , style "grid-gap" "16px"
         ]
-        [ settingCard (translate "settings.community_info.title") (translate "menu.edit") (translate "settings.community_info.description") Route.CommunitySettingsInfo
-        , settingCard (translate "settings.community_currency.title") (translate "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
+        [ settingCard (t "settings.community_info.title") (t "menu.edit") (t "settings.community_info.description") Route.CommunitySettingsInfo
+        , settingCard (t "settings.community_currency.title") (t "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
         , if community.hasObjectives then
-            settingCard (translate "settings.actions.title") (translate "menu.edit") "" Route.Objectives
+            settingCard (t "settings.actions.title") (t "menu.edit") "" Route.Objectives
 
           else
             text ""
-        , settingCard (translate "settings.features.title") (translate "menu.edit") featuresDescription Route.CommunitySettingsFeatures
+        , settingCard (t "settings.features.title") (t "menu.edit") (t "settings.features.description") Route.CommunitySettingsFeatures
         ]
 
 

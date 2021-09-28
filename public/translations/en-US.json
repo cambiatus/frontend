@@ -1056,7 +1056,7 @@
     },
     "features": {
       "title": "Features",
-      "description": "Actions, shop",
+      "description": "Objectives, Actions, Shop, Sponsorship",
       "enabled": "Enabled",
       "disabled": "Disabled"
     }
@@ -1129,6 +1129,7 @@
     }
   },
   "sponsorship": {
+    "title": "Sponsorship",
     "sponsor": "Sponsor",
     "enter_amount": "Enter the amount you want to contribute",
     "amount_too_small": "The amount must be at least {{minimum}} {{currency}}",

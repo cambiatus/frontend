@@ -1017,7 +1017,7 @@
     },
     "features": {
       "title": "ገጽታ",
-      "description": "ተግባር, ሱቅ",
+      "description": "ዓላማዎች ፣ እርምጃዎች ፣ መደብር ፣ ስፖንሰርነት",
       "enabled": "ተችሏል",
       "disabled": "አልተቻለም"
     }
@@ -1090,6 +1090,7 @@
     }
   },
   "sponsorship": {
+    "title": "ስፖንሰርነት",
     "sponsor": "ስፖንሰር",
     "enter_amount": "እርስዎ ለማበርከት የሚፈልጉትን መጠን ያስገቡ",
     "amount_too_small": "መጠኑ ቢያንስ {{minimum}} {{currency}} መሆን አለበት",

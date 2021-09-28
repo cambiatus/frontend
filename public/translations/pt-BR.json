@@ -1062,7 +1062,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Ações, loja",
+      "description": "Objetivos, Ações, Loja, Patrocínio",
       "enabled": "Habilitado",
       "disabled": "Desabilitado"
     }
@@ -1135,6 +1135,7 @@
     }
   },
   "sponsorship": {
+    "title": "Patrocínio",
     "sponsor": "Patrocinar",
     "enter_amount": "Digite o valor que deseja contribuir",
     "amount_too_small": "O valor deve ser ao menos {{minimum}} {{currency}}",
