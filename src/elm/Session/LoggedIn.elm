@@ -901,7 +901,6 @@ updateExternal externalMsg ({ shared } as model) =
                     else
                         case Community.maybeFieldValue field community of
                             Nothing ->
-                                -- TODO - Set field as loading
                                 { defaultResult
                                     | cmd =
                                         Community.queryForField community.symbol
@@ -909,6 +908,12 @@ updateExternal externalMsg ({ shared } as model) =
                                             model.authToken
                                             field
                                             (CompletedLoadCommunityField community)
+                                    , model =
+                                        { model
+                                            | selectedCommunity =
+                                                Community.setFieldAsLoading field community
+                                                    |> RemoteData.Success
+                                        }
                                 }
 
                             Just fieldValue ->
@@ -1146,12 +1151,17 @@ update msg model =
 
                 newCommunity =
                     Community.mergeFields newModel.selectedCommunity community
+                        |> (\comm ->
+                                List.foldl Community.setFieldAsLoading
+                                    comm
+                                    newModel.queuedCommunityFields
+                           )
             in
-            UR.init newModel
+            { newModel | selectedCommunity = RemoteData.Success newCommunity }
+                |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
-                |> UR.addExt (CommunityLoaded community |> Broadcast)
-                -- TODO - Set fields as loading
+                |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
                 |> UR.addCmd
                     (Community.queryForFields community.symbol
                         newModel.shared

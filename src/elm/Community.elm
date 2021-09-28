@@ -32,6 +32,7 @@ module Community exposing
     , newCommunitySubscription
     , queryForField
     , queryForFields
+    , setFieldAsLoading
     , setFieldValue
     , subdomainQuery
     , symbolQuery
@@ -157,6 +158,16 @@ setFieldValue fieldValue model =
 
         UploadsValue uploads ->
             { model | uploads = RemoteData.Success uploads }
+
+
+setFieldAsLoading : Field -> Model -> Model
+setFieldAsLoading field model =
+    case field of
+        ObjectivesField ->
+            { model | objectives = RemoteData.Loading }
+
+        UploadsField ->
+            { model | uploads = RemoteData.Loading }
 
 
 isFieldLoading : Field -> Model -> Bool
