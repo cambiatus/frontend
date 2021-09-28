@@ -88,7 +88,7 @@ update session msg model =
                             List.map .account community.members
                                 |> List.member loggedIn.accountName
 
-                        redirectToApp =
+                        addAction =
                             if isMember then
                                 model.maybeRedirect
                                     |> Maybe.withDefault Route.Dashboard
@@ -96,10 +96,10 @@ update session msg model =
                                     |> UR.addCmd
 
                             else
-                                identity
+                                UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
                     in
                     UR.init model
-                        |> redirectToApp
+                        |> addAction
 
         CompletedSignIn loggedIn (RemoteData.Success (Just { token, user })) ->
             let
@@ -294,18 +294,33 @@ viewAsGuest title guest model =
 
 viewAsLoggedIn : String -> LoggedIn.Model -> Model -> Html Msg
 viewAsLoggedIn title loggedIn model =
-    case loggedIn.selectedCommunity of
-        RemoteData.Success community ->
-            -- div [ class "flex-grow flex" ]
-            --     [ Community.communityPreviewImage True loggedIn.shared community
-            --     , view_ False loggedIn.shared community model
-            --     ]
-            text "TODO"
+    case Community.getField loggedIn.selectedCommunity .uploads of
+        RemoteData.Success ( community, uploads ) ->
+            let
+                normalizedCommunity =
+                    { name = community.name
+                    , hasAutoInvite = community.hasAutoInvite
+                    , description = community.description
+                    , uploads = uploads
+                    , memberCount = community.memberCount
+                    , website = community.website
+                    }
+            in
+            div [ class "flex-grow flex" ]
+                [ Community.communityPreviewImage True loggedIn.shared normalizedCommunity
+                , view_ False loggedIn.shared normalizedCommunity model
+                ]
 
-        RemoteData.Failure err ->
+        RemoteData.Failure (Community.CommunityError err) ->
             Page.fullPageGraphQLError title err
 
-        _ ->
+        RemoteData.Failure (Community.FieldError err) ->
+            Page.fullPageGraphQLError title err
+
+        RemoteData.Loading ->
+            viewLoading loggedIn.shared
+
+        RemoteData.NotAsked ->
             viewLoading loggedIn.shared
 
 
