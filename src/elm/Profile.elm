@@ -76,6 +76,7 @@ type alias Model =
     , interests : List String
     , communities : List CommunityInfo
     , analysisCount : Int
+    , contributionCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
     }
@@ -117,6 +118,7 @@ selectionSet =
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
+        |> with User.contributionCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
 

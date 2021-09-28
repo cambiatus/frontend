@@ -931,13 +931,22 @@ viewBalance ({ shared } as loggedIn) balance =
                 [ text_ "dashboard.invite"
                 , Icons.arrowDown "-rotate-90"
                 ]
-            , a
-                [ class "w-full flex items-center justify-between text-gray-900 py-5"
-                , Route.href (Route.ProfileContributions loggedIn.accountName)
-                ]
-                [ text_ "dashboard.my_contributions"
-                , Icons.arrowDown "-rotate-90"
-                ]
+            , case LoggedIn.profile loggedIn of
+                Just profile ->
+                    if profile.contributionCount > 0 then
+                        a
+                            [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                            , Route.href (Route.ProfileContributions loggedIn.accountName)
+                            ]
+                            [ text_ "dashboard.my_contributions"
+                            , Icons.arrowDown "-rotate-90"
+                            ]
+
+                    else
+                        text ""
+
+                Nothing ->
+                    text ""
             ]
         ]
 
