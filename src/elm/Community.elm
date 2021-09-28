@@ -4,6 +4,7 @@ module Community exposing
     , CreateCommunityData
     , CreateCommunityDataInput
     , Field(..)
+    , FieldError(..)
     , FieldValue(..)
     , Invite
     , Metadata
@@ -21,6 +22,7 @@ module Community exposing
     , encodeCreateObjectiveAction
     , encodeUpdateData
     , encodeUpdateObjectiveAction
+    , getField
     , inviteQuery
     , isFieldLoading
     , isNonExistingCommunityError
@@ -125,6 +127,26 @@ type Field
 type FieldValue
     = ObjectivesValue (List Objective)
     | UploadsValue (List String)
+
+
+type FieldError a
+    = CommunityError (Graphql.Http.Error (Maybe Model))
+    | FieldError a
+
+
+getField :
+    RemoteData (Graphql.Http.Error (Maybe Model)) Model
+    -> (Model -> RemoteData err field)
+    -> RemoteData (FieldError err) ( Model, field )
+getField remoteDataModel accessor =
+    remoteDataModel
+        |> RemoteData.mapError CommunityError
+        |> RemoteData.andThen
+            (\model ->
+                accessor model
+                    |> RemoteData.map (\field -> ( model, field ))
+                    |> RemoteData.mapError FieldError
+            )
 
 
 setFieldValue : FieldValue -> Model -> Model

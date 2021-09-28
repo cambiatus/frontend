@@ -352,13 +352,10 @@ update msg model ({ shared } as loggedIn) =
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case
                 ( isModelValid shared.translators (RemoteData.toMaybe loggedIn.selectedCommunity) model
-                , loggedIn.selectedCommunity
-                , loggedIn.selectedCommunity
-                    |> RemoteData.mapError (\_ -> ())
-                    |> RemoteData.andThen .uploads
+                , Community.getField loggedIn.selectedCommunity .uploads
                 )
             of
-                ( True, RemoteData.Success community, RemoteData.Success communityUploads ) ->
+                ( True, RemoteData.Success ( community, communityUploads ) ) ->
                     let
                         authorization =
                             { actor = loggedIn.accountName
@@ -371,7 +368,6 @@ update msg model ({ shared } as loggedIn) =
                             }
 
                         newUpload =
-                            -- TODO - Check this `case of`
                             case ( model.coverPhoto, List.head communityUploads ) of
                                 ( RemoteData.Success url, Just firstUpload ) ->
                                     if url == firstUpload then
