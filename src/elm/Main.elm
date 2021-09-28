@@ -1274,12 +1274,12 @@ changeRouteTo maybeRoute model =
 
         Just (Route.NewAction objectiveId) ->
             (\l -> ActionEditor.init l objectiveId Nothing)
-                >> updateStatusWith ActionEditor GotActionEditorMsg model
+                >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction objectiveId)
 
         Just (Route.EditAction objectiveId actionId) ->
             (\l -> ActionEditor.init l objectiveId (Just actionId))
-                >> updateStatusWith ActionEditor GotActionEditorMsg model
+                >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction objectiveId actionId)
 
         Just (Route.Claim objectiveId actionId claimId) ->
