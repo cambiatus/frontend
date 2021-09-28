@@ -740,6 +740,7 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
+    | RequestedReloadCommunityField Community.Field
     | RequestedCommunityField Community.Field
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
@@ -766,6 +767,9 @@ mapExternal mapFn msg =
 
         RequestedCommunityField field ->
             RequestedCommunityField field
+
+        RequestedReloadCommunityField field ->
+            RequestedReloadCommunityField field
 
         RequiredAuthentication { successMsg, errorMsg } ->
             RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
@@ -913,6 +917,27 @@ updateExternal externalMsg ({ shared } as model) =
                                         Just
                                             (CommunityFieldLoaded community fieldValue)
                                 }
+
+                _ ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | queuedCommunityFields =
+                                    field :: model.queuedCommunityFields
+                            }
+                    }
+
+        RequestedReloadCommunityField field ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    { defaultResult
+                        | cmd =
+                            Community.queryForField community.symbol
+                                shared
+                                model.authToken
+                                field
+                                (CompletedLoadCommunityField community)
+                    }
 
                 _ ->
                     { defaultResult
