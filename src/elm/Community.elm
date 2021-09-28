@@ -248,7 +248,6 @@ communitySelectionSet =
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
-        -- |> with (Community.uploads Upload.url)
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
 
