@@ -35,7 +35,7 @@ module View.Form.Toggle exposing
 -}
 
 import Html exposing (Html, div, input, label, text)
-import Html.Attributes exposing (checked, class, disabled, for, id, name, type_)
+import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, type_)
 import Html.Events exposing (onCheck)
 import Session.Shared exposing (Translators)
 import View.Components
@@ -149,7 +149,12 @@ viewSimple translators options =
                 , disabled options.disabled
                 ]
                 []
-            , label [ class "form-switch-label", for options.id ] []
+            , label
+                [ class "form-switch-label"
+                , classList [ ( "cursor-default", options.disabled ) ]
+                , for options.id
+                ]
+                []
             ]
         , div [ class "flex items-center" ]
             [ options.label
@@ -193,7 +198,12 @@ viewBig ({ t } as translators) options =
                     , disabled options.disabled
                     ]
                     []
-                , label [ class "form-switch-label", for options.id ] []
+                , label
+                    [ class "form-switch-label"
+                    , classList [ ( "cursor-default", options.disabled ) ]
+                    , for options.id
+                    ]
+                    []
                 ]
             ]
         ]

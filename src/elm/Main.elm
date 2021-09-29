@@ -636,6 +636,10 @@ broadcast broadcastMessage status =
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
 
+                CommunitySettingsSponsorship _ ->
+                    CommunitySettingsSponsorship.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsSponsorshipMsg
+
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsMsg
