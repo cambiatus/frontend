@@ -2,8 +2,8 @@ module Page.Profile.Contributions exposing (Model, init, view)
 
 import Community
 import Eos.Account
-import Html exposing (Html, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList)
+import Html exposing (Html, div, img, li, p, span, text, ul)
+import Html.Attributes exposing (class, classList, src)
 import Icons
 import List.Extra
 import Page
@@ -77,34 +77,42 @@ view_ loggedIn profileContributions title =
     div [ class "flex flex-grow flex-col" ]
         [ Page.viewHeader loggedIn title
         , div [ class "flex flex-grow container mx-auto p-4" ]
-            [ ul [ class "flex-grow bg-white rounded divide-y px-4" ]
-                (profileContributions
-                    |> List.Extra.groupWhile
-                        (\c1 c2 ->
-                            Utils.areSameDay loggedIn.shared.timezone
-                                c1.insertedAt
-                                c2.insertedAt
-                        )
-                    |> List.indexedMap
-                        (\index ( firstContribution, otherContributions ) ->
-                            li
-                                [ classList
-                                    [ ( "pt-6", index /= 0 )
-                                    , ( "pt-4", index == 0 )
+            [ if List.isEmpty profileContributions then
+                div [ class "flex-grow flex flex-col items-center justify-center bg-white rounded px-4" ]
+                    [ img [ src "/images/empty-analysis.svg", class "h-32 mb-3" ] []
+                    , p [ class "text-gray" ]
+                        [ text (loggedIn.shared.translators.t "profile.contributions.no_contributions") ]
+                    ]
+
+              else
+                ul [ class "flex-grow bg-white rounded divide-y px-4" ]
+                    (profileContributions
+                        |> List.Extra.groupWhile
+                            (\c1 c2 ->
+                                Utils.areSameDay loggedIn.shared.timezone
+                                    c1.insertedAt
+                                    c2.insertedAt
+                            )
+                        |> List.indexedMap
+                            (\index ( firstContribution, otherContributions ) ->
+                                li
+                                    [ classList
+                                        [ ( "pt-6", index /= 0 )
+                                        , ( "pt-4", index == 0 )
+                                        ]
                                     ]
-                                ]
-                                [ -- TODO - Use new text size class (#622)
-                                  View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-1" ]
-                                    identity
-                                    loggedIn.shared
-                                    firstContribution.insertedAt
-                                , ul [ class "divide-y" ]
-                                    (List.map (viewContribution loggedIn.shared.translators)
-                                        (firstContribution :: otherContributions)
-                                    )
-                                ]
-                        )
-                )
+                                    [ -- TODO - Use new text size class (#622)
+                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-1" ]
+                                        identity
+                                        loggedIn.shared
+                                        firstContribution.insertedAt
+                                    , ul [ class "divide-y" ]
+                                        (List.map (viewContribution loggedIn.shared.translators)
+                                            (firstContribution :: otherContributions)
+                                        )
+                                    ]
+                            )
+                    )
             ]
         ]
 

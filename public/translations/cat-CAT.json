@@ -744,7 +744,8 @@
     "contributions": {
       "profile_contributions": "Contribucions de {{profile_name}}",
       "not_allowed_title": "No podeu veure les contribucions d'altres persones",
-      "not_allowed": "Només els administradors de la comunitat poden veure les contribucions d'altres persones"
+      "not_allowed": "Només els administradors de la comunitat poden veure les contribucions d'altres persones",
+      "no_contributions": "Encara no hi ha contribucions"
     }
   },
   "shop": {
