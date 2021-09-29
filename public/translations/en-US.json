@@ -1159,6 +1159,13 @@
         "button_label": "Edit message"
       }
     },
+    "fiat": {
+      "title": "Fiat money",
+      "paypal_account": "Community's PayPal account",
+      "paypal_example": "example@gmail.com",
+      "how_to_change": "If you need to update this account, get in touch with us through your Slack support channel",
+      "accepted_currencies": "What currency will the community accept?"
+    },
     "dashboard_modal": {
       "title": "Sponsor your Community",
       "subtitle": "Now you can sponsor this community.",

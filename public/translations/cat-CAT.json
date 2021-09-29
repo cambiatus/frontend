@@ -1161,6 +1161,13 @@
         "button_label": "Configura el missatge"
       }
     },
+    "fiat": {
+      "title": "Fiat diners",
+      "paypal_account": "Compte de PayPal de la comunitat",
+      "paypal_example": "exemple@gmail.com",
+      "how_to_change": "Si necessiteu actualitzar aquest compte, poseu-vos en contacte amb nosaltres a través del canal d'assistència a Slack",
+      "accepted_currencies": "Quina moneda acceptarà la comunitat?"
+    },
     "dashboard_modal": {
       "title": "Patrocina la teva Comunitat",
       "subtitle": "Ara podeu patrocinar aquesta comunitat.",

@@ -23,6 +23,7 @@ module Icons exposing
     , lamp
     , languages
     , notification
+    , paypal
     , phone
     , profile
     , question
@@ -39,8 +40,8 @@ module Icons exposing
     )
 
 import Html exposing (Html)
-import Svg exposing (Svg, g, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, d, fill, fillRule, height, id, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, viewBox, width)
+import Svg exposing (Svg, defs, feBlend, feColorMatrix, feComposite, feFlood, feGaussianBlur, feOffset, g, linearGradient, stop, svg)
+import Svg.Attributes exposing (class, clipPath, clipRule, colorInterpolationFilters, d, dx, dy, fill, fillRule, filter, filterUnits, floodOpacity, gradientUnits, height, id, in2, in_, k2, k3, offset, operator, result, stdDeviation, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, values, viewBox, width, x, x1, x2, y, y1, y2)
 
 
 dashboard : String -> Svg msg
@@ -331,6 +332,23 @@ telegram class_ =
         , Svg.path [ d "M12.25 21.875C11.764 21.875 11.8466 21.6915 11.679 21.2287L10.25 16.5259L21.25 10", fill "#C8DAEA" ] []
         , Svg.path [ d "M12.25 21.875C12.625 21.875 12.7906 21.7035 13 21.5L15 19.5552L12.5052 18.0509", fill "#A9C9DD" ] []
         , Svg.path [ d "M12.505 18.0513L18.55 22.5174C19.2398 22.898 19.7376 22.7009 19.9095 21.877L22.3701 10.2816C22.622 9.27163 21.9851 8.81338 21.3251 9.113L6.87635 14.6844C5.8901 15.08 5.89597 15.6303 6.6966 15.8754L10.4045 17.0328L18.9886 11.6171C19.3938 11.3714 19.7658 11.5034 19.4606 11.7744", fill "#FFFFFF" ] []
+        ]
+
+
+paypal : String -> Html msg
+paypal class_ =
+    svg [ width "21", height "23", fill "none", class class_ ]
+        [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M14.822 1c2.623 0 4.324 1.79 4.324 4.551v9.999c0 2.76-1.7 4.551-4.324 4.551H5.324C2.7 20.101 1 18.311 1 15.55V5.55C1 2.791 2.701 1 5.324 1h9.498Z", fill "url(#a)" ] []
+        , g [ filter "url(#b)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M6.787 3.706a.461.461 0 0 0-.448.402L4.648 15.25c-.045.29.168.553.447.553h2.446l.577-3.956a.462.462 0 0 1 .448-.405h.969s1.14.075 2.005-.28c1.221-.501 2.787-1.682 2.966-3.832.306-3.673-2.094-3.624-3.583-3.624H6.787Z", fill "#fff" ] [] ]
+        , g [ filter "url(#c)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M9.282 6.73a.46.46 0 0 0-.447.403l-1.466 9.653c-.044.29.17.553.448.553H9.72c.223 0 .413-.17.448-.402l.46-3.02a.461.461 0 0 1 .447-.403h.57s.77.05 1.53-.261c1.07-.44 2.255-1.48 2.412-3.366.268-3.22-2.954-3.156-4.26-3.156H9.282Z", fill "#ADD1E6" ] [] ]
+        , g [ filter "url(#d)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M8.126 11.816c.083-.199.262-.374.47-.374h.918s1.15.007 2.016-.348c1.22-.5 2.773-1.611 2.955-3.757-.993-.629-2.415-.606-3.18-.606H9.329c-.25 0-.486.211-.526.473l-.696 4.583.019.03Z", fill "url(#e)" ] [] ]
+        , defs []
+            [ Svg.filter [ id "b", x ".142", y ".706", width "17.891", height "20.097", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "-.5", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.345098 0 0 0 0 0.631373 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.760784 0 0 0 0 0.858824 0 0 0 0 0.921569 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
+            , Svg.filter [ id "c", x "4.363", y "3.73", width "16.238", height "18.608", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "1", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.419608 0 0 0 0 0.701961 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.751403 0 0 0 0 0.876099 0 0 0 0 0.941911 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
+            , Svg.filter [ id "d", x "8.107", y "5.73", width "6.378", height "6.086", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feBlend [ in_ "SourceGraphic", in2 "BackgroundImageFix", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.839216 0 0 0 0 0.905882 0 0 0 0 0.945098 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect1_innerShadow" ] [] ]
+            , linearGradient [ id "a", x1 "-5.858", y1 "10.954", x2 "10.889", y2 "26.375", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#002B6F" ] [], stop [ offset "1", stopColor "#0097D9" ] [] ]
+            , linearGradient [ id "e", x1 "6.5", y1 "7.908", x2 "8.573", y2 "12.316", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#E6EEF5" ] [], stop [ offset "1", stopColor "#E6F0F7" ] [] ]
+            ]
         ]
 
 

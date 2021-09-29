@@ -1,13 +1,20 @@
 module Page.Community.Settings.Sponsorship.Fiat exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Cambiatus.Enum.CurrencyType
 import Community
-import Html exposing (Html, div)
+import Html exposing (Html, div, p, text)
+import Html.Attributes exposing (class)
+import Icons
+import Maybe.Extra
 import Page
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import View.Form.Input
+import View.Form.Select
+import View.Form.Toggle
 
 
 
@@ -70,8 +77,7 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn _ =
     let
         title =
-            -- TODO - Change title
-            loggedIn.shared.translators.t "sponsorship.title"
+            loggedIn.shared.translators.t "sponsorship.fiat.title"
 
         content =
             case loggedIn.selectedCommunity of
@@ -94,9 +100,71 @@ view loggedIn _ =
 
 
 view_ : Shared -> Community.Model -> Html Msg
-view_ shared community =
-    -- TODO - Fill in view_
-    div [] []
+view_ { translators } community =
+    let
+        firstCurrencyOption =
+            community.contributionConfiguration
+                |> Maybe.andThen (List.head << .acceptedCurrencies)
+                |> Maybe.withDefault Cambiatus.Enum.CurrencyType.Brl
+    in
+    div [ class "container mx-auto px-4 my-4" ]
+        [ div [ class "p-4 bg-white rounded" ]
+            [ View.Form.Toggle.init
+                { label =
+                    div [ class "flex" ]
+                        [ Icons.paypal "mr-2"
+                        , text "Paypal"
+                        ]
+                , id = "paypal-toggle"
+                , onToggle = \_ -> NoOp
+                , disabled = True
+                , value =
+                    community.contributionConfiguration
+                        |> Maybe.andThen .paypalAccount
+                        |> Maybe.Extra.isJust
+                }
+                |> View.Form.Toggle.toHtml translators
+            , View.Form.Input.init
+                { label = translators.t "sponsorship.fiat.paypal_account"
+                , id = "paypal-account-input"
+                , onInput = \_ -> NoOp
+                , disabled = True
+                , value =
+                    community.contributionConfiguration
+                        |> Maybe.andThen .paypalAccount
+                        |> Maybe.withDefault ""
+                , placeholder = Just (translators.t "sponsorship.fiat.paypal_example")
+                , problems = Nothing
+                , translators = translators
+                }
+                |> View.Form.Input.withContainerAttrs [ class "mt-5 mb-2" ]
+                |> View.Form.Input.withAttrs []
+                |> View.Form.Input.toHtml
+            , p [ class "mb-10 text-gray-900" ]
+                [ text (translators.t "sponsorship.fiat.how_to_change") ]
+            , View.Form.Select.init
+                { id = "currency-select"
+                , label = translators.t "sponsorship.fiat.accepted_currencies"
+                , onInput = \_ -> NoOp
+                , firstOption = currencyTypeToSelectOption firstCurrencyOption
+                , value = Cambiatus.Enum.CurrencyType.Brl
+                , valueToString = Cambiatus.Enum.CurrencyType.toString
+                , disabled = True
+                , problems = Nothing
+                }
+                |> View.Form.Select.withOptions
+                    (Cambiatus.Enum.CurrencyType.list
+                        |> List.filter ((/=) firstCurrencyOption)
+                        |> List.map currencyTypeToSelectOption
+                    )
+                |> View.Form.Select.toHtml
+            ]
+        ]
+
+
+currencyTypeToSelectOption : Cambiatus.Enum.CurrencyType.CurrencyType -> { value : Cambiatus.Enum.CurrencyType.CurrencyType, label : String }
+currencyTypeToSelectOption currencyType =
+    { value = currencyType, label = Cambiatus.Enum.CurrencyType.toString currencyType }
 
 
 
