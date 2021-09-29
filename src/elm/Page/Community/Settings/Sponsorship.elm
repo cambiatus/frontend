@@ -144,9 +144,7 @@ view_ { translators } community =
                         Just _ ->
                             a
                                 [ class "button button-primary w-full cursor-pointer mt-6"
-
-                                -- TODO - Use correct route
-                                , Route.href Route.Dashboard
+                                , Route.href Route.CommunitySettingsSponsorshipFiat
                                 ]
                                 [ text_ "sponsorship.cards.fiat.settings" ]
                     ]

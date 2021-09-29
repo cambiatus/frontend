@@ -22,6 +22,7 @@ import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
+import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
 import Page.Community.Sponsor as CommunitySponsor
 import Page.Community.Supporters as CommunitySupporters
 import Page.Community.ThankYou as CommunityThankYou
@@ -187,6 +188,7 @@ type Status
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
+    | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
     | CommunitySelector CommunitySelector.Model
     | CommunityThankYou
     | CommunitySponsor CommunitySponsor.Model
@@ -233,6 +235,7 @@ type Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
     | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
+    | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
     | GotCommunitySponsorMsg CommunitySponsor.Msg
     | GotCommunitySupportersMsg CommunitySupporters.Msg
     | GotObjectivesMsg Objectives.Msg
@@ -493,6 +496,11 @@ update msg model =
                 >> updateLoggedInUResult CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
                 |> withLoggedIn
 
+        ( GotCommunitySettingsSponsorshipFiatMsg subMsg, CommunitySettingsSponsorshipFiat subModel ) ->
+            CommunitySettingsSponsorshipFiat.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
+                |> withLoggedIn
+
         ( GotCommunitySponsorMsg subMsg, CommunitySponsor subModel ) ->
             CommunitySponsor.update subMsg subModel
                 >> updateLoggedInUResult CommunitySponsor GotCommunitySponsorMsg model
@@ -639,6 +647,10 @@ broadcast broadcastMessage status =
                 CommunitySettingsSponsorship _ ->
                     CommunitySettingsSponsorship.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsSponsorshipMsg
+
+                CommunitySettingsSponsorshipFiat _ ->
+                    CommunitySettingsSponsorshipFiat.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsSponsorshipFiatMsg
 
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
@@ -938,6 +950,9 @@ statusToRoute status session =
 
         CommunitySettingsSponsorship _ ->
             Just Route.CommunitySettingsSponsorship
+
+        CommunitySettingsSponsorshipFiat _ ->
+            Just Route.CommunitySettingsSponsorshipFiat
 
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
@@ -1313,6 +1328,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
                 |> withLoggedIn Route.CommunitySettingsSponsorship
 
+        Just Route.CommunitySettingsSponsorshipFiat ->
+            CommunitySettingsSponsorshipFiat.init
+                >> updateStatusWith CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
+                |> withLoggedIn Route.CommunitySettingsSponsorshipFiat
+
         Just (Route.CommunitySelector maybeRedirect) ->
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
@@ -1531,6 +1551,9 @@ msgToString msg =
         GotCommunitySettingsSponsorshipMsg subMsg ->
             "GotCommunitySettingsSponsorshipMsg" :: CommunitySettingsSponsorship.msgToString subMsg
 
+        GotCommunitySettingsSponsorshipFiatMsg subMsg ->
+            "GotCommunitySettingsSponsorshipFiatMsg" :: CommunitySettingsSponsorshipFiat.msgToString subMsg
+
         GotCommunitySponsorMsg subMsg ->
             "GotCommunitySponsorMsg" :: CommunitySponsor.msgToString subMsg
 
@@ -1733,6 +1756,9 @@ view model =
 
         CommunitySettingsSponsorship subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.view
+
+        CommunitySettingsSponsorshipFiat subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.view
 
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view

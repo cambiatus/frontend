@@ -220,6 +220,7 @@ type Page
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
+    | CommunitySettingsSponsorshipFiat
     | CommunityEditor
     | CommunitySelector
     | CommunityThankYou
