@@ -120,16 +120,55 @@ type alias Model =
     }
 
 
+{-| In order to be able to query for fields separately from the community (such
+as objectives and uploads), we need to add a `Field` constructor to represent
+that field. The constructor's name should be the name of the field followed by
+`Field` (e.g. `ObjectivesField`).
+
+In order to have a nice API, we also need types to wrap the success and error
+cases. That's why we have `FieldValue` and `FieldError`.
+
+If you want to add a new field that isn't loaded by default (usually Lists are
+good candidates):
+
+1.  Add the field to the `Model`. It's type should be in the format
+    `RemoteData (Graphql.Http.Error field) field`
+2.  Add a new constructor to this `Field` type following the practices described above
+3.  Add a new constructor to `FieldValue` (see `FieldValue`'s documentation for
+    more info)
+4.  Fill in the functions that use `Field` and `FieldValue` (the compiler will
+    let you know which ones)
+
+Pages can use this type to request separate fields from `LoggedIn`, using
+`LoggedIn.External` messages, specifying which field they want. There are two
+variants they can use to do so:
+
+1.  `RequestedCommunityField`: Checks if the field is loaded. If so, send a
+    `BroadcastMsg` with the field. If not, queries the backend for that field,
+    and once the result comes in, sends a `BroadcastMsg`
+2.  `RequestedReloadCommunityField`: Always queries for the field, and sends the
+    result as a `BroadcastMsg`
+
+-}
 type Field
     = ObjectivesField
     | UploadsField
 
 
+{-| `FieldValue` is useful to wrap results of queries for fields that aren't
+loaded in by default with the community (such as objectives and uploads). The
+constructor's name should be the name of the field followed by `Value`, and
+should hold the actual value of that field (e.g. `ObjectivesValue (List Objetive)`).
+-}
 type FieldValue
     = ObjectivesValue (List Objective)
     | UploadsValue (List String)
 
 
+{-| When we want to extract a field that is not loaded by default with the
+community, and there is an error, we need to know if it was an error when
+fetching the community or when fetching the actual field.
+-}
 type FieldError a
     = CommunityError (Graphql.Http.Error (Maybe Model))
     | FieldError a
