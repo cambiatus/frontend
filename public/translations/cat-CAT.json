@@ -1132,6 +1132,7 @@
   },
   "sponsorship": {
     "title": "Patrocini",
+    "description": "Permet que els usuaris patrocinin la comunitat",
     "sponsor": "Patrocina",
     "enter_amount": "Introduïu l'import que voleu contribuir",
     "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} {{currency}}",

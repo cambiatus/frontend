@@ -21,6 +21,7 @@ import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
+import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
 import Page.Community.Sponsor as CommunitySponsor
 import Page.Community.Supporters as CommunitySupporters
 import Page.Community.ThankYou as CommunityThankYou
@@ -185,6 +186,7 @@ type Status
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
+    | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
     | CommunitySelector CommunitySelector.Model
     | CommunityThankYou
     | CommunitySponsor CommunitySponsor.Model
@@ -230,6 +232,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
+    | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
     | GotCommunitySponsorMsg CommunitySponsor.Msg
     | GotCommunitySupportersMsg CommunitySupporters.Msg
     | GotObjectivesMsg Objectives.Msg
@@ -483,6 +486,11 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsSponsorshipMsg subMsg, CommunitySettingsSponsorship subModel ) ->
+            CommunitySettingsSponsorship.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
                 |> withLoggedIn
 
         ( GotCommunitySponsorMsg subMsg, CommunitySponsor subModel ) ->
@@ -924,6 +932,9 @@ statusToRoute status session =
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
+        CommunitySettingsSponsorship _ ->
+            Just Route.CommunitySettingsSponsorship
+
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
 
@@ -1293,6 +1304,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
+        Just Route.CommunitySettingsSponsorship ->
+            CommunitySettingsSponsorship.init
+                >> updateStatusWith CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
+                |> withLoggedIn Route.CommunitySettingsSponsorship
+
         Just (Route.CommunitySelector maybeRedirect) ->
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
@@ -1508,6 +1524,9 @@ msgToString msg =
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
+        GotCommunitySettingsSponsorshipMsg subMsg ->
+            "GotCommunitySettingsSponsorshipMsg" :: CommunitySettingsSponsorship.msgToString subMsg
+
         GotCommunitySponsorMsg subMsg ->
             "GotCommunitySponsorMsg" :: CommunitySponsor.msgToString subMsg
 
@@ -1707,6 +1726,9 @@ view model =
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
+
+        CommunitySettingsSponsorship subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.view
 
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view

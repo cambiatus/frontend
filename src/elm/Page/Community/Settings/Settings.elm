@@ -4,6 +4,7 @@ import Community
 import Eos
 import Html exposing (Html, a, div, span, text)
 import Html.Attributes exposing (class, style)
+import Maybe.Extra
 import Page
 import RemoteData
 import Route exposing (Route)
@@ -109,6 +110,11 @@ viewSettingsList shared community =
           else
             text ""
         , settingCard (t "settings.features.title") (t "menu.edit") (t "settings.features.description") Route.CommunitySettingsFeatures
+        , if Maybe.Extra.isJust community.contributionConfiguration then
+            settingCard (t "sponsorship.title") (t "menu.edit") (t "sponsorship.description") Route.CommunitySettingsSponsorship
+
+          else
+            text ""
         ]
 
 

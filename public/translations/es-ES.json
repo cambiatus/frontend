@@ -1133,6 +1133,7 @@
   },
   "sponsorship": {
     "title": "Patrocinio",
+    "description": "Permitir a los usuarios patrocinar a la comunidad",
     "sponsor": "Patrocinar",
     "enter_amount": "Ingrese la cantidad que desea contribuir",
     "amount_too_small": "El monto debe ser de al menos {{minimum}} {{currency}}",

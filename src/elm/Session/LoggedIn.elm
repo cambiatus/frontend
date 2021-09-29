@@ -219,6 +219,7 @@ type Page
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsSponsorship
     | CommunityEditor
     | CommunitySelector
     | CommunityThankYou

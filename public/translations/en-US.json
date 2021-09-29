@@ -1130,6 +1130,7 @@
   },
   "sponsorship": {
     "title": "Sponsorship",
+    "description": "Allow users to sponsor the community",
     "sponsor": "Sponsor",
     "enter_amount": "Enter the amount you want to contribute",
     "amount_too_small": "The amount must be at least {{minimum}} {{currency}}",

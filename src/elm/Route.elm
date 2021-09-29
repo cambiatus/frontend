@@ -43,6 +43,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsSponsorship
     | CommunitySelector (Maybe Route)
     | CommunityThankYou
     | CommunitySponsor
@@ -111,6 +112,7 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
+        , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -403,6 +405,9 @@ routeToString route =
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
+
+                CommunitySettingsSponsorship ->
+                    ( [ "community", "settings", "sponsorship" ], [] )
 
                 CommunitySelector maybeRedirect ->
                     ( [ "community", "selector" ]
