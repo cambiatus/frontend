@@ -28,16 +28,24 @@ view loggedIn =
                         [ div [ class "container mx-auto my-10 px-4 flex flex-col items-center space-y-4 md:justify-center" ]
                             [ img [ src "/images/sponsor-celebration.svg" ] []
                             , p [ class "font-bold text-3xl leading-tight" ]
-                                [ text <|
-                                    loggedIn.shared.translators.tr
-                                        "community.thank_you.headline"
-                                        [ ( "community"
-                                          , community.name
-                                          )
-                                        ]
+                                [ community.contributionConfiguration
+                                    |> Maybe.andThen .thankYouTitle
+                                    |> Maybe.withDefault
+                                        (loggedIn.shared.translators.tr
+                                            "sponsorship.thank_you_message.default_title"
+                                            [ ( "community", community.name ) ]
+                                        )
+                                    |> text
                                 ]
                             , p []
-                                [ text_ "community.thank_you.importance" ]
+                                [ community.contributionConfiguration
+                                    |> Maybe.andThen .thankYouDescription
+                                    |> Maybe.withDefault
+                                        (loggedIn.shared.translators.t
+                                            "sponsorship.thank_you_message.default_message"
+                                        )
+                                    |> text
+                                ]
                             , a
                                 [ class "underline cursor-pointer"
                                 , Route.href Route.CommunitySupporters

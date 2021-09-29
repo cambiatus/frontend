@@ -124,8 +124,17 @@ view_ { translators } community model =
                 , value =
                     community.contributionConfiguration
                         |> Maybe.andThen .thankYouTitle
-                        |> Maybe.withDefault (translators.t "sponsorship.thank_you_message.default_title")
-                , placeholder = Just (translators.t "sponsorship.thank_you_message.default_title")
+                        |> Maybe.withDefault
+                            (translators.tr
+                                "sponsorship.thank_you_message.default_title"
+                                [ ( "community", community.name ) ]
+                            )
+                , placeholder =
+                    Just
+                        (translators.tr
+                            "sponsorship.thank_you_message.default_title"
+                            [ ( "community", community.name ) ]
+                        )
                 , problems = Nothing
                 , translators = translators
                 }

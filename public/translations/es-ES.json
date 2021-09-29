@@ -667,8 +667,6 @@
     },
     "thank_you": {
       "title": "¡Gracias!",
-      "headline": "¡Gracias por patrocinar {{community}}!",
-      "importance": "Tu contribución es muy importante para las personas de esta comunidad.",
       "all_supporters": "Ver la lista de todos los patrocinadores"
     }
   },
@@ -1171,7 +1169,7 @@
     },
     "thank_you_message": {
       "title": "Título del mensaje",
-      "default_title": "¡Gracias por patrocinar esta comunidad!",
+      "default_title": "¡Gracias por patrocinar {{community}}!",
       "description": "Mensaje",
       "default_message": "Tu contribución está ayudando a tu comunidad a ser aún más impactante, ¡eres increíble!"
     },

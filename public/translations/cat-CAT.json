@@ -667,8 +667,6 @@
     },
     "thank_you": {
       "title": "Gràcies!",
-      "headline": "Gràcies per patrocinar {{community}}!",
-      "importance": "La vostra contribució és molt important per a la gent d’aquesta comunitat.",
       "all_supporters": "Consulteu la llista de tots els partidaris"
     }
   },
@@ -1170,7 +1168,7 @@
     },
     "thank_you_message": {
       "title": "Títol del missatge",
-      "default_title": "Gràcies per patrocinar aquesta comunitat!",
+      "default_title": "Gràcies per patrocinar {{community}}!",
       "message": "Missatge",
       "default_message": "La vostra contribució ajuda la vostra comunitat a ser encara més impactant, sou increïbles!"
     },

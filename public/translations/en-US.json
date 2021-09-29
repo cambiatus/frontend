@@ -663,8 +663,6 @@
     },
     "thank_you": {
       "title": "Thank You!",
-      "headline": "Thank you for sponsoring {{community}}!",
-      "importance": "Your contribution is very important for the people in this community.",
       "all_supporters": "See the list of all supporters"
     }
   },
@@ -1168,7 +1166,7 @@
     },
     "thank_you_message": {
       "title": "Message title",
-      "default_title": "Thank you for sponsoring this community!",
+      "default_title": "Thank you for sponsoring {{community}}!",
       "message": "Message",
       "default_message": "Your contribution is supporting your community to be even more impactful, you are a rockstar!"
     },
