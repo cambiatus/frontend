@@ -439,6 +439,10 @@ window.customElements.define('markdown-editor',
     }
 
     linkHandler () {
+      if (!this._quill.isEnabled()) {
+        return
+      }
+
       let range = this._quill.getSelection(true)
       const isLink = this._quill.getFormat(range).link !== undefined
       if (range.length === 0 && isLink) {
