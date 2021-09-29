@@ -173,9 +173,7 @@ view_ { translators } community =
                     Just _ ->
                         a
                             [ class "button button-primary w-full cursor-pointer"
-
-                            -- TODO - Use correct route
-                            , Route.href Route.Dashboard
+                            , Route.href Route.CommunitySettingsSponsorshipThankYouMessage
                             ]
                             [ text_ "sponsorship.cards.message.button_label" ]
                 )

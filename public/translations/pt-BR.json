@@ -1172,6 +1172,12 @@
       "how_to_change": "Se você precisa atualizar esta conta, entre em contato conosco através do canal de suporte no Slack",
       "accepted_currencies": "Qual moeda a comunidade vai aceitar?"
     },
+    "thank_you_message": {
+      "title": "Título da mensagem",
+      "default_title": "Obrigado por patrocinar esta comunidade!",
+      "message": "Mensagem",
+      "default_message": "Sua contribuição está ajudando sua comunidade a ser ainda mais impactante, você é demais!"
+    },
     "dashboard_modal": {
       "title": "Patrocine sua Comunidade",
       "subtitle": "Agora você pode patrocinar esta comunidade.",

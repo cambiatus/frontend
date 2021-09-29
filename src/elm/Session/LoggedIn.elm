@@ -221,6 +221,7 @@ type Page
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
+    | CommunitySettingsSponsorshipThankYouMessage
     | CommunityEditor
     | CommunitySelector
     | CommunityThankYou
