@@ -1139,6 +1139,26 @@
     "unknown_error": "There was an error processing your payment",
     "load_error": "There was a problem conecting to PayPal, please try again later",
     "contribution_error": "Something went wrong when setting up your contribution",
+    "guidance": "Guidance",
+    "guidance_description": "To activate this feature, ask for help on your Cambiatus Slack support channel",
+    "cards": {
+      "fiat": {
+        "title": "Types of currencies accepted",
+        "description": "Allow the community to accept USD or other fiat currency via PayPal",
+        "toggle_label": "Fiat money",
+        "settings": "Settings"
+      },
+      "crypto": {
+        "title": "Other currencies accepted",
+        "description": "Allow the community to accept cryptocurrency",
+        "toggle_label": "Cryptocurrency"
+      },
+      "message": {
+        "title": "\"Thank you\" message",
+        "description": "Edit the \"thank you\" message to fit your community",
+        "button_label": "Edit message"
+      }
+    },
     "dashboard_modal": {
       "title": "Sponsor your Community",
       "subtitle": "Now you can sponsor this community.",

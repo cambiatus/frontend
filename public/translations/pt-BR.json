@@ -1145,6 +1145,26 @@
     "unknown_error": "Houve um erro ao processar seu pagamento",
     "load_error": "Houve um problema ao conectar com o PayPal, por favor tente novamente mais tarde",
     "contribution_error": "Algo de errado aconteceu ao preparar sua contribuição",
+    "guidance": "Orientação",
+    "guidance_description": "Para ativar essa funcionalidade, peça ajuda no seu canal de suporte no Slack da Cambiatus",
+    "cards": {
+      "fiat": {
+        "title": "Tipos de moedas aceitas",
+        "description": "Permitir que a comunidade aceite USD ou outras moedas fiduciárias via PayPal",
+        "toggle_label": "Moedas fiduciárias",
+        "settings": "Configurações"
+      },
+      "crypto": {
+        "title": "Outras moedas aceitas",
+        "description": "Permitir que a comunidade aceite criptomoedas",
+        "toggle_label": "Criptomoedas"
+      },
+      "message": {
+        "title": "Mensagem de \"obrigado\"",
+        "description": "Configurar a mensagem de \"obrigado\" para combinar com sua comunidade",
+        "button_label": "Configurar mensagem"
+      }
+    },
     "dashboard_modal": {
       "title": "Patrocine sua Comunidade",
       "subtitle": "Agora você pode patrocinar esta comunidade.",

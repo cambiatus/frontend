@@ -98,12 +98,15 @@ view loggedIn _ =
 view_ : Shared -> Community.Model -> Html Msg
 view_ { translators } community =
     let
+        text_ =
+            translators.t >> text
+
         card : String -> String -> Html Msg -> Html Msg
         card title description bottomChild =
             div
                 [ class "bg-white rounded p-4" ]
-                [ h2 [ class "font-bold" ] [ text title ]
-                , p [ class "text-gray-900 mt-2 mb-4" ] [ text description ]
+                [ h2 [ class "font-bold" ] [ text_ title ]
+                , p [ class "text-gray-900 mt-2 mb-4" ] [ text_ description ]
                 , bottomChild
                 ]
     in
@@ -112,20 +115,19 @@ view_ { translators } community =
             Nothing ->
                 div [ class "bg-white" ]
                     [ div [ class "container mx-auto px-8 py-6" ]
-                        [ h2 [ class "font-bold" ] [ text "Guidance" ]
-                        , p [ class "text-gray-900" ] [ text "To activate this feature, ask for Cambiatus help on your Slack Support Channel" ]
+                        [ h2 [ class "font-bold" ] [ text_ "sponsorship.guidance" ]
+                        , p [ class "text-gray-900" ] [ text_ "sponsorship.guidance_description" ]
                         ]
                     ]
 
             Just _ ->
                 text ""
         , div [ class "container mx-auto px-4 mt-4 space-y-4" ]
-            -- TODO - I18N
-            [ card "Types of currencies accepted"
-                "Allow the community to accept USD or other fiat currency via PayPal"
+            [ card "sponsorship.cards.fiat.title"
+                "sponsorship.cards.fiat.description"
                 (div []
                     [ View.Form.Toggle.init
-                        { label = text "Fiat money"
+                        { label = text_ "sponsorship.cards.fiat.toggle_label"
                         , id = "fiat-money-toggle"
                         , onToggle = \_ -> NoOp
                         , disabled = True
@@ -146,13 +148,13 @@ view_ { translators } community =
                                 -- TODO - Use correct route
                                 , Route.href Route.Dashboard
                                 ]
-                                [ text "Settings" ]
+                                [ text_ "sponsorship.cards.fiat.settings" ]
                     ]
                 )
-            , card "Other currencies accepted"
-                "Allow the community to accept cryptocurrency"
+            , card "sponsorship.cards.crypto.title"
+                "sponsorship.cards.crypto.description"
                 (View.Form.Toggle.init
-                    { label = text "Cryptocurrency"
+                    { label = text_ "sponsorship.cards.crypto.toggle_label"
                     , id = "cryptocurrency-toggle"
                     , onToggle = \_ -> NoOp
                     , disabled = True
@@ -160,15 +162,15 @@ view_ { translators } community =
                     }
                     |> View.Form.Toggle.toHtml translators
                 )
-            , card "\"Thank You\" message"
-                "Edit the \"Thank you\" message to fit your community"
+            , card "sponsorship.cards.message.title"
+                "sponsorship.cards.message.description"
                 (case community.contributionConfiguration of
                     Nothing ->
                         button
                             [ class "button button-primary w-full"
                             , disabled True
                             ]
-                            [ text "Edit the message" ]
+                            [ text_ "sponsorship.cards.message.button_label" ]
 
                     Just _ ->
                         a
@@ -177,7 +179,7 @@ view_ { translators } community =
                             -- TODO - Use correct route
                             , Route.href Route.Dashboard
                             ]
-                            [ text "Edit the message" ]
+                            [ text_ "sponsorship.cards.message.button_label" ]
                 )
             ]
         ]
