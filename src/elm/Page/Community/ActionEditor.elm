@@ -79,16 +79,16 @@ type alias ActionId =
     Int
 
 
-init : LoggedIn.Model -> ObjectiveId -> Maybe ActionId -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> ObjectiveId -> Maybe ActionId -> UpdateResult
 init loggedIn objectiveId actionId =
-    ( { status = NotFound
-      , objectiveId = objectiveId
-      , actionId = actionId
-      , form = initForm loggedIn.shared
-      , multiSelectState = Select.newState ""
-      }
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-    )
+    { status = Loading
+    , objectiveId = objectiveId
+    , actionId = actionId
+    , form = initForm loggedIn.shared
+    , multiSelectState = Select.newState ""
+    }
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
 
 
 
@@ -106,6 +106,7 @@ type alias Model =
 
 type Status
     = Authorized
+    | Loading
     | NotFound
     | Unauthorized
 
@@ -473,7 +474,7 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | CompletedLoadCommunity Community.Model
+    | CompletedLoadObjectives Community.Model (List Community.Objective)
     | ClosedAuthModal
     | OnSelectVerifier (Maybe Profile.Minimal)
     | OnRemoveVerifier Profile.Minimal
@@ -559,37 +560,17 @@ update msg model ({ shared } as loggedIn) =
         NoOp ->
             UR.init model
 
-        CompletedLoadCommunity community ->
+        CompletedLoadObjectives community objectives ->
             if community.creator == loggedIn.accountName then
-                -- Check the action belongs to the objective
                 let
                     maybeObjective =
-                        List.filterMap
-                            (\o ->
-                                if o.id == model.objectiveId then
-                                    Just o
-
-                                else
-                                    Nothing
-                            )
-                            community.objectives
-                            |> List.head
+                        List.find (.id >> (==) model.objectiveId) objectives
                 in
                 case ( maybeObjective, model.actionId ) of
                     ( Just objective, Just actionId ) ->
-                        -- Edit form
                         let
                             maybeAction =
-                                List.filterMap
-                                    (\a ->
-                                        if a.id == actionId then
-                                            Just a
-
-                                        else
-                                            Nothing
-                                    )
-                                    objective.actions
-                                    |> List.head
+                                List.find (.id >> (==) actionId) objective.actions
                         in
                         case maybeAction of
                             Just action ->
@@ -1032,7 +1013,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
@@ -1271,6 +1252,9 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageLoading shared
 
                 ( RemoteData.NotAsked, _ ) ->
+                    Page.fullPageLoading shared
+
+                ( _, Loading ) ->
                     Page.fullPageLoading shared
 
                 ( RemoteData.Success community, Authorized ) ->
@@ -1864,8 +1848,8 @@ subscriptions model =
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
-        LoggedIn.CommunityLoaded community ->
-            Just (CompletedLoadCommunity community)
+        LoggedIn.CommunityFieldLoaded community (Community.ObjectivesValue objectives) ->
+            Just (CompletedLoadObjectives community objectives)
 
         _ ->
             Nothing
@@ -1896,8 +1880,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedLoadCommunity _ ->
-            [ "CompletedLoadCommunity" ]
+        CompletedLoadObjectives _ _ ->
+            [ "CompletedLoadObjectives" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

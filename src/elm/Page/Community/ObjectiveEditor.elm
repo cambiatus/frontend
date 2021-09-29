@@ -112,6 +112,7 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
+    | CompletedLoadObjectives (List Community.Objective)
     | ClosedAuthModal
     | GotDescriptionEditorMsg MarkdownEditor.Msg
     | ClickedSaveObjective
@@ -393,25 +394,10 @@ update msg model loggedIn =
             if community.creator == loggedIn.accountName then
                 if model.status == Loading then
                     case model.objectiveId of
-                        Just objectiveId ->
-                            case List.find (\o -> o.id == objectiveId) community.objectives of
-                                Just objective ->
-                                    { model
-                                        | status =
-                                            Editing
-                                                |> EditingObjective objective
-                                                    { description =
-                                                        MarkdownEditor.init "objective-description"
-                                                            |> MarkdownEditor.setContents objective.description
-                                                    , isCompleted = objective.isCompleted
-                                                    }
-                                                |> Authorized
-                                    }
-                                        |> UR.init
-
-                                Nothing ->
-                                    { model | status = NotFound }
-                                        |> UR.init
+                        Just _ ->
+                            model
+                                |> UR.init
+                                |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
 
                         Nothing ->
                             { model
@@ -428,6 +414,37 @@ update msg model loggedIn =
             else
                 { model | status = Unauthorized }
                     |> UR.init
+
+        CompletedLoadObjectives objectives ->
+            case model.objectiveId of
+                Nothing ->
+                    { model
+                        | status =
+                            Creating
+                                |> CreatingObjective initObjectiveForm
+                                |> Authorized
+                    }
+                        |> UR.init
+
+                Just objectiveId ->
+                    case List.find (.id >> (==) objectiveId) objectives of
+                        Nothing ->
+                            { model | status = NotFound }
+                                |> UR.init
+
+                        Just objective ->
+                            { model
+                                | status =
+                                    Editing
+                                        |> EditingObjective objective
+                                            { description =
+                                                MarkdownEditor.init "objective-description"
+                                                    |> MarkdownEditor.setContents objective.description
+                                            , isCompleted = objective.isCompleted
+                                            }
+                                        |> Authorized
+                            }
+                                |> UR.init
 
         ClosedAuthModal ->
             case model.status of
@@ -688,8 +705,6 @@ update msg model loggedIn =
                                         , level = Log.Warning
                                         }
 
-                -- =======
-                -- >>>>>>> master
                 _ ->
                     model
                         |> UR.init
@@ -786,7 +801,7 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.objectives.create_success"))
                 -- TODO - This only works sometimes
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
 
         GotSaveObjectiveResponse (Err v) ->
@@ -897,6 +912,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.ObjectivesValue objectives) ->
+            Just (CompletedLoadObjectives objectives)
+
         _ ->
             Nothing
 
@@ -938,6 +956,9 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadObjectives _ ->
+            [ "CompletedLoadObjectives" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

@@ -887,8 +887,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                                 )
                                 updateResult.afterAuthMsg
                       }
-                    , Cmd.map toMsg updateResult.externalCmd
-                        :: Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
+                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
                         :: broadcastCmd
                         :: cmds_
                     )
@@ -1315,7 +1314,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.Community ->
             (\l -> CommunityPage.init l)
-                >> updateStatusWith Community GotCommunityMsg model
+                >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn Route.Community
 
         Just Route.CommunitySettings ->
@@ -1395,12 +1394,12 @@ changeRouteTo maybeRoute model =
 
         Just (Route.NewAction objectiveId) ->
             (\l -> ActionEditor.init l objectiveId Nothing)
-                >> updateStatusWith ActionEditor GotActionEditorMsg model
+                >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.NewAction objectiveId)
 
         Just (Route.EditAction objectiveId actionId) ->
             (\l -> ActionEditor.init l objectiveId (Just actionId))
-                >> updateStatusWith ActionEditor GotActionEditorMsg model
+                >> updateLoggedInUResult ActionEditor GotActionEditorMsg model
                 |> withLoggedIn (Route.EditAction objectiveId actionId)
 
         Just (Route.Claim objectiveId actionId claimId) ->

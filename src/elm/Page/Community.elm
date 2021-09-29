@@ -24,7 +24,6 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
-import Task
 import Time exposing (Posix, posixToMillis)
 import Token
 import UpdateResult as UR
@@ -37,11 +36,11 @@ import View.MarkdownEditor
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> UpdateResult
 init loggedIn =
-    ( initModel loggedIn
-    , Task.succeed RequestedReloadCommunity |> Task.perform identity
-    )
+    initModel loggedIn
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -85,6 +84,17 @@ view loggedIn model =
                 _ ->
                     t "community.not_found"
 
+        objectivesContainer children =
+            div [ class "px-4 pb-4" ]
+                [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                    children
+                ]
+
+        viewLoading =
+            objectivesContainer
+                [ View.Components.loadingLogoAnimated loggedIn.shared.translators ""
+                ]
+
         content =
             case loggedIn.selectedCommunity of
                 RemoteData.Loading ->
@@ -114,13 +124,28 @@ view loggedIn model =
                             ]
                         , div [ class "container mx-auto" ]
                             [ if community.hasObjectives then
-                                div [ class "px-4 pb-4" ]
-                                    [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                        (Page.viewTitle (t "community.objectives.title_plural")
-                                            :: List.indexedMap (viewObjective loggedIn model community)
-                                                community.objectives
-                                        )
-                                    ]
+                                case community.objectives of
+                                    RemoteData.Success objectives ->
+                                        objectivesContainer
+                                            (Page.viewTitle (t "community.objectives.title_plural")
+                                                :: List.indexedMap (viewObjective loggedIn model community)
+                                                    objectives
+                                            )
+
+                                    RemoteData.Loading ->
+                                        viewLoading
+
+                                    RemoteData.NotAsked ->
+                                        viewLoading
+
+                                    RemoteData.Failure err ->
+                                        objectivesContainer
+                                            [ div [ class "w-full" ]
+                                                [ p [ class "text-2xl font-bold text-center" ] [ text (t "community.objectives.error_loading") ]
+                                                , p [ class "text-center" ] [ text (Utils.errorToString err) ]
+                                                ]
+                                            , img [ class "w-1/3 mx-auto", src "/images/error.svg" ] []
+                                            ]
 
                               else
                                 text ""
@@ -221,7 +246,7 @@ viewCommunityStats { t, tr } community model =
             RemoteData.isSuccess model.tokenInfo
     in
     div
-        [ class "container mx-auto px-4 mb-4 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3"
+        [ class "container mx-auto px-4 my-4 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
         , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
         [ case model.tokenInfo of
@@ -402,7 +427,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | RequestedReloadCommunity
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
@@ -416,10 +440,6 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        RequestedReloadCommunity ->
-            UR.init model
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -471,9 +491,6 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
-
-        RequestedReloadCommunity ->
-            [ "RequestedReloadCommunity" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]

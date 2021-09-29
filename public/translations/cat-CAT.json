@@ -522,6 +522,7 @@
       "action_count": "{{actions}} accions",
       "complete": "Completat",
       "edit": "Edita l'objectiu",
+      "error_loading": "S'ha produït un error en carregar els objectius",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
