@@ -2,6 +2,7 @@ module Community exposing
     ( Balance
     , CommunityPreview
     , Contribution
+    , ContributionConfiguration
     , CreateCommunityData
     , CreateCommunityDataInput
     , Field(..)

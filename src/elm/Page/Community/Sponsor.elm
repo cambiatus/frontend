@@ -1,4 +1,4 @@
-module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, subscriptions, update, view)
+module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, receiveBroadcast, subscriptions, update, view)
 
 import Api.Graphql
 import Browser.Dom
@@ -16,6 +16,7 @@ import Html exposing (Html, div, h1, img, label, text)
 import Html.Attributes exposing (class, for, src)
 import Log
 import Mask
+import Maybe.Extra
 import Page
 import Ports
 import RemoteData exposing (RemoteData)
@@ -42,12 +43,15 @@ type alias Model =
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
+init loggedIn =
     ( { amount = ""
       , amountProblem = Nothing
       , isCreatingOrder = False
       }
-    , focusAmountField
+    , Cmd.batch
+        [ focusAmountField
+        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+        ]
     )
 
 
@@ -75,6 +79,7 @@ type AmountProblem
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity Community.Model
     | EnteredAmount String
     | RequestedPaypalInfoFromJs String
     | CreatedContribution String (RemoteData (Graphql.Http.Error (Maybe Contribution)) (Maybe Contribution))
@@ -92,6 +97,18 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        CompletedLoadCommunity community ->
+            let
+                maybeRedirect =
+                    if Maybe.Extra.isJust community.contributionConfiguration then
+                        identity
+
+                    else
+                        UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
+            in
+            UR.init model
+                |> maybeRedirect
 
         EnteredAmount amount ->
             { model
@@ -140,7 +157,7 @@ update msg model loggedIn =
                                         (createContributionSelectionSet
                                             { amount = amount
                                             , communityId = community.symbol
-                                            , currency = currencyType loggedIn.shared
+                                            , currency = getCurrency community.contributionConfiguration loggedIn.shared
                                             }
                                         )
                                         (CreatedContribution id)
@@ -267,8 +284,8 @@ amountFieldId =
     "sponsor-amount-input"
 
 
-paypalCurrency : Shared -> PaypalButtons.Currency
-paypalCurrency shared =
+defaultPaypalCurrency : Shared -> PaypalButtons.Currency
+defaultPaypalCurrency shared =
     case shared.environment of
         Shared.Development ->
             PaypalButtons.BRL
@@ -283,8 +300,8 @@ paypalCurrency shared =
             PaypalButtons.USD
 
 
-currencyType : Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
-currencyType shared =
+defaultCurrencyType : Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
+defaultCurrencyType shared =
     case shared.environment of
         Shared.Development ->
             Cambiatus.Enum.CurrencyType.Brl
@@ -297,6 +314,44 @@ currencyType shared =
 
         Shared.Production ->
             Cambiatus.Enum.CurrencyType.Usd
+
+
+getCurrency : Maybe Community.ContributionConfiguration -> Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
+getCurrency maybeConfig shared =
+    maybeConfig
+        |> Maybe.map .acceptedCurrencies
+        |> Maybe.andThen List.head
+        |> Maybe.withDefault (defaultCurrencyType shared)
+
+
+getPaypalCurrency : Maybe Community.ContributionConfiguration -> Shared -> PaypalButtons.Currency
+getPaypalCurrency maybeConfig shared =
+    maybeConfig
+        |> Maybe.map (.acceptedCurrencies >> List.filterMap toPaypalCurrency)
+        |> Maybe.andThen List.head
+        |> Maybe.withDefault (defaultPaypalCurrency shared)
+
+
+toPaypalCurrency : Cambiatus.Enum.CurrencyType.CurrencyType -> Maybe PaypalButtons.Currency
+toPaypalCurrency currencyType =
+    case currencyType of
+        Cambiatus.Enum.CurrencyType.Brl ->
+            Just PaypalButtons.BRL
+
+        Cambiatus.Enum.CurrencyType.Btc ->
+            Nothing
+
+        Cambiatus.Enum.CurrencyType.Crc ->
+            Nothing
+
+        Cambiatus.Enum.CurrencyType.Eos ->
+            Nothing
+
+        Cambiatus.Enum.CurrencyType.Eth ->
+            Nothing
+
+        Cambiatus.Enum.CurrencyType.Usd ->
+            Just PaypalButtons.USD
 
 
 
@@ -357,13 +412,19 @@ view_ ({ translators } as shared) community model =
                     , problems =
                         model.amountProblem
                             |> Maybe.map
-                                (amountProblemToString translators (paypalCurrency shared)
+                                (amountProblemToString translators
+                                    (getPaypalCurrency community.contributionConfiguration
+                                        shared
+                                    )
                                     >> List.singleton
                                 )
                     , translators = translators
                     }
                     |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                    |> Input.withCurrency (PaypalButtons.currencyToSymbol (paypalCurrency shared))
+                    |> Input.withCurrency
+                        (PaypalButtons.currencyToSymbol
+                            (getPaypalCurrency community.contributionConfiguration shared)
+                        )
                     |> Input.toHtml
                 , PaypalButtons.view [ class "w-full lg:w-2/3" ]
                     { id = "sponsorship-paypal-buttons"
@@ -382,7 +443,7 @@ view_ ({ translators } as shared) community model =
                                     else
                                         Just amount
                                 )
-                    , currency = paypalCurrency shared
+                    , currency = getPaypalCurrency community.contributionConfiguration shared
                     , onApprove = PaypalApproved
                     , onCancel = PaypalCanceled
                     , onError = PaypalErrored
@@ -440,6 +501,16 @@ createContributionSelectionSet { amount, communityId, currency } =
 -- UTILS
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
 focusAmountField : Cmd Msg
 focusAmountField =
     Browser.Dom.focus amountFieldId
@@ -451,6 +522,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
 
         EnteredAmount _ ->
             [ "EnteredAmount" ]
