@@ -445,7 +445,7 @@ viewClaimCard loggedIn profileSummaries claim =
 
         claimAgingText =
             if claimAging < 1 then
-                ""
+                t "claim.opened_today"
 
             else if claimAging == 1 then
                 tr "claim.day_ago" [ ( "day_count", String.fromInt claimAging ) ]

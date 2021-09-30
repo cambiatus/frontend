@@ -905,6 +905,7 @@
     },
     "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
     "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
+    "opened_today": "Opened today",
     "day_ago": "Opened {{day_count}} day ago",
     "days_ago": "Opened {{day_count}} days ago",
     "vote": "vote",
