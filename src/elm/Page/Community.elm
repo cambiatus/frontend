@@ -14,10 +14,11 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
 import Html exposing (Html, a, button, div, h2, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, id, src)
+import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import List.Extra
 import Log
 import Page
 import RemoteData exposing (RemoteData)
@@ -41,6 +42,7 @@ init loggedIn =
     initModel loggedIn
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -173,8 +175,37 @@ viewSponsorCards loggedIn community =
             text << t
 
         hasContributed =
-            community.contributions
-                |> List.any (\contribution -> contribution.user.account == loggedIn.accountName)
+            case LoggedIn.profile loggedIn of
+                Nothing ->
+                    False
+
+                Just p ->
+                    p.contributionCount > 0
+
+        compareAvatars first second =
+            case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of
+                ( Just _, Just _ ) ->
+                    EQ
+
+                ( Just _, Nothing ) ->
+                    LT
+
+                ( Nothing, Just _ ) ->
+                    GT
+
+                ( Nothing, Nothing ) ->
+                    EQ
+
+        viewLoading =
+            List.range 0 5
+                |> List.map
+                    (\index ->
+                        div
+                            [ class "w-14 h-14 rounded-full -mr-2 border border-white bg-gray-300 animate-skeleton-loading"
+                            , style "animation-delay" (String.fromInt (index * 100) ++ "ms")
+                            ]
+                            []
+                    )
     in
     div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
         [ div [ class "w-full bg-white rounded p-4" ]
@@ -204,12 +235,23 @@ viewSponsorCards loggedIn community =
                 [ text_ "community.index.support_us" ]
             , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
             , div [ class "flex mb-4" ]
-                (community.contributions
-                    |> List.take 5
-                    |> List.map
-                        (\contribution ->
-                            Avatar.view contribution.user.avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white"
-                        )
+                (case community.contributions of
+                    RemoteData.Success contributions ->
+                        contributions
+                            |> List.map (.user >> .avatar)
+                            |> List.Extra.unique
+                            |> List.sortWith compareAvatars
+                            |> List.take 5
+                            |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white")
+
+                    RemoteData.Loading ->
+                        viewLoading
+
+                    RemoteData.NotAsked ->
+                        viewLoading
+
+                    RemoteData.Failure _ ->
+                        []
                 )
             , a
                 [ class "button button-secondary w-full"

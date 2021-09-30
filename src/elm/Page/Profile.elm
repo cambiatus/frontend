@@ -82,7 +82,7 @@ type alias Model =
 -- INIT
 
 
-init : LoggedIn.Model -> Eos.Name -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Eos.Name -> UpdateResult
 init loggedIn profileName =
     let
         fetchProfile =
@@ -98,31 +98,30 @@ init loggedIn profileName =
                     (Profile.query profileName)
                     CompletedLoadProfile
     in
-    ( { profileName = profileName
-      , profile = RemoteData.Loading
-      , balance = RemoteData.Loading
-      , graphqlInfo = RemoteData.Loading
-      , contributionInfo = Nothing
-      , transfersStatus = Loading []
-      , isDeleteKycModalVisible = False
-      , downloadingPdfStatus = NotDownloading
-      , isNewPinModalVisible = False
-      , pinInputModel =
-            Pin.init
-                { label = "profile.newPin"
-                , id = "new-pin-input"
-                , withConfirmation = False
-                , submitLabel = "profile.pin.button"
-                , submittingLabel = "profile.pin.button"
-                , pinVisibility = loggedIn.shared.pinVisibility
-                }
-      , currentPin = Nothing
-      }
-    , Cmd.batch
-        [ fetchProfile
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
-    )
+    { profileName = profileName
+    , profile = RemoteData.Loading
+    , balance = RemoteData.Loading
+    , graphqlInfo = RemoteData.Loading
+    , contributionInfo = Nothing
+    , transfersStatus = Loading []
+    , isDeleteKycModalVisible = False
+    , downloadingPdfStatus = NotDownloading
+    , isNewPinModalVisible = False
+    , pinInputModel =
+        Pin.init
+            { label = "profile.newPin"
+            , id = "new-pin-input"
+            , withConfirmation = False
+            , submitLabel = "profile.pin.button"
+            , submittingLabel = "profile.pin.button"
+            , pinVisibility = loggedIn.shared.pinVisibility
+            }
+    , currentPin = Nothing
+    }
+        |> UR.init
+        |> UR.addCmd fetchProfile
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 
@@ -187,6 +186,7 @@ type Msg
     = Ignored
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadContributions (List Community.Contribution)
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
@@ -269,24 +269,8 @@ update msg model loggedIn =
                                 Err error ->
                                     CompletedLoadBalance (Err (ResultWithError error))
                         )
-
-                contributionInfo : Maybe ContributionInfo
-                contributionInfo =
-                    community.contributions
-                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
-                        |> (\contributions ->
-                                List.head contributions
-                                    |> Maybe.map
-                                        (\contribution ->
-                                            { amount =
-                                                List.map .amount contributions
-                                                    |> List.sum
-                                            , currency = contribution.currency
-                                            }
-                                        )
-                           )
             in
-            { model | contributionInfo = contributionInfo }
+            model
                 |> UR.init
                 |> UR.addCmd fetchBalance
                 |> UR.addCmd
@@ -296,6 +280,27 @@ update msg model loggedIn =
                         CompletedLoadGraphqlInfo
                     )
                 |> UR.addCmd (fetchTransfers loggedIn community Nothing)
+
+        CompletedLoadContributions contributions ->
+            let
+                userContributions =
+                    contributions
+                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
+
+                contributionInfo : Maybe ContributionInfo
+                contributionInfo =
+                    case userContributions of
+                        [] ->
+                            Nothing
+
+                        first :: rest ->
+                            Just
+                                { amount = List.map .amount (first :: rest) |> List.sum
+                                , currency = first.currency
+                                }
+            in
+            { model | contributionInfo = contributionInfo }
+                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             { model
@@ -1398,6 +1403,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.ContributionsValue contributions) ->
+            Just (CompletedLoadContributions contributions)
+
         _ ->
             Nothing
 
@@ -1428,6 +1436,9 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadContributions _ ->
+            [ "CompletedLoadContributions" ]
 
         CompletedLoadBalance r ->
             [ "CompletedLoadBalance", UR.resultToString r ]

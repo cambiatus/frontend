@@ -1279,12 +1279,12 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Profile profileName) ->
             (\loggedIn -> Profile.init loggedIn profileName)
-                >> updateStatusWith Profile GotProfileMsg model
+                >> updateLoggedInUResult Profile GotProfileMsg model
                 |> withLoggedIn (Route.Profile profileName)
 
         Just (Route.ProfileContributions profileName) ->
-            (\_ -> ( ProfileContributions.init profileName, Cmd.none ))
-                >> updateStatusWith ProfileContributions identity model
+            (\_ -> ProfileContributions.init profileName)
+                >> updateLoggedInUResult ProfileContributions (\_ -> Ignored) model
                 |> withLoggedIn (Route.ProfileContributions profileName)
 
         Just Route.ProfileEditor ->
@@ -1369,7 +1369,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunitySupporters ->
             CommunitySupporters.init
-                >> updateStatusWith CommunitySupporters GotCommunitySupportersMsg model
+                >> updateLoggedInUResult CommunitySupporters GotCommunitySupportersMsg model
                 |> withLoggedIn Route.CommunitySupporters
 
         Just Route.NewCommunity ->

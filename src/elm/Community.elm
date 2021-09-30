@@ -115,7 +115,7 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
-    , contributions : List Contribution
+    , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
     , contributionConfiguration : Maybe ContributionConfiguration
     , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
@@ -159,7 +159,8 @@ variants they can use to do so:
 
 -}
 type Field
-    = ObjectivesField
+    = ContributionsField
+    | ObjectivesField
     | UploadsField
 
 
@@ -169,7 +170,8 @@ constructor's name should be the name of the field followed by `Value`, and
 should hold the actual value of that field (e.g. `ObjectivesValue (List Objetive)`).
 -}
 type FieldValue
-    = ObjectivesValue (List Objective)
+    = ContributionsValue (List Contribution)
+    | ObjectivesValue (List Objective)
     | UploadsValue (List String)
 
 
@@ -200,6 +202,9 @@ getField remoteDataModel accessor =
 setFieldValue : FieldValue -> Model -> Model
 setFieldValue fieldValue model =
     case fieldValue of
+        ContributionsValue contributions ->
+            { model | contributions = RemoteData.Success contributions }
+
         ObjectivesValue objectives ->
             { model | objectives = RemoteData.Success objectives }
 
@@ -210,6 +215,9 @@ setFieldValue fieldValue model =
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
     case field of
+        ContributionsField ->
+            { model | contributions = RemoteData.Loading }
+
         ObjectivesField ->
             { model | objectives = RemoteData.Loading }
 
@@ -220,6 +228,9 @@ setFieldAsLoading field model =
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
     case field of
+        ContributionsField ->
+            RemoteData.isLoading model.contributions
+
         ObjectivesField ->
             RemoteData.isLoading model.objectives
 
@@ -230,6 +241,11 @@ isFieldLoading field model =
 maybeFieldValue : Field -> Model -> Maybe FieldValue
 maybeFieldValue field model =
     case field of
+        ContributionsField ->
+            model.contributions
+                |> RemoteData.toMaybe
+                |> Maybe.map ContributionsValue
+
         ObjectivesField ->
             model.objectives
                 |> RemoteData.toMaybe
@@ -289,7 +305,7 @@ communitySelectionSet =
         |> with Community.productCount
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
-        |> with (Community.contributions contributionSelectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
@@ -328,6 +344,10 @@ newCommunitySubscription symbol =
 selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Community
 selectionSetForField field =
     case field of
+        ContributionsField ->
+            Community.contributions contributionSelectionSet
+                |> SelectionSet.map ContributionsValue
+
         ObjectivesField ->
             Community.objectives objectiveSelectionSet
                 |> SelectionSet.map ObjectivesValue

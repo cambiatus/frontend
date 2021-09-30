@@ -10,6 +10,7 @@ import Page
 import RemoteData
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
+import UpdateResult as UR
 import Utils
 import View.Components
 
@@ -22,9 +23,23 @@ type alias Model =
     { profileName : Eos.Account.Name }
 
 
-init : Eos.Account.Name -> Model
+init : Eos.Account.Name -> UpdateResult
 init profileName =
     { profileName = profileName }
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+
+
+
+-- TYPES
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
+
+
+type alias Msg =
+    ()
 
 
 
@@ -43,12 +58,12 @@ view loggedIn model =
                     [ ( "profile_name", Eos.Account.nameToString model.profileName ) ]
 
         content =
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
+            case Community.getField loggedIn.selectedCommunity .contributions of
+                RemoteData.Success ( community, contributions ) ->
                     if loggedIn.accountName == model.profileName || loggedIn.accountName == community.creator then
                         let
                             profileContributions =
-                                community.contributions
+                                contributions
                                     |> List.filter (\contribution -> contribution.user.account == model.profileName)
                         in
                         view_ loggedIn profileContributions title
@@ -64,7 +79,10 @@ view loggedIn model =
                 RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                RemoteData.Failure err ->
+                RemoteData.Failure (Community.CommunityError err) ->
+                    Page.fullPageGraphQLError title err
+
+                RemoteData.Failure (Community.FieldError err) ->
                     Page.fullPageGraphQLError title err
     in
     { title = title

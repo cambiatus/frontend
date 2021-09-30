@@ -27,16 +27,15 @@ type alias Model =
     { profileSummaries : List Profile.Summary.Model }
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init loggedIn =
-    ( { profileSummaries = []
-      }
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , Browser.Dom.setViewport 0 0
-            |> Task.perform (\_ -> NoOp)
-        ]
-    )
+init : LoggedIn.Model -> UpdateResult
+init _ =
+    { profileSummaries = [] }
+        |> UR.init
+        |> UR.addCmd
+            (Browser.Dom.setViewport 0 0
+                |> Task.perform (\_ -> NoOp)
+            )
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 
@@ -45,7 +44,7 @@ init loggedIn =
 
 type Msg
     = NoOp
-    | CompletedLoadCommunity Community.Model
+    | CompletedLoadContributions (List Community.Contribution)
     | GotProfileSummaryMsg Int Profile.Summary.Msg
 
 
@@ -63,10 +62,10 @@ update msg model _ =
         NoOp ->
             UR.init model
 
-        CompletedLoadCommunity community ->
+        CompletedLoadContributions contributions ->
             { model
                 | profileSummaries =
-                    List.length community.contributions
+                    List.length contributions
                         |> Profile.Summary.initMany False
             }
                 |> UR.init
@@ -93,9 +92,9 @@ view loggedIn model =
         content =
             div [ class "flex flex-col flex-grow" ]
                 [ Page.viewHeader loggedIn title
-                , case loggedIn.selectedCommunity of
-                    RemoteData.Success community ->
-                        view_ loggedIn community model
+                , case Community.getField loggedIn.selectedCommunity .contributions of
+                    RemoteData.Success ( _, contributions ) ->
+                        view_ loggedIn contributions model
 
                     RemoteData.Loading ->
                         Page.fullPageLoading loggedIn.shared
@@ -103,7 +102,10 @@ view loggedIn model =
                     RemoteData.NotAsked ->
                         Page.fullPageLoading loggedIn.shared
 
-                    RemoteData.Failure error ->
+                    RemoteData.Failure (Community.CommunityError error) ->
+                        Page.fullPageGraphQLError title error
+
+                    RemoteData.Failure (Community.FieldError error) ->
                         Page.fullPageGraphQLError title error
                 ]
     in
@@ -112,8 +114,8 @@ view loggedIn model =
     }
 
 
-view_ : LoggedIn.Model -> Community.Model -> Model -> Html Msg
-view_ loggedIn community model =
+view_ : LoggedIn.Model -> List Community.Contribution -> Model -> Html Msg
+view_ loggedIn contributions model =
     let
         { t } =
             loggedIn.shared.translators
@@ -128,7 +130,7 @@ view_ loggedIn community model =
             ]
         , div [ class "w-full bg-white flex-grow pt-5" ]
             [ ul [ class "container mx-auto px-4 space-y-4" ]
-                (community.contributions
+                (contributions
                     |> List.Extra.groupWhile
                         (\c1 c2 ->
                             Utils.areSameDay loggedIn.shared.timezone
@@ -210,8 +212,8 @@ viewSupporter loggedIn index profileSummary profile =
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
-        LoggedIn.CommunityLoaded community ->
-            Just (CompletedLoadCommunity community)
+        LoggedIn.CommunityFieldLoaded _ (Community.ContributionsValue contributions) ->
+            Just (CompletedLoadContributions contributions)
 
         _ ->
             Nothing
@@ -223,8 +225,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedLoadCommunity _ ->
-            [ "CompletedLoadCommunity" ]
+        CompletedLoadContributions _ ->
+            [ "CompletedLoadContributions" ]
 
         GotProfileSummaryMsg _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
