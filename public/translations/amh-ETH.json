@@ -894,6 +894,12 @@
     "approve": "አጸድቅ",
     "no_results_found": "ምላሽ አልተገኘም",
     "voteTitle": "ይህን ተግበር አጸድቀዋል ወይም አላጸደቁም?",
+    "cancelled_texts": {
+      "cancelled_claim": "የይገባኛል ጥያቄ ተሰር .ል",
+      "was_cancelled": "ይህ የይገባኛል ጥያቄ ተሰር .ል",
+      "max_date": "ተጓዳኝ እርምጃው የተጠናቀቀው የተወሰነ ቀን ስለደረሰ ነው",
+      "not_available": "ስለዚህ የይገባኛል ጥያቄው ከአሁን በኋላ ለድምጽ አይሰጥም"
+    },
     "modal": {
       "title": "እየታየ ነዉ",
       "message_disapprove": "ይህን ተግባር ለማጽደቅ አይፈልጉም?",

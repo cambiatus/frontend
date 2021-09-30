@@ -933,6 +933,12 @@
     "approve": "Approve",
     "no_results_found": "No results found",
     "voteTitle": "Do you approve or disapprove of this action?",
+    "cancelled_texts": {
+      "cancelled_claim": "Cancelled claim",
+      "was_cancelled": "This claim was cancelled",
+      "max_date": "The corresponding action was completed because it reached it's due date",
+      "not_available": "Therefore, the claim is not open for votes anymore"
+    },
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",

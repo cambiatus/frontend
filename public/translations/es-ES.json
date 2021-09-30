@@ -936,6 +936,12 @@
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
     "voteTitle": "¿Aprueba o desaprueba esta acción?",
+    "cancelled_texts": {
+      "cancelled_claim": "Reclamo cancelado",
+      "was_cancelled": "Este reclamo ha sido cancelado",
+      "max_date": "La acción correspondiente se completó porque llegó a la fecha específica",
+      "not_available": "Por lo tanto, el reclamo ya no está disponible para votar"
+    },
     "modal": {
       "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",

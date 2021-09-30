@@ -407,6 +407,14 @@ viewClaimCard loggedIn profileSummaries claim =
             , claimStatus = claim.status
             }
 
+        isCancelled =
+            case claim.status of
+                Cancelled ->
+                    True
+
+                _ ->
+                    False
+
         claimAging =
             let
                 createdAtDate =
@@ -435,7 +443,7 @@ viewClaimCard loggedIn profileSummaries claim =
             , Utils.onClickNoBubble (GotExternalMsg OpenClaimModal)
             ]
             [ div
-                [ class "flex mb-8"
+                [ class "flex mb-4"
                 , case claim.proofPhoto of
                     Just _ ->
                         class "justify-between"
@@ -461,20 +469,38 @@ viewClaimCard loggedIn profileSummaries claim =
                     Nothing ->
                         text ""
                 ]
-            , div [ class "mb-6" ]
-                [ View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2" ]
-                    claim.action.description
-                , div [ class "flex w-full" ]
-                    [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
-                        identity
-                        loggedIn.shared
-                        (Utils.fromDateTime claim.createdAt)
-                    , p
-                        [ class "ml-auto text-purple-500 text-caption uppercase" ]
-                        [ text claimAgingText ]
-                    ]
-                ]
-            , viewVotingProgress loggedIn.shared completionStatus
+            , if isCancelled then
+                -- TODO - Use new typography classes (#622)
+                span [ class "bg-gray-900 text-white font-bold uppercase text-[12px] py-1 px-5 rounded-label self-center" ]
+                    [ text (t "claim.cancelled_texts.cancelled_claim") ]
+
+              else
+                -- TODO - Use new typography classes (#622)
+                span [ class "text-purple-500 font-bold uppercase text-[12px] self-center" ]
+                    [ text "Opened 10 days ago" ]
+            , View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2 mt-6" ]
+                claim.action.description
+
+            -- TODO - Use new typography classes (#622)
+            , View.Components.dateViewer [ class "text-gray-900 font-bold text-[12px] uppercase flex mb-6" ]
+                identity
+                loggedIn.shared
+                (Utils.fromDateTime claim.createdAt)
+            , case claim.status of
+                Cancelled ->
+                    p [ class "bg-gray-900 rounded p-4 text-white mb-6" ]
+                        ([ "claim.cancelled_texts.was_cancelled"
+                         , "claim.cancelled_texts.max_date"
+                         , "claim.cancelled_texts.not_available"
+                         ]
+                            |> List.map t
+                            |> String.join ". "
+                            |> text
+                            |> List.singleton
+                        )
+
+                _ ->
+                    viewVotingProgress loggedIn.shared completionStatus
             , if
                 isValidated claim loggedIn.accountName
                     || not (isValidator loggedIn.accountName claim)
