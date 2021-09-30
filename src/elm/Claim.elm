@@ -79,7 +79,13 @@ type ClaimStatus
     = Approved
     | Rejected
     | Pending
-    | Cancelled
+    | Cancelled CancelReason
+
+
+type CancelReason
+    = DeadlineReached
+    | UsagesReached
+    | ActionCompleted
 
 
 type alias ClaimId =
@@ -174,23 +180,23 @@ type alias Paginated =
     }
 
 
-claimPaginatedSelectionSet : SelectionSet Paginated Cambiatus.Object.ClaimConnection
-claimPaginatedSelectionSet =
+claimPaginatedSelectionSet : Time.Posix -> SelectionSet Paginated Cambiatus.Object.ClaimConnection
+claimPaginatedSelectionSet now =
     SelectionSet.succeed Paginated
-        |> with (Cambiatus.Object.ClaimConnection.edges claimEdgeSelectionSet)
+        |> with (Cambiatus.Object.ClaimConnection.edges (claimEdgeSelectionSet now))
         |> with (Cambiatus.Object.ClaimConnection.pageInfo Relay.pageInfoSelectionSet)
         |> with Cambiatus.Object.ClaimConnection.count
 
 
-claimEdgeSelectionSet : SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
-claimEdgeSelectionSet =
+claimEdgeSelectionSet : Time.Posix -> SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
+claimEdgeSelectionSet now =
     SelectionSet.succeed Relay.Edge
         |> with Cambiatus.Object.ClaimEdge.cursor
-        |> with (Cambiatus.Object.ClaimEdge.node selectionSet)
+        |> with (Cambiatus.Object.ClaimEdge.node (selectionSet now))
 
 
-selectionSet : SelectionSet Model Cambiatus.Object.Claim
-selectionSet =
+selectionSet : Time.Posix -> SelectionSet Model Cambiatus.Object.Claim
+selectionSet now =
     SelectionSet.succeed Model
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
@@ -205,10 +211,22 @@ selectionSet =
                 case claim.status of
                     Pending ->
                         if claim.action.isCompleted then
-                            { claim | status = Cancelled }
+                            { claim | status = Cancelled ActionCompleted }
+
+                        else if claim.action.usagesLeft == 0 && claim.action.usages > 0 then
+                            { claim | status = Cancelled UsagesReached }
 
                         else
-                            claim
+                            case claim.action.deadline of
+                                Nothing ->
+                                    claim
+
+                                Just deadline ->
+                                    if Time.posixToMillis (Utils.fromDateTime deadline) < Time.posixToMillis now then
+                                        { claim | status = Cancelled DeadlineReached }
+
+                                    else
+                                        claim
 
                     _ ->
                         claim
@@ -216,16 +234,16 @@ selectionSet =
 
 
 emptyStringToNothing : Maybe String -> Maybe String
-emptyStringToNothing s =
-    case s of
-        Just "" ->
-            Nothing
+emptyStringToNothing maybeString =
+    maybeString
+        |> Maybe.andThen
+            (\s ->
+                if String.isEmpty s then
+                    Nothing
 
-        Just nonEmpty ->
-            Just nonEmpty
-
-        Nothing ->
-            Nothing
+                else
+                    Just s
+            )
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -409,7 +427,7 @@ viewClaimCard loggedIn profileSummaries claim =
 
         isCancelled =
             case claim.status of
-                Cancelled ->
+                Cancelled _ ->
                     True
 
                 _ ->
@@ -477,7 +495,7 @@ viewClaimCard loggedIn profileSummaries claim =
               else
                 -- TODO - Use new typography classes (#622)
                 span [ class "text-purple-500 font-bold uppercase text-[12px] self-center" ]
-                    [ text "Opened 10 days ago" ]
+                    [ text claimAgingText ]
             , View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2 mt-6" ]
                 claim.action.description
 
@@ -487,7 +505,8 @@ viewClaimCard loggedIn profileSummaries claim =
                 loggedIn.shared
                 (Utils.fromDateTime claim.createdAt)
             , case claim.status of
-                Cancelled ->
+                Cancelled _ ->
+                    -- TODO - Use correct reason
                     p [ class "bg-gray-900 rounded p-4 text-white mb-6" ]
                         ([ "claim.cancelled_texts.was_cancelled"
                          , "claim.cancelled_texts.max_date"
@@ -589,7 +608,7 @@ viewVotingProgress shared completionStatus =
                             ]
                         ]
 
-                Cancelled ->
+                Cancelled _ ->
                     div []
                         [ div [ class "flex" ]
                             [ p [ class "w-full text-right text-gray-600" ]
@@ -685,7 +704,7 @@ viewVotingProgress shared completionStatus =
                         ]
                     ]
 
-            Cancelled ->
+            Cancelled _ ->
                 p [ class "w-full text-gray-600 text-right space-x-1" ]
                     [ span [] [ text (t "claim.cancelled_voting_bar.1") ]
                     , span [ class "font-bold" ] [ text (String.fromInt votingLeft) ]
@@ -741,7 +760,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                         Pending ->
                             ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
-                        Cancelled ->
+                        Cancelled _ ->
                             ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-black" )
             in
             div [ class "block" ]

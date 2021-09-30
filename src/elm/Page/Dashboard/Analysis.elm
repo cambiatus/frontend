@@ -890,13 +890,18 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
         required =
             { communityId = Eos.symbolToString symbol }
 
-        query =
+        queryFn =
             case tab of
                 WaitingToVote ->
-                    Cambiatus.Query.pendingClaims optionals required Claim.claimPaginatedSelectionSet
+                    Cambiatus.Query.pendingClaims
 
                 Analyzed ->
-                    Cambiatus.Query.analyzedClaims optionals required Claim.claimPaginatedSelectionSet
+                    Cambiatus.Query.analyzedClaims
+
+        query =
+            queryFn optionals
+                required
+                (Claim.claimPaginatedSelectionSet shared.now)
     in
     Api.Graphql.query shared (Just authToken) query (ClaimsLoaded tab)
 

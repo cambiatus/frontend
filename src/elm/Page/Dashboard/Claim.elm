@@ -251,7 +251,7 @@ viewTitle shared model claim =
                     , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                     ]
 
-            Claim.Cancelled ->
+            Claim.Cancelled _ ->
                 div [ class "inline-block" ]
                     [ text_ "claim.title_action_completed" ]
 
@@ -679,7 +679,7 @@ fetchClaim claimId shared authToken =
     Api.Graphql.query
         shared
         (Just authToken)
-        (Cambiatus.Query.claim { input = { id = claimId } } Claim.selectionSet)
+        (Cambiatus.Query.claim { input = { id = claimId } } (Claim.selectionSet shared.now))
         ClaimLoaded
 
 
