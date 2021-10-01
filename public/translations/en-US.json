@@ -937,7 +937,9 @@
     "cancelled_texts": {
       "cancelled_claim": "Cancelled claim",
       "was_cancelled": "This claim was cancelled",
-      "max_date": "The corresponding action was completed because it reached it's due date",
+      "deadline_reached": "The corresponding action was completed because it reached it's due date",
+      "usages_reached": "The corresponding action was completed because it reached it's maximum number of usages",
+      "action_completed": "The corresponding action was marked as completed by the community's administration team",
       "not_available": "Therefore, the claim is not open for votes anymore"
     },
     "modal": {

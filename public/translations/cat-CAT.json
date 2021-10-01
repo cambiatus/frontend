@@ -939,7 +939,9 @@
     "cancelled_texts": {
       "cancelled_claim": "Reclamació cancel·lada",
       "was_cancelled": "Aquesta reclamació s'ha cancel·lat",
-      "max_date": "L'acció corresponent s'ha completat perquè ha arribat a la data concreta",
+      "deadline_reached": "L'acció corresponent s'ha completat perquè ha arribat a la data concreta",
+      "usages_reached": "L'acció corresponent s'ha completat perquè ha assolit la quantitat màxima d'ús",
+      "action_completed": "L'equip administratiu de la comunitat va completar l'acció corresponent",
       "not_available": "Per tant, la reclamació ja no està disponible per votar"
     },
     "modal": {

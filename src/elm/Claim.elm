@@ -505,11 +505,22 @@ viewClaimCard loggedIn profileSummaries claim =
                 loggedIn.shared
                 (Utils.fromDateTime claim.createdAt)
             , case claim.status of
-                Cancelled _ ->
-                    -- TODO - Use correct reason
+                Cancelled reason ->
+                    let
+                        reasonText =
+                            case reason of
+                                DeadlineReached ->
+                                    "claim.cancelled_texts.deadline_reached"
+
+                                UsagesReached ->
+                                    "claim.cancelled_texts.usages_reached"
+
+                                ActionCompleted ->
+                                    "claim.cancelled_texts.action_completed"
+                    in
                     p [ class "bg-gray-900 rounded p-4 text-white mb-6" ]
                         ([ "claim.cancelled_texts.was_cancelled"
-                         , "claim.cancelled_texts.max_date"
+                         , reasonText
                          , "claim.cancelled_texts.not_available"
                          ]
                             |> List.map t

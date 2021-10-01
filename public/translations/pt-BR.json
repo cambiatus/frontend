@@ -943,7 +943,9 @@
     "cancelled_texts": {
       "cancelled_claim": "Reivindicação cancelada",
       "was_cancelled": "Essa reivindicação foi cancelada",
-      "max_date": "A ação correspondente foi concluída pois atingiu a data específica",
+      "deadline_reached": "A ação correspondente foi concluída pois atingiu a data específica",
+      "usages_reached": "A ação correspondente foi concluída pois atingiu a quantidade máxima de uso",
+      "action_completed": "A ação correspondente foi concluída pela equipe administrativa da comunidade",
       "not_available": "Portanto, a reivindicação não está mais disponível para votação"
     },
     "modal": {
