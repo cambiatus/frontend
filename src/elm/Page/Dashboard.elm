@@ -26,7 +26,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, p, span, text)
+import Html exposing (Html, a, button, div, img, p, span, strong, text)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Http
@@ -211,7 +211,10 @@ view ({ shared, accountName } as loggedIn) model =
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
                     div []
                         [ div [ class "container mx-auto px-4" ]
-                            [ viewHeader loggedIn community isCommunityAdmin
+                            [ p [ class "text-gray-333 mt-8 mb-4" ]
+                                [ text (t "menu.my_communities")
+                                , strong [] [ text community.name ]
+                                ]
                             , div
                                 [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
                                 [ div [ class "w-full" ]
@@ -241,27 +244,6 @@ view ({ shared, accountName } as loggedIn) model =
     { title = t "menu.dashboard"
     , content = content
     }
-
-
-viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
-viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-lg" ]
-        [ div []
-            [ text (loggedIn.shared.translators.t "menu.my_communities")
-            , span [ class "text-indigo-500 font-semibold" ]
-                [ text community.name
-                ]
-            ]
-        , if isCommunityAdmin then
-            a
-                [ Route.href Route.CommunitySettings
-                , class "ml-auto"
-                ]
-                [ Icons.settings "" ]
-
-          else
-            text ""
-        ]
 
 
 addContactModal : Shared -> Model -> Html Msg
