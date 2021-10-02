@@ -589,25 +589,25 @@ viewHeader page ({ shared } as model) profile_ =
                         [ nav
                             [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
                             [ a
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
                                 , Route.href (Route.Profile model.accountName)
                                 , onClick (ShowUserNav False)
                                 , onClick SearchClosed
                                 ]
-                                [ Icons.profile "mr-4"
+                                [ Icons.profile "mr-4 fill-current"
                                 , text_ "menu.profile"
                                 ]
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
                                 , onClick ToggleLanguageItems
                                 ]
-                                [ Icons.languages "mr-4"
+                                [ Icons.languages "mr-4 fill-current"
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
                                 div [ class "ml-10 mb-2" ]
                                     (button
-                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase focus-ring rounded-sm"
                                         ]
                                         [ Shared.langFlag shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
@@ -618,10 +618,10 @@ viewHeader page ({ shared } as model) profile_ =
                               else
                                 text ""
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-red focus-visible:text-red"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close "fill-current text-red mr-4"
+                                [ Icons.close "fill-current mr-4"
                                 , text_ "menu.logout"
                                 ]
                             ]
