@@ -113,6 +113,7 @@ module.exports = {
         sans: ['Nunito', 'sans-serif']
       },
       spacing: {
+        '3px': '3px',
         heading: '1.375rem',
         '7': '1.75rem',
         '9': '2.25rem',

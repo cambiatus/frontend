@@ -716,50 +716,46 @@ communitySelectorModal model =
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
-        menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center text-sm text-gray-700 hover:text-indigo-500"
-
-        activeClass =
-            "border-orange-100 border-b-2 text-indigo-500 font-semibold"
-
-        iconClass =
-            "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
-
         closeClaimWithPhoto =
             GotActionMsg Action.ClaimConfirmationClosed
-    in
-    nav [ class "h-16 w-full flex overflow-x-auto" ]
-        [ a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Dashboard )
+
+        menuItem title route =
+            a
+                [ class "text-center text-gray-900 uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
+                , classList [ ( "text-orange-300 font-bold", isActive page route ) ]
+                , Route.href route
+                , onClick closeClaimWithPhoto
                 ]
-            , Route.href Route.Dashboard
-            , onClick closeClaimWithPhoto
-            ]
-            [ Icons.dashboard iconClass
-            , text (model.shared.translators.t "menu.dashboard")
-            ]
-        , case model.selectedCommunity of
-            RemoteData.Success { hasShop } ->
-                if hasShop then
-                    a
-                        [ classList
-                            [ ( menuItemClass, True )
-                            , ( activeClass, isActive page (Route.Shop Shop.All) )
-                            ]
-                        , Route.href (Route.Shop Shop.All)
-                        , onClick closeClaimWithPhoto
-                        ]
-                        [ Icons.shop iconClass
-                        , text (model.shared.translators.t "menu.shop")
-                        ]
+                [ text (model.shared.translators.t title) ]
 
-                else
-                    text ""
+        hasShop =
+            model.selectedCommunity
+                |> RemoteData.map .hasShop
+                |> RemoteData.withDefault False
+    in
+    nav
+        [ class "grid relative md:mx-4"
+        , classList
+            [ ( "grid-cols-2 md:w-96", hasShop )
+            , ( "md:w-48", not hasShop )
+            ]
+        ]
+        [ menuItem "menu.dashboard" Route.Dashboard
+        , if hasShop then
+            menuItem "menu.shop" (Route.Shop Shop.All)
 
-            _ ->
-                text ""
+          else
+            text ""
+        , div
+            [ class "absolute bottom-0 h-3px bg-orange-300"
+            , classList
+                [ ( "w-1/2 transform transition-transform motion-reduce:transition-none", hasShop )
+                , ( "w-full", not hasShop )
+                , ( "translate-x-0", isActive page Route.Dashboard )
+                , ( "translate-x-full", isActive page (Route.Shop Shop.All) )
+                ]
+            ]
+            []
         ]
 
 
