@@ -49,7 +49,7 @@
     },
     "explore": "Explorar",
     "communities": "Comunitats",
-    "welcome_message": "Hola {{user_name}}",
+    "welcome_message": "Hola, {{user_name}}",
     "back_to_dashboard": "Anar a l’inici",
     "edit": "Editar",
     "cancel": "Cancel·lar",

@@ -49,7 +49,7 @@
     },
     "explore": "ያስሱ",
     "communities": "ማህበረሰብ",
-    "welcome_message": "ሄሎ {{user_name}}",
+    "welcome_message": "ሰላም {{user_name}}",
     "back_to_dashboard": "ወደ ዳሽቦርድ ይመለሱ",
     "edit": "አርትእ",
     "cancel": "አጥፋ",

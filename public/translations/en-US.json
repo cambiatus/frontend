@@ -49,7 +49,7 @@
     },
     "explore": "Explore",
     "communities": "Communities",
-    "welcome_message": "Hello {{user_name}}",
+    "welcome_message": "Hello, {{user_name}}",
     "back_to_dashboard": "Back to Dashboard",
     "edit": "Edit",
     "cancel": "Cancel",
