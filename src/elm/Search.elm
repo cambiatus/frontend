@@ -288,10 +288,11 @@ viewForm attrs ({ t } as translators) model =
 
                     else
                         button
-                            [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
+                            [ class "absolute right-3 flex items-center top-1/2 -translate-y-1/2 focus-ring focus-visible:ring-red focus-visible:ring-opacity-50 rounded-full group"
                             , onClick ClearSearchIconClicked
+                            , type_ "button"
                             ]
-                            [ Icons.clearInput ""
+                            [ Icons.clearInput "fill-current text-gray-400 hover:text-red group-focus:text-red"
                             ]
 
         isSearchOpen =
@@ -316,31 +317,29 @@ viewForm attrs ({ t } as translators) model =
             :: onSubmit QuerySubmitted
             :: attrs
         )
-        [ div [ class "relative w-full" ]
-            [ Input.init
-                { label = ""
-                , id = "searchInput"
-                , onInput = CurrentQueryChanged
-                , disabled = isLoading
-                , value = model.currentQuery
-                , placeholder = Just (t "menu.search.placeholder")
-                , problems = Nothing
-                , translators = translators
-                }
-                |> Input.withContainerAttrs [ class "!m-0" ]
-                |> Input.withAttrs
-                    [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
-                    , onFocus InputFocused
-                    , minlength 3
-                    , required True
-                    , autocomplete False
-                    ]
-                |> Input.withElements
-                    [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor
-                    ]
-                |> Input.toHtml
-            ]
+        [ Input.init
+            { label = ""
+            , id = "searchInput"
+            , onInput = CurrentQueryChanged
+            , disabled = isLoading
+            , value = model.currentQuery
+            , placeholder = Just (t "menu.search.placeholder")
+            , problems = Nothing
+            , translators = translators
+            }
+            |> Input.withContainerAttrs [ class "!m-0 w-full" ]
+            |> Input.withAttrs
+                [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
+                , onFocus InputFocused
+                , minlength 3
+                , required isSearchOpen
+                , autocomplete False
+                ]
+            |> Input.withElements
+                [ viewClearSearchIcon
+                , Icons.search <| "absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor
+                ]
+            |> Input.toHtml
         , viewCancel
         ]
 

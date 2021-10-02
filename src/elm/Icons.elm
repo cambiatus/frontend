@@ -62,9 +62,14 @@ close class_ =
 
 clearInput : String -> Svg msg
 clearInput class_ =
-    svg [ fill "none", height "20", viewBox "0 0 20 20", width "20" ]
+    svg [ fill "none", height "20", viewBox "0 0 20 20", width "20", class class_ ]
         [ g [ strokeLinecap "round", strokeLinejoin "round" ]
-            [ Svg.path [ d "m10 18.3334c4.6024 0 8.3333-3.7309 8.3333-8.3333 0-4.60239-3.7309-8.33335-8.3333-8.33335-4.60237 0-8.33333 3.73096-8.33333 8.33335 0 4.6024 3.73096 8.3333 8.33333 8.3333z", fill "#b9b7b7", stroke "#b9b7b7", strokeWidth "2" ] [], g [ stroke "#fff" ] [ Svg.path [ d "m12.5 7.5-5 5" ] [], Svg.path [ d "m7.5 7.5 5 5" ] [] ] ]
+            [ Svg.path [ d "m10 18.3334c4.6024 0 8.3333-3.7309 8.3333-8.3333 0-4.60239-3.7309-8.33335-8.3333-8.33335-4.60237 0-8.33333 3.73096-8.33333 8.33335 0 4.6024 3.73096 8.3333 8.33333 8.3333z", strokeWidth "2" ] []
+            , g [ stroke "#fff" ]
+                [ Svg.path [ d "m12.5 7.5-5 5" ] []
+                , Svg.path [ d "m7.5 7.5 5 5" ] []
+                ]
+            ]
         ]
 
 
