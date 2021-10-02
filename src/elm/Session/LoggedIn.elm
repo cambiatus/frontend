@@ -489,14 +489,21 @@ viewHeader page ({ shared } as model) profile_ =
                     True
     in
     div [ class "flex flex-wrap items-center justify-between p-4 md:flex-nowrap" ]
-        [ if hideCommunitySelector then
-            div []
+        [ div
+            [ class "flex-shrink-0"
+            , classList
+                [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
+                , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
+                ]
+            ]
+            (if hideCommunitySelector then
                 [ img [ class "hidden sm:block h-5", src shared.logo ] []
                 , img [ class "sm:hidden h-5", src shared.logoMobile ] []
                 ]
 
-          else
-            viewCommunitySelector model
+             else
+                [ viewCommunitySelector model ]
+            )
         , if hideCommunityAndSearch page model then
             div [] []
 
@@ -638,31 +645,11 @@ viewCommunitySelector model =
 
                 _ ->
                     False
-
-        isSearchOpen =
-            case model.searchModel.state of
-                Search.Inactive ->
-                    False
-
-                _ ->
-                    True
-
-        isCommunityCreator =
-            case model.selectedCommunity of
-                RemoteData.Success community ->
-                    community.creator == model.accountName
-
-                _ ->
-                    False
     in
     case model.selectedCommunity of
         RemoteData.Success community ->
             button
-                [ class "flex items-center rounded-sm flex-shrink-0 focus-ring focus:ring-offset-4 md:transition-width"
-                , classList
-                    [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
-                    , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
-                    ]
+                [ class "flex items-center rounded-sm focus-ring focus:ring-offset-4"
                 , onClick OpenCommunitySelector
                 ]
                 [ img [ class "h-8 w-8 object-scale-down", src community.logo ] []
