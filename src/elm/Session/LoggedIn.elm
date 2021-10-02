@@ -131,26 +131,37 @@ initLogin shared maybePrivateKey_ profile_ authToken =
 -- SUBSCRIPTIONS
 
 
+onEscape : Msg -> Sub Msg
+onEscape toMsg =
+    Decode.field "key" Decode.string
+        |> Decode.andThen
+            (\key ->
+                if key == "Esc" || key == "Escape" then
+                    Decode.succeed ()
+
+                else
+                    Decode.fail "Expecting Escape key"
+            )
+        |> Browser.Events.onKeyDown
+        |> Sub.map (\_ -> toMsg)
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         , if model.showUserNav then
-            Decode.field "key" Decode.string
-                |> Decode.andThen
-                    (\key ->
-                        if key == "Esc" || key == "Escape" then
-                            Decode.succeed ()
-
-                        else
-                            Decode.fail "Expecting Escape key"
-                    )
-                |> Browser.Events.onKeyDown
-                |> Sub.map (\_ -> ShowUserNav False)
+            onEscape (ShowUserNav False)
 
           else
             Sub.none
+        , case model.searchModel.state of
+            Inactive ->
+                Sub.none
+
+            _ ->
+                onEscape (GotSearchMsg Search.closeMsg)
         ]
 
 
@@ -460,8 +471,24 @@ viewHeader page ({ shared } as model) profile_ =
 
         hideCommunitySelector =
             List.member page hideCommunitySelectorPages
+
+        isCommunityCreator =
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    community.creator == model.accountName
+
+                _ ->
+                    False
+
+        isSearchOpen =
+            case model.searchModel.state of
+                Search.Inactive ->
+                    False
+
+                _ ->
+                    True
     in
-    div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
+    div [ class "flex flex-wrap items-center justify-between p-4 md:flex-nowrap" ]
         [ if hideCommunitySelector then
             div []
                 [ img [ class "hidden sm:block h-5", src shared.logo ] []
@@ -474,16 +501,26 @@ viewHeader page ({ shared } as model) profile_ =
             div [] []
 
           else
-            div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
-                [ Search.viewForm shared.translators model.searchModel
-                    |> Html.map GotSearchMsg
+            Search.viewForm
+                [ class "order-last w-full md:order-none mt-4 md:mt-0 md:mx-4"
+                , classList
+                    [ ( "md:w-96 md:flex-shrink-0", not isSearchOpen )
+                    , ( "w-full", isSearchOpen )
+                    ]
                 ]
-        , div [ class "flex items-center float-right" ]
+                shared.translators
+                model.searchModel
+                |> Html.map GotSearchMsg
+        , div
+            [ class "flex items-center justify-end space-x-8 my-auto flex-shrink-0"
+            , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
+            ]
             [ a
-                [ class "outline-none relative mx-6"
+                [ class "relative rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50"
                 , Route.href Route.Notification
+                , classList [ ( "mr-4", model.unreadCount > 0 ) ]
                 ]
-                [ Icons.notification "fill-current text-black"
+                [ Icons.notification "fill-current text-gray-900 h-6 md:h-7 group-hover:text-orange-300"
                 , if model.unreadCount > 0 then
                     div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-semibold text-sm rounded-full" ]
                         [ text (String.fromInt model.unreadCount) ]
@@ -491,9 +528,18 @@ viewHeader page ({ shared } as model) profile_ =
                   else
                     text ""
                 ]
+            , if isCommunityCreator then
+                a
+                    [ class "rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4"
+                    , Route.href Route.CommunitySettings
+                    ]
+                    [ Icons.settings "fill-current h-6 text-gray-900 md:h-7 group-hover:text-orange-300" ]
+
+              else
+                text ""
             , div [ class "relative z-50" ]
                 [ button
-                    [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex"
+                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus:ring-orange-300 lg:focus:ring-opacity-50"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
@@ -501,23 +547,22 @@ viewHeader page ({ shared } as model) profile_ =
                     , onMouseEnter (ShowUserNav True)
                     ]
                     [ Avatar.view profile_.avatar "h-8 w-8"
-                    , div [ class "flex flex-wrap text-left pl-2" ]
-                        [ p [ class "w-full font-sans uppercase text-gray-900 text-sm overflow-x-hidden" ]
+                    , div [ class "flex flex-col items-center text-left pl-2" ]
+                        [ p [ class "w-full text-gray-333 overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
-                        , p [ class "w-full font-sans text-indigo-500 text-sm" ]
+                        , p [ class "w-full text-orange-300" ]
                             [ text (shared.translators.t "menu.my_account") ]
                         ]
-                    , Icons.arrowDown "float-right"
                     ]
                 , button
-                    [ class "h-12 z-10 py-2 px-3 flex relative lg:hidden"
+                    [ class "z-10 flex relative focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 lg:hidden"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view profile_.avatar "h-8 w-8"
+                    [ Avatar.view profile_.avatar "h-6 w-6 md:h-7 md:w-7"
                     ]
 
                 -- Invisible button to hide menu when clicking outside
@@ -593,13 +638,36 @@ viewCommunitySelector model =
 
                 _ ->
                     False
+
+        isSearchOpen =
+            case model.searchModel.state of
+                Search.Inactive ->
+                    False
+
+                _ ->
+                    True
+
+        isCommunityCreator =
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    community.creator == model.accountName
+
+                _ ->
+                    False
     in
     case model.selectedCommunity of
         RemoteData.Success community ->
-            button [ class "flex items-center", onClick OpenCommunitySelector ]
-                [ img [ class "h-10", src community.logo ] []
+            button
+                [ class "flex items-center rounded-sm flex-shrink-0 focus-ring focus:ring-offset-4 md:transition-width"
+                , classList
+                    [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
+                    , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
+                    ]
+                , onClick OpenCommunitySelector
+                ]
+                [ img [ class "h-8 w-8 object-scale-down", src community.logo ] []
                 , if hasMultipleCommunities then
-                    Icons.arrowDown ""
+                    Icons.arrowDown "fill-current text-gray-900"
 
                   else
                     text ""

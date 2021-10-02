@@ -3,6 +3,7 @@ module Search exposing
     , Model
     , Msg
     , State(..)
+    , closeMsg
     , closeSearch
     , init
     , isActive
@@ -26,7 +27,7 @@ import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src)
+import Html.Attributes exposing (autocomplete, class, classList, minlength, required, src, type_)
 import Html.Events exposing (onClick, onFocus, onSubmit)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -257,8 +258,8 @@ update shared authToken symbol model msg =
 -- VIEW
 
 
-viewForm : Translators -> Model -> Html Msg
-viewForm ({ t } as translators) model =
+viewForm : List (Html.Attribute Msg) -> Translators -> Model -> Html Msg
+viewForm attrs ({ t } as translators) model =
     let
         isLoading =
             case model.state of
@@ -286,29 +287,35 @@ viewForm ({ t } as translators) model =
                         text ""
 
                     else
-                        span
+                        button
                             [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
                             , onClick ClearSearchIconClicked
                             ]
                             [ Icons.clearInput ""
                             ]
 
-        viewCancel =
+        isSearchOpen =
             case model.state of
                 Inactive ->
-                    text ""
+                    False
 
                 _ ->
-                    span
-                        [ class "text-orange-300 pl-3 cursor-pointer lowercase"
-                        , onClick CancelClicked
-                        ]
-                        [ text (t "menu.cancel") ]
+                    True
+
+        viewCancel =
+            button
+                [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline"
+                , classList [ ( "hidden", not isSearchOpen ) ]
+                , onClick CancelClicked
+                , type_ "button"
+                ]
+                [ text (t "menu.cancel") ]
     in
     Html.form
-        [ class "flex items-center"
-        , onSubmit QuerySubmitted
-        ]
+        (class "flex items-center"
+            :: onSubmit QuerySubmitted
+            :: attrs
+        )
         [ div [ class "relative w-full" ]
             [ Input.init
                 { label = ""
@@ -322,7 +329,7 @@ viewForm ({ t } as translators) model =
                 }
                 |> Input.withContainerAttrs [ class "!m-0" ]
                 |> Input.withAttrs
-                    [ class "rounded-full bg-gray-100 border-0 pl-10 h-10"
+                    [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
                     , onFocus InputFocused
                     , minlength 3
                     , required True
@@ -330,7 +337,7 @@ viewForm ({ t } as translators) model =
                     ]
                 |> Input.withElements
                     [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 mt-[6px] left-0 ml-2 fill-current " ++ iconColor
+                    , Icons.search <| "absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor
                     ]
                 |> Input.toHtml
             ]
@@ -620,3 +627,8 @@ isActive model =
 closeSearch : Model -> Model
 closeSearch model =
     { model | state = Inactive, currentQuery = "" }
+
+
+closeMsg : Msg
+closeMsg =
+    CancelClicked

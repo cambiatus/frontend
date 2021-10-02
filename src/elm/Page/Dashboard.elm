@@ -257,7 +257,7 @@ viewHeader loggedIn community isCommunityAdmin =
                 [ Route.href Route.CommunitySettings
                 , class "ml-auto"
                 ]
-                [ Icons.settings ]
+                [ Icons.settings "" ]
 
           else
             text ""
