@@ -605,7 +605,7 @@ viewHeader page ({ shared } as model) profile_ =
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
-                                div [ class "ml-10 mb-2" ]
+                                div [ class "ml-6 mb-2" ]
                                     (button
                                         [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase focus-ring rounded-sm"
                                         ]
@@ -621,7 +621,7 @@ viewHeader page ({ shared } as model) profile_ =
                                 [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-red focus-visible:text-red"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close "fill-current mr-4"
+                                [ Icons.close "fill-current m-1 mr-5"
                                 , text_ "menu.logout"
                                 ]
                             ]
