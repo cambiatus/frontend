@@ -176,18 +176,10 @@ type Direction
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view ({ shared, accountName } as loggedIn) model =
+view ({ shared } as loggedIn) model =
     let
         t =
             shared.translators.t
-
-        isCommunityAdmin =
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    community.creator == accountName
-
-                _ ->
-                    False
 
         areObjectivesEnabled =
             case loggedIn.selectedCommunity of
