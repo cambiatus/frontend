@@ -785,8 +785,9 @@
   },
   "dashboard": {
     "back": "Back",
-    "transfer": "Transfer to a friend",
-    "explore": "How to earn {{symbol}}",
+    "transfer": "Transfer",
+    "your_balance": "Your balance in {{symbol}}",
+    "how_to_earn": "How to earn {{symbol}}",
     "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
@@ -812,16 +813,8 @@
     "reject": "Disapprove",
     "verify": "Approve",
     "closed": "closed",
-    "my_claims": {
-      "1": "My ",
-      "2": "Claims",
-      "go": "Go"
-    },
-    "my_offers": {
-      "1": "My ",
-      "2": "Offers",
-      "go": "Go"
-    },
+    "my_claims": "My claims",
+    "my_offers": "My offers",
     "analysis": {
       "title": {
         "1": "Actions",

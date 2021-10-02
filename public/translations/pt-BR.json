@@ -792,8 +792,9 @@
   },
   "dashboard": {
     "back": "Voltar",
-    "transfer": "Transferir para um amigo",
-    "explore": "Como ganhar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "Seu saldo em {{symbol}}",
+    "how_to_earn": "Como ganhar {{symbol}}",
     "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
     "action_rejected": "Sua ação foi rejeitada",
@@ -819,16 +820,8 @@
     "reject": "Reprovar",
     "verify": "Aprovar",
     "closed": "fechados",
-    "my_claims": {
-      "1": "Minhas ",
-      "2": "Reivindicações",
-      "go": "ir"
-    },
-    "my_offers": {
-      "1": "Minhas ",
-      "2": "Ofertas",
-      "go": "Ir"
-    },
+    "my_claims": "Minhas reivindicações",
+    "my_offers": "Minhas ofertas",
     "analysis": {
       "title": {
         "1": "Ações",

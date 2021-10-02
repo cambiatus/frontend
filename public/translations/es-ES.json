@@ -788,8 +788,9 @@
   },
   "dashboard": {
     "back": "Atrás",
-    "transfer": "Transferir a un(a) colega",
-    "explore": "Como obtener {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "Tu saldo en {{symbol}}",
+    "how_to_earn": "Como obtener {{symbol}}",
     "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
     "action_rejected": "Tu acción fue rechazada",
@@ -815,16 +816,8 @@
     "reject": "Rechazar",
     "verify": "Verificar",
     "closed": "cerrado",
-    "my_claims": {
-      "1": "Mis ",
-      "2": "Reclamos",
-      "go": "Ir"
-    },
-    "my_offers": {
-      "1": "Mis ",
-      "2": "Ofertas",
-      "go": "Ir"
-    },
+    "my_claims": "Mis reclamos",
+    "my_offers": "Mis ofertas",
     "analysis": {
       "title": {
         "1": "Acciones",

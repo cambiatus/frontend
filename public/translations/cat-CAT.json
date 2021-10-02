@@ -788,8 +788,9 @@
   },
   "dashboard": {
     "back": "Tornar",
-    "transfer": "Transferir a un company",
-    "explore": "Com guanyar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "El vostre saldo en {{symbol}}",
+    "how_to_earn": "Com guanyar {{symbol}}",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",
@@ -815,16 +816,8 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
-    "my_claims": {
-      "1": "Les meves ",
-      "2": "Reclamacions",
-      "go": "Vaja"
-    },
-    "my_offers": {
-      "1": "Les meves ",
-      "2": "Ofertes",
-      "go": "Vaja"
-    },
+    "my_claims": "Les meves reclamacions",
+    "my_offers": "Les meves ofertes",
     "analysis": {
       "title": {
         "1": "Accions",

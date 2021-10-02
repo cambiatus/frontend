@@ -804,8 +804,6 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             li [ class "py-2 first:pt-0 last:pb-0" ]
                 [ element (class "flex items-center w-full" :: attrs)
                     [ icon (iconSize ++ " mr-4 text-gray-500 fill-current")
-
-                    -- TODO - Change translation
                     , text description
                     , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current"
                     ]
@@ -821,14 +819,12 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 [ span [ class "text-green text-xl font-bold text-center" ]
                     [ text (Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount) ]
                 , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
-                    -- TODO - I18N
-                    [ text "Seu saldo em {{symbol}}" ]
+                    [ text (tr "dashboard.your_balance" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]) ]
                 , div [ class "flex space-x-4 mt-4" ]
                     [ a
                         [ class "button button-primary w-full"
                         , Route.href (Route.Transfer Nothing)
                         ]
-                        -- TODO - Change translation
                         [ text_ "dashboard.transfer" ]
 
                     -- TODO - Add "Support us" button
@@ -837,7 +833,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             , ul [ class "px-4 pt-4 divide-y divide-y-gray-100" ]
                 [ listItem Icons.cambiatusCoin
                     "w-5"
-                    (tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
+                    (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
                     a
                     [ Route.href Route.Community ]
                 , listItem Icons.profile
@@ -848,8 +844,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 , if community.hasObjectives then
                     listItem Icons.flagWithoutBackground
                         "h-5"
-                        -- TODO - Unify translations
-                        (t "dashboard.my_claims.1" ++ t "dashboard.my_claims.2")
+                        (t "dashboard.my_claims")
                         a
                         [ Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName)) ]
 
@@ -858,8 +853,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 , if community.hasShop then
                     listItem Icons.shop
                         "w-5 h-5"
-                        -- TODO - Unify translations
-                        (t "dashboard.my_offers.1" ++ t "dashboard.my_offers.2")
+                        (t "dashboard.my_offers")
                         a
                         [ Route.href (Route.Shop Shop.UserSales) ]
 

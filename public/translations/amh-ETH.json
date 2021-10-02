@@ -746,8 +746,9 @@
   },
   "dashboard": {
     "back": "ወደ ኃላ",
-    "transfer": "ለጓደኛ አስተላለፍ ",
-    "explore": "እንዴት እንደሚገኝ {{symbol}}",
+    "transfer": "ማስተላለፍ",
+    "your_balance": "{{symbol}} ውስጥ የእርስዎ ሚዛን",
+    "how_to_earn": "እንዴት እንደሚገኝ {{symbol}}",
     "invite": "ጓደኞችህን ጋብዝ",
     "sorry": "ይቅርታ!",
     "action_rejected": "የእርሶ ተግባር ተቀባይነት አላገኘም",
@@ -773,16 +774,8 @@
     "reject": "አልጸደቀም",
     "verify": "አጽድቅ",
     "closed": "ዝጋ",
-    "my_claims": {
-      "1": "የእኔ ",
-      "2": "የይገባኛል ጥያቄዎች",
-      "go": "ሂድ"
-    },
-    "my_offers": {
-      "1": "የእኔ ",
-      "2": "አቅርቦቶች",
-      "go": "ሂድ"
-    },
+    "my_claims": "የእኔ የይገባኛል ጥያቄዎች",
+    "my_offers": "የእኔ ቅናሾች",
     "analysis": {
       "title": {
         "1": "ተግባር",
