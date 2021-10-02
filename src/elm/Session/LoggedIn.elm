@@ -732,6 +732,12 @@ viewMainMenu page model =
             model.selectedCommunity
                 |> RemoteData.map .hasShop
                 |> RemoteData.withDefault False
+
+        isInDashboard =
+            isActive page Route.Dashboard
+
+        isInShop =
+            isActive page (Route.Shop Shop.All)
     in
     nav
         [ class "grid relative md:mx-4"
@@ -747,12 +753,13 @@ viewMainMenu page model =
           else
             text ""
         , div
-            [ class "absolute bottom-0 h-3px bg-orange-300"
+            [ class "absolute bottom-0 h-3px"
             , classList
                 [ ( "w-1/2 transform transition-transform motion-reduce:transition-none", hasShop )
                 , ( "w-full", not hasShop )
-                , ( "translate-x-0", isActive page Route.Dashboard )
-                , ( "translate-x-full", isActive page (Route.Shop Shop.All) )
+                , ( "translate-x-0", isInDashboard )
+                , ( "translate-x-full", isInShop )
+                , ( "bg-orange-300", isInDashboard || isInShop )
                 ]
             ]
             []

@@ -26,7 +26,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, p, span, strong, text)
+import Html exposing (Html, a, button, div, img, li, p, span, strong, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Http
@@ -201,30 +201,37 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
+                    -- div []
+                    --     [ div [ class "container mx-auto px-4" ]
+                    --         [ p [ class "text-gray-333 mt-8 mb-4" ]
+                    --             [ text (t "menu.my_communities")
+                    --             , strong [] [ text community.name ]
+                    --             ]
+                    --         , div
+                    --             [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
+                    --             [ div [ class "w-full" ]
+                    --                 [ viewBalance shared balance
+                    --                 , div [ class "mt-6 flex space-x-6" ]
+                    --                     [ viewMyClaimsCard loggedIn
+                    --                     , viewMyOffersCard loggedIn
+                    --                     ]
+                    --                 ]
+                    --             , viewTransfers loggedIn model False
+                    --             ]
+                    --         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
+                    --             viewAnalysisList loggedIn model
+                    --           else
+                    --             text ""
+                    --         ]
+                    --     , viewTransfers loggedIn model True
+                    --     , viewInvitationModal loggedIn model
+                    --     , addContactModal shared model
+                    --     , viewTransferFilters loggedIn community.members model
+                    --     ]
                     div []
                         [ div [ class "container mx-auto px-4" ]
-                            [ p [ class "text-gray-333 mt-8 mb-4" ]
-                                [ text (t "menu.my_communities")
-                                , strong [] [ text community.name ]
-                                ]
-                            , div
-                                [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
-                                [ div [ class "w-full" ]
-                                    [ viewBalance shared balance
-                                    , div [ class "mt-6 flex space-x-6" ]
-                                        [ viewMyClaimsCard loggedIn
-                                        , viewMyOffersCard loggedIn
-                                        ]
-                                    ]
-                                , viewTransfers loggedIn model False
-                                ]
-                            , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                                viewAnalysisList loggedIn model
-
-                              else
-                                text ""
+                            [ viewWelcomeCard loggedIn community balance
                             ]
-                        , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
                         , viewTransferFilters loggedIn community.members model
@@ -777,96 +784,97 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewBalance : Shared -> Balance -> Html Msg
-viewBalance shared balance =
+viewWelcomeCard : LoggedIn.Model -> Community.Model -> Balance -> Html Msg
+viewWelcomeCard ({ shared } as loggedIn) community balance =
     let
+        { t, tr } =
+            shared.translators
+
         text_ =
-            text << shared.translators.t
+            text << t
+
+        listItem :
+            (String -> Html Msg)
+            -> String
+            -> String
+            -> (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg)
+            -> List (Html.Attribute Msg)
+            -> Html Msg
+        listItem icon iconSize description element attrs =
+            li [ class "py-2 first:pt-0 last:pb-0" ]
+                [ element (class "flex items-center w-full" :: attrs)
+                    [ icon (iconSize ++ " mr-4 text-gray-500 fill-current")
+
+                    -- TODO - Change translation
+                    , text description
+                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current"
+                    ]
+                ]
     in
-    div [ class "bg-white rounded p-4 md:p-6" ]
-        [ p [ class "label" ] [ text_ "account.my_wallet.balances.current" ]
-        , p [ class "text-indigo-500 mt-3" ]
-            [ span [ class "font-bold text-3xl" ]
-                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
-            , text " "
-            , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
+    div [ class "relative" ]
+        [ p [ class "text-gray-333 mt-8 mb-4" ]
+            [ text_ "menu.my_communities"
+            , strong [] [ text community.name ]
             ]
-        , a
-            [ class "button button-primary w-full mt-6"
-            , Route.href (Route.Transfer Nothing)
+        , div [ class "bg-white rounded flex flex-col py-4" ]
+            [ div [ class "flex flex-col px-4 pb-6 border-b border-gray-100" ]
+                [ span [ class "text-green text-xl font-bold text-center" ]
+                    [ text (Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount) ]
+                , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
+                    -- TODO - I18N
+                    [ text "Seu saldo em {{symbol}}" ]
+                , div [ class "flex space-x-4 mt-4" ]
+                    [ a
+                        [ class "button button-primary w-full"
+                        , Route.href (Route.Transfer Nothing)
+                        ]
+                        -- TODO - Change translation
+                        [ text_ "dashboard.transfer" ]
+
+                    -- TODO - Add "Support us" button
+                    ]
+                ]
+            , ul [ class "px-4 pt-4 divide-y divide-y-gray-100" ]
+                [ listItem Icons.cambiatusCoin
+                    "w-5"
+                    (tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
+                    a
+                    [ Route.href Route.Community ]
+                , listItem Icons.profile
+                    "w-5 h-5"
+                    (t "dashboard.invite")
+                    button
+                    [ onClick CreateInvite ]
+                , if community.hasObjectives then
+                    listItem Icons.flagWithoutBackground
+                        "h-5"
+                        -- TODO - Unify translations
+                        (t "dashboard.my_claims.1" ++ t "dashboard.my_claims.2")
+                        a
+                        [ Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName)) ]
+
+                  else
+                    text ""
+                , if community.hasShop then
+                    listItem Icons.shop
+                        "w-5 h-5"
+                        -- TODO - Unify translations
+                        (t "dashboard.my_offers.1" ++ t "dashboard.my_offers.2")
+                        a
+                        [ Route.href (Route.Shop Shop.UserSales) ]
+
+                  else
+                    text ""
+
+                -- TODO - Add "My contributions" listItem
+                ]
             ]
-            [ text_ "dashboard.transfer" ]
-        , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
-            [ a
-                [ class "w-full flex items-center justify-between text-gray-900 py-5"
-                , Route.href Route.Community
-                ]
-                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString balance.asset.symbol ) ]
-                , Icons.arrowDown "-rotate-90"
-                ]
-            , button
-                [ class "w-full flex items-center justify-between text-gray-900 py-5"
-                , onClick CreateInvite
-                ]
-                [ text_ "dashboard.invite"
-                , Icons.arrowDown "-rotate-90"
-                ]
+        , img
+            [ class "absolute top-0 right-0"
+            , src "/images/success-doggo.svg"
             ]
+            []
         ]
-
-
-viewMyClaimsCard : LoggedIn.Model -> Html Msg
-viewMyClaimsCard loggedIn =
-    let
-        { t } =
-            loggedIn.shared.translators
-    in
-    case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
-        RemoteData.Success True ->
-            a
-                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
-                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
-                ]
-                [ div []
-                    [ Icons.claims "w-8 h-8"
-                    , p [ class "text-gray-600 mt-5" ]
-                        [ text <| t "dashboard.my_claims.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
-                        ]
-                    ]
-                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
-                    [ text <| t "dashboard.my_claims.go" ]
-                ]
-
-        _ ->
-            text ""
-
-
-viewMyOffersCard : LoggedIn.Model -> Html Msg
-viewMyOffersCard loggedIn =
-    let
-        { t } =
-            loggedIn.shared.translators
-    in
-    case RemoteData.map .hasShop loggedIn.selectedCommunity of
-        RemoteData.Success True ->
-            a
-                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
-                , Route.href (Route.Shop Shop.UserSales)
-                ]
-                [ div []
-                    [ Icons.shop "w-8 h-8 fill-current"
-                    , p [ class "text-gray-600 mt-5" ]
-                        [ text <| t "dashboard.my_offers.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
-                        ]
-                    ]
-                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
-                    [ text <| t "dashboard.my_offers.go" ]
-                ]
-
-        _ ->
-            text ""
 
 
 
