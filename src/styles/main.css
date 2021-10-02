@@ -35,11 +35,11 @@ body > * {
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white rounded-super hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
+    @apply bg-orange-300 text-white rounded-super hover:bg-orange-100 focus-visible:bg-orange-100 focus-visible:outline-none;
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus:border-orange-300 focus:outline-none;
+    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:outline-none;
   }
 
   .button-sm {
@@ -437,6 +437,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .truncate-children > :not(:first-child) {
     @apply hidden;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring focus:ring-green focus:ring-opacity-50 active:ring-0;
   }
 }
 

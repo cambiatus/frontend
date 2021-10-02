@@ -14,6 +14,7 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
+import 'focus-visible'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
