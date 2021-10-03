@@ -50,7 +50,6 @@ import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
-import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Form
@@ -223,6 +222,7 @@ view ({ shared } as loggedIn) model =
 
                               else
                                 text ""
+                            , viewTimelineCard loggedIn model
                             ]
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
@@ -476,6 +476,7 @@ viewTransfers loggedIn model isMobile =
                     ]
 
             LoadingGraphql (Just transfers) ->
+                -- TODO - Fix desktop layout, pass in correct isMobile
                 viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
 
             LoadedGraphql transfers maybePageInfo ->
@@ -510,6 +511,8 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                         else
                             Nothing
                     )
+
+        -- TODO - Check distanceToRequest
         , distanceToRequest = 1000
         , elementToTrack =
             if isMobile then
@@ -518,40 +521,93 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
             else
                 View.Components.TrackSelf
         }
-        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
+        [ class "divide-y divide-gray-100 flex-grow w-full flex-basis-0" ]
         (transfers
-            |> List.groupWhile
-                (\( t1, _ ) ( t2, _ ) ->
-                    Utils.areSameDay loggedIn.shared.timezone
-                        (Utils.fromDateTime t1.blockTime)
-                        (Utils.fromDateTime t2.blockTime)
-                )
+            -- |> List.groupWhile
+            --     (\( t1, _ ) ( t2, _ ) ->
+            --         Utils.areSameDay loggedIn.shared.timezone
+            --             (Utils.fromDateTime t1.blockTime)
+            --             (Utils.fromDateTime t2.blockTime)
+            --     )
+            -- |> List.map
+            --     (\( ( t1, _ ) as first, rest ) ->
+            --         div []
+            --             [ div [ class "mt-4 mx-4" ]
+            --                 [ View.Components.dateViewer
+            --                     [ class "uppercase text-sm text-black tracking-wide" ]
+            --                     identity
+            --                     loggedIn.shared
+            --                     (Utils.fromDateTime t1.blockTime)
+            --                 ]
+            --             , div [ class "divide-y" ]
+            --                 (List.map
+            --                     (\( transfer, profileSummary ) ->
+            --                         -- Transfer.view loggedIn
+            --                         --     transfer
+            --                         --     profileSummary
+            --                         --     (GotTransferCardProfileSummaryMsg transfer.id)
+            --                         --     (ClickedTransferCard transfer.id)
+            --                         --     []
+            --                         viewTransfer loggedIn transfer profileSummary
+            --                     )
+            --                     (first :: rest)
+            --                 )
+            --             ]
+            --     )
             |> List.map
-                (\( ( t1, _ ) as first, rest ) ->
-                    div []
-                        [ div [ class "mt-4 mx-4" ]
-                            [ View.Components.dateViewer
-                                [ class "uppercase text-sm text-black tracking-wide" ]
-                                identity
-                                loggedIn.shared
-                                (Utils.fromDateTime t1.blockTime)
-                            ]
-                        , div [ class "divide-y" ]
-                            (List.map
-                                (\( transfer, profileSummary ) ->
-                                    Transfer.view loggedIn
-                                        transfer
-                                        profileSummary
-                                        (GotTransferCardProfileSummaryMsg transfer.id)
-                                        (ClickedTransferCard transfer.id)
-                                        []
-                                )
-                                (first :: rest)
-                            )
-                        ]
+                (\( transfer, profileSummary ) ->
+                    viewTransfer loggedIn transfer profileSummary
                 )
             |> addLoading
         )
+
+
+viewTransfer : LoggedIn.Model -> Transfer -> Profile.Summary.Model -> Html Msg
+viewTransfer loggedIn transfer profileSummary =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        ( otherProfile, isFromUser ) =
+            if transfer.from.account == loggedIn.accountName then
+                ( transfer.to, True )
+
+            else
+                ( transfer.from, False )
+    in
+    div [ class "flex py-4 first:pt-0 last:pb-0" ]
+        [ profileSummary
+            |> Profile.Summary.withoutName
+            |> Profile.Summary.withImageSize "w-8 h-8"
+            |> Profile.Summary.view loggedIn.shared
+                loggedIn.accountName
+                otherProfile
+            |> Html.map (GotTransferCardProfileSummaryMsg transfer.id)
+        , div [ class "ml-4" ]
+            [ p [ class "mb-1" ]
+                [ if isFromUser then
+                    text <| t "transfer.sent_to"
+
+                  else
+                    text <| t "transfer.received_from"
+                , text " "
+                , strong []
+                    [ otherProfile.name
+                        |> Maybe.withDefault (Eos.nameToString otherProfile.account)
+                        |> text
+                    ]
+                ]
+            , p [ class "text-green" ]
+                [ strong []
+                    [ { amount = transfer.value
+                      , symbol = transfer.community.symbol
+                      }
+                        |> Eos.assetToString
+                        |> text
+                    ]
+                ]
+            ]
+        ]
 
 
 datePickerSettings : Shared -> DatePicker.Settings
@@ -855,6 +911,52 @@ viewActionsForAnalysisCard ({ t, tr } as translators) model =
                                 , text_ "dashboard.analysis.empty.2"
                                 ]
                             ]
+            ]
+        ]
+
+
+viewTimelineCard : LoggedIn.Model -> Model -> Html Msg
+viewTimelineCard loggedIn model =
+    let
+        translators =
+            loggedIn.shared.translators
+
+        text_ =
+            text << translators.t
+    in
+    div []
+        [ div [ class "flex justify-between items-center mt-6 mb-4 md:mb-1 lg:mt-0" ]
+            [ h1 [ class "text-gray-333" ]
+                [ text_ "transfer.transfers_latest"
+                , text " "
+                , strong [] [ text_ "transfer.transfers" ]
+                ]
+            , button
+                [ class "button button-secondary w-auto h-auto pl-4 flex"
+                , onClick ClickedOpenTransferFilters
+                ]
+                [ text_ "all_analysis.filter.title"
+                , Icons.arrowDown "fill-current"
+                ]
+            ]
+        , div [ class "bg-white rounded p-6" ]
+            [ case model.transfers of
+                LoadingGraphql Nothing ->
+                    View.Components.loadingLogoAnimated translators "-mt-8"
+
+                FailedGraphql ->
+                    p [ class "text-gray-900 text-sm" ]
+                        [ text_ "transfer.loading_error" ]
+
+                LoadedGraphql [] _ ->
+                    p [ class "text-gray-900 text-sm" ]
+                        [ text_ "transfer.no_transfers_yet" ]
+
+                LoadingGraphql (Just transfers) ->
+                    viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = True }
+
+                LoadedGraphql transfers maybePageInfo ->
+                    viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = True }
             ]
         ]
 
