@@ -824,11 +824,12 @@
         "2": "para el análisis"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", buen trabajo.",
-        "3": "has terminado todo"
+        "1": "Felicidades",
+        "2": "No hay más acciones para analizar"
       },
-      "all": "Todas"
+      "analyze_now": "Analizar ahora",
+      "count": "Tienes **{{amount}} acciones** para analizar",
+      "error_fetching": "Algo salió mal al buscar acciones para su análisis"
     },
     "activities": {
       "title": "Actividades para su análisis",

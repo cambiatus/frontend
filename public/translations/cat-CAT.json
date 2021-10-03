@@ -824,11 +824,12 @@
         "2": "per a l'anàlisi"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", bona feina.",
-        "3": "ja heu acabat tot"
+        "1": "Enhorabona",
+        "2": "Ja no hi ha accions per analitzar"
       },
-      "all": "tot"
+      "analyze_now": "Analitza ara",
+      "count": "Teniu **{{amount}} accions** per analitzar",
+      "error_fetching": "S'ha produït un error en obtenir accions per analitzar-les"
     },
     "activities": {
       "title": "Activitats per a la vostra anàlisi",

@@ -821,11 +821,12 @@
         "2": "for analysis"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", good job.",
-        "3": "You have finished all"
+        "1": "Congratulations",
+        "2": "There are no more actions for analysis"
       },
-      "all": "All"
+      "analyze_now": "Analyze now",
+      "count": "You have **{{amount}} actions** for analysis",
+      "error_fetching": "Something went wrong when fetching actions for analysis"
     },
     "activities": {
       "title": "Activities for your analysis",
