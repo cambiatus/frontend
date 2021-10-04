@@ -195,7 +195,7 @@ view ({ shared } as loggedIn) model =
 
                               else
                                 text ""
-                            , viewTimelineCard loggedIn model
+                            , viewTimelineCard loggedIn (community.hasObjectives && isValidator) model
                             ]
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
@@ -785,8 +785,8 @@ viewActionsForAnalysisCard loggedIn model =
         ]
 
 
-viewTimelineCard : LoggedIn.Model -> Model -> Html Msg
-viewTimelineCard loggedIn model =
+viewTimelineCard : LoggedIn.Model -> Bool -> Model -> Html Msg
+viewTimelineCard loggedIn isValidator model =
     let
         translators =
             loggedIn.shared.translators
@@ -794,7 +794,13 @@ viewTimelineCard loggedIn model =
         text_ =
             text << translators.t
     in
-    div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-300 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
+    div
+        [ classList
+            [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard )
+            , ( "md:animation-delay-300", not loggedIn.hasSeenDashboard && isValidator )
+            , ( "md:animation-delay-150", not loggedIn.hasSeenDashboard && not isValidator )
+            ]
+        ]
         [ div [ class "flex justify-between items-center mt-6 mb-4 md:mb-1 lg:mt-0" ]
             [ h1 [ class "text-gray-333" ]
                 [ text_ "transfer.transfers_latest"
