@@ -27,7 +27,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, src)
+import Html.Attributes exposing (class, classList, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -43,7 +43,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Select
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Shop
 import Simple.Fuzzy
 import Time
@@ -187,38 +187,11 @@ view ({ shared } as loggedIn) model =
                         isValidator =
                             List.any ((==) loggedIn.accountName) community.validators
                     in
-                    -- div []
-                    --     [ div [ class "container mx-auto px-4" ]
-                    --         [ p [ class "text-gray-333 mt-8 mb-4" ]
-                    --             [ text (t "menu.my_communities")
-                    --             , strong [] [ text community.name ]
-                    --             ]
-                    --         , div
-                    --             [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
-                    --             [ div [ class "w-full" ]
-                    --                 [ viewBalance shared balance
-                    --                 , div [ class "mt-6 flex space-x-6" ]
-                    --                     [ viewMyClaimsCard loggedIn
-                    --                     , viewMyOffersCard loggedIn
-                    --                     ]
-                    --                 ]
-                    --             , viewTransfers loggedIn model False
-                    --             ]
-                    --         , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                    --             viewAnalysisList loggedIn model
-                    --           else
-                    --             text ""
-                    --         ]
-                    --     , viewTransfers loggedIn model True
-                    --     , viewInvitationModal loggedIn model
-                    --     , addContactModal shared model
-                    --     , viewTransferFilters loggedIn community.members model
-                    --     ]
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ viewWelcomeCard loggedIn community balance
                             , if community.hasObjectives && isValidator then
-                                viewActionsForAnalysisCard shared.translators model
+                                viewActionsForAnalysisCard loggedIn model
 
                               else
                                 text ""
@@ -337,7 +310,10 @@ viewInvitationModal { shared } model =
                         , problems = Nothing
                         , translators = shared.translators
                         }
-                        |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
+                        |> Input.withAttrs
+                            [ class "absolute opacity-0 left-[-9999em]"
+                            , tabindex -1
+                            ]
                         |> Input.withContainerAttrs [ class "mb-0 overflow-hidden" ]
                         |> Input.toHtml
                     ]
@@ -382,178 +358,61 @@ viewInvitationModal { shared } model =
         |> Modal.toHtml
 
 
-
--- viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
--- viewVoteConfirmationModal loggedIn { claimModalStatus } =
---     let
---         viewVoteModal claimId isApproving isLoading =
---             Claim.viewVoteClaimModal
---                 loggedIn.shared.translators
---                 { voteMsg = VoteClaim
---                 , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
---                 , claimId = claimId
---                 , isApproving = isApproving
---                 , isInProgress = isLoading
---                 }
---     in
---     case claimModalStatus of
---         Claim.VoteConfirmationModal claimId vote ->
---             viewVoteModal claimId vote False
---         Claim.Loading claimId vote ->
---             viewVoteModal claimId vote True
---         Claim.PhotoModal claim ->
---             Claim.viewPhotoModal loggedIn claim
---                 |> Html.map (ClaimMsg 0)
---         Claim.Closed ->
---             text ""
--- viewAnalysis : LoggedIn.Model -> Claim.ClaimProfileSummaries -> Int -> ClaimStatus -> Html Msg
--- viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
---     case claimStatus of
---         ClaimLoaded claim ->
---             Claim.viewClaimCard loggedIn profileSummaries claim
---                 |> Html.map (ClaimMsg claimIndex)
---         ClaimLoading _ ->
---             div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
---                 [ div [ class "rounded-lg bg-white h-56 my-2 pt-8" ]
---                     [ Page.fullPageLoading loggedIn.shared ]
---                 ]
---         ClaimVoted _ ->
---             text ""
---         ClaimVoteFailed claim ->
---             Claim.viewClaimCard loggedIn profileSummaries claim
---                 |> Html.map (ClaimMsg claimIndex)
-
-
-viewTransfers : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewTransfers loggedIn model isMobile =
-    let
-        t =
-            loggedIn.shared.translators.t
-
-        outerContainer children =
-            if isMobile then
-                div [ class "w-full bg-white md:hidden" ]
-                    [ div [ class "container mx-auto" ]
-                        children
-                    ]
-
-            else
-                div [ class "w-full bg-white hidden md:flex md:flex-col md:rounded" ]
-                    children
-    in
-    outerContainer
-        [ div [ class "flex justify-between items-center p-4 pb-0" ]
-            [ p [ class "text-lg" ]
-                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
-                , text " "
-                , span [ class "text-indigo-500 font-semibold" ] [ text <| t "transfer.transfers" ]
-                ]
-            , button
-                [ class "flex items-center text-lg lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
-                , onClick ClickedOpenTransferFilters
-                ]
-                [ text <| t "all_analysis.filter.title"
-                , Icons.arrowDown "fill-current"
-                ]
-            ]
-        , case model.transfers of
-            LoadingGraphql Nothing ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text <| t "menu.loading" ]
-                    ]
-
-            FailedGraphql ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.loading_error") ]
-                    ]
-
-            LoadedGraphql [] _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.no_transfers_yet") ]
-                    ]
-
-            LoadingGraphql (Just transfers) ->
-                -- TODO - Fix desktop layout, pass in correct isMobile
-                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
-
-            LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
-        ]
-
-
 viewTransferList :
     LoggedIn.Model
     -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
-    -> { isLoading : Bool, isMobile : Bool }
+    -> Bool
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
+viewTransferList loggedIn transfers maybePageInfo isLoading =
     let
         addLoading transfers_ =
             if isLoading then
                 transfers_
-                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
+                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "mb-8" ]
 
             else
                 transfers_
-    in
-    View.Components.infiniteList
-        { onRequestedItems =
-            maybePageInfo
-                |> Maybe.andThen
-                    (\pageInfo ->
-                        if pageInfo.hasNextPage then
-                            Just RequestedMoreTransfers
 
-                        else
-                            Nothing
+        infiniteList isMobile_ =
+            View.Components.infiniteList
+                { onRequestedItems =
+                    maybePageInfo
+                        |> Maybe.andThen
+                            (\pageInfo ->
+                                if pageInfo.hasNextPage then
+                                    Just RequestedMoreTransfers
+
+                                else
+                                    Nothing
+                            )
+                , distanceToRequest = 800
+                , elementToTrack =
+                    if isMobile_ then
+                        View.Components.TrackWindow
+
+                    else
+                        View.Components.TrackSelf
+                }
+
+        container attrs children =
+            div []
+                [ infiniteList True
+                    (class "md:hidden" :: attrs)
+                    children
+                , infiniteList False
+                    (class "hidden md:block overflow-y-auto"
+                        :: style "height" "max(60vh, 400px)"
+                        :: attrs
                     )
-
-        -- TODO - Check distanceToRequest
-        , distanceToRequest = 1000
-        , elementToTrack =
-            if isMobile then
-                View.Components.TrackWindow
-
-            else
-                View.Components.TrackSelf
-        }
-        [ class "divide-y divide-gray-100 flex-grow w-full flex-basis-0" ]
+                    children
+                ]
+    in
+    container
+        [ class "divide-y divide-gray-100 w-full"
+        , tabindex -1
+        ]
         (transfers
-            -- |> List.groupWhile
-            --     (\( t1, _ ) ( t2, _ ) ->
-            --         Utils.areSameDay loggedIn.shared.timezone
-            --             (Utils.fromDateTime t1.blockTime)
-            --             (Utils.fromDateTime t2.blockTime)
-            --     )
-            -- |> List.map
-            --     (\( ( t1, _ ) as first, rest ) ->
-            --         div []
-            --             [ div [ class "mt-4 mx-4" ]
-            --                 [ View.Components.dateViewer
-            --                     [ class "uppercase text-sm text-black tracking-wide" ]
-            --                     identity
-            --                     loggedIn.shared
-            --                     (Utils.fromDateTime t1.blockTime)
-            --                 ]
-            --             , div [ class "divide-y" ]
-            --                 (List.map
-            --                     (\( transfer, profileSummary ) ->
-            --                         -- Transfer.view loggedIn
-            --                         --     transfer
-            --                         --     profileSummary
-            --                         --     (GotTransferCardProfileSummaryMsg transfer.id)
-            --                         --     (ClickedTransferCard transfer.id)
-            --                         --     []
-            --                         viewTransfer loggedIn transfer profileSummary
-            --                     )
-            --                     (first :: rest)
-            --                 )
-            --             ]
-            --     )
             |> List.map
                 (\( transfer, profileSummary ) ->
                     viewTransfer loggedIn transfer profileSummary
@@ -575,7 +434,10 @@ viewTransfer loggedIn transfer profileSummary =
             else
                 ( transfer.from, False )
     in
-    div [ class "flex py-4 first:pt-0 last:pb-0" ]
+    button
+        [ class "flex w-full px-6 py-4 focus-ring ring-inset focus-visible:rounded-sm hover:bg-gray-200 first:pt-6 last:pb-6"
+        , onClick (ClickedTransferCard transfer.id)
+        ]
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-8 h-8"
@@ -583,7 +445,7 @@ viewTransfer loggedIn transfer profileSummary =
                 loggedIn.accountName
                 otherProfile
             |> Html.map (GotTransferCardProfileSummaryMsg transfer.id)
-        , div [ class "ml-4" ]
+        , div [ class "ml-4 text-left" ]
             [ p [ class "mb-1" ]
                 [ if isFromUser then
                     text <| t "transfer.sent_to"
@@ -778,7 +640,10 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             [ text_ "menu.my_communities"
             , strong [] [ text community.name ]
             ]
-        , div [ class "bg-white rounded flex flex-col py-4" ]
+        , div
+            [ class "bg-white rounded flex flex-col py-4"
+            , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
+            ]
             [ div [ class "flex flex-col px-4 pb-6 border-b border-gray-100" ]
                 [ span [ class "text-green text-xl font-bold text-center" ]
                     [ text (Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount) ]
@@ -829,15 +694,19 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             ]
         , img
             [ class "absolute top-0 right-0"
+            , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
             , src "/images/success-doggo.svg"
             ]
             []
         ]
 
 
-viewActionsForAnalysisCard : Translators -> Model -> Html Msg
-viewActionsForAnalysisCard ({ t, tr } as translators) model =
+viewActionsForAnalysisCard : LoggedIn.Model -> Model -> Html Msg
+viewActionsForAnalysisCard loggedIn model =
     let
+        { t, tr } =
+            loggedIn.shared.translators
+
         text_ =
             text << t
     in
@@ -847,10 +716,13 @@ viewActionsForAnalysisCard ({ t, tr } as translators) model =
             , text " "
             , text_ "dashboard.analysis.title.2"
             ]
-        , div [ class "bg-white rounded py-6" ]
+        , div
+            [ class "bg-white rounded py-6"
+            , classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
+            ]
             [ case model.analysis of
                 LoadingGraphql _ ->
-                    View.Components.loadingLogoAnimated translators "-mt-8"
+                    View.Components.loadingLogoAnimated loggedIn.shared.translators "-mt-8"
 
                 FailedGraphql ->
                     div [ class "px-6" ]
@@ -939,24 +811,27 @@ viewTimelineCard loggedIn model =
                 , Icons.arrowDown "fill-current"
                 ]
             ]
-        , div [ class "bg-white rounded p-6" ]
+        , div
+            [ class "bg-white rounded md:overflow-hidden"
+            , classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-300 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
+            ]
             [ case model.transfers of
                 LoadingGraphql Nothing ->
-                    View.Components.loadingLogoAnimated translators "-mt-8"
+                    View.Components.loadingLogoAnimated translators "px-6 mb-8"
 
                 FailedGraphql ->
-                    p [ class "text-gray-900 text-sm" ]
+                    p [ class "text-gray-900 text-sm py-20 px-6 text-center" ]
                         [ text_ "transfer.loading_error" ]
 
                 LoadedGraphql [] _ ->
-                    p [ class "text-gray-900 text-sm" ]
+                    p [ class "text-gray-900 text-sm py-20 px-6 text-center" ]
                         [ text_ "transfer.no_transfers_yet" ]
 
                 LoadingGraphql (Just transfers) ->
-                    viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = True }
+                    viewTransferList loggedIn transfers Nothing True
 
                 LoadedGraphql transfers maybePageInfo ->
-                    viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = True }
+                    viewTransferList loggedIn transfers maybePageInfo False
             ]
         ]
 

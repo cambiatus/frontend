@@ -188,6 +188,7 @@ type alias Model =
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , authToken : String
+    , hasSeenDashboard : Bool
     }
 
 
@@ -211,6 +212,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , authToken = authToken
+    , hasSeenDashboard = False
     }
 
 

@@ -178,11 +178,17 @@ module.exports = {
         'appear-from-above': {
           '0%': { opacity: 0, transform: 'translate(0, -5px)' },
           '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
+        'appear-from-above-lg': {
+          '0%': { opacity: 0, transform: 'translate(0, -100px)' },
+          '50%': { opacity: 0 },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
         }
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
-        'fade-in-from-above': 'appear-from-above 75ms ease-out'
+        'fade-in-from-above': 'appear-from-above 75ms ease-out',
+        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out'
       }
     }
   },

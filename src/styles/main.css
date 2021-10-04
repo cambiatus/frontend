@@ -220,7 +220,7 @@ body > * {
 }
 
 .modal-content {
-  @apply bg-white rounded-t-lg absolute bottom-0 w-full;
+  @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full;
 }
 
 .modal-content-full {
@@ -441,6 +441,14 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .focus-ring {
     @apply focus:outline-none focus-visible:ring focus:ring-green focus:ring-opacity-50 active:ring-0;
+  }
+
+  .animation-delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
   }
 }
 
