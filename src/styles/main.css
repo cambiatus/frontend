@@ -440,7 +440,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
   }
 
   .focus-ring {
-    @apply focus:outline-none focus-visible:ring focus:ring-green focus:ring-opacity-50 active:ring-0;
+    @apply focus:outline-none focus-visible:ring ring-green ring-opacity-50 active:ring-0;
   }
 
   .animation-delay-150 {

@@ -627,11 +627,11 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             -> List (Html.Attribute Msg)
             -> Html Msg
         listItem icon iconSize description element attrs =
-            li [ class "py-2 first:pt-0 last:pb-0" ]
-                [ element (class "flex items-center w-full" :: attrs)
-                    [ icon (iconSize ++ " mr-4 text-gray-500 fill-current")
+            li []
+                [ element (class "py-2 flex items-center w-full group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm" :: attrs)
+                    [ icon (iconSize ++ " mr-4 text-gray-500 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300")
                     , text description
-                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current"
+                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300"
                     ]
                 ]
     in
@@ -641,7 +641,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             , strong [] [ text community.name ]
             ]
         , div
-            [ class "bg-white rounded flex flex-col py-4"
+            [ class "bg-white rounded flex flex-col pt-4 pb-2"
             , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
             ]
             [ div [ class "flex flex-col px-4 pb-6 border-b border-gray-100" ]
@@ -659,7 +659,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     -- TODO - Add "Support us" button
                     ]
                 ]
-            , ul [ class "px-4 pt-4 divide-y divide-y-gray-100" ]
+            , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
                 [ listItem Icons.cambiatusCoin
                     "w-5"
                     (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
