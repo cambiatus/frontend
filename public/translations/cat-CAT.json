@@ -901,10 +901,7 @@
       "1": "Aquesta solicitud es va",
       "2": "rebutjat"
     },
-    "cancelled_voting_bar": {
-      "1": "tenia",
-      "2": "vots pendents"
-    },
+    "cancelled_voting_bar": "vots pendents",
     "title_action_completed": "Aquesta reclamació està pendent, però, ja que l'acció s'ha completat, no és possible votar",
     "title_action_closed": "Aquesta reclamació està pendent, però, ja que l'acció està tancada, no és possible votar",
     "opened_today": "Obert avui",
@@ -936,6 +933,7 @@
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
     "voteTitle": "Aproveu o rebutgeu aquesta acció?",
+    "attention": "Atenció: ",
     "cancelled_texts": {
       "cancelled_claim": "Reclamació cancel·lada",
       "was_cancelled": "Aquesta reclamació s'ha cancel·lat",

@@ -899,10 +899,7 @@
       "1": "This claim was",
       "2": "rejected"
     },
-    "cancelled_voting_bar": {
-      "1": "had",
-      "2": "pending votes"
-    },
+    "cancelled_voting_bar": "pending votes",
     "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
     "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
     "opened_today": "Opened today",
@@ -934,6 +931,7 @@
     "approve": "Approve",
     "no_results_found": "No results found",
     "voteTitle": "Do you approve or disapprove of this action?",
+    "attention": "Attention: ",
     "cancelled_texts": {
       "cancelled_claim": "Cancelled claim",
       "was_cancelled": "This claim was cancelled",

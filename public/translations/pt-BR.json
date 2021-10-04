@@ -905,10 +905,7 @@
       "1": "Esta reinvindicação foi",
       "2": "rejeitada"
     },
-    "cancelled_voting_bar": {
-      "1": "tinha",
-      "2": "votos pendentes"
-    },
+    "cancelled_voting_bar": "votos pendentes",
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
     "opened_today": "Aberto hoje",
@@ -940,6 +937,7 @@
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
     "voteTitle": "Você aprova ou desaprova esta ação?",
+    "attention": "Atenção: ",
     "cancelled_texts": {
       "cancelled_claim": "Reivindicação cancelada",
       "was_cancelled": "Essa reivindicação foi cancelada",

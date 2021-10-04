@@ -902,10 +902,7 @@
       "1": "Este reclamo fue",
       "2": "rechazado"
     },
-    "cancelled_voting_bar": {
-      "1": "tenía",
-      "2": "votos pendientes"
-    },
+    "cancelled_voting_bar": "votos pendientes",
     "title_action_completed": "Este reclamo está pendiente, sin embargo, dado que la acción se completó, no es posible votar",
     "title_action_closed": "Este reclamo está pendiente, sin embargo, dado que la acción está cerrada, no es posible votar.",
     "opened_today": "Abierto hoy",
@@ -937,6 +934,7 @@
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
     "voteTitle": "¿Aprueba o desaprueba esta acción?",
+    "attention": "Atención: ",
     "cancelled_texts": {
       "cancelled_claim": "Reclamo cancelado",
       "was_cancelled": "Este reclamo ha sido cancelado",

@@ -628,16 +628,10 @@ viewVotingProgress shared completionStatus =
                         , div
                             [ class "w-full h-2 flex bg-gray-500 rounded-full my-2" ]
                             [ div
-                                [ class "flex rounded-full overflow-hidden h-2"
+                                [ class "flex rounded-full bg-gray-900 h-2"
                                 , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
                                 ]
-                                [ div [ class "bg-green", style "width" (String.fromFloat (toFloat completionStatus.approved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%") ] []
-                                , div
-                                    [ class "bg-red"
-                                    , style "width" (String.fromFloat (toFloat completionStatus.disapproved / toFloat (completionStatus.approved + completionStatus.disapproved) * 100) ++ "%")
-                                    ]
-                                    []
-                                ]
+                                []
                             ]
                         ]
 
@@ -717,9 +711,8 @@ viewVotingProgress shared completionStatus =
 
             Cancelled _ ->
                 p [ class "w-full text-gray-600 text-right space-x-1" ]
-                    [ span [] [ text (t "claim.cancelled_voting_bar.1") ]
-                    , span [ class "font-bold" ] [ text (String.fromInt votingLeft) ]
-                    , span [] [ text (t "claim.cancelled_voting_bar.2") ]
+                    [ span [ class "font-bold" ] [ text (String.fromInt votingLeft) ]
+                    , span [] [ text (t "claim.cancelled_voting_bar") ]
                     ]
         ]
 
@@ -772,10 +765,10 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
                         Cancelled _ ->
-                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-black" )
+                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-gray-900" )
             in
             div [ class "block" ]
-                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                [ View.Components.dateViewer [ class "text-xs uppercase block text-gray-900" ]
                     (\translations ->
                         { translations
                             | today = t "claim.claimed_today"
@@ -786,10 +779,37 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     shared
                     (Utils.fromDateTime claim.createdAt)
                 , label [ class "text-2xl font-bold" ]
-                    [ text claimStatusPhrase
-                    ]
+                    [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
+
+        viewCancelledNotice =
+            case claim.status of
+                Cancelled reason ->
+                    let
+                        reasonText =
+                            case reason of
+                                DeadlineReached ->
+                                    "claim.cancelled_texts.deadline_reached"
+
+                                UsagesReached ->
+                                    "claim.cancelled_texts.usages_reached"
+
+                                ActionCompleted ->
+                                    "claim.cancelled_texts.action_completed"
+                    in
+                    p [ class "text-gray-900 my-10" ]
+                        [ span [ class "text-black" ] [ text (t "claim.attention") ]
+                        , [ reasonText
+                          , "claim.cancelled_texts.not_available"
+                          ]
+                            |> List.map t
+                            |> String.join ". "
+                            |> text
+                        ]
+
+                _ ->
+                    text ""
 
         viewRewardInfo =
             let
@@ -802,7 +822,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     }
             in
             div
-                [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-16" ]
+                [ class "text-center flex justify-center bg-gray-100 rounded-md my-10 p-4 space-x-16" ]
                 [ div
                     []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
@@ -959,7 +979,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ]
 
         header =
-            div [ class "flex mt-12 space-x-8 justify-center" ]
+            div [ class "flex space-x-6 md:justify-center md:space-x-8 md:mt-4" ]
                 [ viewClaimerProfileSummary
                 , viewClaimDateAndState
                 ]
@@ -975,17 +995,6 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 claim.action.verifications
             , claimStatus = claim.status
             }
-
-        body =
-            div
-                [ class "block" ]
-                [ viewVotingProgress shared completionStatus
-                , viewRewardInfo
-                , viewApprovedByProfileSummaryList
-                , viewDisapprovedByProfileSummaryList
-                , viewPendingVotersProfileSummaryList
-                , viewActionDetails
-                ]
 
         claimRoute =
             Route.Claim
@@ -1031,12 +1040,14 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             , isVisible = profileSummaries.showClaimModal
             }
             |> Modal.withBody
-                [ div
-                    [ class "block space-y-6 "
-                    ]
-                    [ header
-                    , body
-                    ]
+                [ header
+                , viewCancelledNotice
+                , viewVotingProgress shared completionStatus
+                , viewRewardInfo
+                , viewApprovedByProfileSummaryList
+                , viewDisapprovedByProfileSummaryList
+                , viewPendingVotersProfileSummaryList
+                , viewActionDetails
                 ]
             |> Modal.withFooter [ footer ]
             |> Modal.withSize Modal.Large

@@ -860,10 +860,7 @@
       "1": "ይህ ጥያቄ",
       "2": "ተቀባይነት አላገኘም"
     },
-    "cancelled_voting_bar": {
-      "1": "",
-      "2": "በመጠባበቅ ላይ ያሉ ድምጾች ነበሩት"
-    },
+    "cancelled_voting_bar": "በመጠባበቅ ላይ ያሉ ድምጾች ነበሩት",
     "title_action_completed": "ይህ የይገባኛል ጥያቄ በመጠባበቅ ላይ ነው ፣ ሆኖም እርምጃው ስለተጠናቀቀ ድምጽ መስጠት አይቻልም",
     "title_action_closed": "ይህ የይገባኛል ጥያቄ በመጠባበቅ ላይ ነው ፣ ሆኖም እርምጃው የተዘጋ ስለሆነ ድምጽ መስጠት አይቻልም",
     "opened_today": "ዛሬ ክፍት",
@@ -895,6 +892,7 @@
     "approve": "አጸድቅ",
     "no_results_found": "ምላሽ አልተገኘም",
     "voteTitle": "ይህን ተግበር አጸድቀዋል ወይም አላጸደቁም?",
+    "attention": "ትኩረት ፦ ",
     "cancelled_texts": {
       "cancelled_claim": "የይገባኛል ጥያቄ ተሰር .ል",
       "was_cancelled": "ይህ የይገባኛል ጥያቄ ተሰር .ል",
