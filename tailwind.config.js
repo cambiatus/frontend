@@ -188,7 +188,7 @@ module.exports = {
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
         'fade-in-from-above': 'appear-from-above 75ms ease-out',
-        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out'
+        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both'
       }
     }
   },

@@ -635,14 +635,16 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     ]
                 ]
     in
-    div [ class "relative" ]
+    div
+        [ class "relative"
+        , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
+        ]
         [ h1 [ class "text-gray-333 mb-4" ]
             [ text_ "menu.my_communities"
             , strong [] [ text community.name ]
             ]
         , div
             [ class "bg-white rounded flex flex-col pt-4 pb-2"
-            , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
             ]
             [ div [ class "flex flex-col px-4 pb-6 border-b border-gray-100" ]
                 [ span [ class "text-green text-xl font-bold text-center" ]
@@ -694,7 +696,6 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             ]
         , img
             [ class "absolute top-0 right-0"
-            , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
             , src "/images/success-doggo.svg"
             ]
             []
@@ -710,16 +711,13 @@ viewActionsForAnalysisCard loggedIn model =
         text_ =
             text << t
     in
-    div []
+    div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
         [ h1 [ class "text-gray-333 mt-6 mb-4 lg:mt-0" ]
             [ strong [] [ text_ "dashboard.analysis.title.1" ]
             , text " "
             , text_ "dashboard.analysis.title.2"
             ]
-        , div
-            [ class "bg-white rounded py-6"
-            , classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
-            ]
+        , div [ class "bg-white rounded py-6" ]
             [ case model.analysis of
                 LoadingGraphql _ ->
                     View.Components.loadingLogoAnimated loggedIn.shared.translators "-mt-8"
@@ -796,7 +794,7 @@ viewTimelineCard loggedIn model =
         text_ =
             text << translators.t
     in
-    div []
+    div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-300 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
         [ div [ class "flex justify-between items-center mt-6 mb-4 md:mb-1 lg:mt-0" ]
             [ h1 [ class "text-gray-333" ]
                 [ text_ "transfer.transfers_latest"
@@ -811,10 +809,7 @@ viewTimelineCard loggedIn model =
                 , Icons.arrowDown "fill-current"
                 ]
             ]
-        , div
-            [ class "bg-white rounded md:overflow-hidden"
-            , classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-300 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
-            ]
+        , div [ class "bg-white rounded md:overflow-hidden" ]
             [ case model.transfers of
                 LoadingGraphql Nothing ->
                     View.Components.loadingLogoAnimated translators "px-6 mb-8"
