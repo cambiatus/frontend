@@ -1032,7 +1032,10 @@ update msg model =
                         ( searchModel, searchCmd ) =
                             Search.update shared model.authToken community.symbol model.searchModel searchMsg
                     in
-                    { model | searchModel = searchModel }
+                    { model
+                        | searchModel = searchModel
+                        , hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg
+                    }
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
 

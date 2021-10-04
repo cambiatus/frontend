@@ -7,6 +7,7 @@ module Search exposing
     , closeSearch
     , init
     , isActive
+    , isOpenMsg
     , subscriptions
     , update
     , viewForm
@@ -631,3 +632,13 @@ closeSearch model =
 closeMsg : Msg
 closeMsg =
     CancelClicked
+
+
+isOpenMsg : Msg -> Bool
+isOpenMsg msg =
+    case msg of
+        InputFocused ->
+            True
+
+        _ ->
+            False

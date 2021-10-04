@@ -1070,13 +1070,13 @@ changeRouteTo maybeRoute model =
                             if newRoute == second then
                                 { loggedIn
                                     | routeHistory = newRoute :: rest
-                                    , hasSeenDashboard = second == Route.Dashboard
+                                    , hasSeenDashboard = loggedIn.hasSeenDashboard || second == Route.Dashboard
                                 }
 
                             else
                                 { loggedIn
                                     | routeHistory = newRoute :: routeHistory
-                                    , hasSeenDashboard = second == Route.Dashboard
+                                    , hasSeenDashboard = loggedIn.hasSeenDashboard || second == Route.Dashboard
                                 }
 
                         routeHistory ->
