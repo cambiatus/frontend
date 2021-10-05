@@ -157,7 +157,7 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
-    , showModalRequestingSponsor = not shared.hasSeenSponsorModal
+    , showModalRequestingSponsor = False
     }
 
 
@@ -1067,14 +1067,27 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         CompletedLoadCommunity community ->
             let
+                hasContributionConfiguration =
+                    case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                        Just _ ->
+                            True
+
+                        Nothing ->
+                            False
+
                 markSponsorModalAsSeen =
-                    UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
-                        >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
+                    if hasContributionConfiguration then
+                        UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
+                            >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
+
+                    else
+                        identity
             in
             UR.init
                 { model
                     | balance = RemoteData.Loading
                     , analysis = LoadingGraphql Nothing
+                    , showModalRequestingSponsor = hasContributionConfiguration && not shared.hasSeenSponsorModal
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
