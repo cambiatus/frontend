@@ -151,7 +151,12 @@ view loggedIn model =
 
                               else
                                 text ""
-                            , viewSponsorCards loggedIn community
+                            , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                                Just _ ->
+                                    viewSponsorCards loggedIn community
+
+                                Nothing ->
+                                    text ""
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]

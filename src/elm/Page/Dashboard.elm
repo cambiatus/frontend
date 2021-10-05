@@ -250,7 +250,7 @@ view ({ shared, accountName } as loggedIn) model =
                             , div
                                 [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
                                 [ div [ class "w-full" ]
-                                    [ viewBalance loggedIn balance
+                                    [ viewBalance loggedIn community balance
                                     , div [ class "mt-6 flex space-x-6" ]
                                         [ viewMyClaimsCard loggedIn
                                         , viewMyOffersCard loggedIn
@@ -892,8 +892,8 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewBalance : LoggedIn.Model -> Balance -> Html Msg
-viewBalance ({ shared } as loggedIn) balance =
+viewBalance : LoggedIn.Model -> Community.Model -> Balance -> Html Msg
+viewBalance ({ shared } as loggedIn) community balance =
     let
         text_ =
             text << shared.translators.t
@@ -911,11 +911,16 @@ viewBalance ({ shared } as loggedIn) balance =
             , Route.href (Route.Transfer Nothing)
             ]
             [ text_ "dashboard.transfer" ]
-        , button
-            [ class "button button-secondary w-full mt-4"
-            , onClick ClickedSupportUsButton
-            ]
-            [ text_ "community.index.support_us" ]
+        , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+            Just _ ->
+                button
+                    [ class "button button-secondary w-full mt-4"
+                    , onClick ClickedSupportUsButton
+                    ]
+                    [ text_ "community.index.support_us" ]
+
+            Nothing ->
+                text ""
         , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
             [ a
                 [ class "w-full flex items-center justify-between text-gray-900 py-5"
