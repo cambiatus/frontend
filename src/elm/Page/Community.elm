@@ -175,12 +175,12 @@ viewSponsorCards loggedIn community =
             text << t
 
         hasContributed =
-            case LoggedIn.profile loggedIn of
-                Nothing ->
-                    False
+            case loggedIn.contributionCount of
+                RemoteData.Success contributionCount ->
+                    contributionCount > 0
 
-                Just p ->
-                    p.contributionCount > 0
+                _ ->
+                    False
 
         compareAvatars first second =
             case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of

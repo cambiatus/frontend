@@ -60,6 +60,11 @@ type alias ClaimsOptionalArguments =
     { communityId : OptionalArgument String }
 
 
+{-|
+
+  - communityId - Optional community filter, filling this will get only claims from this community
+
+-}
 claims :
     (ClaimsOptionalArguments -> ClaimsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Claim
@@ -90,9 +95,28 @@ contacts object_ =
     Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
 
 
-contributionCount : SelectionSet Int Cambiatus.Object.User
-contributionCount =
-    Object.selectionForField "Int" "contributionCount" [] Decode.int
+type alias ContributionCountOptionalArguments =
+    { communityId : OptionalArgument String }
+
+
+{-|
+
+  - communityId - Optional community filter, filling this will get only contributions from this community
+
+-}
+contributionCount :
+    (ContributionCountOptionalArguments -> ContributionCountOptionalArguments)
+    -> SelectionSet Int Cambiatus.Object.User
+contributionCount fillInOptionals =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForField "Int" "contributionCount" optionalArgs Decode.int
 
 
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User

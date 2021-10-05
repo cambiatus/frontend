@@ -5,6 +5,7 @@ module Profile exposing
     , Minimal
     , Model
     , ProfileForm
+    , contributionCountQuery
     , deleteKycAndAddressMutation
     , minimalSelectionSet
     , mutation
@@ -76,7 +77,6 @@ type alias Model =
     , interests : List String
     , communities : List CommunityInfo
     , analysisCount : Int
-    , contributionCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
     }
@@ -118,7 +118,6 @@ selectionSet =
             )
         |> with (User.communities communityInfoSelectionSet)
         |> with User.analysisCount
-        |> with User.contributionCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
 
@@ -185,6 +184,23 @@ mutation form =
             }
         }
         selectionSet
+
+
+
+-- CONTRIBUTION COUNT
+
+
+contributionCountSelectionSet : Eos.Symbol -> SelectionSet Int Cambiatus.Object.User
+contributionCountSelectionSet symbol =
+    User.contributionCount
+        (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
+
+
+contributionCountQuery : Eos.Symbol -> Eos.Name -> SelectionSet (Maybe Int) RootQuery
+contributionCountQuery symbol account =
+    Cambiatus.Query.user
+        { account = Eos.nameToString account }
+        (contributionCountSelectionSet symbol)
 
 
 
