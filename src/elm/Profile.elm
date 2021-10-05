@@ -190,13 +190,13 @@ mutation form =
 -- CONTRIBUTION COUNT
 
 
-contributionCountSelectionSet : Eos.Symbol -> SelectionSet Int Cambiatus.Object.User
+contributionCountSelectionSet : Symbol -> SelectionSet Int Cambiatus.Object.User
 contributionCountSelectionSet symbol =
     User.contributionCount
         (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
 
 
-contributionCountQuery : Eos.Symbol -> Eos.Name -> SelectionSet (Maybe Int) RootQuery
+contributionCountQuery : Symbol -> Eos.Name -> SelectionSet (Maybe Int) RootQuery
 contributionCountQuery symbol account =
     Cambiatus.Query.user
         { account = Eos.nameToString account }
