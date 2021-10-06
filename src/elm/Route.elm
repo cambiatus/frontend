@@ -42,6 +42,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsMultisig
     | CommunitySelector (Maybe Route)
     | Objectives
     | NewObjective
@@ -106,6 +107,7 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
+        , Url.map CommunitySettingsMultisig (s "community" </> s "settings" </> s "multisig")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -392,6 +394,9 @@ routeToString route =
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
+
+                CommunitySettingsMultisig ->
+                    ( [ "community", "settings", "multisig" ], [] )
 
                 CommunitySelector maybeRedirect ->
                     ( [ "community", "selector" ]

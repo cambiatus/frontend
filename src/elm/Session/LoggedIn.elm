@@ -221,6 +221,7 @@ type Page
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsMultisig
     | CommunityEditor
     | CommunitySelector
     | Objectives

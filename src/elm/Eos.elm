@@ -21,17 +21,22 @@ module Eos exposing
     , getSymbolPrecision
     , maxSymbolLength
     , minSymbolLength
+    , proposeTransaction
     , symbolDecoder
     , symbolFromString
     , symbolSelectionSet
     , symbolToString
     , symbolToSymbolCodeString
+    , updateAuth
     )
 
 import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import List.Extra
+import Time
 import Utils
 
 
@@ -51,6 +56,98 @@ encodeTransaction transaction =
         ]
 
 
+proposeTransaction : Account.Name -> String -> List Authorization -> Time.Posix -> Transaction -> Action
+proposeTransaction proposer proposalName permissionLevels expiration transaction =
+    { accountName = "eosio.msig"
+    , name = "propose"
+    , authorization =
+        { actor = proposer
+        , permissionName = Account.samplePermission
+        }
+    , data = encodeProposal proposer proposalName permissionLevels expiration transaction
+    }
+
+
+encodeProposal : Account.Name -> String -> List Authorization -> Time.Posix -> Transaction -> Value
+encodeProposal proposer proposalName permissionLevels expiration transaction =
+    Encode.object
+        [ ( "proposer", Account.encodeName proposer )
+        , ( "proposal_name", Encode.string proposalName )
+        , ( "requested", Encode.list encodeAuthorization permissionLevels )
+        , ( "trx"
+          , Encode.object
+                [ ( "expiration"
+                  , expiration
+                        |> Iso8601.fromTime
+                        |> String.toList
+                        -- Eos doesn't support milliseconds, so we remove that information
+                        |> List.Extra.dropWhileRight (\c -> c /= '.')
+                        |> List.Extra.dropWhileRight (not << Char.isDigit)
+                        |> String.fromList
+                        |> Encode.string
+                  )
+                , ( "ref_block_num", Encode.int 0 )
+                , ( "ref_block_prefix", Encode.int 0 )
+                , ( "max_net_usage_words", Encode.int 0 )
+                , ( "max_cpu_usage_ms", Encode.int 0 )
+                , ( "delay_sec", Encode.int 0 )
+                , ( "context_free_actions", encodedEmptyList )
+                , ( "actions", Encode.list encodeAction transaction )
+                , ( "transaction_extensions", Encode.int 0 )
+                ]
+          )
+        ]
+
+
+updateAuth :
+    Authorization
+    -> Account.Name
+    -> Int
+    -> List { name : Account.Name, weight : Int }
+    -> Action
+updateAuth authorization targetAccount threshold accounts =
+    { accountName = "eosio"
+    , name = "updateauth"
+    , authorization = authorization
+    , data = encodeUpdateAuth targetAccount threshold accounts
+    }
+
+
+encodeUpdateAuth :
+    Account.Name
+    -> Int
+    -> List { name : Account.Name, weight : Int }
+    -> Value
+encodeUpdateAuth targetAccount threshold accounts =
+    let
+        encodeAccount account =
+            Encode.object
+                [ ( "permission"
+                  , encodeAuthorization
+                        { actor = account.name, permissionName = Account.samplePermission }
+                  )
+                , ( "weight", Encode.int account.weight )
+                ]
+    in
+    Encode.object
+        [ ( "account", Account.encodeName targetAccount )
+        , ( "permission", Encode.string "active" )
+        , ( "parent", Encode.string "owner" )
+        , ( "auth"
+          , Encode.object
+                [ ( "threshold", Encode.int threshold )
+                , ( "keys", encodedEmptyList )
+                , ( "accounts", Encode.list encodeAccount accounts )
+                ]
+          )
+        ]
+
+
+encodedEmptyList : Value
+encodedEmptyList =
+    Encode.list (\_ -> Encode.null) []
+
+
 
 -- ACTION
 
@@ -68,7 +165,7 @@ encodeAction action =
     Encode.object
         [ ( "account", Encode.string action.accountName )
         , ( "name", Encode.string action.name )
-        , ( "authorization", encodeAuthorization action.authorization )
+        , ( "authorization", Encode.list encodeAuthorization [ action.authorization ] )
         , ( "data", action.data )
         ]
 
@@ -85,14 +182,10 @@ type alias Authorization =
 
 encodeAuthorization : Authorization -> Value
 encodeAuthorization authorization =
-    Encode.list
-        (\a ->
-            Encode.object
-                [ ( "actor", Account.encodeName a.actor )
-                , ( "permission", Account.encodePermissionName a.permissionName )
-                ]
-        )
-        [ authorization ]
+    Encode.object
+        [ ( "actor", Account.encodeName authorization.actor )
+        , ( "permission", Account.encodePermissionName authorization.permissionName )
+        ]
 
 
 

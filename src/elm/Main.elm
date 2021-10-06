@@ -20,6 +20,7 @@ import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
+import Page.Community.Settings.Multisig as CommunitySettingsMultisig
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
@@ -177,6 +178,7 @@ type Status
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
+    | CommunitySettingsMultisig CommunitySettingsMultisig.Model
     | CommunitySelector CommunitySelector.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
@@ -218,6 +220,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
+    | GotCommunitySettingsMultisigMsg CommunitySettingsMultisig.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -471,6 +474,11 @@ update msg model =
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn
 
+        ( GotCommunitySettingsMultisigMsg subMsg, CommunitySettingsMultisig subModel ) ->
+            CommunitySettingsMultisig.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsMultisig GotCommunitySettingsMultisigMsg model
+                |> withLoggedIn
+
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
             Shop.update subMsg subModel
                 >> updateLoggedInUResult (Shop maybeFilter) GotShopMsg model
@@ -603,6 +611,10 @@ broadcast broadcastMessage status =
                 CommunitySettingsCurrency _ ->
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
+
+                CommunitySettingsMultisig _ ->
+                    CommunitySettingsMultisig.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsMultisigMsg
 
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
@@ -894,6 +906,9 @@ statusToRoute status session =
 
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
+
+        CommunitySettingsMultisig _ ->
+            Just Route.CommunitySettingsMultisig
 
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
@@ -1247,6 +1262,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
+        Just Route.CommunitySettingsMultisig ->
+            CommunitySettingsMultisig.init
+                >> updateStatusWith CommunitySettingsMultisig GotCommunitySettingsMultisigMsg model
+                |> withLoggedIn Route.CommunitySettingsMultisig
+
         Just (Route.CommunitySelector maybeRedirect) ->
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
@@ -1387,6 +1407,10 @@ jsAddressToMsg address val =
             Maybe.map GotCommunitySettingsCurrencyMsg
                 (CommunitySettingsCurrency.jsAddressToMsg rAddress val)
 
+        "GotCommunitySettingsMultisigMsg" :: rAddress ->
+            Maybe.map GotCommunitySettingsMultisigMsg
+                (CommunitySettingsMultisig.jsAddressToMsg rAddress val)
+
         "GotActionEditorMsg" :: rAddress ->
             Maybe.map GotActionEditorMsg
                 (ActionEditor.jsAddressToMsg rAddress val)
@@ -1446,6 +1470,9 @@ msgToString msg =
 
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
+
+        GotCommunitySettingsMultisigMsg subMsg ->
+            "GotCommunitySettingsMultisigMsg" :: CommunitySettingsMultisig.msgToString subMsg
 
         GotObjectivesMsg subMsg ->
             "GotObjectivesMsg" :: Objectives.msgToString subMsg
@@ -1640,6 +1667,9 @@ view model =
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
+
+        CommunitySettingsMultisig subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsMultisig GotCommunitySettingsMultisigMsg CommunitySettingsMultisig.view
 
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view

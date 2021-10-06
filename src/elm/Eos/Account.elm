@@ -8,6 +8,7 @@ module Eos.Account exposing
     , nameQueryUrlParser
     , nameSelectionSet
     , nameToString
+    , ownerPermission
     , privateKeyDecoder
     , privateKeyToString
     , samplePermission
@@ -80,6 +81,11 @@ encodePermissionName (PermissionName permissionName) =
 samplePermission : PermissionName
 samplePermission =
     PermissionName "active"
+
+
+ownerPermission : PermissionName
+ownerPermission =
+    PermissionName "owner"
 
 
 
