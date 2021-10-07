@@ -1,6 +1,7 @@
 import * as AbsintheSocket from '@absinthe/socket'
 import * as Sentry from '@sentry/browser'
-import Eos from 'eosjs'
+import * as Eos from 'eosjs'
+import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import ecc from 'eosjs-ecc'
 import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 import pdfMake from 'pdfmake/build/pdfmake'
@@ -247,7 +248,7 @@ window.customElements.define('key-listener',
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
+    static get observedAttributes () { return ['elm-edit-text', 'elm-remove-text', 'elm-disabled'] }
 
     constructor () {
       super()
@@ -262,8 +263,8 @@ window.customElements.define('markdown-editor',
           modules: {
             toolbar: [
               [{ 'header': 1 }, { 'header': 2 }],
-              [ 'bold', 'italic', 'strike' ],
-              [ 'link' ],
+              ['bold', 'italic', 'strike'],
+              ['link'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
@@ -399,7 +400,7 @@ window.customElements.define('markdown-editor',
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
+    static get observedAttributes () { return ['elm-distance-to-request', 'elm-element-to-track'] }
 
     connectedCallback () {
       this.listenToScroll()
@@ -460,7 +461,7 @@ window.customElements.define('infinite-list',
 
 window.customElements.define('date-formatter',
   class DateFormatter extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-locale', 'elm-date' ] }
+    static get observedAttributes () { return ['elm-locale', 'elm-date'] }
 
     constructor () {
       super()
@@ -927,8 +928,8 @@ if (process.env.NODE_ENV === 'development') {
           supported = true
           return null
         },
-        hasBody: function (obj) {},
-        body: function (obj, config) {}
+        hasBody: function (obj) { },
+        body: function (obj, config) { }
       }
     ]
     console.log('elm-debug-transformer: checking for formatter support.', {})
@@ -1032,7 +1033,10 @@ app.ports.logEvent.subscribe(logEvent)
 // EOS / Identity functions
 // =========================================
 
-eos = Eos(config.eosOptions)
+eos = new Eos.Api({
+  rpc: new Eos.JsonRpc(config.eosOptions.httpEndpoint),
+  chainId: config.eosOptions.chainId
+})
 
 // STORE LANGUAGE
 
@@ -1248,7 +1252,7 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
-      return eos.getAccount(arg.data.account)
+      return eos.rpc.get_account(arg.data.account)
         .then(_ => ({ isAvailable: false, error: 'account not available' }))
         .catch(e => {
           // Invalid name exception
@@ -1284,7 +1288,7 @@ async function handleJavascriptPort (arg) {
       } else {
         try {
           const publicKey = ecc.privateToPublic(privateKey)
-          const accounts = await eos.getKeyAccounts(publicKey)
+          const accounts = await eos.rpc.history_get_key_accounts(publicKey)
           addBreadcrumb({
             type: 'debug',
             category: 'login',
@@ -1311,7 +1315,7 @@ async function handleJavascriptPort (arg) {
             )
 
             // Save credentials to EOS
-            eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+            eos.signatureProvider = new JsSignatureProvider([privateKey])
             Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
             addBreadcrumb({
               type: 'debug',
@@ -1374,7 +1378,7 @@ async function handleJavascriptPort (arg) {
         try {
           const decryptedKey = sjcl.decrypt(pin, user.encryptedKey)
 
-          eos = Eos(Object.assign(config.eosOptions, { keyProvider: decryptedKey }))
+          eos.signatureProvider = new JsSignatureProvider([decryptedKey])
           addBreadcrumb({
             type: 'debug',
             category: 'getPrivateKey',
@@ -1410,7 +1414,19 @@ async function handleJavascriptPort (arg) {
         level: 'info'
       })
 
-      return eos.transaction({ actions: arg.data.actions })
+      // If the transaction itself doesn't provide arguments for TAPOS
+      // (Transaction As Proof Of State), we need to provide it on the transact
+      // function config arguments
+      const needsTAPOS =
+        arg.data.actions.expiration === undefined &&
+        arg.data.actions.ref_block_num === undefined &&
+        arg.data.actions.ref_block_prefix === undefined
+
+      const transactionConfig = needsTAPOS
+        ? { blocksBehind: 3, expireSeconds: 30 }
+        : undefined
+
+      return eos.transact({ actions: arg.data.actions }, transactionConfig)
         .then(res => {
           addBreadcrumb({
             type: 'debug',
@@ -1486,7 +1502,15 @@ async function handleJavascriptPort (arg) {
       }
     }
     case 'accountNameToUint64': {
-      return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
+      const builtinTypes = Eos.Serialize.createInitialTypes()
+      const uint64Type = builtinTypes.get('uint64')
+      const nameType = builtinTypes.get('name')
+      const buffer = new Eos.Serialize.SerialBuffer()
+
+      nameType.serialize(buffer, arg.data.accountName)
+      const uint64name = uint64Type.deserialize(buffer)
+
+      return { uint64name }
     }
     case 'scrollIntoView': {
       document.getElementById(arg.data.id).scrollIntoView(true)
