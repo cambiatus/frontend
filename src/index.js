@@ -1426,7 +1426,18 @@ async function handleJavascriptPort (arg) {
         ? { blocksBehind: 3, expireSeconds: 30 }
         : undefined
 
-      return eos.transact({ actions: arg.data.actions }, transactionConfig)
+      const actions = await Promise.all(arg.data.actions.map(async (action) => {
+        if (action.name !== 'propose') {
+          return action
+        }
+
+        // If the action is a proposal, we need to serialize the actions we're proposing
+        const serializedActions = await eos.serializeActions(action.data.trx.actions)
+        action.data.trx.actions = serializedActions
+        return action
+      }))
+
+      return eos.transact({ actions }, transactionConfig)
         .then(res => {
           addBreadcrumb({
             type: 'debug',

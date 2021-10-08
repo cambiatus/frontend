@@ -124,7 +124,7 @@ update msg model loggedIn =
                                         [ { accountName = loggedIn.shared.contracts.community
                                           , name = "newobjective"
                                           , authorization =
-                                                { actor = loggedIn.accountName
+                                                { actor = Eos.Account.stringToName "eosmsigadmin"
                                                 , permissionName = Eos.Account.samplePermission
                                                 }
                                           , data =

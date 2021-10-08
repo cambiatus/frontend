@@ -93,7 +93,7 @@ encodeProposal proposer proposalName permissionLevels expiration transaction =
                 , ( "delay_sec", Encode.int 0 )
                 , ( "context_free_actions", encodedEmptyList )
                 , ( "actions", Encode.list encodeAction transaction )
-                , ( "transaction_extensions", Encode.int 0 )
+                , ( "transaction_extensions", encodedEmptyList )
                 ]
           )
         ]
