@@ -612,10 +612,6 @@ broadcast broadcastMessage status =
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
 
-                CommunitySettingsMultisig _ ->
-                    CommunitySettingsMultisig.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunitySettingsMultisigMsg
-
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsMsg

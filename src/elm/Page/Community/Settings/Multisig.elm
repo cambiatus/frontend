@@ -1,4 +1,4 @@
-module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
+module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api
 import Community
@@ -19,6 +19,7 @@ import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import View.Components
+import View.Form.Input as Input
 
 
 
@@ -27,12 +28,15 @@ import View.Components
 
 type alias Model =
     { proposals : List Proposal
+    , newObjectiveName : String
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { proposals = [] }
+    ( { proposals = []
+      , newObjectiveName = ""
+      }
     , Api.getFromBlockchain loggedIn.shared
         { code = "eosio.msig"
         , scope = "henriquebuss"
@@ -57,6 +61,8 @@ type Msg
     | ClickedApproveProposal Proposal
     | ClickedUnapproveProposal Proposal
     | ClickedExecuteProposal Proposal
+    | EnteredNewObjectiveName String
+    | CompletedProposingNewObjective
 
 
 type alias UpdateResult =
@@ -95,38 +101,43 @@ update msg model loggedIn =
             UR.init model
 
         ClickedChangeAccountPermissions ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = ClickedChangeAccountPermissions
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ Eos.updateAuth
-                                { actor = loggedIn.accountName
-                                , permissionName = Eos.Account.ownerPermission
-                                }
-                                -- TODO - Not hardcode this
-                                (Eos.Account.stringToName "eosmsigadmin")
-                                2
-                                -- TODO - Not hardcode these
-                                [ { name = Eos.Account.stringToName "henriquebuss"
-                                  , weight = 1
-                                  }
-                                , { name = Eos.Account.stringToName "henriquebus2"
-                                  , weight = 1
-                                  }
-                                , { name = Eos.Account.stringToName "henriquebus4"
-                                  , weight = 1
-                                  }
-                                ]
-                            ]
-                    }
-                |> LoggedIn.withAuthentication loggedIn
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     model
-                    { successMsg = ClickedChangeAccountPermissions
-                    , errorMsg = NoOp
-                    }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = ClickedChangeAccountPermissions
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ Eos.updateAuth
+                                        { actor = loggedIn.accountName
+                                        , permissionName = Eos.Account.ownerPermission
+                                        }
+                                        community.creator
+                                        2
+                                        -- TODO - Not hardcode these
+                                        [ { name = Eos.Account.stringToName "henriquebuss"
+                                          , weight = 1
+                                          }
+                                        , { name = Eos.Account.stringToName "henriquebus2"
+                                          , weight = 1
+                                          }
+                                        , { name = Eos.Account.stringToName "henriquebus4"
+                                          , weight = 1
+                                          }
+                                        ]
+                                    ]
+                            }
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = ClickedChangeAccountPermissions
+                            , errorMsg = NoOp
+                            }
+
+                _ ->
+                    -- TODO
+                    UR.init model
 
         ClickedProposeNewObjective ->
             case loggedIn.selectedCommunity of
@@ -140,7 +151,7 @@ update msg model loggedIn =
                                 Eos.encodeTransaction
                                     [ Eos.proposeTransaction
                                         loggedIn.accountName
-                                        "createobj"
+                                        model.newObjectiveName
                                         -- TODO - Not hardcode these
                                         [ { actor = Eos.Account.stringToName "henriquebus2"
                                           , permissionName = Eos.Account.samplePermission
@@ -159,7 +170,7 @@ update msg model loggedIn =
                                         [ { accountName = loggedIn.shared.contracts.community
                                           , name = "newobjective"
                                           , authorization =
-                                                { actor = Eos.Account.stringToName "eosmsigadmin"
+                                                { actor = community.creator
                                                 , permissionName = Eos.Account.samplePermission
                                                 }
                                           , data =
@@ -290,6 +301,24 @@ update msg model loggedIn =
                     model
                     { successMsg = msg, errorMsg = NoOp }
 
+        EnteredNewObjectiveName newObjectiveName ->
+            { model | newObjectiveName = newObjectiveName }
+                |> UR.init
+
+        CompletedProposingNewObjective ->
+            { model | newObjectiveName = "" }
+                |> UR.init
+                |> UR.addCmd
+                    (Api.getFromBlockchain loggedIn.shared
+                        { code = "eosio.msig"
+                        , scope = "henriquebuss"
+                        , table = "proposal"
+                        , limit = 100
+                        }
+                        proposalRowsDecoder
+                        CompletedLoadProposals
+                    )
+
 
 
 -- VIEW
@@ -330,6 +359,19 @@ view_ shared model =
                 , onClick ClickedChangeAccountPermissions
                 ]
                 [ text "Change account permissions" ]
+            , Input.init
+                { label = "New objective name"
+                , id = "new-objective-name-input"
+                , onInput = EnteredNewObjectiveName
+                , disabled = False
+                , value = model.newObjectiveName
+                , placeholder = Nothing
+                , problems = Nothing
+                , translators = shared.translators
+                }
+                |> Input.withCounter 12
+                |> Input.withCounterType Input.CountLetters
+                |> Input.toHtml
             , button
                 [ class "button button-primary w-full mt-10"
                 , onClick ClickedProposeNewObjective
@@ -378,7 +420,7 @@ viewAction action =
             , p [] [ text action.account ]
             ]
         , div [ class "flex justify-between" ]
-            [ h2 [ class "font-bold" ] [ text "Proposal name" ]
+            [ h2 [ class "font-bold" ] [ text "Action" ]
             , p [] [ text action.name ]
             ]
         , div [ class "flex justify-between" ]
@@ -445,11 +487,6 @@ encodeVote vote =
 -- UTILS
 
 
-receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
-receiveBroadcast broadcastMsg =
-    Nothing
-
-
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -461,6 +498,9 @@ jsAddressToMsg addr val =
                 val
                 |> DeserializedProposals
                 |> Just
+
+        [ "ClickedProposeNewObjective" ] ->
+            Just CompletedProposingNewObjective
 
         _ ->
             Nothing
@@ -492,3 +532,9 @@ msgToString msg =
 
         ClickedExecuteProposal _ ->
             [ "ClickedExecuteProposal" ]
+
+        EnteredNewObjectiveName _ ->
+            [ "EnteredNewObjectiveName" ]
+
+        CompletedProposingNewObjective ->
+            [ "CompletedProposingNewObjective" ]
