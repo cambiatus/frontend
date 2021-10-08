@@ -11,6 +11,7 @@ module Eos exposing
     , cambiatusSymbol
     , decodeAsset
     , encodeAsset
+    , encodeAuthorization
     , encodeEosBool
     , encodeSymbol
     , encodeTableQuery

@@ -1,11 +1,16 @@
 module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Api
 import Community
 import Eos
 import Eos.Account
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, h1, h2, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
+import Http
+import Iso8601
+import Json.Decode
+import Json.Decode.Pipeline
 import Json.Encode as Encode
 import Page
 import RemoteData
@@ -13,6 +18,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
+import View.Components
 
 
 
@@ -20,13 +26,21 @@ import UpdateResult as UR
 
 
 type alias Model =
-    {}
+    { proposals : List Proposal
+    }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( {}
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+    ( { proposals = [] }
+    , Api.getFromBlockchain loggedIn.shared
+        { code = "eosio.msig"
+        , scope = "henriquebuss"
+        , table = "proposal"
+        , limit = 100
+        }
+        proposalRowsDecoder
+        CompletedLoadProposals
     )
 
 
@@ -36,13 +50,37 @@ init loggedIn =
 
 type Msg
     = NoOp
-    | CompletedLoadCommunity Community.Model
     | ClickedChangeAccountPermissions
     | ClickedProposeNewObjective
+    | CompletedLoadProposals (Result Http.Error (List ProposalRow))
+    | DeserializedProposals (Result Json.Decode.Error (List Proposal))
+    | ClickedApproveProposal Proposal
+    | ClickedUnapproveProposal Proposal
 
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg (LoggedIn.External Msg)
+
+
+type alias Proposal =
+    { name : String
+    , expiration : Time.Posix
+    , actions : List Action
+    }
+
+
+type alias Vote =
+    { proposer : Eos.Account.Name
+    , proposalName : String
+    , permissionLevel : Eos.Authorization
+    }
+
+
+type alias Action =
+    { account : String
+    , name : String
+    , description : String
+    }
 
 
 
@@ -54,10 +92,6 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        CompletedLoadCommunity community ->
-            model
-                |> UR.init
 
         ClickedChangeAccountPermissions ->
             model
@@ -146,13 +180,96 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
+        CompletedLoadProposals (Ok proposals) ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "deserializeProposals" )
+                            , ( "proposals", Encode.list proposalRowEncoder proposals )
+                            ]
+                    }
+
+        CompletedLoadProposals (Err _) ->
+            -- TODO
+            UR.init model
+
+        DeserializedProposals (Ok proposals) ->
+            { model | proposals = proposals }
+                |> UR.init
+
+        DeserializedProposals (Err err) ->
+            -- TODO
+            UR.init model
+
+        ClickedApproveProposal proposal ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = "eosio.msig"
+                              , name = "approve"
+                              , authorization =
+                                    { actor = loggedIn.accountName
+                                    , permissionName = Eos.Account.samplePermission
+                                    }
+                              , data =
+                                    encodeVote
+                                        { proposer = Eos.Account.stringToName "henriquebuss"
+                                        , proposalName = proposal.name
+                                        , permissionLevel =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.Account.samplePermission
+                                            }
+                                        }
+                              }
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = NoOp }
+
+        ClickedUnapproveProposal proposal ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = "eosio.msig"
+                              , name = "unapprove"
+                              , authorization =
+                                    { actor = loggedIn.accountName
+                                    , permissionName = Eos.Account.samplePermission
+                                    }
+                              , data =
+                                    encodeVote
+                                        { proposer = Eos.Account.stringToName "henriquebuss"
+                                        , proposalName = proposal.name
+                                        , permissionLevel =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.Account.samplePermission
+                                            }
+                                        }
+                              }
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = NoOp }
+
 
 
 -- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn _ =
+view loggedIn model =
     let
         title =
             "Multisig"
@@ -162,7 +279,7 @@ view loggedIn _ =
                 RemoteData.Success community ->
                     div []
                         [ Page.viewHeader loggedIn title
-                        , view_ loggedIn.shared community
+                        , view_ loggedIn.shared model
                         ]
 
                 RemoteData.Loading ->
@@ -177,8 +294,8 @@ view loggedIn _ =
     { title = title, content = content }
 
 
-view_ : Shared -> Community.Model -> Html Msg
-view_ { translators } community =
+view_ : Shared -> Model -> Html Msg
+view_ shared model =
     div [ class "container mx-auto" ]
         [ div [ class "px-4" ]
             [ button
@@ -191,7 +308,104 @@ view_ { translators } community =
                 , onClick ClickedProposeNewObjective
                 ]
                 [ text "Propose new objective" ]
+            , div [ class "grid gap-4 grid-cols-2 mt-4" ]
+                (List.map (viewProposal shared) model.proposals)
             ]
+        ]
+
+
+viewProposal : Shared -> Proposal -> Html Msg
+viewProposal shared proposal =
+    div [ class "bg-white rounded shadow p-4" ]
+        [ h1 [ class "font-bold" ] [ text proposal.name ]
+        , View.Components.dateViewer [ class "text-sm text-gray-900" ]
+            identity
+            shared
+            proposal.expiration
+        , div [ class "my-4" ] (List.map viewAction proposal.actions)
+        , div [ class "flex justify-between gap-4" ]
+            [ button
+                [ class "button w-full button-primary"
+                , onClick (ClickedApproveProposal proposal)
+                ]
+                [ text "Approve" ]
+            , button
+                [ class "button w-full button-danger"
+                , onClick (ClickedUnapproveProposal proposal)
+                ]
+                [ text "Disapprove" ]
+            ]
+        ]
+
+
+viewAction : Action -> Html Msg
+viewAction action =
+    div [ class "bg-white rounded shadow p-4" ]
+        [ div [ class "flex justify-between" ]
+            [ h2 [ class "font-bold" ] [ text "Proposer" ]
+            , p [] [ text action.account ]
+            ]
+        , div [ class "flex justify-between" ]
+            [ h2 [ class "font-bold" ] [ text "Proposal name" ]
+            , p [] [ text action.name ]
+            ]
+        , div [ class "flex justify-between" ]
+            [ h2 [ class "font-bold" ] [ text "Proposed description" ]
+            , p [] [ text action.description ]
+            ]
+        ]
+
+
+
+-- JSON
+
+
+type alias ProposalRow =
+    { proposalName : String, serializedTransaction : String }
+
+
+proposalRowsDecoder : Json.Decode.Decoder (List ProposalRow)
+proposalRowsDecoder =
+    Json.Decode.field "rows" (Json.Decode.list proposalRowDecoder)
+
+
+proposalRowDecoder : Json.Decode.Decoder ProposalRow
+proposalRowDecoder =
+    Json.Decode.succeed ProposalRow
+        |> Json.Decode.Pipeline.required "proposal_name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "packed_transaction" Json.Decode.string
+
+
+proposalRowEncoder : ProposalRow -> Encode.Value
+proposalRowEncoder proposalRow =
+    Encode.object
+        [ ( "proposalName", Encode.string proposalRow.proposalName )
+        , ( "serializedTransaction", Encode.string proposalRow.serializedTransaction )
+        ]
+
+
+proposalDecoder : Json.Decode.Decoder Proposal
+proposalDecoder =
+    Json.Decode.succeed Proposal
+        |> Json.Decode.Pipeline.required "proposalName" Json.Decode.string
+        |> Json.Decode.Pipeline.requiredAt [ "actions", "expiration" ] Iso8601.decoder
+        |> Json.Decode.Pipeline.requiredAt [ "actions", "actions" ] (Json.Decode.list actionDecoder)
+
+
+actionDecoder : Json.Decode.Decoder Action
+actionDecoder =
+    Json.Decode.succeed Action
+        |> Json.Decode.Pipeline.required "account" Json.Decode.string
+        |> Json.Decode.Pipeline.required "name" Json.Decode.string
+        |> Json.Decode.Pipeline.requiredAt [ "data", "description" ] Json.Decode.string
+
+
+encodeVote : Vote -> Encode.Value
+encodeVote vote =
+    Encode.object
+        [ ( "proposer", Eos.Account.encodeName vote.proposer )
+        , ( "proposal_name", Encode.string vote.proposalName )
+        , ( "level", Eos.encodeAuthorization vote.permissionLevel )
         ]
 
 
@@ -202,16 +416,24 @@ view_ { translators } community =
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
-        LoggedIn.CommunityLoaded community ->
-            Just (CompletedLoadCommunity community)
-
         _ ->
             Nothing
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
-    Nothing
+    case addr of
+        "CompletedLoadOwnProposals" :: _ ->
+            Json.Decode.decodeValue
+                (Json.Decode.field "deserializedProposals"
+                    (Json.Decode.list proposalDecoder)
+                )
+                val
+                |> DeserializedProposals
+                |> Just
+
+        _ ->
+            Nothing
 
 
 msgToString : Msg -> List String
@@ -220,11 +442,20 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedLoadCommunity _ ->
-            [ "CompletedLoadCommunity" ]
-
         ClickedChangeAccountPermissions ->
             [ "ClickedChangeAccountPermissions" ]
 
         ClickedProposeNewObjective ->
             [ "ClickedProposeNewObjective" ]
+
+        CompletedLoadProposals r ->
+            [ "CompletedLoadOwnProposals", UR.resultToString r ]
+
+        DeserializedProposals _ ->
+            [ "DeserializedProposals" ]
+
+        ClickedApproveProposal _ ->
+            [ "ClickedApproveProposal" ]
+
+        ClickedUnapproveProposal _ ->
+            [ "ClickedUnapproveProposal" ]

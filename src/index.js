@@ -1929,6 +1929,17 @@ async function handleJavascriptPort (arg) {
         return { notSupported: true }
       }
     }
+    case 'deserializeProposals': {
+      const { proposals } = arg.data
+      const deserializedProposals = await Promise.all(
+        proposals.map(async (proposal) => {
+          const deserializedActions = await eos.deserializeTransactionWithActions(proposal.serializedTransaction)
+          return { proposalName: proposal.proposalName, actions: deserializedActions }
+        })
+      )
+
+      return { deserializedProposals }
+    }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
     }
