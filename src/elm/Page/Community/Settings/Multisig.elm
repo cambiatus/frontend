@@ -447,15 +447,13 @@ encodeVote vote =
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
-    case broadcastMsg of
-        _ ->
-            Nothing
+    Nothing
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "CompletedLoadOwnProposals" :: _ ->
+        "CompletedLoadProposals" :: _ ->
             Json.Decode.decodeValue
                 (Json.Decode.field "deserializedProposals"
                     (Json.Decode.list proposalDecoder)
@@ -481,7 +479,7 @@ msgToString msg =
             [ "ClickedProposeNewObjective" ]
 
         CompletedLoadProposals r ->
-            [ "CompletedLoadOwnProposals", UR.resultToString r ]
+            [ "CompletedLoadProposals", UR.resultToString r ]
 
         DeserializedProposals _ ->
             [ "DeserializedProposals" ]
