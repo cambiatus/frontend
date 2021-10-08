@@ -56,6 +56,7 @@ type Msg
     | DeserializedProposals (Result Json.Decode.Error (List Proposal))
     | ClickedApproveProposal Proposal
     | ClickedUnapproveProposal Proposal
+    | ClickedExecuteProposal Proposal
 
 
 type alias UpdateResult =
@@ -263,6 +264,32 @@ update msg model loggedIn =
                     model
                     { successMsg = msg, errorMsg = NoOp }
 
+        ClickedExecuteProposal proposal ->
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = "eosio.msig"
+                              , name = "exec"
+                              , authorization =
+                                    { actor = loggedIn.accountName
+                                    , permissionName = Eos.Account.samplePermission
+                                    }
+                              , data =
+                                    Encode.object
+                                        [ ( "proposer", Encode.string "henriquebuss" )
+                                        , ( "proposal_name", Encode.string proposal.name )
+                                        , ( "executer", Eos.Account.encodeName loggedIn.accountName )
+                                        ]
+                              }
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = NoOp }
+
 
 
 -- VIEW
@@ -334,6 +361,11 @@ viewProposal shared proposal =
                 , onClick (ClickedUnapproveProposal proposal)
                 ]
                 [ text "Disapprove" ]
+            , button
+                [ class "button w-full button-secondary"
+                , onClick (ClickedExecuteProposal proposal)
+                ]
+                [ text "Execute" ]
             ]
         ]
 
@@ -342,7 +374,7 @@ viewAction : Action -> Html Msg
 viewAction action =
     div [ class "bg-white rounded shadow p-4" ]
         [ div [ class "flex justify-between" ]
-            [ h2 [ class "font-bold" ] [ text "Proposer" ]
+            [ h2 [ class "font-bold" ] [ text "Account" ]
             , p [] [ text action.account ]
             ]
         , div [ class "flex justify-between" ]
@@ -459,3 +491,6 @@ msgToString msg =
 
         ClickedUnapproveProposal _ ->
             [ "ClickedUnapproveProposal" ]
+
+        ClickedExecuteProposal _ ->
+            [ "ClickedExecuteProposal" ]
