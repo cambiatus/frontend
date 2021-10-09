@@ -4,7 +4,6 @@ module Eos exposing
     , Authorization
     , EosBool(..)
     , Symbol
-    , TableQuery
     , Transaction
     , assetToString
     , boolToEosBool
@@ -14,7 +13,6 @@ module Eos exposing
     , encodeAuthorization
     , encodeEosBool
     , encodeSymbol
-    , encodeTableQuery
     , encodeTransaction
     , eosBoolDecoder
     , eosBoolToBool
@@ -459,26 +457,3 @@ eosBoolDecoder : Decoder EosBool
 eosBoolDecoder =
     Decode.int
         |> Decode.map intToEosBool
-
-
-
--- Table Query
-
-
-type alias TableQuery =
-    { code : String
-    , scope : String
-    , table : String
-    , limit : Int
-    }
-
-
-encodeTableQuery : TableQuery -> Value
-encodeTableQuery query =
-    Encode.object
-        [ ( "code", Encode.string query.code )
-        , ( "scope", Encode.string query.scope )
-        , ( "table", Encode.string query.table )
-        , ( "limit", Encode.int query.limit )
-        , ( "json", Encode.bool True )
-        ]

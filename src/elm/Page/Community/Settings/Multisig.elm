@@ -1,6 +1,7 @@
 module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api
+import Api.Eos
 import Community
 import Eos
 import Eos.Account
@@ -37,14 +38,10 @@ init loggedIn =
     ( { proposals = []
       , newObjectiveName = ""
       }
-    , Api.getFromBlockchain loggedIn.shared
-        { code = "eosio.msig"
-        , scope = "henriquebuss"
-        , table = "proposal"
-        , limit = 100
-        }
-        proposalRowsDecoder
+    , Api.Eos.query loggedIn.shared
         CompletedLoadProposals
+        proposalRowDecoder
+        (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
     )
 
 
@@ -309,14 +306,10 @@ update msg model loggedIn =
             { model | newObjectiveName = "" }
                 |> UR.init
                 |> UR.addCmd
-                    (Api.getFromBlockchain loggedIn.shared
-                        { code = "eosio.msig"
-                        , scope = "henriquebuss"
-                        , table = "proposal"
-                        , limit = 100
-                        }
-                        proposalRowsDecoder
+                    (Api.Eos.query loggedIn.shared
                         CompletedLoadProposals
+                        proposalRowDecoder
+                        (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
                     )
 
 
@@ -436,11 +429,6 @@ viewAction action =
 
 type alias ProposalRow =
     { proposalName : String, serializedTransaction : String }
-
-
-proposalRowsDecoder : Json.Decode.Decoder (List ProposalRow)
-proposalRowsDecoder =
-    Json.Decode.field "rows" (Json.Decode.list proposalRowDecoder)
 
 
 proposalRowDecoder : Json.Decode.Decoder ProposalRow
