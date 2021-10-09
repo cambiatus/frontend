@@ -1,8 +1,6 @@
 module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
-import Api
 import Api.Eos
-import Community
 import Eos
 import Eos.Account
 import Html exposing (Html, button, div, h1, h2, p, text)
@@ -69,14 +67,8 @@ type alias UpdateResult =
 type alias Proposal =
     { name : String
     , expiration : Time.Posix
+    , proposer : Eos.Account.Name
     , actions : List Action
-    }
-
-
-type alias Vote =
-    { proposer : Eos.Account.Name
-    , proposalName : String
-    , permissionLevel : Eos.Authorization
     }
 
 
@@ -139,47 +131,46 @@ update msg model loggedIn =
         ClickedProposeNewObjective ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
+                    let
+                        proposedActions =
+                            [ ( Api.Eos.CreateObjective
+                                    { communitySymbol = community.symbol
+                                    , objectiveDescription = model.newObjectiveName
+                                    , communityAdmin = community.creator
+                                    }
+                                    |> Api.Eos.CommunityAction
+                              , { actor = community.creator, permission = Api.Eos.Active }
+                              )
+                            ]
+                    in
                     model
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = ClickedProposeNewObjective
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ Eos.proposeTransaction
-                                        loggedIn.accountName
-                                        model.newObjectiveName
-                                        -- TODO - Not hardcode these
-                                        [ { actor = Eos.Account.stringToName "henriquebus2"
-                                          , permissionName = Eos.Account.samplePermission
-                                          }
-                                        , { actor = Eos.Account.stringToName "henriquebus4"
-                                          , permissionName = Eos.Account.samplePermission
-                                          }
-                                        ]
-                                        (loggedIn.shared.now
-                                            |> Time.posixToMillis
-                                            -- now + 10 days
-                                            |> (\now -> now + 1000 * 60 * 60 * 24 * 10)
-                                            |> Time.millisToPosix
-                                        )
-                                        -- TODO - Not hardcode these
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "newobjective"
-                                          , authorization =
-                                                { actor = community.creator
-                                                , permissionName = Eos.Account.samplePermission
-                                                }
-                                          , data =
-                                                { asset = { amount = 0, symbol = community.symbol }
-                                                , description = "Test objective with multisig transaction"
-                                                , creator = loggedIn.accountName
-                                                }
-                                                    |> Community.encodeCreateObjectiveAction
-                                          }
-                                        ]
+                            (Api.Eos.Propose
+                                { proposer = loggedIn.accountName
+                                , proposalName = model.newObjectiveName
+                                , requestedVotes =
+                                    -- TODO - Not hardcode requestedVotes
+                                    [ { actor = Eos.Account.stringToName "henriquebus2"
+                                      , permission = Api.Eos.Active
+                                      }
+                                    , { actor = Eos.Account.stringToName "henriquebus4"
+                                      , permission = Api.Eos.Active
+                                      }
                                     ]
-                            }
+                                , expiration =
+                                    loggedIn.shared.now
+                                        |> Time.posixToMillis
+                                        -- now + 10 days
+                                        |> (\now -> now + 1000 * 60 * 60 * 24 * 10)
+                                        |> Time.millisToPosix
+                                , actions = proposedActions
+                                }
+                                |> Api.Eos.MultiSigAction
+                                |> Api.Eos.transact loggedIn.shared
+                                    { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                                    ClickedProposeNewObjective
+                            )
                         |> LoggedIn.withAuthentication loggedIn
                             model
                             { successMsg = ClickedProposeNewObjective
@@ -217,28 +208,15 @@ update msg model loggedIn =
         ClickedApproveProposal proposal ->
             UR.init model
                 |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = "eosio.msig"
-                              , name = "approve"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.Account.samplePermission
-                                    }
-                              , data =
-                                    encodeVote
-                                        { proposer = Eos.Account.stringToName "henriquebuss"
-                                        , proposalName = proposal.name
-                                        , permissionLevel =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.Account.samplePermission
-                                            }
-                                        }
-                              }
-                            ]
-                    }
+                    (Api.Eos.Approve
+                        { proposer = proposal.proposer
+                        , proposalName = proposal.name
+                        }
+                        |> Api.Eos.MultiSigAction
+                        |> Api.Eos.transact loggedIn.shared
+                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            msg
+                    )
                 |> LoggedIn.withAuthentication loggedIn
                     model
                     { successMsg = msg, errorMsg = NoOp }
@@ -246,28 +224,15 @@ update msg model loggedIn =
         ClickedUnapproveProposal proposal ->
             UR.init model
                 |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = "eosio.msig"
-                              , name = "unapprove"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.Account.samplePermission
-                                    }
-                              , data =
-                                    encodeVote
-                                        { proposer = Eos.Account.stringToName "henriquebuss"
-                                        , proposalName = proposal.name
-                                        , permissionLevel =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.Account.samplePermission
-                                            }
-                                        }
-                              }
-                            ]
-                    }
+                    (Api.Eos.Unapprove
+                        { proposer = proposal.proposer
+                        , proposalName = proposal.name
+                        }
+                        |> Api.Eos.MultiSigAction
+                        |> Api.Eos.transact loggedIn.shared
+                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            msg
+                    )
                 |> LoggedIn.withAuthentication loggedIn
                     model
                     { successMsg = msg, errorMsg = NoOp }
@@ -275,25 +240,15 @@ update msg model loggedIn =
         ClickedExecuteProposal proposal ->
             UR.init model
                 |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = "eosio.msig"
-                              , name = "exec"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.Account.samplePermission
-                                    }
-                              , data =
-                                    Encode.object
-                                        [ ( "proposer", Encode.string "henriquebuss" )
-                                        , ( "proposal_name", Encode.string proposal.name )
-                                        , ( "executer", Eos.Account.encodeName loggedIn.accountName )
-                                        ]
-                              }
-                            ]
-                    }
+                    (Api.Eos.Execute
+                        { proposer = proposal.proposer
+                        , proposalName = proposal.name
+                        }
+                        |> Api.Eos.MultiSigAction
+                        |> Api.Eos.transact loggedIn.shared
+                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            msg
+                    )
                 |> LoggedIn.withAuthentication loggedIn
                     model
                     { successMsg = msg, errorMsg = NoOp }
@@ -451,6 +406,8 @@ proposalDecoder =
     Json.Decode.succeed Proposal
         |> Json.Decode.Pipeline.required "proposalName" Json.Decode.string
         |> Json.Decode.Pipeline.requiredAt [ "actions", "expiration" ] Iso8601.decoder
+        -- TODO - Not hardcode proposer
+        |> Json.Decode.Pipeline.hardcoded (Eos.Account.stringToName "henriquebuss")
         |> Json.Decode.Pipeline.requiredAt [ "actions", "actions" ] (Json.Decode.list actionDecoder)
 
 
@@ -460,15 +417,6 @@ actionDecoder =
         |> Json.Decode.Pipeline.required "account" Json.Decode.string
         |> Json.Decode.Pipeline.required "name" Json.Decode.string
         |> Json.Decode.Pipeline.requiredAt [ "data", "description" ] Json.Decode.string
-
-
-encodeVote : Vote -> Encode.Value
-encodeVote vote =
-    Encode.object
-        [ ( "proposer", Eos.Account.encodeName vote.proposer )
-        , ( "proposal_name", Encode.string vote.proposalName )
-        , ( "level", Eos.encodeAuthorization vote.permissionLevel )
-        ]
 
 
 

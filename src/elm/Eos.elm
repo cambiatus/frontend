@@ -10,7 +10,6 @@ module Eos exposing
     , cambiatusSymbol
     , decodeAsset
     , encodeAsset
-    , encodeAuthorization
     , encodeEosBool
     , encodeSymbol
     , encodeTransaction
@@ -20,7 +19,6 @@ module Eos exposing
     , getSymbolPrecision
     , maxSymbolLength
     , minSymbolLength
-    , proposeTransaction
     , symbolDecoder
     , symbolFromString
     , symbolSelectionSet
@@ -31,11 +29,8 @@ module Eos exposing
 
 import Eos.Account as Account exposing (PermissionName)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import List.Extra
-import Time
 import Utils
 
 
@@ -52,49 +47,6 @@ encodeTransaction transaction =
     Encode.object
         [ ( "name", Encode.string "eosTransaction" )
         , ( "actions", Encode.list encodeAction transaction )
-        ]
-
-
-proposeTransaction : Account.Name -> String -> List Authorization -> Time.Posix -> Transaction -> Action
-proposeTransaction proposer proposalName permissionLevels expiration transaction =
-    { accountName = "eosio.msig"
-    , name = "propose"
-    , authorization =
-        { actor = proposer
-        , permissionName = Account.samplePermission
-        }
-    , data = encodeProposal proposer proposalName permissionLevels expiration transaction
-    }
-
-
-encodeProposal : Account.Name -> String -> List Authorization -> Time.Posix -> Transaction -> Value
-encodeProposal proposer proposalName permissionLevels expiration transaction =
-    Encode.object
-        [ ( "proposer", Account.encodeName proposer )
-        , ( "proposal_name", Encode.string proposalName )
-        , ( "requested", Encode.list encodeAuthorization permissionLevels )
-        , ( "trx"
-          , Encode.object
-                [ ( "expiration"
-                  , expiration
-                        |> Iso8601.fromTime
-                        |> String.toList
-                        -- Eos doesn't support milliseconds, so we remove that information
-                        |> List.Extra.dropWhileRight (\c -> c /= '.')
-                        |> List.Extra.dropWhileRight (not << Char.isDigit)
-                        |> String.fromList
-                        |> Encode.string
-                  )
-                , ( "ref_block_num", Encode.int 0 )
-                , ( "ref_block_prefix", Encode.int 0 )
-                , ( "max_net_usage_words", Encode.int 0 )
-                , ( "max_cpu_usage_ms", Encode.int 0 )
-                , ( "delay_sec", Encode.int 0 )
-                , ( "context_free_actions", encodedEmptyList )
-                , ( "actions", Encode.list encodeAction transaction )
-                , ( "transaction_extensions", encodedEmptyList )
-                ]
-          )
         ]
 
 
