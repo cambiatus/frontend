@@ -1132,9 +1132,12 @@
   },
   "sponsorship": {
     "title": "Patrocini",
+    "no_support": "La vostra comunitat encara no admet patrocinis",
+    "no_support_subtitle": "Parleu amb l'equip d'administració de la comunitat per activar aquesta funció",
     "description": "Permet que els usuaris patrocinin la comunitat",
     "sponsor": "Patrocina",
     "enter_amount": "Introduïu l'import que voleu contribuir",
+    "select_currency": "Seleccioneu la moneda que vulgueu utilitzar",
     "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} {{currency}}",
     "amount_too_big": "L'import ha de ser màxim d'{{maximum}} {{currency}}",
     "invalid_amount": "Valor no vàlid",

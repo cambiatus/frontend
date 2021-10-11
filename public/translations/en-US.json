@@ -1130,9 +1130,12 @@
   },
   "sponsorship": {
     "title": "Sponsorship",
+    "no_support": "Your community doesn't support sponsorship yet",
+    "no_support_subtitle": "Talk to the community administration team to activate this feature",
     "description": "Allow users to sponsor the community",
     "sponsor": "Sponsor",
     "enter_amount": "Enter the amount you want to contribute",
+    "select_currency": "Select the currency you want to use",
     "amount_too_small": "The amount must be at least {{minimum}} {{currency}}",
     "amount_too_big": "The amount must be a maximum of {{maximum}} {{currency}}",
     "invalid_amount": "Invalid amount",

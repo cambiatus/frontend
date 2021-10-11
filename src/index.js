@@ -44,6 +44,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 window.customElements.define('paypal-buttons',
   class PaypalButtons extends HTMLElement {
+    static get observedAttributes () { return ['elm-currency'] }
+
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'elm-currency') {
+        this.setupPaypal()
+      }
+    }
+
     constructor () {
       super()
 
@@ -53,6 +61,10 @@ window.customElements.define('paypal-buttons',
     }
 
     connectedCallback () {
+      this.setupPaypal()
+    }
+
+    setupPaypal () {
       paypalJs.loadScript({
         'client-id': config.paypal.clientId,
         currency: this.getAttribute('elm-currency') || 'USD'

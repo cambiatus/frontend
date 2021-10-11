@@ -1133,9 +1133,12 @@
   },
   "sponsorship": {
     "title": "Patrocinio",
+    "no_support": "Tu comunidad aún no admite el patrocinio",
+    "no_support_subtitle": "Habla con el equipo de administración de la comunidad para activar esta función",
     "description": "Permitir a los usuarios patrocinar a la comunidad",
     "sponsor": "Patrocinar",
     "enter_amount": "Ingrese la cantidad que desea contribuir",
+    "select_currency": "Seleccione la moneda que desea utilizar",
     "amount_too_small": "El monto debe ser de al menos {{minimum}} {{currency}}",
     "amount_too_big": "El monto debe ser máximo {{maximum}} {{currency}}",
     "invalid_amount": "Valor no válido",

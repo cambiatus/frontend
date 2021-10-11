@@ -28,6 +28,7 @@ import UpdateResult as UR
 import Utils
 import View.Feedback
 import View.Form.Input as Input
+import View.Form.Select as Select
 import View.PaypalButtons as PaypalButtons
 
 
@@ -39,6 +40,7 @@ type alias Model =
     { amount : String
     , amountProblem : Maybe AmountProblem
     , isCreatingOrder : Bool
+    , selectedCurrency : PaypalButtons.Currency
     }
 
 
@@ -47,6 +49,7 @@ init loggedIn =
     ( { amount = ""
       , amountProblem = Nothing
       , isCreatingOrder = False
+      , selectedCurrency = defaultPaypalCurrency loggedIn.shared
       }
     , Cmd.batch
         [ focusAmountField
@@ -80,6 +83,7 @@ type AmountProblem
 type Msg
     = NoOp
     | CompletedLoadCommunity Community.Model
+    | SelectedCurrency PaypalButtons.Currency
     | EnteredAmount String
     | RequestedPaypalInfoFromJs String
     | CreatedContribution String (RemoteData (Graphql.Http.Error (Maybe Contribution)) (Maybe Contribution))
@@ -99,16 +103,12 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLoadCommunity community ->
-            let
-                maybeRedirect =
-                    if Maybe.Extra.isJust community.contributionConfiguration then
-                        identity
+            { model | selectedCurrency = getPaypalCurrency community.contributionConfiguration loggedIn.shared }
+                |> UR.init
 
-                    else
-                        UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
-            in
-            UR.init model
-                |> maybeRedirect
+        SelectedCurrency currency ->
+            { model | selectedCurrency = currency }
+                |> UR.init
 
         EnteredAmount amount ->
             { model
@@ -157,7 +157,7 @@ update msg model loggedIn =
                                         (createContributionSelectionSet
                                             { amount = amount
                                             , communityId = community.symbol
-                                            , currency = getCurrency community.contributionConfiguration loggedIn.shared
+                                            , currency = toCurrencyType model.selectedCurrency
                                             }
                                         )
                                         (CreatedContribution id)
@@ -316,14 +316,6 @@ defaultCurrencyType shared =
             Cambiatus.Enum.CurrencyType.Usd
 
 
-getCurrency : Maybe Community.ContributionConfiguration -> Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
-getCurrency maybeConfig shared =
-    maybeConfig
-        |> Maybe.map .acceptedCurrencies
-        |> Maybe.andThen List.head
-        |> Maybe.withDefault (defaultCurrencyType shared)
-
-
 getPaypalCurrency : Maybe Community.ContributionConfiguration -> Shared -> PaypalButtons.Currency
 getPaypalCurrency maybeConfig shared =
     maybeConfig
@@ -354,6 +346,26 @@ toPaypalCurrency currencyType =
             Just PaypalButtons.USD
 
 
+toCurrencyType : PaypalButtons.Currency -> Cambiatus.Enum.CurrencyType.CurrencyType
+toCurrencyType currency =
+    case currency of
+        PaypalButtons.BRL ->
+            Cambiatus.Enum.CurrencyType.Brl
+
+        PaypalButtons.USD ->
+            Cambiatus.Enum.CurrencyType.Usd
+
+
+toHumanString : Translators -> PaypalButtons.Currency -> String
+toHumanString { t } currency =
+    case currency of
+        PaypalButtons.BRL ->
+            t "currency.brl_plural"
+
+        PaypalButtons.USD ->
+            t "currency.usd_plural"
+
+
 
 -- VIEW
 
@@ -369,7 +381,14 @@ view loggedIn model =
                 [ Page.viewHeader loggedIn title
                 , case loggedIn.selectedCommunity of
                     RemoteData.Success community ->
-                        view_ loggedIn.shared community model
+                        case community.contributionConfiguration of
+                            Nothing ->
+                                Page.fullPageNotFound
+                                    (loggedIn.shared.translators.t "sponsorship.no_support")
+                                    (loggedIn.shared.translators.t "sponsorship.no_support_subtitle")
+
+                            Just contributionConfiguration ->
+                                view_ loggedIn.shared community contributionConfiguration model
 
                     RemoteData.Loading ->
                         Page.fullPageLoading loggedIn.shared
@@ -386,69 +405,109 @@ view loggedIn model =
     }
 
 
-view_ : Shared -> Community.Model -> Model -> Html Msg
-view_ ({ translators } as shared) community model =
+view_ : Shared -> Community.Model -> Community.ContributionConfiguration -> Model -> Html Msg
+view_ ({ translators } as shared) community contributionConfiguration model =
     div [ class "m-4 bg-white rounded md:m-0 md:bg-white md:flex-grow" ]
         [ div [ class "container mx-auto" ]
             [ div [ class "flex flex-col items-center w-full px-4 py-7 bg-white md:w-1/2 md:mx-auto" ]
-                [ img [ class "h-10", src community.logo ] []
+                (img [ class "h-10", src community.logo ] []
+                    -- TODO - Use new typography text-size class (#622)
+                    :: h1 [ class "font-bold text-black text-[46px] mb-8" ] [ text community.name ]
+                    :: label
+                        [ for amountFieldId
 
-                -- TODO - Use new typography text-size class (#622)
-                , h1 [ class "font-bold text-black text-[46px] mb-8" ] [ text community.name ]
-                , label
-                    [ for amountFieldId
+                        -- TODO - Move this to the input's label, use new typography text-size class (#622)
+                        , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
+                        ]
+                        [ text <| translators.t "sponsorship.enter_amount" ]
+                    :: (Input.init
+                            { label = ""
+                            , id = amountFieldId
+                            , onInput = EnteredAmount
+                            , disabled = model.isCreatingOrder
+                            , value = model.amount
+                            , placeholder = Nothing
+                            , problems =
+                                model.amountProblem
+                                    |> Maybe.map
+                                        (amountProblemToString translators
+                                            model.selectedCurrency
+                                            >> List.singleton
+                                        )
+                            , translators = translators
+                            }
+                            |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
+                            |> Input.withCurrency (PaypalButtons.currencyToSymbol model.selectedCurrency)
+                            |> Input.toHtml
+                       )
+                    :: (case
+                            contributionConfiguration.acceptedCurrencies
+                                |> List.filterMap toPaypalCurrency
+                        of
+                            [] ->
+                                []
 
-                    -- TODO - Move this to the input's label, use new typography text-size class (#622)
-                    , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
-                    ]
-                    [ text <| translators.t "sponsorship.enter_amount" ]
-                , Input.init
-                    { label = ""
-                    , id = amountFieldId
-                    , onInput = EnteredAmount
-                    , disabled = model.isCreatingOrder
-                    , value = model.amount
-                    , placeholder = Nothing
-                    , problems =
-                        model.amountProblem
-                            |> Maybe.map
-                                (amountProblemToString translators
-                                    (getPaypalCurrency community.contributionConfiguration
-                                        shared
-                                    )
-                                    >> List.singleton
-                                )
-                    , translators = translators
-                    }
-                    |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                    |> Input.withCurrency
-                        (PaypalButtons.currencyToSymbol
-                            (getPaypalCurrency community.contributionConfiguration shared)
-                        )
-                    |> Input.toHtml
-                , PaypalButtons.view [ class "w-full lg:w-2/3" ]
-                    { id = "sponsorship-paypal-buttons"
-                    , value =
-                        model.amount
-                            |> Mask.removeFloat (Shared.decimalSeparators translators)
-                            |> String.toFloat
-                            |> Maybe.andThen
-                                (\amount ->
-                                    if amount < PaypalButtons.minimumAmount then
-                                        Nothing
+                            [ _ ] ->
+                                []
 
-                                    else if amount > PaypalButtons.maximumAmount then
-                                        Nothing
+                            firstCurrency :: otherCurrencies ->
+                                let
+                                    currencyOption currency =
+                                        { value = currency
+                                        , label =
+                                            toHumanString translators currency
+                                                ++ " ("
+                                                ++ PaypalButtons.currencyToString currency
+                                                ++ ")"
+                                        }
+                                in
+                                -- TODO - Move this to the input's label, use new typography text-size class (#622)
+                                [ label
+                                    [ for "currency-selector"
+                                    , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
+                                    ]
+                                    [ text <| translators.t "sponsorship.select_currency" ]
+                                , Select.init
+                                    { id = "currency-selector"
+                                    , label = ""
+                                    , onInput = SelectedCurrency
+                                    , firstOption = currencyOption firstCurrency
+                                    , value = model.selectedCurrency
+                                    , valueToString =
+                                        PaypalButtons.currencyToSymbol
+                                            >> Eos.symbolToSymbolCodeString
+                                    , disabled = model.isCreatingOrder
+                                    , problems = Nothing
+                                    }
+                                    |> Select.withOptions (List.map currencyOption otherCurrencies)
+                                    |> Select.withContainerAttrs [ class "w-full lg:w-2/3" ]
+                                    |> Select.toHtml
+                                ]
+                       )
+                    ++ [ PaypalButtons.view [ class "w-full lg:w-2/3" ]
+                            { id = "sponsorship-paypal-buttons"
+                            , value =
+                                model.amount
+                                    |> Mask.removeFloat (Shared.decimalSeparators translators)
+                                    |> String.toFloat
+                                    |> Maybe.andThen
+                                        (\amount ->
+                                            if amount < PaypalButtons.minimumAmount then
+                                                Nothing
 
-                                    else
-                                        Just amount
-                                )
-                    , currency = getPaypalCurrency community.contributionConfiguration shared
-                    , onApprove = PaypalApproved
-                    , onCancel = PaypalCanceled
-                    , onError = PaypalErrored
-                    }
-                ]
+                                            else if amount > PaypalButtons.maximumAmount then
+                                                Nothing
+
+                                            else
+                                                Just amount
+                                        )
+                            , currency = model.selectedCurrency
+                            , onApprove = PaypalApproved
+                            , onCancel = PaypalCanceled
+                            , onError = PaypalErrored
+                            }
+                       ]
+                )
             ]
         ]
 
@@ -525,6 +584,9 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        SelectedCurrency _ ->
+            [ "SelectedCurrency" ]
 
         EnteredAmount _ ->
             [ "EnteredAmount" ]

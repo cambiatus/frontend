@@ -1091,9 +1091,12 @@
   },
   "sponsorship": {
     "title": "ስፖንሰርነት",
+    "no_support": "ማህበረሰብዎ ገና ስፖንሰርነትን አይደግፍም",
+    "no_support_subtitle": "ይህንን ባህሪ ለማግበር ከማህበረሰቡ አስተዳደር ቡድን ጋር ይነጋገሩ",
     "description": "ተጠቃሚዎች ማህበረሰቡን ስፖንሰር እንዲያደርጉ ይፍቀዱ",
     "sponsor": "ስፖንሰር",
     "enter_amount": "እርስዎ ለማበርከት የሚፈልጉትን መጠን ያስገቡ",
+    "select_currency": "ሊጠቀሙበት የሚፈልጉትን ምንዛሬ ይምረጡ",
     "amount_too_small": "መጠኑ ቢያንስ {{minimum}} {{currency}} መሆን አለበት",
     "amount_too_big": "መጠኑ ከፍተኛው {{maximum}} {{currency}} መሆን አለበት",
     "invalid_amount": "ልክ ያልሆነ እሴት",

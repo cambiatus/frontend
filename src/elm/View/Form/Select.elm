@@ -105,7 +105,11 @@ toHtml select =
                     select.onInput selectedOption.value
     in
     Html.div (class "mb-10" :: select.containerAttrs)
-        [ View.Form.label select.id select.label
+        [ if String.isEmpty select.label then
+            text ""
+
+          else
+            View.Form.label select.id select.label
         , Html.select
             (class "form-select select w-full"
                 :: classList [ ( "bg-gray-500", select.disabled ) ]
