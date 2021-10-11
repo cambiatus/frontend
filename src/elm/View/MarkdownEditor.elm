@@ -229,7 +229,7 @@ viewReadOnly attributes content =
             in
             case Markdown.Renderer.render renderer blocks of
                 Ok asHtml ->
-                    p (class "markdown-viewer" :: attributes) asHtml
+                    div (class "markdown-viewer" :: attributes) asHtml
 
                 Err _ ->
                     text ""

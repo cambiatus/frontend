@@ -49,7 +49,7 @@
     },
     "explore": "ያስሱ",
     "communities": "ማህበረሰብ",
-    "welcome_message": "ሄሎ {{user_name}}",
+    "welcome_message": "ሰላም {{user_name}}",
     "back_to_dashboard": "ወደ ዳሽቦርድ ይመለሱ",
     "edit": "አርትእ",
     "cancel": "አጥፋ",
@@ -746,8 +746,9 @@
   },
   "dashboard": {
     "back": "ወደ ኃላ",
-    "transfer": "ለጓደኛ አስተላለፍ ",
-    "explore": "እንዴት እንደሚገኝ {{symbol}}",
+    "transfer": "ማስተላለፍ",
+    "your_balance": "{{symbol}} ውስጥ የእርስዎ ሚዛን",
+    "how_to_earn": "እንዴት እንደሚገኝ {{symbol}}",
     "invite": "ጓደኞችህን ጋብዝ",
     "sorry": "ይቅርታ!",
     "action_rejected": "የእርሶ ተግባር ተቀባይነት አላገኘም",
@@ -773,27 +774,20 @@
     "reject": "አልጸደቀም",
     "verify": "አጽድቅ",
     "closed": "ዝጋ",
-    "my_claims": {
-      "1": "የእኔ ",
-      "2": "የይገባኛል ጥያቄዎች",
-      "go": "ሂድ"
-    },
-    "my_offers": {
-      "1": "የእኔ ",
-      "2": "አቅርቦቶች",
-      "go": "ሂድ"
-    },
+    "my_claims": "የእኔ የይገባኛል ጥያቄዎች",
+    "my_offers": "የእኔ ቅናሾች",
     "analysis": {
       "title": {
         "1": "ተግባር",
         "2": "ለትንተና "
       },
       "empty": {
-        "1": "ዋዉ",
-        "2": ", ጎበዝ.",
-        "3": "ሁሉንም አጠናቅቀዋል"
+        "1": "እንኳን ደስ አላችሁ",
+        "2": "ለመተንተን ተጨማሪ እርምጃዎች የሉም"
       },
-      "all": "ሁሉም"
+      "analyze_now": "አሁን ይተንትኑ",
+      "count": "ለመተንተን **{{amount}} እርምጃዎች** አሉዎት",
+      "error_fetching": "ለመተንተን እርምጃዎችን በማምጣት ላይ የሆነ ችግር ተፈጥሯል"
     },
     "activities": {
       "title": "እንቅስቃሴዎች ለእርሶ ትንተና",

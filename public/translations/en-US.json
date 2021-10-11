@@ -49,7 +49,7 @@
     },
     "explore": "Explore",
     "communities": "Communities",
-    "welcome_message": "Hello {{user_name}}",
+    "welcome_message": "Hello, {{user_name}}",
     "back_to_dashboard": "Back to Dashboard",
     "edit": "Edit",
     "cancel": "Cancel",
@@ -785,8 +785,9 @@
   },
   "dashboard": {
     "back": "Back",
-    "transfer": "Transfer to a friend",
-    "explore": "How to earn {{symbol}}",
+    "transfer": "Transfer",
+    "your_balance": "Your balance in {{symbol}}",
+    "how_to_earn": "How to earn {{symbol}}",
     "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
@@ -812,27 +813,20 @@
     "reject": "Disapprove",
     "verify": "Approve",
     "closed": "closed",
-    "my_claims": {
-      "1": "My ",
-      "2": "Claims",
-      "go": "Go"
-    },
-    "my_offers": {
-      "1": "My ",
-      "2": "Offers",
-      "go": "Go"
-    },
+    "my_claims": "My claims",
+    "my_offers": "My offers",
     "analysis": {
       "title": {
         "1": "Actions",
         "2": "for analysis"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", good job.",
-        "3": "You have finished all"
+        "1": "Congratulations",
+        "2": "There are no more actions for analysis"
       },
-      "all": "All"
+      "analyze_now": "Analyze now",
+      "count": "You have **{{amount}} actions** for analysis",
+      "error_fetching": "Something went wrong when fetching actions for analysis"
     },
     "activities": {
       "title": "Activities for your analysis",

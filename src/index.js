@@ -14,6 +14,7 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
+import 'focus-visible'
 
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
@@ -482,7 +483,7 @@ window.customElements.define('dialog-bubble',
       this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
       this._defaultPointClasses = 'absolute transform -z-10'
 
-      window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
+      window.addEventListener('resize', this.setPosition, { passive: true })
     }
 
     connectedCallback () {
@@ -498,9 +499,9 @@ window.customElements.define('dialog-bubble',
       this._scrollSelector = scrollSelector ? document.querySelector(scrollSelector) : null
 
       if (this._scrollSelector !== null) {
-        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
+        this._scrollSelector.addEventListener('scroll', this.setPosition, { passive: true })
       } else {
-        window.addEventListener('scroll', () => { this.setPosition() })
+        window.addEventListener('scroll', this.setPosition)
       }
 
       point.appendChild(pointElement)
@@ -513,6 +514,15 @@ window.customElements.define('dialog-bubble',
       this._sibling = this.previousSibling || this.nextSibling
 
       this.setPosition()
+    }
+
+    disconnectedCallback () {
+      window.removeEventListener('resize', this.setPosition)
+      if (this._scrollSelector !== null) {
+        this._scrollSelector.removeEventListener('scroll', this.setPosition)
+      } else {
+        window.removeEventListener('scroll', this.setPosition)
+      }
     }
 
     setPosition () {

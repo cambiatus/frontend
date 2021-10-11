@@ -49,7 +49,7 @@
     },
     "explore": "Explorar",
     "communities": "Comunitats",
-    "welcome_message": "Hola {{user_name}}",
+    "welcome_message": "Hola, {{user_name}}",
     "back_to_dashboard": "Anar a l’inici",
     "edit": "Editar",
     "cancel": "Cancel·lar",
@@ -788,8 +788,9 @@
   },
   "dashboard": {
     "back": "Tornar",
-    "transfer": "Transferir a un company",
-    "explore": "Com guanyar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "El vostre saldo en {{symbol}}",
+    "how_to_earn": "Com guanyar {{symbol}}",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",
@@ -815,27 +816,20 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
-    "my_claims": {
-      "1": "Les meves ",
-      "2": "Reclamacions",
-      "go": "Vaja"
-    },
-    "my_offers": {
-      "1": "Les meves ",
-      "2": "Ofertes",
-      "go": "Vaja"
-    },
+    "my_claims": "Les meves reclamacions",
+    "my_offers": "Les meves ofertes",
     "analysis": {
       "title": {
         "1": "Accions",
         "2": "per a l'anàlisi"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", bona feina.",
-        "3": "ja heu acabat tot"
+        "1": "Enhorabona",
+        "2": "Ja no hi ha accions per analitzar"
       },
-      "all": "tot"
+      "analyze_now": "Analitza ara",
+      "count": "Teniu **{{amount}} accions** per analitzar",
+      "error_fetching": "S'ha produït un error en obtenir accions per analitzar-les"
     },
     "activities": {
       "title": "Activitats per a la vostra anàlisi",

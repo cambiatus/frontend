@@ -35,11 +35,11 @@ body > * {
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white rounded-super hover:bg-orange-100 focus:bg-orange-100 focus:outline-none;
+    @apply bg-orange-300 text-white rounded-super hover:bg-orange-100 focus-visible:bg-orange-100 focus-visible:outline-none;
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus:border-orange-300 focus:outline-none;
+    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:outline-none;
   }
 
   .button-sm {
@@ -220,7 +220,7 @@ body > * {
 }
 
 .modal-content {
-  @apply bg-white rounded-t-lg absolute bottom-0 w-full;
+  @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full;
 }
 
 .modal-content-full {
@@ -437,6 +437,18 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .truncate-children > :not(:first-child) {
     @apply hidden;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring ring-green ring-opacity-50 active:ring-0;
+  }
+
+  .animation-delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
   }
 }
 
