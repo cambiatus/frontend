@@ -26,7 +26,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, br, button, div, h1, img, li, p, span, strong, text, ul)
+import Html exposing (Html, a, br, button, div, h1, hr, img, li, p, span, strong, text, ul)
 import Html.Attributes exposing (class, classList, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
@@ -50,6 +50,7 @@ import Time
 import Transfer exposing (QueryTransfers, Transfer)
 import UpdateResult as UR
 import Url
+import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Form
@@ -409,13 +410,46 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                 ]
     in
     container
-        [ class "divide-y divide-gray-100 w-full"
-        , tabindex -1
+        [ tabindex -1
         ]
         (transfers
+            |> List.groupWhile
+                (\( t1, _ ) ( t2, _ ) ->
+                    Utils.areSameDay loggedIn.shared.timezone
+                        (Utils.fromDateTime t1.blockTime)
+                        (Utils.fromDateTime t2.blockTime)
+                )
             |> List.map
-                (\( transfer, profileSummary ) ->
-                    viewTransfer loggedIn transfer profileSummary
+                (\( ( t1, _ ) as first, rest ) ->
+                    div [ class "pb-6 first:pt-4 last:pb-2" ]
+                        (([ div [ class "uppercase text-sm font-bold px-6" ]
+                                [ View.Components.dateViewer [ class "text-black" ]
+                                    identity
+                                    loggedIn.shared
+                                    (Utils.fromDateTime t1.blockTime)
+                                , text " "
+                                , View.Components.dateViewer [ class "text-gray-333" ]
+                                    (\translations ->
+                                        { translations
+                                            | today = "{{date}}"
+                                            , yesterday = "{{date}}"
+                                            , other = ""
+                                        }
+                                    )
+                                    loggedIn.shared
+                                    (Utils.fromDateTime t1.blockTime)
+                                ]
+                          ]
+                            :: List.map
+                                (\( transfer, profileSummary ) ->
+                                    [ viewTransfer loggedIn transfer profileSummary
+                                    , hr [ class "mx-6 border-gray-100" ] []
+                                    ]
+                                )
+                                (first :: rest)
+                         )
+                            |> List.concat
+                        )
                 )
             |> addLoading
         )
@@ -435,7 +469,7 @@ viewTransfer loggedIn transfer profileSummary =
                 ( transfer.from, False )
     in
     button
-        [ class "flex w-full px-6 py-4 focus-ring ring-inset focus-visible:rounded-sm hover:bg-gray-200 first:pt-6 last:pb-6"
+        [ class "flex w-full px-6 py-4 focus-ring ring-inset focus-visible:rounded-sm hover:bg-gray-200"
         , onClick (ClickedTransferCard transfer.id)
         ]
         [ profileSummary
