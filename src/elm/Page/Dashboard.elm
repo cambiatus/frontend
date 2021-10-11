@@ -27,7 +27,7 @@ import Eos.Account as Eos
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, hr, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, src, style, tabindex)
+import Html.Attributes exposing (class, classList, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -402,7 +402,7 @@ viewTransferList loggedIn transfers maybePageInfo isLoading =
                     (class "md:hidden" :: attrs)
                     children
                 , infiniteList False
-                    (class "hidden md:block overflow-y-auto"
+                    (class "hidden md:block"
                         :: style "height" "max(60vh, 400px)"
                         :: attrs
                     )
@@ -467,6 +467,13 @@ viewTransfer loggedIn transfer profileSummary =
 
             else
                 ( transfer.from, False )
+
+        addRelativeSelector =
+            if loggedIn.hasSeenDashboard then
+                identity
+
+            else
+                Profile.Summary.withRelativeSelector "#transfer-list-container"
     in
     button
         [ class "flex w-full px-6 py-4 focus-ring ring-inset focus-visible:rounded-sm hover:bg-gray-200"
@@ -475,6 +482,9 @@ viewTransfer loggedIn transfer profileSummary =
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-8 h-8"
+            |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+            |> addRelativeSelector
+            |> Profile.Summary.withScrollSelector "#transfer-list-container"
             |> Profile.Summary.view loggedIn.shared
                 loggedIn.accountName
                 otherProfile
@@ -834,6 +844,7 @@ viewTimelineCard loggedIn isValidator model =
             , ( "md:animation-delay-300", not loggedIn.hasSeenDashboard && isValidator )
             , ( "md:animation-delay-150", not loggedIn.hasSeenDashboard && not isValidator )
             ]
+        , id "transfer-list-container"
         ]
         [ div [ class "flex justify-between items-center mt-6 mb-4 md:mb-1 lg:mt-0" ]
             [ h1 [ class "text-gray-333" ]
