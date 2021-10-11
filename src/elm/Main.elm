@@ -1323,7 +1323,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Transfer maybeTo) ->
             (\l -> Transfer.init l maybeTo)
-                >> updateStatusWith Transfer GotTransferMsg model
+                >> updateLoggedInUResult Transfer GotTransferMsg model
                 |> withLoggedIn (Route.Transfer maybeTo)
 
         Just Route.Analysis ->

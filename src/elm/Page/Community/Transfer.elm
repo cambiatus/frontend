@@ -42,11 +42,12 @@ import View.Form.Input as Input
 import View.MarkdownEditor as MarkdownEditor
 
 
-init : LoggedIn.Model -> Maybe String -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Maybe String -> UpdateResult
 init loggedIn maybeTo =
-    ( initModel maybeTo
-    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-    )
+    initModel maybeTo
+        |> UR.init
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.MembersField)
 
 
 
