@@ -68,4 +68,6 @@
     stroke="#C47D27" stroke-width=".294" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
   <path
     d="M43.186 54.19c.043-.01.09-.01.134-.003.26.054.407.416.48.741.14.641.154 1.325.037 1.976-.037.201-.087.402-.184.563-.093.151-.21.232-.327.245"
-    stroke="#45459B" stroke-width=".883" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    stroke="#45459B" stroke-width=".883" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" />
+  <ellipse cx="72.517" cy="45.388" rx="7.412" ry="5.55" transform="rotate(8.743 72.517 45.388)" fill="#FFE400" />
+  <ellipse rx="8.477" ry="6.245" transform="scale(-1 1) rotate(8.743 -308.024 -52.326)" fill="#FFE400" /></svg>

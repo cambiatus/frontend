@@ -729,7 +729,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 ]
             ]
         , img
-            [ class "absolute top-0 right-0"
+            [ class "absolute -top-2 right-2 md:right-4"
             , src "/images/success-doggo.svg"
             ]
             []
