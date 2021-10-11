@@ -90,43 +90,38 @@ update msg model loggedIn =
             UR.init model
 
         ClickedChangeAccountPermissions ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    (Api.Eos.UpdateAuth
+                        { targetAccount = loggedIn.accountName
+                        , targetPermission = Api.Eos.Active
+                        , threshold = 2
+                        , accounts =
+                            [ { account = Eos.Account.stringToName "henriquebus2"
+                              , permission = Api.Eos.Active
+                              , weight = 1
+                              }
+                            , { account = Eos.Account.stringToName "henriquebus4"
+                              , permission = Api.Eos.Active
+                              , weight = 1
+                              }
+                            , { account = Eos.Account.stringToName "henriquebuss"
+                              , permission = Api.Eos.Active
+                              , weight = 1
+                              }
+                            ]
+                        }
+                        |> Api.Eos.EosAction
+                        |> Api.Eos.transact loggedIn.shared
+                            { actor = loggedIn.accountName, permission = Api.Eos.Owner }
+                            msg
+                    )
+                |> LoggedIn.withAuthentication loggedIn
                     model
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = ClickedChangeAccountPermissions
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ Eos.updateAuth
-                                        { actor = loggedIn.accountName
-                                        , permissionName = Eos.Account.ownerPermission
-                                        }
-                                        community.creator
-                                        2
-                                        -- TODO - Not hardcode these
-                                        [ { name = Eos.Account.stringToName "henriquebuss"
-                                          , weight = 1
-                                          }
-                                        , { name = Eos.Account.stringToName "henriquebus2"
-                                          , weight = 1
-                                          }
-                                        , { name = Eos.Account.stringToName "henriquebus4"
-                                          , weight = 1
-                                          }
-                                        ]
-                                    ]
-                            }
-                        |> LoggedIn.withAuthentication loggedIn
-                            model
-                            { successMsg = ClickedChangeAccountPermissions
-                            , errorMsg = NoOp
-                            }
-
-                _ ->
-                    -- TODO
-                    UR.init model
+                    { successMsg = ClickedChangeAccountPermissions
+                    , errorMsg = NoOp
+                    }
 
         ClickedProposeNewObjective ->
             case loggedIn.selectedCommunity of

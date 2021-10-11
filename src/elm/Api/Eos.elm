@@ -2,7 +2,7 @@ module Api.Eos exposing
     ( query, querySingleItem, queryWithList, Account(..)
     , TokenTable(..), MultiSigTable(..)
     , transact, Authorization, Permission(..), Action(..)
-    , CommunityAction(..), MultiSigAction(..)
+    , CommunityAction(..), MultiSigAction(..), EosAction(..)
     )
 
 {-| This is a module to help interacting with EOS, our blockchain. There are two
@@ -30,7 +30,7 @@ You can view more information on blockchain stuff using [the block explorer](htt
 
 ### Actions
 
-@docs CommunityAction, MultiSigAction
+@docs CommunityAction, MultiSigAction, EosAction
 
 -}
 
@@ -88,6 +88,7 @@ of actions.
 type Action
     = CommunityAction CommunityAction
     | MultiSigAction MultiSigAction
+    | EosAction EosAction
 
 
 {-| All of the available actions related to communities (on the `cambiatus.cm`
@@ -139,6 +140,26 @@ type MultiSigAction
         }
 
 
+{-| All of the available actions related to core eos (on the `eosio` contract)
+
+  - `UpdateAuth`: configure an account's permissions. Usually used to set it as
+    a multisig account.
+
+-}
+type EosAction
+    = UpdateAuth
+        { targetAccount : Eos.Account.Name
+        , targetPermission : Permission
+        , threshold : Int
+        , accounts :
+            List
+                { account : Eos.Account.Name
+                , permission : Permission
+                , weight : Int
+                }
+        }
+
+
 {-| This defines the key to use to sign a transaction. All accounts are
 identified by an `Eos.Account.Name` (the `actor`). Every account may have
 multiple (hierarchical) levels of `Permission`, each one associated with a key
@@ -156,8 +177,9 @@ can change the `Active` permission's auth data by signing as `Owner`, but you
 can't change the `Owner` permission's auth data by signing as `Active`.
 -}
 type Permission
-    = Active
+    = RootPermission
     | Owner
+    | Active
 
 
 
@@ -336,20 +358,37 @@ encodeTableInfo tableInfo =
 -- INTERNAL TRANSACT HELPERS
 
 
+encodePermission : Permission -> Encode.Value
+encodePermission permission =
+    case permission of
+        RootPermission ->
+            Encode.string ""
+
+        Owner ->
+            Encode.string "owner"
+
+        Active ->
+            Encode.string "active"
+
+
+parentPermission : Permission -> Permission
+parentPermission permission =
+    case permission of
+        RootPermission ->
+            RootPermission
+
+        Owner ->
+            RootPermission
+
+        Active ->
+            Owner
+
+
 encodeAuthorization : Authorization -> Encode.Value
 encodeAuthorization authorization =
-    let
-        permissionName =
-            case authorization.permission of
-                Active ->
-                    "active"
-
-                Owner ->
-                    "owner"
-    in
     Encode.object
         [ ( "actor", Eos.Account.encodeName authorization.actor )
-        , ( "permission", Encode.string permissionName )
+        , ( "permission", encodePermission authorization.permission )
         ]
 
 
@@ -406,6 +445,18 @@ actionData shared authorization action =
             { contract = "eosio.msig"
             , actionName = actionName
             , encodedData = encodeMultisigAction shared authorization multisigAction
+            }
+
+        EosAction eosAction ->
+            let
+                actionName =
+                    case eosAction of
+                        UpdateAuth _ ->
+                            "updateauth"
+            in
+            { contract = "eosio"
+            , actionName = actionName
+            , encodedData = encodeEosAction eosAction
             }
 
 
@@ -478,3 +529,29 @@ encodeMultisigAction shared authorization multisigAction =
                 , ( "proposal_name", Encode.string execution.proposalName )
                 , ( "executer", Eos.Account.encodeName authorization.actor )
                 ]
+
+
+encodeEosAction : EosAction -> Encode.Value
+encodeEosAction (UpdateAuth updateAuth) =
+    let
+        encodeAccount account =
+            Encode.object
+                [ ( "permission"
+                  , encodeAuthorization { actor = account.account, permission = account.permission }
+                  )
+                , ( "weight", Encode.int account.weight )
+                ]
+    in
+    Encode.object
+        [ ( "account", Eos.Account.encodeName updateAuth.targetAccount )
+        , ( "permission", encodePermission updateAuth.targetPermission )
+        , ( "parent", encodePermission (parentPermission updateAuth.targetPermission) )
+        , ( "auth"
+          , Encode.object
+                [ ( "threshold", Encode.int updateAuth.threshold )
+                , ( "keys", encodedEmptyList )
+                , ( "waits", encodedEmptyList )
+                , ( "accounts", Encode.list encodeAccount updateAuth.accounts )
+                ]
+          )
+        ]
