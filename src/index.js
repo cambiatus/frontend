@@ -1256,9 +1256,13 @@ async function handleJavascriptPort (arg) {
         .then(_ => ({ isAvailable: false, error: 'account not available' }))
         .catch(e => {
           // Invalid name exception
-          if (JSON.parse(e.message).error.code === 3010001) {
-            return { isAvailable: false, error: e.message }
-          } else {
+          try {
+            if (JSON.parse(e.message).error.code === 3010001) {
+              return { isAvailable: false, error: e.message }
+            } else {
+              return { isAvailable: true }
+            }
+          } catch {
             return { isAvailable: true }
           }
         })
