@@ -16,7 +16,6 @@ import Html exposing (Html, div, h1, img, label, text)
 import Html.Attributes exposing (class, for, src)
 import Log
 import Mask
-import Maybe.Extra
 import Page
 import Ports
 import RemoteData exposing (RemoteData)
@@ -298,22 +297,6 @@ defaultPaypalCurrency shared =
 
         Shared.Production ->
             PaypalButtons.USD
-
-
-defaultCurrencyType : Shared -> Cambiatus.Enum.CurrencyType.CurrencyType
-defaultCurrencyType shared =
-    case shared.environment of
-        Shared.Development ->
-            Cambiatus.Enum.CurrencyType.Brl
-
-        Shared.Staging ->
-            Cambiatus.Enum.CurrencyType.Brl
-
-        Shared.Demo ->
-            Cambiatus.Enum.CurrencyType.Usd
-
-        Shared.Production ->
-            Cambiatus.Enum.CurrencyType.Usd
 
 
 getPaypalCurrency : Maybe Community.ContributionConfiguration -> Shared -> PaypalButtons.Currency
