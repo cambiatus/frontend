@@ -531,7 +531,7 @@ viewHeader page ({ shared } as model) profile_ =
                 ]
                 [ Icons.notification "fill-current text-gray-900 h-6 md:h-7 group-hover:text-orange-300"
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-semibold text-sm rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-2 px-1 py-0.5 bg-orange-500 text-white font-semibold text-xs rounded-full md:-mr-4 md:px-2 md:py-1 md:text-sm" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
