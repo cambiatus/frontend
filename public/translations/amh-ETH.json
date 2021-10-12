@@ -1144,8 +1144,7 @@
       "title": "Fiat ገንዘብ",
       "paypal_account": "የማህበረሰብ PayPal ሂሳብ",
       "paypal_example": "example@gmail.com",
-      "how_to_change": "ይህንን መለያ ማዘመን ከፈለጉ እባክዎን በ Slack ላይ ባለው የድጋፍ ሰርጥ በኩል ያነጋግሩን",
-      "accepted_currencies": "ማህበረሰቡ ምን ዓይነት ምንዛሬ ይቀበላል?"
+      "how_to_change": "ይህንን መለያ ማዘመን ከፈለጉ እባክዎን በ Slack ላይ ባለው የድጋፍ ሰርጥ በኩል ያነጋግሩን"
     },
     "thank_you_message": {
       "title": "የመልዕክት ርዕስ",

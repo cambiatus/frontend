@@ -12,8 +12,8 @@ import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import View.Form.Checkbox
 import View.Form.Input
-import View.Form.Select
 import View.Form.Toggle
 
 
@@ -101,12 +101,6 @@ view loggedIn _ =
 
 view_ : Shared -> Community.Model -> Html Msg
 view_ { translators } community =
-    let
-        firstCurrencyOption =
-            community.contributionConfiguration
-                |> Maybe.andThen (List.head << .acceptedCurrencies)
-                |> Maybe.withDefault Cambiatus.Enum.CurrencyType.Brl
-    in
     div [ class "container mx-auto px-4 my-4" ]
         [ div [ class "p-4 bg-white rounded" ]
             [ View.Form.Toggle.init
@@ -142,29 +136,59 @@ view_ { translators } community =
                 |> View.Form.Input.toHtml
             , p [ class "mb-10 text-gray-900" ]
                 [ text (translators.t "sponsorship.fiat.how_to_change") ]
-            , View.Form.Select.init
-                { id = "currency-select"
-                , label = translators.t "sponsorship.fiat.accepted_currencies"
-                , onInput = \_ -> NoOp
-                , firstOption = currencyTypeToSelectOption firstCurrencyOption
-                , value = Cambiatus.Enum.CurrencyType.Brl
-                , valueToString = Cambiatus.Enum.CurrencyType.toString
-                , disabled = True
-                , problems = Nothing
-                }
-                |> View.Form.Select.withOptions
-                    (Cambiatus.Enum.CurrencyType.list
-                        |> List.filter ((/=) firstCurrencyOption)
-                        |> List.map currencyTypeToSelectOption
-                    )
-                |> View.Form.Select.toHtml
+
+            -- TODO - Use new typography classes (#622)
+            , p [ class "text-green tracking-wide uppercase text-caption block mb-2" ]
+                [ text (translators.t "sponsorship.cards.fiat.title") ]
+            , div [ class "grid xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-6" ]
+                (Cambiatus.Enum.CurrencyType.list
+                    |> List.filter isPaypalCurrency
+                    |> List.map (currencyTypeToRadioButton community)
+                )
             ]
         ]
 
 
-currencyTypeToSelectOption : Cambiatus.Enum.CurrencyType.CurrencyType -> { value : Cambiatus.Enum.CurrencyType.CurrencyType, label : String }
-currencyTypeToSelectOption currencyType =
-    { value = currencyType, label = Cambiatus.Enum.CurrencyType.toString currencyType }
+isPaypalCurrency : Cambiatus.Enum.CurrencyType.CurrencyType -> Bool
+isPaypalCurrency currencyType =
+    case currencyType of
+        Cambiatus.Enum.CurrencyType.Brl ->
+            True
+
+        Cambiatus.Enum.CurrencyType.Btc ->
+            False
+
+        Cambiatus.Enum.CurrencyType.Crc ->
+            False
+
+        Cambiatus.Enum.CurrencyType.Eos ->
+            False
+
+        Cambiatus.Enum.CurrencyType.Eth ->
+            False
+
+        Cambiatus.Enum.CurrencyType.Usd ->
+            True
+
+
+currencyTypeToRadioButton : Community.Model -> Cambiatus.Enum.CurrencyType.CurrencyType -> Html Msg
+currencyTypeToRadioButton community currencyType =
+    let
+        asString =
+            Cambiatus.Enum.CurrencyType.toString currencyType
+    in
+    View.Form.Checkbox.init
+        { description = text asString
+        , id = "currencies_" ++ asString
+        , value =
+            community.contributionConfiguration
+                |> Maybe.map (\config -> List.member currencyType config.acceptedCurrencies)
+                |> Maybe.withDefault False
+        , disabled = True
+        , onCheck = \_ -> NoOp
+        }
+        |> View.Form.Checkbox.withContainerAttrs [ class "flex items-center" ]
+        |> View.Form.Checkbox.toHtml
 
 
 

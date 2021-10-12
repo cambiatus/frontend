@@ -1183,8 +1183,7 @@
       "title": "Fiat money",
       "paypal_account": "Community's PayPal account",
       "paypal_example": "example@gmail.com",
-      "how_to_change": "If you need to update this account, get in touch with us through your Slack support channel",
-      "accepted_currencies": "What currency will the community accept?"
+      "how_to_change": "If you need to update this account, get in touch with us through your Slack support channel"
     },
     "thank_you_message": {
       "title": "Message title",

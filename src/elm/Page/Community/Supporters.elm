@@ -35,7 +35,7 @@ init _ =
             (Browser.Dom.setViewport 0 0
                 |> Task.perform (\_ -> NoOp)
             )
-        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ContributionsField)
 
 
 

@@ -1189,8 +1189,7 @@
       "title": "Dinheiro fiduciário",
       "paypal_account": "Conta PayPal da comunidade",
       "paypal_example": "exemplo@gmail.com",
-      "how_to_change": "Se você precisa atualizar esta conta, entre em contato conosco através do canal de suporte no Slack",
-      "accepted_currencies": "Qual moeda a comunidade vai aceitar?"
+      "how_to_change": "Se você precisa atualizar esta conta, entre em contato conosco através do canal de suporte no Slack"
     },
     "thank_you_message": {
       "title": "Título da mensagem",
