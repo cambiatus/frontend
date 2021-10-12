@@ -251,6 +251,10 @@ viewTitle shared model claim =
                     , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                     ]
 
+            Claim.Cancelled _ ->
+                div [ class "inline-block" ]
+                    [ text_ "claim.title_action_completed" ]
+
             Claim.Rejected ->
                 div [ class "inline-block" ]
                     [ text_ "claim.title_rejected.1"
@@ -258,13 +262,7 @@ viewTitle shared model claim =
                     ]
 
             Claim.Pending ->
-                if claim.action.isCompleted then
-                    div
-                        [ class "inline-block" ]
-                        [ text_ "claim.title_action_completed"
-                        ]
-
-                else if Action.isClosed claim.action shared.now then
+                if Action.isClosed claim.action shared.now then
                     div
                         [ class "inline-block" ]
                         [ text_ "claim.title_action_closed"
@@ -681,7 +679,7 @@ fetchClaim claimId shared authToken =
     Api.Graphql.query
         shared
         (Just authToken)
-        (Cambiatus.Query.claim { input = { id = claimId } } Claim.selectionSet)
+        (Cambiatus.Query.claim { input = { id = claimId } } (Claim.selectionSet shared.now))
         ClaimLoaded
 
 

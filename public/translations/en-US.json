@@ -595,7 +595,8 @@
         "no": "No",
         "yes": "Yes",
         "automatic": "Automatic,",
-        "automatic_detail": " rewards the user immediately when claimed",
+        "automatic_detail": " unclaimable action and therefore, without the review and approval of other members",
+        "automatic_tooltip": "If you need to connect an external app through an API, the community admin may contact us to make that configuration.",
         "manual": "Manual,",
         "manual_detail": " rewards the user only after reviewed by others",
         "verifier_placeholder": "Type the username",
@@ -886,6 +887,10 @@
       "2": "under review",
       "3": ", other members still need to vote"
     },
+    "title_cancelled": {
+      "1": "This claim was",
+      "2": "cancelled"
+    },
     "title_approved": {
       "1": "This claim was",
       "2": "approved"
@@ -894,13 +899,16 @@
       "1": "This claim was",
       "2": "rejected"
     },
+    "cancelled_voting_bar": "pending votes",
     "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
     "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
+    "opened_today": "Opened today",
     "day_ago": "Opened {{day_count}} day ago",
     "days_ago": "Opened {{day_count}} days ago",
     "vote": "vote",
     "votes": "votes",
     "pending": "Pending",
+    "cancelled": "Cancelled",
     "disapproved": "Disapproved",
     "approved": "Approved",
     "reward": "Congrats, you gained: {{value}}",
@@ -923,6 +931,15 @@
     "approve": "Approve",
     "no_results_found": "No results found",
     "voteTitle": "Do you approve or disapprove of this action?",
+    "attention": "Attention: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Cancelled claim",
+      "was_cancelled": "This claim was cancelled",
+      "deadline_reached": "The corresponding action was completed because it reached it's due date",
+      "usages_reached": "The corresponding action was completed because it reached it's maximum number of usages",
+      "action_completed": "The corresponding action was marked as completed by the community's administration team",
+      "not_available": "Therefore, the claim is not open for votes anymore"
+    },
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",

@@ -609,9 +609,11 @@ window.customElements.define('dialog-bubble',
 
     connectedCallback () {
       this.className = `${this.getAttribute('elm-class')} ${this._defaultClasses}`
+      const bgClass = this.className.match(/bg-[a-z]*/)[0]
+
       const point = document.createElement('div')
       const pointElement = document.createElement('div')
-      pointElement.className = 'w-8 h-8 bg-white transform -rotate-45 rounded-sm'
+      pointElement.className = `w-8 h-8 ${bgClass} transform -rotate-45 rounded-sm`
 
       const relativeSelector = this.getAttribute('elm-relative-selector')
       this._relativeElement = relativeSelector ? document.querySelector(relativeSelector) : null
