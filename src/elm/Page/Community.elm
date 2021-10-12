@@ -665,11 +665,6 @@ viewAction shared canEdit date action isDisabled =
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
-        validationType : String
-        validationType =
-            action.verificationType
-                |> VerificationType.toString
-
         isClosed =
             pastDeadline
                 || (action.usages > 0 && action.usagesLeft == 0)
@@ -727,17 +722,23 @@ viewAction shared canEdit date action isDisabled =
                         ]
                     , div [ class "sm:self-end" ]
                         [ div [ class "mt-3 flex flex-row items-center" ]
-                            (if validationType == "CLAIMABLE" then
-                                validatorAvatars
+                            (case action.verificationType of
+                                VerificationType.Claimable ->
+                                    validatorAvatars
 
-                             else
-                                [ span [ class "text-date-purple uppercase text-sm mr-1" ]
-                                    [ text_ "community.actions.automatic_analyzers" ]
-                                , img [ src "/icons/tooltip.svg" ] []
-                                ]
+                                VerificationType.Automatic ->
+                                    [ span [ class "text-date-purple uppercase text-sm mr-1" ]
+                                        [ text_ "community.actions.automatic_analyzers" ]
+                                    , img [ src "/icons/tooltip.svg" ] []
+                                    ]
                             )
-                        , div [ class "capitalize text-text-grey text-sm sm:text-right" ]
-                            [ text_ "community.actions.verifiers" ]
+                        , case action.verificationType of
+                            VerificationType.Claimable ->
+                                div [ class "capitalize text-text-grey text-sm sm:text-right" ]
+                                    [ text_ "community.actions.verifiers" ]
+
+                            VerificationType.Automatic ->
+                                text ""
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
@@ -746,19 +747,21 @@ viewAction shared canEdit date action isDisabled =
                         , span [ class "font-medium" ] [ text rewardStr ]
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
-                        [ if validationType == "CLAIMABLE" then
-                            viewClaimButton
+                        (case action.verificationType of
+                            VerificationType.Claimable ->
+                                [ viewClaimButton ]
 
-                          else
-                            text ""
-                        ]
+                            VerificationType.Automatic ->
+                                []
+                        )
                     ]
                 ]
             , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
-                [ if validationType == "CLAIMABLE" then
-                    viewClaimButton
+                (case action.verificationType of
+                    VerificationType.Claimable ->
+                        [ viewClaimButton ]
 
-                  else
-                    text ""
-                ]
+                    VerificationType.Automatic ->
+                        []
+                )
             ]

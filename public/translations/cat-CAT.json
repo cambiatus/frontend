@@ -608,7 +608,8 @@
         "no": "No",
         "yes": "Sí",
         "automatic": "Automàtic,",
-        "automatic_detail": " recompensa l'usuari immediatament quan ho reclama",
+        "automatic_detail": " acció no reclamable i, per tant, sense la revisió i aprovació d'altres membres",
+        "automatic_tooltip": "Si és necessari connectar una aplicació externa mitjançant API, la persona que administra la comunitat pot contactar amb nosaltres per realitzar aquesta configuració.",
         "manual": "Manual,",
         "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
@@ -908,6 +909,10 @@
       "2": "fase de revisió",
       "3": ", els altres membres encara han de votar"
     },
+    "title_cancelled": {
+      "1": "Aquesta solicitud es va",
+      "2": "cancel·lat"
+    },
     "title_approved": {
       "1": "Aquesta solicitud es va",
       "2": "aprovar"
@@ -916,13 +921,16 @@
       "1": "Aquesta solicitud es va",
       "2": "rebutjat"
     },
+    "cancelled_voting_bar": "vots pendents",
     "title_action_completed": "Aquesta reclamació està pendent, però, ja que l'acció s'ha completat, no és possible votar",
     "title_action_closed": "Aquesta reclamació està pendent, però, ja que l'acció està tancada, no és possible votar",
+    "opened_today": "Obert avui",
     "day_ago": "Obert fa {{day_count}} die",
     "days_ago": "Obert fa {{day_count}} dies",
     "vote": "vot",
     "votes": "vots",
     "pending": "Pendent",
+    "cancelled": "Cancel·lat",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",
     "reward": "Has guanyat: {{value}}",
@@ -945,6 +953,15 @@
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
     "voteTitle": "Aproveu o rebutgeu aquesta acció?",
+    "attention": "Atenció: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reclamació cancel·lada",
+      "was_cancelled": "Aquesta reclamació s'ha cancel·lat",
+      "deadline_reached": "L'acció corresponent s'ha completat perquè ha arribat a la data concreta",
+      "usages_reached": "L'acció corresponent s'ha completat perquè ha assolit la quantitat màxima d'ús",
+      "action_completed": "L'equip administratiu de la comunitat va completar l'acció corresponent",
+      "not_available": "Per tant, la reclamació ja no està disponible per votar"
+    },
     "modal": {
       "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",

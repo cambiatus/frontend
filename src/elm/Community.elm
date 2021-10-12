@@ -163,6 +163,7 @@ type Field
     = ContributionsField
     | ObjectivesField
     | UploadsField
+    | MembersField
 
 
 {-| `FieldValue` is useful to wrap results of queries for fields that aren't
@@ -174,6 +175,7 @@ type FieldValue
     = ContributionsValue (List Contribution)
     | ObjectivesValue (List Objective)
     | UploadsValue (List String)
+    | MembersValue (List Profile.Minimal)
 
 
 {-| When we want to extract a field that is not loaded by default with the
@@ -212,6 +214,9 @@ setFieldValue fieldValue model =
         UploadsValue uploads ->
             { model | uploads = RemoteData.Success uploads }
 
+        MembersValue members ->
+            { model | members = members }
+
 
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
@@ -225,6 +230,9 @@ setFieldAsLoading field model =
         UploadsField ->
             { model | uploads = RemoteData.Loading }
 
+        MembersField ->
+            model
+
 
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
@@ -237,6 +245,9 @@ isFieldLoading field model =
 
         UploadsField ->
             RemoteData.isLoading model.uploads
+
+        MembersField ->
+            False
 
 
 maybeFieldValue : Field -> Model -> Maybe FieldValue
@@ -256,6 +267,9 @@ maybeFieldValue field model =
             model.uploads
                 |> RemoteData.toMaybe
                 |> Maybe.map UploadsValue
+
+        MembersField ->
+            Just (MembersValue model.members)
 
 
 mergeFields : RemoteData x Model -> Model -> Model
@@ -356,6 +370,10 @@ selectionSetForField field =
         UploadsField ->
             Community.uploads Upload.url
                 |> SelectionSet.map UploadsValue
+
+        MembersField ->
+            Community.members Profile.minimalSelectionSet
+                |> SelectionSet.map MembersValue
 
 
 queryForField :

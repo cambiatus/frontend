@@ -61,7 +61,7 @@ type alias Options msg =
     , disabled : Bool
     , value : Bool
     , variant : Variant
-    , tooltip : Maybe String
+    , tooltip : Maybe { message : String, iconClass : String }
     , extraAttrs : List (Html.Attribute msg)
     }
 
@@ -92,7 +92,7 @@ init requiredOptions =
 
 {-| Adds a tooltip the user can see when hovering over an icon
 -}
-withTooltip : String -> Options msg -> Options msg
+withTooltip : { message : String, iconClass : String } -> Options msg -> Options msg
 withTooltip tooltip options =
     { options | tooltip = Just tooltip }
 
@@ -158,7 +158,7 @@ viewSimple translators options =
             ]
         , div [ class "flex items-center" ]
             [ options.label
-            , viewTooltip translators options
+            , viewTooltip options
             ]
         ]
 
@@ -183,7 +183,7 @@ viewBig ({ t } as translators) options =
         )
         [ div [ class "flex items-center" ]
             [ options.label
-            , viewTooltip translators options
+            , viewTooltip options
             ]
         , div [ class ("flex items-center font-medium lowercase ml-2 " ++ statusColor) ]
             [ label [ for options.id ] [ text_ (statusText options) ]
@@ -213,14 +213,14 @@ viewBig ({ t } as translators) options =
 -- INTERNAL
 
 
-viewTooltip : Translators -> Options msg -> Html msg
-viewTooltip translators options =
+viewTooltip : Options msg -> Html msg
+viewTooltip options =
     case options.tooltip of
         Nothing ->
             text ""
 
         Just tooltip ->
-            View.Components.tooltip translators tooltip
+            View.Components.tooltip tooltip
 
 
 statusText : Options msg -> String

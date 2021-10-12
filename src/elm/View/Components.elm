@@ -96,12 +96,12 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
 -- ELEMENTS
 
 
-tooltip : Translators -> String -> Html msg
-tooltip { t } tooltipMessage =
+tooltip : { message : String, iconClass : String } -> Html msg
+tooltip { message, iconClass } =
     span [ class "icon-tooltip ml-1" ]
-        [ Icons.question "inline-block"
-        , div [ class "icon-tooltip-content" ]
-            [ text (t tooltipMessage) ]
+        [ Icons.question ("inline-block " ++ iconClass)
+        , p [ class "icon-tooltip-content" ]
+            [ text message ]
         ]
 
 

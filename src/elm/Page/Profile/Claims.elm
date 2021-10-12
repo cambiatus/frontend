@@ -35,6 +35,7 @@ import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
+import Time
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form.Select as Select
@@ -640,13 +641,15 @@ profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> Cmd Msg
 profileClaimQuery { shared, authToken } accountName symbol =
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.user { account = accountName } (selectionSet symbol))
+        (Cambiatus.Query.user { account = accountName } (selectionSet shared.now symbol))
         ClaimsLoaded
 
 
-selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
-selectionSet communityId =
-    Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet
+selectionSet : Time.Posix -> Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
+selectionSet now communityId =
+    Profile.claims
+        (\_ -> { communityId = Present (Eos.symbolToString communityId) })
+        (Claim.selectionSet now)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

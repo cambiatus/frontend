@@ -79,6 +79,13 @@ type ClaimStatus
     = Approved
     | Rejected
     | Pending
+    | Cancelled CancelReason
+
+
+type CancelReason
+    = DeadlineReached
+    | UsagesReached
+    | ActionCompleted
 
 
 type alias ClaimId =
@@ -173,23 +180,23 @@ type alias Paginated =
     }
 
 
-claimPaginatedSelectionSet : SelectionSet Paginated Cambiatus.Object.ClaimConnection
-claimPaginatedSelectionSet =
+claimPaginatedSelectionSet : Time.Posix -> SelectionSet Paginated Cambiatus.Object.ClaimConnection
+claimPaginatedSelectionSet now =
     SelectionSet.succeed Paginated
-        |> with (Cambiatus.Object.ClaimConnection.edges claimEdgeSelectionSet)
+        |> with (Cambiatus.Object.ClaimConnection.edges (claimEdgeSelectionSet now))
         |> with (Cambiatus.Object.ClaimConnection.pageInfo Relay.pageInfoSelectionSet)
         |> with Cambiatus.Object.ClaimConnection.count
 
 
-claimEdgeSelectionSet : SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
-claimEdgeSelectionSet =
+claimEdgeSelectionSet : Time.Posix -> SelectionSet (Relay.Edge Model) Cambiatus.Object.ClaimEdge
+claimEdgeSelectionSet now =
     SelectionSet.succeed Relay.Edge
         |> with Cambiatus.Object.ClaimEdge.cursor
-        |> with (Cambiatus.Object.ClaimEdge.node selectionSet)
+        |> with (Cambiatus.Object.ClaimEdge.node (selectionSet now))
 
 
-selectionSet : SelectionSet Model Cambiatus.Object.Claim
-selectionSet =
+selectionSet : Time.Posix -> SelectionSet Model Cambiatus.Object.Claim
+selectionSet now =
     SelectionSet.succeed Model
         |> with Claim.id
         |> with (SelectionSet.map claimStatusMap Claim.status)
@@ -199,19 +206,44 @@ selectionSet =
         |> with Claim.createdAt
         |> with (SelectionSet.map emptyStringToNothing Claim.proofPhoto)
         |> with (SelectionSet.map emptyStringToNothing Claim.proofCode)
+        |> SelectionSet.map
+            (\claim ->
+                case claim.status of
+                    Pending ->
+                        if claim.action.isCompleted then
+                            { claim | status = Cancelled ActionCompleted }
+
+                        else if claim.action.usagesLeft == 0 && claim.action.usages > 0 then
+                            { claim | status = Cancelled UsagesReached }
+
+                        else
+                            case claim.action.deadline of
+                                Nothing ->
+                                    claim
+
+                                Just deadline ->
+                                    if Time.posixToMillis (Utils.fromDateTime deadline) < Time.posixToMillis now then
+                                        { claim | status = Cancelled DeadlineReached }
+
+                                    else
+                                        claim
+
+                    _ ->
+                        claim
+            )
 
 
 emptyStringToNothing : Maybe String -> Maybe String
-emptyStringToNothing s =
-    case s of
-        Just "" ->
-            Nothing
+emptyStringToNothing maybeString =
+    maybeString
+        |> Maybe.andThen
+            (\s ->
+                if String.isEmpty s then
+                    Nothing
 
-        Just nonEmpty ->
-            Just nonEmpty
-
-        Nothing ->
-            Nothing
+                else
+                    Just s
+            )
 
 
 claimStatusMap : ClaimStatus.ClaimStatus -> ClaimStatus
@@ -393,6 +425,14 @@ viewClaimCard loggedIn profileSummaries claim =
             , claimStatus = claim.status
             }
 
+        isCancelled =
+            case claim.status of
+                Cancelled _ ->
+                    True
+
+                _ ->
+                    False
+
         claimAging =
             let
                 createdAtDate =
@@ -405,7 +445,7 @@ viewClaimCard loggedIn profileSummaries claim =
 
         claimAgingText =
             if claimAging < 1 then
-                ""
+                t "claim.opened_today"
 
             else if claimAging == 1 then
                 tr "claim.day_ago" [ ( "day_count", String.fromInt claimAging ) ]
@@ -421,7 +461,7 @@ viewClaimCard loggedIn profileSummaries claim =
             , Utils.onClickNoBubble (GotExternalMsg OpenClaimModal)
             ]
             [ div
-                [ class "flex mb-8"
+                [ class "flex mb-4"
                 , case claim.proofPhoto of
                     Just _ ->
                         class "justify-between"
@@ -447,20 +487,50 @@ viewClaimCard loggedIn profileSummaries claim =
                     Nothing ->
                         text ""
                 ]
-            , div [ class "mb-6" ]
-                [ View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2" ]
-                    claim.action.description
-                , div [ class "flex w-full" ]
-                    [ View.Components.dateViewer [ class "text-gray-900 text-caption uppercase" ]
-                        identity
-                        loggedIn.shared
-                        (Utils.fromDateTime claim.createdAt)
-                    , p
-                        [ class "ml-auto text-purple-500 text-caption uppercase" ]
-                        [ text claimAgingText ]
-                    ]
-                ]
-            , viewVotingProgress loggedIn.shared completionStatus
+            , if isCancelled then
+                -- TODO - Use new typography classes (#622)
+                span [ class "bg-gray-900 text-white font-bold uppercase text-[12px] py-1 px-5 rounded-label self-center" ]
+                    [ text (t "claim.cancelled_texts.cancelled_claim") ]
+
+              else
+                -- TODO - Use new typography classes (#622)
+                span [ class "text-purple-500 font-bold uppercase text-[12px] self-center" ]
+                    [ text claimAgingText ]
+            , View.MarkdownEditor.viewReadOnly [ class "text-body truncate-children mb-2 mt-6" ]
+                claim.action.description
+
+            -- TODO - Use new typography classes (#622)
+            , View.Components.dateViewer [ class "text-gray-900 font-bold text-[12px] uppercase flex mb-6" ]
+                identity
+                loggedIn.shared
+                (Utils.fromDateTime claim.createdAt)
+            , case claim.status of
+                Cancelled reason ->
+                    let
+                        reasonText =
+                            case reason of
+                                DeadlineReached ->
+                                    "claim.cancelled_texts.deadline_reached"
+
+                                UsagesReached ->
+                                    "claim.cancelled_texts.usages_reached"
+
+                                ActionCompleted ->
+                                    "claim.cancelled_texts.action_completed"
+                    in
+                    p [ class "bg-gray-900 rounded p-4 text-white mb-6" ]
+                        ([ "claim.cancelled_texts.was_cancelled"
+                         , reasonText
+                         , "claim.cancelled_texts.not_available"
+                         ]
+                            |> List.map t
+                            |> String.join ". "
+                            |> text
+                            |> List.singleton
+                        )
+
+                _ ->
+                    viewVotingProgress loggedIn.shared completionStatus
             , if
                 isValidated claim loggedIn.accountName
                     || not (isValidator loggedIn.accountName claim)
@@ -549,6 +619,22 @@ viewVotingProgress shared completionStatus =
                             ]
                         ]
 
+                Cancelled _ ->
+                    div []
+                        [ div [ class "flex" ]
+                            [ p [ class "w-full text-right text-gray-600" ]
+                                [ text (t "claim.cancelled") ]
+                            ]
+                        , div
+                            [ class "w-full h-2 flex bg-gray-500 rounded-full my-2" ]
+                            [ div
+                                [ class "flex rounded-full bg-gray-900 h-2"
+                                , style "width" (String.fromFloat (approvedWidth + disapprovedWidth) ++ "%")
+                                ]
+                                []
+                            ]
+                        ]
+
                 Approved ->
                     div []
                         [ p
@@ -622,6 +708,12 @@ viewVotingProgress shared completionStatus =
                             [ voteNumberTitleConditional votingLeft ]
                         ]
                     ]
+
+            Cancelled _ ->
+                p [ class "w-full text-gray-600 text-right space-x-1" ]
+                    [ span [ class "font-bold" ] [ text (String.fromInt votingLeft) ]
+                    , span [] [ text (t "claim.cancelled_voting_bar") ]
+                    ]
         ]
 
 
@@ -670,14 +762,13 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
 
                         Pending ->
-                            if claim.action.isCompleted then
-                                ( t "claim.title_under_review.1", t "community.actions.completed", "text-black" )
+                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
 
-                            else
-                                ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+                        Cancelled _ ->
+                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-gray-900" )
             in
             div [ class "block" ]
-                [ View.Components.dateViewer [ class "text-xs uppercase block" ]
+                [ View.Components.dateViewer [ class "text-xs uppercase block text-gray-900" ]
                     (\translations ->
                         { translations
                             | today = t "claim.claimed_today"
@@ -688,10 +779,37 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     shared
                     (Utils.fromDateTime claim.createdAt)
                 , label [ class "text-2xl font-bold" ]
-                    [ text claimStatusPhrase
-                    ]
+                    [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
+
+        viewCancelledNotice =
+            case claim.status of
+                Cancelled reason ->
+                    let
+                        reasonText =
+                            case reason of
+                                DeadlineReached ->
+                                    "claim.cancelled_texts.deadline_reached"
+
+                                UsagesReached ->
+                                    "claim.cancelled_texts.usages_reached"
+
+                                ActionCompleted ->
+                                    "claim.cancelled_texts.action_completed"
+                    in
+                    p [ class "text-gray-900 my-10" ]
+                        [ span [ class "text-black" ] [ text (t "claim.attention") ]
+                        , [ reasonText
+                          , "claim.cancelled_texts.not_available"
+                          ]
+                            |> List.map t
+                            |> String.join ". "
+                            |> text
+                        ]
+
+                _ ->
+                    text ""
 
         viewRewardInfo =
             let
@@ -704,7 +822,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     }
             in
             div
-                [ class "text-center flex justify-center bg-gray-100 rounded-md p-4 space-x-16" ]
+                [ class "text-center flex justify-center bg-gray-100 rounded-md my-10 p-4 space-x-16" ]
                 [ div
                     []
                     [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
@@ -861,7 +979,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ]
 
         header =
-            div [ class "flex mt-12 space-x-8 justify-center" ]
+            div [ class "flex space-x-6 md:justify-center md:space-x-8 md:mt-4" ]
                 [ viewClaimerProfileSummary
                 , viewClaimDateAndState
                 ]
@@ -877,17 +995,6 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 claim.action.verifications
             , claimStatus = claim.status
             }
-
-        body =
-            div
-                [ class "block" ]
-                [ viewVotingProgress shared completionStatus
-                , viewRewardInfo
-                , viewApprovedByProfileSummaryList
-                , viewDisapprovedByProfileSummaryList
-                , viewPendingVotersProfileSummaryList
-                , viewActionDetails
-                ]
 
         claimRoute =
             Route.Claim
@@ -933,12 +1040,14 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             , isVisible = profileSummaries.showClaimModal
             }
             |> Modal.withBody
-                [ div
-                    [ class "block space-y-6 "
-                    ]
-                    [ header
-                    , body
-                    ]
+                [ header
+                , viewCancelledNotice
+                , viewVotingProgress shared completionStatus
+                , viewRewardInfo
+                , viewApprovedByProfileSummaryList
+                , viewDisapprovedByProfileSummaryList
+                , viewPendingVotersProfileSummaryList
+                , viewActionDetails
                 ]
             |> Modal.withFooter [ footer ]
             |> Modal.withSize Modal.Large

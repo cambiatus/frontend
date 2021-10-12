@@ -35,8 +35,8 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Html exposing (Html, b, button, div, img, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, src, tabindex)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (class, classList, id, src, tabindex)
+import Html.Events exposing (onClick, onMouseEnter, onMouseLeave)
 import I18Next
 import Icons
 import Json.Decode as Json exposing (Value)
@@ -58,6 +58,7 @@ import Time
 import Time.Extra
 import UpdateResult as UR
 import Utils
+import View.Components
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Checkbox as Checkbox
@@ -65,6 +66,7 @@ import View.Form.Input as Input
 import View.Form.Radio as Radio
 import View.Form.Toggle as Toggle
 import View.MarkdownEditor as MarkdownEditor
+import View.Modal as Modal
 
 
 
@@ -86,6 +88,7 @@ init loggedIn objectiveId actionId =
     , actionId = actionId
     , form = initForm loggedIn.shared
     , multiSelectState = Select.newState ""
+    , showAutomaticActionTooltip = False
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
@@ -101,6 +104,7 @@ type alias Model =
     , actionId : Maybe ActionId
     , form : Form
     , multiSelectState : Select.State
+    , showAutomaticActionTooltip : Bool
     }
 
 
@@ -499,6 +503,8 @@ type Msg
     | GotProfileSummaryMsg Int Profile.Summary.Msg
     | GotDescriptionEditorMsg MarkdownEditor.Msg
     | GotInstructionsEditorMsg MarkdownEditor.Msg
+    | OpenedAutomaticActionTooltip
+    | ClosedAutomaticActionTooltip
 
 
 
@@ -1071,6 +1077,14 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotInstructionsEditorMsg subCmd)
 
+        OpenedAutomaticActionTooltip ->
+            { model | showAutomaticActionTooltip = True }
+                |> UR.init
+
+        ClosedAutomaticActionTooltip ->
+            { model | showAutomaticActionTooltip = False }
+                |> UR.init
+
 
 datePickerSettings : Shared -> DatePicker.Settings
 datePickerSettings shared =
@@ -1553,6 +1567,19 @@ viewVerifications ({ shared } as loggedIn) model community =
             getInput verifiersValidator
                 |> List.length
                 |> Profile.Summary.initMany False
+
+        automaticActionTooltipContainer children =
+            div [ class "flex items-center" ]
+                [ div
+                    [ class "items-center hidden md:flex"
+                    , onMouseEnter OpenedAutomaticActionTooltip
+                    , onMouseLeave ClosedAutomaticActionTooltip
+                    ]
+                    children
+                , div
+                    [ class "items-center flex md:hidden" ]
+                    children
+                ]
     in
     div [ class "mb-10" ]
         [ Radio.init
@@ -1582,9 +1609,43 @@ viewVerifications ({ shared } as loggedIn) model community =
             }
             |> Radio.withOption Automatic
                 (\_ ->
-                    span []
-                        [ b [] [ text_ "community.actions.form.automatic" ]
-                        , text_ "community.actions.form.automatic_detail"
+                    div [ class "flex space-x-2" ]
+                        [ span []
+                            [ b [] [ text_ "community.actions.form.automatic" ]
+                            , text_ "community.actions.form.automatic_detail"
+                            ]
+                        , automaticActionTooltipContainer
+                            [ button
+                                [ class "rounded-full focus:outline-none focus:ring focus:ring-green focus:ring-opacity-50"
+                                , Utils.onClickNoBubble OpenedAutomaticActionTooltip
+                                ]
+                                [ Icons.question "h-5 md:h-4" ]
+                            , if model.showAutomaticActionTooltip then
+                                View.Components.dialogBubble
+                                    { class_ = "bg-black text-white p-2 w-120 animate-fade-in opacity-0 hidden md:block"
+                                    , relativeSelector = Nothing
+                                    , scrollSelector = Nothing
+                                    }
+                                    [ text_ "community.actions.form.automatic_tooltip" ]
+
+                              else
+                                text ""
+                            , div [ class "text-black md:hidden" ]
+                                [ Modal.initWith
+                                    { closeMsg = ClosedAutomaticActionTooltip
+                                    , isVisible = model.showAutomaticActionTooltip
+                                    }
+                                    |> Modal.withBody [ text_ "community.actions.form.automatic_tooltip" ]
+                                    |> Modal.withFooter
+                                        [ button
+                                            [ class "button button-primary w-full"
+                                            , Utils.onClickNoBubble ClosedAutomaticActionTooltip
+                                            ]
+                                            [ text_ "Entendi" ]
+                                        ]
+                                    |> Modal.toHtml
+                                ]
+                            ]
                         ]
                 )
             |> Radio.withOption
@@ -1954,3 +2015,9 @@ msgToString msg =
 
         GotInstructionsEditorMsg subMsg ->
             "GotInstructionsEditorMsg" :: MarkdownEditor.msgToString subMsg
+
+        OpenedAutomaticActionTooltip ->
+            [ "OpenedAutomaticActionTooltip" ]
+
+        ClosedAutomaticActionTooltip ->
+            [ "ClosedAutomaticActionTooltip" ]

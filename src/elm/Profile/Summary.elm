@@ -144,10 +144,7 @@ mobileView shared loggedInAccount profile model =
         [ viewUserImg profile True model
         , viewUserNameTag shared loggedInAccount profile model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
-            |> Modal.withBody
-                [ div [ class "pt-14" ]
-                    [ viewUserInfo profile ]
-                ]
+            |> Modal.withBody [ viewUserInfo profile ]
             |> Modal.withPreventScrolling model.preventScrolling
             |> Modal.toHtml
         ]

@@ -608,7 +608,8 @@
         "no": "No",
         "yes": "Sí",
         "automatic": "Automático,",
-        "automatic_detail": " recompensa al usuario de inmediato cuando se reclama",
+        "automatic_detail": " acción no reclamable y, por lo tanto, sin la revisión y aprobación de otros miembros",
+        "automatic_tooltip": "Si es necesario conectar una aplicación externa vía API, la persona que administra la comunidad puede contactarnos para realizar esta configuración.",
         "manual": "Manual,",
         "manual_detail": " recompensa al usuario solo después de ser revisado por otros",
         "verifier_placeholder": "Escribe el nombre de usuario",
@@ -909,6 +910,10 @@
       "2": "bajo revisión",
       "3": ", otros miembros aún necesitan votar"
     },
+    "title_cancelled": {
+      "1": "Este reclamo fue",
+      "2": "cancelado"
+    },
     "title_approved": {
       "1": "Este reclamo fue",
       "2": "aprobado"
@@ -917,13 +922,16 @@
       "1": "Este reclamo fue",
       "2": "rechazado"
     },
+    "cancelled_voting_bar": "votos pendientes",
     "title_action_completed": "Este reclamo está pendiente, sin embargo, dado que la acción se completó, no es posible votar",
     "title_action_closed": "Este reclamo está pendiente, sin embargo, dado que la acción está cerrada, no es posible votar.",
+    "opened_today": "Abierto hoy",
     "day_ago": "Abierto hace {{day_count}} día",
     "days_ago": "Abierto hace {{day_count}} días",
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendiente",
+    "cancelled": "cancelado",
     "disapproved": "Rechazado",
     "approved": "Aprobado",
     "reward": "Ganaste: {{value}}",
@@ -946,6 +954,15 @@
     "approve": "Aprobar",
     "no_results_found": "No se han encontrado resultados",
     "voteTitle": "¿Aprueba o desaprueba esta acción?",
+    "attention": "Atención: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reclamo cancelado",
+      "was_cancelled": "Este reclamo ha sido cancelado",
+      "deadline_reached": "La acción correspondiente se completó porque llegó a la fecha específica",
+      "usages_reached": "La acción correspondiente se completó porque alcanzó la cantidad máxima de uso",
+      "action_completed": "La acción correspondiente fue completada por el equipo administrativo de la comunidad",
+      "not_available": "Por lo tanto, el reclamo ya no está disponible para votar"
+    },
     "modal": {
       "title": "Bajo Revisión",
       "message_disapprove": "Realmente quiere desaprobar este reclamo?",

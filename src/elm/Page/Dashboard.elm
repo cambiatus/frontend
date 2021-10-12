@@ -1810,7 +1810,10 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
     in
     Api.Graphql.query shared
         (Just authToken)
-        (Cambiatus.Query.pendingClaims optionalArguments arg Claim.claimPaginatedSelectionSet)
+        (Cambiatus.Query.pendingClaims optionalArguments
+            arg
+            (Claim.claimPaginatedSelectionSet shared.now)
+        )
         ClaimsLoaded
 
 

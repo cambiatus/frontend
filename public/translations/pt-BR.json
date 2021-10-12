@@ -612,7 +612,8 @@
         "no": "Não",
         "yes": "Sim",
         "automatic": "Automático,",
-        "automatic_detail": " recompensa o usuário imediatamente quando feita a reivindicação",
+        "automatic_detail": " ação não reivindicável e portanto, sem a revisão e aprovação de outros membros",
+        "automatic_tooltip": "Caso seja preciso conectar algum aplicativo externo através de API, a pessoa que administra a comunidade pode entrar em contato conosco para realizar essa configuração.",
         "manual": "Manual,",
         "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
@@ -912,6 +913,10 @@
       "2": "em análise",
       "3": ", outros membros ainda precisam votar"
     },
+    "title_cancelled": {
+      "1": "Esta reivindicação foi",
+      "2": "cancelada"
+    },
     "title_approved": {
       "1": "Esta reinvindicação foi",
       "2": "aprovada"
@@ -920,13 +925,16 @@
       "1": "Esta reinvindicação foi",
       "2": "rejeitada"
     },
+    "cancelled_voting_bar": "votos pendentes",
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
+    "opened_today": "Aberto hoje",
     "day_ago": "Aberto {{day_count}} dia atrás",
     "days_ago": "Aberto {{day_count}} dias atrás",
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendente",
+    "cancelled": "Cancelado",
     "disapproved": "Reprovado",
     "approved": "Aprovado",
     "disapproved_by": "Reprovado por",
@@ -949,6 +957,15 @@
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
     "voteTitle": "Você aprova ou desaprova esta ação?",
+    "attention": "Atenção: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reivindicação cancelada",
+      "was_cancelled": "Essa reivindicação foi cancelada",
+      "deadline_reached": "A ação correspondente foi concluída pois atingiu a data específica",
+      "usages_reached": "A ação correspondente foi concluída pois atingiu a quantidade máxima de uso",
+      "action_completed": "A ação correspondente foi concluída pela equipe administrativa da comunidade",
+      "not_available": "Portanto, a reivindicação não está mais disponível para votação"
+    },
     "modal": {
       "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",

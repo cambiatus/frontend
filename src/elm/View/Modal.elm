@@ -34,7 +34,7 @@ and call `toHtml` at the end of the pipeline:
 import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class, tabindex)
 import Icons
-import Utils exposing (onClickNoBubble)
+import Utils exposing (onClickNoBubble, onClickPreventAll)
 import View.Components
 
 
@@ -203,7 +203,7 @@ viewModalDetails options =
     div [ class "modal fade-in" ]
         [ View.Components.bgNoScroll
             [ class "modal-bg"
-            , onClickNoBubble options.closeMsg
+            , onClickPreventAll options.closeMsg
             ]
             options.preventScrolling
         , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg, .modal-footer" }

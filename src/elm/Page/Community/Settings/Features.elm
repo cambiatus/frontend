@@ -118,7 +118,10 @@ view loggedIn model =
                                 , disabled = True
                                 , value = community.hasKyc
                                 }
-                                |> View.Form.Toggle.withTooltip "community.kyc.info"
+                                |> View.Form.Toggle.withTooltip
+                                    { message = t "community.kyc.info"
+                                    , iconClass = "text-orange-300"
+                                    }
                              , View.Form.Toggle.init
                                 { label = text (t "sponsorship.title")
                                 , id = "sponsorship-toggle"
