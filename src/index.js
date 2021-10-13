@@ -48,6 +48,7 @@ window.customElements.define('paypal-buttons',
 
     attributeChangedCallback (name, oldValue, newValue) {
       if (name === 'elm-currency') {
+        this.removePaypal()
         this.setupPaypal()
       }
     }
@@ -60,11 +61,27 @@ window.customElements.define('paypal-buttons',
       shadow.appendChild(this._paypalContainer)
     }
 
-    connectedCallback () {
-      this.setupPaypal()
+    disconnectedCallback () {
+      this.removePaypal()
+    }
+
+    removePaypal () {
+      for (const child of document.head.childNodes) {
+        if (child.nodeName.toLowerCase() === 'script' && child.src) {
+          if (child.src.startsWith('https://www.paypal.com/sdk/js?')) {
+            document.head.removeChild(child)
+          }
+        }
+      }
     }
 
     setupPaypal () {
+      const handleError = (err) => {
+        if (err.message !== 'Elm got an error creating contribution') {
+          this.dispatchEvent(new CustomEvent('paypal-error', { error: err }))
+        }
+      }
+
       paypalJs.loadScript({
         'client-id': config.paypal.clientId,
         currency: this.getAttribute('elm-currency') || 'USD'
@@ -74,10 +91,11 @@ window.customElements.define('paypal-buttons',
             style: {
               shape: 'pill'
             },
+
             createOrder: async (data, actions) => {
               const valueAttribute = this.getAttribute('elm-value')
               if (valueAttribute === '') {
-                throw new Error('Amount could not be parsed as a float by Elm')
+                return handleError(new Error('Amount could not be parsed as a float by Elm'))
               }
 
               app.ports.requestPaypalInfoFromJs.send(this.id)
@@ -90,7 +108,7 @@ window.customElements.define('paypal-buttons',
               })
 
               if (paypalInfo.error) {
-                throw new Error('Elm got an error creating contribution')
+                return handleError(new Error('Elm got an error creating contribution'))
               }
 
               return actions.order.create({
@@ -118,11 +136,7 @@ window.customElements.define('paypal-buttons',
               this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
             },
 
-            onError: (err) => {
-              if (err.message !== 'Elm got an error creating contribution') {
-                this.dispatchEvent(new CustomEvent('paypal-error', { error: err }))
-              }
-            }
+            onError: handleError
           }).render(this._paypalContainer)
         })
         .catch((err) => {
