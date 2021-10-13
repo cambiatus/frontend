@@ -95,13 +95,7 @@ viewSettingsList shared community =
         { t } =
             shared.translators
     in
-    div
-        [ class "grid my-4"
-        , class "flex container mx-auto"
-        , style "grid-template-columns" "0 1fr 0"
-        , style "grid-template-rows" "auto"
-        , style "grid-gap" "16px"
-        ]
+    div [ class "flex flex-col container my-4 mx-auto gap-4 px-4" ]
         [ settingCard (t "settings.community_info.title") (t "menu.edit") (t "settings.community_info.description") Route.CommunitySettingsInfo
         , settingCard (t "settings.community_currency.title") (t "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
         , if community.hasObjectives then
