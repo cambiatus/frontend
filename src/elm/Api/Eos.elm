@@ -1,9 +1,9 @@
 module Api.Eos exposing
     ( query, querySingleItem, queryWithList, Account(..)
     , TokenTable(..), MultiSigTable(..)
-    , transact, Authorization, Permission(..), defaultPermission, Action(..)
+    , transact, Action(..)
     , CommunityAction(..), MultiSigAction(..), EosAction(..)
-    , listPermissions, permissionToString
+    , getAccount
     )
 
 {-| This is a module to help interacting with EOS, our blockchain. There are two
@@ -42,6 +42,7 @@ You can view more information on blockchain stuff using [the block explorer](htt
 
 import Eos
 import Eos.Account
+import Eos.Permission
 import Http
 import Iso8601
 import Json.Decode as Decode
@@ -67,7 +68,7 @@ is done in JS, and the simplest way to do it is to add a call to
 key isn't loaded, EOS will return an error.
 
 -}
-transact : Shared -> Authorization -> msg -> Action -> Ports.JavascriptOutModel msg
+transact : Shared -> Eos.Permission.Authorization -> msg -> Action -> Ports.JavascriptOutModel msg
 transact shared authorization toMsg action =
     { responseAddress = toMsg
     , responseData = Encode.null
@@ -128,9 +129,9 @@ type MultiSigAction
     = Propose
         { proposer : Eos.Account.Name
         , proposalName : String
-        , requestedVotes : List Authorization
+        , requestedVotes : List Eos.Permission.Authorization
         , expiration : Time.Posix
-        , actions : List ( Action, Authorization )
+        , actions : List ( Action, Eos.Permission.Authorization )
         }
     | Approve
         { proposer : Eos.Account.Name
@@ -155,71 +156,15 @@ type MultiSigAction
 type EosAction
     = UpdateAuth
         { targetAccount : Eos.Account.Name
-        , targetPermission : Permission
+        , targetPermission : Eos.Permission.PermissionType
         , threshold : Int
         , accounts :
             List
                 { account : Eos.Account.Name
-                , permission : Permission
+                , permission : Eos.Permission.PermissionType
                 , weight : Int
                 }
         }
-
-
-{-| This defines the key to use to sign a transaction. All accounts are
-identified by an `Eos.Account.Name` (the `actor`). Every account may have
-multiple (hierarchical) levels of `Permission`, each one associated with a key
-pair (on multisig accounts, there may be multiple key pairs per permission level)
--}
-type alias Authorization =
-    { actor : Eos.Account.Name
-    , permission : Permission
-    }
-
-
-{-| The standard permission levels are `Active` and `Owner`. `Active` is a child
-of `Owner`, which means `Owner` has more "power" than `Active`. For example, you
-can change the `Active` permission's auth data by signing as `Owner`, but you
-can't change the `Owner` permission's auth data by signing as `Active`.
--}
-type Permission
-    = RootPermission
-    | Owner
-    | Active
-
-
-{-| All the permissions a user can use to sign a transaction.
-
-Note that `RootPermission` isn't included, since it only exists to represent
-the `Owner` permission's parent. In Eos, the `RootPermission` is just an empty
-string.
-
--}
-listPermissions : List Permission
-listPermissions =
-    [ Owner, Active ]
-
-
-{-| The permission to use when we need a default one
--}
-defaultPermission : Permission
-defaultPermission =
-    Active
-
-
-{-| Turn a permission into a string
--}
-permissionToString : Permission -> String
-permissionToString permission =
-    case permission of
-        RootPermission ->
-            ""
-
-        Owner ->
-            "owner"
-
-        Active ->
-            "active"
 
 
 
@@ -320,6 +265,19 @@ type MultiSigTable
 
 
 
+-- SPECIAL QUERIES
+
+
+getAccount : Shared -> Eos.Account.Name -> (Result Http.Error Eos.Permission.Permissions -> msg) -> Cmd msg
+getAccount shared accountName toMsg =
+    Http.post
+        { url = blockchainUrl shared [ "chain", "get_account" ] []
+        , body = Http.jsonBody (Encode.object [ ( "account_name", Eos.Account.encodeName accountName ) ])
+        , expect = Http.expectJson toMsg (Decode.field "permissions" Eos.Permission.decoder)
+        }
+
+
+
 -- INTERNAL HELPERS
 
 
@@ -398,46 +356,12 @@ encodeTableInfo tableInfo =
 -- INTERNAL TRANSACT HELPERS
 
 
-encodePermission : Permission -> Encode.Value
-encodePermission permission =
-    case permission of
-        RootPermission ->
-            Encode.string ""
-
-        Owner ->
-            Encode.string "owner"
-
-        Active ->
-            Encode.string "active"
-
-
-parentPermission : Permission -> Permission
-parentPermission permission =
-    case permission of
-        RootPermission ->
-            RootPermission
-
-        Owner ->
-            RootPermission
-
-        Active ->
-            Owner
-
-
-encodeAuthorization : Authorization -> Encode.Value
-encodeAuthorization authorization =
-    Encode.object
-        [ ( "actor", Eos.Account.encodeName authorization.actor )
-        , ( "permission", encodePermission authorization.permission )
-        ]
-
-
 encodedEmptyList : Encode.Value
 encodedEmptyList =
     Encode.list (\_ -> Encode.null) []
 
 
-encodeAction : Shared -> Authorization -> Action -> Encode.Value
+encodeAction : Shared -> Eos.Permission.Authorization -> Action -> Encode.Value
 encodeAction shared authorization action =
     let
         actionData_ =
@@ -446,12 +370,12 @@ encodeAction shared authorization action =
     Encode.object
         [ ( "account", Encode.string actionData_.contract )
         , ( "name", Encode.string actionData_.actionName )
-        , ( "authorization", Encode.list encodeAuthorization [ authorization ] )
+        , ( "authorization", Encode.list Eos.Permission.encodeAuthorization [ authorization ] )
         , ( "data", actionData_.encodedData )
         ]
 
 
-actionData : Shared -> Authorization -> Action -> { contract : String, actionName : String, encodedData : Encode.Value }
+actionData : Shared -> Eos.Permission.Authorization -> Action -> { contract : String, actionName : String, encodedData : Encode.Value }
 actionData shared authorization action =
     case action of
         CommunityAction ((CreateObjective _) as communityAction) ->
@@ -509,14 +433,14 @@ encodeCommunityAction communityAction =
                 ]
 
 
-encodeMultisigAction : Shared -> Authorization -> MultiSigAction -> Encode.Value
+encodeMultisigAction : Shared -> Eos.Permission.Authorization -> MultiSigAction -> Encode.Value
 encodeMultisigAction shared authorization multisigAction =
     case multisigAction of
         Propose proposal ->
             Encode.object
                 [ ( "proposer", Eos.Account.encodeName proposal.proposer )
                 , ( "proposal_name", Encode.string proposal.proposalName )
-                , ( "requested", Encode.list encodeAuthorization proposal.requestedVotes )
+                , ( "requested", Encode.list Eos.Permission.encodeAuthorization proposal.requestedVotes )
                 , ( "trx"
                   , Encode.object
                         [ ( "expiration"
@@ -549,14 +473,14 @@ encodeMultisigAction shared authorization multisigAction =
             Encode.object
                 [ ( "proposer", Eos.Account.encodeName approval.proposer )
                 , ( "proposal_name", Encode.string approval.proposalName )
-                , ( "level", encodeAuthorization authorization )
+                , ( "level", Eos.Permission.encodeAuthorization authorization )
                 ]
 
         Unapprove unapproval ->
             Encode.object
                 [ ( "proposer", Eos.Account.encodeName unapproval.proposer )
                 , ( "proposal_name", Encode.string unapproval.proposalName )
-                , ( "level", encodeAuthorization authorization )
+                , ( "level", Eos.Permission.encodeAuthorization authorization )
                 ]
 
         Execute execution ->
@@ -573,15 +497,18 @@ encodeEosAction (UpdateAuth updateAuth) =
         encodeAccount account =
             Encode.object
                 [ ( "permission"
-                  , encodeAuthorization { actor = account.account, permission = account.permission }
+                  , Eos.Permission.encodeAuthorization
+                        { actor = account.account
+                        , permission = account.permission
+                        }
                   )
                 , ( "weight", Encode.int account.weight )
                 ]
     in
     Encode.object
         [ ( "account", Eos.Account.encodeName updateAuth.targetAccount )
-        , ( "permission", encodePermission updateAuth.targetPermission )
-        , ( "parent", encodePermission (parentPermission updateAuth.targetPermission) )
+        , ( "permission", Eos.Permission.encodePermissionType updateAuth.targetPermission )
+        , ( "parent", Eos.Permission.encodePermissionType (Eos.Permission.parent updateAuth.targetPermission) )
         , ( "auth"
           , Encode.object
                 [ ( "threshold", Encode.int updateAuth.threshold )
