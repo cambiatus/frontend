@@ -24,7 +24,6 @@ module Eos exposing
     , symbolSelectionSet
     , symbolToString
     , symbolToSymbolCodeString
-    , updateAuth
     )
 
 import Eos.Account as Account exposing (PermissionName)
@@ -48,55 +47,6 @@ encodeTransaction transaction =
         [ ( "name", Encode.string "eosTransaction" )
         , ( "actions", Encode.list encodeAction transaction )
         ]
-
-
-updateAuth :
-    Authorization
-    -> Account.Name
-    -> Int
-    -> List { name : Account.Name, weight : Int }
-    -> Action
-updateAuth authorization targetAccount threshold accounts =
-    { accountName = "eosio"
-    , name = "updateauth"
-    , authorization = authorization
-    , data = encodeUpdateAuth targetAccount threshold accounts
-    }
-
-
-encodeUpdateAuth :
-    Account.Name
-    -> Int
-    -> List { name : Account.Name, weight : Int }
-    -> Value
-encodeUpdateAuth targetAccount threshold accounts =
-    let
-        encodeAccount account =
-            Encode.object
-                [ ( "permission"
-                  , encodeAuthorization
-                        { actor = account.name, permissionName = Account.samplePermission }
-                  )
-                , ( "weight", Encode.int account.weight )
-                ]
-    in
-    Encode.object
-        [ ( "account", Account.encodeName targetAccount )
-        , ( "permission", Encode.string "active" )
-        , ( "parent", Encode.string "owner" )
-        , ( "auth"
-          , Encode.object
-                [ ( "threshold", Encode.int threshold )
-                , ( "keys", encodedEmptyList )
-                , ( "accounts", Encode.list encodeAccount accounts )
-                ]
-          )
-        ]
-
-
-encodedEmptyList : Value
-encodedEmptyList =
-    Encode.list (\_ -> Encode.null) []
 
 
 

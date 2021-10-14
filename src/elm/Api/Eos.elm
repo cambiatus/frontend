@@ -454,12 +454,10 @@ encodeAction shared authorization action =
 actionData : Shared -> Authorization -> Action -> { contract : String, actionName : String, encodedData : Encode.Value }
 actionData shared authorization action =
     case action of
-        CommunityAction communityAction ->
+        CommunityAction ((CreateObjective _) as communityAction) ->
             let
                 actionName =
-                    case communityAction of
-                        CreateObjective _ ->
-                            "newobjective"
+                    "newobjective"
             in
             { contract = shared.contracts.community
             , actionName = actionName
@@ -487,12 +485,10 @@ actionData shared authorization action =
             , encodedData = encodeMultisigAction shared authorization multisigAction
             }
 
-        EosAction eosAction ->
+        EosAction ((UpdateAuth _) as eosAction) ->
             let
                 actionName =
-                    case eosAction of
-                        UpdateAuth _ ->
-                            "updateauth"
+                    "updateauth"
             in
             { contract = "eosio"
             , actionName = actionName
