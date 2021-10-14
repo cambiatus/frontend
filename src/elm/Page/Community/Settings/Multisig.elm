@@ -19,7 +19,7 @@ import List.Extra
 import Log
 import Page
 import Profile
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
@@ -39,7 +39,7 @@ import View.Form.Radio as Radio
 
 
 type alias Model =
-    { proposals : List Proposal
+    { proposals : RemoteData Http.Error (List Proposal)
     , threshold : Int
     , voterState : Select.State
     , selectedVoters :
@@ -59,6 +59,8 @@ type alias Model =
             }
     , newObjectiveExpirationDate : Date.Date
     , newObjectiveExpirationDatePicker : DatePicker.DatePicker
+    , searchState : Select.State
+    , selectedSearch : Maybe Profile.Minimal
     }
 
 
@@ -69,7 +71,7 @@ init loggedIn =
             Date.fromPosix loggedIn.shared.timezone loggedIn.shared.now
                 |> Date.add Date.Days 7
     in
-    ( { proposals = []
+    ( { proposals = RemoteData.NotAsked
       , threshold = 1
       , voterState = Select.newState "voter-select"
       , selectedVoters = []
@@ -79,14 +81,10 @@ init loggedIn =
       , proposalVoters = []
       , newObjectiveExpirationDate = nextWeek
       , newObjectiveExpirationDatePicker = DatePicker.initFromDate nextWeek
+      , searchState = Select.newState "search-select"
+      , selectedSearch = Nothing
       }
-    , Cmd.batch
-        [ Api.Eos.query loggedIn.shared
-            CompletedLoadProposals
-            proposalRowDecoder
-            (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
-        , LoggedIn.maybeInitWith CompletedLoadCommunityCreatorPermissions .communityCreatorPermissions loggedIn
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunityCreatorPermissions .communityCreatorPermissions loggedIn
     )
 
 
@@ -117,6 +115,8 @@ type Msg
     | CheckedProposalVoter Eos.Account.Name Bool
     | CompletedLoadCommunityCreatorPermissions Eos.Permission.Permissions
     | GotNewObjectiveDatePickerMsg DatePicker.Msg
+    | GotSearchSelectMsg (Select.Msg Profile.Minimal)
+    | SelectedProposalSearch (Maybe Profile.Minimal)
 
 
 type alias UpdateResult =
@@ -353,12 +353,21 @@ update msg model loggedIn =
             UR.init model
 
         DeserializedProposals (Ok proposals) ->
-            { model | proposals = proposals }
+            { model | proposals = RemoteData.Success proposals }
                 |> UR.init
 
         DeserializedProposals (Err err) ->
-            -- TODO
-            UR.init model
+            -- TODO - Use error in model
+            -- UR.init model
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when deserializing proposals")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when deserializing proposals"
+                    { moduleName = "Page.Community.Settings.Multising", function = "update" }
+                    []
+                    err
 
         ClickedApproveProposal proposal ->
             UR.init model
@@ -502,6 +511,45 @@ update msg model loggedIn =
                     { model | newObjectiveExpirationDatePicker = newDatePicker }
                         |> UR.init
 
+        GotSearchSelectMsg subMsg ->
+            let
+                ( updatedVoters, cmd ) =
+                    Select.update (searchProposalSelectConfiguration loggedIn.shared)
+                        subMsg
+                        model.searchState
+            in
+            { model | searchState = updatedVoters }
+                |> UR.init
+                |> UR.addCmd cmd
+
+        SelectedProposalSearch maybeProfile ->
+            let
+                queryProposals =
+                    case maybeProfile of
+                        Nothing ->
+                            identity
+
+                        Just profile ->
+                            Api.Eos.Proposal profile.account
+                                |> Api.Eos.MultiSig
+                                |> Api.Eos.query loggedIn.shared
+                                    CompletedLoadProposals
+                                    proposalRowDecoder
+                                |> UR.addCmd
+            in
+            { model
+                | selectedSearch = maybeProfile
+                , proposals =
+                    case maybeProfile of
+                        Nothing ->
+                            model.proposals
+
+                        Just _ ->
+                            RemoteData.Loading
+            }
+                |> UR.init
+                |> queryProposals
+
 
 
 -- VIEW
@@ -538,9 +586,8 @@ view_ loggedIn community model =
     div [ class "container mx-auto" ]
         [ div [ class "px-4" ]
             [ viewChangePermissions loggedIn community model
-            , viewProposeObjective loggedIn community model
-            , div [ class "grid gap-4 grid-cols-2 mt-4" ]
-                (List.map (viewProposal loggedIn.shared) model.proposals)
+            , viewProposeObjective loggedIn model
+            , viewProposalCard loggedIn.shared community model
             ]
         ]
 
@@ -654,8 +701,8 @@ viewVoter ({ shared } as loggedIn) { profile, permission, weight } =
         ]
 
 
-viewProposeObjective : LoggedIn.Model -> Community.Model -> Model -> Html Msg
-viewProposeObjective loggedIn community model =
+viewProposeObjective : LoggedIn.Model -> Model -> Html Msg
+viewProposeObjective loggedIn model =
     let
         canPropose =
             List.any (\{ profile } -> profile.account == loggedIn.accountName)
@@ -755,9 +802,63 @@ viewProposalVoter loggedIn { profile, isChecked } =
         |> Checkbox.toHtml
 
 
+viewProposalCard : Shared -> Community.Model -> Model -> Html Msg
+viewProposalCard shared community model =
+    div [ class "bg-white rounded-sm shadow p-4 my-10" ]
+        [ p [ class "text-sm mb-4" ]
+            [ text "Here you can use this select element to search for proposals proposed by some user. "
+            , text "Available actions are `Approve`, `Unapprove`, `Execute` and `Cancel`. "
+            , text "All of them are straight forward, except for `Unapprove`. It doesn't mean \"Vote No\", it means \"Remove my Yes vote (if there is one)\""
+            ]
+        , View.Form.label "proposal-search-select" "Search proposals by user"
+        , viewSearchProposal shared community model
+        , div [ class "grid gap-4 grid-cols-2 mt-4" ]
+            (case model.proposals of
+                RemoteData.Success proposals ->
+                    List.map (viewProposal shared) proposals
+
+                RemoteData.Failure _ ->
+                    [ text "Something went wrong when fetching proposals" ]
+
+                RemoteData.Loading ->
+                    [ text "Loading" ]
+
+                RemoteData.NotAsked ->
+                    []
+            )
+        ]
+
+
+viewSearchProposal : Shared -> Community.Model -> Model -> Html Msg
+viewSearchProposal shared community model =
+    Select.view
+        (searchProposalSelectConfiguration shared)
+        model.searchState
+        community.members
+        (model.selectedSearch
+            |> Maybe.map List.singleton
+            |> Maybe.withDefault []
+        )
+        |> Html.map GotSearchSelectMsg
+
+
+searchProposalSelectConfiguration : Shared -> Select.Config Msg Profile.Minimal
+searchProposalSelectConfiguration shared =
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = SelectedProposalSearch
+            , toLabel = .account >> Eos.Account.nameToString
+            , filter = Profile.selectFilter 2 (.account >> Eos.Account.nameToString)
+            }
+            |> Select.withInputId "proposal-search-select"
+        )
+        shared
+        False
+
+
 viewProposal : Shared -> Proposal -> Html Msg
 viewProposal shared proposal =
-    div [ class "bg-white rounded shadow p-4" ]
+    div [ class "bg-white rounded border p-4" ]
         [ h1 [ class "font-bold" ] [ text proposal.name ]
         , View.Components.dateViewer [ class "text-sm text-gray-900" ]
             identity
@@ -786,7 +887,7 @@ viewProposal shared proposal =
 
 viewAction : Action -> Html Msg
 viewAction action =
-    div [ class "bg-white rounded shadow p-4" ]
+    div []
         [ div [ class "flex justify-between" ]
             [ h2 [ class "font-bold" ] [ text "Account" ]
             , p [] [ text action.account ]
@@ -986,3 +1087,9 @@ msgToString msg =
 
         CompletedLoadCommunityCreatorPermissions _ ->
             [ "CompletedLoadCommunityCreatorPermissions" ]
+
+        GotSearchSelectMsg _ ->
+            [ "GotSearchSelectMsg" ]
+
+        SelectedProposalSearch _ ->
+            [ "SelectedProposalSearch" ]
