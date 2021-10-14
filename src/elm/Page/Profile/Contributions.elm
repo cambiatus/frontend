@@ -120,7 +120,7 @@ view_ loggedIn profileContributions title =
                                         ]
                                     ]
                                     [ -- TODO - Use new text size class (#622)
-                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-1" ]
+                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-2" ]
                                         identity
                                         loggedIn.shared
                                         firstContribution.insertedAt
