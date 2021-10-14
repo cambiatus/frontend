@@ -1,8 +1,9 @@
 module Api.Eos exposing
     ( query, querySingleItem, queryWithList, Account(..)
     , TokenTable(..), MultiSigTable(..)
-    , transact, Authorization, Permission(..), Action(..)
+    , transact, Authorization, Permission(..), defaultPermission, Action(..)
     , CommunityAction(..), MultiSigAction(..), EosAction(..)
+    , listPermissions, permissionToString
     )
 
 {-| This is a module to help interacting with EOS, our blockchain. There are two
@@ -25,12 +26,17 @@ You can view more information on blockchain stuff using [the block explorer](htt
 
 ## Transacting
 
-@docs transact, Authorization, Permission, Action
+@docs transact, Authorization, Permission, defaultPermission, Action
 
 
 ### Actions
 
 @docs CommunityAction, MultiSigAction, EosAction
+
+
+## Helpers
+
+@ docs listPermissions, permissionToString
 
 -}
 
@@ -180,6 +186,40 @@ type Permission
     = RootPermission
     | Owner
     | Active
+
+
+{-| All the permissions a user can use to sign a transaction.
+
+Note that `RootPermission` isn't included, since it only exists to represent
+the `Owner` permission's parent. In Eos, the `RootPermission` is just an empty
+string.
+
+-}
+listPermissions : List Permission
+listPermissions =
+    [ Owner, Active ]
+
+
+{-| The permission to use when we need a default one
+-}
+defaultPermission : Permission
+defaultPermission =
+    Active
+
+
+{-| Turn a permission into a string
+-}
+permissionToString : Permission -> String
+permissionToString permission =
+    case permission of
+        RootPermission ->
+            ""
+
+        Owner ->
+            "owner"
+
+        Active ->
+            "active"
 
 
 
@@ -551,7 +591,13 @@ encodeEosAction (UpdateAuth updateAuth) =
                 [ ( "threshold", Encode.int updateAuth.threshold )
                 , ( "keys", encodedEmptyList )
                 , ( "waits", encodedEmptyList )
-                , ( "accounts", Encode.list encodeAccount updateAuth.accounts )
+                , ( "accounts"
+                  , updateAuth.accounts
+                        -- EOS demands that these accounts are in alphabetical
+                        -- order. Otherwise, the transaction fails
+                        |> List.sortBy (\account -> Eos.Account.nameToString account.account)
+                        |> Encode.list encodeAccount
+                  )
                 ]
           )
         ]

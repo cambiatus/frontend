@@ -1,7 +1,8 @@
 module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Api.Eos
-import Eos
+import Avatar
+import Community
 import Eos.Account
 import Html exposing (Html, button, div, h1, h2, p, text)
 import Html.Attributes exposing (class)
@@ -11,14 +12,21 @@ import Iso8601
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode as Encode
+import List.Extra
+import Log
 import Page
+import Profile
 import RemoteData
+import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import View.Components
+import View.Feedback as Feedback
+import View.Form
 import View.Form.Input as Input
+import View.Form.Radio as Radio
 
 
 
@@ -27,6 +35,15 @@ import View.Form.Input as Input
 
 type alias Model =
     { proposals : List Proposal
+    , threshold : Int
+    , voterState : Select.State
+    , selectedVoters :
+        List
+            { profile : Profile.Minimal
+            , permission : Api.Eos.Permission
+            , weight : Int
+            }
+    , targetPermission : Api.Eos.Permission
     , newObjectiveName : String
     }
 
@@ -34,6 +51,10 @@ type alias Model =
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( { proposals = []
+      , threshold = 1
+      , voterState = Select.newState "voter-select"
+      , selectedVoters = []
+      , targetPermission = Api.Eos.defaultPermission
       , newObjectiveName = ""
       }
     , Api.Eos.query loggedIn.shared
@@ -49,7 +70,15 @@ init loggedIn =
 
 type Msg
     = NoOp
+    | EnteredThreshold String
+    | SelectedVoter (Maybe Profile.Minimal)
+    | GotVoterSelectMsg (Select.Msg Profile.Minimal)
+    | EnteredVoterWeight Eos.Account.Name String
+    | SelectedVoterPermission Eos.Account.Name Api.Eos.Permission
+    | RemovedVoter Eos.Account.Name
+    | SelectedTargetPermission Api.Eos.Permission
     | ClickedChangeAccountPermissions
+    | CompletedChangeAccountPermissions (Result Json.Decode.Error ())
     | ClickedProposeNewObjective
     | CompletedLoadProposals (Result Http.Error (List ProposalRow))
     | DeserializedProposals (Result Json.Decode.Error (List Proposal))
@@ -89,28 +118,112 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
+        EnteredThreshold stringThreshold ->
+            case String.toInt stringThreshold of
+                Nothing ->
+                    UR.init model
+
+                Just threshold ->
+                    if threshold > 0 then
+                        { model | threshold = threshold }
+                            |> UR.init
+
+                    else
+                        UR.init model
+
+        SelectedVoter Nothing ->
+            -- TODO - Add log
+            model
+                |> UR.init
+
+        SelectedVoter (Just voter) ->
+            let
+                newVoters =
+                    if
+                        List.any (\{ profile } -> profile == voter)
+                            model.selectedVoters
+                    then
+                        model.selectedVoters
+
+                    else
+                        { profile = voter
+                        , permission = Api.Eos.defaultPermission
+                        , weight = 1
+                        }
+                            :: model.selectedVoters
+            in
+            { model | selectedVoters = newVoters }
+                |> UR.init
+
+        GotVoterSelectMsg subMsg ->
+            let
+                ( updatedVoters, cmd ) =
+                    Select.update (selectConfiguration loggedIn.shared)
+                        subMsg
+                        model.voterState
+            in
+            UR.init { model | voterState = updatedVoters }
+                |> UR.addCmd cmd
+
+        EnteredVoterWeight voterName stringWeight ->
+            case String.toInt stringWeight of
+                Nothing ->
+                    UR.init model
+
+                Just weight ->
+                    if weight > 0 then
+                        { model
+                            | selectedVoters =
+                                List.Extra.updateIf
+                                    (\{ profile } -> profile.account == voterName)
+                                    (\voter -> { voter | weight = weight })
+                                    model.selectedVoters
+                        }
+                            |> UR.init
+
+                    else
+                        UR.init model
+
+        SelectedVoterPermission voterName permission ->
+            { model
+                | selectedVoters =
+                    List.Extra.updateIf
+                        (\{ profile } -> profile.account == voterName)
+                        (\voter -> { voter | permission = permission })
+                        model.selectedVoters
+            }
+                |> UR.init
+
+        RemovedVoter voterName ->
+            { model
+                | selectedVoters =
+                    List.filter
+                        (\{ profile } -> profile.account /= voterName)
+                        model.selectedVoters
+            }
+                |> UR.init
+
+        SelectedTargetPermission permission ->
+            { model | targetPermission = permission }
+                |> UR.init
+
         ClickedChangeAccountPermissions ->
             model
                 |> UR.init
                 |> UR.addPort
                     (Api.Eos.UpdateAuth
                         { targetAccount = loggedIn.accountName
-                        , targetPermission = Api.Eos.Active
-                        , threshold = 2
+                        , targetPermission = model.targetPermission
+                        , threshold = model.threshold
                         , accounts =
-                            [ { account = Eos.Account.stringToName "henriquebus2"
-                              , permission = Api.Eos.Active
-                              , weight = 1
-                              }
-                            , { account = Eos.Account.stringToName "henriquebus4"
-                              , permission = Api.Eos.Active
-                              , weight = 1
-                              }
-                            , { account = Eos.Account.stringToName "henriquebuss"
-                              , permission = Api.Eos.Active
-                              , weight = 1
-                              }
-                            ]
+                            List.map
+                                (\{ profile, permission, weight } ->
+                                    { account = profile.account
+                                    , permission = permission
+                                    , weight = weight
+                                    }
+                                )
+                                model.selectedVoters
                         }
                         |> Api.Eos.EosAction
                         |> Api.Eos.transact loggedIn.shared
@@ -122,6 +235,22 @@ update msg model loggedIn =
                     { successMsg = ClickedChangeAccountPermissions
                     , errorMsg = NoOp
                     }
+
+        CompletedChangeAccountPermissions (Ok ()) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Account permissions changed")
+
+        CompletedChangeAccountPermissions (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when changing account permissions")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when changing account permissions"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
 
         ClickedProposeNewObjective ->
             case loggedIn.selectedCommunity of
@@ -278,7 +407,7 @@ view loggedIn model =
                 RemoteData.Success community ->
                     div []
                         [ Page.viewHeader loggedIn title
-                        , view_ loggedIn.shared model
+                        , view_ loggedIn community model
                         ]
 
                 RemoteData.Loading ->
@@ -293,15 +422,11 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : Shared -> Model -> Html Msg
-view_ shared model =
+view_ : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+view_ ({ shared } as loggedIn) community model =
     div [ class "container mx-auto" ]
         [ div [ class "px-4" ]
-            [ button
-                [ class "button button-danger w-full my-10"
-                , onClick ClickedChangeAccountPermissions
-                ]
-                [ text "Change account permissions" ]
+            [ viewChangePermissions loggedIn community model
             , Input.init
                 { label = "New objective name"
                 , id = "new-objective-name-input"
@@ -323,6 +448,131 @@ view_ shared model =
             , div [ class "grid gap-4 grid-cols-2 mt-4" ]
                 (List.map (viewProposal shared) model.proposals)
             ]
+        ]
+
+
+viewChangePermissions : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+viewChangePermissions ({ shared } as loggedIn) community model =
+    div [ class "bg-white rounded-sm shadow p-4 my-10" ]
+        [ p [ class "font-bold mb-2" ]
+            [ text "This will change the permission on the account you're currently logged in to. Since this is still a WIP, make sure you're using a test account, otherwise you may need to manually submit a transaction to the blockchain to revert your actions." ]
+        , p [ class "mb-4" ] [ text "Here you can set the threshold of a specific permission. You also choose the accounts that will be associated with that permission" ]
+        , Input.init
+            { label = "Threshold"
+            , id = "threshold-input"
+            , onInput = EnteredThreshold
+            , disabled = False
+            , value = model.threshold |> String.fromInt
+            , placeholder = Nothing
+            , problems = Nothing
+            , translators = shared.translators
+            }
+            |> Input.withType Input.Number
+            |> Input.toHtml
+        , Radio.init
+            { label = "Target permission"
+            , name = "permission-radio"
+            , optionToString = Api.Eos.permissionToString
+            , activeOption = model.targetPermission
+            , onSelect = SelectedTargetPermission
+            , areOptionsEqual = (==)
+            }
+            |> Radio.withOptions
+                (List.map
+                    (\permission_ ->
+                        ( permission_
+                        , \_ -> text (Api.Eos.permissionToString permission_)
+                        )
+                    )
+                    Api.Eos.listPermissions
+                )
+            |> Radio.withAttrs [ class "mb-10" ]
+            |> Radio.withLabelAttrs [ class "mr-29 capitalize" ]
+            |> Radio.withRowAttrs [ class "mt-2" ]
+            |> Radio.toHtml shared.translators
+        , View.Form.label "voter-select-input" "Voters"
+        , viewAutoCompleteAccount shared community model
+        , div [ class "flex flex-wrap gap-6 my-6" ]
+            (List.map (viewVoter loggedIn) model.selectedVoters)
+        , button
+            [ class "button button-primary w-full"
+            , onClick ClickedChangeAccountPermissions
+            ]
+            [ text "Change account permissions" ]
+        ]
+
+
+viewAutoCompleteAccount : Shared -> Community.Model -> Model -> Html Msg
+viewAutoCompleteAccount shared community model =
+    Select.view
+        (selectConfiguration shared)
+        model.voterState
+        community.members
+        (model.selectedVoters |> List.map .profile)
+        |> Html.map GotVoterSelectMsg
+
+
+selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
+selectConfiguration shared =
+    Profile.selectConfig
+        (Select.newConfig
+            { onSelect = SelectedVoter
+            , toLabel = .account >> Eos.Account.nameToString
+            , filter = Profile.selectFilter 2 (.account >> Eos.Account.nameToString)
+            }
+            |> Select.withMultiSelection True
+            |> Select.withInputId "voter-select-input"
+        )
+        shared
+        False
+
+
+viewVoter :
+    LoggedIn.Model
+    -> { profile : Profile.Minimal, permission : Api.Eos.Permission, weight : Int }
+    -> Html Msg
+viewVoter ({ shared } as loggedIn) { profile, permission, weight } =
+    div [ class "flex flex-col items-center border p-4 rounded" ]
+        [ Avatar.view profile.avatar "w-10 h-10 mb-2"
+        , Profile.viewProfileNameTag shared loggedIn.accountName profile
+        , Input.init
+            { label = "Weight"
+            , id = "profile-weight-" ++ Eos.Account.nameToString profile.account
+            , onInput = EnteredVoterWeight profile.account
+            , disabled = False
+            , value = weight |> String.fromInt
+            , placeholder = Nothing
+            , problems = Nothing
+            , translators = shared.translators
+            }
+            |> Input.withType Input.Number
+            |> Input.withContainerAttrs [ class "!my-4" ]
+            |> Input.toHtml
+        , Radio.init
+            { label = "Permission"
+            , name = "voter-permission-radio-" ++ Eos.Account.nameToString profile.account
+            , optionToString = Api.Eos.permissionToString
+            , activeOption = permission
+            , onSelect = SelectedVoterPermission profile.account
+            , areOptionsEqual = (==)
+            }
+            |> Radio.withOptions
+                (List.map
+                    (\permission_ ->
+                        ( permission_
+                        , \_ -> text (Api.Eos.permissionToString permission_)
+                        )
+                    )
+                    Api.Eos.listPermissions
+                )
+            |> Radio.withAttrs [ class "w-full" ]
+            |> Radio.withRowAttrs [ class "mt-2 justify-between capitalize" ]
+            |> Radio.toHtml shared.translators
+        , button
+            [ class "button button-danger w-full mt-4"
+            , onClick (RemovedVoter profile.account)
+            ]
+            [ text "Remove" ]
         ]
 
 
@@ -421,6 +671,13 @@ actionDecoder =
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
+        "ClickedChangeAccountPermissions" :: _ ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedChangeAccountPermissions
+                |> Just
+
         "CompletedLoadProposals" :: _ ->
             Json.Decode.decodeValue
                 (Json.Decode.field "deserializedProposals"
@@ -443,8 +700,32 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
+        EnteredThreshold _ ->
+            [ "EnteredThreshold" ]
+
+        SelectedVoter _ ->
+            [ "SelectedVoter" ]
+
+        GotVoterSelectMsg _ ->
+            [ "GotVoterSelectMsg" ]
+
+        EnteredVoterWeight _ _ ->
+            [ "EnteredVoterWeight" ]
+
+        SelectedVoterPermission _ _ ->
+            [ "SelectedVoterPermission" ]
+
+        RemovedVoter _ ->
+            [ "RemovedVoter" ]
+
+        SelectedTargetPermission _ ->
+            [ "SelectedTargetPermission" ]
+
         ClickedChangeAccountPermissions ->
             [ "ClickedChangeAccountPermissions" ]
+
+        CompletedChangeAccountPermissions r ->
+            [ "CompletedChangeAccountPermissions", UR.resultToString r ]
 
         ClickedProposeNewObjective ->
             [ "ClickedProposeNewObjective" ]
