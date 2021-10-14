@@ -662,6 +662,7 @@ viewGeneralFields ({ t } as translators) community model =
         |> Radio.withOption Token.Mcc (\_ -> text "MCC")
         |> Radio.withOption Token.Expiry (\_ -> text (t "settings.community_currency.expiry"))
         |> Radio.withAttrs [ class "mb-8" ]
+        |> Radio.withLabelAttrs [ class "mr-29" ]
         |> Radio.withDisabled True
         |> Radio.toHtml translators
     ]

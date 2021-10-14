@@ -2,7 +2,7 @@ module View.Form.Radio exposing
     ( init
     , withOption, withOptions, withAttrs, withRowAttrs, withVertical, withDisabled, withVariant
     , toHtml
-    , Variant(..)
+    , Variant(..), withLabelAttrs
     )
 
 {-| Creates a Cambiatus-style radio button group
@@ -60,6 +60,7 @@ type alias Options option msg =
     , options : List ( option, Bool -> Html msg )
     , extraAttrs : List (Html.Attribute msg)
     , rowAttrs : List (Html.Attribute msg)
+    , labelAttrs : List (Html.Attribute msg)
     , isVertical : Bool
     , isDisabled : Bool
     , variant : Variant
@@ -95,6 +96,7 @@ init initialOptions =
     , options = []
     , extraAttrs = []
     , rowAttrs = []
+    , labelAttrs = []
     , isVertical = False
     , isDisabled = False
     , variant = Default
@@ -131,6 +133,13 @@ withAttrs attrs options =
 withRowAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withRowAttrs attrs options =
     { options | rowAttrs = options.rowAttrs ++ attrs }
+
+
+{-| Adds attributes to the label
+-}
+withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
+withLabelAttrs attrs options =
+    { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 {-| Defines if the group should be displayed in a row or in a column
@@ -196,12 +205,13 @@ isActive options option =
 viewOptionAsDefault : Options option msg -> ( option, Bool -> Html msg ) -> Html msg
 viewOptionAsDefault options ( option, view ) =
     label
-        [ class "flex items-center"
-        , classList
-            [ ( "mb-6", options.isVertical )
-            , ( "xs-max:mb-6 mr-29", not options.isVertical )
-            ]
-        ]
+        (class "flex items-center"
+            :: classList
+                [ ( "mb-6", options.isVertical )
+                , ( "xs-max:mb-6", not options.isVertical )
+                ]
+            :: options.labelAttrs
+        )
         [ input
             [ type_ "radio"
             , class "form-radio h-5 w-5 text-green"
