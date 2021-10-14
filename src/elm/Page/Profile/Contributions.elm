@@ -120,7 +120,7 @@ view_ loggedIn profileContributions title =
                                         ]
                                     ]
                                     [ -- TODO - Use new text size class (#622)
-                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-2" ]
+                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-1" ]
                                         identity
                                         loggedIn.shared
                                         firstContribution.insertedAt
@@ -140,7 +140,7 @@ viewContribution { t } contribution =
     li [ class "flex items-center px-1 py-4" ]
         [ div [ class "w-14 h-14 bg-gray-100 flex items-center justify-center rounded" ]
             [ Icons.coinHeart "" ]
-        , p [ class "flex space-x-1 text-black" ]
+        , p [ class "flex space-x-1 text-black ml-3" ]
             -- TODO - Use new text size classes (#622)
             [ span [ class "text-[22px]" ]
                 [ text (Utils.formatFloat contribution.amount 0 True) ]
