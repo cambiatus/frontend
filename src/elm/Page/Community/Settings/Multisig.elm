@@ -1,11 +1,14 @@
-module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Community.Settings.Multisig exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Api.Eos
 import Avatar
 import Community
+import Date
+import DatePicker
 import Eos.Account
-import Html exposing (Html, button, div, h1, h2, p, text)
-import Html.Attributes exposing (class)
+import Eos.Permission
+import Html exposing (Html, button, div, h1, h2, img, p, text)
+import Html.Attributes exposing (class, disabled, src, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Iso8601
@@ -22,9 +25,11 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
+import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Form
+import View.Form.Checkbox as Checkbox
 import View.Form.Input as Input
 import View.Form.Radio as Radio
 
@@ -40,27 +45,48 @@ type alias Model =
     , selectedVoters :
         List
             { profile : Profile.Minimal
-            , permission : Api.Eos.Permission
+            , permission : Eos.Permission.PermissionType
             , weight : Int
             }
-    , targetPermission : Api.Eos.Permission
+    , targetPermission : Eos.Permission.PermissionType
     , newObjectiveName : String
+    , proposalPermission : Eos.Permission.PermissionType
+    , proposalVoters :
+        List
+            { profile : Profile.Minimal
+            , isChecked : Bool
+            , permission : Eos.Permission.PermissionType
+            }
+    , newObjectiveExpirationDate : Date.Date
+    , newObjectiveExpirationDatePicker : DatePicker.DatePicker
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
+    let
+        nextWeek =
+            Date.fromPosix loggedIn.shared.timezone loggedIn.shared.now
+                |> Date.add Date.Days 7
+    in
     ( { proposals = []
       , threshold = 1
       , voterState = Select.newState "voter-select"
       , selectedVoters = []
-      , targetPermission = Api.Eos.defaultPermission
+      , targetPermission = Eos.Permission.default
       , newObjectiveName = ""
+      , proposalPermission = Eos.Permission.default
+      , proposalVoters = []
+      , newObjectiveExpirationDate = nextWeek
+      , newObjectiveExpirationDatePicker = DatePicker.initFromDate nextWeek
       }
-    , Api.Eos.query loggedIn.shared
-        CompletedLoadProposals
-        proposalRowDecoder
-        (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
+    , Cmd.batch
+        [ Api.Eos.query loggedIn.shared
+            CompletedLoadProposals
+            proposalRowDecoder
+            (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
+        , LoggedIn.maybeInitWith CompletedLoadCommunityCreatorPermissions .communityCreatorPermissions loggedIn
+        ]
     )
 
 
@@ -74,9 +100,9 @@ type Msg
     | SelectedVoter (Maybe Profile.Minimal)
     | GotVoterSelectMsg (Select.Msg Profile.Minimal)
     | EnteredVoterWeight Eos.Account.Name String
-    | SelectedVoterPermission Eos.Account.Name Api.Eos.Permission
+    | SelectedVoterPermission Eos.Account.Name Eos.Permission.PermissionType
     | RemovedVoter Eos.Account.Name
-    | SelectedTargetPermission Api.Eos.Permission
+    | SelectedTargetPermission Eos.Permission.PermissionType
     | ClickedChangeAccountPermissions
     | CompletedChangeAccountPermissions (Result Json.Decode.Error ())
     | ClickedProposeNewObjective
@@ -86,7 +112,11 @@ type Msg
     | ClickedUnapproveProposal Proposal
     | ClickedExecuteProposal Proposal
     | EnteredNewObjectiveName String
-    | CompletedProposingNewObjective
+    | CompletedProposingNewObjective (Result Json.Decode.Error ())
+    | SelectedProposalPermission Eos.Permission.PermissionType
+    | CheckedProposalVoter Eos.Account.Name Bool
+    | CompletedLoadCommunityCreatorPermissions Eos.Permission.Permissions
+    | GotNewObjectiveDatePickerMsg DatePicker.Msg
 
 
 type alias UpdateResult =
@@ -147,7 +177,7 @@ update msg model loggedIn =
 
                     else
                         { profile = voter
-                        , permission = Api.Eos.defaultPermission
+                        , permission = Eos.Permission.default
                         , weight = 1
                         }
                             :: model.selectedVoters
@@ -158,7 +188,7 @@ update msg model loggedIn =
         GotVoterSelectMsg subMsg ->
             let
                 ( updatedVoters, cmd ) =
-                    Select.update (selectConfiguration loggedIn.shared)
+                    Select.update (voterSelectConfiguration loggedIn.shared)
                         subMsg
                         model.voterState
             in
@@ -227,7 +257,7 @@ update msg model loggedIn =
                         }
                         |> Api.Eos.EosAction
                         |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Api.Eos.Owner }
+                            { actor = loggedIn.accountName, permission = Eos.Permission.Owner }
                             msg
                     )
                 |> LoggedIn.withAuthentication loggedIn
@@ -263,7 +293,7 @@ update msg model loggedIn =
                                     , communityAdmin = community.creator
                                     }
                                     |> Api.Eos.CommunityAction
-                              , { actor = community.creator, permission = Api.Eos.Active }
+                              , { actor = community.creator, permission = Eos.Permission.Active }
                               )
                             ]
                     in
@@ -274,25 +304,26 @@ update msg model loggedIn =
                                 { proposer = loggedIn.accountName
                                 , proposalName = model.newObjectiveName
                                 , requestedVotes =
-                                    -- TODO - Not hardcode requestedVotes
-                                    [ { actor = Eos.Account.stringToName "henriquebus2"
-                                      , permission = Api.Eos.Active
-                                      }
-                                    , { actor = Eos.Account.stringToName "henriquebus4"
-                                      , permission = Api.Eos.Active
-                                      }
-                                    ]
+                                    model.proposalVoters
+                                        |> List.filterMap
+                                            (\{ profile, isChecked, permission } ->
+                                                if isChecked then
+                                                    Just
+                                                        { actor = profile.account
+                                                        , permission = permission
+                                                        }
+
+                                                else
+                                                    Nothing
+                                            )
                                 , expiration =
-                                    loggedIn.shared.now
-                                        |> Time.posixToMillis
-                                        -- now + 10 days
-                                        |> (\now -> now + 1000 * 60 * 60 * 24 * 10)
-                                        |> Time.millisToPosix
+                                    Utils.posixFromDate loggedIn.shared.timezone
+                                        model.newObjectiveExpirationDate
                                 , actions = proposedActions
                                 }
                                 |> Api.Eos.MultiSigAction
                                 |> Api.Eos.transact loggedIn.shared
-                                    { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                                    { actor = loggedIn.accountName, permission = Eos.Permission.Active }
                                     ClickedProposeNewObjective
                             )
                         |> LoggedIn.withAuthentication loggedIn
@@ -338,7 +369,7 @@ update msg model loggedIn =
                         }
                         |> Api.Eos.MultiSigAction
                         |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
                             msg
                     )
                 |> LoggedIn.withAuthentication loggedIn
@@ -354,7 +385,7 @@ update msg model loggedIn =
                         }
                         |> Api.Eos.MultiSigAction
                         |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
                             msg
                     )
                 |> LoggedIn.withAuthentication loggedIn
@@ -370,7 +401,7 @@ update msg model loggedIn =
                         }
                         |> Api.Eos.MultiSigAction
                         |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Api.Eos.Active }
+                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
                             msg
                     )
                 |> LoggedIn.withAuthentication loggedIn
@@ -381,15 +412,95 @@ update msg model loggedIn =
             { model | newObjectiveName = newObjectiveName }
                 |> UR.init
 
-        CompletedProposingNewObjective ->
+        CompletedProposingNewObjective (Ok ()) ->
             { model | newObjectiveName = "" }
                 |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Objective created")
                 |> UR.addCmd
                     (Api.Eos.query loggedIn.shared
                         CompletedLoadProposals
                         proposalRowDecoder
                         (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
                     )
+
+        CompletedProposingNewObjective (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when proposing new objective")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when proposing a new objective"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
+
+        SelectedProposalPermission proposalPermission ->
+            case ( loggedIn.selectedCommunity, loggedIn.communityCreatorPermissions ) of
+                ( RemoteData.Success community, RemoteData.Success communityCreatorPermissions ) ->
+                    let
+                        permission =
+                            case proposalPermission of
+                                Eos.Permission.Active ->
+                                    communityCreatorPermissions.active
+
+                                Eos.Permission.Owner ->
+                                    communityCreatorPermissions.owner
+
+                                Eos.Permission.RootPermission ->
+                                    communityCreatorPermissions.owner
+                    in
+                    { model
+                        | proposalPermission = proposalPermission
+                        , proposalVoters = List.filterMap (makeVoter permission) community.members
+                    }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
+        CheckedProposalVoter proposalVoter value ->
+            { model
+                | proposalVoters =
+                    List.Extra.updateIf (\{ profile } -> profile.account == proposalVoter)
+                        (\voter -> { voter | isChecked = value })
+                        model.proposalVoters
+            }
+                |> UR.init
+
+        CompletedLoadCommunityCreatorPermissions permissions ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    let
+                        permission =
+                            case model.proposalPermission of
+                                Eos.Permission.Active ->
+                                    permissions.active
+
+                                Eos.Permission.Owner ->
+                                    permissions.owner
+
+                                Eos.Permission.RootPermission ->
+                                    permissions.owner
+                    in
+                    { model | proposalVoters = List.filterMap (makeVoter permission) community.members }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
+        GotNewObjectiveDatePickerMsg subMsg ->
+            let
+                ( newDatePicker, dateEvent ) =
+                    DatePicker.update (datePickerSettings loggedIn.shared) subMsg model.newObjectiveExpirationDatePicker
+            in
+            case dateEvent of
+                DatePicker.Picked newDate ->
+                    { model | newObjectiveExpirationDate = newDate }
+                        |> UR.init
+
+                _ ->
+                    { model | newObjectiveExpirationDatePicker = newDatePicker }
+                        |> UR.init
 
 
 
@@ -423,30 +534,13 @@ view loggedIn model =
 
 
 view_ : LoggedIn.Model -> Community.Model -> Model -> Html Msg
-view_ ({ shared } as loggedIn) community model =
+view_ loggedIn community model =
     div [ class "container mx-auto" ]
         [ div [ class "px-4" ]
             [ viewChangePermissions loggedIn community model
-            , Input.init
-                { label = "New objective name"
-                , id = "new-objective-name-input"
-                , onInput = EnteredNewObjectiveName
-                , disabled = False
-                , value = model.newObjectiveName
-                , placeholder = Nothing
-                , problems = Nothing
-                , translators = shared.translators
-                }
-                |> Input.withCounter 12
-                |> Input.withCounterType Input.CountLetters
-                |> Input.toHtml
-            , button
-                [ class "button button-primary w-full mt-10"
-                , onClick ClickedProposeNewObjective
-                ]
-                [ text "Propose new objective" ]
+            , viewProposeObjective loggedIn community model
             , div [ class "grid gap-4 grid-cols-2 mt-4" ]
-                (List.map (viewProposal shared) model.proposals)
+                (List.map (viewProposal loggedIn.shared) model.proposals)
             ]
         ]
 
@@ -472,20 +566,12 @@ viewChangePermissions ({ shared } as loggedIn) community model =
         , Radio.init
             { label = "Target permission"
             , name = "permission-radio"
-            , optionToString = Api.Eos.permissionToString
+            , optionToString = Eos.Permission.toString
             , activeOption = model.targetPermission
             , onSelect = SelectedTargetPermission
             , areOptionsEqual = (==)
             }
-            |> Radio.withOptions
-                (List.map
-                    (\permission_ ->
-                        ( permission_
-                        , \_ -> text (Api.Eos.permissionToString permission_)
-                        )
-                    )
-                    Api.Eos.listPermissions
-                )
+            |> Radio.withOptions permissionOptions
             |> Radio.withAttrs [ class "mb-10" ]
             |> Radio.withLabelAttrs [ class "mr-29 capitalize" ]
             |> Radio.withRowAttrs [ class "mt-2" ]
@@ -505,15 +591,15 @@ viewChangePermissions ({ shared } as loggedIn) community model =
 viewAutoCompleteAccount : Shared -> Community.Model -> Model -> Html Msg
 viewAutoCompleteAccount shared community model =
     Select.view
-        (selectConfiguration shared)
+        (voterSelectConfiguration shared)
         model.voterState
         community.members
         (model.selectedVoters |> List.map .profile)
         |> Html.map GotVoterSelectMsg
 
 
-selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
-selectConfiguration shared =
+voterSelectConfiguration : Shared -> Select.Config Msg Profile.Minimal
+voterSelectConfiguration shared =
     Profile.selectConfig
         (Select.newConfig
             { onSelect = SelectedVoter
@@ -529,7 +615,7 @@ selectConfiguration shared =
 
 viewVoter :
     LoggedIn.Model
-    -> { profile : Profile.Minimal, permission : Api.Eos.Permission, weight : Int }
+    -> { profile : Profile.Minimal, permission : Eos.Permission.PermissionType, weight : Int }
     -> Html Msg
 viewVoter ({ shared } as loggedIn) { profile, permission, weight } =
     div [ class "flex flex-col items-center border p-4 rounded" ]
@@ -551,20 +637,12 @@ viewVoter ({ shared } as loggedIn) { profile, permission, weight } =
         , Radio.init
             { label = "Permission"
             , name = "voter-permission-radio-" ++ Eos.Account.nameToString profile.account
-            , optionToString = Api.Eos.permissionToString
+            , optionToString = Eos.Permission.toString
             , activeOption = permission
             , onSelect = SelectedVoterPermission profile.account
             , areOptionsEqual = (==)
             }
-            |> Radio.withOptions
-                (List.map
-                    (\permission_ ->
-                        ( permission_
-                        , \_ -> text (Api.Eos.permissionToString permission_)
-                        )
-                    )
-                    Api.Eos.listPermissions
-                )
+            |> Radio.withOptions permissionOptions
             |> Radio.withAttrs [ class "w-full" ]
             |> Radio.withRowAttrs [ class "mt-2 justify-between capitalize" ]
             |> Radio.toHtml shared.translators
@@ -574,6 +652,107 @@ viewVoter ({ shared } as loggedIn) { profile, permission, weight } =
             ]
             [ text "Remove" ]
         ]
+
+
+viewProposeObjective : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+viewProposeObjective loggedIn community model =
+    let
+        canPropose =
+            List.any (\{ profile } -> profile.account == loggedIn.accountName)
+                model.proposalVoters
+    in
+    div [ class "bg-white rounded-sm shadow p-4 mb-10" ]
+        [ p [ class "text-sm mb-4" ]
+            [ text "This will create an objective with the name given. We automatically show everyone who can vote (those who are in the owner or active permission of the community admin). "
+            , text "We use the same name for the objective and for the proposal, so it needs to be <= 12 characters long. "
+            , text "The `Permission to Use` field indicates if the new objective will be created using the active or owner permission of the community creator, and we use it to determine who can vote (and with which permission) on the proposal. "
+            , text "You can select and deselect the accounts that may vote on the proposal. "
+            , text "You can set the date in which the proposal will expire. It will expire at 23:59:59 of that date."
+            ]
+        , Input.init
+            { label = "New objective name"
+            , id = "new-objective-name-input"
+            , onInput = EnteredNewObjectiveName
+            , disabled = False
+            , value = model.newObjectiveName
+            , placeholder = Nothing
+            , problems = Nothing
+            , translators = loggedIn.shared.translators
+            }
+            |> Input.withCounter 12
+            |> Input.withCounterType Input.CountLetters
+            |> Input.toHtml
+        , Radio.init
+            { label = "Permission to use"
+            , name = "proposal-permission-radio"
+            , optionToString = Eos.Permission.toString
+            , activeOption = model.proposalPermission
+            , onSelect = SelectedProposalPermission
+            , areOptionsEqual = (==)
+            }
+            |> Radio.withOptions permissionOptions
+            |> Radio.withAttrs [ class "mb-4" ]
+            |> Radio.withLabelAttrs [ class "mr-29 capitalize" ]
+            |> Radio.withRowAttrs [ class "mt-2" ]
+            |> Radio.toHtml loggedIn.shared.translators
+        , div [ class "flex gap-4 mb-10" ]
+            (List.map (viewProposalVoter loggedIn) model.proposalVoters)
+        , View.Form.label "newobjective-expiration-picker" "Expiration (until when is the proposal valid)"
+        , div [ class "relative mb-10" ]
+            [ DatePicker.view (Just model.newObjectiveExpirationDate)
+                (datePickerSettings loggedIn.shared)
+                model.newObjectiveExpirationDatePicker
+                |> Html.map GotNewObjectiveDatePickerMsg
+            , img
+                [ class "absolute right-0 top-0 h-full cursor-pointer"
+                , src "/icons/calendar.svg"
+                , tabindex -1
+                ]
+                []
+            ]
+        , button
+            [ class "button button-primary w-full"
+            , onClick ClickedProposeNewObjective
+            , disabled (not canPropose)
+            ]
+            [ text "Propose new objective" ]
+        ]
+
+
+datePickerSettings : Shared -> DatePicker.Settings
+datePickerSettings shared =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+    in
+    { defaultSettings
+        | changeYear = DatePicker.off
+        , placeholder = shared.translators.t "payment_history.pick_date"
+        , inputClassList = [ ( "input w-full", True ) ]
+        , inputId = Just "newobjective-expiration-picker"
+        , dateFormatter = Date.format "E, d MMM y"
+        , firstDayOfWeek = Time.Mon
+    }
+
+
+viewProposalVoter :
+    LoggedIn.Model
+    -> { profile : Profile.Minimal, isChecked : Bool, permission : Eos.Permission.PermissionType }
+    -> Html Msg
+viewProposalVoter loggedIn { profile, isChecked } =
+    Checkbox.init
+        { description =
+            div [ class "flex flex-col items-center p-2" ]
+                [ Avatar.view profile.avatar "w-10 h-10 mb-2"
+                , Profile.viewProfileNameTag loggedIn.shared loggedIn.accountName profile
+                ]
+        , id = "proposal-voter-" ++ Eos.Account.nameToString profile.account
+        , value = isChecked
+        , disabled = False
+        , onCheck = CheckedProposalVoter profile.account
+        }
+        |> Checkbox.withContainerAttrs [ class "flex flex-col-reverse items-center gap-2 border p-4 rounded-sm" ]
+        |> Checkbox.toHtml
 
 
 viewProposal : Shared -> Proposal -> Html Msg
@@ -623,6 +802,15 @@ viewAction action =
         ]
 
 
+permissionOptions : List ( Eos.Permission.PermissionType, Bool -> Html Msg )
+permissionOptions =
+    List.map
+        (\permission ->
+            ( permission, \_ -> text (Eos.Permission.toString permission) )
+        )
+        Eos.Permission.list
+
+
 
 -- JSON
 
@@ -668,6 +856,38 @@ actionDecoder =
 -- UTILS
 
 
+makeVoter :
+    Eos.Permission.Permission
+    -> Profile.Minimal
+    ->
+        Maybe
+            { profile : Profile.Minimal
+            , isChecked : Bool
+            , permission : Eos.Permission.PermissionType
+            }
+makeVoter permission member =
+    List.Extra.find
+        (\{ authorization } -> authorization.actor == member.account)
+        permission.accounts
+        |> Maybe.map
+            (\{ authorization } ->
+                { profile = member
+                , isChecked = True
+                , permission = authorization.permission
+                }
+            )
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityCreatorPermissionsLoaded permissions ->
+            Just (CompletedLoadCommunityCreatorPermissions permissions)
+
+        _ ->
+            Nothing
+
+
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -688,7 +908,11 @@ jsAddressToMsg addr val =
                 |> Just
 
         [ "ClickedProposeNewObjective" ] ->
-            Just CompletedProposingNewObjective
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedProposingNewObjective
+                |> Just
 
         _ ->
             Nothing
@@ -748,5 +972,17 @@ msgToString msg =
         EnteredNewObjectiveName _ ->
             [ "EnteredNewObjectiveName" ]
 
-        CompletedProposingNewObjective ->
-            [ "CompletedProposingNewObjective" ]
+        CompletedProposingNewObjective r ->
+            [ "CompletedProposingNewObjective", UR.resultToString r ]
+
+        SelectedProposalPermission _ ->
+            [ "SelectedProposalPermission" ]
+
+        CheckedProposalVoter _ _ ->
+            [ "CheckedProposalVoter" ]
+
+        GotNewObjectiveDatePickerMsg _ ->
+            [ "GotNewObjectiveDatePickerMsg" ]
+
+        CompletedLoadCommunityCreatorPermissions _ ->
+            [ "CompletedLoadCommunityCreatorPermissions" ]

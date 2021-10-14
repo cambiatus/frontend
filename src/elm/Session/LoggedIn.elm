@@ -24,6 +24,7 @@ module Session.LoggedIn exposing
 
 import Action
 import Api
+import Api.Eos
 import Api.Graphql
 import Auth
 import Avatar
@@ -34,6 +35,7 @@ import Community
 import Dict
 import Eos
 import Eos.Account as Eos
+import Eos.Permission
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
@@ -168,6 +170,7 @@ type alias Model =
     , claimingAction : Action.Model
     , authToken : String
     , queuedCommunityFields : List Community.Field
+    , communityCreatorPermissions : RemoteData Http.Error Eos.Permission.Permissions
     }
 
 
@@ -192,6 +195,9 @@ initModel shared maybePrivateKey_ accountName authToken =
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , authToken = authToken
     , queuedCommunityFields = []
+
+    -- TODO - Should this be loading as default?
+    , communityCreatorPermissions = RemoteData.NotAsked
     }
 
 
@@ -871,6 +877,15 @@ updateExternal externalMsg ({ shared } as model) =
                 TranslationsLoaded ->
                     { defaultResult | broadcastMsg = Just broadcastMsg }
 
+                CommunityCreatorPermissionsLoaded permissions ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | communityCreatorPermissions = RemoteData.Success permissions
+                            }
+                        , broadcastMsg = Just broadcastMsg
+                    }
+
         ReloadResource CommunityResource ->
             let
                 ( _, cmd ) =
@@ -983,6 +998,7 @@ type BroadcastMsg
     = CommunityLoaded Community.Model
     | CommunityFieldLoaded Community.Model Community.FieldValue
     | ProfileLoaded Profile.Model
+    | CommunityCreatorPermissionsLoaded Eos.Permission.Permissions
     | GotTime Time.Posix
     | TranslationsLoaded
 
@@ -1011,6 +1027,7 @@ type Msg
     | SearchClosed
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
+    | CompletedLoadCommunityCreatorPermissions (Result Http.Error Eos.Permission.Permissions)
 
 
 update : Msg -> Model -> UpdateResult
@@ -1158,10 +1175,18 @@ update msg model =
                                     newModel.queuedCommunityFields
                            )
             in
-            { newModel | selectedCommunity = RemoteData.Success newCommunity }
+            { newModel
+                | selectedCommunity = RemoteData.Success newCommunity
+                , communityCreatorPermissions = RemoteData.Loading
+            }
                 |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
+                |> UR.addCmd
+                    (Api.Eos.getAccount newModel.shared
+                        newCommunity.creator
+                        CompletedLoadCommunityCreatorPermissions
+                    )
                 |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
                 |> UR.addCmd
                     (Community.queryForFields community.symbol
@@ -1427,6 +1452,21 @@ update msg model =
 
                 RemoteData.Loading ->
                     UR.init model
+
+        CompletedLoadCommunityCreatorPermissions (Ok permissions) ->
+            { model | communityCreatorPermissions = RemoteData.Success permissions }
+                |> UR.init
+                |> UR.addExt (Broadcast (CommunityCreatorPermissionsLoaded permissions))
+
+        CompletedLoadCommunityCreatorPermissions (Err err) ->
+            { model | communityCreatorPermissions = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logHttpError msg
+                    (Just model.accountName)
+                    "Got an error when loading account permissions from EOS"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1807,3 +1847,6 @@ msgToString msg =
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]
+
+        CompletedLoadCommunityCreatorPermissions r ->
+            [ "CompletedLoadAccountPermissions", UR.resultToString r ]
