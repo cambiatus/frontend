@@ -9,6 +9,7 @@ module Utils exposing
     , fromMaybeDateTime
     , onClickNoBubble
     , onClickPreventAll
+    , posixFromDate
     , previousDay
     )
 
@@ -22,6 +23,7 @@ import Html.Events
 import Iso8601
 import Json.Decode as Decode
 import Time exposing (Posix)
+import Time.Extra
 
 
 fromMaybeDateTime : Maybe DateTime -> Posix
@@ -38,6 +40,19 @@ fromDateTime : DateTime -> Posix
 fromDateTime (DateTime dateTime) =
     Iso8601.toTime dateTime
         |> Result.withDefault (Time.millisToPosix 0)
+
+
+posixFromDate : Time.Zone -> Date.Date -> Posix
+posixFromDate timezone date =
+    Time.Extra.partsToPosix timezone
+        { year = Date.year date
+        , month = Date.month date
+        , day = Date.day date
+        , hour = 23
+        , minute = 59
+        , second = 59
+        , millisecond = 0
+        }
 
 
 areSameDay : Time.Zone -> Posix -> Posix -> Bool
