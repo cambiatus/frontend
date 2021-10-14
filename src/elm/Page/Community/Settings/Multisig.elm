@@ -365,7 +365,7 @@ update msg model loggedIn =
                 |> UR.logDecodingError msg
                     (Just loggedIn.accountName)
                     "Got an error when deserializing proposals"
-                    { moduleName = "Page.Community.Settings.Multising", function = "update" }
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
                     []
                     err
 
@@ -425,12 +425,6 @@ update msg model loggedIn =
             { model | newObjectiveName = "" }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Objective created")
-                |> UR.addCmd
-                    (Api.Eos.query loggedIn.shared
-                        CompletedLoadProposals
-                        proposalRowDecoder
-                        (Api.Eos.MultiSig (Api.Eos.Proposal (Eos.Account.stringToName "henriquebuss")))
-                    )
 
         CompletedProposingNewObjective (Err err) ->
             model

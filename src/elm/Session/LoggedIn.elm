@@ -1849,4 +1849,4 @@ msgToString msg =
             [ "GotFeedbackMsg" ]
 
         CompletedLoadCommunityCreatorPermissions r ->
-            [ "CompletedLoadAccountPermissions", UR.resultToString r ]
+            [ "CompletedLoadCommunityCreatorPermissions", UR.resultToString r ]
