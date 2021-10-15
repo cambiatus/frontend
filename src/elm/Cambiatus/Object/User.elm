@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.User exposing (..)
 
+import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -117,6 +118,28 @@ contributionCount fillInOptionals =
                 |> List.filterMap identity
     in
     Object.selectionForField "Int" "contributionCount" optionalArgs Decode.int
+
+
+type alias ContributionsOptionalArguments =
+    { communityId : OptionalArgument String
+    , status : OptionalArgument Cambiatus.Enum.ContributionStatusType.ContributionStatusType
+    }
+
+
+contributions :
+    (ContributionsOptionalArguments -> ContributionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
+contributions fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent, status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
 
 
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User

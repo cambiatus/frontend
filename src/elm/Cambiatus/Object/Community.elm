@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.Community exposing (..)
 
+import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -41,13 +42,26 @@ contributionConfiguration object_ =
     Object.selectionForCompositeField "contributionConfiguration" [] object_ (identity >> Decode.nullable)
 
 
+type alias ContributionsOptionalArguments =
+    { status : OptionalArgument Cambiatus.Enum.ContributionStatusType.ContributionStatusType }
+
+
 {-| List of contributions this community received
 -}
 contributions :
-    SelectionSet decodesTo Cambiatus.Object.Contribution
+    (ContributionsOptionalArguments -> ContributionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
-contributions object_ =
-    Object.selectionForCompositeField "contributions" [] object_ (identity >> Decode.list)
+contributions fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community

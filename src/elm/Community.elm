@@ -43,6 +43,7 @@ module Community exposing
 
 import Action exposing (Action)
 import Api.Graphql
+import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
@@ -360,7 +361,9 @@ selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Communi
 selectionSetForField field =
     case field of
         ContributionsField ->
-            Community.contributions contributionSelectionSet
+            Community.contributions
+                (\optionals -> { optionals | status = Present Cambiatus.Enum.ContributionStatusType.Created })
+                contributionSelectionSet
                 |> SelectionSet.map ContributionsValue
 
         ObjectivesField ->
