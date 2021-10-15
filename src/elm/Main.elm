@@ -249,6 +249,7 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfileContributionsMsg ProfileContributions.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -452,6 +453,11 @@ update msg model =
         ( GotProfileMsg subMsg, Profile subModel ) ->
             Profile.update subMsg subModel
                 >> updateLoggedInUResult Profile GotProfileMsg model
+                |> withLoggedIn
+
+        ( GotProfileContributionsMsg subMsg, ProfileContributions subModel ) ->
+            ProfileContributions.update subMsg subModel
+                >> updateLoggedInUResult ProfileContributions GotProfileContributionsMsg model
                 |> withLoggedIn
 
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
@@ -691,6 +697,10 @@ broadcast broadcastMessage status =
                 Profile _ ->
                     Profile.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileMsg
+
+                ProfileContributions _ ->
+                    ProfileContributions.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileContributionsMsg
 
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
@@ -1287,8 +1297,8 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.Profile profileName)
 
         Just (Route.ProfileContributions profileName) ->
-            (\_ -> ProfileContributions.init profileName)
-                >> updateLoggedInUResult ProfileContributions (\_ -> Ignored) model
+            (\l -> ProfileContributions.init l profileName)
+                >> updateStatusWith ProfileContributions GotProfileContributionsMsg model
                 |> withLoggedIn (Route.ProfileContributions profileName)
 
         Just Route.ProfileEditor ->
@@ -1613,6 +1623,9 @@ msgToString msg =
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
 
+        GotProfileContributionsMsg subMsg ->
+            "GotProfileContributionsMsg" :: ProfileContributions.msgToString subMsg
+
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
 
@@ -1823,7 +1836,7 @@ view model =
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
 
         ProfileContributions subModel ->
-            viewLoggedIn subModel LoggedIn.ProfileContributions identity ProfileContributions.view
+            viewLoggedIn subModel LoggedIn.ProfileContributions GotProfileContributionsMsg ProfileContributions.view
 
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view

@@ -1,13 +1,17 @@
-module Page.Profile.Contributions exposing (Model, init, view)
+module Page.Profile.Contributions exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Api.Graphql
 import Community
+import Dict
 import Eos.Account
+import Graphql.Http
 import Html exposing (Html, div, img, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Icons
 import List.Extra
 import Page
-import RemoteData
+import Profile
+import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
@@ -20,14 +24,18 @@ import View.Components
 
 
 type alias Model =
-    { profileName : Eos.Account.Name }
+    { profileName : Eos.Account.Name
+    , contributions : RemoteData (Graphql.Http.Error (Maybe (List Profile.Contribution))) (List Profile.Contribution)
+    }
 
 
-init : Eos.Account.Name -> UpdateResult
-init profileName =
-    { profileName = profileName }
-        |> UR.init
-        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+init : LoggedIn.Model -> Eos.Account.Name -> ( Model, Cmd Msg )
+init loggedIn profileName =
+    ( { profileName = profileName
+      , contributions = RemoteData.NotAsked
+      }
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
+    )
 
 
 
@@ -38,8 +46,50 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
-type alias Msg =
-    ()
+type Msg
+    = CompletedLoadCommunity Community.Model
+    | CompletedLoadContributions (RemoteData (Graphql.Http.Error (Maybe (List Profile.Contribution))) (Maybe (List Profile.Contribution)))
+
+
+
+-- UPDATE
+
+
+update : Msg -> Model -> LoggedIn.Model -> UpdateResult
+update msg model loggedIn =
+    case msg of
+        CompletedLoadCommunity community ->
+            { model | contributions = RemoteData.Loading }
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.query loggedIn.shared
+                        (Just loggedIn.authToken)
+                        (Profile.contributionsQuery community.symbol model.profileName)
+                        CompletedLoadContributions
+                    )
+
+        CompletedLoadContributions (RemoteData.Success contributions) ->
+            { model | contributions = RemoteData.Success (Maybe.withDefault [] contributions) }
+                |> UR.init
+
+        CompletedLoadContributions (RemoteData.Failure err) ->
+            { model | contributions = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading profile contributions"
+                    { moduleName = "Page.Profile.Contributions", function = "update" }
+                    [ { name = "Profile"
+                      , extras = Dict.fromList [ ( "profile", Eos.Account.encodeName model.profileName ) ]
+                      }
+                    ]
+                    err
+
+        CompletedLoadContributions RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadContributions RemoteData.Loading ->
+            UR.init model
 
 
 
@@ -58,31 +108,34 @@ view loggedIn model =
                     [ ( "profile_name", Eos.Account.nameToString model.profileName ) ]
 
         content =
-            case Community.getField loggedIn.selectedCommunity .contributions of
-                RemoteData.Success ( community, contributions ) ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
                     if loggedIn.accountName == model.profileName || loggedIn.accountName == community.creator then
-                        let
-                            profileContributions =
-                                contributions
-                                    |> List.filter (\contribution -> contribution.user.account == model.profileName)
-                        in
-                        view_ loggedIn profileContributions title
+                        case model.contributions of
+                            RemoteData.Success contributions ->
+                                view_ loggedIn contributions title
+
+                            RemoteData.Loading ->
+                                Page.fullPageLoading loggedIn.shared
+
+                            RemoteData.NotAsked ->
+                                Page.fullPageLoading loggedIn.shared
+
+                            RemoteData.Failure err ->
+                                Page.fullPageGraphQLError title err
 
                     else
                         Page.fullPageNotFound
                             (loggedIn.shared.translators.t "profile.contributions.not_allowed_title")
                             (loggedIn.shared.translators.t "profile.contributions.not_allowed")
 
-                RemoteData.NotAsked ->
-                    Page.fullPageLoading loggedIn.shared
-
                 RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
 
-                RemoteData.Failure (Community.CommunityError err) ->
-                    Page.fullPageGraphQLError title err
+                RemoteData.NotAsked ->
+                    Page.fullPageLoading loggedIn.shared
 
-                RemoteData.Failure (Community.FieldError err) ->
+                RemoteData.Failure err ->
                     Page.fullPageGraphQLError title err
     in
     { title = title
@@ -90,7 +143,7 @@ view loggedIn model =
     }
 
 
-view_ : LoggedIn.Model -> List Community.Contribution -> String -> Html msg
+view_ : LoggedIn.Model -> List Profile.Contribution -> String -> Html msg
 view_ loggedIn profileContributions title =
     div [ class "flex flex-grow flex-col" ]
         [ Page.viewHeader loggedIn title
@@ -135,7 +188,7 @@ view_ loggedIn profileContributions title =
         ]
 
 
-viewContribution : Translators -> Community.Contribution -> Html msg
+viewContribution : Translators -> Profile.Contribution -> Html msg
 viewContribution { t } contribution =
     li [ class "flex items-center px-1 py-4" ]
         [ div [ class "w-14 h-14 bg-gray-100 flex items-center justify-center rounded" ]
@@ -152,3 +205,27 @@ viewContribution { t } contribution =
                 ]
             ]
         ]
+
+
+
+-- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
+        CompletedLoadContributions r ->
+            [ "CompletedLoadContributions", UR.remoteDataToString r ]
