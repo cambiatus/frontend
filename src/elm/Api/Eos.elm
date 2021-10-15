@@ -123,6 +123,8 @@ contract)
     `Unapproving` the vote.
   - `Unapprove`: remove an approval vote from a proposal. You can't vote "no" to
     a proposal, you can only vote "yes" or remove your "yes" vote
+  - `Cancel`: cancels a proposal. Can only be called after the proposal has
+    expired.
 
 -}
 type MultiSigAction
@@ -142,6 +144,10 @@ type MultiSigAction
         , proposalName : String
         }
     | Execute
+        { proposer : Eos.Account.Name
+        , proposalName : String
+        }
+    | Cancel
         { proposer : Eos.Account.Name
         , proposalName : String
         }
@@ -257,11 +263,15 @@ type TokenTable
 
 {-| All of the available tables for the `MultiSig` account.
 
-  - `Proposal`: takes in the name of the user who proposed the transaction
+  - `Proposal`: takes in the name of the user who proposed the transaction.
+    Returns all proposals submitted by the user
+  - `Approvals2`: takes in the name of the user who proposed the transaction.
+    Returns all pending approvals and provided approvals
 
 -}
 type MultiSigTable
     = Proposal Eos.Account.Name
+    | Approvals2 Eos.Account.Name
 
 
 
@@ -340,6 +350,9 @@ queryTableAndScope shared query_ =
         MultiSig (Proposal accountName) ->
             { table = "proposal", scope = Eos.Account.nameToString accountName }
 
+        MultiSig (Approvals2 accountName) ->
+            { table = "approvals2", scope = Eos.Account.nameToString accountName }
+
 
 encodeTableInfo : { contract : String, scope : String, table : String, limit : Int } -> Encode.Value
 encodeTableInfo tableInfo =
@@ -403,6 +416,9 @@ actionData shared authorization action =
 
                         Execute _ ->
                             "exec"
+
+                        Cancel _ ->
+                            "cancel"
             in
             { contract = "eosio.msig"
             , actionName = actionName
@@ -488,6 +504,13 @@ encodeMultisigAction shared authorization multisigAction =
                 [ ( "proposer", Eos.Account.encodeName execution.proposer )
                 , ( "proposal_name", Encode.string execution.proposalName )
                 , ( "executer", Eos.Account.encodeName authorization.actor )
+                ]
+
+        Cancel cancel ->
+            Encode.object
+                [ ( "proposer", Eos.Account.encodeName cancel.proposer )
+                , ( "proposal_name", Encode.string cancel.proposalName )
+                , ( "canceler", Eos.Account.encodeName authorization.actor )
                 ]
 
 
