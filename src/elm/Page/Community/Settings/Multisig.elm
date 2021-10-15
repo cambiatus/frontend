@@ -39,7 +39,7 @@ import View.Form.Radio as Radio
 
 
 type alias Model =
-    { proposals : RemoteData Http.Error (List Proposal)
+    { proposals : RemoteData ProposalsError (List Proposal)
     , threshold : Int
     , voterState : Select.State
     , selectedVoters :
@@ -121,6 +121,11 @@ type Msg
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg (LoggedIn.External Msg)
+
+
+type ProposalsError
+    = HttpError Http.Error
+    | DecodeError Json.Decode.Error
 
 
 type alias Proposal =
@@ -348,18 +353,23 @@ update msg model loggedIn =
                             ]
                     }
 
-        CompletedLoadProposals (Err _) ->
-            -- TODO
-            UR.init model
+        CompletedLoadProposals (Err err) ->
+            { model | proposals = RemoteData.Failure (HttpError err) }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when loading proposals")
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading proposals"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
 
         DeserializedProposals (Ok proposals) ->
             { model | proposals = RemoteData.Success proposals }
                 |> UR.init
 
         DeserializedProposals (Err err) ->
-            -- TODO - Use error in model
-            -- UR.init model
-            model
+            { model | proposals = RemoteData.Failure (DecodeError err) }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when deserializing proposals")
                 |> UR.logDecodingError msg
