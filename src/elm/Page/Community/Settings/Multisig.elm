@@ -132,8 +132,8 @@ type alias UpdateResult =
 
 
 type ProposalsError
-    = HttpError Http.Error
-    | DecodeError Json.Decode.Error
+    = HttpError
+    | DecodeError
 
 
 type alias Proposal =
@@ -361,7 +361,7 @@ update msg model loggedIn =
                     }
 
         CompletedLoadProposals (Err err) ->
-            { model | proposals = RemoteData.Failure (HttpError err) }
+            { model | proposals = RemoteData.Failure HttpError }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when loading proposals")
                 |> UR.logHttpError msg
@@ -376,7 +376,7 @@ update msg model loggedIn =
                 |> UR.init
 
         DeserializedProposals (Err err) ->
-            { model | proposals = RemoteData.Failure (DecodeError err) }
+            { model | proposals = RemoteData.Failure DecodeError }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when deserializing proposals")
                 |> UR.logDecodingError msg
