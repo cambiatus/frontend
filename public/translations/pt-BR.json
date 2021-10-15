@@ -751,7 +751,10 @@
       "profile_contributions": "Contribuições de {{profile_name}}",
       "not_allowed_title": "Você não pode ver as contribuições de outras pessoas",
       "not_allowed": "Apenas administradores da comunidade podem ver as contribuições de outras pessoas",
-      "no_contributions": "Nenhuma contribuição ainda"
+      "no_contributions": "Nenhuma contribuição ainda",
+      "pending": "Pendente",
+      "approved": "Aprovada",
+      "failed": "Fracassada"
     }
   },
   "shop": {

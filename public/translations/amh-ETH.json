@@ -705,7 +705,10 @@
       "profile_contributions": "አስተዋጽዖዎች ከ {{profile_name}}",
       "not_allowed_title": "የሌሎች ሰዎችን መዋጮ ማየት አይችሉም",
       "not_allowed": "የሌሎች ሰዎችን መዋጮ ማየት የሚችሉት የማህበረሰብ አስተዳዳሪዎች ብቻ ናቸው",
-      "no_contributions": "እስካሁን ምንም አስተዋፅዖ የለም"
+      "no_contributions": "እስካሁን ምንም አስተዋፅዖ የለም",
+      "pending": "በመጠባበቅ ላይ",
+      "approved": "ጸድቋል",
+      "failed": "አልተሳካም"
     }
   },
   "shop": {

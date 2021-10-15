@@ -1,6 +1,7 @@
 module Page.Profile.Contributions exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Api.Graphql
+import Cambiatus.Enum.ContributionStatusType
 import Community
 import Dict
 import Eos.Account
@@ -190,10 +191,43 @@ view_ loggedIn profileContributions title =
 
 viewContribution : Translators -> Profile.Contribution -> Html msg
 viewContribution { t } contribution =
-    li [ class "flex items-center px-1 py-4" ]
+    let
+        isApprovedOrCaptured =
+            case contribution.status of
+                Cambiatus.Enum.ContributionStatusType.Approved ->
+                    True
+
+                Cambiatus.Enum.ContributionStatusType.Captured ->
+                    True
+
+                _ ->
+                    False
+
+        isFailedOrRejected =
+            case contribution.status of
+                Cambiatus.Enum.ContributionStatusType.Failed ->
+                    True
+
+                Cambiatus.Enum.ContributionStatusType.Rejected ->
+                    True
+
+                _ ->
+                    False
+
+        statusString =
+            if isApprovedOrCaptured then
+                t "profile.contributions.approved"
+
+            else if isFailedOrRejected then
+                t "profile.contributions.failed"
+
+            else
+                t "profile.contributions.pending"
+    in
+    li [ class "flex items-center px-1 py-4 flex-wrap" ]
         [ div [ class "w-14 h-14 bg-gray-100 flex items-center justify-center rounded" ]
             [ Icons.coinHeart "" ]
-        , p [ class "flex space-x-1 text-black ml-3" ]
+        , p [ class "flex space-x-1 text-black ml-3 mr-2" ]
             -- TODO - Use new text size classes (#622)
             [ span [ class "text-[22px]" ]
                 [ text (Utils.formatFloat contribution.amount 0 True) ]
@@ -204,6 +238,15 @@ viewContribution { t } contribution =
                     |> text
                 ]
             ]
+        , span
+            -- TODO - Use new text size classes (#622)
+            [ class "ml-auto py-0.5 px-5 bg-gray-100 uppercase text-[12px]"
+            , classList
+                [ ( "font-bold text-green", isApprovedOrCaptured )
+                , ( "font-bold text-red", isFailedOrRejected )
+                ]
+            ]
+            [ text statusString ]
         ]
 
 

@@ -744,7 +744,10 @@
       "profile_contributions": "{{profile_name}}'s contributions",
       "not_allowed_title": "You're not allowed to see other people's contributions",
       "not_allowed": "Only community admins can see other people's contributions",
-      "no_contributions": "No contributions yet"
+      "no_contributions": "No contributions yet",
+      "pending": "Pending",
+      "approved": "Approved",
+      "failed": "Failed"
     }
   },
   "shop": {
