@@ -40,6 +40,7 @@ import View.Form.Radio as Radio
 
 type alias Model =
     { proposals : RemoteData ProposalsError (List Proposal)
+    , approvals : RemoteData Http.Error (List Approval)
     , threshold : Int
     , voterState : Select.State
     , selectedVoters :
@@ -72,6 +73,7 @@ init loggedIn =
                 |> Date.add Date.Days 7
     in
     ( { proposals = RemoteData.NotAsked
+      , approvals = RemoteData.NotAsked
       , threshold = 1
       , voterState = Select.newState "voter-select"
       , selectedVoters = []
@@ -105,10 +107,16 @@ type Msg
     | CompletedChangeAccountPermissions (Result Json.Decode.Error ())
     | ClickedProposeNewObjective
     | CompletedLoadProposals (Result Http.Error (List ProposalRow))
+    | CompletedLoadApprovals (Result Http.Error (List Approval))
     | DeserializedProposals (Result Json.Decode.Error (List Proposal))
     | ClickedApproveProposal Proposal
     | ClickedUnapproveProposal Proposal
     | ClickedExecuteProposal Proposal
+    | ClickedCancelProposal Proposal
+    | CompletedApprovingProposal (Result Json.Decode.Error ())
+    | CompletedUnapprovingProposal (Result Json.Decode.Error ())
+    | CompletedExecutingProposal (Result Json.Decode.Error ())
+    | CompletedCancellingProposal (Result Json.Decode.Error ())
     | EnteredNewObjectiveName String
     | CompletedProposingNewObjective (Result Json.Decode.Error ())
     | SelectedProposalPermission Eos.Permission.PermissionType
@@ -131,7 +139,6 @@ type ProposalsError
 type alias Proposal =
     { name : String
     , expiration : Time.Posix
-    , proposer : Eos.Account.Name
     , actions : List Action
     }
 
@@ -379,53 +386,216 @@ update msg model loggedIn =
                     []
                     err
 
+        CompletedLoadApprovals (Ok approvals) ->
+            { model | approvals = RemoteData.Success approvals }
+                |> UR.init
+
+        CompletedLoadApprovals (Err err) ->
+            { model | approvals = RemoteData.Failure err }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Got an error when loading approvals2 data")
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when loading approvals2 data"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
+
         ClickedApproveProposal proposal ->
-            UR.init model
-                |> UR.addPort
-                    (Api.Eos.Approve
-                        { proposer = proposal.proposer
-                        , proposalName = proposal.name
-                        }
-                        |> Api.Eos.MultiSigAction
-                        |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
-                            msg
-                    )
-                |> LoggedIn.withAuthentication loggedIn
-                    model
-                    { successMsg = msg, errorMsg = NoOp }
+            case model.selectedSearch of
+                Just proposer ->
+                    UR.init model
+                        |> UR.addPort
+                            (Api.Eos.Approve
+                                { proposer = proposer.account
+                                , proposalName = proposal.name
+                                }
+                                |> Api.Eos.MultiSigAction
+                                |> Api.Eos.transact loggedIn.shared
+                                    { actor = loggedIn.accountName, permission = Eos.Permission.Active }
+                                    msg
+                            )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = NoOp }
+
+                Nothing ->
+                    UR.init model
 
         ClickedUnapproveProposal proposal ->
-            UR.init model
-                |> UR.addPort
-                    (Api.Eos.Unapprove
-                        { proposer = proposal.proposer
-                        , proposalName = proposal.name
-                        }
-                        |> Api.Eos.MultiSigAction
-                        |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
-                            msg
-                    )
-                |> LoggedIn.withAuthentication loggedIn
-                    model
-                    { successMsg = msg, errorMsg = NoOp }
+            case model.selectedSearch of
+                Just proposer ->
+                    UR.init model
+                        |> UR.addPort
+                            (Api.Eos.Unapprove
+                                { proposer = proposer.account
+                                , proposalName = proposal.name
+                                }
+                                |> Api.Eos.MultiSigAction
+                                |> Api.Eos.transact loggedIn.shared
+                                    { actor = loggedIn.accountName, permission = Eos.Permission.Active }
+                                    msg
+                            )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = NoOp }
+
+                Nothing ->
+                    UR.init model
 
         ClickedExecuteProposal proposal ->
-            UR.init model
-                |> UR.addPort
-                    (Api.Eos.Execute
-                        { proposer = proposal.proposer
-                        , proposalName = proposal.name
-                        }
-                        |> Api.Eos.MultiSigAction
-                        |> Api.Eos.transact loggedIn.shared
-                            { actor = loggedIn.accountName, permission = Eos.Permission.Active }
-                            msg
-                    )
-                |> LoggedIn.withAuthentication loggedIn
+            case model.selectedSearch of
+                Just proposer ->
+                    UR.init model
+                        |> UR.addPort
+                            (Api.Eos.Execute
+                                { proposer = proposer.account
+                                , proposalName = proposal.name
+                                }
+                                |> Api.Eos.MultiSigAction
+                                |> Api.Eos.transact loggedIn.shared
+                                    { actor = loggedIn.accountName, permission = Eos.Permission.Active }
+                                    msg
+                            )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = NoOp }
+
+                Nothing ->
+                    UR.init model
+
+        ClickedCancelProposal proposal ->
+            case model.selectedSearch of
+                Just proposer ->
+                    UR.init model
+                        |> UR.addPort
+                            (Api.Eos.Cancel
+                                { proposer = proposer.account
+                                , proposalName = proposal.name
+                                }
+                                |> Api.Eos.MultiSigAction
+                                |> Api.Eos.transact loggedIn.shared
+                                    { actor = loggedIn.accountName, permission = Eos.Permission.Active }
+                                    msg
+                            )
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = NoOp }
+
+                Nothing ->
+                    UR.init model
+
+        CompletedApprovingProposal (Ok ()) ->
+            case model.selectedSearch of
+                Just profile ->
+                    { model | approvals = RemoteData.Loading }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Marked as approved")
+                        |> UR.addCmd
+                            (Api.Eos.Approvals2 profile.account
+                                |> Api.Eos.MultiSig
+                                |> Api.Eos.query loggedIn.shared
+                                    CompletedLoadApprovals
+                                    approvalDecoder
+                            )
+
+                Nothing ->
+                    model |> UR.init
+
+        CompletedApprovingProposal (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Error when approving proposal")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when approving proposal"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
+
+        CompletedUnapprovingProposal (Ok ()) ->
+            case model.selectedSearch of
+                Just profile ->
+                    { model | approvals = RemoteData.Loading }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Removed approval vote")
+                        |> UR.addCmd
+                            (Api.Eos.Approvals2 profile.account
+                                |> Api.Eos.MultiSig
+                                |> Api.Eos.query loggedIn.shared
+                                    CompletedLoadApprovals
+                                    approvalDecoder
+                            )
+
+                Nothing ->
+                    UR.init model
+
+        CompletedUnapprovingProposal (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Error when unapproving proposal")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when unapproving proposal"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
+
+        CompletedExecutingProposal (Ok ()) ->
+            case model.selectedSearch of
+                Just profile ->
                     model
-                    { successMsg = msg, errorMsg = NoOp }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Executed transaction")
+                        |> UR.addCmd
+                            (Api.Eos.Approvals2 profile.account
+                                |> Api.Eos.MultiSig
+                                |> Api.Eos.query loggedIn.shared
+                                    CompletedLoadApprovals
+                                    approvalDecoder
+                            )
+
+                _ ->
+                    UR.init model
+
+        CompletedExecutingProposal (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Error when executing proposal")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when executing proposal"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
+
+        CompletedCancellingProposal (Ok ()) ->
+            case model.selectedSearch of
+                Just profile ->
+                    model
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Cancelled proposal")
+                        |> UR.addCmd
+                            (Api.Eos.Approvals2 profile.account
+                                |> Api.Eos.MultiSig
+                                |> Api.Eos.query loggedIn.shared
+                                    CompletedLoadApprovals
+                                    approvalDecoder
+                            )
+
+                _ ->
+                    UR.init model
+
+        CompletedCancellingProposal (Err err) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Error when cancelling proposal")
+                |> UR.logDecodingError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when cancelling proposal"
+                    { moduleName = "Page.Community.Settings.Multisig", function = "update" }
+                    []
+                    err
 
         EnteredNewObjectiveName newObjectiveName ->
             { model | newObjectiveName = newObjectiveName }
@@ -526,33 +696,31 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addCmd cmd
 
-        SelectedProposalSearch maybeProfile ->
-            let
-                queryProposals =
-                    case maybeProfile of
-                        Nothing ->
-                            identity
-
-                        Just profile ->
-                            Api.Eos.Proposal profile.account
-                                |> Api.Eos.MultiSig
-                                |> Api.Eos.query loggedIn.shared
-                                    CompletedLoadProposals
-                                    proposalRowDecoder
-                                |> UR.addCmd
-            in
+        SelectedProposalSearch (Just profile) ->
             { model
-                | selectedSearch = maybeProfile
-                , proposals =
-                    case maybeProfile of
-                        Nothing ->
-                            model.proposals
-
-                        Just _ ->
-                            RemoteData.Loading
+                | selectedSearch = Just profile
+                , proposals = RemoteData.Loading
+                , approvals = RemoteData.Loading
             }
                 |> UR.init
-                |> queryProposals
+                |> UR.addCmd
+                    (Api.Eos.Proposal profile.account
+                        |> Api.Eos.MultiSig
+                        |> Api.Eos.query loggedIn.shared
+                            CompletedLoadProposals
+                            proposalRowDecoder
+                    )
+                |> UR.addCmd
+                    (Api.Eos.Approvals2 profile.account
+                        |> Api.Eos.MultiSig
+                        |> Api.Eos.query loggedIn.shared
+                            CompletedLoadApprovals
+                            approvalDecoder
+                    )
+
+        SelectedProposalSearch Nothing ->
+            { model | selectedSearch = Nothing }
+                |> UR.init
 
 
 
@@ -591,7 +759,7 @@ view_ loggedIn community model =
         [ div [ class "px-4" ]
             [ viewChangePermissions loggedIn community model
             , viewProposeObjective loggedIn model
-            , viewProposalCard loggedIn.shared community model
+            , viewProposalCard loggedIn community model
             ]
         ]
 
@@ -806,8 +974,8 @@ viewProposalVoter loggedIn { profile, isChecked } =
         |> Checkbox.toHtml
 
 
-viewProposalCard : Shared -> Community.Model -> Model -> Html Msg
-viewProposalCard shared community model =
+viewProposalCard : LoggedIn.Model -> Community.Model -> Model -> Html Msg
+viewProposalCard loggedIn community model =
     div [ class "bg-white rounded-sm shadow p-4 my-10" ]
         [ p [ class "text-sm mb-4" ]
             [ text "Here you can use this select element to search for proposals proposed by some user. "
@@ -815,19 +983,30 @@ viewProposalCard shared community model =
             , text "All of them are straight forward, except for `Unapprove`. It doesn't mean \"Vote No\", it means \"Remove my Yes vote (if there is one)\""
             ]
         , View.Form.label "proposal-search-select" "Search proposals by user"
-        , viewSearchProposal shared community model
+        , viewSearchProposal loggedIn.shared community model
         , div [ class "grid gap-4 grid-cols-2 mt-4" ]
-            (case model.proposals of
-                RemoteData.Success proposals ->
-                    List.map (viewProposal shared) proposals
+            (case ( model.proposals, model.approvals ) of
+                ( RemoteData.Success proposals, RemoteData.Success approvals ) ->
+                    List.map2 (viewProposal loggedIn)
+                        (List.sortBy .name proposals)
+                        (List.sortBy .proposalName approvals)
 
-                RemoteData.Failure _ ->
-                    [ text "Something went wrong when fetching proposals" ]
+                ( RemoteData.Failure _, _ ) ->
+                    [ text "Error when fetching proposals" ]
 
-                RemoteData.Loading ->
+                ( _, RemoteData.Failure _ ) ->
+                    [ text "Error when fetching approvals" ]
+
+                ( RemoteData.Loading, RemoteData.Loading ) ->
                     [ text "Loading" ]
 
-                RemoteData.NotAsked ->
+                ( RemoteData.Loading, _ ) ->
+                    [ text "Loading proposals" ]
+
+                ( _, RemoteData.Loading ) ->
+                    [ text "Loading approvals" ]
+
+                _ ->
                     []
             )
         ]
@@ -860,31 +1039,95 @@ searchProposalSelectConfiguration shared =
         False
 
 
-viewProposal : Shared -> Proposal -> Html Msg
-viewProposal shared proposal =
+viewProposal : LoggedIn.Model -> Proposal -> Approval -> Html Msg
+viewProposal loggedIn proposal approval =
+    let
+        communityCreatorInfo =
+            case loggedIn.communityCreatorPermissions of
+                RemoteData.Success permissions ->
+                    Just
+                        -- TODO - Use proposal's authorization's permission
+                        ( permissions.active.accounts
+                            |> List.filterMap
+                                (\account ->
+                                    if
+                                        List.member account.authorization
+                                            approval.providedApprovals
+                                    then
+                                        Just account.weight
+
+                                    else
+                                        Nothing
+                                )
+                            |> List.sum
+                        , permissions.active.threshold
+                        )
+
+                _ ->
+                    Nothing
+    in
     div [ class "bg-white rounded border p-4" ]
         [ h1 [ class "font-bold" ] [ text proposal.name ]
         , View.Components.dateViewer [ class "text-sm text-gray-900" ]
             identity
-            shared
+            loggedIn.shared
             proposal.expiration
         , div [ class "my-4" ] (List.map viewAction proposal.actions)
+        , p [ class "mb-4" ]
+            [ text "Approvals: "
+            , case communityCreatorInfo of
+                Just ( votes, _ ) ->
+                    text (String.fromInt votes)
+
+                Nothing ->
+                    text "Loading"
+            ]
         , div [ class "flex justify-between gap-4" ]
-            [ button
-                [ class "button w-full button-primary"
-                , onClick (ClickedApproveProposal proposal)
-                ]
-                [ text "Approve" ]
-            , button
-                [ class "button w-full button-danger"
-                , onClick (ClickedUnapproveProposal proposal)
-                ]
-                [ text "Disapprove" ]
-            , button
-                [ class "button w-full button-secondary"
-                , onClick (ClickedExecuteProposal proposal)
-                ]
-                [ text "Execute" ]
+            [ if
+                List.any (\requested -> requested.actor == loggedIn.accountName)
+                    approval.requestedApprovals
+              then
+                button
+                    [ class "button w-full button-primary"
+                    , onClick (ClickedApproveProposal proposal)
+                    ]
+                    [ text "Approve" ]
+
+              else if
+                List.any (\provided -> provided.actor == loggedIn.accountName)
+                    approval.providedApprovals
+              then
+                button
+                    [ class "button w-full button-danger"
+                    , onClick (ClickedUnapproveProposal proposal)
+                    ]
+                    [ text "Unapprove" ]
+
+              else
+                text ""
+            , case communityCreatorInfo of
+                Just ( votes, threshold ) ->
+                    if votes >= threshold then
+                        button
+                            [ class "button w-full button-secondary"
+                            , onClick (ClickedExecuteProposal proposal)
+                            ]
+                            [ text "Execute" ]
+
+                    else
+                        text ""
+
+                Nothing ->
+                    text ""
+            , if Time.posixToMillis loggedIn.shared.now > Time.posixToMillis proposal.expiration then
+                button
+                    [ class "w-full button-danger"
+                    , onClick (ClickedCancelProposal proposal)
+                    ]
+                    [ text "Cancel" ]
+
+              else
+                text ""
             ]
         ]
 
@@ -924,6 +1167,27 @@ type alias ProposalRow =
     { proposalName : String, serializedTransaction : String }
 
 
+type alias Approval =
+    { proposalName : String
+    , requestedApprovals : List Eos.Permission.Authorization
+    , providedApprovals : List Eos.Permission.Authorization
+    }
+
+
+approvalDecoder : Json.Decode.Decoder Approval
+approvalDecoder =
+    Json.Decode.succeed Approval
+        |> Json.Decode.Pipeline.required "proposal_name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "requested_approvals"
+            (Json.Decode.list
+                (Json.Decode.field "level" Eos.Permission.authorizationDecoder)
+            )
+        |> Json.Decode.Pipeline.required "provided_approvals"
+            (Json.Decode.list
+                (Json.Decode.field "level" Eos.Permission.authorizationDecoder)
+            )
+
+
 proposalRowDecoder : Json.Decode.Decoder ProposalRow
 proposalRowDecoder =
     Json.Decode.succeed ProposalRow
@@ -944,8 +1208,6 @@ proposalDecoder =
     Json.Decode.succeed Proposal
         |> Json.Decode.Pipeline.required "proposalName" Json.Decode.string
         |> Json.Decode.Pipeline.requiredAt [ "actions", "expiration" ] Iso8601.decoder
-        -- TODO - Not hardcode proposer
-        |> Json.Decode.Pipeline.hardcoded (Eos.Account.stringToName "henriquebuss")
         |> Json.Decode.Pipeline.requiredAt [ "actions", "actions" ] (Json.Decode.list actionDecoder)
 
 
@@ -1019,6 +1281,34 @@ jsAddressToMsg addr val =
                 |> CompletedProposingNewObjective
                 |> Just
 
+        [ "ClickedApproveProposal" ] ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedApprovingProposal
+                |> Just
+
+        [ "ClickedUnapproveProposal" ] ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedUnapprovingProposal
+                |> Just
+
+        [ "ClickedExecuteProposal" ] ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedExecutingProposal
+                |> Just
+
+        [ "ClickedCancelProposal" ] ->
+            val
+                |> Json.Decode.decodeValue (Json.Decode.field "transactionId" Json.Decode.string)
+                |> Result.map (\_ -> ())
+                |> CompletedCancellingProposal
+                |> Just
+
         _ ->
             Nothing
 
@@ -1062,6 +1352,9 @@ msgToString msg =
         CompletedLoadProposals r ->
             [ "CompletedLoadProposals", UR.resultToString r ]
 
+        CompletedLoadApprovals r ->
+            [ "CompletedLoadApprovals", UR.resultToString r ]
+
         DeserializedProposals _ ->
             [ "DeserializedProposals" ]
 
@@ -1073,6 +1366,21 @@ msgToString msg =
 
         ClickedExecuteProposal _ ->
             [ "ClickedExecuteProposal" ]
+
+        ClickedCancelProposal _ ->
+            [ "ClickedCancelProposal" ]
+
+        CompletedApprovingProposal r ->
+            [ "CompletedApprovingProposal", UR.resultToString r ]
+
+        CompletedUnapprovingProposal r ->
+            [ "CompletedUnapprovingProposal", UR.resultToString r ]
+
+        CompletedExecutingProposal r ->
+            [ "CompletedExecutingProposal", UR.resultToString r ]
+
+        CompletedCancellingProposal r ->
+            [ "CompletedCancellingProposal", UR.resultToString r ]
 
         EnteredNewObjectiveName _ ->
             [ "EnteredNewObjectiveName" ]

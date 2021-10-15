@@ -2,6 +2,7 @@ module Eos.Permission exposing
     ( PermissionType(..), Authorization, Permission, Permissions
     , decoder, encodeAuthorization, encodePermissionType
     , default, list, parent, toString
+    , authorizationDecoder
     )
 
 {-| This module helps when dealing with Eos Permissions. In EOS, we can have
@@ -123,6 +124,15 @@ encodeAuthorization authorization =
         ]
 
 
+{-| Decode an `Authorization`
+-}
+authorizationDecoder : Decode.Decoder Authorization
+authorizationDecoder =
+    Decode.succeed Authorization
+        |> Json.Decode.Pipeline.required "actor" Eos.Account.nameDecoder
+        |> Json.Decode.Pipeline.required "permission" permissionTypeDecoder
+
+
 {-| Encode a `PermissionType`
 -}
 encodePermissionType : PermissionType -> Encode.Value
@@ -132,13 +142,6 @@ encodePermissionType =
 
 
 -- INTERNAL JSON
-
-
-authorizationDecoder : Decode.Decoder Authorization
-authorizationDecoder =
-    Decode.succeed Authorization
-        |> Json.Decode.Pipeline.required "actor" Eos.Account.nameDecoder
-        |> Json.Decode.Pipeline.required "permission" permissionTypeDecoder
 
 
 permissionTypeDecoder : Decode.Decoder PermissionType
