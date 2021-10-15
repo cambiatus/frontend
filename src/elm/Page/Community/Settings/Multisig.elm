@@ -1065,6 +1065,9 @@ viewProposal loggedIn proposal approval =
 
                 _ ->
                     Nothing
+
+        isExpired =
+            Time.posixToMillis loggedIn.shared.now > Time.posixToMillis proposal.expiration
     in
     div [ class "bg-white rounded border p-4" ]
         [ h1 [ class "font-bold" ] [ text proposal.name ]
@@ -1083,7 +1086,14 @@ viewProposal loggedIn proposal approval =
                     text "Loading"
             ]
         , div [ class "flex justify-between gap-4" ]
-            [ if
+            [ if isExpired then
+                button
+                    [ class "w-full button-danger"
+                    , onClick (ClickedCancelProposal proposal)
+                    ]
+                    [ text "Cancel" ]
+
+              else if
                 List.any (\requested -> requested.actor == loggedIn.accountName)
                     approval.requestedApprovals
               then
@@ -1107,7 +1117,7 @@ viewProposal loggedIn proposal approval =
                 text ""
             , case communityCreatorInfo of
                 Just ( votes, threshold ) ->
-                    if votes >= threshold then
+                    if votes >= threshold && not isExpired then
                         button
                             [ class "button w-full button-secondary"
                             , onClick (ClickedExecuteProposal proposal)
@@ -1119,15 +1129,6 @@ viewProposal loggedIn proposal approval =
 
                 Nothing ->
                     text ""
-            , if Time.posixToMillis loggedIn.shared.now > Time.posixToMillis proposal.expiration then
-                button
-                    [ class "w-full button-danger"
-                    , onClick (ClickedCancelProposal proposal)
-                    ]
-                    [ text "Cancel" ]
-
-              else
-                text ""
             ]
         ]
 
