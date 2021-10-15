@@ -73,10 +73,7 @@ init loggedIn =
             initModel loggedIn.shared
     in
     ( model
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , LoggedIn.maybeInitWith (\_ -> CompletedLoadProfile) .profile loggedIn
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -1022,7 +1019,6 @@ type Msg
     = NoOp
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
-    | CompletedLoadProfile
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
@@ -1082,21 +1078,21 @@ update msg model ({ shared, accountName } as loggedIn) =
 
                     else
                         identity
+
+                showModalRequestingSponsor =
+                    hasContributionConfiguration && not shared.hasSeenSponsorModal
             in
             UR.init
                 { model
                     | balance = RemoteData.Loading
                     , analysis = LoadingGraphql Nothing
-                    , showModalRequestingSponsor = hasContributionConfiguration && not shared.hasSeenSponsorModal
+                    , showModalRequestingSponsor = showModalRequestingSponsor
+                    , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
                 |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
                 |> markSponsorModalAsSeen
-
-        CompletedLoadProfile ->
-            { model | showContactModal = shouldShowContactModal loggedIn model }
-                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1871,9 +1867,6 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
-        LoggedIn.ProfileLoaded _ ->
-            Just CompletedLoadProfile
-
         _ ->
             Nothing
 
@@ -1917,9 +1910,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        CompletedLoadProfile ->
-            [ "CompletedLoadProfile" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]
