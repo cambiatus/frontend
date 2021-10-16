@@ -604,6 +604,7 @@ update msg model loggedIn =
 
                                 value =
                                     Eos.assetToString
+                                        loggedIn.shared.translators
                                         { amount = claim.action.verifierReward
                                         , symbol = symbol
                                         }

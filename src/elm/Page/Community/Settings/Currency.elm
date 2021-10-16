@@ -555,7 +555,7 @@ viewInformativeFields ({ t, tr } as translators) community =
             Eos.getSymbolPrecision community.symbol
 
         symbolExample =
-            case Eos.formatSymbolAmount community.symbol 100 |> String.split "." of
+            case Eos.formatSymbolAmount translators community.symbol 100 |> String.split "." of
                 [] ->
                     []
 
@@ -606,7 +606,7 @@ viewInformativeFields ({ t, tr } as translators) community =
                 |> Input.withAttrs [ class "w-full" ]
                 |> Input.withElements
                     [ span [ class "absolute right-0 inset-y-0 flex items-center pr-3 text-gray-900" ]
-                        [ text (Eos.formatSymbolAmount community.symbol 100) ]
+                        [ text (Eos.formatSymbolAmount translators community.symbol 100) ]
                     ]
                 |> Input.toHtml
             ]
@@ -633,7 +633,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMinimumBalance
         , disabled = False
         , value = model.minimumBalance
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 0)
         , problems = errorsForField translators MinimumBalance model
         , translators = translators
         }
@@ -645,7 +645,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMaximumSupply
         , disabled = False
         , value = model.maximumSupply
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 21000000)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 21000000)
         , problems = errorsForField translators MaximumSupply model
         , translators = translators
         }
@@ -708,7 +708,7 @@ viewExpiryFields ({ t } as translators) community model =
         , onInput = EnteredRenovationAmount
         , disabled = False
         , value = model.renovationAmount
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 100)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 100)
         , problems = errorsForField translators RenovationAmount model
         , translators = translators
         }

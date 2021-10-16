@@ -825,11 +825,19 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ class "text-center flex justify-center bg-gray-100 rounded-md my-10 p-4 space-x-16" ]
                 [ div
                     []
-                    [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.reward)) ]
+                    [ p [ class rewardTxtClass ]
+                        [ makeAsset claim.action.reward
+                            |> Eos.assetToString shared.translators
+                            |> text
+                        ]
                     , p [ class greenTextTitleClass ] [ text (t "community.actions.reward") ]
                     ]
                 , div []
-                    [ p [ class rewardTxtClass ] [ text (Eos.assetToString (makeAsset claim.action.verifierReward)) ]
+                    [ p [ class rewardTxtClass ]
+                        [ makeAsset claim.action.verifierReward
+                            |> Eos.assetToString shared.translators
+                            |> text
+                        ]
                     , p [ class greenTextTitleClass ] [ text (t "claim.analyst_reward") ]
                     ]
                 ]

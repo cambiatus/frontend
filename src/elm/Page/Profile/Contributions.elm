@@ -190,7 +190,7 @@ view_ loggedIn profileContributions title =
 
 
 viewContribution : Translators -> Profile.Contribution -> Html msg
-viewContribution { t } contribution =
+viewContribution ({ t } as translators) contribution =
     let
         isApprovedOrCaptured =
             case contribution.status of
@@ -230,7 +230,7 @@ viewContribution { t } contribution =
         , p [ class "flex space-x-1 text-black ml-3 mr-2" ]
             -- TODO - Use new text size classes (#622)
             [ span [ class "text-[22px]" ]
-                [ text (Utils.formatFloat contribution.amount 0 True) ]
+                [ text (Utils.formatFloat (Just translators) 0 contribution.amount) ]
             , span [ class "text-[12px] uppercase self-end mb-1" ]
                 [ contribution
                     |> Community.currencyTranslationKey

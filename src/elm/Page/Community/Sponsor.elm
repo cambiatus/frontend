@@ -503,13 +503,13 @@ amountProblemToString translators currency amountProblem =
 
         AmountTooSmall ->
             translators.tr "sponsorship.amount_too_small"
-                [ ( "minimum", Utils.formatFloat PaypalButtons.minimumAmount 2 False )
+                [ ( "minimum", Utils.formatFloat (Just translators) 2 PaypalButtons.minimumAmount )
                 , ( "currency", PaypalButtons.currencyToString currency )
                 ]
 
         AmountTooBig ->
             translators.tr "sponsorship.amount_too_big"
-                [ ( "maximum", Utils.formatFloat PaypalButtons.maximumAmount 2 False )
+                [ ( "maximum", Utils.formatFloat (Just translators) 2 PaypalButtons.maximumAmount )
                 , ( "currency", PaypalButtons.currencyToString currency )
                 ]
 

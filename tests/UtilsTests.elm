@@ -4,6 +4,7 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Expect
 import Fuzz
 import Iso8601
+import List.Extra
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
 import Time
@@ -16,7 +17,6 @@ all =
         [ fromMaybeDateTime
         , areSameDay
         , formatFloat
-        , formatFloatWithMaxCases
         ]
 
 
@@ -82,34 +82,23 @@ formatFloat : Test
 formatFloat =
     let
         fuzzer =
-            fuzz3 Fuzz.float (Fuzz.intRange -10 1000) Fuzz.bool
+            fuzz2 Fuzz.float (Fuzz.intRange -10 1000)
 
-        stringToFloat : Bool -> String -> Maybe Float
-        stringToFloat useSeparator floatString =
-            if useSeparator then
-                floatString
-                    |> String.replace "." ""
-                    |> String.replace "," "."
-                    |> String.toFloat
+        stringToFloat : String -> Maybe Float
+        stringToFloat floatString =
+            floatString
+                |> String.toFloat
 
-            else
-                floatString
-                    |> String.toFloat
-
-        separator : Bool -> String
-        separator useSeparator =
-            if useSeparator then
-                ","
-
-            else
-                "."
+        separator : String
+        separator =
+            "."
     in
     describe "formatFloat"
         [ fuzzer "should have the right amount of decimalCases" <|
-            \fuzzNumber fuzzDecimalCases fuzzUseSeparator ->
+            \fuzzNumber fuzzDecimalCases ->
                 case
-                    Utils.formatFloat fuzzNumber fuzzDecimalCases fuzzUseSeparator
-                        |> String.split (separator fuzzUseSeparator)
+                    Utils.formatFloat Nothing fuzzDecimalCases fuzzNumber
+                        |> String.split separator
                 of
                     [] ->
                         Expect.fail "didn't expect empty list"
@@ -123,18 +112,18 @@ formatFloat =
                     _ ->
                         Expect.fail "didn't expect list with more than 2 elements"
         , fuzzer "should be able to convert back to float" <|
-            \fuzzNumber fuzzDecimalCases fuzzUseSeparator ->
-                Utils.formatFloat fuzzNumber fuzzDecimalCases fuzzUseSeparator
-                    |> stringToFloat fuzzUseSeparator
+            \fuzzNumber fuzzDecimalCases ->
+                Utils.formatFloat Nothing fuzzDecimalCases fuzzNumber
+                    |> stringToFloat
                     |> Expect.notEqual Nothing
         , fuzzer "should be the same when truncated" <|
-            \fuzzNumber fuzzDecimalCases fuzzUseSeparator ->
-                Utils.formatFloat fuzzNumber fuzzDecimalCases fuzzUseSeparator
-                    |> stringToFloat fuzzUseSeparator
+            \fuzzNumber fuzzDecimalCases ->
+                Utils.formatFloat Nothing fuzzDecimalCases fuzzNumber
+                    |> stringToFloat
                     |> Maybe.map truncate
                     |> Expect.equal (Just (truncate fuzzNumber))
         , fuzzer "value of decimal cases should remain the same, but truncated" <|
-            \fuzzNumber fuzzDecimalCases fuzzUseSeparator ->
+            \fuzzNumber fuzzDecimalCases ->
                 let
                     decimalCasesValue =
                         case fuzzNumber |> String.fromFloat |> String.split "." of
@@ -156,14 +145,28 @@ formatFloat =
                                 ""
                 in
                 case
-                    Utils.formatFloat fuzzNumber fuzzDecimalCases fuzzUseSeparator
-                        |> String.split (separator fuzzUseSeparator)
+                    Utils.formatFloat Nothing fuzzDecimalCases fuzzNumber
+                        |> String.split separator
                 of
                     [] ->
                         Expect.fail "didn't expect empty list"
 
                     [ _ ] ->
-                        Expect.equal "" decimalCasesValue
+                        let
+                            numbersBeforeSeparator =
+                                String.fromFloat fuzzNumber
+                                    |> String.split "."
+                                    |> List.head
+                                    |> Maybe.withDefault "0"
+                        in
+                        Expect.equal
+                            (if fuzzDecimalCases > 0 then
+                                numbersBeforeSeparator ++ "." ++ String.repeat fuzzDecimalCases "0"
+
+                             else
+                                numbersBeforeSeparator
+                            )
+                            (Utils.formatFloat Nothing fuzzDecimalCases fuzzNumber)
 
                     [ _, afterSeparator ] ->
                         afterSeparator
@@ -171,22 +174,4 @@ formatFloat =
 
                     _ ->
                         Expect.fail "didn't expect list with more than 2 elements"
-        ]
-
-
-formatFloatWithMaxCases : Test
-formatFloatWithMaxCases =
-    describe "formatFloatWithMaxCases"
-        [ test "should handle cases like 1.1 when maxCases = 2" <|
-            \() ->
-                Utils.formatFloatWithMaxCases 2 False 1.1
-                    |> Expect.equal "1.1"
-        , test "should handle cases like 1.11 when maxCases = 2" <|
-            \() ->
-                Utils.formatFloatWithMaxCases 2 False 1.11
-                    |> Expect.equal "1.11"
-        , test "should handle cases like 1.111 when maxCases = 2" <|
-            \() ->
-                Utils.formatFloatWithMaxCases 2 False 1.111
-                    |> Expect.equal "1.11"
         ]

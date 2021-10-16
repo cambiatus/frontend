@@ -284,7 +284,7 @@ viewSponsorCards loggedIn community =
 
 
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
-viewCommunityStats { t, tr } community model =
+viewCommunityStats ({ t, tr } as translators) community model =
     let
         card attrs =
             div (class "bg-white rounded p-4" :: attrs)
@@ -301,7 +301,8 @@ viewCommunityStats { t, tr } community model =
                 card [ class "col-span-2 flex items-center bg-green text-white" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount supply.symbol supply.amount) ]
+                        [ p [ class "font-bold text-3xl" ]
+                            [ text (Eos.formatSymbolAmount translators supply.symbol supply.amount) ]
                         , p [ class "text-sm" ]
                             [ text
                                 (tr "community.index.amount_in_circulation"
@@ -318,7 +319,8 @@ viewCommunityStats { t, tr } community model =
                 card [ class "col-span-2 flex items-center" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount minBalance.symbol minBalance.amount) ]
+                        [ p [ class "font-bold text-3xl text-green" ]
+                            [ text (Eos.formatSymbolAmount translators minBalance.symbol minBalance.amount) ]
                         , p [ class "text-sm text-gray-900" ]
                             [ text (t "community.index.minimum_balance") ]
                         ]

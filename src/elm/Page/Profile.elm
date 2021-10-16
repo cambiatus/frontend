@@ -1223,7 +1223,7 @@ viewHistory shared balance graphqlInfo maybeContributionInfo =
                 ]
                 (span [ class "text-3xl mr-1" ]
                     [ balance.asset.amount
-                        |> Eos.formatSymbolAmount balance.asset.symbol
+                        |> Eos.formatSymbolAmount shared.translators balance.asset.symbol
                         |> text
                     ]
                 )
@@ -1237,7 +1237,7 @@ viewHistory shared balance graphqlInfo maybeContributionInfo =
 
                 Just contributionInfo ->
                     viewHistoryItem [ text_ "dashboard.my_contributions" ]
-                        (Utils.formatFloat contributionInfo.amount 2 True
+                        (Utils.formatFloat (Just shared.translators) 2 contributionInfo.amount
                             |> text
                         )
                         (Community.currencyTranslationKey contributionInfo

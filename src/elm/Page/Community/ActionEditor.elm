@@ -1390,7 +1390,7 @@ viewReward { shared } community form =
         , onInput = EnteredReward
         , disabled = False
         , value = getInput form.reward
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+        , placeholder = Just (Eos.formatSymbolAmount shared.translators community.symbol 0)
         , problems = Just (listErrors shared.translations form.reward)
         , translators = shared.translators
         }
@@ -1745,7 +1745,7 @@ viewManualVerificationForm ({ shared } as loggedIn) model community =
                     , onInput = EnteredVerifierReward
                     , disabled = False
                     , value = getInput verifierRewardValidator
-                    , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+                    , placeholder = Just (Eos.formatSymbolAmount shared.translators community.symbol 0)
                     , problems = listErrors shared.translations verifierRewardValidator |> Just
                     , translators = shared.translators
                     }

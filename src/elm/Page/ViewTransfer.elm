@@ -249,7 +249,8 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                 , div [ class "flex text-green" ]
                     [ span [ class "font-medium text-heading" ]
                         [ transfer.value
-                            |> Eos.formatSymbolAmount transfer.community.symbol
+                            |> Eos.formatSymbolAmount loggedIn.shared.translators
+                                transfer.community.symbol
                             |> text
                         ]
                     , span [ class "text-caption ml-2 mb-2 self-end" ]

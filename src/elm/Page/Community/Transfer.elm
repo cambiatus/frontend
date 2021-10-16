@@ -180,7 +180,10 @@ validateAmount translators symbol maxAmountStatus form =
                             Invalid "transfer.too_much"
                                 (Just
                                     [ ( "token", Eos.symbolToSymbolCodeString symbol )
-                                    , ( "max_asset", Eos.assetToString { amount = maxAmount, symbol = symbol } )
+                                    , ( "max_asset"
+                                      , Eos.assetToString translators
+                                            { amount = maxAmount, symbol = symbol }
+                                      )
                                     ]
                                 )
 
@@ -299,7 +302,7 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
             , div [ class "bg-gray-100 uppercase text-xs px-2 inline-block mb-10" ]
                 [ text
                     (shared.translators.tr "account.my_wallet.your_current_balance"
-                        [ ( "balance", Eos.assetToString currBalance ) ]
+                        [ ( "balance", Eos.assetToString shared.translators currBalance ) ]
                     )
                 ]
             , MarkdownEditor.view

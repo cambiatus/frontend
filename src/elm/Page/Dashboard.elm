@@ -899,7 +899,7 @@ viewBalance ({ shared } as loggedIn) community balance =
         [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
         , p [ class "text-indigo-500 mt-3" ]
             [ span [ class "font-bold text-3xl" ]
-                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
+                [ text <| Eos.formatSymbolAmount shared.translators balance.asset.symbol balance.asset.amount ]
             , text " "
             , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
             ]
