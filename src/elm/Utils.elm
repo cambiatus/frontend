@@ -21,7 +21,6 @@ import Html
 import Html.Events
 import Iso8601
 import Json.Decode as Decode
-import List.Extra as List
 import Mask
 import Time exposing (Posix)
 

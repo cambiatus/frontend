@@ -4,7 +4,6 @@ import Cambiatus.Scalar exposing (DateTime(..))
 import Expect
 import Fuzz
 import Iso8601
-import List.Extra
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
 import Time
