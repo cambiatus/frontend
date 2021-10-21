@@ -1399,6 +1399,13 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
   }
 })
 
+// All notifiers for GraphQL subscriptions through absinthe socket
+let newCommunityNotifier = null
+let transferNotifier = null
+let notificationNotifier = null
+
+const absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
@@ -1648,24 +1655,16 @@ async function handleJavascriptPort (arg) {
       return {}
     }
     case 'subscribeToNewCommunity': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (newCommunityNotifier) {
+        AbsintheSocket.cancel(absintheSocket, newCommunityNotifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
-
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
+      // Create new notifier
+      newCommunityNotifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
       const onStart = data => {
         addBreadcrumb({
@@ -1718,7 +1717,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      let onResult = data => {
+      const onResult = data => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -1736,39 +1735,29 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
+      AbsintheSocket.observe(absintheSocket, newCommunityNotifier, {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
       })
 
       return { isSubscription: true }
     }
     case 'subscribeToTransfer': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (transferNotifier) {
+        AbsintheSocket.cancel(absintheSocket, transferNotifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
+      // Create new notifier
+      transferNotifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
-
-      let onStart = data => {
+      const onStart = data => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -1838,37 +1827,27 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
+      AbsintheSocket.observe(absintheSocket, transferNotifier, {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
       })
 
       return { isSubscription: true }
     }
     case 'subscribeToUnreadCount': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (notificationNotifier) {
+        AbsintheSocket.cancel(absintheSocket, notificationNotifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
-
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
+      // Create new notifier
+      notificationNotifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
       const onStart = data => {
         addBreadcrumb({
@@ -1932,14 +1911,12 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
+      AbsintheSocket.observe(absintheSocket, notificationNotifier, {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
       })
 
       return { isSubscription: true }
