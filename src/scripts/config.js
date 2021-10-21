@@ -19,6 +19,9 @@ const dev = {
     graphql: 'https://staging.cambiatus.io/api/graph',
     socket: 'wss://staging.cambiatus.io/socket'
   },
+  paypal: {
+    clientId: 'AbuWni_NhYfoUDAre0hl0IFxpGFUSRT2lW6HaHBevn1YxbOHq8qtxk-1_6xsXM8XJtUnFBBR4sfNkOU4'
+  },
   logo: '/images/logo-cambiatus.png',
   logoMobile: '/images/logo-cambiatus-mobile.svg',
   bespiralAccount: 'cambiatus',
@@ -43,6 +46,7 @@ const httpEndpoint = isLocal
   ? dev.eosOptions.httpEndpoint
   : `${chainUrl}:${chainPort}`
 const socketUrl = isLocal ? dev.endpoints.socket : _env_.SOCKET_URL
+const paypalClientId = isLocal ? dev.paypal.clientId : _env_.PAYPAL_CLIENT_ID
 const pKey = isLocal ? dev.pushKey : _env_.PUSH_KEY
 const appLogo = isLocal ? dev.logo : _env_.LOGO
 const appLogoMobile = isLocal ? dev.logoMobile : _env_.LOGO_MOBILE
@@ -77,6 +81,9 @@ const prod = {
     eosio: httpEndpoint,
     graphql: graphqlUrl,
     socket: socketUrl
+  },
+  paypal: {
+    clientId: paypalClientId
   },
   logo: appLogo,
   logoMobile: appLogoMobile,

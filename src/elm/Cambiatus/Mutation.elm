@@ -4,6 +4,7 @@
 
 module Cambiatus.Mutation exposing (..)
 
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -47,6 +48,23 @@ completeObjective :
     -> SelectionSet (Maybe decodesTo) RootMutation
 completeObjective requiredArgs object_ =
     Object.selectionForCompositeField "completeObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)
+
+
+type alias ContributionRequiredArguments =
+    { amount : Float
+    , communityId : String
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    }
+
+
+{-| [Auth required] Create a new contribution
+-}
+contribution :
+    ContributionRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (Maybe decodesTo) RootMutation
+contribution requiredArgs object_ =
+    Object.selectionForCompositeField "contribution" [ Argument.required "amount" requiredArgs.amount Encode.float, Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "currency" requiredArgs.currency (Encode.enum Cambiatus.Enum.CurrencyType.toString) ] object_ (identity >> Decode.nullable)
 
 
 {-| [Auth required] A mutation to delete user's address data

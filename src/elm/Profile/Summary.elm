@@ -1,8 +1,23 @@
-module Profile.Summary exposing (Model, Msg, init, initMany, msgToString, update, view, withImageSize, withPreventScrolling, withRelativeSelector, withScrollSelector, withoutName)
+module Profile.Summary exposing
+    ( Model
+    , Msg
+    , expand
+    , init
+    , initMany
+    , msgToString
+    , update
+    , view
+    , withAttrs
+    , withImageSize
+    , withPreventScrolling
+    , withRelativeSelector
+    , withScrollSelector
+    , withoutName
+    )
 
 import Avatar
 import Eos.Account as Eos
-import Html exposing (Html, a, button, div, li, p, text, ul)
+import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, href)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Profile
@@ -11,6 +26,7 @@ import Route
 import Session.Shared exposing (Shared)
 import Utils exposing (onClickNoBubble)
 import View.Components
+import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -25,6 +41,7 @@ type alias Model =
     , relativeSelector : Maybe String
     , scrollSelector : Maybe String
     , showNameTag : Bool
+    , extraAttrs : List (Html.Attribute Msg)
     }
 
 
@@ -41,6 +58,7 @@ init isLarge =
     , relativeSelector = Nothing
     , scrollSelector = Nothing
     , showNameTag = True
+    , extraAttrs = []
     }
 
 
@@ -73,6 +91,11 @@ update msg model =
             { model | isExpanded = False }
 
 
+expand : Msg
+expand =
+    OpenedInfo
+
+
 withPreventScrolling : View.Components.PreventScroll -> Model -> Model
 withPreventScrolling preventScrolling model =
     { model | preventScrolling = preventScrolling }
@@ -100,6 +123,11 @@ withoutName model =
 withImageSize : String -> Model -> Model
 withImageSize imageSize model =
     { model | imageSize = imageSize }
+
+
+withAttrs : List (Html.Attribute Msg) -> Model -> Model
+withAttrs attrs model =
+    { model | extraAttrs = model.extraAttrs ++ attrs }
 
 
 view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
@@ -150,10 +178,10 @@ viewUserImg profile isMobile model =
     let
         container attrs =
             if isMobile then
-                button (onClickNoBubble OpenedInfo :: attrs)
+                button (onClickNoBubble OpenedInfo :: model.extraAttrs ++ attrs)
 
             else
-                a (Route.href (Route.Profile profile.account) :: attrs)
+                a (Route.href (Route.Profile profile.account) :: model.extraAttrs ++ attrs)
     in
     div [ class "flex flex-col items-center" ]
         [ div [ class ("rounded-full " ++ model.imageSize) ]
@@ -199,8 +227,8 @@ viewUserInfo profile =
                     ]
                 ]
             ]
-        , p [ class "text-sm text-gray-900" ]
-            [ text bio ]
+        , MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
+            bio
         , div [ class "flex justify-evenly mt-6" ]
             (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
         , a

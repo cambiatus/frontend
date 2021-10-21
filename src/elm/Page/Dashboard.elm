@@ -27,8 +27,8 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, src, tabindex)
+import Html exposing (Html, a, button, div, h1, img, p, span, text)
+import Html.Attributes exposing (class, classList, id, src, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -37,6 +37,7 @@ import Json.Encode as Encode
 import List.Extra as List
 import Log
 import Page
+import Ports
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
@@ -67,11 +68,12 @@ import View.Modal as Modal
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( initModel loggedIn.shared
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
-        ]
+    let
+        model =
+            initModel loggedIn.shared
+    in
+    ( model
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -100,7 +102,34 @@ type alias Model =
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , showModalRequestingSponsor : Bool
     }
+
+
+hasModalsOpen : Model -> Bool
+hasModalsOpen model =
+    let
+        isShowingInviteModal =
+            case model.inviteModalStatus of
+                InviteModalClosed ->
+                    False
+
+                _ ->
+                    True
+
+        isShowingClaimModal =
+            case model.claimModalStatus of
+                Claim.Closed ->
+                    False
+
+                _ ->
+                    True
+    in
+    model.showTransferFiltersModal
+        || model.showContactModal
+        || model.showModalRequestingSponsor
+        || isShowingInviteModal
+        || isShowingClaimModal
 
 
 initModel : Shared -> Model
@@ -125,6 +154,7 @@ initModel shared =
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+    , showModalRequestingSponsor = False
     }
 
 
@@ -217,7 +247,7 @@ view ({ shared, accountName } as loggedIn) model =
                             , div
                                 [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
                                 [ div [ class "w-full" ]
-                                    [ viewBalance shared balance
+                                    [ viewBalance loggedIn community balance
                                     , div [ class "mt-6 flex space-x-6" ]
                                         [ viewMyClaimsCard loggedIn
                                         , viewMyOffersCard loggedIn
@@ -234,6 +264,7 @@ view ({ shared, accountName } as loggedIn) model =
                         , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
+                        , viewModalRequestingSponsor shared community model
                         , viewTransferFilters loggedIn community.members model
                         ]
 
@@ -266,20 +297,51 @@ viewHeader loggedIn community isCommunityAdmin =
         ]
 
 
+viewNewTag : Shared -> Html msg
+viewNewTag shared =
+    p [ class "flex items-center bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+        [ text <| shared.translators.t "contact_modal.new" ]
+
+
+viewModalRequestingSponsor : Shared -> Community.Model -> Model -> Html Msg
+viewModalRequestingSponsor shared community model =
+    let
+        text_ =
+            shared.translators.t >> text
+    in
+    Modal.initWith
+        { closeMsg = ClosedModalRequestingSponsor
+        , isVisible = model.showModalRequestingSponsor
+        }
+        |> Modal.withHeaderElement (viewNewTag shared)
+        |> Modal.withBody
+            [ div [ class "flex flex-col items-center h-full" ]
+                [ h1 [ class "text-center text-heading font-bold" ]
+                    [ text_ "sponsorship.dashboard_modal.title" ]
+                , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
+                , div [ class "w-full mt-7 mx-auto md:w-5/6 lg:w-2/3" ]
+                    [ p [ class "text-center mb-6" ]
+                        [ text_ "sponsorship.dashboard_modal.subtitle" ]
+                    , p [ class "text-center mb-6" ]
+                        [ text_ "sponsorship.dashboard_modal.explanation" ]
+                    , a
+                        [ class "button button-primary w-full md:mt-8 mb-6"
+                        , Route.href Route.CommunitySponsor
+                        ]
+                        [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
+                    ]
+                ]
+            ]
+        |> Modal.withSize Modal.Large
+        |> Modal.toHtml
+
+
 addContactModal : Shared -> Model -> Html Msg
 addContactModal shared ({ contactModel } as model) =
     let
         text_ s =
             shared.translators.t s
                 |> text
-
-        header =
-            div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
-                    [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
-                    [ text_ "contact_modal.title" ]
-                ]
 
         form =
             Contact.view shared.translators contactModel
@@ -289,8 +351,9 @@ addContactModal shared ({ contactModel } as model) =
         { closeMsg = ClosedAddContactModal
         , isVisible = model.showContactModal
         }
+        |> Modal.withHeaderElement (viewNewTag shared)
         |> Modal.withBody
-            [ header
+            [ p [ class "text-heading font-bold mt-2" ] [ text_ "contact_modal.title" ]
             , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
             , p [ class "text-caption text-center uppercase my-4" ]
@@ -380,6 +443,7 @@ viewInvitationModal { shared } model =
                             , ( "button-success", model.copied )
                             ]
                         , class "button w-full md:w-48 select-all"
+                        , id "copy-invite-button"
                         , onClick (CopyToClipboard "invitation-id")
                         ]
                         [ if model.copied then
@@ -588,20 +652,29 @@ viewTransfers loggedIn model isMobile =
                     ]
 
             LoadingGraphql (Just transfers) ->
-                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
+                viewTransferList loggedIn
+                    model
+                    transfers
+                    Nothing
+                    { isLoading = True, isMobile = isMobile }
 
             LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
+                viewTransferList loggedIn
+                    model
+                    transfers
+                    maybePageInfo
+                    { isLoading = False, isMobile = isMobile }
         ]
 
 
 viewTransferList :
     LoggedIn.Model
+    -> Model
     -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
     -> { isLoading : Bool, isMobile : Bool }
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
+viewTransferList loggedIn model transfers maybePageInfo { isLoading, isMobile } =
     let
         addLoading transfers_ =
             if isLoading then
@@ -630,7 +703,9 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
             else
                 View.Components.TrackSelf
         }
-        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
+        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4"
+        , classList [ ( "md:overflow-y-hidden", hasModalsOpen model ) ]
+        ]
         (transfers
             |> List.groupWhile
                 (\( t1, _ ) ( t2, _ ) ->
@@ -814,8 +889,8 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewBalance : Shared -> Balance -> Html Msg
-viewBalance shared balance =
+viewBalance : LoggedIn.Model -> Community.Model -> Balance -> Html Msg
+viewBalance ({ shared } as loggedIn) community balance =
     let
         text_ =
             text << shared.translators.t
@@ -824,7 +899,7 @@ viewBalance shared balance =
         [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
         , p [ class "text-indigo-500 mt-3" ]
             [ span [ class "font-bold text-3xl" ]
-                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
+                [ text <| Eos.formatSymbolAmount shared.translators balance.asset.symbol balance.asset.amount ]
             , text " "
             , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
             ]
@@ -833,6 +908,16 @@ viewBalance shared balance =
             , Route.href (Route.Transfer Nothing)
             ]
             [ text_ "dashboard.transfer" ]
+        , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+            Just _ ->
+                button
+                    [ class "button button-secondary w-full mt-4"
+                    , onClick ClickedSupportUsButton
+                    ]
+                    [ text_ "community.index.support_us" ]
+
+            Nothing ->
+                text ""
         , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
             [ a
                 [ class "w-full flex items-center justify-between text-gray-900 py-5"
@@ -848,6 +933,22 @@ viewBalance shared balance =
                 [ text_ "dashboard.invite"
                 , Icons.arrowDown "-rotate-90"
                 ]
+            , case loggedIn.contributionCount of
+                RemoteData.Success contributionCount ->
+                    if contributionCount > 0 then
+                        a
+                            [ class "w-full flex items-center justify-between text-gray-900 py-5"
+                            , Route.href (Route.ProfileContributions loggedIn.accountName)
+                            ]
+                            [ text_ "dashboard.my_contributions"
+                            , Icons.arrowDown "-rotate-90"
+                            ]
+
+                    else
+                        text ""
+
+                _ ->
+                    text ""
             ]
         ]
 
@@ -918,7 +1019,6 @@ type Msg
     = NoOp
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
-    | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
@@ -939,6 +1039,7 @@ type Msg
     | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
     | ClickedApplyTransfersFilters
     | ClickedTransferCard Int
+    | ClickedSupportUsButton
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -947,6 +1048,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ToggleAnalysisSorting
+    | ClosedModalRequestingSponsor
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -960,26 +1062,37 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         CompletedLoadCommunity community ->
+            let
+                hasContributionConfiguration =
+                    case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                        Just _ ->
+                            True
+
+                        Nothing ->
+                            False
+
+                markSponsorModalAsSeen =
+                    if hasContributionConfiguration then
+                        UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
+                            >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
+
+                    else
+                        identity
+
+                showModalRequestingSponsor =
+                    hasContributionConfiguration && not shared.hasSeenSponsorModal
+            in
             UR.init
                 { model
                     | balance = RemoteData.Loading
                     , analysis = LoadingGraphql Nothing
+                    , showModalRequestingSponsor = showModalRequestingSponsor
+                    , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
                 |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
                 |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
-
-        CompletedLoadProfile profile ->
-            let
-                addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
-
-                showContactModalFromDate =
-                    addContactLimitDate - Time.posixToMillis shared.now > 0
-            in
-            { model | showContactModal = showContactModalFromDate && List.isEmpty profile.contacts }
-                |> UR.init
+                |> markSponsorModalAsSeen
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1421,6 +1534,10 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
 
+        ClickedSupportUsButton ->
+            { model | showModalRequestingSponsor = True }
+                |> UR.init
+
         CreateInvite ->
             case model.balance of
                 RemoteData.Success (Just b) ->
@@ -1495,6 +1612,10 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedInviteCreation (Ok invitationId) ->
             { model | inviteModalStatus = InviteModalLoaded invitationId }
                 |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "copy-invite-button"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
@@ -1549,9 +1670,37 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd fetchCmd
 
+        ClosedModalRequestingSponsor ->
+            let
+                newModel =
+                    { model | showModalRequestingSponsor = False }
+            in
+            { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
+                |> UR.init
+
 
 
 -- HELPERS
+
+
+shouldShowContactModal : LoggedIn.Model -> Model -> Bool
+shouldShowContactModal loggedIn model =
+    case loggedIn.profile of
+        RemoteData.Success profile ->
+            let
+                addContactLimitDate =
+                    -- 01/01/2022
+                    1641006000000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis loggedIn.shared.now > 0
+            in
+            showContactModalFromDate
+                && List.isEmpty profile.contacts
+                && not model.showModalRequestingSponsor
+
+        _ ->
+            False
 
 
 fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
@@ -1718,9 +1867,6 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
-        LoggedIn.ProfileLoaded profile ->
-            Just (CompletedLoadProfile profile)
-
         _ ->
             Nothing
 
@@ -1764,9 +1910,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        CompletedLoadProfile _ ->
-            [ "CompletedLoadProfile" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]
@@ -1828,6 +1971,9 @@ msgToString msg =
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
 
+        ClickedSupportUsButton ->
+            [ "ClickedSupportUsButton" ]
+
         CreateInvite ->
             [ "CreateInvite" ]
 
@@ -1851,3 +1997,6 @@ msgToString msg =
 
         ToggleAnalysisSorting ->
             [ "ToggleAnalysisSorting" ]
+
+        ClosedModalRequestingSponsor ->
+            [ "ClosedModalRequestingSponsor" ]

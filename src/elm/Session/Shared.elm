@@ -54,6 +54,7 @@ type alias Shared =
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
+    , hasSeenSponsorModal : Bool
     }
 
 
@@ -94,6 +95,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility
+      , hasSeenSponsorModal = flags.hasSeenSponsorModal
       }
     , case environment of
         Production ->

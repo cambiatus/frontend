@@ -9,6 +9,7 @@ import Html.Attributes exposing (class)
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import Log
+import Maybe.Extra
 import Page
 import Ports
 import RemoteData
@@ -59,6 +60,7 @@ type Msg
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc
+    | ToggleSponsorship
     | SaveSuccess
 
 
@@ -120,6 +122,13 @@ view loggedIn model =
                                     { message = t "community.kyc.info"
                                     , iconClass = "text-orange-300"
                                     }
+                             , View.Form.Toggle.init
+                                { label = text (t "sponsorship.title")
+                                , id = "sponsorship-toggle"
+                                , onToggle = \_ -> ToggleSponsorship
+                                , disabled = True
+                                , value = Maybe.Extra.isJust community.contributionConfiguration
+                                }
                              ]
                                 |> List.map
                                     (View.Form.Toggle.withAttrs [ class "py-6" ]
@@ -184,6 +193,10 @@ update msg model loggedIn =
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleKyc ->
+            model
+                |> UR.init
+
+        ToggleSponsorship ->
             model
                 |> UR.init
 
@@ -339,6 +352,9 @@ msgToString msg =
 
         ToggleKyc ->
             [ "ToggleKyc" ]
+
+        ToggleSponsorship ->
+            [ "ToggleSponsorship" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]

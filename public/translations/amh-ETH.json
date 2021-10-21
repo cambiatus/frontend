@@ -422,7 +422,16 @@
       "claims": "የይገባኛል ጥያቄዎች",
       "products": "የሱቅ ሽያጭ",
       "orders": "የሱቅ ግዢዎች",
-      "transfers": "ግብይቶች"
+      "transfers": "ግብይቶች",
+      "our_supporters": "የእኛ",
+      "supporters": "ደጋፊዎች",
+      "our_messages": "የእኛ",
+      "messages": "መልእክቶች",
+      "you": "አንቺ",
+      "your_turn": "{{community}} ረድቶዎታል ፣ አሁን የእርስዎ ተራ ነው!",
+      "support_us": "ይደግፉን",
+      "see_supporters": "እኛን የሚደግፉን የቅርብ ጊዜ አባላትን ይመልከቱ።",
+      "see_all_supporters": "ሁሉንም ደጋፊዎች ይመልከቱ"
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",
@@ -614,6 +623,10 @@
         "canRemove": "ከ መገለጫ ይህንነ መረጃ ለማዉጣት ሲወስኑ ባቻ ይችላሉ.",
         "success": "የእርሶ KYC ደታ በትክከል ተቀምጧል."
       }
+    },
+    "thank_you": {
+      "title": "አመሰግናለሁ!",
+      "all_supporters": "የሁሉንም ደጋፊዎች ዝርዝር ይመልከቱ"
     }
   },
   "profile": {
@@ -687,6 +700,15 @@
         "completed_action": "በትክክል ያከናወኗቸውን እርምጃዎች ብቻ ይጠይቁ;",
         "know_good_practices": "ስለ ማህበረሰቡ መልካም ልምዶች ይወቁ"
       }
+    },
+    "contributions": {
+      "profile_contributions": "አስተዋጽዖዎች ከ {{profile_name}}",
+      "not_allowed_title": "የሌሎች ሰዎችን መዋጮ ማየት አይችሉም",
+      "not_allowed": "የሌሎች ሰዎችን መዋጮ ማየት የሚችሉት የማህበረሰብ አስተዳዳሪዎች ብቻ ናቸው",
+      "no_contributions": "እስካሁን ምንም አስተዋፅዖ የለም",
+      "pending": "በመጠባበቅ ላይ",
+      "approved": "ጸድቋል",
+      "failed": "አልተሳካም"
     }
   },
   "shop": {
@@ -753,6 +775,7 @@
     "back": "ወደ ኃላ",
     "transfer": "ለጓደኛ አስተላለፍ ",
     "explore": "እንዴት እንደሚገኝ {{symbol}}",
+    "my_contributions": "የእኔ አስተዋፅዖዎች",
     "invite": "ጓደኞችህን ጋብዝ",
     "sorry": "ይቅርታ!",
     "action_rejected": "የእርሶ ተግባር ተቀባይነት አላገኘም",
@@ -1014,7 +1037,7 @@
     },
     "features": {
       "title": "ገጽታ",
-      "description": "ተግባር, ሱቅ",
+      "description": "ዓላማዎች ፣ እርምጃዎች ፣ መደብር ፣ ስፖንሰርነት",
       "enabled": "ተችሏል",
       "disabled": "አልተቻለም"
     }
@@ -1086,6 +1109,59 @@
       "accept": "አዎ"
     }
   },
+  "sponsorship": {
+    "title": "ስፖንሰርነት",
+    "no_support": "ማህበረሰብዎ ገና ስፖንሰርነትን አይደግፍም",
+    "no_support_subtitle": "ይህንን ባህሪ ለማግበር ከማህበረሰቡ አስተዳደር ቡድን ጋር ይነጋገሩ",
+    "description": "ተጠቃሚዎች ማህበረሰቡን ስፖንሰር እንዲያደርጉ ይፍቀዱ",
+    "sponsor": "ስፖንሰር",
+    "enter_amount": "እርስዎ ለማበርከት የሚፈልጉትን መጠን ያስገቡ",
+    "select_currency": "ሊጠቀሙበት የሚፈልጉትን ምንዛሬ ይምረጡ",
+    "amount_too_small": "መጠኑ ቢያንስ {{minimum}} {{currency}} መሆን አለበት",
+    "amount_too_big": "መጠኑ ከፍተኛው {{maximum}} {{currency}} መሆን አለበት",
+    "invalid_amount": "ልክ ያልሆነ እሴት",
+    "unknown_error": "ክፍያዎን ማስኬድ ላይ ስህተት ነበር",
+    "load_error": "ከ PayPal ጋር መገናኘት ላይ ችግር ነበር ፣ እባክዎ ቆይተው እንደገና ይሞክሩ",
+    "contribution_error": "አስተዋፅኦዎን በማዘጋጀት ላይ ሳለ የሆነ ችግር ተፈጥሯል",
+    "guidance": "መመሪያ",
+    "guidance_description": "ይህንን ባህሪ ለማንቃት ፣ በካምቢያስ ስላክ ላይ ባለው የድጋፍ ሰርጥዎ ላይ እገዛን ይጠይቁ",
+    "cards": {
+      "fiat": {
+        "title": "ምንዛሬዎች ዓይነቶች ተቀባይነት አግኝተዋል",
+        "description": "ማህበረሰቡ በ PayPal በኩል የአሜሪካን ወይም የሌሎችን የገንዘብ ምንዛሪዎችን እንዲቀበል ይፍቀዱ",
+        "toggle_label": "fiat ምንዛሬዎች",
+        "settings": "ቅንብሮች"
+      },
+      "crypto": {
+        "title": "ሌሎች ተቀባይነት ያላቸው ገንዘቦች",
+        "description": "ማህበረሰቡ ምስጢራዊ ምንዛሪዎችን እንዲቀበል ይፍቀዱ",
+        "toggle_label": "ምስጢራዊ ምንዛሬዎች"
+      },
+      "message": {
+        "title": "መልእክት \"አመሰግናለሁ\"",
+        "description": "ከማህበረሰብዎ ጋር የሚስማማውን ‹አመሰግናለሁ› የሚለውን መልእክት ያዋቅሩ",
+        "button_label": "መልዕክት ያዋቅሩ"
+      }
+    },
+    "fiat": {
+      "title": "Fiat ገንዘብ",
+      "paypal_account": "የማህበረሰብ PayPal ሂሳብ",
+      "paypal_example": "example@gmail.com",
+      "how_to_change": "ይህንን መለያ ማዘመን ከፈለጉ እባክዎን በ Slack ላይ ባለው የድጋፍ ሰርጥ በኩል ያነጋግሩን"
+    },
+    "thank_you_message": {
+      "title": "የመልዕክት ርዕስ",
+      "default_title": "{{community}} ን ስፖንሰር ስላደረጉ እናመሰግናለን!",
+      "message": "መልዕክት",
+      "default_message": "የእርስዎ አስተዋፅኦ ማህበረሰብዎ የበለጠ ተፅእኖ እንዲኖረው እየረዳ ነው ፣ እርስዎ ግሩም ነዎት!"
+    },
+    "dashboard_modal": {
+      "title": "ማህበረሰብዎን ይደግፉ",
+      "subtitle": "አሁን ይህንን ማህበረሰብ ስፖንሰር ማድረግ ይችላሉ።",
+      "explanation": "ከታች ያለውን አዝራር ጠቅ በማድረግ አስተዋፅኦዎን ያበርክቱ። ግብይትዎን ለማጠናቀቅ ወደ PayPal ይዛወራሉ።",
+      "sponsor": "ስፖንሰር {{community_name}}"
+    }
+  },
   "markdown": {
     "link_form": {
       "header": "አገናኝ አክል",
@@ -1099,5 +1175,19 @@
   },
   "block_explorer": {
     "see": "በብሎክ አሳሽ ውስጥ ይመልከቱ"
+  },
+  "currency": {
+    "brl_singular": "እውነተኛ",
+    "btc_singular": "ቢትኮይን",
+    "crc_singular": "ኮሎን",
+    "eos_singular": "Eos",
+    "eth_singular": "ኤቴሬም",
+    "usd_singular": "ዶላር",
+    "brl_plural": "እውነተኛ",
+    "btc_plural": "ቢትኮይን",
+    "crc_plural": "ኮሎኔሎች",
+    "eos_plural": "Eos",
+    "eth_plural": "ቢትኮይን",
+    "usd_plural": "ዶላር"
   }
 }

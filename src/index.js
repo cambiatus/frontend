@@ -1,4 +1,5 @@
 import * as AbsintheSocket from '@absinthe/socket'
+import * as paypalJs from '@paypal/paypal-js'
 import * as Sentry from '@sentry/browser'
 import Eos from 'eosjs'
 import ecc from 'eosjs-ecc'
@@ -15,6 +16,23 @@ import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
 
+// =========================================
+// Initial constants
+// =========================================
+
+let eos = null
+const USER_KEY = 'bespiral.user'
+const LANGUAGE_KEY = 'bespiral.language'
+const AUTH_TOKEN = 'bespiral.auth_token'
+const RECENT_SEARCHES = 'bespiral.recent_search'
+const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
+const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
+const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
+const env = process.env.NODE_ENV || 'development'
+const graphqlSecret = process.env.GRAPHQL_SECRET || ''
+const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
+const config = configuration[env]
+
 // If you're updating `pdfjs-dist`, make sure to
 // `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
@@ -23,6 +41,110 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 // Custom elements
 // =========================================
 /* global HTMLElement, CustomEvent */
+
+window.customElements.define('paypal-buttons',
+  class PaypalButtons extends HTMLElement {
+    static get observedAttributes () { return ['elm-currency'] }
+
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'elm-currency') {
+        this.removePaypal()
+        this.setupPaypal()
+      }
+    }
+
+    constructor () {
+      super()
+
+      const shadow = this.attachShadow({ mode: 'open' })
+      this._paypalContainer = document.createElement('div')
+      shadow.appendChild(this._paypalContainer)
+    }
+
+    disconnectedCallback () {
+      this.removePaypal()
+    }
+
+    removePaypal () {
+      for (const child of document.head.childNodes) {
+        if (child.nodeName.toLowerCase() === 'script' && child.src) {
+          if (child.src.startsWith('https://www.paypal.com/sdk/js?')) {
+            document.head.removeChild(child)
+          }
+        }
+      }
+    }
+
+    setupPaypal () {
+      const handleError = (err) => {
+        if (err.message !== 'Elm got an error creating contribution') {
+          this.dispatchEvent(new CustomEvent('paypal-error', { error: err }))
+        }
+      }
+
+      paypalJs.loadScript({
+        'client-id': config.paypal.clientId,
+        currency: this.getAttribute('elm-currency') || 'USD'
+      })
+        .then((paypal) => {
+          paypal.Buttons({
+            style: {
+              shape: 'pill'
+            },
+
+            createOrder: async (data, actions) => {
+              const valueAttribute = this.getAttribute('elm-value')
+              if (valueAttribute === '') {
+                return handleError(new Error('Amount could not be parsed as a float by Elm'))
+              }
+
+              app.ports.requestPaypalInfoFromJs.send(this.id)
+              const paypalInfo = await usePortAsPromise(app.ports.paypalInfo, (paypalInfo) => {
+                if (paypalInfo.targetId !== this.id) {
+                  return { unsubscribeFromPort: false }
+                }
+
+                return paypalInfo
+              })
+
+              if (paypalInfo.error) {
+                return handleError(new Error('Elm got an error creating contribution'))
+              }
+
+              return actions.order.create({
+                purchase_units: [{
+                  invoice_id: paypalInfo.invoiceId,
+                  amount: {
+                    value: paypalInfo.amount,
+                    currency_code: paypalInfo.currency
+                  }
+                }],
+                application_context: {
+                  brand_name: paypalInfo.communityName,
+                  shipping_preference: 'NO_SHIPPING'
+                }
+              })
+            },
+
+            onApprove: (data, actions) => {
+              return actions.order.capture().then(() => {
+                this.dispatchEvent(new CustomEvent('paypal-approve', {}))
+              })
+            },
+
+            onCancel: () => {
+              this.dispatchEvent(new CustomEvent('paypal-cancel', {}))
+            },
+
+            onError: handleError
+          }).render(this._paypalContainer)
+        })
+        .catch((err) => {
+          this.dispatchEvent(new CustomEvent('paypal-load-error', { error: err }))
+        })
+    }
+  }
+)
 
 window.customElements.define('masked-input-helper',
   class MaskedInputHelper extends HTMLElement {
@@ -343,6 +465,10 @@ window.customElements.define('markdown-editor',
     }
 
     linkHandler () {
+      if (!this._quill.isEnabled()) {
+        return
+      }
+
       let range = this._quill.getSelection(true)
       const isLink = this._quill.getFormat(range).link !== undefined
       if (range.length === 0 && isLink) {
@@ -359,17 +485,19 @@ window.customElements.define('markdown-editor',
         }
       ))
 
-      const markdownLinkPortHandler = (link) => {
+      usePortAsPromise(app.ports.markdownLink, (link) => {
         if (link.id === this.id) {
           this._quill.updateContents(new QuillDelta()
             .retain(range.index)
             .delete(range.length)
             .insert(link.label, { ...currentFormat, link: link.url })
           )
-          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
+
+          this._quill.setSelection(range.index + link.label.length, 0, 'silent')
+        } else {
+          return { unsubscribeFromPort: false }
         }
-      }
-      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
+      })
     }
 
     /** Gets the range from the formatting that the `index` position is affected
@@ -719,19 +847,6 @@ window.customElements.define('bg-no-scroll',
 // App startup
 // =========================================
 
-let eos = null
-const USER_KEY = 'bespiral.user'
-const LANGUAGE_KEY = 'bespiral.language'
-const PUSH_PREF = 'bespiral.push.pref'
-const AUTH_TOKEN = 'bespiral.auth_token'
-const RECENT_SEARCHES = 'bespiral.recent_search'
-const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
-const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
-const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
-const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
-const config = configuration[env]
-
 // Init Sentry as soon as possible so it starts recording events and breadcrumbs
 // automatically
 Sentry.init({
@@ -890,7 +1005,7 @@ const setItem = (key, value) => {
   }
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
+const storedKeys = [USER_KEY, LANGUAGE_KEY, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
 if (useSubdomain) {
   storedKeys.forEach((key) => {
@@ -1004,7 +1119,8 @@ function flags () {
     canReadClipboard: canReadClipboard(),
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
-    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false
+    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
+    hasSeenSponsorModal: JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false
   }
 }
 
@@ -1024,6 +1140,30 @@ addBreadcrumb({
 
 // Register Service Worker After App
 // registerServiceWorker()
+
+/**
+ * Subscribe to a port to consume it only once and unsubcribe from it.
+ * It's good practice to have an id to check if that port is actually supposed
+ * to communicate with the component that requested it. In case it's not, the
+ * `handler` should return `{ unsubscribeFromPort: false }` (that way the
+ * component doesn't unsubscribe from the port)
+ * @param {*} port an elm port
+ * @param {*} handler a function to act as the port's subscription
+ * @returns a promise that resolves with the result of `handler`
+ */
+const usePortAsPromise = (port, handler) => {
+  return new Promise((resolve, reject) => {
+    const internalHandler = (...args) => {
+      const result = handler(...args)
+      if (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false) {
+        port.unsubscribe(internalHandler)
+        resolve(result)
+      }
+    }
+
+    port.subscribe(internalHandler)
+  })
+}
 
 // Ports error Reporter
 app.ports.addBreadcrumbPort.subscribe(addBreadcrumb)
@@ -1110,6 +1250,18 @@ app.ports.storePinVisibility.subscribe(pinVisibility => {
     category: 'storePinVisibility',
     message: 'Stored pin visibility',
     data: { pinVisibility },
+    localData: {},
+    level: 'debug'
+  })
+})
+
+app.ports.storeHasSeenSponsorModal.subscribe(hasSeenSponsorModal => {
+  setItem(HAS_SEEN_SPONSOR_MODAL_KEY, hasSeenSponsorModal)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeHasSeenSponsorModal',
+    message: 'Stored whether or not the user has seen the sponsor modal',
+    data: { hasSeenSponsorModal },
     localData: {},
     level: 'debug'
   })

@@ -528,7 +528,7 @@ update msg model loggedIn =
                                     claim.action.objective.community.symbol
 
                                 value =
-                                    Eos.assetToString
+                                    Eos.assetToString loggedIn.shared.translators
                                         { amount = claim.action.verifierReward
                                         , symbol = symbol
                                         }

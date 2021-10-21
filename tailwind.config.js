@@ -184,10 +184,19 @@ module.exports = {
             opacity: '1',
             'pointer-events': 'auto'
           }
+        },
+        'skeleton-loading-keyframes': {
+          '0%': {
+            'background-color': '#e0e0e0'
+          },
+          '100%': {
+            'background-color': '#eeeeee'
+          }
         }
       },
       animation: {
-        'fade-in': 'appear 50ms linear 400ms both'
+        'fade-in': 'appear 50ms linear 400ms both',
+        'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate'
       }
     }
   },

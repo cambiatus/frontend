@@ -21,6 +21,12 @@ import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.Settings as CommunitySettings
+import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
+import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
+import Page.Community.Settings.Sponsorship.ThankYouMessage as CommunitySettingsSponsorshipThankYouMessage
+import Page.Community.Sponsor as CommunitySponsor
+import Page.Community.Supporters as CommunitySupporters
+import Page.Community.ThankYou as CommunityThankYou
 import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
@@ -34,6 +40,7 @@ import Page.Profile as Profile
 import Page.Profile.AddContact as ProfileAddContact
 import Page.Profile.AddKyc as ProfileAddKyc
 import Page.Profile.Claims as ProfileClaims
+import Page.Profile.Contributions as ProfileContributions
 import Page.Profile.Editor as ProfileEditor
 import Page.Register as Register
 import Page.Shop as Shop
@@ -130,6 +137,10 @@ subscriptions model =
                 CommunitySettingsInfo.subscriptions subModel
                     |> Sub.map GotCommunitySettingsInfoMsg
 
+            CommunitySponsor subModel ->
+                CommunitySponsor.subscriptions subModel
+                    |> Sub.map GotCommunitySponsorMsg
+
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
@@ -177,7 +188,13 @@ type Status
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
+    | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
+    | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
+    | CommunitySettingsSponsorshipThankYouMessage CommunitySettingsSponsorshipThankYouMessage.Model
     | CommunitySelector CommunitySelector.Model
+    | CommunityThankYou
+    | CommunitySponsor CommunitySponsor.Model
+    | CommunitySupporters CommunitySupporters.Model
     | Objectives Objectives.Model
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
@@ -186,6 +203,7 @@ type Status
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
     | Profile Profile.Model
+    | ProfileContributions ProfileContributions.Model
     | ProfileEditor ProfileEditor.Model
     | ProfileAddKyc ProfileAddKyc.Model
     | ProfileClaims ProfileClaims.Model
@@ -218,6 +236,11 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
+    | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
+    | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
+    | GotCommunitySettingsSponsorshipThankYouMessageMsg CommunitySettingsSponsorshipThankYouMessage.Msg
+    | GotCommunitySponsorMsg CommunitySponsor.Msg
+    | GotCommunitySupportersMsg CommunitySupporters.Msg
     | GotObjectivesMsg Objectives.Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
@@ -226,6 +249,7 @@ type Msg
     | GotLoginMsg Login.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
+    | GotProfileContributionsMsg ProfileContributions.Msg
     | GotProfileEditorMsg ProfileEditor.Msg
     | GotProfileAddKycMsg ProfileAddKyc.Msg
     | GotProfileClaimsMsg ProfileClaims.Msg
@@ -431,6 +455,11 @@ update msg model =
                 >> updateLoggedInUResult Profile GotProfileMsg model
                 |> withLoggedIn
 
+        ( GotProfileContributionsMsg subMsg, ProfileContributions subModel ) ->
+            ProfileContributions.update subMsg subModel
+                >> updateLoggedInUResult ProfileContributions GotProfileContributionsMsg model
+                |> withLoggedIn
+
         ( GotProfileEditorMsg subMsg, ProfileEditor subModel ) ->
             ProfileEditor.update subMsg subModel
                 >> updateLoggedInUResult ProfileEditor GotProfileEditorMsg model
@@ -469,6 +498,31 @@ update msg model =
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
             CommunitySettingsCurrency.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsSponsorshipMsg subMsg, CommunitySettingsSponsorship subModel ) ->
+            CommunitySettingsSponsorship.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsSponsorshipFiatMsg subMsg, CommunitySettingsSponsorshipFiat subModel ) ->
+            CommunitySettingsSponsorshipFiat.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsSponsorshipThankYouMessageMsg subMsg, CommunitySettingsSponsorshipThankYouMessage subModel ) ->
+            CommunitySettingsSponsorshipThankYouMessage.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySponsorMsg subMsg, CommunitySponsor subModel ) ->
+            CommunitySponsor.update subMsg subModel
+                >> updateLoggedInUResult CommunitySponsor GotCommunitySponsorMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySupportersMsg subMsg, CommunitySupporters subModel ) ->
+            CommunitySupporters.update subMsg subModel
+                >> updateLoggedInUResult CommunitySupporters GotCommunitySupportersMsg model
                 |> withLoggedIn
 
         ( GotShopMsg subMsg, Shop maybeFilter subModel ) ->
@@ -604,9 +658,29 @@ broadcast broadcastMessage status =
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
 
+                CommunitySettingsSponsorship _ ->
+                    CommunitySettingsSponsorship.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsSponsorshipMsg
+
+                CommunitySettingsSponsorshipFiat _ ->
+                    CommunitySettingsSponsorshipFiat.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsSponsorshipFiatMsg
+
+                CommunitySettingsSponsorshipThankYouMessage _ ->
+                    CommunitySettingsSponsorshipThankYouMessage.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsSponsorshipThankYouMessageMsg
+
                 CommunitySettings _ ->
                     CommunitySettings.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsMsg
+
+                CommunitySponsor _ ->
+                    CommunitySponsor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySponsorMsg
+
+                CommunitySupporters _ ->
+                    CommunitySupporters.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySupportersMsg
 
                 ObjectiveEditor _ ->
                     ObjectiveEditor.receiveBroadcast broadcastMessage
@@ -623,6 +697,10 @@ broadcast broadcastMessage status =
                 Profile _ ->
                     Profile.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileMsg
+
+                ProfileContributions _ ->
+                    ProfileContributions.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotProfileContributionsMsg
 
                 Invite _ ->
                     Invite.receiveBroadcast broadcastMessage
@@ -895,8 +973,26 @@ statusToRoute status session =
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
+        CommunitySettingsSponsorship _ ->
+            Just Route.CommunitySettingsSponsorship
+
+        CommunitySettingsSponsorshipFiat _ ->
+            Just Route.CommunitySettingsSponsorshipFiat
+
+        CommunitySettingsSponsorshipThankYouMessage _ ->
+            Just Route.CommunitySettingsSponsorshipThankYouMessage
+
         CommunitySelector subModel ->
             Just (Route.CommunitySelector subModel.maybeRedirect)
+
+        CommunityThankYou ->
+            Just Route.CommunityThankYou
+
+        CommunitySponsor _ ->
+            Just Route.CommunitySponsor
+
+        CommunitySupporters _ ->
+            Just Route.CommunitySupporters
 
         Objectives _ ->
             Just Route.Objectives
@@ -940,6 +1036,9 @@ statusToRoute status session =
 
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
+
+        ProfileContributions subModel ->
+            Just (Route.ProfileContributions subModel.profileName)
 
         ProfileEditor _ ->
             Just Route.ProfileEditor
@@ -1194,8 +1293,13 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Profile profileName) ->
             (\loggedIn -> Profile.init loggedIn profileName)
-                >> updateStatusWith Profile GotProfileMsg model
+                >> updateLoggedInUResult Profile GotProfileMsg model
                 |> withLoggedIn (Route.Profile profileName)
+
+        Just (Route.ProfileContributions profileName) ->
+            (\l -> ProfileContributions.init l profileName)
+                >> updateStatusWith ProfileContributions GotProfileContributionsMsg model
+                |> withLoggedIn (Route.ProfileContributions profileName)
 
         Just Route.ProfileEditor ->
             ProfileEditor.init
@@ -1247,10 +1351,40 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
                 |> withLoggedIn Route.CommunitySettingsCurrency
 
+        Just Route.CommunitySettingsSponsorship ->
+            CommunitySettingsSponsorship.init
+                >> updateStatusWith CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg model
+                |> withLoggedIn Route.CommunitySettingsSponsorship
+
+        Just Route.CommunitySettingsSponsorshipFiat ->
+            CommunitySettingsSponsorshipFiat.init
+                >> updateStatusWith CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg model
+                |> withLoggedIn Route.CommunitySettingsSponsorshipFiat
+
+        Just Route.CommunitySettingsSponsorshipThankYouMessage ->
+            CommunitySettingsSponsorshipThankYouMessage.init
+                >> updateStatusWith CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg model
+                |> withLoggedIn Route.CommunitySettingsSponsorshipThankYouMessage
+
         Just (Route.CommunitySelector maybeRedirect) ->
             CommunitySelector.init maybeRedirect
                 >> updateStatusWith CommunitySelector (\_ -> Ignored) model
                 |> withLoggedIn (Route.CommunitySelector maybeRedirect)
+
+        Just Route.CommunityThankYou ->
+            CommunityThankYou
+                |> updateStatus model
+                |> noCmd
+
+        Just Route.CommunitySponsor ->
+            CommunitySponsor.init
+                >> updateStatusWith CommunitySponsor GotCommunitySponsorMsg model
+                |> withLoggedIn Route.CommunitySponsor
+
+        Just Route.CommunitySupporters ->
+            CommunitySupporters.init
+                >> updateLoggedInUResult CommunitySupporters GotCommunitySupportersMsg model
+                |> withLoggedIn Route.CommunitySupporters
 
         Just Route.NewCommunity ->
             CommunityEditor.init
@@ -1447,6 +1581,21 @@ msgToString msg =
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
+        GotCommunitySettingsSponsorshipMsg subMsg ->
+            "GotCommunitySettingsSponsorshipMsg" :: CommunitySettingsSponsorship.msgToString subMsg
+
+        GotCommunitySettingsSponsorshipFiatMsg subMsg ->
+            "GotCommunitySettingsSponsorshipFiatMsg" :: CommunitySettingsSponsorshipFiat.msgToString subMsg
+
+        GotCommunitySettingsSponsorshipThankYouMessageMsg subMsg ->
+            "GotCommunitySettingsSponsorshipThankYouMessageMsg" :: CommunitySettingsSponsorshipThankYouMessage.msgToString subMsg
+
+        GotCommunitySponsorMsg subMsg ->
+            "GotCommunitySponsorMsg" :: CommunitySponsor.msgToString subMsg
+
+        GotCommunitySupportersMsg subMsg ->
+            "GotCommunitySupportersMsg" :: CommunitySupporters.msgToString subMsg
+
         GotObjectivesMsg subMsg ->
             "GotObjectivesMsg" :: Objectives.msgToString subMsg
 
@@ -1473,6 +1622,9 @@ msgToString msg =
 
         GotProfileMsg subMsg ->
             "GotProfileMsg" :: Profile.msgToString subMsg
+
+        GotProfileContributionsMsg subMsg ->
+            "GotProfileContributionsMsg" :: ProfileContributions.msgToString subMsg
 
         GotProfileEditorMsg subMsg ->
             "GotProfileEditorMsg" :: ProfileEditor.msgToString subMsg
@@ -1641,8 +1793,26 @@ view model =
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
 
+        CommunitySettingsSponsorship subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorship GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.view
+
+        CommunitySettingsSponsorshipFiat subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorshipFiat GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.view
+
+        CommunitySettingsSponsorshipThankYouMessage subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsSponsorshipThankYouMessage GotCommunitySettingsSponsorshipThankYouMessageMsg CommunitySettingsSponsorshipThankYouMessage.view
+
         CommunitySelector subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySelector (\_ -> Ignored) CommunitySelector.view
+
+        CommunityThankYou ->
+            viewLoggedIn () LoggedIn.CommunityThankYou (\_ -> Ignored) (\l () -> CommunityThankYou.view l)
+
+        CommunitySponsor subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySponsor GotCommunitySponsorMsg CommunitySponsor.view
+
+        CommunitySupporters subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySupporters GotCommunitySupportersMsg CommunitySupporters.view
 
         CommunityEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunityEditor GotCommunityEditorMsg CommunityEditor.view
@@ -1664,6 +1834,9 @@ view model =
 
         Profile subModel ->
             viewLoggedIn subModel LoggedIn.Profile GotProfileMsg Profile.view
+
+        ProfileContributions subModel ->
+            viewLoggedIn subModel LoggedIn.ProfileContributions GotProfileContributionsMsg ProfileContributions.view
 
         ProfileEditor subModel ->
             viewLoggedIn subModel LoggedIn.ProfileEditor GotProfileEditorMsg ProfileEditor.view

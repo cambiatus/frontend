@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.User exposing (..)
 
+import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -60,6 +61,11 @@ type alias ClaimsOptionalArguments =
     { communityId : OptionalArgument String }
 
 
+{-|
+
+  - communityId - Optional community filter, filling this will get only claims from this community
+
+-}
 claims :
     (ClaimsOptionalArguments -> ClaimsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Claim
@@ -88,6 +94,52 @@ contacts :
     -> SelectionSet (List decodesTo) Cambiatus.Object.User
 contacts object_ =
     Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
+
+
+type alias ContributionCountOptionalArguments =
+    { communityId : OptionalArgument String }
+
+
+{-|
+
+  - communityId - Optional community filter, filling this will get only contributions from this community
+
+-}
+contributionCount :
+    (ContributionCountOptionalArguments -> ContributionCountOptionalArguments)
+    -> SelectionSet Int Cambiatus.Object.User
+contributionCount fillInOptionals =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForField "Int" "contributionCount" optionalArgs Decode.int
+
+
+type alias ContributionsOptionalArguments =
+    { communityId : OptionalArgument String
+    , status : OptionalArgument Cambiatus.Enum.ContributionStatusType.ContributionStatusType
+    }
+
+
+contributions :
+    (ContributionsOptionalArguments -> ContributionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
+contributions fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent, status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
 
 
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User

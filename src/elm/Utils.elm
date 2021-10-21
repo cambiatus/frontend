@@ -21,6 +21,7 @@ import Html
 import Html.Events
 import Iso8601
 import Json.Decode as Decode
+import Mask
 import Time exposing (Posix)
 
 
@@ -58,67 +59,21 @@ previousDay time =
 {-| Format a float to separate thousands, and use `,` as a separator for
 decimals
 -}
-formatFloat : Float -> Int -> Bool -> String
-formatFloat number decimalCases useSeparator =
-    let
-        addThousandsSeparator : String -> String
-        addThousandsSeparator floatWithoutSeparator =
-            if not useSeparator then
-                floatWithoutSeparator
+formatFloat : Maybe { translators | t : String -> String } -> Int -> Float -> String
+formatFloat maybeTranslators decimalCases number =
+    Mask.float (Mask.Precisely decimalCases)
+        (case maybeTranslators of
+            Just { t } ->
+                { decimalSeparator = t "decimal_separator"
+                , thousandsSeparator = t "thousands_separator"
+                }
 
-            else
-                let
-                    sign =
-                        String.filter (not << Char.isDigit) floatWithoutSeparator
-                in
-                floatWithoutSeparator
-                    |> String.filter Char.isDigit
-                    |> String.foldr
-                        (\currChar ( currCount, currString ) ->
-                            if currCount == 3 then
-                                ( 1, currChar :: '.' :: currString )
-
-                            else
-                                ( currCount + 1, currChar :: currString )
-                        )
-                        ( 0, [] )
-                    |> Tuple.second
-                    |> String.fromList
-                    |> (\withThousands -> sign ++ withThousands)
-
-        newSeparator =
-            if useSeparator then
-                ","
-
-            else
-                "."
-    in
-    case String.fromFloat number |> String.split "." of
-        [] ->
-            String.fromFloat number
-
-        [ withoutSeparator ] ->
-            if decimalCases <= 0 then
-                addThousandsSeparator withoutSeparator
-
-            else
-                addThousandsSeparator withoutSeparator
-                    ++ newSeparator
-                    ++ String.repeat decimalCases "0"
-
-        beforeSeparator :: afterSeparator :: _ ->
-            if decimalCases <= 0 then
-                addThousandsSeparator beforeSeparator
-
-            else
-                let
-                    paddedSeparator =
-                        String.left decimalCases afterSeparator
-                            ++ String.repeat
-                                (max 0 (decimalCases - String.length afterSeparator))
-                                "0"
-                in
-                String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
+            Nothing ->
+                { decimalSeparator = "."
+                , thousandsSeparator = ""
+                }
+        )
+        number
 
 
 escSubscription : msg -> Sub msg

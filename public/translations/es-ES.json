@@ -464,7 +464,16 @@
       "claims": "Reivindicaciones",
       "products": "Ventas de la tienda",
       "orders": "Compras en la tienda",
-      "transfers": "Transacciónes"
+      "transfers": "Transacciónes",
+      "our_supporters": "Nuestros",
+      "supporters": "Partidarios",
+      "our_messages": "Nuestros",
+      "messages": "Mensajes",
+      "you": "Tú",
+      "your_turn": "{{community}} te ayudó, ¡ahora te toca a ti!",
+      "support_us": "Apoyanos",
+      "see_supporters": "Vea los miembros más recientes que nos apoyaron.",
+      "see_all_supporters": "Ver todos los partidarios"
     },
     "invite": {
       "title": "Invita a un amigo",
@@ -657,6 +666,10 @@
         "canRemove": "Siempre puede eliminar esta información de su perfil si decide hacerlo.",
         "success": "Sus datos KYC se guardaron correctamente."
       }
+    },
+    "thank_you": {
+      "title": "¡Gracias!",
+      "all_supporters": "Ver la lista de todos los patrocinadores"
     }
   },
   "profile": {
@@ -729,6 +742,15 @@
         "completed_action": "Reclame solo las acciones que realmente realizó;",
         "know_good_practices": "Conoce las buenas prácticas de la Comunidad"
       }
+    },
+    "contributions": {
+      "profile_contributions": "Contribuciones de {{profile_name}}",
+      "not_allowed_title": "No puede ver las contribuciones de otras personas",
+      "not_allowed": "Solo los administradores de la comunidad pueden ver las contribuciones de otras personas",
+      "no_contributions": "Aún no hay contribuiciones",
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "failed": "Fallida"
     }
   },
   "shop": {
@@ -795,6 +817,7 @@
     "back": "Atrás",
     "transfer": "Transferir a un(a) colega",
     "explore": "Como obtener {{symbol}}",
+    "my_contributions": "Mis contribuciones",
     "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
     "action_rejected": "Tu acción fue rechazada",
@@ -1056,7 +1079,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Ações, loja",
+      "description": "Objetivos, Acciones, Tienda, Patrocinio",
       "enabled": "Activado",
       "disabled": "Desactivado"
     }
@@ -1128,6 +1151,59 @@
       "accept": "Sí"
     }
   },
+  "sponsorship": {
+    "title": "Patrocinio",
+    "no_support": "Tu comunidad aún no admite el patrocinio",
+    "no_support_subtitle": "Habla con el equipo de administración de la comunidad para activar esta función",
+    "description": "Permitir a los usuarios patrocinar a la comunidad",
+    "sponsor": "Patrocinar",
+    "enter_amount": "Ingrese la cantidad que desea contribuir",
+    "select_currency": "Seleccione la moneda que desea utilizar",
+    "amount_too_small": "El monto debe ser de al menos {{minimum}} {{currency}}",
+    "amount_too_big": "El monto debe ser máximo {{maximum}} {{currency}}",
+    "invalid_amount": "Valor no válido",
+    "unknown_error": "Hubo un error al procesar su pago",
+    "load_error": "Hubo un problema al conectarse a PayPal, vuelva a intentarlo más tarde.",
+    "contribution_error": "Algo salió mal mientras preparaba su contribución",
+    "guidance": "Orientación",
+    "guidance_description": "Para habilitar esta función, solicite ayuda en su canal de soporte en Cambiatus Slack",
+    "cards": {
+      "fiat": {
+        "title": "Tipos de monedas aceptadas",
+        "description": "Permita que la comunidad acepte USD u otras monedas fiduciarias a través de PayPal",
+        "toggle_label": "Monedas fiduciarias",
+        "settings": "Configuraciones"
+      },
+      "crypto": {
+        "title": "Otras monedas aceptadas",
+        "description": "Permitir que la comunidad acepte criptomonedas",
+        "toggle_label": "Criptomonedas"
+      },
+      "message": {
+        "title": "Mensaje de \"gracias\"",
+        "description": "Configure el mensaje \"gracias\" para que coincida con su comunidad",
+        "button_label": "Configurar mensaje"
+      }
+    },
+    "fiat": {
+      "title": "Dinero de fíat",
+      "paypal_account": "Cuenta PayPal de la comunidad",
+      "paypal_example": "ejemplo@gmail.com",
+      "how_to_change": "Si necesita actualizar esta cuenta, comuníquese con nosotros a través del canal de soporte en Slack"
+    },
+    "thank_you_message": {
+      "title": "Título del mensaje",
+      "default_title": "¡Gracias por patrocinar {{community}}!",
+      "description": "Mensaje",
+      "default_message": "Tu contribución está ayudando a tu comunidad a ser aún más impactante, ¡eres increíble!"
+    },
+    "dashboard_modal": {
+      "title": "Patrocina tu Comunidad",
+      "subtitle": "Ahora puedes patrocinar esta comunidad.",
+      "explanation": "Haga su contribución en efectivo haciendo clic en el botón de abajo. Serás redirigido a PayPal para completar tu transacción.",
+      "sponsor": "Patrocinar {{community_name}}"
+    }
+  },
   "markdown": {
     "link_form": {
       "header": "Añadir enlace",
@@ -1141,5 +1217,19 @@
   },
   "block_explorer": {
     "see": "Ver en el explorador de bloques"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dólar",
+    "brl_plural": "Reales",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dolares"
   }
 }

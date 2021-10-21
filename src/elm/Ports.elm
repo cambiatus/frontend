@@ -1,5 +1,6 @@
 port module Ports exposing
-    ( JavascriptOut
+    ( ContributionData(..)
+    , JavascriptOut
     , JavascriptOutModel
     , addPlausibleScript
     , getRecentSearches
@@ -8,15 +9,19 @@ port module Ports exposing
     , javascriptOut
     , javascriptOutCmd
     , mapAddress
+    , requestPaypalInfoFromJs
     , sendMarkdownLink
+    , sendPaypalInfo
     , setMarkdownContent
     , storeAuthToken
+    , storeHasSeenSponsorModal
     , storeLanguage
     , storePinVisibility
     , storeRecentSearches
     , storeSelectedCommunitySymbol
     )
 
+import Cambiatus.Enum.CurrencyType
 import Json.Encode as Encode exposing (Value)
 
 
@@ -96,6 +101,11 @@ port storeSelectedCommunitySymbol : String -> Cmd msg
 port storePinVisibility : Bool -> Cmd msg
 
 
+{-| Store whether or not the user has seen the sponsor modal
+-}
+port storeHasSeenSponsorModal : Bool -> Cmd msg
+
+
 {-| Send info about a link in a MarkdownEditor to be treated on JS
 -}
 sendMarkdownLink : { id : String, label : String, url : String } -> Cmd msg
@@ -121,6 +131,41 @@ setMarkdownContent { id, content } =
 
 
 port setMarkdown : Value -> Cmd msg
+
+
+type ContributionData
+    = SuccessfulContribution
+        { amount : Float
+        , communityName : String
+        , targetId : String
+        , invoiceId : String
+        , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+        }
+    | ContributionWithError
+
+
+sendPaypalInfo : ContributionData -> Cmd msg
+sendPaypalInfo contributionData =
+    case contributionData of
+        SuccessfulContribution contribution ->
+            Encode.object
+                [ ( "amount", Encode.float contribution.amount )
+                , ( "communityName", Encode.string contribution.communityName )
+                , ( "targetId", Encode.string contribution.targetId )
+                , ( "invoiceId", Encode.string contribution.invoiceId )
+                , ( "currency", Encode.string (Cambiatus.Enum.CurrencyType.toString contribution.currency) )
+                ]
+                |> paypalInfo
+
+        ContributionWithError ->
+            Encode.object [ ( "error", Encode.bool True ) ]
+                |> paypalInfo
+
+
+port paypalInfo : Value -> Cmd msg
+
+
+port requestPaypalInfoFromJs : (String -> msg) -> Sub msg
 
 
 {-| Add a Plausible script so we can track usage metrics. We have it here so we

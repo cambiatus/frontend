@@ -6,7 +6,7 @@ import Community
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList, id)
+import Html.Attributes exposing (class, classList, id, tabindex)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -353,9 +353,14 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             )
                     ]
                 , a
-                    [ class "button button-primary button-sm w-full sm:w-40 mt-8"
+                    [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
                     , Route.href (Route.EditAction objectiveId action.id)
                     , classList [ ( "button-disabled", action.objective.isCompleted ) ]
+                    , if action.objective.isCompleted then
+                        tabindex -1
+
+                      else
+                        class ""
                     ]
                     [ text_ "community.actions.edit" ]
                 ]

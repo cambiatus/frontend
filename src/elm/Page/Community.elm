@@ -13,14 +13,16 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
-import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, id, src)
+import Html exposing (Html, a, button, div, h2, img, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import List.Extra
 import Log
 import Page
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Time exposing (Posix, posixToMillis)
@@ -40,6 +42,7 @@ init loggedIn =
     initModel loggedIn
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -148,6 +151,12 @@ view loggedIn model =
 
                               else
                                 text ""
+                            , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                                Just _ ->
+                                    viewSponsorCards loggedIn community
+
+                                Nothing ->
+                                    text ""
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
@@ -161,8 +170,121 @@ view loggedIn model =
     }
 
 
+viewSponsorCards : LoggedIn.Model -> Community.Model -> Html msg
+viewSponsorCards loggedIn community =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+
+        text_ =
+            text << t
+
+        hasContributed =
+            case loggedIn.contributionCount of
+                RemoteData.Success contributionCount ->
+                    contributionCount > 0
+
+                _ ->
+                    False
+
+        compareAvatars first second =
+            case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of
+                ( Just _, Just _ ) ->
+                    EQ
+
+                ( Just _, Nothing ) ->
+                    LT
+
+                ( Nothing, Just _ ) ->
+                    GT
+
+                ( Nothing, Nothing ) ->
+                    EQ
+
+        viewLoading =
+            List.range 0 5
+                |> List.map
+                    (\index ->
+                        div
+                            [ class "w-14 h-14 rounded-full -mr-2 border border-white bg-gray-300 animate-skeleton-loading"
+                            , style "animation-delay" (String.fromInt (index * 100) ++ "ms")
+                            ]
+                            []
+                    )
+    in
+    div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
+        [ div [ class "w-full bg-white rounded p-4" ]
+            -- TODO - Use new typography text-size class (#622)
+            [ h2 [ class "text-[22px] font-bold mb-6" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
+                ]
+            , if not hasContributed then
+                div [ class "flex items-center mb-4" ]
+                    [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                        [ text_ "community.index.you" ]
+                    , p [ class "ml-4" ]
+                        [ text <|
+                            tr "community.index.your_turn"
+                                [ ( "community", community.name ) ]
+                        ]
+                    ]
+
+              else
+                text ""
+            , a
+                [ class "button button-primary w-full mb-6"
+                , Route.href Route.CommunitySponsor
+                ]
+                [ text_ "community.index.support_us" ]
+            , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
+            , div [ class "flex mb-4" ]
+                (case community.contributions of
+                    RemoteData.Success contributions ->
+                        contributions
+                            |> List.map (.user >> .avatar)
+                            |> List.Extra.unique
+                            |> List.sortWith compareAvatars
+                            |> List.take 5
+                            |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white")
+
+                    RemoteData.Loading ->
+                        viewLoading
+
+                    RemoteData.NotAsked ->
+                        viewLoading
+
+                    RemoteData.Failure _ ->
+                        []
+                )
+            , a
+                [ class "button button-secondary w-full"
+                , Route.href Route.CommunitySupporters
+                ]
+                [ text_ "community.index.see_all_supporters" ]
+            ]
+        , div [ class "w-full bg-white rounded p-4 relative hidden md:block" ]
+            -- TODO - Use new typography text-size class (#622)
+            [ h2 [ class "text-[22px] font-bold" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.messages" ]
+                ]
+
+            -- TODO - Use new typography text-size class (#622)
+            , p [ class "text-center text-gray-900 mt-24 font-bold text-[22px]" ] [ text_ "menu.coming_soon" ]
+            , img
+                [ class "absolute bottom-0 right-0 rounded-br"
+                , src "images/woman_announcer.svg"
+                ]
+                []
+            ]
+        ]
+
+
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
-viewCommunityStats { t, tr } community model =
+viewCommunityStats ({ t, tr } as translators) community model =
     let
         card attrs =
             div (class "bg-white rounded p-4" :: attrs)
@@ -171,15 +293,16 @@ viewCommunityStats { t, tr } community model =
             RemoteData.isSuccess model.tokenInfo
     in
     div
-        [ class "container mx-auto mt-4 px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
+        [ class "container mx-auto px-4 my-4 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
         , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
         [ case model.tokenInfo of
             RemoteData.Success { supply } ->
-                card [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white" ]
+                card [ class "col-span-2 flex items-center bg-green text-white" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount supply.symbol supply.amount) ]
+                        [ p [ class "font-bold text-3xl" ]
+                            [ text (Eos.formatSymbolAmount translators supply.symbol supply.amount) ]
                         , p [ class "text-sm" ]
                             [ text
                                 (tr "community.index.amount_in_circulation"
@@ -193,10 +316,11 @@ viewCommunityStats { t, tr } community model =
                 text ""
         , case model.tokenInfo of
             RemoteData.Success { minBalance } ->
-                card [ class "col-span-2 flex items-center px-6 py-5" ]
+                card [ class "col-span-2 flex items-center" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount minBalance.symbol minBalance.amount) ]
+                        [ p [ class "font-bold text-3xl text-green" ]
+                            [ text (Eos.formatSymbolAmount translators minBalance.symbol minBalance.amount) ]
                         , p [ class "text-sm text-gray-900" ]
                             [ text (t "community.index.minimum_balance") ]
                         ]
