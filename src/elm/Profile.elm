@@ -1,10 +1,13 @@
 module Profile exposing
     ( Basic
     , CommunityInfo
+    , Contribution
     , DeleteKycAndAddressResult
     , Minimal
     , Model
     , ProfileForm
+    , contributionCountQuery
+    , contributionsQuery
     , deleteKycAndAddressMutation
     , minimalSelectionSet
     , mutation
@@ -21,9 +24,12 @@ module Profile exposing
     )
 
 import Avatar exposing (Avatar)
+import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
+import Cambiatus.Object.Contribution
 import Cambiatus.Object.DeleteKycAddress
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
@@ -37,12 +43,14 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, span, text)
 import Html.Attributes exposing (class)
+import Iso8601
 import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Select
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
+import Time
 
 
 type alias Basic a =
@@ -187,6 +195,59 @@ mutation form =
 
 
 
+-- CONTRIBUTION
+
+
+type alias Contribution =
+    { amount : Float
+    , insertedAt : Time.Posix
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    , status : Cambiatus.Enum.ContributionStatusType.ContributionStatusType
+    }
+
+
+contributionSelectionSet : Symbol -> SelectionSet (List Contribution) Cambiatus.Object.User
+contributionSelectionSet symbol =
+    let
+        selectionSet_ =
+            SelectionSet.succeed Contribution
+                |> with Cambiatus.Object.Contribution.amount
+                |> with
+                    (Cambiatus.Object.Contribution.insertedAt
+                        |> SelectionSet.map
+                            (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
+                                Iso8601.toTime naiveDateTime
+                                    |> Result.withDefault (Time.millisToPosix 0)
+                            )
+                    )
+                |> with Cambiatus.Object.Contribution.currency
+                |> with Cambiatus.Object.Contribution.status
+    in
+    User.contributions
+        (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
+        selectionSet_
+
+
+contributionsQuery : Symbol -> Eos.Name -> SelectionSet (Maybe (List Contribution)) RootQuery
+contributionsQuery symbol account =
+    Cambiatus.Query.user { account = Eos.nameToString account }
+        (contributionSelectionSet symbol)
+
+
+contributionCountSelectionSet : Symbol -> SelectionSet Int Cambiatus.Object.User
+contributionCountSelectionSet symbol =
+    User.contributionCount
+        (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
+
+
+contributionCountQuery : Symbol -> Eos.Name -> SelectionSet (Maybe Int) RootQuery
+contributionCountQuery symbol account =
+    Cambiatus.Query.user
+        { account = Eos.nameToString account }
+        (contributionCountSelectionSet symbol)
+
+
+
 -- UPDATE/INSERT KYC
 
 
@@ -215,7 +276,7 @@ type alias DeleteKycResult =
 
 
 deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
-deleteKycMutation account =
+deleteKycMutation _ =
     Cambiatus.Mutation.deleteKyc
         (SelectionSet.succeed DeleteKycResult
             |> with Cambiatus.Object.DeleteKycAddress.status
@@ -230,7 +291,7 @@ type alias DeleteAddressResult =
 
 
 deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
-deleteAddressMutation account =
+deleteAddressMutation _ =
     Cambiatus.Mutation.deleteAddress
         (SelectionSet.succeed DeleteAddressResult
             |> with Cambiatus.Object.DeleteKycAddress.status
@@ -288,10 +349,8 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 
 viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
 viewProfileNameTag shared loggedInAccount profile =
-    div [ class "flex items-center bg-black rounded-label p-1" ]
-        [ p [ class "mx-2 uppercase font-bold text-white text-sm text-center" ]
-            [ viewProfileName shared loggedInAccount profile ]
-        ]
+    p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
+        [ viewProfileName shared loggedInAccount profile ]
 
 
 viewProfileName : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg

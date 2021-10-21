@@ -4,6 +4,7 @@ module Session.Shared exposing
     , TranslationStatus(..)
     , Translators
     , communityDomain
+    , decimalSeparators
     , environmentFromUrl
     , init
     , langFlag
@@ -53,6 +54,7 @@ type alias Shared =
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
+    , hasSeenSponsorModal : Bool
     }
 
 
@@ -93,6 +95,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility
+      , hasSeenSponsorModal = flags.hasSeenSponsorModal
       }
     , case environment of
         Production ->
@@ -142,6 +145,13 @@ makeTranslators translations =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
+
+
+decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
+decimalSeparators { t } =
+    { decimalSeparator = t "decimal_separator"
+    , thousandsSeparator = t "thousands_separator"
+    }
 
 
 

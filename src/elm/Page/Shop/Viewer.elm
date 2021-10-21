@@ -675,7 +675,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                             [ text
                                 (shared.translators.tr
                                     "account.my_wallet.your_current_balance"
-                                    [ ( "balance", Eos.assetToString asset ) ]
+                                    [ ( "balance", Eos.assetToString shared.translators asset ) ]
                                 )
                             ]
                         ]

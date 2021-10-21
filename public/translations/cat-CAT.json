@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Torna",
+  "decimal_separator": ",",
+  "thousands_separator": ".",
   "dates": {
     "today": "Avui",
     "yesterday": "Ahir"
@@ -84,7 +86,7 @@
         "is_odd": "El nombre ha de ser imparell"
       },
       "date": {
-        "invalid": "La data no és vàlida, fes-la servir 'mm/dd/aaaa'"
+        "invalid": "Data no vàlida, trieu una data en el futur"
       },
       "text": {
         "only_numbers": "Només es permeten números",
@@ -461,7 +463,16 @@
       "claims": "Reclamacions",
       "products": "Venda de botigues",
       "orders": "Compra de botigues",
-      "transfers": "Transaccions"
+      "transfers": "Transaccions",
+      "our_supporters": "Els nostres",
+      "supporters": "Seguidors",
+      "our_messages": "Els nostres",
+      "messages": "Missatges",
+      "you": "Tu",
+      "your_turn": "{{community}} t’ha ajudat, ara és el teu torn!",
+      "support_us": "recolza’ns",
+      "see_supporters": "Consulteu els darrers membres que ens van donar suport.",
+      "see_all_supporters": "Veure tots els seguidors"
     },
     "invite": {
       "title": "Convida als teus amics",
@@ -510,6 +521,7 @@
       "action_count": "{{actions}} accions",
       "complete": "Completat",
       "edit": "Edita l'objectiu",
+      "error_loading": "S'ha produït un error en carregar els objectius",
       "editor": {
         "not_found": "No trobat",
         "error": "Ui! Quelcom ha fallat",
@@ -595,7 +607,8 @@
         "no": "No",
         "yes": "Sí",
         "automatic": "Automàtic,",
-        "automatic_detail": " recompensa l'usuari immediatament quan ho reclama",
+        "automatic_detail": " acció no reclamable i, per tant, sense la revisió i aprovació d'altres membres",
+        "automatic_tooltip": "Si és necessari connectar una aplicació externa mitjançant API, la persona que administra la comunitat pot contactar amb nosaltres per realitzar aquesta configuració.",
         "manual": "Manual,",
         "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
@@ -652,6 +665,10 @@
         "canRemove": "Sempre podeu eliminar aquesta informació del vostre perfil si ho decidiu.",
         "success": "Les vostres dades KYC s'han desat correctament."
       }
+    },
+    "thank_you": {
+      "title": "Gràcies!",
+      "all_supporters": "Consulteu la llista de tots els partidaris"
     }
   },
   "profile": {
@@ -724,6 +741,15 @@
         "completed_action": "Reclameu només accions realment realitzades;",
         "know_good_practices": "Obteniu més informació sobre les bones pràctiques de la Comunitat"
       }
+    },
+    "contributions": {
+      "profile_contributions": "Contribucions de {{profile_name}}",
+      "not_allowed_title": "No podeu veure les contribucions d'altres persones",
+      "not_allowed": "Només els administradors de la comunitat poden veure les contribucions d'altres persones",
+      "no_contributions": "Encara no hi ha contribucions",
+      "pending": "Pendents",
+      "approved": "Aprovat",
+      "failed": "Fracassat"
     }
   },
   "shop": {
@@ -791,6 +817,7 @@
     "transfer": "Transferir",
     "your_balance": "El vostre saldo en {{symbol}}",
     "how_to_earn": "Com guanyar {{symbol}}",
+    "my_contributions": "Les meves aportacions",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
     "action_rejected": "S'ha rebutjat la teva acció",
@@ -878,6 +905,10 @@
       "2": "fase de revisió",
       "3": ", els altres membres encara han de votar"
     },
+    "title_cancelled": {
+      "1": "Aquesta solicitud es va",
+      "2": "cancel·lat"
+    },
     "title_approved": {
       "1": "Aquesta solicitud es va",
       "2": "aprovar"
@@ -886,13 +917,16 @@
       "1": "Aquesta solicitud es va",
       "2": "rebutjat"
     },
+    "cancelled_voting_bar": "vots pendents",
     "title_action_completed": "Aquesta reclamació està pendent, però, ja que l'acció s'ha completat, no és possible votar",
     "title_action_closed": "Aquesta reclamació està pendent, però, ja que l'acció està tancada, no és possible votar",
+    "opened_today": "Obert avui",
     "day_ago": "Obert fa {{day_count}} die",
     "days_ago": "Obert fa {{day_count}} dies",
     "vote": "vot",
     "votes": "vots",
     "pending": "Pendent",
+    "cancelled": "Cancel·lat",
     "disapproved": "Desaprovat",
     "approved": "Aprovat",
     "reward": "Has guanyat: {{value}}",
@@ -915,6 +949,15 @@
     "approve": "Aprovar",
     "no_results_found": "Sense resultats",
     "voteTitle": "Aproveu o rebutgeu aquesta acció?",
+    "attention": "Atenció: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reclamació cancel·lada",
+      "was_cancelled": "Aquesta reclamació s'ha cancel·lat",
+      "deadline_reached": "L'acció corresponent s'ha completat perquè ha arribat a la data concreta",
+      "usages_reached": "L'acció corresponent s'ha completat perquè ha assolit la quantitat màxima d'ús",
+      "action_completed": "L'equip administratiu de la comunitat va completar l'acció corresponent",
+      "not_available": "Per tant, la reclamació ja no està disponible per votar"
+    },
     "modal": {
       "title": "Sota Revisió",
       "message_disapprove": "Realment voleu rebutjar aquesta reclamació?",
@@ -1028,7 +1071,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Ações, loja",
+      "description": "Objectius, Accions, Botiga, Patrocini",
       "enabled": "Activat",
       "disabled": "Desactivat"
     }
@@ -1100,6 +1143,59 @@
       "accept": "Sí"
     }
   },
+  "sponsorship": {
+    "title": "Patrocini",
+    "no_support": "La vostra comunitat encara no admet patrocinis",
+    "no_support_subtitle": "Parleu amb l'equip d'administració de la comunitat per activar aquesta funció",
+    "description": "Permet que els usuaris patrocinin la comunitat",
+    "sponsor": "Patrocina",
+    "enter_amount": "Introduïu l'import que voleu contribuir",
+    "select_currency": "Seleccioneu la moneda que vulgueu utilitzar",
+    "amount_too_small": "L'import ha de ser com a mínim d'{{minimum}} {{currency}}",
+    "amount_too_big": "L'import ha de ser màxim d'{{maximum}} {{currency}}",
+    "invalid_amount": "Valor no vàlid",
+    "unknown_error": "S'ha produït un error en processar el vostre pagament",
+    "load_error": "S'ha produït un problema en connectar amb PayPal, torneu-ho a provar més tard",
+    "contribution_error": "S'ha produït un error en preparar la vostra contribució",
+    "guidance": "Orientació",
+    "guidance_description": "Per habilitar aquesta funció, demaneu ajuda al vostre canal d'assistència a Cambiatus Slack",
+    "cards": {
+      "fiat": {
+        "title": "Tipus de monedes acceptades",
+        "description": "Permetre que la comunitat accepti USD o altres monedes fiduciàries mitjançant PayPal",
+        "toggle_label": "Monedes fiduciàries",
+        "settings": "Configuració"
+      },
+      "crypto": {
+        "title": "Altres monedes acceptades",
+        "description": "Permetre que la comunitat accepti criptomonedes",
+        "toggle_label": "Criptomonedes"
+      },
+      "message": {
+        "title": "Missatge \"gràcies\"",
+        "description": "Configureu el missatge \"gràcies\" perquè coincideixi amb la vostra comunitat",
+        "button_label": "Configura el missatge"
+      }
+    },
+    "fiat": {
+      "title": "Fiat diners",
+      "paypal_account": "Compte de PayPal de la comunitat",
+      "paypal_example": "exemple@gmail.com",
+      "how_to_change": "Si necessiteu actualitzar aquest compte, poseu-vos en contacte amb nosaltres a través del canal d'assistència a Slack"
+    },
+    "thank_you_message": {
+      "title": "Títol del missatge",
+      "default_title": "Gràcies per patrocinar {{community}}!",
+      "message": "Missatge",
+      "default_message": "La vostra contribució ajuda la vostra comunitat a ser encara més impactant, sou increïbles!"
+    },
+    "dashboard_modal": {
+      "title": "Patrocina la teva Comunitat",
+      "subtitle": "Ara podeu patrocinar aquesta comunitat.",
+      "explanation": "Feu la vostra contribució fent clic al botó següent. Se us redirigirà a PayPal per completar la transacció.",
+      "sponsor": "Patrocina {{community_name}}"
+    }
+  },
   "markdown": {
     "link_form": {
       "header": "Afegeix un enllaç",
@@ -1113,5 +1209,19 @@
   },
   "block_explorer": {
     "see": "Veure a explorador de blocs"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dòlar",
+    "brl_plural": "Reals",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dòlars"
   }
 }

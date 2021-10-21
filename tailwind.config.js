@@ -57,7 +57,7 @@ module.exports = {
     // The first item in each list is the font size, and the second item is the
     // default line height for that font size
     fontSize: {
-      xs: ['0.6875rem', '0.75rem'], // ['11px']
+      xs: ['0.6875rem', '0.75rem'], // ['11px', '12px']
       sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
       base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
       lg: ['1.375rem', '1.875rem'], // ['22px', '30px']
@@ -184,12 +184,21 @@ module.exports = {
           '0%': { opacity: 0, transform: 'translate(0, -100px)' },
           '50%': { opacity: 0 },
           '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
+        'skeleton-loading-keyframes': {
+          '0%': {
+            'background-color': '#e0e0e0'
+          },
+          '100%': {
+            'background-color': '#eeeeee'
+          }
         }
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
         'fade-in-from-above': 'appear-from-above 75ms ease-out',
-        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both'
+        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
+        'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate'
       }
     }
   },

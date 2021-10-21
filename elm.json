@@ -7,6 +7,7 @@
     "dependencies": {
         "direct": {
             "CurrySoftware/elm-datepicker": "4.0.0",
+            "NeoVier/elm-mask": "2.0.4",
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
             "abadi199/elm-input-extra": "5.2.4",
@@ -25,11 +26,12 @@
             "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
-            "elm-community/list-extra": "8.2.4",
+            "elm-community/list-extra": "8.5.1",
             "elm-community/maybe-extra": "5.2.0",
             "elm-community/string-extra": "4.0.1",
             "jfmengels/elm-review": "2.3.2",
             "justinmimbs/date": "3.2.1",
+            "justinmimbs/time-extra": "1.1.0",
             "krisajenkins/remotedata": "6.0.1",
             "pdamoc/elm-hashids": "1.0.4",
             "robinheghan/elm-phone-numbers": "1.0.0",

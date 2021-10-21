@@ -4,6 +4,7 @@ module View.Form.Select exposing
     , toHtml
     , withAttrs
     , withContainerAttrs
+    , withLabelAttrs
     , withOption
     , withOptions
     )
@@ -50,6 +51,7 @@ init requiredOptions =
     , disabled = requiredOptions.disabled
     , extraAttrs = []
     , containerAttrs = []
+    , labelAttrs = []
     , problems = requiredOptions.problems
     }
 
@@ -62,6 +64,11 @@ withAttrs extraAttrs select =
 withContainerAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
 withContainerAttrs attrs select =
     { select | containerAttrs = select.containerAttrs ++ attrs }
+
+
+withLabelAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
+withLabelAttrs attrs select =
+    { select | labelAttrs = select.labelAttrs ++ attrs }
 
 
 {-| Adds a new option field to a dropdown
@@ -105,7 +112,11 @@ toHtml select =
                     select.onInput selectedOption.value
     in
     Html.div (class "mb-10" :: select.containerAttrs)
-        [ View.Form.label [] select.id select.label
+        [ if String.isEmpty select.label then
+            text ""
+
+          else
+            View.Form.label select.labelAttrs select.id select.label
         , Html.select
             (class "form-select w-full"
                 :: classList
@@ -145,6 +156,7 @@ type alias Select a msg =
     , disabled : Bool
     , extraAttrs : List (Html.Attribute msg)
     , containerAttrs : List (Html.Attribute msg)
+    , labelAttrs : List (Html.Attribute msg)
     , problems : Maybe (List String)
     }
 

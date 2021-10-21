@@ -17,7 +17,6 @@ module Session.Guest exposing
 
 import Api.Graphql
 import Auth
-import Browser.Events
 import Browser.Navigation
 import Community
 import Dict
@@ -30,7 +29,6 @@ import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
-import Json.Decode as Decode
 import Json.Encode as Encode
 import Log
 import Ports
@@ -42,6 +40,7 @@ import Task
 import Translation
 import UpdateResult as UR
 import Url
+import Utils
 import View.Feedback as Feedback
 
 
@@ -128,7 +127,7 @@ initModel shared =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.map KeyDown (Browser.Events.onKeyDown (Decode.field "key" Decode.string))
+    Utils.escSubscription PressedEsc
 
 
 
@@ -322,7 +321,7 @@ type Msg
     | ClickedTryAgainTranslation
     | ShowLanguageNav Bool
     | ClickedLanguage Translation.Language
-    | KeyDown String
+    | PressedEsc
     | CompletedLoadCommunityPreview (RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) (Maybe Community.CommunityPreview))
     | GotFeedbackMsg Feedback.Msg
 
@@ -372,14 +371,9 @@ update msg ({ shared } as model) =
                 |> UR.init
                 |> UR.addCmd (fetchTranslations lang)
 
-        KeyDown key ->
-            if key == "Esc" || key == "Escape" then
-                { model | showLanguageNav = False }
-                    |> UR.init
-
-            else
-                model
-                    |> UR.init
+        PressedEsc ->
+            { model | showLanguageNav = False }
+                |> UR.init
 
         CompletedLoadCommunityPreview (RemoteData.Success (Just communityPreview)) ->
             { model | community = RemoteData.Success communityPreview }
@@ -494,8 +488,8 @@ msgToString msg =
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
 
-        KeyDown _ ->
-            [ "KeyDown" ]
+        PressedEsc ->
+            [ "PressedEsc" ]
 
         CompletedLoadCommunityPreview r ->
             [ "CompletedLoadCommunityPreview", UR.remoteDataToString r ]

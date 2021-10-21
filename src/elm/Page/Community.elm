@@ -13,17 +13,18 @@ import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Eos
-import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, disabled, id, src)
+import Html exposing (Html, a, button, div, h2, img, p, span, text)
+import Html.Attributes exposing (class, classList, disabled, id, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import List.Extra
 import Log
 import Page
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
-import Task
 import Time exposing (Posix, posixToMillis)
 import Token
 import UpdateResult as UR
@@ -36,11 +37,12 @@ import View.MarkdownEditor
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> UpdateResult
 init loggedIn =
-    ( initModel loggedIn
-    , Task.succeed RequestedReloadCommunity |> Task.perform identity
-    )
+    initModel loggedIn
+        |> UR.init
+        |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -84,6 +86,17 @@ view loggedIn model =
                 _ ->
                     t "community.not_found"
 
+        objectivesContainer children =
+            div [ class "px-4 pb-4" ]
+                [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+                    children
+                ]
+
+        viewLoading =
+            objectivesContainer
+                [ View.Components.loadingLogoAnimated loggedIn.shared.translators ""
+                ]
+
         content =
             case loggedIn.selectedCommunity of
                 RemoteData.Loading ->
@@ -113,16 +126,37 @@ view loggedIn model =
                             ]
                         , div [ class "container mx-auto" ]
                             [ if community.hasObjectives then
-                                div [ class "px-4 pb-4" ]
-                                    [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
-                                        (Page.viewTitle (t "community.objectives.title_plural")
-                                            :: List.indexedMap (viewObjective loggedIn model community)
-                                                community.objectives
-                                        )
-                                    ]
+                                case community.objectives of
+                                    RemoteData.Success objectives ->
+                                        objectivesContainer
+                                            (Page.viewTitle (t "community.objectives.title_plural")
+                                                :: List.indexedMap (viewObjective loggedIn model community)
+                                                    objectives
+                                            )
+
+                                    RemoteData.Loading ->
+                                        viewLoading
+
+                                    RemoteData.NotAsked ->
+                                        viewLoading
+
+                                    RemoteData.Failure err ->
+                                        objectivesContainer
+                                            [ div [ class "w-full" ]
+                                                [ p [ class "text-2xl font-bold text-center" ] [ text (t "community.objectives.error_loading") ]
+                                                , p [ class "text-center" ] [ text (Utils.errorToString err) ]
+                                                ]
+                                            , img [ class "w-1/3 mx-auto", src "/images/error.svg" ] []
+                                            ]
 
                               else
                                 text ""
+                            , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                                Just _ ->
+                                    viewSponsorCards loggedIn community
+
+                                Nothing ->
+                                    text ""
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
@@ -136,8 +170,118 @@ view loggedIn model =
     }
 
 
+viewSponsorCards : LoggedIn.Model -> Community.Model -> Html msg
+viewSponsorCards loggedIn community =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+
+        text_ =
+            text << t
+
+        hasContributed =
+            case loggedIn.contributionCount of
+                RemoteData.Success contributionCount ->
+                    contributionCount > 0
+
+                _ ->
+                    False
+
+        compareAvatars first second =
+            case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of
+                ( Just _, Just _ ) ->
+                    EQ
+
+                ( Just _, Nothing ) ->
+                    LT
+
+                ( Nothing, Just _ ) ->
+                    GT
+
+                ( Nothing, Nothing ) ->
+                    EQ
+
+        viewLoading =
+            List.range 0 5
+                |> List.map
+                    (\index ->
+                        div
+                            [ class "w-14 h-14 rounded-full -mr-2 border border-white bg-gray-300 animate-skeleton-loading"
+                            , style "animation-delay" (String.fromInt (index * 100) ++ "ms")
+                            ]
+                            []
+                    )
+    in
+    div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
+        [ div [ class "w-full bg-white rounded p-4" ]
+            [ h2 [ class "text-lg font-bold mb-6" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
+                ]
+            , if not hasContributed then
+                div [ class "flex items-center mb-4" ]
+                    [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                        [ text_ "community.index.you" ]
+                    , p [ class "ml-4" ]
+                        [ text <|
+                            tr "community.index.your_turn"
+                                [ ( "community", community.name ) ]
+                        ]
+                    ]
+
+              else
+                text ""
+            , a
+                [ class "button button-primary w-full mb-6"
+                , Route.href Route.CommunitySponsor
+                ]
+                [ text_ "community.index.support_us" ]
+            , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
+            , div [ class "flex mb-4" ]
+                (case community.contributions of
+                    RemoteData.Success contributions ->
+                        contributions
+                            |> List.map (.user >> .avatar)
+                            |> List.Extra.unique
+                            |> List.sortWith compareAvatars
+                            |> List.take 5
+                            |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white")
+
+                    RemoteData.Loading ->
+                        viewLoading
+
+                    RemoteData.NotAsked ->
+                        viewLoading
+
+                    RemoteData.Failure _ ->
+                        []
+                )
+            , a
+                [ class "button button-secondary w-full"
+                , Route.href Route.CommunitySupporters
+                ]
+                [ text_ "community.index.see_all_supporters" ]
+            ]
+        , div [ class "w-full bg-white rounded p-4 relative hidden md:block" ]
+            [ h2 [ class "text-lg font-bold" ]
+                [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
+                , text " "
+                , span [ class "text-purple-500" ] [ text_ "community.index.messages" ]
+                ]
+            , p [ class "text-center text-gray-900 mt-24 font-bold text-lg" ]
+                [ text_ "menu.coming_soon" ]
+            , img
+                [ class "absolute bottom-0 right-0 rounded-br"
+                , src "images/woman_announcer.svg"
+                ]
+                []
+            ]
+        ]
+
+
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
-viewCommunityStats { t, tr } community model =
+viewCommunityStats ({ t, tr } as translators) community model =
     let
         card attrs =
             div (class "bg-white rounded p-4" :: attrs)
@@ -146,15 +290,16 @@ viewCommunityStats { t, tr } community model =
             RemoteData.isSuccess model.tokenInfo
     in
     div
-        [ class "container mx-auto px-4 mb-5 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
+        [ class "container mx-auto px-4 my-4 grid grid-cols-2 grid-rows-6 gap-4 grid-flow-row-dense md:grid-cols-4 md:grid-rows-3 md:mb-10"
         , classList [ ( "grid-rows-4", not hasTokenInfo ) ]
         ]
         [ case model.tokenInfo of
             RemoteData.Success { supply } ->
-                card [ class "col-span-2 flex items-center px-6 py-5 bg-green text-white" ]
+                card [ class "col-span-2 flex items-center bg-green text-white" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl" ] [ text (Eos.formatSymbolAmount supply.symbol supply.amount) ]
+                        [ p [ class "font-bold text-3xl" ]
+                            [ text (Eos.formatSymbolAmount translators supply.symbol supply.amount) ]
                         , p [ class "text-sm" ]
                             [ text
                                 (tr "community.index.amount_in_circulation"
@@ -168,10 +313,11 @@ viewCommunityStats { t, tr } community model =
                 text ""
         , case model.tokenInfo of
             RemoteData.Success { minBalance } ->
-                card [ class "col-span-2 flex items-center px-6 py-5" ]
+                card [ class "col-span-2 flex items-center" ]
                     [ Icons.coin "mr-6"
                     , div []
-                        [ p [ class "font-bold text-3xl text-green" ] [ text (Eos.formatSymbolAmount minBalance.symbol minBalance.amount) ]
+                        [ p [ class "font-bold text-3xl text-green" ]
+                            [ text (Eos.formatSymbolAmount translators minBalance.symbol minBalance.amount) ]
                         , p [ class "text-sm text-gray-900" ]
                             [ text (t "community.index.minimum_balance") ]
                         ]
@@ -327,7 +473,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | RequestedReloadCommunity
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
       -- Objective
@@ -341,10 +486,6 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
-
-        RequestedReloadCommunity ->
-            UR.init model
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
 
         CompletedLoadCommunity community ->
             UR.init model
@@ -396,9 +537,6 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
-
-        RequestedReloadCommunity ->
-            [ "RequestedReloadCommunity" ]
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
@@ -526,11 +664,6 @@ viewAction shared canEdit date action isDisabled =
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
-        validationType : String
-        validationType =
-            action.verificationType
-                |> VerificationType.toString
-
         isClosed =
             pastDeadline
                 || (action.usages > 0 && action.usagesLeft == 0)
@@ -588,17 +721,23 @@ viewAction shared canEdit date action isDisabled =
                         ]
                     , div [ class "sm:self-end" ]
                         [ div [ class "mt-3 flex flex-row items-center" ]
-                            (if validationType == "CLAIMABLE" then
-                                validatorAvatars
+                            (case action.verificationType of
+                                VerificationType.Claimable ->
+                                    validatorAvatars
 
-                             else
-                                [ span [ class "uppercase text-sm mr-1" ]
-                                    [ text_ "community.actions.automatic_analyzers" ]
-                                , img [ src "/icons/tooltip.svg" ] []
-                                ]
+                                VerificationType.Automatic ->
+                                    [ span [ class "uppercase text-sm mr-1" ]
+                                        [ text_ "community.actions.automatic_analyzers" ]
+                                    , img [ src "/icons/tooltip.svg" ] []
+                                    ]
                             )
-                        , div [ class "capitalize text-text-grey text-sm sm:text-right" ]
-                            [ text_ "community.actions.verifiers" ]
+                        , case action.verificationType of
+                            VerificationType.Claimable ->
+                                div [ class "capitalize text-text-grey text-sm sm:text-right" ]
+                                    [ text_ "community.actions.verifiers" ]
+
+                            VerificationType.Automatic ->
+                                text ""
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
@@ -607,19 +746,21 @@ viewAction shared canEdit date action isDisabled =
                         , span [ class "font-semibold" ] [ text rewardStr ]
                         ]
                     , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
-                        [ if validationType == "CLAIMABLE" then
-                            viewClaimButton
+                        (case action.verificationType of
+                            VerificationType.Claimable ->
+                                [ viewClaimButton ]
 
-                          else
-                            text ""
-                        ]
+                            VerificationType.Automatic ->
+                                []
+                        )
                     ]
                 ]
             , div [ class "flex flex-row mt-8 justify-between sm:hidden" ]
-                [ if validationType == "CLAIMABLE" then
-                    viewClaimButton
+                (case action.verificationType of
+                    VerificationType.Claimable ->
+                        [ viewClaimButton ]
 
-                  else
-                    text ""
-                ]
+                    VerificationType.Automatic ->
+                        []
+                )
             ]

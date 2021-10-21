@@ -13,6 +13,7 @@ import Api
 import Api.Graphql
 import Api.Relay
 import Avatar
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -29,7 +30,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href, id, target)
+import Html.Attributes exposing (class, classList, href, id, tabindex, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -67,6 +68,7 @@ type alias Model =
     , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
     , balance : RemoteData (QueryError Http.Error) Community.Balance
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
+    , contributionInfo : Maybe ContributionInfo
     , transfersStatus : TransfersStatus
     , isDeleteKycModalVisible : Bool
     , downloadingPdfStatus : DownloadStatus
@@ -80,7 +82,7 @@ type alias Model =
 -- INIT
 
 
-init : LoggedIn.Model -> Eos.Name -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Eos.Name -> UpdateResult
 init loggedIn profileName =
     let
         fetchProfile =
@@ -96,30 +98,30 @@ init loggedIn profileName =
                     (Profile.query profileName)
                     CompletedLoadProfile
     in
-    ( { profileName = profileName
-      , profile = RemoteData.Loading
-      , balance = RemoteData.Loading
-      , graphqlInfo = RemoteData.Loading
-      , transfersStatus = Loading []
-      , isDeleteKycModalVisible = False
-      , downloadingPdfStatus = NotDownloading
-      , isNewPinModalVisible = False
-      , pinInputModel =
-            Pin.init
-                { label = "profile.newPin"
-                , id = "new-pin-input"
-                , withConfirmation = False
-                , submitLabel = "profile.pin.button"
-                , submittingLabel = "profile.pin.button"
-                , pinVisibility = loggedIn.shared.pinVisibility
-                }
-      , currentPin = Nothing
-      }
-    , Cmd.batch
-        [ fetchProfile
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
-    )
+    { profileName = profileName
+    , profile = RemoteData.Loading
+    , balance = RemoteData.Loading
+    , graphqlInfo = RemoteData.Loading
+    , contributionInfo = Nothing
+    , transfersStatus = Loading []
+    , isDeleteKycModalVisible = False
+    , downloadingPdfStatus = NotDownloading
+    , isNewPinModalVisible = False
+    , pinInputModel =
+        Pin.init
+            { label = "profile.newPin"
+            , id = "new-pin-input"
+            , withConfirmation = False
+            , submitLabel = "profile.pin.button"
+            , submittingLabel = "profile.pin.button"
+            , pinVisibility = loggedIn.shared.pinVisibility
+            }
+    , currentPin = Nothing
+    }
+        |> UR.init
+        |> UR.addCmd fetchProfile
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 
@@ -142,6 +144,12 @@ type alias GraphqlInfo =
     , totalClaims : Int
     , totalProducts : Int
     , createdDate : Maybe Time.Posix
+    }
+
+
+type alias ContributionInfo =
+    { amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
     }
 
 
@@ -178,6 +186,7 @@ type Msg
     = Ignored
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadContributions (List Community.Contribution)
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
@@ -271,6 +280,27 @@ update msg model loggedIn =
                         CompletedLoadGraphqlInfo
                     )
                 |> UR.addCmd (fetchTransfers loggedIn community Nothing)
+
+        CompletedLoadContributions contributions ->
+            let
+                userContributions =
+                    contributions
+                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
+
+                contributionInfo : Maybe ContributionInfo
+                contributionInfo =
+                    case userContributions of
+                        [] ->
+                            Nothing
+
+                        first :: rest ->
+                            Just
+                                { amount = List.map .amount (first :: rest) |> List.sum
+                                , currency = first.currency
+                                }
+            in
+            { model | contributionInfo = contributionInfo }
+                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             { model
@@ -843,6 +873,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
         [ div
             [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
             , id "transfer-scroll-container"
+            , tabindex -1
             ]
             [ div [ class "w-full bg-white md:bg-gray-100" ]
                 [ div [ class "px-4" ]
@@ -896,7 +927,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
               else
                 text ""
             , if isProfileOwner || isCommunityAdmin then
-                viewHistory loggedIn.shared balance graphqlInfo
+                viewHistory loggedIn.shared balance graphqlInfo model.contributionInfo
 
               else
                 text ""
@@ -1163,8 +1194,8 @@ viewTransactionList loggedIn transfers =
             )
 
 
-viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Html msg
-viewHistory shared balance graphqlInfo =
+viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Maybe ContributionInfo -> Html msg
+viewHistory shared balance graphqlInfo maybeContributionInfo =
     let
         { t } =
             shared.translators
@@ -1192,7 +1223,7 @@ viewHistory shared balance graphqlInfo =
                 ]
                 (span [ class "text-3xl mr-1" ]
                     [ balance.asset.amount
-                        |> Eos.formatSymbolAmount balance.asset.symbol
+                        |> Eos.formatSymbolAmount shared.translators balance.asset.symbol
                         |> text
                     ]
                 )
@@ -1200,6 +1231,18 @@ viewHistory shared balance graphqlInfo =
                     |> Eos.symbolToSymbolCodeString
                     |> text
                 )
+            , case maybeContributionInfo of
+                Nothing ->
+                    text ""
+
+                Just contributionInfo ->
+                    viewHistoryItem [ text_ "dashboard.my_contributions" ]
+                        (Utils.formatFloat (Just shared.translators) 2 contributionInfo.amount
+                            |> text
+                        )
+                        (Community.currencyTranslationKey contributionInfo
+                            |> text_
+                        )
             , viewHistoryItem [ text_ "profile.history.transfers_number" ]
                 (graphqlInfo.totalTransfers
                     |> String.fromInt
@@ -1360,6 +1403,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.ContributionsValue contributions) ->
+            Just (CompletedLoadContributions contributions)
+
         _ ->
             Nothing
 
@@ -1390,6 +1436,9 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadContributions _ ->
+            [ "CompletedLoadContributions" ]
 
         CompletedLoadBalance r ->
             [ "CompletedLoadBalance", UR.resultToString r ]

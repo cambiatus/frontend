@@ -198,7 +198,7 @@ viewHeader loggedIn =
                     [ text (t "shop.description") ]
                 , a
                     [ Route.href Route.NewSale
-                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-semibold"
+                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-semibold focus-visible:ring-offset-indigo-500"
                     ]
                     [ text (t "shop.create_offer") ]
                 ]

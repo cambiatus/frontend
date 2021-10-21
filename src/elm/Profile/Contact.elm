@@ -34,6 +34,7 @@ import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
 import List.Extra as LE
+import Mask
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
@@ -549,7 +550,24 @@ submit translators kind =
 
 submitSingle : Translators -> Basic -> Result Basic Normalized
 submitSingle translators basic =
+    let
+        removeMask : Basic -> Basic
+        removeMask basic_ =
+            case basic_.contactType of
+                Phone ->
+                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
+
+                Whatsapp ->
+                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
+
+                Instagram ->
+                    basic_
+
+                Telegram ->
+                    basic_
+    in
     basic
+        |> removeMask
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
@@ -996,8 +1014,26 @@ viewPhoneInput ({ t, tr } as translators) basic =
             , problems = basic.errors
             , translators = translators
             }
+            |> Input.withMask (phoneMask basic)
+            |> Input.withType Input.Telephone
             |> Input.toHtml
         ]
+
+
+phoneMask : Basic -> { mask : String, replace : Char }
+phoneMask basic =
+    { mask =
+        basic.supportedCountry.phonePlaceholder
+            |> String.map
+                (\phoneChar ->
+                    if Char.isDigit phoneChar then
+                        '#'
+
+                    else
+                        phoneChar
+                )
+    , replace = '#'
+    }
 
 
 viewProfileInput : Translators -> Basic -> Html Msg
@@ -1121,7 +1157,7 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\{ supportedCountry, contact } ->
+        (\({ supportedCountry, contact } as basic) ->
             if
                 PhoneNumber.valid
                     { defaultCountry = supportedCountry.country

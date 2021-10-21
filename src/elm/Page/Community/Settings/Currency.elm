@@ -20,12 +20,13 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Log
+import Mask
 import Page
 import Ports
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Translators)
+import Session.Shared as Shared exposing (Translators)
 import Token
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -125,7 +126,7 @@ update msg model ({ shared } as loggedIn) =
         ClickedSubmit ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    case validateModel community.symbol model of
+                    case validateModel shared.translators community.symbol model of
                         Ok ( validUpdateTokenData, validExpiryOptsData ) ->
                             { model | isLoading = True }
                                 |> UR.init
@@ -188,13 +189,27 @@ update msg model ({ shared } as loggedIn) =
                     val
 
         CompletedLoadCommunity community ->
+            let
+                precision =
+                    Eos.getSymbolPrecision community.symbol
+
+                applyMask : Float -> String
+                applyMask floatValue =
+                    Mask.float (Mask.Precisely precision)
+                        { decimalSeparator = shared.translators.t "decimal_separator"
+                        , thousandsSeparator = shared.translators.t "thousands_separator"
+                        }
+                        floatValue
+            in
             { model
                 | minimumBalance =
-                    Maybe.map String.fromFloat community.minBalance
-                        |> Maybe.withDefault "0"
+                    community.minBalance
+                        |> Maybe.withDefault 0
+                        |> applyMask
                 , maximumSupply =
-                    Maybe.map String.fromFloat community.maxSupply
-                        |> Maybe.withDefault "21000000"
+                    community.maxSupply
+                        |> Maybe.withDefault 21000000
+                        |> applyMask
                 , isLoading = True
             }
                 |> UR.init
@@ -288,12 +303,12 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (shared.translators.t "error.unknown"))
 
 
-withSymbolValidation : (Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
+withSymbolValidation : (Translators -> Eos.Symbol -> Model -> Result String a) -> Field -> LoggedIn.Model -> Model -> Model
 withSymbolValidation fn field loggedIn_ model_ =
     case loggedIn_.selectedCommunity of
         RemoteData.Success community ->
             model_
-                |> setErrors field (fn community.symbol)
+                |> setErrors field (fn loggedIn_.shared.translators community.symbol)
 
         _ ->
             model_
@@ -355,15 +370,19 @@ validateIntInput numberInput =
         |> Result.fromMaybe "error.validator.text.only_numbers"
 
 
-validateSymbolInput : Eos.Symbol -> String -> Result String Eos.Asset
-validateSymbolInput symbol numberInput =
+validateSymbolInput : Translators -> Eos.Symbol -> String -> Result String Eos.Asset
+validateSymbolInput translators symbol numberInput =
     let
+        unmasked =
+            Mask.removeFloat (Shared.decimalSeparators translators) numberInput
+
         validateParsing =
-            String.toFloat numberInput
+            unmasked
+                |> String.toFloat
                 |> Maybe.map (\amount -> { symbol = symbol, amount = amount })
                 |> Result.fromMaybe "error.validator.text.only_numbers"
     in
-    case String.split "." numberInput of
+    case String.split "." unmasked of
         [] ->
             Err "error.required"
 
@@ -398,14 +417,14 @@ setErrors field modelValidation model =
     }
 
 
-validateMinimumBalance : Eos.Symbol -> Model -> Result String Eos.Asset
-validateMinimumBalance symbol model =
-    validateSymbolInput symbol model.minimumBalance
+validateMinimumBalance : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMinimumBalance translators symbol model =
+    validateSymbolInput translators symbol model.minimumBalance
 
 
-validateMaximumSupply : Eos.Symbol -> Model -> Result String Eos.Asset
-validateMaximumSupply symbol model =
-    validateSymbolInput symbol model.maximumSupply
+validateMaximumSupply : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateMaximumSupply translators symbol model =
+    validateSymbolInput translators symbol model.maximumSupply
 
 
 validateNaturalExpirationPeriod : Model -> Result String Int
@@ -418,32 +437,32 @@ validateJuridicalExpirationPeriod model =
     validateIntInput model.juridicalExpirationPeriod
 
 
-validateRenovationAmount : Eos.Symbol -> Model -> Result String Eos.Asset
-validateRenovationAmount symbol model =
-    validateSymbolInput symbol model.renovationAmount
+validateRenovationAmount : Translators -> Eos.Symbol -> Model -> Result String Eos.Asset
+validateRenovationAmount translators symbol model =
+    validateSymbolInput translators symbol model.renovationAmount
 
 
-validateModel : Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
-validateModel symbol model =
+validateModel : Translators -> Eos.Symbol -> Model -> Result Model ( Token.UpdateTokenData, Maybe Token.ExpiryOptsData )
+validateModel translators symbol model =
     let
         tokenValidation =
             Result.map2 Token.UpdateTokenData
-                (validateMaximumSupply symbol model)
-                (validateMinimumBalance symbol model)
+                (validateMaximumSupply translators symbol model)
+                (validateMinimumBalance translators symbol model)
 
         expiryOptsValidation =
             Result.map3 (Token.ExpiryOptsData symbol)
                 (validateNaturalExpirationPeriod model)
                 (validateJuridicalExpirationPeriod model)
-                (validateRenovationAmount symbol model)
+                (validateRenovationAmount translators symbol model)
 
         modelWithErrors =
             model
-                |> setErrors MinimumBalance (validateMinimumBalance symbol)
-                |> setErrors MaximumSupply (validateMaximumSupply symbol)
+                |> setErrors MinimumBalance (validateMinimumBalance translators symbol)
+                |> setErrors MaximumSupply (validateMaximumSupply translators symbol)
                 |> setErrors NaturalExpirationPeriod validateNaturalExpirationPeriod
                 |> setErrors JuridicalExpirationPeriod validateJuridicalExpirationPeriod
-                |> setErrors RenovationAmount (validateRenovationAmount symbol)
+                |> setErrors RenovationAmount (validateRenovationAmount translators symbol)
     in
     case model.tokenType of
         Token.Mcc ->
@@ -536,7 +555,7 @@ viewInformativeFields ({ t, tr } as translators) community =
             Eos.getSymbolPrecision community.symbol
 
         symbolExample =
-            case Eos.formatSymbolAmount community.symbol 100 |> String.split "." of
+            case Eos.formatSymbolAmount translators community.symbol 100 |> String.split "." of
                 [] ->
                     []
 
@@ -587,7 +606,7 @@ viewInformativeFields ({ t, tr } as translators) community =
                 |> Input.withAttrs [ class "w-full" ]
                 |> Input.withElements
                     [ span [ class "absolute right-0 inset-y-0 flex items-center pr-3 text-gray-900" ]
-                        [ text (Eos.formatSymbolAmount community.symbol 100) ]
+                        [ text (Eos.formatSymbolAmount translators community.symbol 100) ]
                     ]
                 |> Input.toHtml
             ]
@@ -614,7 +633,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMinimumBalance
         , disabled = False
         , value = model.minimumBalance
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 0)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 0)
         , problems = errorsForField translators MinimumBalance model
         , translators = translators
         }
@@ -626,7 +645,7 @@ viewGeneralFields ({ t } as translators) community model =
         , onInput = EnteredMaximumSupply
         , disabled = False
         , value = model.maximumSupply
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 21000000)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 21000000)
         , problems = errorsForField translators MaximumSupply model
         , translators = translators
         }
@@ -689,7 +708,7 @@ viewExpiryFields ({ t } as translators) community model =
         , onInput = EnteredRenovationAmount
         , disabled = False
         , value = model.renovationAmount
-        , placeholder = Just (Eos.formatSymbolAmount community.symbol 100)
+        , placeholder = Just (Eos.formatSymbolAmount translators community.symbol 100)
         , problems = errorsForField translators RenovationAmount model
         , translators = translators
         }

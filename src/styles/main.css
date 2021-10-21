@@ -31,7 +31,7 @@ body > * {
   }
 
   .button:disabled {
-    @apply bg-opacity-75;
+    @apply bg-opacity-75 button-disabled;
   }
 
   .button-primary {
@@ -52,6 +52,14 @@ body > * {
 
   .button-success {
     @apply bg-green text-white rounded-full;
+  }
+
+  .button-disabled {
+    @apply bg-gray-500 text-gray-900 rounded-super pointer-events-none;
+  }
+
+  .button-danger {
+    @apply button-secondary text-red focus-visible:ring-red focus-visible:ring-opacity-20 hover:border-red;
   }
 }
 
@@ -232,7 +240,7 @@ body > * {
 }
 
 .modal-body {
-  @apply p-4 pt-0 overflow-y-auto;
+  @apply p-4 pt-0 overflow-y-auto h-full;
 
   min-height: 4rem;
   max-height: 60vh;
@@ -242,7 +250,7 @@ body > * {
   @apply p-4 pt-0 overflow-y-auto;
 
   min-height: 4rem;
-  max-height: 70vh;
+  max-height: 80vh;
 }
 
 .modal-body-full {
@@ -453,26 +461,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of extra utilities */
-
-/* Button Modifiers (must be below all other button's styles) */
-
-.button-disabled {
-  @apply bg-gray-500 text-gray-900 rounded-super pointer-events-none;
-}
-
-.button-disabled:hover {
-  @apply bg-gray-500;
-}
-
-.button-danger {
-  @apply button-secondary text-red;
-}
-
-.button-danger:hover {
-  @apply border-red;
-}
-
-/* End of Button Modifiers */
 
 /* Markdown Viewer classes */
 

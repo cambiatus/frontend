@@ -289,7 +289,10 @@ viewAutoInvite { translators } isDisabled defVal _ =
             , value = not defVal
             }
             |> Toggle.withAttrs [ class "mb-10" ]
-            |> Toggle.withTooltip "settings.community_info.invitation.description"
+            |> Toggle.withTooltip
+                { message = translators.t "settings.community_info.invitation.description"
+                , iconClass = "text-orange-300"
+                }
             |> Toggle.toHtml translators
         ]
 

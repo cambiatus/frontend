@@ -236,12 +236,12 @@ fullPageGraphQLError title_ e =
 
 fullPageNotFound : String -> String -> Html msg
 fullPageNotFound title subTitle =
-    div [ class "mx-auto container p-24 flex flex-wrap" ]
+    div [ class "mx-auto container p-8 md:p-24 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title ]
             , p [ class "text-center" ] [ text subTitle ]
             ]
-        , img [ class "w-full", src "/images/not_found.svg" ] []
+        , img [ class "w-full md:w-auto md:mx-auto mt-4", src "/images/not_found.svg" ] []
         ]
 
 

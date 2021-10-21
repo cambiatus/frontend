@@ -1,8 +1,13 @@
 module Community exposing
     ( Balance
     , CommunityPreview
+    , Contribution
+    , ContributionConfiguration
     , CreateCommunityData
     , CreateCommunityDataInput
+    , Field(..)
+    , FieldError(..)
+    , FieldValue(..)
     , Invite
     , Metadata
     , Model
@@ -13,25 +18,39 @@ module Community exposing
     , communityPreviewSymbolQuery
     , createCommunityData
     , createCommunityDataDecoder
+    , currencyTranslationKey
     , decodeBalance
     , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeUpdateData
     , encodeUpdateObjectiveAction
+    , getField
     , inviteQuery
+    , isFieldLoading
     , isNonExistingCommunityError
     , logoBackground
+    , maybeFieldValue
+    , mergeFields
     , newCommunitySubscription
+    , queryForField
+    , queryForFields
+    , setFieldAsLoading
+    , setFieldValue
     , subdomainQuery
     , symbolQuery
     )
 
 import Action exposing (Action)
+import Api.Graphql
+import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
+import Cambiatus.Object.Contribution
+import Cambiatus.Object.ContributionConfig
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -49,10 +68,13 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
+import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
+import List.Extra
 import Profile
+import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
 import Utils
@@ -95,15 +117,173 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
-    , objectives : List Objective
+    , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
+    , contributionConfiguration : Maybe ContributionConfiguration
+    , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
     , validators : List Eos.Name
-    , uploads : List String
+    , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
     }
+
+
+{-| In order to be able to query for fields separately from the community (such
+as objectives and uploads), we need to add a `Field` constructor to represent
+that field. The constructor's name should be the name of the field followed by
+`Field` (e.g. `ObjectivesField`).
+
+In order to have a nice API, we also need types to wrap the success and error
+cases. That's why we have `FieldValue` and `FieldError`.
+
+If you want to add a new field that isn't loaded by default (usually Lists are
+good candidates):
+
+1.  Add the field to the `Model`. It's type should be in the format
+    `RemoteData (Graphql.Http.Error field) field`
+2.  Add a new constructor to this `Field` type following the practices described above
+3.  Add a new constructor to `FieldValue` (see `FieldValue`'s documentation for
+    more info)
+4.  Fill in the functions that use `Field` and `FieldValue` (the compiler will
+    let you know which ones)
+
+Pages can use this type to request separate fields from `LoggedIn`, using
+`LoggedIn.External` messages, specifying which field they want. There are two
+variants they can use to do so:
+
+1.  `RequestedCommunityField`: Checks if the field is loaded. If so, send a
+    `BroadcastMsg` with the field. If not, queries the backend for that field,
+    and once the result comes in, sends a `BroadcastMsg`
+2.  `RequestedReloadCommunityField`: Always queries for the field, and sends the
+    result as a `BroadcastMsg`
+
+-}
+type Field
+    = ContributionsField
+    | ObjectivesField
+    | UploadsField
+    | MembersField
+
+
+{-| `FieldValue` is useful to wrap results of queries for fields that aren't
+loaded in by default with the community (such as objectives and uploads). The
+constructor's name should be the name of the field followed by `Value`, and
+should hold the actual value of that field (e.g. `ObjectivesValue (List Objetive)`).
+-}
+type FieldValue
+    = ContributionsValue (List Contribution)
+    | ObjectivesValue (List Objective)
+    | UploadsValue (List String)
+    | MembersValue (List Profile.Minimal)
+
+
+{-| When we want to extract a field that is not loaded by default with the
+community, and there is an error, we need to know if it was an error when
+fetching the community or when fetching the actual field.
+-}
+type FieldError a
+    = CommunityError (Graphql.Http.Error (Maybe Model))
+    | FieldError a
+
+
+getField :
+    RemoteData (Graphql.Http.Error (Maybe Model)) Model
+    -> (Model -> RemoteData err field)
+    -> RemoteData (FieldError err) ( Model, field )
+getField remoteDataModel accessor =
+    remoteDataModel
+        |> RemoteData.mapError CommunityError
+        |> RemoteData.andThen
+            (\model ->
+                accessor model
+                    |> RemoteData.map (\field -> ( model, field ))
+                    |> RemoteData.mapError FieldError
+            )
+
+
+setFieldValue : FieldValue -> Model -> Model
+setFieldValue fieldValue model =
+    case fieldValue of
+        ContributionsValue contributions ->
+            { model | contributions = RemoteData.Success contributions }
+
+        ObjectivesValue objectives ->
+            { model | objectives = RemoteData.Success objectives }
+
+        UploadsValue uploads ->
+            { model | uploads = RemoteData.Success uploads }
+
+        MembersValue members ->
+            { model | members = members }
+
+
+setFieldAsLoading : Field -> Model -> Model
+setFieldAsLoading field model =
+    case field of
+        ContributionsField ->
+            { model | contributions = RemoteData.Loading }
+
+        ObjectivesField ->
+            { model | objectives = RemoteData.Loading }
+
+        UploadsField ->
+            { model | uploads = RemoteData.Loading }
+
+        MembersField ->
+            model
+
+
+isFieldLoading : Field -> Model -> Bool
+isFieldLoading field model =
+    case field of
+        ContributionsField ->
+            RemoteData.isLoading model.contributions
+
+        ObjectivesField ->
+            RemoteData.isLoading model.objectives
+
+        UploadsField ->
+            RemoteData.isLoading model.uploads
+
+        MembersField ->
+            False
+
+
+maybeFieldValue : Field -> Model -> Maybe FieldValue
+maybeFieldValue field model =
+    case field of
+        ContributionsField ->
+            model.contributions
+                |> RemoteData.toMaybe
+                |> Maybe.map ContributionsValue
+
+        ObjectivesField ->
+            model.objectives
+                |> RemoteData.toMaybe
+                |> Maybe.map ObjectivesValue
+
+        UploadsField ->
+            model.uploads
+                |> RemoteData.toMaybe
+                |> Maybe.map UploadsValue
+
+        MembersField ->
+            Just (MembersValue model.members)
+
+
+mergeFields : RemoteData x Model -> Model -> Model
+mergeFields loadedCommunity newCommunity =
+    case loadedCommunity of
+        RemoteData.Success oldCommunity ->
+            { newCommunity
+                | objectives = oldCommunity.objectives
+                , uploads = oldCommunity.uploads
+            }
+
+        _ ->
+            newCommunity
 
 
 
@@ -141,13 +321,15 @@ communitySelectionSet =
         |> with Community.productCount
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
-        |> with (Community.objectives objectiveSelectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
+        |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
         |> with Community.autoInvite
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
-        |> with (Community.uploads Upload.url)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
 
 
@@ -173,6 +355,65 @@ newCommunitySubscription symbol =
             { input = { symbol = stringSymbol } }
     in
     Subscription.newcommunity args selectionSet
+
+
+selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Community
+selectionSetForField field =
+    case field of
+        ContributionsField ->
+            Community.contributions
+                (\optionals -> { optionals | status = Present Cambiatus.Enum.ContributionStatusType.Created })
+                contributionSelectionSet
+                |> SelectionSet.map ContributionsValue
+
+        ObjectivesField ->
+            Community.objectives objectiveSelectionSet
+                |> SelectionSet.map ObjectivesValue
+
+        UploadsField ->
+            Community.uploads Upload.url
+                |> SelectionSet.map UploadsValue
+
+        MembersField ->
+            Community.members Profile.minimalSelectionSet
+                |> SelectionSet.map MembersValue
+
+
+queryForField :
+    Eos.Symbol
+    -> Shared
+    -> String
+    -> Field
+    -> (RemoteData (Graphql.Http.Error (Maybe FieldValue)) (Maybe FieldValue) -> msg)
+    -> Cmd msg
+queryForField symbol shared authToken field toMsg =
+    Api.Graphql.query shared
+        (Just authToken)
+        (field
+            |> selectionSetForField
+            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+        )
+        toMsg
+
+
+queryForFields :
+    Eos.Symbol
+    -> Shared
+    -> String
+    -> List Field
+    -> (RemoteData (Graphql.Http.Error (List FieldValue)) (List FieldValue) -> msg)
+    -> Cmd msg
+queryForFields symbol shared authToken fields toMsg =
+    Api.Graphql.query shared
+        (Just authToken)
+        (fields
+            |> List.Extra.unique
+            |> List.map selectionSetForField
+            |> SelectionSet.list
+            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+            |> SelectionSet.withDefault []
+        )
+        toMsg
 
 
 symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
@@ -270,6 +511,83 @@ encodeUpdateObjectiveAction c =
         , ( "description", Encode.string c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
+
+
+
+-- CONTRIBUTION
+
+
+type alias Contribution =
+    { user : Profile.Minimal
+    , amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    , id : String
+    , insertedAt : Posix
+    }
+
+
+type alias ContributionConfiguration =
+    { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
+    , paypalAccount : Maybe String
+    , thankYouDescription : Maybe String
+    , thankYouTitle : Maybe String
+    }
+
+
+contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contribution
+contributionSelectionSet =
+    SelectionSet.succeed Contribution
+        |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
+        |> with Cambiatus.Object.Contribution.amount
+        |> with Cambiatus.Object.Contribution.currency
+        |> with Cambiatus.Object.Contribution.id
+        |> with
+            (Cambiatus.Object.Contribution.insertedAt
+                |> SelectionSet.map
+                    (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
+                        Iso8601.toTime naiveDateTime
+                            |> Result.withDefault (Time.millisToPosix 0)
+                    )
+            )
+
+
+contributionConfigurationSelectionSet : SelectionSet ContributionConfiguration Cambiatus.Object.ContributionConfig
+contributionConfigurationSelectionSet =
+    SelectionSet.succeed ContributionConfiguration
+        |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
+        |> with Cambiatus.Object.ContributionConfig.paypalAccount
+        |> with Cambiatus.Object.ContributionConfig.thankYouDescription
+        |> with Cambiatus.Object.ContributionConfig.thankYouTitle
+
+
+currencyTranslationKey : { contribution | amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> String
+currencyTranslationKey { amount, currency } =
+    let
+        baseTranslation =
+            case currency of
+                Cambiatus.Enum.CurrencyType.Brl ->
+                    "currency.brl"
+
+                Cambiatus.Enum.CurrencyType.Btc ->
+                    "currency.btc"
+
+                Cambiatus.Enum.CurrencyType.Crc ->
+                    "currency.crc"
+
+                Cambiatus.Enum.CurrencyType.Eos ->
+                    "currency.eos"
+
+                Cambiatus.Enum.CurrencyType.Eth ->
+                    "currency.eth"
+
+                Cambiatus.Enum.CurrencyType.Usd ->
+                    "currency.usd"
+    in
+    if amount == 1 then
+        baseTranslation ++ "_singular"
+
+    else
+        baseTranslation ++ "_plural"
 
 
 

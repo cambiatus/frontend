@@ -6,7 +6,7 @@ import Community
 import Dict exposing (Dict)
 import Eos
 import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList, id)
+import Html.Attributes exposing (class, classList, id, tabindex)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -17,7 +17,6 @@ import Profile.Summary
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Task
 import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
@@ -28,10 +27,7 @@ import View.MarkdownEditor
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
     ( initModel
-    , Cmd.batch
-        [ Task.succeed RequestedReloadCommunity |> Task.perform identity
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -74,17 +70,21 @@ view ({ shared } as loggedIn) model =
             t "community.objectives.title_plural"
 
         content =
-            case ( loggedIn.selectedCommunity, model.status ) of
-                ( RemoteData.Success community, Loaded ) ->
+            case
+                ( Community.getField loggedIn.selectedCommunity .objectives
+                , model.status
+                )
+            of
+                ( RemoteData.Success ( community, objectives ), Loaded ) ->
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title_plural")
                         , div [ class "container mx-auto px-4 my-10" ]
                             [ div [ class "flex justify-end mb-10" ] [ viewNewObjectiveButton loggedIn community ]
                             , div []
-                                (community.objectives
+                                (objectives
                                     |> List.sortBy .id
                                     |> List.reverse
-                                    |> List.indexedMap (viewObjective loggedIn model community)
+                                    |> List.indexedMap (viewObjective loggedIn model)
                                 )
                             ]
                         ]
@@ -96,7 +96,10 @@ view ({ shared } as loggedIn) model =
                             [ text (shared.translators.t "community.edit.unauthorized") ]
                         ]
 
-                ( RemoteData.Failure e, _ ) ->
+                ( RemoteData.Failure (Community.CommunityError e), _ ) ->
+                    Page.fullPageGraphQLError (t "community.objectives.title_plural") e
+
+                ( RemoteData.Failure (Community.FieldError e), _ ) ->
                     Page.fullPageGraphQLError (t "community.objectives.title_plural") e
 
                 ( RemoteData.Loading, _ ) ->
@@ -126,8 +129,8 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         text ""
 
 
-viewObjective : LoggedIn.Model -> Model -> Community.Model -> Int -> Community.Objective -> Html Msg
-viewObjective ({ shared } as loggedIn) model _ index objective =
+viewObjective : LoggedIn.Model -> Model -> Int -> Community.Objective -> Html Msg
+viewObjective ({ shared } as loggedIn) model index objective =
     let
         isOpen : Bool
         isOpen =
@@ -351,9 +354,14 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             )
                     ]
                 , a
-                    [ class "button button-primary button-sm w-full sm:w-40 mt-8"
+                    [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
                     , Route.href (Route.EditAction objectiveId action.id)
                     , classList [ ( "button-disabled", action.objective.isCompleted ) ]
+                    , if action.objective.isCompleted then
+                        tabindex -1
+
+                      else
+                        class ""
                     ]
                     [ text_ "community.actions.edit" ]
                 ]
@@ -371,7 +379,6 @@ type alias UpdateResult =
 
 type Msg
     = CompletedLoadCommunity Community.Model
-    | RequestedReloadCommunity
     | OpenObjective Int
     | GotProfileSummaryMsg Int Int Profile.Summary.Msg
 
@@ -380,22 +387,17 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
-            UR.init
-                { model
-                    | status =
-                        if not community.hasObjectives then
-                            Unauthorized
+            let
+                ( status, maybeRequestObjectives ) =
+                    if community.hasObjectives && community.creator == loggedIn.accountName then
+                        ( Loaded, UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField) )
 
-                        else if community.creator == loggedIn.accountName then
-                            Loaded
-
-                        else
-                            Unauthorized
-                }
-
-        RequestedReloadCommunity ->
-            UR.init model
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.CommunityResource)
+                    else
+                        ( Unauthorized, identity )
+            in
+            { model | status = status }
+                |> UR.init
+                |> maybeRequestObjectives
 
         OpenObjective index ->
             if model.openObjective == Just index then
@@ -415,7 +417,7 @@ update msg model loggedIn =
                     , profileSummaries =
                         loggedIn.selectedCommunity
                             |> RemoteData.toMaybe
-                            |> Maybe.map .objectives
+                            |> Maybe.andThen (.objectives >> RemoteData.toMaybe)
                             |> Maybe.andThen (List.getAt index)
                             |> Maybe.map .actions
                             |> Maybe.withDefault []
@@ -465,9 +467,6 @@ msgToString msg =
     case msg of
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        RequestedReloadCommunity ->
-            [ "RequestedReloadCommunity" ]
 
         OpenObjective _ ->
             [ "OpenObjective" ]

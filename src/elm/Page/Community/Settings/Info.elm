@@ -26,11 +26,12 @@ import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import Log
+import Mask
 import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import Url
@@ -98,6 +99,7 @@ init loggedIn =
 type Msg
     = Ignored
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadUploads (List String)
     | ClosedAuthModal
     | EnteredLogo (List File)
     | CompletedLogoUpload (Result Http.Error String)
@@ -127,17 +129,32 @@ update msg model ({ shared } as loggedIn) =
             UR.init model
 
         CompletedLoadCommunity community ->
+            let
+                ( coverPhoto, maybeRequestUploads ) =
+                    case community.uploads of
+                        RemoteData.Success uploads ->
+                            ( case List.head uploads of
+                                Just photo ->
+                                    RemoteData.Success photo
+
+                                Nothing ->
+                                    RemoteData.NotAsked
+                            , identity
+                            )
+
+                        RemoteData.Loading ->
+                            ( RemoteData.Loading, identity )
+
+                        _ ->
+                            ( RemoteData.Loading
+                            , UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
+                            )
+            in
             { model
                 | logo = RemoteData.Success community.logo
                 , nameInput = community.name
                 , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
-                , coverPhoto =
-                    case List.head community.uploads of
-                        Just photo ->
-                            RemoteData.Success photo
-
-                        Nothing ->
-                            RemoteData.NotAsked
+                , coverPhoto = coverPhoto
                 , subdomainInput =
                     community.subdomain
                         |> String.split "."
@@ -148,6 +165,19 @@ update msg model ({ shared } as loggedIn) =
                 , invitedRewardInput = String.fromFloat community.invitedReward
                 , isLoading = False
                 , websiteInput = Maybe.withDefault "" community.website
+            }
+                |> UR.init
+                |> maybeRequestUploads
+
+        CompletedLoadUploads uploads ->
+            { model
+                | coverPhoto =
+                    case List.head uploads of
+                        Just photo ->
+                            RemoteData.Success photo
+
+                        Nothing ->
+                            RemoteData.NotAsked
             }
                 |> UR.init
 
@@ -243,12 +273,12 @@ update msg model ({ shared } as loggedIn) =
 
         EnteredInviterReward inviterReward ->
             { model | inviterRewardInput = inviterReward }
-                |> validateInviterReward (RemoteData.toMaybe loggedIn.selectedCommunity)
+                |> validateInviterReward shared.translators (RemoteData.toMaybe loggedIn.selectedCommunity)
                 |> UR.init
 
         EnteredInvitedReward invitedReward ->
             { model | invitedRewardInput = invitedReward }
-                |> validateInvitedReward (RemoteData.toMaybe loggedIn.selectedCommunity)
+                |> validateInvitedReward shared.translators (RemoteData.toMaybe loggedIn.selectedCommunity)
                 |> UR.init
 
         ClickedSave ->
@@ -265,7 +295,7 @@ update msg model ({ shared } as loggedIn) =
                         |> Maybe.map ((==) inputFullDomain)
                         |> Maybe.withDefault False
             in
-            if isModelValid maybeCommunity model then
+            if isModelValid shared.translators maybeCommunity model then
                 if isSameSubdomain then
                     { model | isLoading = True }
                         |> UR.init
@@ -287,7 +317,7 @@ update msg model ({ shared } as loggedIn) =
             else
                 let
                     invalidModel =
-                        validateModel maybeCommunity model
+                        validateModel shared.translators maybeCommunity model
 
                     focusErrorField =
                         case
@@ -321,11 +351,11 @@ update msg model ({ shared } as loggedIn) =
 
         GotDomainAvailableResponse (RemoteData.Success True) ->
             case
-                ( isModelValid (RemoteData.toMaybe loggedIn.selectedCommunity) model
-                , loggedIn.selectedCommunity
+                ( isModelValid shared.translators (RemoteData.toMaybe loggedIn.selectedCommunity) model
+                , Community.getField loggedIn.selectedCommunity .uploads
                 )
             of
-                ( True, RemoteData.Success community ) ->
+                ( True, RemoteData.Success ( community, communityUploads ) ) ->
                     let
                         authorization =
                             { actor = loggedIn.accountName
@@ -338,7 +368,7 @@ update msg model ({ shared } as loggedIn) =
                             }
 
                         newUpload =
-                            case ( model.coverPhoto, List.head community.uploads ) of
+                            case ( model.coverPhoto, List.head communityUploads ) of
                                 ( RemoteData.Success url, Just firstUpload ) ->
                                     if url == firstUpload then
                                         Nothing
@@ -378,11 +408,15 @@ update msg model ({ shared } as loggedIn) =
                                             , description = model.descriptionInput.contents
                                             , subdomain = Route.communityFullDomain shared model.subdomainInput
                                             , inviterReward =
-                                                String.toFloat model.inviterRewardInput
+                                                model.inviterRewardInput
+                                                    |> Mask.removeFloat (Shared.decimalSeparators shared.translators)
+                                                    |> String.toFloat
                                                     |> Maybe.withDefault community.inviterReward
                                                     |> asset
                                             , invitedReward =
-                                                String.toFloat model.invitedRewardInput
+                                                model.invitedRewardInput
+                                                    |> Mask.removeFloat (Shared.decimalSeparators shared.translators)
+                                                    |> String.toFloat
                                                     |> Maybe.withDefault community.invitedReward
                                                     |> asset
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
@@ -403,7 +437,7 @@ update msg model ({ shared } as loggedIn) =
                                         (Just loggedIn.authToken)
                                         (Community.addPhotosMutation
                                             community.symbol
-                                            (url :: community.uploads)
+                                            (url :: communityUploads)
                                         )
                                         (CompletedAddingCoverPhoto url)
 
@@ -530,9 +564,9 @@ update msg model ({ shared } as loggedIn) =
                                         Route.Dashboard
 
                             newUploads =
-                                case model.coverPhoto of
-                                    RemoteData.Success coverPhoto ->
-                                        coverPhoto :: community.uploads
+                                case ( community.uploads, model.coverPhoto ) of
+                                    ( RemoteData.Success uploads, RemoteData.Success coverPhoto ) ->
+                                        RemoteData.Success (coverPhoto :: uploads)
 
                                     _ ->
                                         community.uploads
@@ -555,10 +589,12 @@ update msg model ({ shared } as loggedIn) =
                                         , logo = RemoteData.withDefault community.logo model.logo
                                         , inviterReward =
                                             model.inviterRewardInput
+                                                |> Mask.removeFloat (Shared.decimalSeparators shared.translators)
                                                 |> String.toFloat
                                                 |> Maybe.withDefault community.inviterReward
                                         , invitedReward =
                                             model.invitedRewardInput
+                                                |> Mask.removeFloat (Shared.decimalSeparators shared.translators)
                                                 |> String.toFloat
                                                 |> Maybe.withDefault community.invitedReward
                                         , hasAutoInvite = model.hasAutoInvite
@@ -646,11 +682,11 @@ fieldId field =
             "invited_reward_input"
 
 
-isModelValid : Maybe Community.Model -> Model -> Bool
-isModelValid maybeCommunity model =
+isModelValid : Shared.Translators -> Maybe Community.Model -> Model -> Bool
+isModelValid translators maybeCommunity model =
     let
         validatedModel =
-            validateModel maybeCommunity model
+            validateModel translators maybeCommunity model
     in
     List.all (\f -> f validatedModel |> List.isEmpty)
         [ .nameErrors
@@ -664,15 +700,15 @@ isModelValid maybeCommunity model =
         && (RemoteData.isNotAsked model.coverPhoto || RemoteData.isSuccess model.coverPhoto)
 
 
-validateModel : Maybe Community.Model -> Model -> Model
-validateModel maybeCommunity model =
+validateModel : Shared.Translators -> Maybe Community.Model -> Model -> Model
+validateModel translators maybeCommunity model =
     model
         |> validateName
         |> validateDescription
         |> validateWebsite
         |> validateSubdomain
-        |> validateInviterReward maybeCommunity
-        |> validateInvitedReward maybeCommunity
+        |> validateInviterReward translators maybeCommunity
+        |> validateInvitedReward translators maybeCommunity
 
 
 validateName : Model -> Model
@@ -762,14 +798,17 @@ validateSubdomain model =
     { model | subdomainErrors = validateChars ++ validateCase ++ validateLength }
 
 
-validateNumberInput : Maybe Eos.Symbol -> String -> Result String Float
-validateNumberInput maybeSymbol numberInput =
+validateNumberInput : Shared.Translators -> Maybe Eos.Symbol -> String -> Result String Float
+validateNumberInput translators maybeSymbol numberInput =
     let
+        unmasked =
+            Mask.removeFloat (Shared.decimalSeparators translators) numberInput
+
         validateParsing =
-            String.toFloat numberInput
+            String.toFloat unmasked
                 |> Result.fromMaybe "error.validator.text.only_numbers"
     in
-    case String.split "." numberInput of
+    case String.split "." unmasked of
         [] ->
             Err "error.required"
 
@@ -792,9 +831,9 @@ validateNumberInput maybeSymbol numberInput =
                     validateParsing
 
 
-validateInviterReward : Maybe Community.Model -> Model -> Model
-validateInviterReward maybeCommunity model =
-    case validateNumberInput (Maybe.map .symbol maybeCommunity) model.inviterRewardInput of
+validateInviterReward : Shared.Translators -> Maybe Community.Model -> Model -> Model
+validateInviterReward translators maybeCommunity model =
+    case validateNumberInput translators (Maybe.map .symbol maybeCommunity) model.inviterRewardInput of
         Ok _ ->
             { model | inviterRewardErrors = [] }
 
@@ -802,9 +841,9 @@ validateInviterReward maybeCommunity model =
             { model | inviterRewardErrors = [ err ] }
 
 
-validateInvitedReward : Maybe Community.Model -> Model -> Model
-validateInvitedReward maybeCommunity model =
-    case validateNumberInput (Maybe.map .symbol maybeCommunity) model.invitedRewardInput of
+validateInvitedReward : Shared.Translators -> Maybe Community.Model -> Model -> Model
+validateInvitedReward translators maybeCommunity model =
+    case validateNumberInput translators (Maybe.map .symbol maybeCommunity) model.invitedRewardInput of
         Ok _ ->
             { model | invitedRewardErrors = [] }
 
@@ -1126,6 +1165,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.UploadsValue uploads) ->
+            Just (CompletedLoadUploads uploads)
+
         _ ->
             Nothing
 
@@ -1158,6 +1200,9 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        CompletedLoadUploads _ ->
+            [ "CompletedLoadUploads" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

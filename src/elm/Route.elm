@@ -35,6 +35,7 @@ type Route
     | ProfileAddContact
     | PaymentHistory Eos.Account.Name
     | Profile Eos.Account.Name
+    | ProfileContributions Eos.Account.Name
     | Dashboard
     | Community
     | NewCommunity
@@ -42,7 +43,13 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsSponsorship
+    | CommunitySettingsSponsorshipFiat
+    | CommunitySettingsSponsorshipThankYouMessage
     | CommunitySelector (Maybe Route)
+    | CommunityThankYou
+    | CommunitySponsor
+    | CommunitySupporters
     | Objectives
     | NewObjective
     | EditObjective Int
@@ -96,6 +103,7 @@ parser url =
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map Profile (s "profile" </> (string |> Url.map Eos.Account.stringToName))
+        , Url.map ProfileContributions (s "profile" </> (string |> Url.map Eos.Account.stringToName) </> s "contributions")
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
@@ -106,6 +114,9 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
+        , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
+        , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
+        , Url.map CommunitySettingsSponsorshipThankYouMessage (s "community" </> s "settings" </> s "sponsorship" </> s "thank-you")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -113,6 +124,9 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
+        , Url.map CommunityThankYou (s "community" </> s "thank-you")
+        , Url.map CommunitySponsor (s "community" </> s "sponsor")
+        , Url.map CommunitySupporters (s "community" </> s "supporters")
         , Url.map Objectives (s "community" </> s "objectives")
         , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
         , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
@@ -375,6 +389,9 @@ routeToString route =
                 Profile accountName ->
                     ( [ "profile", Eos.Account.nameToString accountName ], [] )
 
+                ProfileContributions accountName ->
+                    ( [ "profile", Eos.Account.nameToString accountName, "contributions" ], [] )
+
                 Dashboard ->
                     ( [ "dashboard" ], [] )
 
@@ -393,10 +410,28 @@ routeToString route =
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
 
+                CommunitySettingsSponsorship ->
+                    ( [ "community", "settings", "sponsorship" ], [] )
+
+                CommunitySettingsSponsorshipFiat ->
+                    ( [ "community", "settings", "sponsorship", "fiat" ], [] )
+
+                CommunitySettingsSponsorshipThankYouMessage ->
+                    ( [ "community", "settings", "sponsorship", "thank-you" ], [] )
+
                 CommunitySelector maybeRedirect ->
                     ( [ "community", "selector" ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
+
+                CommunityThankYou ->
+                    ( [ "community", "thank-you" ], [] )
+
+                CommunitySponsor ->
+                    ( [ "community", "sponsor" ], [] )
+
+                CommunitySupporters ->
+                    ( [ "community", "supporters" ], [] )
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )

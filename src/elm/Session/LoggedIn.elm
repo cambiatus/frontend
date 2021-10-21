@@ -27,7 +27,6 @@ import Api
 import Api.Graphql
 import Auth
 import Avatar
-import Browser.Events
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -62,6 +61,7 @@ import Task
 import Time
 import Translation
 import UpdateResult as UR
+import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -131,28 +131,13 @@ initLogin shared maybePrivateKey_ profile_ authToken =
 -- SUBSCRIPTIONS
 
 
-onEscape : Msg -> Sub Msg
-onEscape toMsg =
-    Decode.field "key" Decode.string
-        |> Decode.andThen
-            (\key ->
-                if key == "Esc" || key == "Escape" then
-                    Decode.succeed ()
-
-                else
-                    Decode.fail "Expecting Escape key"
-            )
-        |> Browser.Events.onKeyDown
-        |> Sub.map (\_ -> toMsg)
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
         , if model.showUserNav then
-            onEscape (ShowUserNav False)
+            Utils.escSubscription (ShowUserNav False)
 
           else
             Sub.none
@@ -161,7 +146,7 @@ subscriptions model =
                 Sub.none
 
             _ ->
-                onEscape (GotSearchMsg Search.closeMsg)
+                Utils.escSubscription (GotSearchMsg Search.closeMsg)
         ]
 
 
@@ -175,6 +160,7 @@ type alias Model =
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
+    , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
     , showUserNav : Bool
     , showLanguageItems : Bool
     , showNotificationModal : Bool
@@ -189,6 +175,7 @@ type alias Model =
     , claimingAction : Action.Model
     , authToken : String
     , hasSeenDashboard : Bool
+    , queuedCommunityFields : List Community.Field
     }
 
 
@@ -199,20 +186,22 @@ initModel shared maybePrivateKey_ accountName authToken =
     , accountName = accountName
     , profile = RemoteData.Loading
     , selectedCommunity = RemoteData.Loading
+    , contributionCount = RemoteData.NotAsked
     , showUserNav = False
     , showLanguageItems = False
     , showNotificationModal = False
     , showMainNav = False
-    , notification = Notification.init
-    , unreadCount = 0
+    , showCommunitySelector = False
     , showAuthModal = False
     , auth = Auth.init shared.pinVisibility maybePrivateKey_
+    , notification = Notification.init
+    , unreadCount = 0
     , feedback = Feedback.Hidden
-    , showCommunitySelector = False
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , authToken = authToken
     , hasSeenDashboard = False
+    , queuedCommunityFields = []
     }
 
 
@@ -235,15 +224,20 @@ type Page
     | NotFound
     | ComingSoon
     | Invite
-    | Join
     | Dashboard
     | Community
     | CommunitySettings
-    | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsCurrency
+    | CommunitySettingsFeatures
+    | CommunitySettingsSponsorship
+    | CommunitySettingsSponsorshipFiat
+    | CommunitySettingsSponsorshipThankYouMessage
     | CommunityEditor
     | CommunitySelector
+    | CommunityThankYou
+    | CommunitySponsor
+    | CommunitySupporters
     | Objectives
     | ObjectiveEditor
     | ActionEditor
@@ -254,6 +248,7 @@ type Page
     | ShopViewer
     | Profile
     | ProfilePublic
+    | ProfileContributions
     | ProfileEditor
     | ProfileAddKyc
     | ProfileClaims
@@ -262,6 +257,7 @@ type Page
     | Transfer
     | ViewTransfer
     | Analysis
+    | Join
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -525,7 +521,7 @@ viewHeader page ({ shared } as model) profile_ =
             , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
             ]
             [ a
-                [ class "relative rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50"
+                [ class "relative rounded-sm group focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50"
                 , Route.href Route.Notification
                 , classList [ ( "mr-4", model.unreadCount > 0 ) ]
                 ]
@@ -548,9 +544,11 @@ viewHeader page ({ shared } as model) profile_ =
                 text ""
             , div [ class "relative z-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus:ring-orange-300 lg:focus:ring-opacity-50"
-                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
-                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    , classList
+                        [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav )
+                        , ( "rounded-lg", not model.showUserNav )
+                        ]
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
@@ -564,7 +562,7 @@ viewHeader page ({ shared } as model) profile_ =
                         ]
                     ]
                 , button
-                    [ class "z-10 flex relative focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 lg:hidden"
+                    [ class "z-10 flex relative focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
@@ -593,8 +591,7 @@ viewHeader page ({ shared } as model) profile_ =
                             [ a
                                 [ class "flex block w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
                                 , Route.href (Route.Profile model.accountName)
-                                , onClick (ShowUserNav False)
-                                , onClick SearchClosed
+                                , onClick ClickedProfileIcon
                                 ]
                                 [ Icons.profile "mr-4 fill-current"
                                 , text_ "menu.profile"
@@ -786,7 +783,7 @@ viewFooter _ =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
-            , Icons.heart
+            , Icons.heartSolid
             , text "by Satisfied Vagabonds"
             ]
         , img
@@ -809,6 +806,8 @@ type External msg
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
+    | RequestedReloadCommunityField Community.Field
+    | RequestedCommunityField Community.Field
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
@@ -832,6 +831,12 @@ mapExternal mapFn msg =
         ReloadResource resource ->
             ReloadResource resource
 
+        RequestedCommunityField field ->
+            RequestedCommunityField field
+
+        RequestedReloadCommunityField field ->
+            RequestedReloadCommunityField field
+
         RequiredAuthentication { successMsg, errorMsg } ->
             RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
 
@@ -854,7 +859,6 @@ updateExternal :
     ->
         { model : Model
         , cmd : Cmd Msg
-        , externalCmd : Cmd msg
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
         }
@@ -863,7 +867,6 @@ updateExternal externalMsg ({ shared } as model) =
         defaultResult =
             { model = model
             , cmd = Cmd.none
-            , externalCmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
             }
@@ -907,6 +910,17 @@ updateExternal externalMsg ({ shared } as model) =
                     in
                     { defaultResult | model = newModel, cmd = cmd, broadcastMsg = Just broadcastMsg }
 
+                CommunityFieldLoaded community field ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | selectedCommunity =
+                                    Community.setFieldValue field community
+                                        |> RemoteData.Success
+                            }
+                        , broadcastMsg = Just broadcastMsg
+                    }
+
                 ProfileLoaded profile_ ->
                     { defaultResult
                         | model = { model | profile = RemoteData.Success profile_ }
@@ -944,6 +958,67 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource TimeResource ->
             { defaultResult | cmd = Task.perform GotTimeInternal Time.now }
 
+        RequestedCommunityField field ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    if Community.isFieldLoading field community then
+                        defaultResult
+
+                    else
+                        case Community.maybeFieldValue field community of
+                            Nothing ->
+                                { defaultResult
+                                    | cmd =
+                                        Community.queryForField community.symbol
+                                            shared
+                                            model.authToken
+                                            field
+                                            (CompletedLoadCommunityField community)
+                                    , model =
+                                        { model
+                                            | selectedCommunity =
+                                                Community.setFieldAsLoading field community
+                                                    |> RemoteData.Success
+                                        }
+                                }
+
+                            Just fieldValue ->
+                                { defaultResult
+                                    | broadcastMsg =
+                                        Just
+                                            (CommunityFieldLoaded community fieldValue)
+                                }
+
+                _ ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | queuedCommunityFields =
+                                    field :: model.queuedCommunityFields
+                            }
+                    }
+
+        RequestedReloadCommunityField field ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    { defaultResult
+                        | cmd =
+                            Community.queryForField community.symbol
+                                shared
+                                model.authToken
+                                field
+                                (CompletedLoadCommunityField community)
+                    }
+
+                _ ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | queuedCommunityFields =
+                                    field :: model.queuedCommunityFields
+                            }
+                    }
+
         RequiredAuthentication afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
@@ -971,6 +1046,7 @@ type ExternalMsg
 
 type BroadcastMsg
     = CommunityLoaded Community.Model
+    | CommunityFieldLoaded Community.Model Community.FieldValue
     | ProfileLoaded Profile.Model
     | GotTime Time.Posix
     | TranslationsLoaded
@@ -981,6 +1057,8 @@ type Msg
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
+    | CompletedLoadCommunityField Community.Model (RemoteData (Graphql.Http.Error (Maybe Community.FieldValue)) (Maybe Community.FieldValue))
+    | CompletedLoadCommunityFields Community.Model (RemoteData (Graphql.Http.Error (List Community.FieldValue)) (List Community.FieldValue))
     | ClickedTryAgainProfile Eos.Name
     | ClickedLogout
     | ShowUserNav Bool
@@ -996,7 +1074,9 @@ type Msg
     | GotSearchMsg Search.Msg
     | GotActionMsg Action.Msg
     | SearchClosed
+    | ClickedProfileIcon
     | GotTimeInternal Time.Posix
+    | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
 
 
 update : Msg -> Model -> UpdateResult
@@ -1023,6 +1103,10 @@ update msg model =
 
         SearchClosed ->
             { model | searchModel = Search.closeSearch model.searchModel }
+                |> UR.init
+
+        ClickedProfileIcon ->
+            { closeAllModals | searchModel = Search.closeSearch model.searchModel }
                 |> UR.init
 
         GotSearchMsg searchMsg ->
@@ -1131,12 +1215,37 @@ update msg model =
         CompletedLoadCommunity (RemoteData.Success (Just community)) ->
             let
                 ( newModel, cmd ) =
-                    setCommunity community model
+                    setCommunity
+                        (Community.mergeFields model.selectedCommunity community)
+                        model
+
+                newCommunity =
+                    Community.mergeFields newModel.selectedCommunity community
+                        |> (\comm ->
+                                List.foldl Community.setFieldAsLoading
+                                    comm
+                                    newModel.queuedCommunityFields
+                           )
+
+                queryForContributionCount =
+                    Api.Graphql.query newModel.shared
+                        (Just newModel.authToken)
+                        (Profile.contributionCountQuery community.symbol model.accountName)
+                        CompletedLoadContributionCount
             in
-            UR.init newModel
+            { newModel | selectedCommunity = RemoteData.Success newCommunity }
+                |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
-                |> UR.addExt (CommunityLoaded community |> Broadcast)
+                |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
+                |> UR.addCmd
+                    (Community.queryForFields community.symbol
+                        newModel.shared
+                        newModel.authToken
+                        newModel.queuedCommunityFields
+                        (CompletedLoadCommunityFields newCommunity)
+                    )
+                |> UR.addCmd queryForContributionCount
                 |> UR.addBreadcrumb
                     { type_ = Log.DefaultBreadcrumb
                     , category = msg
@@ -1177,6 +1286,78 @@ update msg model =
 
         CompletedLoadCommunity RemoteData.Loading ->
             UR.init { model | selectedCommunity = RemoteData.Loading }
+
+        CompletedLoadCommunityField community (RemoteData.Success (Just fieldValue)) ->
+            let
+                newCommunity =
+                    Community.setFieldValue fieldValue community
+            in
+            { model | selectedCommunity = RemoteData.Success newCommunity }
+                |> UR.init
+                |> UR.addExt
+                    (CommunityFieldLoaded newCommunity fieldValue
+                        |> Broadcast
+                    )
+
+        CompletedLoadCommunityField community (RemoteData.Success Nothing) ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Tried loading community field, but got Nothing in return"
+                    (Just model.accountName)
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    [ Log.contextFromCommunity (RemoteData.Success community) ]
+
+        CompletedLoadCommunityField _ (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading community field"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedLoadCommunityField _ RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadCommunityField _ RemoteData.Loading ->
+            UR.init model
+
+        CompletedLoadCommunityFields community (RemoteData.Success fieldValues) ->
+            let
+                newCommunity =
+                    List.foldl Community.setFieldValue community fieldValues
+
+                addBroadcasts uResult =
+                    List.foldl
+                        (\field ->
+                            UR.addExt
+                                (CommunityFieldLoaded community field
+                                    |> Broadcast
+                                )
+                        )
+                        uResult
+                        fieldValues
+            in
+            { model | selectedCommunity = RemoteData.Success newCommunity }
+                |> UR.init
+                |> addBroadcasts
+
+        CompletedLoadCommunityFields _ (RemoteData.Failure err) ->
+            UR.init model
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading multiple community fields"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedLoadCommunityFields _ RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedLoadCommunityFields _ RemoteData.Loading ->
+            UR.init model
 
         ClickedTryAgainProfile accountName ->
             UR.init { model | profile = RemoteData.Loading }
@@ -1322,6 +1503,37 @@ update msg model =
 
                 RemoteData.Loading ->
                     UR.init model
+
+        CompletedLoadContributionCount (RemoteData.Success (Just contributionCount)) ->
+            { model | contributionCount = RemoteData.Success contributionCount }
+                |> UR.init
+
+        CompletedLoadContributionCount (RemoteData.Success Nothing) ->
+            { model | contributionCount = RemoteData.Success 0 }
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Got contribution count successfully, but it returned `Nothing`"
+                    (Just model.accountName)
+                    { moduleName = "Session.LoggedIn"
+                    , function = "update"
+                    }
+                    [ Log.contextFromCommunity model.selectedCommunity ]
+
+        CompletedLoadContributionCount (RemoteData.Failure err) ->
+            { model | contributionCount = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when loading contribution count"
+                    { moduleName = "Session.LoggedIn"
+                    , function = "update"
+                    }
+                    [ Log.contextFromCommunity model.selectedCommunity ]
+                    err
+
+        CompletedLoadContributionCount _ ->
+            model
+                |> UR.init
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1640,6 +1852,9 @@ msgToString msg =
         SearchClosed ->
             [ "SearchClosed" ]
 
+        ClickedProfileIcon ->
+            [ "ClickedProfileIcon" ]
+
         GotSearchMsg _ ->
             [ "GotSearchMsg" ]
 
@@ -1657,6 +1872,12 @@ msgToString msg =
 
         CompletedLoadCommunity r ->
             [ "CompletedLoadCommunity", UR.remoteDataToString r ]
+
+        CompletedLoadCommunityField _ _ ->
+            [ "CompletedLoadCommunityField" ]
+
+        CompletedLoadCommunityFields _ _ ->
+            [ "CompletedLoadCommunityFields" ]
 
         ClickedTryAgainProfile _ ->
             [ "ClickedTryAgainProfile" ]
@@ -1693,3 +1914,6 @@ msgToString msg =
 
         GotFeedbackMsg _ ->
             [ "GotFeedbackMsg" ]
+
+        CompletedLoadContributionCount r ->
+            [ "CompletedLoadContributionCount", UR.remoteDataToString r ]

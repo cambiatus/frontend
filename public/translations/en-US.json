@@ -1,6 +1,8 @@
 {
   "bespiral": "Cambiatus",
   "back": "Back",
+  "decimal_separator": ".",
+  "thousands_separator": ",",
   "dates": {
     "today": "Today",
     "yesterday": "Yesterday"
@@ -84,7 +86,7 @@
         "is_odd": "The number must be odd"
       },
       "date": {
-        "invalid": "The date is invalid, please use 'mm/dd/aaaa'"
+        "invalid": "Invalid date, choose a date in the future"
       },
       "text": {
         "only_numbers": "Only numbers are allowed",
@@ -457,7 +459,16 @@
       "claims": "Claims",
       "products": "Shop sales",
       "orders": "Shop purchases",
-      "transfers": "Transactions"
+      "transfers": "Transactions",
+      "our_supporters": "Our",
+      "supporters": "Supporters",
+      "our_messages": "Our",
+      "messages": "Messages",
+      "you": "You",
+      "your_turn": "{{community}} supported you, now it's your turn!",
+      "support_us": "Support us",
+      "see_supporters": "See the latest members who supported us.",
+      "see_all_supporters": "See all supporters"
     },
     "invite": {
       "title": "Invite your friends",
@@ -506,6 +517,7 @@
       "action_count": "{{actions}} actions",
       "complete": "Complete",
       "edit": "Edit objective",
+      "error_loading": "Something went wrong when loading objectives",
       "editor": {
         "not_found": "Not Found",
         "error": "Ops something went wrong!",
@@ -591,7 +603,8 @@
         "no": "No",
         "yes": "Yes",
         "automatic": "Automatic,",
-        "automatic_detail": " rewards the user immediately when claimed",
+        "automatic_detail": " unclaimable action and therefore, without the review and approval of other members",
+        "automatic_tooltip": "If you need to connect an external app through an API, the community admin may contact us to make that configuration.",
         "manual": "Manual,",
         "manual_detail": " rewards the user only after reviewed by others",
         "verifier_placeholder": "Type the username",
@@ -648,6 +661,10 @@
         "canRemove": "You can always remove this information from your profile if you decide to do so.",
         "success": "Your KYC data was successfully saved."
       }
+    },
+    "thank_you": {
+      "title": "Thank You!",
+      "all_supporters": "See the list of all supporters"
     }
   },
   "profile": {
@@ -721,6 +738,15 @@
         "completed_action": "Only claim actions you have actually completed;",
         "know_good_practices": "Know the Community's good practices"
       }
+    },
+    "contributions": {
+      "profile_contributions": "{{profile_name}}'s contributions",
+      "not_allowed_title": "You're not allowed to see other people's contributions",
+      "not_allowed": "Only community admins can see other people's contributions",
+      "no_contributions": "No contributions yet",
+      "pending": "Pending",
+      "approved": "Approved",
+      "failed": "Failed"
     }
   },
   "shop": {
@@ -788,6 +814,7 @@
     "transfer": "Transfer",
     "your_balance": "Your balance in {{symbol}}",
     "how_to_earn": "How to earn {{symbol}}",
+    "my_contributions": "My contributions",
     "invite": "Invite your friends",
     "sorry": "Sorry!",
     "action_rejected": "Your action was rejected",
@@ -876,6 +903,10 @@
       "2": "under review",
       "3": ", other members still need to vote"
     },
+    "title_cancelled": {
+      "1": "This claim was",
+      "2": "cancelled"
+    },
     "title_approved": {
       "1": "This claim was",
       "2": "approved"
@@ -884,13 +915,16 @@
       "1": "This claim was",
       "2": "rejected"
     },
+    "cancelled_voting_bar": "pending votes",
     "title_action_completed": "This claim is pending, however, since the action is completed, it's not possible to vote",
     "title_action_closed": "This claim is pending, however, since the action is closed, it's not possible to vote",
+    "opened_today": "Opened today",
     "day_ago": "Opened {{day_count}} day ago",
     "days_ago": "Opened {{day_count}} days ago",
     "vote": "vote",
     "votes": "votes",
     "pending": "Pending",
+    "cancelled": "Cancelled",
     "disapproved": "Disapproved",
     "approved": "Approved",
     "reward": "Congrats, you gained: {{value}}",
@@ -913,6 +947,15 @@
     "approve": "Approve",
     "no_results_found": "No results found",
     "voteTitle": "Do you approve or disapprove of this action?",
+    "attention": "Attention: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Cancelled claim",
+      "was_cancelled": "This claim was cancelled",
+      "deadline_reached": "The corresponding action was completed because it reached it's due date",
+      "usages_reached": "The corresponding action was completed because it reached it's maximum number of usages",
+      "action_completed": "The corresponding action was marked as completed by the community's administration team",
+      "not_available": "Therefore, the claim is not open for votes anymore"
+    },
     "modal": {
       "title": "Under Review",
       "message_disapprove": "Do you really want to disapprove this action?",
@@ -1026,7 +1069,7 @@
     },
     "features": {
       "title": "Features",
-      "description": "Actions, shop",
+      "description": "Objectives, Actions, Shop, Sponsorship",
       "enabled": "Enabled",
       "disabled": "Disabled"
     }
@@ -1098,6 +1141,59 @@
       "accept": "Yes"
     }
   },
+  "sponsorship": {
+    "title": "Sponsorship",
+    "no_support": "Your community doesn't support sponsorship yet",
+    "no_support_subtitle": "Talk to the community administration team to activate this feature",
+    "description": "Allow users to sponsor the community",
+    "sponsor": "Sponsor",
+    "enter_amount": "Enter the amount you want to contribute",
+    "select_currency": "Select the currency you want to use",
+    "amount_too_small": "The amount must be at least {{minimum}} {{currency}}",
+    "amount_too_big": "The amount must be a maximum of {{maximum}} {{currency}}",
+    "invalid_amount": "Invalid amount",
+    "unknown_error": "There was an error processing your payment",
+    "load_error": "There was a problem conecting to PayPal, please try again later",
+    "contribution_error": "Something went wrong when setting up your contribution",
+    "guidance": "Guidance",
+    "guidance_description": "To activate this feature, ask for help on your Cambiatus Slack support channel",
+    "cards": {
+      "fiat": {
+        "title": "Types of currencies accepted",
+        "description": "Allow the community to accept USD or other fiat currency via PayPal",
+        "toggle_label": "Fiat money",
+        "settings": "Settings"
+      },
+      "crypto": {
+        "title": "Other currencies accepted",
+        "description": "Allow the community to accept cryptocurrency",
+        "toggle_label": "Cryptocurrency"
+      },
+      "message": {
+        "title": "\"Thank you\" message",
+        "description": "Edit the \"thank you\" message to fit your community",
+        "button_label": "Edit message"
+      }
+    },
+    "fiat": {
+      "title": "Fiat money",
+      "paypal_account": "Community's PayPal account",
+      "paypal_example": "example@gmail.com",
+      "how_to_change": "If you need to update this account, get in touch with us through your Slack support channel"
+    },
+    "thank_you_message": {
+      "title": "Message title",
+      "default_title": "Thank you for sponsoring {{community}}!",
+      "message": "Message",
+      "default_message": "Your contribution is supporting your community to be even more impactful, you are a rockstar!"
+    },
+    "dashboard_modal": {
+      "title": "Sponsor your Community",
+      "subtitle": "Now you can sponsor this community.",
+      "explanation": "Make your contribution with cash by clicking on the button below. You'll be redirected to PayPal to complete your transaction.",
+      "sponsor": "Sponsor {{community_name}}"
+    }
+  },
   "markdown": {
     "link_form": {
       "header": "Add link",
@@ -1111,5 +1207,19 @@
   },
   "block_explorer": {
     "see": "See on block explorer"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dollar",
+    "brl_plural": "Reais",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dollars"
   }
 }

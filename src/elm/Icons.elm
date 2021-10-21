@@ -11,17 +11,20 @@ module Icons exposing
     , clock
     , close
     , coin
+    , coinHeart
     , edit
     , exclamation
     , externalLink
     , flag
     , flagWithoutBackground
-    , heart
+    , heartSolid
+    , heartStroke
     , imageMultiple
     , instagram
     , lamp
     , languages
     , notification
+    , paypal
     , phone
     , profile
     , question
@@ -37,8 +40,8 @@ module Icons exposing
     )
 
 import Html exposing (Html)
-import Svg exposing (Svg, g, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, d, fill, fillRule, height, id, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, viewBox, width)
+import Svg exposing (Svg, defs, feBlend, feColorMatrix, feComposite, feFlood, feGaussianBlur, feOffset, g, linearGradient, stop, svg)
+import Svg.Attributes exposing (class, clipPath, clipRule, colorInterpolationFilters, d, dx, dy, fill, fillRule, filter, filterUnits, floodOpacity, gradientUnits, height, id, in2, in_, k2, k3, offset, operator, result, stdDeviation, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, values, viewBox, width, x, x1, x2, y, y1, y2)
 
 
 shop : String -> Svg msg
@@ -117,10 +120,30 @@ back class_ =
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M0 14C0 21.732 6.26801 28 14 28C21.732 28 28 21.732 28 14C28 6.26801 21.732 0 14 0C6.26801 0 0 6.26801 0 14Z", fill "white" ] [], Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M10.1818 12.9881C10.1504 13.0302 10.1227 13.0749 10.0991 13.1217C10.0599 13.1713 10.0258 13.2246 9.99724 13.2808C9.97866 13.3388 9.96587 13.3985 9.95906 13.459C9.92071 13.5747 9.92071 13.6997 9.95906 13.8154C9.96587 13.8759 9.97866 13.9356 9.99724 13.9935C10.0258 14.0498 10.0599 14.1031 10.0991 14.1526C10.1227 14.1995 10.1504 14.2442 10.1818 14.2863L15.2727 19.059C15.6586 19.4113 16.2561 19.3878 16.6131 19.0064C16.9702 18.6249 16.9542 18.0272 16.5772 17.6654L12.2309 13.5863L16.5772 9.50718C16.9542 9.14536 16.9702 8.54766 16.6131 8.16617C16.2561 7.78469 15.6586 7.76124 15.2727 8.11354L10.1818 12.9881Z" ] [] ]
 
 
-heart : Svg msg
-heart =
+heartSolid : Svg msg
+heartSolid =
     svg [ width "49", height "32", viewBox "0 0 49 32", fill "none" ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M24.4692 27.1195C24.4692 27.1195 12.3218 19.4394 12.3218 10.6168C12.3218 7.20833 14.4914 4.9043 17.8298 4.9043C21.1681 4.9043 24.1335 9.34734 24.7552 9.34734C25.3768 9.34734 28.2552 4.9043 31.5935 4.9043C34.9319 4.9043 36.5669 7.20833 36.5669 10.6168C36.5918 19.3569 24.4692 27.1195 24.4692 27.1195Z", fill "#DB1B1B" ] [] ]
+
+
+heartStroke : String -> Svg msg
+heartStroke class_ =
+    svg [ width "22", height "20", viewBox "0 0 22 20", fill "none", class class_ ]
+        [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M16.2447 0C13.9541 0 12.1226 1.77722 10.9844 2.95389C9.82238 1.78698 7.95737 0 5.67154 0C2.32409 0 0 2.40706 0 5.85896C0 13.3536 9.61675 19.5299 10.0424 19.7789C10.5064 20.0737 11.0942 20.0737 11.5583 19.7789C11.9647 19.5201 21.5385 13.3145 21.5385 5.86384C21.505 2.24594 19.4917 0 16.2447 0ZM10.7451 18.5534C10.7451 18.5534 1.40096 12.6456 1.40096 5.85894C1.40096 3.23706 3.0699 1.46472 5.63788 1.46472C8.20585 1.46472 10.4869 4.88245 10.9651 4.88245C11.4433 4.88245 13.6574 1.46472 16.2254 1.46472C18.7934 1.46472 20.051 3.23706 20.051 5.85894C20.0702 12.5821 10.7451 18.5534 10.7451 18.5534Z" ]
+            []
+        ]
+
+
+coinHeart : String -> Svg msg
+coinHeart class_ =
+    svg
+        [ width "29"
+        , height "31"
+        , viewBox "0 0 29 31"
+        , fill "none"
+        , class class_
+        ]
+        [ Svg.path [ d "M21 22.1094C25.4183 22.1094 29 17.1601 29 11.0547C29 4.94936 25.4183 0 21 0C16.5817 0 13 4.94936 13 11.0547C13 17.1601 16.5817 22.1094 21 22.1094Z", fill "#00BCCC" ] [], Svg.path [ d "M21.0003 17.9927C23.7468 17.9927 25.9733 14.8872 25.9733 11.0564C25.9733 7.2256 23.7468 4.12012 21.0003 4.12012C18.2538 4.12012 16.0273 7.2256 16.0273 11.0564C16.0273 14.8872 18.2538 17.9927 21.0003 17.9927Z", stroke "#008793", strokeWidth "0.1991", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M15.3776 3.25293C15.81 3.90321 16.4587 4.77024 17.3236 6.0708", stroke "#008793", strokeWidth "0.1991", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M24.6758 16.042C25.5406 17.3425 26.4055 18.4263 26.8379 18.8599", stroke "#008793", strokeWidth "0.1991", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M15.3776 18.6421C15.81 17.9918 16.4587 17.1248 17.5397 15.8242", stroke "#008793", strokeWidth "0.1991", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M24.6758 5.85302C25.5406 4.55247 26.4055 3.68543 26.6217 3.03516", stroke "#008793", strokeWidth "0.1991", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M15.8258 6.35866L8.17377 2C7.99986 2 7.99985 2 7.82594 2L0.17392 6.35866C1.0612e-05 6.35866 0 6.533 0 6.70735V15.4247C0 15.599 1.0612e-05 15.599 0.17392 15.7734L7.82594 20.132H7.99986H8.17377L15.8258 15.7734C15.9997 15.7734 15.9997 15.599 15.9997 15.4247V6.70735C15.9997 6.533 15.9997 6.533 15.8258 6.35866Z", fill "#F1653A" ] [], Svg.path [ d "M13.2171 7.92724L8.17371 5.1377H7.9998L2.95641 8.10158L2.7825 8.27593V14.0294C2.7825 14.0294 2.7825 14.2037 2.95641 14.2037L7.9998 17.1676C7.9998 17.1676 7.9998 17.1676 8.17371 17.1676C8.17371 17.1676 8.17371 17.1676 8.34762 17.1676L13.391 14.2037L13.5649 14.0294V8.27593C13.391 8.10158 13.391 7.92724 13.2171 7.92724Z", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M8.17368 20.1319C8.17368 20.1319 8.17368 18.9114 8.17368 17.168", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M8.17368 4.96389C8.17368 3.22042 8.17368 2 8.17368 2", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M16.0003 15.5974C16.0003 15.5974 14.9569 15.0744 13.3917 14.0283", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M2.78247 8.1033C1.21729 7.23157 0.173828 6.53418 0.173828 6.53418", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M16.0003 6.70703C16.0003 6.70703 14.9569 7.23007 13.3917 8.1018", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M2.78247 14.0283C1.21729 14.9001 0.173828 15.4231 0.173828 15.4231", stroke "#BC4F2C", strokeWidth "0.2066", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M23.8222 19.9805L16.4741 10.2376C16.4741 10 16.237 10 16 10C15.763 10 15.763 10 15.5259 10.2376L8.17778 19.9805C7.94074 20.2182 7.94074 20.4558 8.17778 20.4558L15.5259 30.1987C15.5259 30.4364 15.763 30.4364 16 30.4364C16.237 30.4364 16.237 30.4364 16.4741 30.1987L23.8222 20.4558C24.0593 20.4558 24.0593 20.2182 23.8222 19.9805Z", fill "#F89C33" ] [], Svg.path [ d "M20.0293 19.9795L16.2367 14.9893H15.9996H15.7626L12.207 19.9795V20.2172L15.7626 25.2074H15.9996H16.2367L20.0293 20.2172C20.0293 20.2172 20.0293 20.2172 20.0293 19.9795Z", stroke "#C47D27", strokeWidth "0.21", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M16.237 14.9903V10", stroke "#C47D27", strokeWidth "0.21", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M16.237 30.1983V25.208", stroke "#C47D27", strokeWidth "0.21", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M8.65103 20.2188C8.65103 20.2188 10.3103 20.2188 12.4436 20.2188", stroke "#C47D27", strokeWidth "0.21", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M20.2669 20.2188C22.4003 20.2188 23.8225 20.2188 23.8225 20.2188", stroke "#C47D27", strokeWidth "0.21", strokeMiterlimit "10", strokeLinecap "round", strokeLinejoin "round" ] [] ]
 
 
 profile : String -> Svg msg
@@ -164,26 +187,23 @@ flagWithoutBackground class_ =
 
 exclamation : String -> Svg msg
 exclamation class_ =
-    svg [ width "24", height "24", viewBox "0 0 24 24", class class_ ]
+    svg [ width "24", height "24", viewBox "0 0 24 24", class class_, fill "currentColor" ]
         [ Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M12 1.5C6.20101 1.5 1.5 6.20101 1.5 12C1.5 17.799 6.20101 22.5 12 22.5C17.799 22.5 22.5 17.799 22.5 12C22.5 6.20101 17.799 1.5 12 1.5ZM12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21Z"
-            , fill "black"
             ]
             []
         , Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M12.25 5.75C11.8358 5.75 11.5 6.08579 11.5 6.5V13.5C11.5 13.9142 11.8358 14.25 12.25 14.25C12.6642 14.25 13 13.9142 13 13.5V6.5C13 6.08579 12.6642 5.75 12.25 5.75Z"
-            , fill "black"
             ]
             []
         , Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M12.25 17C12.6642 17 13 16.6642 13 16.25C13 15.8358 12.6642 15.5 12.25 15.5C11.8358 15.5 11.5 15.8358 11.5 16.25C11.5 16.6642 11.8358 17 12.25 17Z"
-            , fill "black"
             ]
             []
         ]
@@ -191,26 +211,26 @@ exclamation class_ =
 
 question : String -> Svg msg
 question class_ =
-    svg [ class class_, width "16", height "16", viewBox "0 0 16 16", fill "none" ]
+    svg [ class class_, height "16", viewBox "0 0 16 16", fill "none" ]
         [ Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M8 1C4.13401 1 1 4.13401 1 8C1 11.866 4.13401 15 8 15C11.866 15 15 11.866 15 8C15 4.13401 11.866 1 8 1ZM8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8C14 11.3137 11.3137 14 8 14Z"
-            , fill "#F99D33"
+            , fill "currentColor"
             ]
             []
         , Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M8 4C6.02353 4 5.5 5.44412 5.5 6.20588C5.5 6.44954 5.69752 6.64706 5.94118 6.64706C6.18483 6.64706 6.38235 6.44954 6.38235 6.20588C6.38235 6.07059 6.42647 4.88235 8 4.88235C9.49706 4.88235 9.61765 5.71176 9.61765 6.79412C9.61765 6.96176 9.20588 7.22647 8.90294 7.41765C8.31471 7.8 7.55882 8.27353 7.55882 9.14706C7.55882 9.39071 7.75635 9.58823 8 9.58823C8.24366 9.58823 8.44118 9.39071 8.44118 9.14706C8.44118 8.78529 8.81176 8.52353 9.37647 8.16176C9.94118 7.8 10.5 7.44706 10.5 6.79412C10.5 5.95882 10.5 4 8 4Z"
-            , fill "#F99D33"
+            , fill "currentColor"
             ]
             []
         , Svg.path
             [ fillRule "evenodd"
             , clipRule "evenodd"
             , d "M7.85329 11.5C8.09694 11.5 8.29446 11.3025 8.29446 11.0589C8.29446 10.8152 8.09694 10.6177 7.85329 10.6177C7.60963 10.6177 7.41211 10.8152 7.41211 11.0589C7.41211 11.3025 7.60963 11.5 7.85329 11.5Z"
-            , fill "#F99D33"
+            , fill "currentColor"
             ]
             []
         ]
@@ -317,6 +337,23 @@ telegram class_ =
         , Svg.path [ d "M12.25 21.875C11.764 21.875 11.8466 21.6915 11.679 21.2287L10.25 16.5259L21.25 10", fill "#C8DAEA" ] []
         , Svg.path [ d "M12.25 21.875C12.625 21.875 12.7906 21.7035 13 21.5L15 19.5552L12.5052 18.0509", fill "#A9C9DD" ] []
         , Svg.path [ d "M12.505 18.0513L18.55 22.5174C19.2398 22.898 19.7376 22.7009 19.9095 21.877L22.3701 10.2816C22.622 9.27163 21.9851 8.81338 21.3251 9.113L6.87635 14.6844C5.8901 15.08 5.89597 15.6303 6.6966 15.8754L10.4045 17.0328L18.9886 11.6171C19.3938 11.3714 19.7658 11.5034 19.4606 11.7744", fill "#FFFFFF" ] []
+        ]
+
+
+paypal : String -> Html msg
+paypal class_ =
+    svg [ width "21", height "23", fill "none", class class_ ]
+        [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M14.822 1c2.623 0 4.324 1.79 4.324 4.551v9.999c0 2.76-1.7 4.551-4.324 4.551H5.324C2.7 20.101 1 18.311 1 15.55V5.55C1 2.791 2.701 1 5.324 1h9.498Z", fill "url(#a)" ] []
+        , g [ filter "url(#b)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M6.787 3.706a.461.461 0 0 0-.448.402L4.648 15.25c-.045.29.168.553.447.553h2.446l.577-3.956a.462.462 0 0 1 .448-.405h.969s1.14.075 2.005-.28c1.221-.501 2.787-1.682 2.966-3.832.306-3.673-2.094-3.624-3.583-3.624H6.787Z", fill "#fff" ] [] ]
+        , g [ filter "url(#c)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M9.282 6.73a.46.46 0 0 0-.447.403l-1.466 9.653c-.044.29.17.553.448.553H9.72c.223 0 .413-.17.448-.402l.46-3.02a.461.461 0 0 1 .447-.403h.57s.77.05 1.53-.261c1.07-.44 2.255-1.48 2.412-3.366.268-3.22-2.954-3.156-4.26-3.156H9.282Z", fill "#ADD1E6" ] [] ]
+        , g [ filter "url(#d)" ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M8.126 11.816c.083-.199.262-.374.47-.374h.918s1.15.007 2.016-.348c1.22-.5 2.773-1.611 2.955-3.757-.993-.629-2.415-.606-3.18-.606H9.329c-.25 0-.486.211-.526.473l-.696 4.583.019.03Z", fill "url(#e)" ] [] ]
+        , defs []
+            [ Svg.filter [ id "b", x ".142", y ".706", width "17.891", height "20.097", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "-.5", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.345098 0 0 0 0 0.631373 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.760784 0 0 0 0 0.858824 0 0 0 0 0.921569 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
+            , Svg.filter [ id "c", x "4.363", y "3.73", width "16.238", height "18.608", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dx "1", dy "1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feColorMatrix [ values "0 0 0 0 0 0 0 0 0 0.419608 0 0 0 0 0.701961 0 0 0 1 0" ] [], feBlend [ in2 "BackgroundImageFix", result "effect1_dropShadow" ] [], feBlend [ in_ "SourceGraphic", in2 "effect1_dropShadow", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.751403 0 0 0 0 0.876099 0 0 0 0 0.941911 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect2_innerShadow" ] [] ]
+            , Svg.filter [ id "d", x "8.107", y "5.73", width "6.378", height "6.086", filterUnits "userSpaceOnUse", colorInterpolationFilters "sRGB" ] [ feFlood [ floodOpacity "0", result "BackgroundImageFix" ] [], feBlend [ in_ "SourceGraphic", in2 "BackgroundImageFix", result "shape" ] [], feColorMatrix [ in_ "SourceAlpha", values "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0", result "hardAlpha" ] [], feOffset [ dy "-1" ] [], feGaussianBlur [ stdDeviation "2" ] [], feComposite [ in2 "hardAlpha", operator "arithmetic", k2 "-1", k3 "1" ] [], feColorMatrix [ values "0 0 0 0 0.839216 0 0 0 0 0.905882 0 0 0 0 0.945098 0 0 0 1 0" ] [], feBlend [ in2 "shape", result "effect1_innerShadow" ] [] ]
+            , linearGradient [ id "a", x1 "-5.858", y1 "10.954", x2 "10.889", y2 "26.375", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#002B6F" ] [], stop [ offset "1", stopColor "#0097D9" ] [] ]
+            , linearGradient [ id "e", x1 "6.5", y1 "7.908", x2 "8.573", y2 "12.316", gradientUnits "userSpaceOnUse" ] [ stop [ stopColor "#E6EEF5" ] [], stop [ offset "1", stopColor "#E6F0F7" ] [] ]
+            ]
         ]
 
 
