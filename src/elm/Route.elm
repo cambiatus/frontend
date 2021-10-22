@@ -1,5 +1,6 @@
 module Route exposing
-    ( Route(..)
+    ( NewsEditorKind(..)
+    , Route(..)
     , communityFullDomain
     , externalHref
     , fromUrl
@@ -20,6 +21,12 @@ import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
 import Url.Parser as Url exposing ((</>), (<?>), Parser, int, oneOf, s, string, top)
 import Url.Parser.Query as Query
+
+
+type NewsEditorKind
+    = CreateNews
+    | EditNews
+    | CopyNews
 
 
 type Route
@@ -43,6 +50,7 @@ type Route
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsNews
+    | CommunitySettingsNewsEditor NewsEditorKind
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
@@ -115,6 +123,7 @@ parser url =
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsNews (s "community" </> s "settings" </> s "news")
+        , Url.map (CommunitySettingsNewsEditor CreateNews) (s "community" </> s "settings" </> s "news" </> s "new")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
@@ -411,6 +420,15 @@ routeToString route =
 
                 CommunitySettingsNews ->
                     ( [ "community", "settings", "news" ], [] )
+
+                CommunitySettingsNewsEditor CreateNews ->
+                    ( [ "community", "settings", "news", "new" ], [] )
+
+                CommunitySettingsNewsEditor EditNews ->
+                    ( [ "community", "settings", "news", "edit" ], [] )
+
+                CommunitySettingsNewsEditor CopyNews ->
+                    ( [ "community", "settings", "news", "copy" ], [] )
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )

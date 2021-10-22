@@ -21,6 +21,7 @@ import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
 import Page.Community.Settings.News as CommunitySettingsNews
+import Page.Community.Settings.News.Editor as CommunitySettingsNewsEditor
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
 import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
@@ -189,6 +190,7 @@ type Status
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
     | CommunitySettingsNews CommunitySettingsNews.Model
+    | CommunitySettingsNewsEditor CommunitySettingsNewsEditor.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
     | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
@@ -238,6 +240,7 @@ type Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
     | GotCommunitySettingsNewsMsg CommunitySettingsNews.Msg
+    | GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
     | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
     | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
@@ -501,6 +504,11 @@ update msg model =
         ( GotCommunitySettingsNewsMsg subMsg, CommunitySettingsNews subModel ) ->
             CommunitySettingsNews.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsNewsEditorMsg subMsg, CommunitySettingsNewsEditor subModel ) ->
+            CommunitySettingsNewsEditor.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
@@ -981,6 +989,10 @@ statusToRoute status session =
         CommunitySettingsNews _ ->
             Just Route.CommunitySettingsNews
 
+        CommunitySettingsNewsEditor _ ->
+            -- TODO - Change CreateNews
+            Just (Route.CommunitySettingsNewsEditor Route.CreateNews)
+
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
@@ -1362,6 +1374,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsNews GotCommunitySettingsNewsMsg model
                 |> withLoggedIn Route.CommunitySettingsNews
 
+        Just (Route.CommunitySettingsNewsEditor editorKind) ->
+            CommunitySettingsNewsEditor.init
+                >> updateStatusWith CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
+                |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
+
         Just Route.CommunitySettingsCurrency ->
             CommunitySettingsCurrency.init
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
@@ -1597,6 +1614,9 @@ msgToString msg =
         GotCommunitySettingsNewsMsg subMsg ->
             "GotCommunitySettingsNewsMsg" :: CommunitySettingsNews.msgToString subMsg
 
+        GotCommunitySettingsNewsEditorMsg subMsg ->
+            "GotCommunitySettingsNewsEditorMsg" :: CommunitySettingsNewsEditor.msgToString subMsg
+
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
@@ -1811,6 +1831,9 @@ view model =
 
         CommunitySettingsNews subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsNews GotCommunitySettingsNewsMsg CommunitySettingsNews.view
+
+        CommunitySettingsNewsEditor subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.view
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view

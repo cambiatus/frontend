@@ -223,6 +223,7 @@ type Page
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsNews
+    | CommunitySettingsNewsEditor
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat

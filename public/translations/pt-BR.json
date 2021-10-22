@@ -1209,7 +1209,8 @@
   },
   "news": {
     "title": "Notícias",
-    "description": "Permitir que o time da comunidade envie comunicados"
+    "description": "Permitir que o time da comunidade envie comunicados",
+    "create": "Novo comunicado"
   },
   "markdown": {
     "link_form": {

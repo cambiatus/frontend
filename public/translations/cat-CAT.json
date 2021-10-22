@@ -1205,7 +1205,8 @@
   },
   "news": {
     "title": "Notícies",
-    "description": "Permet que l'equip de la comunitat enviï comunicacions"
+    "description": "Permet que l'equip de la comunitat enviï comunicacions",
+    "create": "Nova comunicació"
   },
   "markdown": {
     "link_form": {
