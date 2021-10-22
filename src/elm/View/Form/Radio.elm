@@ -208,7 +208,11 @@ viewOptionAsDefault options ( option, view ) =
             , name options.name
             , value (options.optionToString option)
             , checked (isActive options option)
-            , onClick (options.onSelect option)
+            , if isActive options option then
+                class ""
+
+              else
+                onClick (options.onSelect option)
             , disabled options.isDisabled
             ]
             []
