@@ -1201,6 +1201,9 @@
       "sponsor": "Sponsor {{community_name}}"
     }
   },
+  "news": {
+    "title": "News"
+  },
   "markdown": {
     "link_form": {
       "header": "Add link",

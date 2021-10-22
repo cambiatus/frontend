@@ -1162,6 +1162,9 @@
       "sponsor": "ስፖንሰር {{community_name}}"
     }
   },
+  "news": {
+    "title": "ዜና"
+  },
   "markdown": {
     "link_form": {
       "header": "አገናኝ አክል",

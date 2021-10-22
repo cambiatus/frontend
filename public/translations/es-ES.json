@@ -1204,6 +1204,9 @@
       "sponsor": "Patrocinar {{community_name}}"
     }
   },
+  "news": {
+    "title": "Noticias"
+  },
   "markdown": {
     "link_form": {
       "header": "Añadir enlace",
