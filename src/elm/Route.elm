@@ -42,6 +42,7 @@ type Route
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsNews
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
@@ -113,6 +114,7 @@ parser url =
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
+        , Url.map CommunitySettingsNews (s "community" </> s "settings" </> s "news")
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
@@ -406,6 +408,9 @@ routeToString route =
 
                 CommunitySettingsInfo ->
                     ( [ "community", "settings", "info" ], [] )
+
+                CommunitySettingsNews ->
+                    ( [ "community", "settings", "news" ], [] )
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )

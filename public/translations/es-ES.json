@@ -1205,7 +1205,8 @@
     }
   },
   "news": {
-    "title": "Noticias"
+    "title": "Noticias",
+    "description": "Permitir que el equipo de la comunidad envíe comunicaciones"
   },
   "markdown": {
     "link_form": {

@@ -1202,7 +1202,8 @@
     }
   },
   "news": {
-    "title": "News"
+    "title": "News",
+    "description": "Allow the community team to send communications"
   },
   "markdown": {
     "link_form": {

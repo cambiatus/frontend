@@ -222,6 +222,7 @@ type Page
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsNews
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat

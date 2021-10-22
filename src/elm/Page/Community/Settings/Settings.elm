@@ -109,6 +109,11 @@ viewSettingsList shared community =
 
           else
             text ""
+        , if community.hasNews then
+            settingCard (t "news.title") (t "menu.edit") (t "news.description") Route.CommunitySettingsNews
+
+          else
+            text ""
         ]
 
 

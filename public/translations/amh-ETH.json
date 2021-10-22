@@ -1163,7 +1163,8 @@
     }
   },
   "news": {
-    "title": "ዜና"
+    "title": "ዜና",
+    "description": "የማህበረሰቡ ቡድን ግንኙነቶችን እንዲልክ ፍቀድለት"
   },
   "markdown": {
     "link_form": {

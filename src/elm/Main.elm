@@ -20,6 +20,7 @@ import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
+import Page.Community.Settings.News as CommunitySettingsNews
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
 import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
@@ -187,6 +188,7 @@ type Status
     | CommunitySettings CommunitySettings.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
+    | CommunitySettingsNews CommunitySettingsNews.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
     | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
@@ -235,6 +237,7 @@ type Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
+    | GotCommunitySettingsNewsMsg CommunitySettingsNews.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
     | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
     | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
@@ -493,6 +496,11 @@ update msg model =
         ( GotCommunitySettingsInfoMsg subMsg, CommunitySettingsInfo subModel ) ->
             CommunitySettingsInfo.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsInfo GotCommunitySettingsInfoMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsNewsMsg subMsg, CommunitySettingsNews subModel ) ->
+            CommunitySettingsNews.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
@@ -970,6 +978,9 @@ statusToRoute status session =
         CommunitySettingsInfo _ ->
             Just Route.CommunitySettingsInfo
 
+        CommunitySettingsNews _ ->
+            Just Route.CommunitySettingsNews
+
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
@@ -1346,6 +1357,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith CommunitySettingsInfo GotCommunitySettingsInfoMsg model
                 |> withLoggedIn Route.CommunitySettingsInfo
 
+        Just Route.CommunitySettingsNews ->
+            CommunitySettingsNews.init
+                >> updateStatusWith CommunitySettingsNews GotCommunitySettingsNewsMsg model
+                |> withLoggedIn Route.CommunitySettingsNews
+
         Just Route.CommunitySettingsCurrency ->
             CommunitySettingsCurrency.init
                 >> updateStatusWith CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg model
@@ -1578,6 +1594,9 @@ msgToString msg =
         GotCommunitySettingsInfoMsg subMsg ->
             "GotCommunitySettingsInfoMsg" :: CommunitySettingsInfo.msgToString subMsg
 
+        GotCommunitySettingsNewsMsg subMsg ->
+            "GotCommunitySettingsNewsMsg" :: CommunitySettingsNews.msgToString subMsg
+
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
@@ -1789,6 +1808,9 @@ view model =
 
         CommunitySettingsInfo subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsInfo GotCommunitySettingsInfoMsg CommunitySettingsInfo.view
+
+        CommunitySettingsNews subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsNews GotCommunitySettingsNewsMsg CommunitySettingsNews.view
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view
