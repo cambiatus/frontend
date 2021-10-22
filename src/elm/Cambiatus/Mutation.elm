@@ -85,6 +85,98 @@ deleteKyc object_ =
     Object.selectionForCompositeField "deleteKyc" [] object_ (identity >> Decode.nullable)
 
 
+type alias HasNewsRequiredArguments =
+    { communityId : String
+    , hasNews : Bool
+    }
+
+
+{-| [Auth required - Admin only] Set has\_news flag of community
+-}
+hasNews :
+    HasNewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet (Maybe decodesTo) RootMutation
+hasNews requiredArgs object_ =
+    Object.selectionForCompositeField "hasNews" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "hasNews" requiredArgs.hasNews Encode.bool ] object_ (identity >> Decode.nullable)
+
+
+type alias HighlightedNewsRequiredArguments =
+    { communityId : String
+    , newsId : Int
+    }
+
+
+{-| [Auth required - Admin only] Set highlighted news of community
+-}
+highlightedNews :
+    HighlightedNewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet (Maybe decodesTo) RootMutation
+highlightedNews requiredArgs object_ =
+    Object.selectionForCompositeField "highlightedNews" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+
+
+type alias NewsOptionalArguments =
+    { scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime }
+
+
+type alias NewsRequiredArguments =
+    { communityId : String
+    , description : String
+    , title : String
+    }
+
+
+{-| [Auth required - Admin only] News mutation, that allows for creating news on a community
+-}
+news :
+    (NewsOptionalArguments -> NewsOptionalArguments)
+    -> NewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) RootMutation
+news fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { scheduling = Absent }
+
+        optionalArgs =
+            [ Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
+
+
+type alias ReactToNewsRequiredArguments =
+    { newsId : Int
+    , reactions : List String
+    }
+
+
+{-| [Auth required] Add or update reactions from user in a news through news\_receipt
+-}
+reactToNews :
+    ReactToNewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.NewsReceipt
+    -> SelectionSet (Maybe decodesTo) RootMutation
+reactToNews requiredArgs object_ =
+    Object.selectionForCompositeField "reactToNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int, Argument.required "reactions" requiredArgs.reactions (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
+
+
+type alias ReadRequiredArguments =
+    { newsId : Int }
+
+
+{-| [Auth required] Mark news as read, creating a new news\_receipt without reactions
+-}
+read :
+    ReadRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.NewsReceipt
+    -> SelectionSet (Maybe decodesTo) RootMutation
+read requiredArgs object_ =
+    Object.selectionForCompositeField "read" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+
+
 type alias ReadNotificationRequiredArguments =
     { input : Cambiatus.InputObject.ReadNotificationInput }
 
@@ -189,6 +281,36 @@ signUp fillInOptionals requiredArgs object_ =
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ (identity >> Decode.nullable)
+
+
+type alias UpdateNewsOptionalArguments =
+    { description : OptionalArgument String
+    , scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime
+    , title : OptionalArgument String
+    }
+
+
+type alias UpdateNewsRequiredArguments =
+    { id : Int }
+
+
+{-| [Auth required - Admin only] Mutation to update news
+-}
+updateNews :
+    (UpdateNewsOptionalArguments -> UpdateNewsOptionalArguments)
+    -> UpdateNewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateNews fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { description = Absent, scheduling = Absent, title = Absent }
+
+        optionalArgs =
+            [ Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime), Argument.optional "title" filledInOptionals.title Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "updateNews" (optionalArgs ++ [ Argument.required "id" requiredArgs.id Encode.int ]) object_ (identity >> Decode.nullable)
 
 
 type alias UpdateUserRequiredArguments =
