@@ -25,8 +25,8 @@ import Url.Parser.Query as Query
 
 type NewsEditorKind
     = CreateNews
-    | EditNews
-    | CopyNews
+    | EditNews Int
+    | CopyNews Int
 
 
 type Route
@@ -124,6 +124,8 @@ parser url =
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
         , Url.map CommunitySettingsNews (s "community" </> s "settings" </> s "news")
         , Url.map (CommunitySettingsNewsEditor CreateNews) (s "community" </> s "settings" </> s "news" </> s "new")
+        , Url.map (EditNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "edit" </> int)
+        , Url.map (CopyNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "copy" </> int)
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
@@ -424,11 +426,11 @@ routeToString route =
                 CommunitySettingsNewsEditor CreateNews ->
                     ( [ "community", "settings", "news", "new" ], [] )
 
-                CommunitySettingsNewsEditor EditNews ->
-                    ( [ "community", "settings", "news", "edit" ], [] )
+                CommunitySettingsNewsEditor (EditNews newsId) ->
+                    ( [ "community", "settings", "news", "edit", String.fromInt newsId ], [] )
 
-                CommunitySettingsNewsEditor CopyNews ->
-                    ( [ "community", "settings", "news", "copy" ], [] )
+                CommunitySettingsNewsEditor (CopyNews newsId) ->
+                    ( [ "community", "settings", "news", "copy", String.fromInt newsId ], [] )
 
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )

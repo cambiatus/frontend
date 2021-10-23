@@ -670,6 +670,10 @@ broadcast broadcastMessage status =
                     CommunitySettingsInfo.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsInfoMsg
 
+                CommunitySettingsNewsEditor _ ->
+                    CommunitySettingsNewsEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsNewsEditorMsg
+
                 CommunitySettingsCurrency _ ->
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
@@ -1375,7 +1379,7 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.CommunitySettingsNews
 
         Just (Route.CommunitySettingsNewsEditor editorKind) ->
-            CommunitySettingsNewsEditor.init
+            CommunitySettingsNewsEditor.init editorKind
                 >> updateStatusWith CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
 
