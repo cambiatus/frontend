@@ -101,17 +101,22 @@ emptyForm =
     }
 
 
-formFromExistingNews : Time.Zone -> Community.News.Model -> Action -> Form
+formFromExistingNews : Time.Zone -> Community.News.Model -> Action -> ( Form, Cmd Msg )
 formFromExistingNews timezone news action =
-    { title = news.title
-    , descriptionEditor =
-        MarkdownEditor.init descriptionEditorId
-            |> MarkdownEditor.setContents news.description
-    , publicationMode = publicationModeFromMaybePosix timezone news.scheduling
-    , timeError = Nothing
-    , action = action
-    , isSaving = False
-    }
+    let
+        ( markdownEditor, cmd ) =
+            MarkdownEditor.init descriptionEditorId
+                |> MarkdownEditor.forceSetContents news.description
+    in
+    ( { title = news.title
+      , descriptionEditor = markdownEditor
+      , publicationMode = publicationModeFromMaybePosix timezone news.scheduling
+      , timeError = Nothing
+      , action = action
+      , isSaving = False
+      }
+    , Cmd.map GotInitialDescriptionEditorMsg cmd
+    )
 
 
 publicationModeFromMaybePosix : Time.Zone -> Maybe Time.Posix -> PublicationMode
@@ -145,6 +150,7 @@ publicationModeFromMaybePosix timezone maybeTime =
 type Msg
     = CompletedLoadCommunity Community.Model
     | CompletedLoadNews (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
+    | GotInitialDescriptionEditorMsg MarkdownEditor.Msg
     | GotFormMsg FormMsg
 
 
@@ -224,14 +230,22 @@ update msg model loggedIn =
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
                 WaitingNewsToCopy _ ->
-                    formFromExistingNews loggedIn.shared.timezone news CreateNew
-                        |> Editing
+                    let
+                        ( form, cmd ) =
+                            formFromExistingNews loggedIn.shared.timezone news CreateNew
+                    in
+                    Editing form
                         |> UR.init
+                        |> UR.addCmd cmd
 
                 WaitingNewsToEdit newsId ->
-                    formFromExistingNews loggedIn.shared.timezone news (EditExisting newsId)
-                        |> Editing
+                    let
+                        ( form, cmd ) =
+                            formFromExistingNews loggedIn.shared.timezone news (EditExisting newsId)
+                    in
+                    Editing form
                         |> UR.init
+                        |> UR.addCmd cmd
 
         CompletedLoadNews (RemoteData.Success Nothing) ->
             NewsNotFound
@@ -257,6 +271,21 @@ update msg model loggedIn =
 
         CompletedLoadNews RemoteData.Loading ->
             UR.init model
+
+        GotInitialDescriptionEditorMsg subMsg ->
+            case model of
+                Editing form ->
+                    let
+                        ( descriptionEditor, cmd ) =
+                            MarkdownEditor.update subMsg form.descriptionEditor
+                    in
+                    { form | descriptionEditor = descriptionEditor }
+                        |> Editing
+                        |> UR.init
+                        |> UR.addCmd (Cmd.map GotInitialDescriptionEditorMsg cmd)
+
+                _ ->
+                    UR.init model
 
         GotFormMsg subMsg ->
             case model of
@@ -674,6 +703,9 @@ msgToString msg =
 
         CompletedLoadNews r ->
             [ "CompletedLoadNews", UR.remoteDataToString r ]
+
+        GotInitialDescriptionEditorMsg subMsg ->
+            "GotInitialDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: formMsgToString subMsg

@@ -103,7 +103,7 @@ view_ shared community =
                     [ text (shared.translators.t "news.create") ]
                 ]
             ]
-        , div [ class "container mx-auto px-4" ]
+        , div [ class "container mx-auto px-4 my-4" ]
             [ case community.news of
                 RemoteData.Success news ->
                     div [ class "grid gap-4 md:grid-cols-2" ]
