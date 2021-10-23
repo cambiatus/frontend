@@ -670,6 +670,10 @@ broadcast broadcastMessage status =
                     CommunitySettingsInfo.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsInfoMsg
 
+                CommunitySettingsNews _ ->
+                    CommunitySettingsNews.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsNewsMsg
+
                 CommunitySettingsNewsEditor _ ->
                     CommunitySettingsNewsEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsNewsEditorMsg
@@ -1375,7 +1379,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunitySettingsNews ->
             CommunitySettingsNews.init
-                >> updateStatusWith CommunitySettingsNews GotCommunitySettingsNewsMsg model
+                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
                 |> withLoggedIn Route.CommunitySettingsNews
 
         Just (Route.CommunitySettingsNewsEditor editorKind) ->
