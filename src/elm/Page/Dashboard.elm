@@ -496,8 +496,8 @@ viewTransferList loggedIn model transfers maybePageInfo isLoading =
                                 , View.Components.dateViewer [ class "text-gray-333" ]
                                     (\translations ->
                                         { translations
-                                            | today = "{{date}}"
-                                            , yesterday = "{{date}}"
+                                            | today = Just "{{date}}"
+                                            , yesterday = Just "{{date}}"
                                             , other = ""
                                         }
                                     )

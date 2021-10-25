@@ -9,24 +9,26 @@ import Community.News
 import Date
 import DatePicker
 import Eos
+import Eos.Account
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, button, div, img, text)
+import Html exposing (Html, a, button, div, hr, img, p, text)
 import Html.Attributes exposing (class, disabled, src, tabindex, type_)
 import Html.Events exposing (onSubmit)
 import Iso8601
 import Log
 import Page
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
 import Time
 import Time.Extra
 import UpdateResult as UR
 import Utils
+import View.Components
 import View.Feedback as Feedback
 import View.Form
 import View.Form.Input as Input
@@ -162,6 +164,7 @@ type FormMsg
     | EnteredPublicationTime String
     | ClickedSave
     | CompletedSaving (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | GotEditorSummaryMsg Profile.Summary.Msg
 
 
 type alias UpdateResult =
@@ -174,7 +177,7 @@ type alias FormUpdateResult =
 
 type Action
     = CreateNew
-    | EditExisting Int
+    | EditExisting Community.News.Model Profile.Summary.Model
 
 
 type PublicationMode
@@ -238,10 +241,12 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd cmd
 
-                WaitingNewsToEdit newsId ->
+                WaitingNewsToEdit _ ->
                     let
                         ( form, cmd ) =
-                            formFromExistingNews loggedIn.shared.timezone news (EditExisting newsId)
+                            formFromExistingNews loggedIn.shared.timezone
+                                news
+                                (EditExisting news (Profile.Summary.init False))
                     in
                     Editing form
                         |> UR.init
@@ -408,7 +413,7 @@ updateForm msg form loggedIn =
                                         }
                                         SelectionSet.empty
 
-                                EditExisting newsId ->
+                                EditExisting news _ ->
                                     Cambiatus.Mutation.updateNews
                                         (\optionals ->
                                             { optionals
@@ -417,7 +422,7 @@ updateForm msg form loggedIn =
                                                 , title = OptionalArgument.Present form.title
                                             }
                                         )
-                                        { id = newsId }
+                                        { id = news.id }
                                         SelectionSet.empty
 
                         saveNews : Maybe Cambiatus.Scalar.DateTime -> Cmd FormMsg
@@ -470,6 +475,20 @@ updateForm msg form loggedIn =
         CompletedSaving RemoteData.Loading ->
             UR.init form
 
+        GotEditorSummaryMsg subMsg ->
+            case form.action of
+                CreateNew ->
+                    UR.init form
+
+                EditExisting news profileSummary ->
+                    { form
+                        | action =
+                            profileSummary
+                                |> Profile.Summary.update subMsg
+                                |> EditExisting news
+                    }
+                        |> UR.init
+
 
 parseDateTime : Time.Zone -> PublicationMode -> ParsedDateTime
 parseDateTime timezone publicationMode =
@@ -521,7 +540,7 @@ view loggedIn model =
             , case model of
                 Editing form ->
                     div [ class "container mx-auto pt-4 pb-10" ]
-                        [ viewForm loggedIn.shared form
+                        [ viewForm loggedIn form
                             |> Html.map GotFormMsg
                         ]
 
@@ -544,9 +563,12 @@ view loggedIn model =
     }
 
 
-viewForm : Shared -> Form -> Html FormMsg
-viewForm ({ translators } as shared) form =
+viewForm : LoggedIn.Model -> Form -> Html FormMsg
+viewForm ({ shared } as loggedIn) form =
     let
+        { translators } =
+            shared
+
         defaultSchedulingDate =
             shared.now
                 |> Date.fromPosix shared.timezone
@@ -583,6 +605,13 @@ viewForm ({ translators } as shared) form =
             []
             form.descriptionEditor
             |> Html.map GotDescriptionEditorMsg
+        , case form.action of
+            CreateNew ->
+                text ""
+
+            EditExisting news profileSummary ->
+                viewLatestEditions loggedIn news profileSummary
+        , hr [ class "mt-5 mb-10 text-gray-500" ] []
         , Radio.init
             { -- TODO - I18N
               label = "Publish or schedule"
@@ -666,6 +695,51 @@ viewForm ({ translators } as shared) form =
         ]
 
 
+viewLatestEditions : LoggedIn.Model -> Community.News.Model -> Profile.Summary.Model -> Html FormMsg
+viewLatestEditions ({ shared } as loggedIn) news profileSummary =
+    case news.lastEditor of
+        Nothing ->
+            text ""
+
+        Just lastEditor ->
+            div []
+                [ p [ class "label mb-6" ] [ text "Latest editions" ]
+                , div [ class "flex items-center" ]
+                    [ profileSummary
+                        |> Profile.Summary.withoutName
+                        |> Profile.Summary.withImageSize "h-8 w-8"
+                        |> Profile.Summary.view shared
+                            loggedIn.accountName
+                            lastEditor
+                        |> Html.map GotEditorSummaryMsg
+                    , p [ class "text-gray-900 ml-2" ]
+                        -- TODO - I18N
+                        [ text "Edited by "
+                        , a
+                            [ class "font-bold hover:underline"
+                            , Route.href (Route.Profile lastEditor.account)
+                            ]
+                            [ lastEditor.name
+                                |> Maybe.withDefault (Eos.Account.nameToString lastEditor.account)
+                                |> text
+                            ]
+                        , View.Components.dateViewer []
+                            (\translations ->
+                                { translations
+                                    | today = Nothing
+                                    , yesterday = Nothing
+
+                                    -- TODO - I18N
+                                    , other = " on {{date}}"
+                                }
+                            )
+                            shared
+                            news.updatedAt
+                        ]
+                    ]
+                ]
+
+
 datePickerSettings : DatePicker.Settings
 datePickerSettings =
     let
@@ -734,3 +808,6 @@ formMsgToString formMsg =
 
         CompletedSaving _ ->
             [ "CompletedSaving" ]
+
+        GotEditorSummaryMsg subMsg ->
+            "GotEditorSummaryMsg" :: Profile.Summary.msgToString subMsg
