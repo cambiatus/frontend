@@ -171,7 +171,7 @@ viewGoodPracticesCard { translators } =
             translators.t >> text
     in
     div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
-        [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
+        [ div [ class "flex items-center bg-yellow text-black font-semibold p-2 rounded-t" ]
             [ Icons.lamp "mr-2", text_ "profile.claims.good_practices.title" ]
         , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
             [ li [ class "pl-1" ] [ text_ "profile.claims.good_practices.once_a_day" ]

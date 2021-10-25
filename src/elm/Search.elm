@@ -3,9 +3,11 @@ module Search exposing
     , Model
     , Msg
     , State(..)
+    , closeMsg
     , closeSearch
     , init
     , isActive
+    , isOpenMsg
     , subscriptions
     , update
     , viewForm
@@ -298,8 +300,8 @@ update shared authToken symbol model msg =
 -- VIEW
 
 
-viewForm : Translators -> Model -> Html Msg
-viewForm ({ t } as translators) model =
+viewForm : List (Html.Attribute Msg) -> Translators -> Model -> Html Msg
+viewForm attrs ({ t } as translators) model =
     let
         isLoading =
             case model.state of
@@ -318,64 +320,63 @@ viewForm ({ t } as translators) model =
                     "text-indigo-500"
 
         viewClearSearchIcon =
+            if isSearchOpen && not (String.isEmpty model.currentQuery) then
+                button
+                    [ class "absolute right-3 flex items-center top-1/2 -translate-y-1/2 focus-ring focus-visible:ring-red focus-visible:ring-opacity-50 rounded-full group"
+                    , onClick ClearSearchIconClicked
+                    , type_ "button"
+                    ]
+                    [ Icons.clearInput "fill-current text-gray-400 hover:text-red group-focus:text-red"
+                    ]
+
+            else
+                text ""
+
+        isSearchOpen =
             case model.state of
                 Inactive ->
-                    text ""
+                    False
 
                 _ ->
-                    if String.isEmpty model.currentQuery then
-                        text ""
-
-                    else
-                        span
-                            [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
-                            , onClick ClearSearchIconClicked
-                            ]
-                            [ Icons.clearInput ""
-                            ]
+                    True
 
         viewCancel =
-            case model.state of
-                Inactive ->
-                    text ""
-
-                _ ->
-                    button
-                        [ class "text-orange-300 ml-3 leading-10 cursor-pointer lowercase hover:underline focus:outline-none focus:underline"
-                        , type_ "button"
-                        , onClick CancelClicked
-                        ]
-                        [ text (t "menu.cancel") ]
+            button
+                [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline focus:outline-none focus:underline"
+                , classList [ ( "hidden", not isSearchOpen ) ]
+                , onClick CancelClicked
+                , type_ "button"
+                ]
+                [ text (t "menu.cancel") ]
     in
     Html.form
-        [ class "flex items-center"
-        , onSubmit QuerySubmitted
-        ]
-        [ div [ class "relative w-full" ]
-            [ Input.init
-                { label = ""
-                , id = "searchInput"
-                , onInput = CurrentQueryChanged
-                , disabled = isLoading
-                , value = model.currentQuery
-                , placeholder = Just (t "menu.search.placeholder")
-                , problems = Nothing
-                , translators = translators
-                }
-                |> Input.withContainerAttrs [ class "!m-0" ]
-                |> Input.withAttrs
-                    [ class "rounded-full bg-gray-100 border-0 pl-10 text-base h-10"
-                    , onFocus InputFocused
-                    , minlength 3
-                    , required True
-                    , autocomplete False
-                    ]
-                |> Input.withElements
-                    [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current " ++ " " ++ iconColor
-                    ]
-                |> Input.toHtml
-            ]
+        (class "flex items-center"
+            :: onSubmit QuerySubmitted
+            :: attrs
+        )
+        [ Input.init
+            { label = ""
+            , id = "searchInput"
+            , onInput = CurrentQueryChanged
+            , disabled = isLoading
+            , value = model.currentQuery
+            , placeholder = Just (t "menu.search.placeholder")
+            , problems = Nothing
+            , translators = translators
+            }
+            |> Input.withContainerAttrs [ class "!m-0 w-full" ]
+            |> Input.withAttrs
+                [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
+                , onFocus InputFocused
+                , minlength 3
+                , required isSearchOpen
+                , autocomplete False
+                ]
+            |> Input.withElements
+                [ viewClearSearchIcon
+                , Icons.search <| "absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor
+                ]
+            |> Input.toHtml
         , viewCancel
         ]
 
@@ -457,17 +458,17 @@ viewRecentQueries { t } recentQueries =
         viewItem q =
             li []
                 [ button
-                    [ class "w-full text-left leading-10 hover:text-orange-500 focus:text-orange-500 focus:outline-none cursor-pointer"
+                    [ class "flex items-center w-full hover:text-orange-500 focus:text-orange-500 focus:outline-none"
                     , onClick (RecentQueryClicked q)
                     ]
-                    [ Icons.clock "inline-block align-middle mr-3 fill-current"
-                    , span [ class "inline align-middle" ] [ text q ]
+                    [ Icons.clock "mr-3 fill-current"
+                    , span [] [ text q ]
                     ]
                 ]
     in
     div [ class "w-full p-4 bg-white" ]
         [ strong [] [ text (t "menu.search.recentlyHeader") ]
-        , ul [ class "text-gray-900" ]
+        , ul [ class "text-gray-900 mt-4 space-y-2" ]
             (List.map viewItem recentQueries)
         ]
 
@@ -483,9 +484,9 @@ viewTabs { tr } results activeTab =
             in
             li [ class "w-full" ]
                 [ button
-                    [ class "rounded-sm flex-1 text-center cursor-pointer capitalize w-full focus:outline-none focus:ring focus:ring-gray-300"
+                    [ class "rounded-sm text-center capitalize w-full py-3 focus-ring focus-visible:ring-gray-300"
                     , classList
-                        [ ( "bg-orange-300 text-white", activeTab == tabKind )
+                        [ ( "bg-orange-300 text-white font-bold", activeTab == tabKind )
                         , ( "bg-gray-100 hover:bg-gray-200 focus:bg-gray-200", activeTab /= tabKind )
                         , ( "cursor-not-allowed text-gray-300", count <= 0 )
                         ]
@@ -503,7 +504,7 @@ viewTabs { tr } results activeTab =
                     [ text <| tr label [ ( "count", String.fromInt count ) ] ]
                 ]
     in
-    ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
+    ul [ class "space-x-2 flex items-stretch p-4 pb-2 bg-white" ]
         [ viewTab OffersTab
             "menu.search.offers_title"
             results.offers
@@ -600,15 +601,15 @@ viewOffers translators symbol offers =
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
                     , if offer.units == 0 && offer.trackStock then
-                        p [ class "px-3 leading-none text-xl text-red" ]
+                        p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]
 
                       else
-                        p [ class "px-3 leading-none" ]
-                            [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
+                        p [ class "px-3" ]
+                            [ span [ class "text-xl text-green font-semibold" ] [ text <| String.fromFloat offer.price ]
                             , br [] []
-                            , span [ class "text-gray-300 text-xs" ]
+                            , span [ class "text-gray-900 text-sm" ]
                                 [ text <| Eos.symbolToSymbolCodeString symbol
                                 ]
                             ]
@@ -627,7 +628,7 @@ viewMembers { t } members =
                 [ div [ class "grid grid-cols-3 px-4" ]
                     [ Avatar.view member.avatar "h-20 w-20 my-auto"
                     , div [ class "flex flex-col col-span-2" ]
-                        [ span [ class "text-heading font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
+                        [ span [ class "text-lg font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (member.email |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (Eos.Account.nameToString member.account) ]
                         ]
@@ -673,3 +674,18 @@ isActive model =
 closeSearch : Model -> Model
 closeSearch model =
     { model | state = Inactive, currentQuery = "" }
+
+
+closeMsg : Msg
+closeMsg =
+    CancelClicked
+
+
+isOpenMsg : Msg -> Bool
+isOpenMsg msg =
+    case msg of
+        InputFocused ->
+            True
+
+        _ ->
+            False

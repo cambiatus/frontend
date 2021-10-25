@@ -54,22 +54,17 @@ module.exports = {
       lg: '1024px',
       xl: '1280px'
     },
-    // Needed after updating to tailwind 2.0
+    // The first item in each list is the font size, and the second item is the
+    // default line height for that font size
     fontSize: {
-      caption: '0.625rem',
-      xs: '0.75rem',
-      sm: '0.875rem',
-      menu: '0.9125rem',
-      body: '0.9rem',
-      base: '1rem',
-      lg: '1.125rem',
-      xl: '1.25rem',
-      heading: '1.375rem',
-      '2xl': '1.5rem',
-      '3xl': '1.875rem',
-      '4xl': '2.25rem',
-      '5xl': '3rem',
-      '6xl': '4rem'
+      xs: ['0.6875rem', '0.75rem'], // ['11px', '12px']
+      sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
+      base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
+      lg: ['1.375rem', '1.875rem'], // ['22px', '30px']
+      xl: ['1.875rem', '2.5625rem'], // ['30px', '41px']
+      '2xl': ['2.375rem', '3.25rem'], // ['38px', '52px']
+      '3xl': ['2.875rem', '3.9375rem'], // ['46px', '63px']
+      '4xl': ['3.375rem', '4.625rem'] // ['54px', '74px']
     },
     // Customizing BorderRadius sizes
     borderRadius: {
@@ -80,13 +75,6 @@ module.exports = {
       'lg': '1.25rem',
       'full': '9999px',
       'large': '12px'
-    },
-    // Overwriting since the current font family only have these weights
-    fontWeight: {
-      light: 300,
-      normal: 400,
-      medium: 600,
-      bold: 700
     },
     // transform keys
     rotate: {
@@ -126,10 +114,12 @@ module.exports = {
         sans: ['Nunito', 'sans-serif']
       },
       spacing: {
+        '3px': '3px',
         heading: '1.375rem',
         '7': '1.75rem',
         '9': '2.25rem',
         '14': '3.5rem',
+        '18': '4.5rem',
         '29': '7.25rem',
         '44': '11rem',
         '72': '18rem',
@@ -145,6 +135,7 @@ module.exports = {
         '108': '27rem'
       },
       minHeight: {
+        '25': '6.25rem',
         '36': '9rem',
         '48': '12rem'
       },
@@ -185,6 +176,15 @@ module.exports = {
             'pointer-events': 'auto'
           }
         },
+        'appear-from-above': {
+          '0%': { opacity: 0, transform: 'translate(0, -5px)' },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
+        'appear-from-above-lg': {
+          '0%': { opacity: 0, transform: 'translate(0, -100px)' },
+          '50%': { opacity: 0 },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
         'skeleton-loading-keyframes': {
           '0%': {
             'background-color': '#e0e0e0'
@@ -196,6 +196,8 @@ module.exports = {
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
+        'fade-in-from-above': 'appear-from-above 75ms ease-out',
+        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
         'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate'
       }
     }

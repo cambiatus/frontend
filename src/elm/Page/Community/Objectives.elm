@@ -159,7 +159,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
                         objective.description
-                    , p [ class "text-gray-900 text-caption uppercase mt-2" ]
+                    , p [ class "text-gray-900 text-sm uppercase mt-2" ]
                         [ text
                             (shared.translators.tr
                                 "community.objectives.action_count"
@@ -167,7 +167,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                             )
                         ]
                     , if objective.isCompleted then
-                        p [ class "bg-green rounded-sm text-center inline-block px-7 py-1 text-xs text-black uppercase mt-4 tracking-wide" ]
+                        p [ class "bg-green rounded-sm text-center inline-block px-7 py-1 text-sm text-black uppercase mt-4 tracking-wide" ]
                             [ text_ "community.objectives.complete" ]
 
                       else
@@ -246,9 +246,9 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             [ View.MarkdownEditor.viewReadOnly [ class "text-white truncate" ] action.description
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
                 [ div [ class "mx-2 mb-2 text-white" ]
-                    [ p [ class "input-label" ]
+                    [ p [ class "label text-green" ]
                         [ text_ "community.actions.reward" ]
-                    , p [ class "uppercase text-body" ]
+                    , p [ class "uppercase" ]
                         [ String.fromFloat action.reward
                             ++ " "
                             ++ Eos.symbolToString symbol
@@ -257,9 +257,9 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     ]
                 , if validationType == "CLAIMABLE" then
                     div [ class "mx-2 mb-2" ]
-                        [ p [ class "input-label" ]
+                        [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
-                        , p [ class "uppercase text-body text-white" ]
+                        , p [ class "uppercase next-white" ]
                             [ String.fromFloat action.verifierReward
                                 ++ " "
                                 ++ Eos.symbolToString symbol
@@ -274,9 +274,9 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
 
                   else
                     div [ class "mx-2 mb-2" ]
-                        [ p [ class "input-label" ]
+                        [ p [ class "label text-green" ]
                             [ text_ "community.actions.available_until" ]
-                        , p [ class "text-body" ]
+                        , p []
                             [ if action.usages > 0 then
                                 p [ classList [ ( "text-red", action.usagesLeft == 0 ), ( "text-white", action.usagesLeft /= 1 ) ] ]
                                     [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
@@ -300,9 +300,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                     text ""
                             ]
                         ]
-                , div [ class "mx-2 mb-2" ]
+                , div [ class "mx-4 mb-2 mt-auto" ]
                     [ if action.isCompleted then
-                        div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
+                        div [ class "tag bg-green" ]
+                            [ text_ "community.actions.completed" ]
 
                       else if isClosed then
                         div [ class "tag bg-gray-500 text-red" ] [ text_ "community.actions.closed" ]
@@ -313,10 +314,10 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 ]
             , div [ class "flex flex-wrap justify-between items-end" ]
                 [ div [ class "w-full sm:w-4/5" ]
-                    [ p [ class "input-label mb-4" ] [ text_ "community.actions.verifiers" ]
+                    [ p [ class "label text-green" ] [ text_ "community.actions.verifiers" ]
                     , if validationType == "AUTOMATIC" then
                         div [ class "flex items-center" ]
-                            [ p [ class "text-body text-white" ] [ text_ "community.actions.automatic_analyzers" ]
+                            [ p [ class "text-white" ] [ text_ "community.actions.automatic_analyzers" ]
                             , Icons.exclamation "ml-2 text-white fill-current"
                             ]
 

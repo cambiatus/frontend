@@ -627,7 +627,7 @@ viewForm ({ translators } as shared) form =
                 div [ class "flex space-x-4" ]
                     [ div [ class "w-full" ]
                         [ -- TODO - I18N
-                          View.Form.label "datepicker-input" "Initial date"
+                          View.Form.label [] "datepicker-input" "Initial date"
                         , div [ class "relative" ]
                             [ DatePicker.view (Just selectedDate)
                                 datePickerSettings

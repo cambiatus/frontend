@@ -3,7 +3,7 @@ module Page.Community.Settings.Settings exposing (Model, Msg, init, msgToString,
 import Community
 import Eos
 import Html exposing (Html, a, div, span, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Maybe.Extra
 import Page
 import RemoteData
@@ -121,10 +121,9 @@ settingCard : String -> String -> String -> Route -> Html Msg
 settingCard title action description route =
     div
         [ class "flex flex-col justify-around bg-white w-full h-32 rounded px-4 pt-3 pb-4"
-        , style "grid-column" "1 / 4"
         ]
-        [ span [ class "text-sm font-medium" ] [ text title ]
-        , span [ class "text-xs text-gray-900 uppercase" ] [ text description ]
+        [ span [ class "font-semibold" ] [ text title ]
+        , span [ class "text-sm text-gray-900 uppercase" ] [ text description ]
         , a
             [ Route.href route
             , class "button button-primary w-full h-8"

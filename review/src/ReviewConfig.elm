@@ -69,6 +69,9 @@ config =
         [ ( [ "Html.input", "Html.textarea" ]
           , [ "View.Form.Input", "View.Form.Toggle", "View.Form.Radio", "View.Form.FileUploader", "View.Form.Checkbox" ]
           )
+        , ( [ "Html.label" ]
+          , [ "View.Form", "View.Form.Toggle", "View.Form.FileUploader", "View.Form.Checkbox", "View.Form.Radio", "Page.Community.New" ]
+          )
         , ( [ "Html.select" ], [ "View.Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
         ]

@@ -141,6 +141,12 @@ subscriptions model =
 
           else
             Sub.none
+        , case model.searchModel.state of
+            Inactive ->
+                Sub.none
+
+            _ ->
+                Utils.escSubscription (GotSearchMsg Search.closeMsg)
         ]
 
 
@@ -168,6 +174,7 @@ type alias Model =
     , searchModel : Search.Model
     , claimingAction : Action.Model
     , authToken : String
+    , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
     }
 
@@ -184,15 +191,16 @@ initModel shared maybePrivateKey_ accountName authToken =
     , showLanguageItems = False
     , showNotificationModal = False
     , showMainNav = False
-    , notification = Notification.init
-    , unreadCount = 0
+    , showCommunitySelector = False
     , showAuthModal = False
     , auth = Auth.init shared.pinVisibility maybePrivateKey_
+    , notification = Notification.init
+    , unreadCount = 0
     , feedback = Feedback.Hidden
-    , showCommunitySelector = False
     , searchModel = Search.init
     , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
     , authToken = authToken
+    , hasSeenDashboard = False
     , queuedCommunityFields = []
     }
 
@@ -216,15 +224,14 @@ type Page
     | NotFound
     | ComingSoon
     | Invite
-    | Join
     | Dashboard
     | Community
     | CommunitySettings
-    | CommunitySettingsFeatures
     | CommunitySettingsInfo
     | CommunitySettingsNews
     | CommunitySettingsNewsEditor
     | CommunitySettingsCurrency
+    | CommunitySettingsFeatures
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
     | CommunitySettingsSponsorshipThankYouMessage
@@ -252,6 +259,7 @@ type Page
     | Transfer
     | ViewTransfer
     | Analysis
+    | Join
 
 
 view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
@@ -463,64 +471,107 @@ viewHeader page ({ shared } as model) profile_ =
 
         hideCommunitySelector =
             List.member page hideCommunitySelectorPages
+
+        isCommunityCreator =
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    community.creator == model.accountName
+
+                _ ->
+                    False
+
+        isSearchOpen =
+            case model.searchModel.state of
+                Search.Inactive ->
+                    False
+
+                _ ->
+                    True
     in
-    div [ class "flex flex-wrap items-center justify-between px-4 pt-6 pb-4" ]
-        [ if hideCommunitySelector then
-            div []
+    div [ class "flex flex-wrap items-center justify-between p-4 md:flex-nowrap" ]
+        [ div
+            [ class "flex-shrink-0"
+            , classList
+                [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
+                , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
+                ]
+            ]
+            (if hideCommunitySelector then
                 [ img [ class "hidden sm:block h-5", src shared.logo ] []
                 , img [ class "sm:hidden h-5", src shared.logoMobile ] []
                 ]
 
-          else
-            viewCommunitySelector model
+             else
+                [ viewCommunitySelector model ]
+            )
         , if hideCommunityAndSearch page model then
             div [] []
 
           else
-            div [ class "order-last w-full md:order-none mt-2 md:ml-2 md:flex-grow md:w-auto" ]
-                [ Search.viewForm shared.translators model.searchModel
-                    |> Html.map GotSearchMsg
+            Search.viewForm
+                [ class "order-last w-full md:order-none mt-4 md:mt-0 md:mx-4"
+                , classList
+                    [ ( "md:w-96 md:flex-shrink-0", not isSearchOpen )
+                    , ( "w-full", isSearchOpen )
+                    ]
                 ]
-        , div [ class "flex items-center float-right" ]
+                shared.translators
+                model.searchModel
+                |> Html.map GotSearchMsg
+        , div
+            [ class "flex items-center justify-end space-x-8 my-auto flex-shrink-0"
+            , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
+            ]
             [ a
-                [ class "outline-none relative mx-6 rounded focus:ring focus:ring-offset-4"
+                [ class "relative rounded-sm group focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50"
                 , Route.href Route.Notification
+                , classList [ ( "mr-4", model.unreadCount > 0 ) ]
                 ]
-                [ Icons.notification "fill-current text-black"
+                [ Icons.notification "fill-current text-gray-900 h-6 md:h-7 group-hover:text-orange-300"
                 , if model.unreadCount > 0 then
-                    div [ class "absolute top-0 right-0 -mr-4 px-2 py-1 bg-orange-500 text-white font-medium text-xs rounded-full" ]
+                    div [ class "absolute top-0 right-0 -mr-2 px-1 py-0.5 bg-orange-500 text-white font-semibold text-xs rounded-full md:-mr-4 md:px-2 md:py-1 md:text-sm" ]
                         [ text (String.fromInt model.unreadCount) ]
 
                   else
                     text ""
                 ]
+            , if isCommunityCreator then
+                a
+                    [ class "rounded-sm group focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4"
+                    , Route.href Route.CommunitySettings
+                    ]
+                    [ Icons.settings "fill-current h-6 text-gray-900 md:h-7 group-hover:text-orange-300" ]
+
+              else
+                text ""
             , div [ class "relative z-50" ]
                 [ button
-                    [ class "h-12 z-10 bg-gray-200 py-2 px-3 relative hidden lg:visible lg:flex focus:outline-none focus:ring"
-                    , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
-                    , classList [ ( "rounded-lg", not model.showUserNav ) ]
+                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    , classList
+                        [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav )
+                        , ( "rounded-lg", not model.showUserNav )
+                        ]
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
                     [ Avatar.view profile_.avatar "h-8 w-8"
-                    , div [ class "flex flex-wrap text-left pl-2" ]
-                        [ p [ class "w-full font-sans uppercase text-gray-900 text-xs overflow-x-hidden" ]
+                    , div [ class "flex flex-col items-center text-left pl-2" ]
+                        [ p [ class "w-full text-gray-333 overflow-x-hidden" ]
                             [ text (tr "menu.welcome_message" [ ( "user_name", Eos.nameToString profile_.account ) ]) ]
-                        , p [ class "w-full font-sans text-indigo-500 text-sm" ]
+                        , p [ class "w-full text-orange-300" ]
                             [ text (shared.translators.t "menu.my_account") ]
                         ]
-                    , Icons.arrowDown "float-right"
                     ]
                 , button
-                    [ class "h-8 z-10 my-1 ml-3 flex relative lg:hidden focus:outline-none focus:ring"
+                    [ class "z-10 flex relative focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 focus-visible:ring-offset-4 lg:hidden"
                     , classList [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav ) ]
                     , classList [ ( "rounded-lg", not model.showUserNav ) ]
                     , type_ "button"
                     , onClick (ShowUserNav (not model.showUserNav))
                     , onMouseEnter (ShowUserNav True)
                     ]
-                    [ Avatar.view profile_.avatar "h-8 w-8"
+                    [ Avatar.view profile_.avatar "h-6 w-6 md:h-7 md:w-7"
                     ]
 
                 -- Invisible button to hide menu when clicking outside
@@ -540,24 +591,24 @@ viewHeader page ({ shared } as model) profile_ =
                         [ nav
                             [ class "absolute right-0 lg:w-full py-2 px-4 shadow-lg bg-white rounded-t-lg rounded-b-lg lg:rounded-t-none z-50" ]
                             [ a
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
                                 , Route.href (Route.Profile model.accountName)
                                 , onClick ClickedProfileIcon
                                 ]
-                                [ Icons.profile "mr-4"
+                                [ Icons.profile "mr-4 fill-current"
                                 , text_ "menu.profile"
                                 ]
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-orange-300 focus-visible:text-orange-300"
                                 , onClick ToggleLanguageItems
                                 ]
-                                [ Icons.languages "mr-4"
+                                [ Icons.languages "mr-4 fill-current"
                                 , text_ "menu.languages"
                                 ]
                             , if model.showLanguageItems then
-                                div [ class "ml-10 mb-2" ]
+                                div [ class "ml-6 mb-2" ]
                                     (button
-                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase"
+                                        [ class "flex px-4 py-2 text-gray items-center text-indigo-500 font-bold text-xs uppercase focus-ring rounded-sm"
                                         ]
                                         [ Shared.langFlag shared.language
                                         , text (Translation.languageToLanguageCode shared.language)
@@ -568,10 +619,10 @@ viewHeader page ({ shared } as model) profile_ =
                               else
                                 text ""
                             , button
-                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t"
+                                [ class "flex block w-full px-4 py-4 justify-start items-center text-sm border-t focus-ring rounded-sm hover:text-red focus-visible:text-red"
                                 , onClick ClickedLogout
                                 ]
-                                [ Icons.close "fill-current text-red mr-4"
+                                [ Icons.close "fill-current m-1 mr-5"
                                 , text_ "menu.logout"
                                 ]
                             ]
@@ -598,10 +649,13 @@ viewCommunitySelector model =
     in
     case model.selectedCommunity of
         RemoteData.Success community ->
-            button [ class "flex items-center", onClick OpenCommunitySelector ]
-                [ img [ class "h-10", src community.logo ] []
+            button
+                [ class "flex items-center rounded-sm focus-ring focus:ring-offset-4"
+                , onClick OpenCommunitySelector
+                ]
+                [ img [ class "h-8 w-8 object-scale-down", src community.logo ] []
                 , if hasMultipleCommunities then
-                    Icons.arrowDown ""
+                    Icons.arrowDown "fill-current text-gray-900"
 
                   else
                     text ""
@@ -663,50 +717,53 @@ communitySelectorModal model =
 viewMainMenu : Page -> Model -> Html Msg
 viewMainMenu page model =
     let
-        menuItemClass =
-            "mx-4 w-48 font-sans uppercase flex items-center justify-center leading-tight text-xs text-gray-700 hover:text-indigo-500"
-
-        activeClass =
-            "border-orange-100 border-b-2 text-indigo-500 font-medium"
-
-        iconClass =
-            "w-6 h-6 fill-current hover:text-indigo-500 mr-5"
-
         closeClaimWithPhoto =
             GotActionMsg Action.ClaimConfirmationClosed
-    in
-    nav [ class "h-16 w-full flex overflow-x-auto" ]
-        [ a
-            [ classList
-                [ ( menuItemClass, True )
-                , ( activeClass, isActive page Route.Dashboard )
+
+        menuItem title route =
+            a
+                [ class "text-center text-gray-900 uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
+                , classList [ ( "text-orange-300 font-bold", isActive page route ) ]
+                , Route.href route
+                , onClick closeClaimWithPhoto
                 ]
-            , Route.href Route.Dashboard
-            , onClick closeClaimWithPhoto
-            ]
-            [ Icons.dashboard iconClass
-            , text (model.shared.translators.t "menu.dashboard")
-            ]
-        , case model.selectedCommunity of
-            RemoteData.Success { hasShop } ->
-                if hasShop then
-                    a
-                        [ classList
-                            [ ( menuItemClass, True )
-                            , ( activeClass, isActive page (Route.Shop Shop.All) )
-                            ]
-                        , Route.href (Route.Shop Shop.All)
-                        , onClick closeClaimWithPhoto
-                        ]
-                        [ Icons.shop iconClass
-                        , text (model.shared.translators.t "menu.shop")
-                        ]
+                [ text (model.shared.translators.t title) ]
 
-                else
-                    text ""
+        hasShop =
+            model.selectedCommunity
+                |> RemoteData.map .hasShop
+                |> RemoteData.withDefault False
 
-            _ ->
-                text ""
+        isInDashboard =
+            isActive page Route.Dashboard
+
+        isInShop =
+            isActive page (Route.Shop Shop.All)
+    in
+    nav
+        [ class "grid relative md:mx-4"
+        , classList
+            [ ( "grid-cols-2 md:w-96", hasShop )
+            , ( "md:w-48", not hasShop )
+            ]
+        ]
+        [ menuItem "menu.dashboard" Route.Dashboard
+        , if hasShop then
+            menuItem "menu.shop" (Route.Shop Shop.All)
+
+          else
+            text ""
+        , div
+            [ class "absolute bottom-0 h-3px"
+            , classList
+                [ ( "w-1/2 transform transition-transform motion-reduce:transition-none", hasShop )
+                , ( "w-full", not hasShop )
+                , ( "translate-x-0", isInDashboard )
+                , ( "translate-x-full", isInShop )
+                , ( "bg-orange-300", isInDashboard || isInShop )
+                ]
+            ]
+            []
         ]
 
 
@@ -728,7 +785,7 @@ viewFooter _ =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
             [ text "Created with"
-            , Icons.heart
+            , Icons.heartSolid
             , text "by Satisfied Vagabonds"
             ]
         , img
@@ -1061,7 +1118,10 @@ update msg model =
                         ( searchModel, searchCmd ) =
                             Search.update shared model.authToken community.symbol model.searchModel searchMsg
                     in
-                    { model | searchModel = searchModel }
+                    { model
+                        | searchModel = searchModel
+                        , hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg
+                    }
                         |> UR.init
                         |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
 

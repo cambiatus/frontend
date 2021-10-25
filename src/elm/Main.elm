@@ -1197,10 +1197,16 @@ changeRouteTo maybeRoute model =
                     case loggedIn.routeHistory of
                         (_ :: second :: rest) as routeHistory ->
                             if newRoute == second then
-                                { loggedIn | routeHistory = newRoute :: rest }
+                                { loggedIn
+                                    | routeHistory = newRoute :: rest
+                                    , hasSeenDashboard = loggedIn.hasSeenDashboard || second == Route.Dashboard
+                                }
 
                             else
-                                { loggedIn | routeHistory = newRoute :: routeHistory }
+                                { loggedIn
+                                    | routeHistory = newRoute :: routeHistory
+                                    , hasSeenDashboard = loggedIn.hasSeenDashboard || second == Route.Dashboard
+                                }
 
                         routeHistory ->
                             { loggedIn | routeHistory = newRoute :: routeHistory }

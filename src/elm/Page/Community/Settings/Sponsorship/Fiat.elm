@@ -136,9 +136,7 @@ view_ { translators } community =
                 |> View.Form.Input.toHtml
             , p [ class "mb-10 text-gray-900" ]
                 [ text (translators.t "sponsorship.fiat.how_to_change") ]
-
-            -- TODO - Use new typography classes (#622)
-            , p [ class "text-green tracking-wide uppercase text-caption block mb-2" ]
+            , p [ class "label" ]
                 [ text (translators.t "sponsorship.cards.fiat.title") ]
             , div [ class "grid xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-6" ]
                 (Cambiatus.Enum.CurrencyType.list

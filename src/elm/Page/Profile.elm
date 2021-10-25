@@ -797,7 +797,7 @@ viewProfile loggedIn profile =
                     [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                     , div [ class "flex flex-grow items-center justify-between" ]
                         [ ul [ class "text-sm text-gray-900" ]
-                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                            [ li [ class "font-semibold text-body-black text-2xl xs-max:text-xl" ]
                                 [ text (Maybe.withDefault "" profile.name) ]
                             , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
                             , li [] [ text (Eos.nameToString profile.account) ]
@@ -950,9 +950,9 @@ viewDetailsItem label content verticalAlign =
                 , ( "items-center", verticalAlign == Center )
                 ]
             ]
-            [ span [ class "text-sm leading-6 mr-4" ]
+            [ span [ class "text-sm mr-4" ]
                 [ label ]
-            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+            , span [ class "text-indigo-500 font-semibold text-sm text-right" ]
                 [ content ]
             ]
         ]
@@ -1074,7 +1074,7 @@ viewSettings loggedIn profile =
                                 viewDetailsItem
                                     (div []
                                         [ kycLabel
-                                        , span [ class "uppercase text-red pt-2 text-xs" ]
+                                        , span [ class "uppercase text-red pt-2 text-sm" ]
                                             [ text_ "community.kyc.delete.warning" ]
                                         ]
                                     )
@@ -1131,10 +1131,10 @@ viewLatestTransactions loggedIn model =
     in
     div [ class "p-4 bg-white max-w-screen md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
-            [ p [ class "text-heading" ]
+            [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+                , span [ class "text-indigo-500 font-semibold" ] [ text_ "transfer.transfers" ]
                 ]
             , case model.transfersStatus of
                 FailedLoading ->
@@ -1170,7 +1170,7 @@ viewTransactionList loggedIn transfers =
                 div []
                     [ div [ class "mt-4" ]
                         [ View.Components.dateViewer
-                            [ class "uppercase text-caption text-black tracking-wider" ]
+                            [ class "uppercase text-sm text-black tracking-wide" ]
                             identity
                             loggedIn.shared
                             (Utils.fromDateTime t1.blockTime)
@@ -1204,13 +1204,13 @@ viewHistory shared balance graphqlInfo maybeContributionInfo =
             text << t
 
         viewHistoryItem title number translation =
-            li [ class "flex items-center py-4 text-sm leading-6" ]
+            li [ class "flex items-center py-4 text-sm" ]
                 [ div [ class "flex items-center" ]
                     title
                 , div [ class "ml-auto" ]
                     [ span [ class "mr-1 text-indigo-500 font-bold" ]
                         [ number ]
-                    , span [ class "text-caption text-gray-900 uppercase" ]
+                    , span [ class "text-sm text-gray-900 uppercase" ]
                         [ translation ]
                     ]
                 ]

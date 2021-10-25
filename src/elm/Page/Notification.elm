@@ -174,9 +174,9 @@ viewNotificationTransfer shared history notification =
             ]
         , div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ class "text-black" ]
                 [ text description ]
-            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+            , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                 identity
                 shared
                 (Utils.fromDateTime history.insertedAt)
@@ -222,9 +222,9 @@ viewNotificationMint shared history notification =
             ]
         , div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ class "text-black" ]
                 [ text description ]
-            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+            , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                 identity
                 shared
                 (Utils.fromDateTime history.insertedAt)
@@ -291,9 +291,9 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     in
     [ div [ class "flex-col flex-grow-1 pl-4" ]
         [ p
-            [ class "font-sans text-black text-sm leading-relaxed" ]
+            [ class "text-black" ]
             [ text description ]
-        , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+        , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
             identity
             shared
             (Utils.fromDateTime date)

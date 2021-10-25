@@ -199,7 +199,7 @@ viewBig ({ t } as translators) options =
             [ options.label
             , viewTooltip options
             ]
-        , div [ class ("flex items-center font-medium lowercase ml-2 " ++ statusColor) ]
+        , div [ class ("flex items-center font-semibold lowercase ml-2 " ++ statusColor) ]
             [ label [ for options.id ] [ text_ (statusText options) ]
             , div [ class "form-switch ml-7" ]
                 [ input

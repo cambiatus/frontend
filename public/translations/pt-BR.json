@@ -13,7 +13,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Bem vindo a {{community_name}}",
+    "welcome_to": "Bem vindo de volta,",
     "my_communities": "Bem vindo a ",
     "dashboard": "Painel",
     "news": "Novidades",
@@ -197,7 +197,7 @@
       "wordsMode": {
         "input": {
           "description": "Digite suas 12 palavras que você copiou e colou no registro.",
-          "label": "Suas 12 palavras (você salvou ao criar sua conta)",
+          "label": "Suas 12 palavras",
           "placeholder": "Digite suas 12 palavras aqui",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
@@ -349,8 +349,7 @@
       "title": "Opa. Algo de errado aconteceu enquanto criavamos sua conta"
     },
     "account_created": {
-      "greet": "Ei",
-      "last_step": "esse é o último passo e o mais importante",
+      "greet": "Ei {{name}},",
       "copy": "copie",
       "i_saved_words": "Copiei e colei em um local seguro as 12 palavras que Cambiatus pediu",
       "words_copied": "foram copiadas para a área de transferência",
@@ -819,8 +818,9 @@
   },
   "dashboard": {
     "back": "Voltar",
-    "transfer": "Transferir para um amigo",
-    "explore": "Como ganhar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "Seu saldo em {{symbol}}",
+    "how_to_earn": "Como ganhar {{symbol}}",
     "my_contributions": "Minhas contribuições",
     "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
@@ -832,7 +832,7 @@
     "scan": "Escanear",
     "or_choose_list": "Ou escolha da lista",
     "choose_one_option": "Escolha uma das opções",
-    "next": "Próximo",
+    "continue": "Continuar",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
     "claim": "Reivindicar",
@@ -847,27 +847,20 @@
     "reject": "Reprovar",
     "verify": "Aprovar",
     "closed": "fechados",
-    "my_claims": {
-      "1": "Minhas ",
-      "2": "Reivindicações",
-      "go": "ir"
-    },
-    "my_offers": {
-      "1": "Minhas ",
-      "2": "Ofertas",
-      "go": "Ir"
-    },
+    "my_claims": "Minhas reivindicações",
+    "my_offers": "Minhas ofertas",
     "analysis": {
       "title": {
         "1": "Ações",
         "2": "para análise"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", bom trabalho.",
-        "3": "Você finalizou tudo"
+        "1": "Parabéns",
+        "2": "Não existem ações para análise"
       },
-      "all": "Todas"
+      "analyze_now": "Analisar agora",
+      "count": "Você tem **{{amount}} ações** para análise",
+      "error_fetching": "Algo de errado aconteceu ao buscar as ações para análise"
     },
     "activities": {
       "title": "Atividades para sua análise",

@@ -125,7 +125,7 @@ viewTransfer loggedIn transfer direction =
                     , src "/images/transfer-doggo.svg"
                     ]
                     []
-                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-medium text-white" ]
+                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-semibold text-white" ]
                     [ text <|
                         case direction of
                             TransferDirectionValue.Sending ->
@@ -136,9 +136,9 @@ viewTransfer loggedIn transfer direction =
                     ]
                 , div
                     [ class "flex flex-wrap w-full p-4 mt-4 mx-2 bg-black bg-opacity-10 rounded-lg" ]
-                    [ p [ class "w-full text-xs text-white uppercase font-bold" ]
+                    [ p [ class "w-full text-sm text-white uppercase font-bold" ]
                         [ text (t "transfer_result.transaction_id.title") ]
-                    , p [ class "w-full text-xs text-white uppercase" ]
+                    , p [ class "w-full text-sm text-white uppercase" ]
                         [ text (t "transfer_result.transaction_id.body") ]
                     , p [ class "w-full tracking-widest text-center text-4xl mt-4" ]
                         [ text (Emoji.encode transfer.createdTx) ]
@@ -237,7 +237,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
         , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
             [ Icons.arrowDown arrowClass
             , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
-                [ span [ class "text-gray-900 text-caption uppercase" ]
+                [ span [ class "text-gray-900 text-sm uppercase" ]
                     [ text <|
                         case transferDirection of
                             TransferDirectionValue.Receiving ->
@@ -247,13 +247,13 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                                 t "transfer_result.transferred"
                     ]
                 , div [ class "flex text-green" ]
-                    [ span [ class "font-medium text-heading" ]
+                    [ span [ class "font-semibold text-lg" ]
                         [ transfer.value
                             |> Eos.formatSymbolAmount loggedIn.shared.translators
                                 transfer.community.symbol
                             |> text
                         ]
-                    , span [ class "text-caption ml-2 mb-2 self-end" ]
+                    , span [ class "text-sm ml-2 mb-2" ]
                         [ transfer.community.symbol
                             |> Eos.symbolToSymbolCodeString
                             |> text
@@ -269,10 +269,8 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
 viewDetail : String -> Html Msg -> Html Msg
 viewDetail title content =
     div [ class "my-4" ]
-        [ h5 [ class "input-label mb-2" ]
-            [ text title ]
-        , p [ class "text-body" ]
-            [ content ]
+        [ h5 [ class "label" ] [ text title ]
+        , p [] [ content ]
         ]
 
 
