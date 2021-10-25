@@ -112,7 +112,7 @@ view guest model =
         guest.shared.translators.t "auth.login.loginTab"
     , content =
         div [ class "bg-purple-500 flex-grow flex flex-col justify-center md:block" ]
-            [ div [ class "sf-wrapper flex-grow w-full px-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+            [ div [ class "flex flex-col flex-grow justify-between w-full p-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
                 (case model of
                     EnteringPassphrase passphraseModel ->
                         viewPassphrase guest passphraseModel
@@ -138,7 +138,7 @@ viewPassphrase ({ shared } as guest) model =
         viewPasteButton =
             if shared.canReadClipboard then
                 button
-                    [ class "absolute bottom-0 left-0 button m-2"
+                    [ class "absolute bottom-4 left-1/2 transform -translate-x-1/2 button"
                     , classList
                         [ ( "button-secondary", not model.hasPasted )
                         , ( "button-primary", model.hasPasted )
@@ -168,12 +168,12 @@ viewPassphrase ({ shared } as guest) model =
                 _ ->
                     ""
     in
-    [ form [ class "sf-content flex flex-col flex-grow justify-center" ]
+    [ form [ class "flex flex-col justify-center" ]
         [ viewIllustration "login_key.svg"
-        , p [ class "text-white text-body mb-5" ]
-            [ span [ class "text-green text-caption tracking-wide uppercase block mb-1" ]
+        , p [ class "text-white mb-6" ]
+            [ span [ class "font-bold block text-white" ]
                 [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
-            , span [ class "text-white block leading-relaxed" ]
+            , span [ class "text-white block" ]
                 [ text (t "auth.login.wordsMode.input.description") ]
             ]
         , Input.init
@@ -191,10 +191,10 @@ viewPassphrase ({ shared } as guest) model =
             }
             |> Input.withInputType Input.TextArea
             |> Input.withAttrs
-                [ class "min-w-full block text-base"
+                [ class "min-w-full block p-4"
                 , classList
                     [ ( "field-with-error", not (List.isEmpty model.problems) )
-                    , ( "pb-16", shared.canReadClipboard )
+                    , ( "pb-18", shared.canReadClipboard )
                     ]
                 , rows 2
                 , View.Form.noGrammarly
@@ -215,14 +215,15 @@ viewPassphrase ({ shared } as guest) model =
                 ]
             |> Input.withCounter 12
             |> Input.withCounterType Input.CountWords
-            |> Input.withCounterAttrs [ class "text-white" ]
+            |> Input.withCounterAttrs [ class "!text-white" ]
             |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
             |> Input.withElements [ viewPasteButton ]
+            |> Input.withLabelAttrs [ class "text-white" ]
             |> Input.toHtml
         ]
-    , div [ class "sf-footer" ]
+    , div []
         [ if showRegisterLink then
-            p [ class "text-white text-body text-center mb-6 block" ]
+            p [ class "text-white text-center mb-6 block" ]
                 [ text (t "auth.login.register")
                 , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
                     [ text (t "auth.login.registerLink")
@@ -232,10 +233,10 @@ viewPassphrase ({ shared } as guest) model =
           else
             text ""
         , button
-            [ class "button button-primary min-w-full mb-8"
+            [ class "button button-primary min-w-full"
             , onClick ClickedNextStep
             ]
-            [ text (t "dashboard.next") ]
+            [ text (t "dashboard.continue") ]
         ]
     ]
 
@@ -250,7 +251,7 @@ viewPin { shared } model =
             shared.translators
     in
     [ viewIllustration "login_pin.svg"
-    , p [ class "text-white text-body mb-5" ]
+    , p [ class "text-white mb-6" ]
         [ text (t (trPrefix "nowCreate"))
         , text " "
         , strong [] [ text (t (trPrefix "sixDigitPin")) ]
@@ -261,7 +262,10 @@ viewPin { shared } model =
         , text " "
         , text <| t (trPrefix "eachLogin")
         ]
-    , Pin.withAttrs [ class "mb-8" ] model.pinModel
+    , model.pinModel
+        |> Pin.withAttrs []
+        |> Pin.withLabelAttrs [ class "text-white" ]
+        |> Pin.withCounterAttrs [ class "!text-white" ]
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]
@@ -269,7 +273,7 @@ viewPin { shared } model =
 
 viewIllustration : String -> Html msg
 viewIllustration fileName =
-    img [ class "h-40 mx-auto mt-8 mb-7", src ("/images/" ++ fileName) ] []
+    img [ class "h-40 mx-auto mb-6", src ("/images/" ++ fileName) ] []
 
 
 

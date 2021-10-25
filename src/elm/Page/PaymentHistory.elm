@@ -26,12 +26,15 @@ import Eos.Account
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, h1, h2, img, label, p, span, text, ul)
-import Html.Attributes as Attrs exposing (class, href, src, style, tabindex)
+import Html exposing (Html, a, button, div, h1, h2, img, p, text, ul)
+import Html.Attributes as Attrs exposing (class, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Icons
 import Log
 import Page
+import Profile
+import Profile.Contact
+import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Select
 import Session.LoggedIn as LoggedIn
@@ -43,6 +46,7 @@ import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
+import View.Form
 
 
 
@@ -61,6 +65,7 @@ type Msg
     | ClickedCalendar
     | ClearDatePicker
     | ShowMore
+    | GotPayerProfileSummaryMsg Profile.Summary.Msg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -109,6 +114,9 @@ msgToString msg =
         ClearDatePicker ->
             [ "ClearDatePicker" ]
 
+        GotPayerProfileSummaryMsg subMsg ->
+            "GotPayerProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
+
 
 
 -- MODEL
@@ -124,6 +132,7 @@ type alias Model =
     , autocompleteSelectedProfile : Maybe ProfileBase
     , datePicker : DatePicker.DatePicker
     , selectedDate : Maybe Date
+    , payerProfileSummary : Profile.Summary.Model
     }
 
 
@@ -134,16 +143,22 @@ type QueryStatus err resp
 
 
 type alias ProfileBase =
-    { userName : Maybe String
+    { name : Maybe String
     , account : Eos.Account.Name
     , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , contacts : List Profile.Contact.Normalized
     }
 
 
 type alias ProfileWithTransfers =
-    { userName : Maybe String
+    { name : Maybe String
     , account : Eos.Account.Name
     , avatar : Avatar
+    , email : Maybe String
+    , bio : Maybe String
+    , contacts : List Profile.Contact.Normalized
     , transfers : Maybe ConnectionTransfer
     }
 
@@ -200,14 +215,18 @@ profileWithTransfersSelectionSet community model =
                             }
                 }
     in
-    SelectionSet.map4 ProfileWithTransfers
-        User.name
-        (Eos.Account.nameSelectionSet User.account)
-        (Avatar.selectionSet User.avatar)
-        (User.transfers
-            optionalArgsFn
-            Transfer.transferConnectionSelectionSet
-        )
+    SelectionSet.succeed ProfileWithTransfers
+        |> SelectionSet.with User.name
+        |> SelectionSet.with (Eos.Account.nameSelectionSet User.account)
+        |> SelectionSet.with (Avatar.selectionSet User.avatar)
+        |> SelectionSet.with User.email
+        |> SelectionSet.with User.bio
+        |> SelectionSet.with Profile.userContactSelectionSet
+        |> SelectionSet.with
+            (User.transfers
+                optionalArgsFn
+                Transfer.transferConnectionSelectionSet
+            )
 
 
 fetchProfileWithTransfers : Shared -> Community.Model -> Model -> String -> Cmd Msg
@@ -230,10 +249,13 @@ fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
         autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.User
         autocompleteSelectionSet =
-            SelectionSet.map3 ProfileBase
-                User.name
-                (Eos.Account.nameSelectionSet User.account)
-                (Avatar.selectionSet User.avatar)
+            SelectionSet.succeed ProfileBase
+                |> SelectionSet.with User.name
+                |> SelectionSet.with (Eos.Account.nameSelectionSet User.account)
+                |> SelectionSet.with (Avatar.selectionSet User.avatar)
+                |> SelectionSet.with User.email
+                |> SelectionSet.with User.bio
+                |> SelectionSet.with Profile.userContactSelectionSet
 
         selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.User
         selectionSet =
@@ -258,16 +280,13 @@ datePickerSettings shared =
     { defaultSettings
         | changeYear = off
         , placeholder = shared.translators.t "payment_history.pick_date"
-        , inputClassList =
-            [ ( "input", True )
-            , ( "w-full", True )
-            ]
         , dateFormatter = Date.format "E, d MMM y"
         , firstDayOfWeek = Mon
         , inputId = Just "date-picker-input"
         , inputAttributes =
             [ Attrs.required False
             , Attrs.readonly True
+            , class "input w-full"
             ]
     }
 
@@ -278,9 +297,15 @@ init recipientAccountName loggedIn =
         ( datePicker, datePickerCmd ) =
             DatePicker.init
 
-        recipientProfile : ProfileBase
+        recipientProfile : Profile.Basic {}
         recipientProfile =
-            { userName = Nothing, account = recipientAccountName, avatar = Avatar.empty }
+            { name = Nothing
+            , account = recipientAccountName
+            , avatar = Avatar.empty
+            , email = Nothing
+            , bio = Nothing
+            , contacts = []
+            }
 
         initModel =
             { queryStatus = Loading
@@ -292,6 +317,7 @@ init recipientAccountName loggedIn =
             , autocompleteSelectedProfile = Nothing
             , datePicker = datePicker
             , selectedDate = Nothing
+            , payerProfileSummary = Profile.Summary.init False
             }
     in
     ( initModel
@@ -409,9 +435,12 @@ update msg model ({ shared, authToken } as loggedIn) =
 
                         recipientProfile : ProfileBase
                         recipientProfile =
-                            { userName = profile.userName
+                            { name = profile.name
                             , account = profile.account
                             , avatar = profile.avatar
+                            , email = profile.email
+                            , bio = profile.bio
+                            , contacts = profile.contacts
                             }
 
                         newIncomingTransfers =
@@ -598,13 +627,17 @@ update msg model ({ shared, authToken } as loggedIn) =
                             { moduleName = "Page.PaymentHistory", function = "update" }
                             []
 
+        GotPayerProfileSummaryMsg subMsg ->
+            { model | payerProfileSummary = Profile.Summary.update subMsg model.payerProfileSummary }
+                |> UR.init
+
 
 
 -- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view { shared } model =
+view ({ shared } as loggedIn) model =
     let
         pageTitle =
             shared.translators.t "payment_history.title"
@@ -618,7 +651,7 @@ view { shared } model =
                             [ h2 [ class "text-center text-black text-2xl" ]
                                 [ text (shared.translators.t "payment_history.title") ]
                             , div []
-                                [ viewUserAutocomplete shared model
+                                [ viewUserAutocomplete loggedIn model
                                 , viewDatePicker shared model
                                 ]
                             , viewTransfers shared model
@@ -640,7 +673,7 @@ viewSplash : ProfileWithTransfers -> Html msg
 viewSplash p =
     let
         name =
-            Maybe.withDefault (Eos.Account.nameToString p.account) p.userName
+            Maybe.withDefault (Eos.Account.nameToString p.account) p.name
     in
     div
         [ class "bg-purple-500 bg-contain bg-center bg-no-repeat h-56 mb-6"
@@ -650,20 +683,16 @@ viewSplash p =
         ]
 
 
-viewUserAutocomplete : Shared -> Model -> Html Msg
-viewUserAutocomplete shared model =
+viewUserAutocomplete : LoggedIn.Model -> Model -> Html Msg
+viewUserAutocomplete loggedIn model =
     div [ class "my-4" ]
-        [ label
-            [ class "block" ]
-            [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text (shared.translators.t "payment_history.user") ]
-            ]
-        , viewPayerAutocomplete shared model False
+        [ View.Form.label [] "elm-select-input" (loggedIn.shared.translators.t "payment_history.user")
+        , viewPayerAutocomplete loggedIn model False
         ]
 
 
-viewPayerAutocomplete : Shared -> Model -> Bool -> Html Msg
-viewPayerAutocomplete shared model isDisabled =
+viewPayerAutocomplete : LoggedIn.Model -> Model -> Bool -> Html Msg
+viewPayerAutocomplete loggedIn model isDisabled =
     let
         selectedPayers =
             Maybe.map (\v -> [ v ]) model.autocompleteSelectedProfile
@@ -672,24 +701,24 @@ viewPayerAutocomplete shared model isDisabled =
     div []
         [ Html.map SelectMsg
             (Select.view
-                (selectConfiguration shared isDisabled)
+                (selectConfiguration loggedIn.shared isDisabled)
                 model.autocompleteState
                 model.autocompleteProfiles
                 selectedPayers
             )
-        , viewSelectedPayers model shared selectedPayers
+        , viewSelectedPayers model loggedIn selectedPayers
         ]
 
 
-viewSelectedPayers : Model -> Shared -> List ProfileBase -> Html Msg
-viewSelectedPayers model shared selectedPayers =
+viewSelectedPayers : Model -> LoggedIn.Model -> List ProfileBase -> Html Msg
+viewSelectedPayers model loggedIn selectedPayers =
     div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
         (selectedPayers
             |> List.map
                 (\p ->
                     div
                         [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ viewSelectedPayer shared model p
+                        [ viewSelectedPayer loggedIn model p
                         , div
                             [ onClick ClearSelect
                             , class "h-6 w-6 flex items-center mt-4"
@@ -700,77 +729,18 @@ viewSelectedPayers model shared selectedPayers =
         )
 
 
-viewSelectedPayer : Shared -> Model -> ProfileBase -> Html msg
-viewSelectedPayer shared model profile =
-    let
-        accountName =
-            if profile.account == model.recipientProfile.account then
-                text (shared.translators.t "transfer_result.you")
-
-            else
-                case profile.userName of
-                    Just u ->
-                        text u
-
-                    Nothing ->
-                        Eos.Account.viewName profile.account
-
-        accountNameContainer =
-            div [ class "flex items-center bg-black rounded-label p-1" ]
-                [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption" ]
-                    [ accountName ]
-                ]
-    in
-    a
-        [ class "flex flex-col items-center"
-        , href ("/profile/" ++ Eos.Account.nameToString profile.account)
-        ]
-        [ div [ class "w-10 h-10 rounded-full" ]
-            [ Avatar.view profile.avatar "w-10 h-10"
-            ]
-        , div [ class "mt-2" ]
-            [ accountNameContainer ]
-        ]
-
-
-selectConfig : Select.Config msg ProfileBase -> Shared -> Bool -> Select.Config msg ProfileBase
-selectConfig select shared isDisabled =
-    select
-        |> Select.withInputClass "form-input h-12 w-full font-sans placeholder-gray-900"
-        |> Select.withClear False
-        |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound "No matches"
-        |> Select.withNotFoundClass "text-red  border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "border-t-none border-solid border-gray-100 border rounded-b z-30 bg-white"
-
-
-viewAutoCompleteItem : Shared -> ProfileBase -> Html Never
-viewAutoCompleteItem shared profile =
-    div [ class "pt-3 pl-3 flex flex-row items-center w-select z-30" ]
-        [ div [ class "pr-3" ] [ Avatar.view profile.avatar "h-7 w-7" ]
-        , div [ class "flex flex-col font-sans border-b border-gray-500 pb-3 w-full" ]
-            [ span [ class "text-black text-body leading-loose" ]
-                [ text (Eos.Account.nameToString profile.account) ]
-            , span [ class "leading-caption uppercase text-green text-caption" ]
-                [ case profile.userName of
-                    Just name ->
-                        text name
-
-                    Nothing ->
-                        text ""
-                ]
-            ]
-        ]
+viewSelectedPayer : LoggedIn.Model -> Model -> ProfileBase -> Html Msg
+viewSelectedPayer loggedIn model profile =
+    Profile.Summary.view loggedIn.shared
+        loggedIn.accountName
+        profile
+        model.payerProfileSummary
+        |> Html.map GotPayerProfileSummaryMsg
 
 
 selectConfiguration : Shared -> Bool -> Select.Config Msg ProfileBase
 selectConfiguration shared isDisabled =
-    selectConfig
+    Profile.selectConfig
         (Select.newConfig
             { onSelect = OnSelect
             , toLabel = \p -> Eos.Account.nameToString p.account
@@ -796,11 +766,7 @@ selectFilter minChars toLabel q items =
 viewDatePicker : Shared -> Model -> Html Msg
 viewDatePicker shared model =
     div [ class "my-4" ]
-        [ label
-            [ class "block" ]
-            [ span [ class "text-green tracking-wide uppercase text-caption block mb-1" ]
-                [ text (shared.translators.t "payment_history.date") ]
-            ]
+        [ View.Form.label [] "date-picker" (shared.translators.t "payment_history.date")
         , div [ class "relative" ]
             [ DatePicker.view
                 model.selectedDate
@@ -857,7 +823,7 @@ viewTransfer shared payment =
             [ avatarImg ]
         , p [ class "text-black mt-2" ]
             [ text userName ]
-        , p [ class "uppercase text-gray-900 text-xs my-1" ]
+        , p [ class "uppercase text-gray-900 text-sm my-1" ]
             [ text time ]
         , p [ class "text-green text-4xl my-3" ]
             [ text amount ]
@@ -883,7 +849,7 @@ viewTransfers shared model =
                     ]
 
         Nothing ->
-            div [ class "text-center leading-10 h-48" ]
+            div [ class "text-center h-48" ]
                 [ div [ class "m-auto spinner" ] []
                 , text (shared.translators.t "menu.loading")
                 ]

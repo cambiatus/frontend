@@ -59,7 +59,7 @@ loadingLogoWithCustomText : Translators -> String -> String -> Html msg
 loadingLogoWithCustomText { t } customTextKey class_ =
     div [ class ("w-full text-center " ++ class_) ]
         [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
-        , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
+        , p [ class "font-bold text-xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t customTextKey ]
         ]
 
@@ -175,19 +175,32 @@ dateViewer attrs fillInTranslations shared time =
                 , yesterday = shared.translators.t "dates.yesterday"
                 , other = "{{date}}"
                 }
+
+        translationString =
+            if Utils.areSameDay shared.timezone shared.now time then
+                translations.today
+
+            else if Utils.areSameDay shared.timezone shared.now yesterday then
+                translations.yesterday
+
+            else
+                translations.other
     in
-    if Utils.areSameDay shared.timezone shared.now time then
+    if String.contains "{{date}}" translationString then
+        dateFormatter attrs
+            { language = shared.language
+            , date = time
+            , translationString = translationString
+            }
+
+    else if Utils.areSameDay shared.timezone shared.now time then
         span attrs [ text translations.today ]
 
     else if Utils.areSameDay shared.timezone shared.now yesterday then
         span attrs [ text translations.yesterday ]
 
     else
-        dateFormatter attrs
-            { language = shared.language
-            , date = time
-            , translationString = translations.other
-            }
+        text ""
 
 
 type ElementToTrack

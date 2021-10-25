@@ -13,7 +13,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Welcome to {{community_name}}",
+    "welcome_to": "Welcome back,",
     "my_communities": "Welcome to ",
     "dashboard": "Dashboard",
     "news": "News",
@@ -51,7 +51,7 @@
     },
     "explore": "Explore",
     "communities": "Communities",
-    "welcome_message": "Hello {{user_name}}",
+    "welcome_message": "Hello, {{user_name}}",
     "back_to_dashboard": "Back to Dashboard",
     "edit": "Edit",
     "cancel": "Cancel",
@@ -192,7 +192,7 @@
       "wordsMode": {
         "input": {
           "description": "Enter your 12 words, that you've copied and pasted on registration.",
-          "label": "Your 12 words (you saved when creating your account)",
+          "label": "Your 12 words",
           "placeholder": "Type your 12 words here",
           "tooltip": "You can use your PRIVATE KEY too",
           "toggle": "I want to use the Private Key",
@@ -340,8 +340,7 @@
       "title": "Uoh. Something went wrong while creating your account"
     },
     "account_created": {
-      "greet": "Hey",
-      "last_step": "it is the last step, and the most important",
+      "greet": "Hey {{name}},",
       "copy": "copy",
       "i_saved_words": "I've copied and pasted on a secure place the 12 words as Cambiatus asked",
       "words_copied": "were copied to clipboard",
@@ -812,8 +811,9 @@
   },
   "dashboard": {
     "back": "Back",
-    "transfer": "Transfer to a friend",
-    "explore": "How to earn {{symbol}}",
+    "transfer": "Transfer",
+    "your_balance": "Your balance in {{symbol}}",
+    "how_to_earn": "How to earn {{symbol}}",
     "my_contributions": "My contributions",
     "invite": "Invite your friends",
     "sorry": "Sorry!",
@@ -825,7 +825,7 @@
     "scan": "Scan",
     "or_choose_list": "Or choose from the list",
     "choose_one_option": "Choose one of the options",
-    "next": "Next",
+    "continue": "Continue",
     "your_action": "Your Action:",
     "add_comment": "Add a comment",
     "claim": "Claim",
@@ -840,27 +840,20 @@
     "reject": "Disapprove",
     "verify": "Approve",
     "closed": "closed",
-    "my_claims": {
-      "1": "My ",
-      "2": "Claims",
-      "go": "Go"
-    },
-    "my_offers": {
-      "1": "My ",
-      "2": "Offers",
-      "go": "Go"
-    },
+    "my_claims": "My claims",
+    "my_offers": "My offers",
     "analysis": {
       "title": {
         "1": "Actions",
         "2": "for analysis"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", good job.",
-        "3": "You have finished all"
+        "1": "Congratulations",
+        "2": "There are no more actions for analysis"
       },
-      "all": "All"
+      "analyze_now": "Analyze now",
+      "count": "You have **{{amount}} actions** for analysis",
+      "error_fetching": "Something went wrong when fetching actions for analysis"
     },
     "activities": {
       "title": "Activities for your analysis",

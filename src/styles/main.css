@@ -6,18 +6,19 @@
   --white: #f6f6f6;
   --black: #4a4a4a;
   --gray: #eee;
-  --font-family: 'Nunito', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
+  --font-family: 'Nunito Sans', 'Lato', 'San Francisco', 'Helvetica', 'Verdana', sans-serif;
 }
 
 /* Typography */
+
 body {
   background-color: #f6f6f6;
   font-family: var(--font-family);
   color: var(--black);
 }
 
-.heading-bold {
-  @apply font-medium text-black text-heading my-3;
+body > * {
+  @apply text-base;
 }
 
 /* End of Typography */
@@ -26,15 +27,19 @@ body {
 
 @layer components {
   .button {
-    @apply uppercase text-sm flex items-center justify-center text-center leading-none w-40 h-10 px-2 disabled:button-disabled;
+    @apply uppercase text-base font-bold leading-5 flex items-center justify-center text-center w-40 h-10 px-2;
+  }
+
+  .button:disabled {
+    @apply bg-opacity-75 button-disabled;
   }
 
   .button-primary {
-    @apply bg-orange-300 text-white text-body rounded-super font-medium hover:bg-orange-100 focus:ring focus:ring-offset-2 focus:ring-orange-100 focus:outline-none active:ring-0;
+    @apply bg-orange-300 text-white rounded-super hover:bg-orange-100 focus-visible:bg-orange-100 focus-visible:outline-none;
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border font-medium hover:border-orange-300 focus:ring focus:ring-orange-100 focus:ring-opacity-40 focus:outline-none active:ring-0;
+    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:outline-none;
   }
 
   .button-sm {
@@ -46,15 +51,15 @@ body {
   }
 
   .button-success {
-    @apply bg-green text-white rounded-full text-body;
+    @apply bg-green text-white rounded-full;
   }
 
   .button-disabled {
-    @apply bg-gray-500 text-gray-900 rounded-super text-body pointer-events-none;
+    @apply bg-gray-500 text-gray-900 rounded-super pointer-events-none;
   }
 
   .button-danger {
-    @apply button-secondary text-red focus:ring-red focus:ring-opacity-20 hover:border-red;
+    @apply button-secondary text-red focus-visible:ring-red focus-visible:ring-opacity-20 hover:border-red;
   }
 }
 
@@ -63,32 +68,44 @@ body {
 /* Form */
 
 @layer components {
-  .focused-input {
-    @apply focus:ring focus:ring-offset-0 focus:ring-blue-600 focus:ring-opacity-50 focus:border-blue-600;
+  .form-input {
+    @apply bg-white px-3 py-2 placeholder-gray-900 input-border text-base;
   }
 
-  .form-input {
-    @apply bg-white border border-gray-500 rounded-md px-3 py-2 placeholder-gray-400 focused-input;
+  .input-border {
+    @apply border border-gray-500 rounded-md ring-0 duration-100;
+
+    transition-property: box-shadow, color, border-color;
+  }
+
+  .input-border:not(.with-error) {
+    @apply focus-within:ring focus-within:ring-green focus-within:border-green focus-within:ring-opacity-50;
+  }
+
+  .input-border.with-error {
+    @apply focus-within:ring-red focus-within:ring-opacity-30;
   }
 
   .form-checkbox {
-    @apply h-5 w-5 text-green rounded-sm focused-input;
+    @apply h-5 w-5 text-green rounded-sm input-border disabled:bg-gray-100;
   }
 
   .form-checkbox:checked {
+    @apply text-4xl;
+
     background-image: url('/icons/checkbox.svg');
   }
 
   .form-select {
-    @apply form-input pr-10 bg-no-repeat focus:outline-none;
+    @apply input pr-10 bg-no-repeat focus:outline-none;
 
     background-position: right 0.5rem center;
-    background-size: 1.5em;
+    background-size: 2rem;
     background-image: url('/icons/select-arrow.svg');
   }
 
   .form-radio {
-    @apply rounded-full border h-6 w-6 focused-input;
+    @apply rounded-full border h-6 w-6 input-border;
   }
 
   .form-radio:checked {
@@ -98,54 +115,38 @@ body {
   .form-radio:checked:disabled {
     background-image: url('/icons/radio-disabled.svg');
   }
+
+  /* End of form */
+
+  /* Input */
+
+  .input {
+    @apply form-input h-12 outline-none text-black;
+  }
+
+  .input:disabled {
+    @apply bg-gray-500;
+  }
+
+  textarea.input {
+    @apply h-40;
+  }
+
+  .input.with-error {
+    @apply border-red text-red;
+  }
+
+  .field-with-error,
+  .field-with-error:focus {
+    @apply border-red text-red;
+  }
+
+  .label {
+    @apply text-black font-bold uppercase text-sm mb-2 block;
+  }
 }
 
 /* End of form */
-
-/* Input */
-
-.input {
-  @apply form-input h-12 text-sm outline-none transition-colors duration-100 text-black;
-}
-
-.input:disabled {
-  @apply bg-gray-500;
-}
-
-textarea.input {
-  @apply h-40;
-}
-
-.textarea-input {
-  @apply block;
-}
-
-.field-with-error,
-.field-with-error:focus {
-  @apply border-red text-red;
-}
-
-.input-counter {
-  @apply text-purple-100 uppercase font-bold float-right mt-1 text-caption;
-}
-
-.input-label {
-  @apply text-green text-caption uppercase font-sans;
-}
-
-.input-token {
-  @apply text-white font-sans items-center justify-center bg-indigo-500 px-4 py-3 text-body rounded-r;
-}
-
-/* End of Input */
-
-/* Select */
-
-.select {
-  @apply h-12 text-sm block border border-gray-500 rounded-sm text-black outline-none transition-colors duration-100 focus:border-purple-500;
-}
-
-/* End of Select */
 
 /* Elm Select */
 
@@ -180,7 +181,7 @@ textarea.input {
 
 /* Icon Tooltip */
 .icon-tooltip {
-  @apply relative inline-block align-middle leading-none;
+  @apply relative inline-block align-middle;
 }
 
 .icon-tooltip .icon-tooltip-content {
@@ -227,7 +228,7 @@ textarea.input {
 }
 
 .modal-content {
-  @apply bg-white rounded-t-lg absolute bottom-0 w-full flex flex-col;
+  @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full;
 }
 
 .modal-content-full {
@@ -235,18 +236,18 @@ textarea.input {
 }
 
 .modal-header {
-  @apply w-full font-medium text-heading p-4 pb-2 flex justify-center;
+  @apply w-full font-semibold text-lg p-4 pb-2 flex justify-center;
 }
 
 .modal-body {
-  @apply p-4 pt-0 text-body overflow-y-auto h-full;
+  @apply p-4 pt-0 overflow-y-auto h-full;
 
   min-height: 4rem;
   max-height: 60vh;
 }
 
 .modal-body-lg {
-  @apply p-4 pt-0 text-body overflow-y-auto;
+  @apply p-4 pt-0 overflow-y-auto;
 
   min-height: 4rem;
   max-height: 80vh;
@@ -284,6 +285,13 @@ textarea.input {
     --tw-translate-y: -50%;
   }
 
+  .modal-body-lg {
+    @apply px-4 py-0 overflow-y-auto;
+
+    min-height: 4rem;
+    max-height: 60vh;
+  }
+
   .modal-body-full {
     max-height: 80vh;
   }
@@ -306,14 +314,14 @@ textarea.input {
 /* Tag */
 
 .tag {
-  @apply uppercase rounded text-caption py-1 px-5;
+  @apply uppercase rounded text-sm py-1 px-5;
 }
 
 /* End of Tag */
 
 /* CHECKBOX TOGGLE SWITCH */
 .form-switch {
-  @apply relative select-none w-10 mr-2 leading-normal;
+  @apply relative select-none w-10 mr-2;
 }
 
 .form-switch-checkbox {
@@ -348,7 +356,7 @@ textarea.input {
 @layer utilities {
   .form-error {
     /* validation message for the field */
-    @apply text-red text-caption uppercase tracking-wide block mt-1;
+    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in-from-above;
   }
 }
 
@@ -398,21 +406,6 @@ textarea.input {
   min-height: stretch;
 }
 
-/* Sticky Footer, https://css-tricks.com/couple-takes-sticky-footer/#article-header-id-3 */
-.sf-wrapper {
-  @apply flex flex-col;
-}
-
-.sf-content {
-  flex: 1 0 auto;
-}
-
-.sf-footer {
-  flex-shrink: 0;
-}
-
-/* End of Sticky Footer */
-
 /* Objectives */
 .action-verifier svg {
   fill: #eee;
@@ -452,6 +445,18 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .truncate-children > :not(:first-child) {
     @apply hidden;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring ring-green ring-opacity-50 active:ring-0;
+  }
+
+  .animation-delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
   }
 }
 
@@ -494,7 +499,7 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 .ql-editor {
-  @apply bg-white text-black text-sm rounded-b-md px-3 py-2 min-h-36 max-h-48 focus:outline-none;
+  @apply bg-white text-black text-base rounded-b-md px-3 py-2 min-h-36 max-h-48 focus:outline-none;
 
   font-family: var(--font-family);
 }

@@ -705,7 +705,7 @@ view translators model =
 viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
-        [ div [ class "font-menu font-medium flex items-center mb-4 justify-between" ]
+        [ div [ class "font-menu font-semibold flex items-center mb-4 justify-between" ]
             [ div [ class "flex items-center" ]
                 [ contactTypeToIcon "mr-2" False basic.contactType
                 , text (contactTypeToString translators basic.contactType)
@@ -933,9 +933,9 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label (flagSelectorId basic.contactType) (t "contact_form.country")
+        , View.Form.label [] (flagSelectorId basic.contactType) (t "contact_form.country")
         , button
-            [ class "form-select select relative"
+            [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
             , onClick (ClickedToggleContactFlags basic.contactType)
             , Html.Attributes.id (flagSelectorId basic.contactType)

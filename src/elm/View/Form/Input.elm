@@ -1,7 +1,7 @@
 module View.Form.Input exposing
     ( init
     , withCounter, withElements, withCurrency
-    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
+    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withInputType, withType, withCounterType, asNumeric
     , withMask
     , toHtml
@@ -40,7 +40,7 @@ and character counters.
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs
+@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
 
 
 ## Changing types
@@ -88,6 +88,7 @@ type alias RequiredInputOptions a =
 init : RequiredInputOptions a -> InputOptions a
 init options =
     { label = options.label
+    , labelAttrs = []
     , id = options.id
     , onInput = options.onInput
     , disabled = options.disabled
@@ -113,45 +114,33 @@ init options =
 -}
 toHtml : InputOptions a -> Html a
 toHtml options =
-    let
-        hasCounter =
-            case options.maximumCounterValue of
-                Just _ ->
-                    True
-
-                Nothing ->
-                    False
-    in
     div
-        (class "relative"
-            :: classList [ ( "mb-10", not hasCounter ), ( "mb-6", hasCounter ) ]
+        (class "relative mb-10"
             :: options.containerAttrs
         )
         [ if String.isEmpty options.label then
             text ""
 
           else
-            View.Form.label options.id options.label
+            View.Form.label options.labelAttrs options.id options.label
         , input options
-        , case options.maximumCounterValue of
-            Just number ->
-                inputCounterviewWithAttrs options.translators.tr
-                    number
-                    options.value
-                    options.counterAttrs
-                    options.counterType
+        , div [ class "flex w-full px-1" ]
+            [ ul [ class "inline-block mr-auto" ]
+                (options.problems
+                    |> Maybe.withDefault []
+                    |> List.map (viewFieldProblem options.errorAttrs)
+                )
+            , case options.maximumCounterValue of
+                Just number ->
+                    inputCounterviewWithAttrs options.translators.tr
+                        number
+                        options.value
+                        options.counterAttrs
+                        options.counterType
 
-            Nothing ->
-                text ""
-        , case options.problems of
-            Nothing ->
-                text ""
-
-            Just problems ->
-                ul []
-                    (problems
-                        |> List.map (viewFieldProblem options.errorAttrs)
-                    )
+                Nothing ->
+                    text ""
+            ]
         ]
 
 
@@ -187,6 +176,7 @@ input options =
             (id options.id
                 :: onInput (beforeInputFunction >> options.onInput)
                 :: class ("w-full " ++ inputClass)
+                :: classList [ ( "with-error", hasErrors options ) ]
                 :: disabled options.disabled
                 :: value options.value
                 :: placeholder (Maybe.withDefault "" options.placeholder)
@@ -207,6 +197,13 @@ For more information, see the InputCounter module
 withCounter : Int -> InputOptions a -> InputOptions a
 withCounter maximum options =
     { options | maximumCounterValue = Just maximum }
+
+
+{-| Adds attributes to the label
+-}
+withLabelAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
+withLabelAttrs attrs options =
+    { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 {-| Adds attributes to the counter
@@ -385,7 +382,7 @@ inputCounterviewWithAttrs tr max str attrs counterType =
                         |> List.filter (not << String.isEmpty)
                         |> List.length
     in
-    div (class "input-counter" :: attrs)
+    div (class "text-purple-100 mt-2 ml-2 uppercase font-bold text-sm flex-shrink-0" :: attrs)
         [ text <|
             tr "edit.input_counter"
                 [ ( "current", String.fromInt currentLength )
@@ -418,14 +415,22 @@ type Mask
 --- INTERNAL
 
 
+hasErrors : InputOptions a -> Bool
+hasErrors options =
+    options.problems
+        |> Maybe.withDefault []
+        |> List.length
+        |> (\length -> length > 0)
+
+
 viewFieldProblem : List (Html.Attribute a) -> String -> Html a
 viewFieldProblem attrs problem =
-    li (class "form-error absolute mr-10" :: attrs) [ text problem ]
+    li (class "form-error" :: attrs) [ text problem ]
 
 
 viewCurrencyElement : Eos.Symbol -> Html a
 viewCurrencyElement symbol =
-    span [ class "absolute right-0 rounded-r-sm border-gray border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
+    span [ class "absolute right-0 rounded-r-sm border-transparent border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
         [ text <| Eos.symbolToSymbolCodeString symbol ]
 
 
@@ -444,6 +449,7 @@ fieldTypeToString fieldType =
 
 type alias InputOptions a =
     { label : String
+    , labelAttrs : List (Html.Attribute a)
     , id : String
     , onInput : String -> a
     , disabled : Bool

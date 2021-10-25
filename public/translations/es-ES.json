@@ -13,7 +13,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Bienvenido a {{community_name}}",
+    "welcome_to": "Bienvenido de nuevo,",
     "my_communities": "Bienvenido a ",
     "dashboard": "Inicio",
     "news": "Noticias",
@@ -51,7 +51,7 @@
     },
     "explore": "Explorar",
     "communities": "Comunidades",
-    "welcome_message": "Hola {{user_name}}",
+    "welcome_message": "Hola, {{user_name}}",
     "back_to_dashboard": "Ir al Inicio",
     "edit": "Editar",
     "cancel": "Cancelar",
@@ -192,7 +192,7 @@
       "wordsMode": {
         "input": {
           "description": "Ingrese sus 12 palabras, que ha copiado y pegado en el registro.",
-          "label": "Sus 12 palabras (que guardó al crear su cuenta)",
+          "label": "Sus 12 palabras",
           "placeholder": "Escriba sus 12 palabras aquí",
           "tooltip": "También puedes usar tu CLAVE PRIVADA",
           "toggle": "Quiero usar la clave privada",
@@ -344,8 +344,7 @@
       "title": "Oh-oh. Algo salió mal mientras creabamos tu cuenta"
     },
     "account_created": {
-      "greet": "Oye",
-      "last_step": "es el último paso y el más importante",
+      "greet": "Oye {{name}},",
       "copy": "Copiar",
       "i_saved_words": "Copié y pegué en un lugar seguro las 12 palabras como Cambiatus me indicó",
       "words_copied": "fueron copiadas al portapapeles",
@@ -815,8 +814,9 @@
   },
   "dashboard": {
     "back": "Atrás",
-    "transfer": "Transferir a un(a) colega",
-    "explore": "Como obtener {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "Tu saldo en {{symbol}}",
+    "how_to_earn": "Como obtener {{symbol}}",
     "my_contributions": "Mis contribuciones",
     "invite": "Invita a tus amigas(os)",
     "sorry": "¡Lo sentimos!",
@@ -828,7 +828,7 @@
     "scan": "Escanea",
     "or_choose_list": "o escoge de la lista",
     "choose_one_option": "Escoge una de las opciones",
-    "next": "Siguiente",
+    "continue": "Continuar",
     "your_action": "Tu acción:",
     "add_comment": "Agrega un comentario",
     "claim": "Reclamar",
@@ -843,27 +843,20 @@
     "reject": "Rechazar",
     "verify": "Verificar",
     "closed": "cerrado",
-    "my_claims": {
-      "1": "Mis ",
-      "2": "Reclamos",
-      "go": "Ir"
-    },
-    "my_offers": {
-      "1": "Mis ",
-      "2": "Ofertas",
-      "go": "Ir"
-    },
+    "my_claims": "Mis reclamos",
+    "my_offers": "Mis ofertas",
     "analysis": {
       "title": {
         "1": "Acciones",
         "2": "para el análisis"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", buen trabajo.",
-        "3": "has terminado todo"
+        "1": "Felicidades",
+        "2": "No hay más acciones para analizar"
       },
-      "all": "Todas"
+      "analyze_now": "Analizar ahora",
+      "count": "Tienes **{{amount}} acciones** para analizar",
+      "error_fetching": "Algo salió mal al buscar acciones para su análisis"
     },
     "activities": {
       "title": "Actividades para su análisis",

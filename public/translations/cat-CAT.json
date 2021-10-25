@@ -13,7 +13,7 @@
   },
   "menu": {
     "title": "Menú",
-    "welcome_to": "Benvingut a {{community_name}}",
+    "welcome_to": "Benvingut de nou,",
     "my_communities": "Benvingut a ",
     "dashboard": "Inici",
     "news": "Notícies",
@@ -51,7 +51,7 @@
     },
     "explore": "Explorar",
     "communities": "Comunitats",
-    "welcome_message": "Hola {{user_name}}",
+    "welcome_message": "Hola, {{user_name}}",
     "back_to_dashboard": "Anar a l’inici",
     "edit": "Editar",
     "cancel": "Cancel·lar",
@@ -192,7 +192,7 @@
       "wordsMode": {
         "input": {
           "description": "Escriviu les 12 paraules que heu copiat i enganxat al registre.",
-          "label": "Les vostres 12 paraules (heu desat en crear el vostre compte)",
+          "label": "Les vostres 12 paraules",
           "placeholder": "Escriviu les vostres 12 paraules aquí",
           "tooltip": "També podeu fer servir la tecla PRIVADA",
           "toggle": "Vull utilitzar la clau privada",
@@ -344,8 +344,7 @@
       "title": "Oh-oh. Alguna cosa ha sortit malament mentre creàvem el teu compte"
     },
     "account_created": {
-      "greet": "Ei",
-      "last_step": "és l’últim pas i el més important",
+      "greet": "Ei {{name}},",
       "copy": "copieu",
       "i_saved_words": "He copiat i enganxat en un lloc segur les 12 paraules que va demanar Cambiatus",
       "words_copied": "es van copiar al porta-retalls",
@@ -815,8 +814,9 @@
   },
   "dashboard": {
     "back": "Tornar",
-    "transfer": "Transferir a un company",
-    "explore": "Com guanyar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "El vostre saldo en {{symbol}}",
+    "how_to_earn": "Com guanyar {{symbol}}",
     "my_contributions": "Les meves aportacions",
     "invite": "Convida els teus amics",
     "sorry": "ho sentim!",
@@ -828,7 +828,7 @@
     "scan": "Escanejar",
     "or_choose_list": "O escull de la llista",
     "choose_one_option": "tria una de les opcions",
-    "next": "Pròxim",
+    "continue": "Continua",
     "your_action": "La teva acció:",
     "add_comment": "Afegeix un comentari",
     "claim": "Reclamar",
@@ -843,27 +843,20 @@
     "reject": "Rebutjar",
     "verify": "Verificar",
     "closed": "tancat",
-    "my_claims": {
-      "1": "Les meves ",
-      "2": "Reclamacions",
-      "go": "Vaja"
-    },
-    "my_offers": {
-      "1": "Les meves ",
-      "2": "Ofertes",
-      "go": "Vaja"
-    },
+    "my_claims": "Les meves reclamacions",
+    "my_offers": "Les meves ofertes",
     "analysis": {
       "title": {
         "1": "Accions",
         "2": "per a l'anàlisi"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", bona feina.",
-        "3": "ja heu acabat tot"
+        "1": "Enhorabona",
+        "2": "Ja no hi ha accions per analitzar"
       },
-      "all": "tot"
+      "analyze_now": "Analitza ara",
+      "count": "Teniu **{{amount}} accions** per analitzar",
+      "error_fetching": "S'ha produït un error en obtenir accions per analitzar-les"
     },
     "activities": {
       "title": "Activitats per a la vostra anàlisi",

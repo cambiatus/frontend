@@ -12,8 +12,8 @@ import Eos
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, div, h1, img, label, text)
-import Html.Attributes exposing (class, for, src)
+import Html exposing (Html, div, h1, img, text)
+import Html.Attributes exposing (class, src)
 import Log
 import Mask
 import Page
@@ -393,104 +393,88 @@ view_ ({ translators } as shared) community contributionConfiguration model =
     div [ class "m-4 bg-white rounded md:m-0 md:bg-white md:flex-grow" ]
         [ div [ class "container mx-auto" ]
             [ div [ class "flex flex-col items-center w-full px-4 py-7 bg-white md:w-1/2 md:mx-auto" ]
-                (img [ class "h-10", src community.logo ] []
-                    -- TODO - Use new typography text-size class (#622)
-                    :: h1 [ class "font-bold text-black text-[46px] mb-8" ] [ text community.name ]
-                    :: label
-                        [ for amountFieldId
+                [ img [ class "h-10", src community.logo ] []
+                , h1 [ class "font-bold text-black text-3xl mb-8" ] [ text community.name ]
+                , Input.init
+                    { label = translators.t "sponsorship.enter_amount"
+                    , id = amountFieldId
+                    , onInput = EnteredAmount
+                    , disabled = model.isCreatingOrder
+                    , value = model.amount
+                    , placeholder = Nothing
+                    , problems =
+                        model.amountProblem
+                            |> Maybe.map
+                                (amountProblemToString translators
+                                    model.selectedCurrency
+                                    >> List.singleton
+                                )
+                    , translators = translators
+                    }
+                    |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
+                    |> Input.withCurrency (PaypalButtons.currencyToSymbol model.selectedCurrency)
+                    |> Input.withLabelAttrs [ class "text-purple-500 text-lg normal-case text-center whitespace-nowrap" ]
+                    |> Input.toHtml
+                , case
+                    contributionConfiguration.acceptedCurrencies
+                        |> List.filterMap toPaypalCurrency
+                  of
+                    [] ->
+                        text ""
 
-                        -- TODO - Move this to the input's label, use new typography text-size class (#622)
-                        , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
-                        ]
-                        [ text <| translators.t "sponsorship.enter_amount" ]
-                    :: (Input.init
-                            { label = ""
-                            , id = amountFieldId
-                            , onInput = EnteredAmount
+                    [ _ ] ->
+                        text ""
+
+                    firstCurrency :: otherCurrencies ->
+                        let
+                            currencyOption currency =
+                                { value = currency
+                                , label =
+                                    toHumanString translators currency
+                                        ++ " ("
+                                        ++ PaypalButtons.currencyToString currency
+                                        ++ ")"
+                                }
+                        in
+                        Select.init
+                            { id = "currency-selector"
+                            , label = translators.t "sponsorship.select_currency"
+                            , onInput = SelectedCurrency
+                            , firstOption = currencyOption firstCurrency
+                            , value = model.selectedCurrency
+                            , valueToString =
+                                PaypalButtons.currencyToSymbol
+                                    >> Eos.symbolToSymbolCodeString
                             , disabled = model.isCreatingOrder
-                            , value = model.amount
-                            , placeholder = Nothing
-                            , problems =
-                                model.amountProblem
-                                    |> Maybe.map
-                                        (amountProblemToString translators
-                                            model.selectedCurrency
-                                            >> List.singleton
-                                        )
-                            , translators = translators
+                            , problems = Nothing
                             }
-                            |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                            |> Input.withCurrency (PaypalButtons.currencyToSymbol model.selectedCurrency)
-                            |> Input.toHtml
-                       )
-                    :: (case
-                            contributionConfiguration.acceptedCurrencies
-                                |> List.filterMap toPaypalCurrency
-                        of
-                            [] ->
-                                []
+                            |> Select.withOptions (List.map currencyOption otherCurrencies)
+                            |> Select.withContainerAttrs [ class "w-full lg:w-2/3" ]
+                            |> Select.withLabelAttrs [ class "text-purple-500 text-lg normal-case text-center whitespace-nowrap" ]
+                            |> Select.toHtml
+                , PaypalButtons.view [ class "w-full lg:w-2/3" ]
+                    { id = "sponsorship-paypal-buttons"
+                    , value =
+                        model.amount
+                            |> Mask.removeFloat (Shared.decimalSeparators translators)
+                            |> String.toFloat
+                            |> Maybe.andThen
+                                (\amount ->
+                                    if amount < PaypalButtons.minimumAmount then
+                                        Nothing
 
-                            [ _ ] ->
-                                []
+                                    else if amount > PaypalButtons.maximumAmount then
+                                        Nothing
 
-                            firstCurrency :: otherCurrencies ->
-                                let
-                                    currencyOption currency =
-                                        { value = currency
-                                        , label =
-                                            toHumanString translators currency
-                                                ++ " ("
-                                                ++ PaypalButtons.currencyToString currency
-                                                ++ ")"
-                                        }
-                                in
-                                -- TODO - Move this to the input's label, use new typography text-size class (#622)
-                                [ label
-                                    [ for "currency-selector"
-                                    , class "text-center text-purple-500 text-[22px] mb-2 font-bold"
-                                    ]
-                                    [ text <| translators.t "sponsorship.select_currency" ]
-                                , Select.init
-                                    { id = "currency-selector"
-                                    , label = ""
-                                    , onInput = SelectedCurrency
-                                    , firstOption = currencyOption firstCurrency
-                                    , value = model.selectedCurrency
-                                    , valueToString =
-                                        PaypalButtons.currencyToSymbol
-                                            >> Eos.symbolToSymbolCodeString
-                                    , disabled = model.isCreatingOrder
-                                    , problems = Nothing
-                                    }
-                                    |> Select.withOptions (List.map currencyOption otherCurrencies)
-                                    |> Select.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                                    |> Select.toHtml
-                                ]
-                       )
-                    ++ [ PaypalButtons.view [ class "w-full lg:w-2/3" ]
-                            { id = "sponsorship-paypal-buttons"
-                            , value =
-                                model.amount
-                                    |> Mask.removeFloat (Shared.decimalSeparators translators)
-                                    |> String.toFloat
-                                    |> Maybe.andThen
-                                        (\amount ->
-                                            if amount < PaypalButtons.minimumAmount then
-                                                Nothing
-
-                                            else if amount > PaypalButtons.maximumAmount then
-                                                Nothing
-
-                                            else
-                                                Just amount
-                                        )
-                            , currency = model.selectedCurrency
-                            , onApprove = PaypalApproved
-                            , onCancel = PaypalCanceled
-                            , onError = PaypalErrored
-                            }
-                       ]
-                )
+                                    else
+                                        Just amount
+                                )
+                    , currency = model.selectedCurrency
+                    , onApprove = PaypalApproved
+                    , onCancel = PaypalCanceled
+                    , onError = PaypalErrored
+                    }
+                ]
             ]
         ]
 

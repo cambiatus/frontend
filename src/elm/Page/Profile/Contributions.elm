@@ -173,8 +173,7 @@ view_ loggedIn profileContributions title =
                                         , ( "pt-4", index == 0 )
                                         ]
                                     ]
-                                    [ -- TODO - Use new text size class (#622)
-                                      View.Components.dateViewer [ class "text-[12px] text-black uppercase font-bold px-1" ]
+                                    [ View.Components.dateViewer [ class "text-sm text-black uppercase font-bold px-1" ]
                                         identity
                                         loggedIn.shared
                                         firstContribution.insertedAt
@@ -228,10 +227,9 @@ viewContribution ({ t } as translators) contribution =
         [ div [ class "w-14 h-14 bg-gray-100 flex items-center justify-center rounded" ]
             [ Icons.coinHeart "" ]
         , p [ class "flex space-x-1 text-black ml-3 mr-2" ]
-            -- TODO - Use new text size classes (#622)
-            [ span [ class "text-[22px]" ]
+            [ span [ class "text-lg" ]
                 [ text (Utils.formatFloat (Just translators) 0 contribution.amount) ]
-            , span [ class "text-[12px] uppercase self-end mb-1" ]
+            , span [ class "text-sm uppercase self-end mb-2" ]
                 [ contribution
                     |> Community.currencyTranslationKey
                     |> t
@@ -239,8 +237,7 @@ viewContribution ({ t } as translators) contribution =
                 ]
             ]
         , span
-            -- TODO - Use new text size classes (#622)
-            [ class "ml-auto py-0.5 px-5 bg-gray-100 uppercase text-[12px]"
+            [ class "ml-auto py-0.5 px-5 bg-gray-100 uppercase text-sm"
             , classList
                 [ ( "font-bold text-green", isApprovedOrCaptured )
                 , ( "font-bold text-red", isFailedOrRejected )

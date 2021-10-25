@@ -564,7 +564,7 @@ viewSearchActions ({ t } as translators) today actions =
                             [ p []
                                 [ text (t "menu.search.gain")
                                 , br [] []
-                                , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                                , span [ class "text-green font-semibold" ] [ text <| String.fromFloat action.reward ]
                                 , text " "
                                 , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]
@@ -585,7 +585,7 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
     in
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
-            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
+            [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
             , MarkdownEditor.viewReadOnly [ class "mb-4" ]
                 (Maybe.withDefault "" action.photoProofInstructions)
             , case proofCode of
@@ -667,11 +667,11 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
     div [ class "mb-4" ]
-        [ span [ class "input-label block mb-1" ]
+        [ span [ class "label block" ]
             [ text (t "community.actions.form.verification_code") ]
         , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
             [ text proofCode ]
-        , span [ class "whitespace-nowrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+        , span [ class "whitespace-nowrap rounded-full bg-lightred px-3 py-1 text-white" ]
             [ text (t "community.actions.proof.code_period_label")
             , text " "
             , text timer

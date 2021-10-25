@@ -10,7 +10,9 @@ module View.Pin exposing
     , update
     , view
     , withAttrs
+    , withCounterAttrs
     , withDisabled
+    , withLabelAttrs
     , withProblem
     )
 
@@ -55,7 +57,9 @@ type alias Model =
     , isSubmitting : Bool
     , submitLabel : String
     , submittingLabel : String
+    , labelAttrs : List (Html.Attribute Msg)
     , extraAttrs : List (Html.Attribute Msg)
+    , counterAttrs : List (Html.Attribute Msg)
     }
 
 
@@ -96,7 +100,9 @@ init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility 
     , isSubmitting = False
     , submitLabel = submitLabel
     , submittingLabel = submittingLabel
+    , labelAttrs = []
     , extraAttrs = []
+    , counterAttrs = []
     }
 
 
@@ -179,11 +185,10 @@ viewField field model ({ t } as translators) =
         , translators = translators
         }
         |> View.Form.Input.withCounter pinLength
-        |> View.Form.Input.withCounterAttrs [ class "text-white" ]
+        |> View.Form.Input.withCounterAttrs model.counterAttrs
         |> View.Form.Input.withElements [ viewToggleVisibility field model translators ]
-        |> View.Form.Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
         |> View.Form.Input.withAttrs
-            [ class "form-input text-base text-body-black tracking-widest"
+            [ class "form-input text-body-black tracking-widest"
             , classList
                 [ ( "field-with-error"
                   , model.problems
@@ -213,6 +218,7 @@ viewField field model ({ t } as translators) =
                         )
                 )
             ]
+        |> View.Form.Input.withLabelAttrs model.labelAttrs
         |> View.Form.Input.toHtml
 
 
@@ -223,7 +229,7 @@ viewToggleVisibility field model { t } =
             t >> text
     in
     button
-        [ class "absolute inset-y-0 uppercase text-xs right-0 mr-3 text-orange-300"
+        [ class "absolute inset-y-0 uppercase text-sm font-bold right-0 mr-3 text-orange-300"
         , onClick (ToggledPinVisibility field)
         , attribute "tabindex" "-1"
         ]
@@ -340,6 +346,16 @@ withProblem field problem model =
 withAttrs : List (Html.Attribute Msg) -> Model -> Model
 withAttrs attrs model =
     { model | extraAttrs = attrs }
+
+
+withLabelAttrs : List (Html.Attribute Msg) -> Model -> Model
+withLabelAttrs attrs model =
+    { model | labelAttrs = model.labelAttrs ++ attrs }
+
+
+withCounterAttrs : List (Html.Attribute Msg) -> Model -> Model
+withCounterAttrs attrs model =
+    { model | counterAttrs = model.counterAttrs ++ attrs }
 
 
 {-| The length of a PIN

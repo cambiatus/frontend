@@ -13,7 +13,7 @@
   },
   "menu": {
     "title": "የአማራጭ ዝርዝር",
-    "welcome_to": "ወደ {{community_name}} እንኳን በደህና መጡ",
+    "welcome_to": "እንኳን ደህና መጣህ,",
     "my_communities": "እንኩአን ደህና መጡ ",
     "dashboard": "ዳሽቦርድ",
     "news": "ዜና",
@@ -51,7 +51,7 @@
     },
     "explore": "ያስሱ",
     "communities": "ማህበረሰብ",
-    "welcome_message": "ሄሎ {{user_name}}",
+    "welcome_message": "ሰላም {{user_name}}",
     "back_to_dashboard": "ወደ ዳሽቦርድ ይመለሱ",
     "edit": "አርትእ",
     "cancel": "አጥፋ",
@@ -158,7 +158,7 @@
       "wordsMode": {
         "input": {
           "description": "12 ቃላት ያስገቡ, ሲመዘገቡ ቀዱትና ቅጂዉን የስቀመጡትን.",
-          "label": "የእርሶ 12 ቃላት (መለያ ሲፈጥሩ ያቀመጡት)",
+          "label": "የእርሶ 12 ቃላት",
           "placeholder": "እዚህ ጋ 12 ቃላትን ይፃፉ",
           "tooltip": "የግል ቁልፍ መጠቀምም ይችላሉ",
           "toggle": "የግል ቁልፍ መጠቀም እፈልጋልሁ",
@@ -302,8 +302,7 @@
       "title": "አይ . መለያ ሲፈጥሩ የሆነ ችግር ተፈጥሯል"
     },
     "account_created": {
-      "greet": "ሠለም",
-      "last_step": "ይህ የመጨረሻ ደረጃ  እና በጣም ጠቃሚ ነዉ ",
+      "greet": "ሰላም {{name}}",
       "copy": "copy",
       "i_saved_words": " ካምባትስ እንደጠየዉ ደህንነቱ በተጠበቀዉ ቦታ 12 ቃላት ቅጂ ተቀምጧል ",
       "words_copied": "ወደ ቅንጥብ ሰሌዳ ተቀድቷል ",
@@ -773,8 +772,9 @@
   },
   "dashboard": {
     "back": "ወደ ኃላ",
-    "transfer": "ለጓደኛ አስተላለፍ ",
-    "explore": "እንዴት እንደሚገኝ {{symbol}}",
+    "transfer": "ማስተላለፍ",
+    "your_balance": "{{symbol}} ውስጥ የእርስዎ ሚዛን",
+    "how_to_earn": "እንዴት እንደሚገኝ {{symbol}}",
     "my_contributions": "የእኔ አስተዋፅዖዎች",
     "invite": "ጓደኞችህን ጋብዝ",
     "sorry": "ይቅርታ!",
@@ -786,7 +786,7 @@
     "scan": "ቃኝ",
     "or_choose_list": "ወይም ከዝርዝሩ ዉስጥ ምረጡ",
     "choose_one_option": "አንዱን አማራጭ ይምረጡ",
-    "next": "ቀጥል",
+    "continue": "ቀጥል",
     "your_action": "የእርሶ ተግባር:",
     "add_comment": "አስተያየት ጨምር",
     "claim": "ጥያቄ",
@@ -801,27 +801,20 @@
     "reject": "አልጸደቀም",
     "verify": "አጽድቅ",
     "closed": "ዝጋ",
-    "my_claims": {
-      "1": "የእኔ ",
-      "2": "የይገባኛል ጥያቄዎች",
-      "go": "ሂድ"
-    },
-    "my_offers": {
-      "1": "የእኔ ",
-      "2": "አቅርቦቶች",
-      "go": "ሂድ"
-    },
+    "my_claims": "የእኔ የይገባኛል ጥያቄዎች",
+    "my_offers": "የእኔ ቅናሾች",
     "analysis": {
       "title": {
         "1": "ተግባር",
         "2": "ለትንተና "
       },
       "empty": {
-        "1": "ዋዉ",
-        "2": ", ጎበዝ.",
-        "3": "ሁሉንም አጠናቅቀዋል"
+        "1": "እንኳን ደስ አላችሁ",
+        "2": "ለመተንተን ተጨማሪ እርምጃዎች የሉም"
       },
-      "all": "ሁሉም"
+      "analyze_now": "አሁን ይተንትኑ",
+      "count": "ለመተንተን **{{amount}} እርምጃዎች** አሉዎት",
+      "error_fetching": "ለመተንተን እርምጃዎችን በማምጣት ላይ የሆነ ችግር ተፈጥሯል"
     },
     "activities": {
       "title": "እንቅስቃሴዎች ለእርሶ ትንተና",

@@ -852,7 +852,7 @@ communityPreviewImage isLeftSide { translators } community =
                 [ class "w-full opacity-60"
                 , classList
                     [ ( "h-screen object-cover", isLeftSide )
-                    , ( "max-h-108", not isLeftSide )
+                    , ( "min-h-25 max-h-108", not isLeftSide )
                     ]
                 , src
                     (List.head community.uploads
@@ -862,8 +862,8 @@ communityPreviewImage isLeftSide { translators } community =
                 []
             ]
         , div [ class "absolute inset-0 flex flex-col items-center justify-center text-white uppercase px-5" ]
-            [ span [ class "font-medium text-xl" ] [ text community.name ]
-            , span [ class "text-xs mt-2" ]
+            [ span [ class "font-bold text-lg" ] [ text community.name ]
+            , span [ class "font-bold text-sm mt-4" ]
                 [ text
                     (translators.tr "community.join.member_count"
                         [ ( "member_count", String.fromInt community.memberCount ) ]

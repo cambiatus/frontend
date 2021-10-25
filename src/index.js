@@ -15,6 +15,7 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
+import 'focus-visible'
 
 // =========================================
 // Initial constants
@@ -376,7 +377,7 @@ window.customElements.define('markdown-editor',
 
       this._quillContainer = document.createElement('div')
       this._parentContainer = document.createElement('div')
-      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
+      this._parentContainer.className = 'placeholder-gray-400 input-border'
 
       this._parentContainer.appendChild(this._quillContainer)
       this._quill = new Quill(this._quillContainer,
@@ -732,7 +733,7 @@ window.customElements.define('dialog-bubble',
       this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
       this._defaultPointClasses = 'absolute transform -z-10'
 
-      window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
+      window.addEventListener('resize', this.setPosition, { passive: true })
     }
 
     connectedCallback () {
@@ -750,9 +751,9 @@ window.customElements.define('dialog-bubble',
       this._scrollSelector = scrollSelector ? document.querySelector(scrollSelector) : null
 
       if (this._scrollSelector !== null) {
-        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
+        this._scrollSelector.addEventListener('scroll', this.setPosition, { passive: true })
       } else {
-        window.addEventListener('scroll', () => { this.setPosition() })
+        window.addEventListener('scroll', this.setPosition)
       }
 
       point.appendChild(pointElement)
@@ -765,6 +766,15 @@ window.customElements.define('dialog-bubble',
       this._sibling = this.previousSibling || this.nextSibling
 
       this.setPosition()
+    }
+
+    disconnectedCallback () {
+      window.removeEventListener('resize', this.setPosition)
+      if (this._scrollSelector !== null) {
+        this._scrollSelector.removeEventListener('scroll', this.setPosition)
+      } else {
+        window.removeEventListener('scroll', this.setPosition)
+      }
     }
 
     setPosition () {
@@ -1925,7 +1935,7 @@ async function handleJavascriptPort (arg) {
       document.querySelector('#' + arg.data.id).select()
       document.execCommand('copy')
 
-      return {}
+      return { copied: true }
     }
     case 'readClipboard': {
       if (canReadClipboard()) {

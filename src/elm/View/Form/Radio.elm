@@ -175,7 +175,7 @@ toHtml { t } options =
                     viewOptionAsCircled options ( option, view )
     in
     div options.extraAttrs
-        [ span [ class "input-label" ] [ text (t options.label) ]
+        [ span [ class "label" ] [ text (t options.label) ]
         , div
             (class "flex mt-6"
                 :: classList
@@ -213,10 +213,10 @@ viewOptionAsDefault options ( option, view ) =
             ]
             []
         , span
-            [ class "flex ml-2 text-body"
+            [ class "flex ml-2"
             , classList
                 [ ( "text-green", isActive options option && not options.isDisabled )
-                , ( "text-gray-600", options.isDisabled )
+                , ( "text-gray-900", options.isDisabled )
                 ]
             ]
             [ view (isActive options option) ]

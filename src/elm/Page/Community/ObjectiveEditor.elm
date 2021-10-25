@@ -331,7 +331,7 @@ viewCompletion shared completionStatus =
             "community.objectives.editor.completion_text"
             ""
         , div [ class "mb-10 mt-6" ]
-            [ span [ class "text-black uppercase font-light text-xs" ]
+            [ span [ class "text-black uppercase font-light text-sm" ]
                 [ text
                     (shared.translators.tr
                         "community.objectives.editor.completed_progress"
