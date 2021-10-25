@@ -758,7 +758,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
         [ class "relative"
         , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
         ]
-        [ h1 [ class "text-gray-333 mb-4" ]
+        [ h1 [ class "text-gray-333 mb-4 md:mb-7" ]
             [ text_ "menu.my_communities"
             , strong [] [ text community.name ]
             ]
@@ -834,7 +834,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 ]
             ]
         , img
-            [ class "absolute -top-2 right-2 md:right-4"
+            [ class "absolute -top-2 md:top-0 right-2 md:right-4"
             , src "/images/success-doggo.svg"
             ]
             []
@@ -851,7 +851,7 @@ viewActionsForAnalysisCard loggedIn model =
             text << t
     in
     div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
-        [ h1 [ class "text-gray-333 mt-6 mb-4 lg:mt-0" ]
+        [ h1 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
             [ strong [] [ text_ "dashboard.analysis.title.1" ]
             , text " "
             , text_ "dashboard.analysis.title.2"
@@ -941,7 +941,7 @@ viewTimelineCard loggedIn isValidator model =
             ]
         , id "transfer-list-container"
         ]
-        [ div [ class "flex justify-between items-center mt-6 mb-4 md:mb-1 lg:mt-0" ]
+        [ div [ class "flex justify-between items-center mt-6 mb-4 lg:mt-0" ]
             [ h1 [ class "text-gray-333" ]
                 [ text_ "transfer.transfers_latest"
                 , text " "
