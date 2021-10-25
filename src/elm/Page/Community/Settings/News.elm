@@ -1,17 +1,27 @@
 module Page.Community.Settings.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Api.Graphql
+import Cambiatus.Mutation
+import Cambiatus.Object.Community
 import Community
 import Community.News
-import Html exposing (Html, a, div, h1, p, small, text)
+import Eos
+import Graphql.Http
+import Graphql.SelectionSet
+import Html exposing (Html, a, button, div, h1, p, small, text)
 import Html.Attributes exposing (class)
+import Html.Events exposing (onClick)
+import Log
 import Page
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Form.Toggle
 import View.MarkdownEditor as MarkdownEditor
+import View.Modal as Modal
 
 
 
@@ -19,12 +29,13 @@ import View.MarkdownEditor as MarkdownEditor
 
 
 type alias Model =
-    {}
+    { highlightNewsConfirmationModal : HighlightNewsConfirmationModal }
 
 
 init : LoggedIn.Model -> UpdateResult
 init loggedIn =
-    UR.init {}
+    { highlightNewsConfirmationModal = NotVisible }
+        |> UR.init
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
 
@@ -33,9 +44,18 @@ init loggedIn =
 -- TYPES
 
 
+type HighlightNewsConfirmationModal
+    = NotVisible
+    | Visible { newsId : Int, isHighlighted : Bool }
+
+
 type Msg
     = NoOp
     | CompletedLoadCommunity Community.Model
+    | ToggledHighlightNews Int Bool
+    | CompletedSettingHighlightedNews (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
+    | ClosedHighlightNewsConfirmationModal
+    | ConfirmedHighlightNews Int
 
 
 type alias UpdateResult =
@@ -60,16 +80,112 @@ update msg model loggedIn =
                 UR.init model
                     |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
+        ToggledHighlightNews newsId isHighlighted ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    case community.highlightedNews of
+                        Nothing ->
+                            UR.init model
+                                |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+
+                        Just _ ->
+                            { model
+                                | highlightNewsConfirmationModal =
+                                    Visible { newsId = newsId, isHighlighted = isHighlighted }
+                            }
+                                |> UR.init
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Tried toggling highlighted news, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.News", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+
+        CompletedSettingHighlightedNews (RemoteData.Success maybeNews) ->
+            { model | highlightNewsConfirmationModal = NotVisible }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.UpdatedLoggedIn
+                        { loggedIn
+                            | selectedCommunity =
+                                RemoteData.map
+                                    (\community ->
+                                        { community | highlightedNews = maybeNews }
+                                    )
+                                    loggedIn.selectedCommunity
+                        }
+                    )
+
+        CompletedSettingHighlightedNews (RemoteData.Failure err) ->
+            { model | highlightNewsConfirmationModal = NotVisible }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when highlighting news"
+                    { moduleName = "Page.Community.Settings.News", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something wrong happened when highlighting news")
+
+        CompletedSettingHighlightedNews RemoteData.NotAsked ->
+            UR.init model
+
+        CompletedSettingHighlightedNews RemoteData.Loading ->
+            UR.init model
+
+        ClosedHighlightNewsConfirmationModal ->
+            { model | highlightNewsConfirmationModal = NotVisible }
+                |> UR.init
+
+        ConfirmedHighlightNews newsId ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd (setHighlightNews loggedIn community newsId True)
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Confirmed setting highlighted news, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.News", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+
+
+setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> Cmd Msg
+setHighlightNews loggedIn community newsId isHighlighted =
+    -- TODO - Check if we can have no highlighted news
+    Api.Graphql.mutation loggedIn.shared
+        (Just loggedIn.authToken)
+        (Cambiatus.Mutation.highlightedNews
+            { communityId = Eos.symbolToString community.symbol
+            , newsId = newsId
+            }
+            (Cambiatus.Object.Community.highlightedNews Community.News.selectionSet)
+            -- We need to remove nested Maybes (one from the highlightedNews
+            -- mutation, and another one from the highlightedNews selectionSet)
+            |> Graphql.SelectionSet.map (Maybe.andThen identity)
+        )
+        CompletedSettingHighlightedNews
+
 
 
 -- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view loggedIn _ =
+view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         title =
-            loggedIn.shared.translators.t "news.title"
+            t "news.title"
 
         content =
             case loggedIn.selectedCommunity of
@@ -77,6 +193,41 @@ view loggedIn _ =
                     div []
                         [ Page.viewHeader loggedIn title
                         , view_ loggedIn.shared community
+                        , case model.highlightNewsConfirmationModal of
+                            NotVisible ->
+                                text ""
+
+                            Visible { newsId } ->
+                                Modal.initWith
+                                    { closeMsg = ClosedHighlightNewsConfirmationModal
+                                    , isVisible = True
+                                    }
+                                    -- TODO - I18N
+                                    |> Modal.withHeader "Destacar o comunicado"
+                                    |> Modal.withBody
+                                        [ p []
+                                            -- TODO - I18N
+                                            [ text "Você já tem um comunicado ativo" ]
+                                        , p [ class "my-2" ]
+                                            [ text "Ao destacar este comunicado ele substituirá o comunicado existente" ]
+                                        , p [ class "mb-6" ]
+                                            [ text "Tem certeza que deseja destacá-lo?" ]
+                                        ]
+                                    |> Modal.withFooter
+                                        [ div [ class "w-full flex flex-col md:flex-row md:space-x-4" ]
+                                            [ button
+                                                [ class "button button-secondary w-full mb-4 md:mb-0"
+                                                , onClick ClosedHighlightNewsConfirmationModal
+                                                ]
+                                                [ text <| t "community.actions.form.no" ]
+                                            , button
+                                                [ class "button button-primary w-full"
+                                                , onClick (ConfirmedHighlightNews newsId)
+                                                ]
+                                                [ text <| t "community.actions.form.yes" ]
+                                            ]
+                                        ]
+                                    |> Modal.toHtml
                         ]
 
                 RemoteData.Loading ->
@@ -107,7 +258,14 @@ view_ shared community =
             [ case community.news of
                 RemoteData.Success news ->
                     div [ class "grid gap-4 md:grid-cols-2" ]
-                        (List.map (viewNewsCard shared.translators) news)
+                        (List.map
+                            (\newsForCard ->
+                                viewNewsCard shared.translators
+                                    (Just newsForCard == community.highlightedNews)
+                                    newsForCard
+                            )
+                            news
+                        )
 
                 RemoteData.Failure err ->
                     Page.fullPageGraphQLError
@@ -124,8 +282,8 @@ view_ shared community =
         ]
 
 
-viewNewsCard : Translators -> Community.News.Model -> Html Msg
-viewNewsCard translators news =
+viewNewsCard : Translators -> Bool -> Community.News.Model -> Html Msg
+viewNewsCard translators isHighlighted news =
     div [ class "bg-white rounded p-4 pb-6 flex flex-col" ]
         [ h1 [ class "font-bold" ]
             [ text news.title ]
@@ -155,9 +313,11 @@ viewNewsCard translators news =
             { -- TODO - I18N
               label = text "Destacar esse comunicado"
             , id = "highlight-news-toggle-" ++ String.fromInt news.id
-            , onToggle = \_ -> NoOp
+            , onToggle = ToggledHighlightNews news.id
+
+            -- TODO - Check if we can have no highlighted news
             , disabled = False
-            , value = False
+            , value = isHighlighted
             }
             |> View.Form.Toggle.withStatusText View.Form.Toggle.YesNo
             |> View.Form.Toggle.withAttrs [ class "mt-auto" ]
@@ -199,3 +359,15 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
+
+        ToggledHighlightNews _ _ ->
+            [ "ToggledHighlightNews" ]
+
+        CompletedSettingHighlightedNews r ->
+            [ "CompletedSettingHighlightedNews", UR.remoteDataToString r ]
+
+        ClosedHighlightNewsConfirmationModal ->
+            [ "ClosedHighlightNewsConfirmationModal" ]
+
+        ConfirmedHighlightNews _ ->
+            [ "ConfirmedHighlightNews" ]

@@ -121,6 +121,7 @@ type alias Model =
     , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
     , contributionConfiguration : Maybe ContributionConfiguration
     , news : RemoteData (Graphql.Http.Error (List Community.News.Model)) (List Community.News.Model)
+    , highlightedNews : Maybe Community.News.Model
     , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
@@ -343,6 +344,7 @@ communitySelectionSet =
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
+        |> with (Community.highlightedNews Community.News.selectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
         |> with Community.hasShop
