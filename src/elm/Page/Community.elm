@@ -12,6 +12,7 @@ import Action exposing (Action)
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
+import Community.News
 import Eos
 import Html exposing (Html, a, button, div, h2, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src, style)
@@ -43,6 +44,7 @@ init loggedIn =
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
 
 
 initModel : LoggedIn.Model -> Model
@@ -212,7 +214,7 @@ viewSponsorCards loggedIn community =
                             []
                     )
     in
-    div [ class "container mx-auto px-4 mb-4 flex flex-row md:gap-4" ]
+    div [ class "container mx-auto px-4 mb-4 flex flex-col md:grid gap-4 md:grid-cols-2" ]
         [ div [ class "w-full bg-white rounded p-4" ]
             [ h2 [ class "text-lg font-bold mb-6" ]
                 [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
@@ -263,20 +265,88 @@ viewSponsorCards loggedIn community =
                 ]
                 [ text_ "community.index.see_all_supporters" ]
             ]
-        , div [ class "w-full bg-white rounded p-4 relative hidden md:block overflow-hidden" ]
-            [ h2 [ class "text-lg font-bold" ]
-                [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
-                , text " "
-                , span [ class "text-purple-500" ] [ text_ "community.index.messages" ]
-                ]
-            , p [ class "text-center text-gray-900 mt-24 font-bold text-lg" ]
-                [ text_ "menu.coming_soon" ]
-            , img
-                [ class "absolute bottom-0 -right-8 rounded-br"
-                , src "/images/woman_announcer.svg"
-                ]
-                []
+        , if not community.hasNews then
+            viewNewsComingSoon loggedIn.shared.translators
+
+          else
+            case community.news of
+                RemoteData.Success news ->
+                    if List.isEmpty news then
+                        viewNewsComingSoon loggedIn.shared.translators
+
+                    else
+                        div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
+                            [ viewNewsContainer loggedIn.shared.translators
+                                [ Community.News.viewList loggedIn.shared
+                                    [ class "hidden md:block" ]
+                                    news
+                                , Community.News.viewList loggedIn.shared
+                                    [ class "md:hidden" ]
+                                    (List.take 2 news)
+                                , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
+                                    [ a
+                                        [ class "text-orange-300 hover:underline"
+                                        , Route.href (Route.News Nothing)
+                                        ]
+                                        -- TODO - I18N
+                                        [ text "Veja mais" ]
+                                    ]
+                                , img
+                                    [ class "mx-auto -mb-4 md:hidden"
+                                    , src "/images/woman_announcer.svg"
+                                    ]
+                                    []
+                                ]
+                            , img
+                                [ class "absolute bottom-0 -right-8 hidden pointer-events-none md:block"
+                                , src "/images/woman_announcer.svg"
+                                ]
+                                []
+                            ]
+
+                RemoteData.Loading ->
+                    viewNewsContainer loggedIn.shared.translators
+                        [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                            ""
+                        ]
+
+                RemoteData.NotAsked ->
+                    viewNewsContainer loggedIn.shared.translators
+                        [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                            ""
+                        ]
+
+                RemoteData.Failure _ ->
+                    viewNewsContainer loggedIn.shared.translators
+                        [ p [ class "text-lg font-bold text-gray-900" ]
+                            -- TODO - I18N
+                            [ text "Something went wrong fetching news" ]
+                        ]
+        ]
+
+
+viewNewsContainer : Translators -> List (Html msg) -> Html msg
+viewNewsContainer { t } children =
+    div [ class "flex flex-col w-full bg-white rounded p-4 relative md:overflow-y-auto md:flex-basis-0 md:flex-grow-1" ]
+        (h2 [ class "text-lg font-bold mb-6" ]
+            [ span [ class "text-gray-900" ] [ text <| t "community.index.our_messages" ]
+            , text " "
+            , span [ class "text-purple-500" ] [ text <| t "community.index.messages" ]
             ]
+            :: children
+        )
+
+
+viewNewsComingSoon : Translators -> Html msg
+viewNewsComingSoon translators =
+    viewNewsContainer translators
+        [ p [ class "text-lg font-bold text-gray-900 m-auto" ]
+            [ text <| translators.t "menu.coming_soon" ]
+        , img
+            [ class "mx-auto -mb-4"
+            , src "/images/woman_announcer.svg"
+            ]
+            []
         ]
 
 
