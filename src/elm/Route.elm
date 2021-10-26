@@ -46,6 +46,7 @@ type Route
     | Dashboard
     | Community
     | NewCommunity
+    | News (Maybe Int)
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
@@ -118,6 +119,8 @@ parser url =
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
+        , Url.map (News Nothing) (s "news")
+        , Url.map (Just >> News) (s "news" </> int)
         , Url.map Community (s "community")
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
@@ -460,6 +463,12 @@ routeToString route =
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
+
+                News Nothing ->
+                    ( [ "news" ], [] )
+
+                News (Just newsId) ->
+                    ( [ "news", String.fromInt newsId ], [] )
 
                 Objectives ->
                     ( [ "community", "objectives" ], [] )

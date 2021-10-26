@@ -476,6 +476,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
   @apply underline hover:opacity-80;
 }
 
+.markdown-viewer.colored-links a {
+  @apply text-orange-300;
+}
+
 .markdown-viewer h1 {
   @apply text-4xl;
 }

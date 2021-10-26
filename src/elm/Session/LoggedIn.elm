@@ -225,6 +225,7 @@ type Page
     | ComingSoon
     | Invite
     | Dashboard
+    | News
     | Community
     | CommunitySettings
     | CommunitySettingsInfo

@@ -35,6 +35,7 @@ import Page.Dashboard.Analysis as Analysis
 import Page.Dashboard.Claim as Claim
 import Page.Join as Join
 import Page.Login as Login
+import Page.News as News
 import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
@@ -206,6 +207,7 @@ type Status
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
+    | News News.Model
     | Profile Profile.Model
     | ProfileContributions ProfileContributions.Model
     | ProfileEditor ProfileEditor.Model
@@ -253,6 +255,7 @@ type Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
+    | GotNewsMsg News.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileContributionsMsg ProfileContributions.Msg
@@ -420,6 +423,11 @@ update msg model =
             Login.update subMsg subModel
                 >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest
+
+        ( GotNewsMsg subMsg, News subModel ) ->
+            News.update subMsg subModel
+                >> updateLoggedInUResult News GotNewsMsg model
+                |> withLoggedIn
 
         ( GotNotificationMsg subMsg, Notification subModel ) ->
             -- Will return a function expecting a LoggedIn Model
@@ -1065,6 +1073,9 @@ statusToRoute status session =
             in
             Just (Route.Login maybeInvitation maybeRedirect)
 
+        News subModel ->
+            Just (Route.News subModel.newsId)
+
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
 
@@ -1312,6 +1323,11 @@ changeRouteTo maybeRoute model =
             Login.init
                 >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
                 |> withGuest maybeInvitation maybeRedirect
+
+        Just (Route.News maybeNewsId) ->
+            News.init maybeNewsId
+                >> updateLoggedInUResult News GotNewsMsg model
+                |> withLoggedIn (Route.News maybeNewsId)
 
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init accountName
@@ -1670,6 +1686,9 @@ msgToString msg =
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
 
+        GotNewsMsg subMsg ->
+            "GotNewsMsg" :: News.msgToString subMsg
+
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
 
@@ -1827,6 +1846,9 @@ view model =
 
         Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view
+
+        News subModel ->
+            viewLoggedIn subModel LoggedIn.News GotNewsMsg News.view
 
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
