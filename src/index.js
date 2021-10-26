@@ -1165,7 +1165,7 @@ const usePortAsPromise = (port, handler) => {
   return new Promise((resolve, reject) => {
     const internalHandler = (...args) => {
       const result = handler(...args)
-      if (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false) {
+      if (result && (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false)) {
         port.unsubscribe(internalHandler)
         resolve(result)
       }
