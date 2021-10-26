@@ -5,7 +5,7 @@ import Cambiatus.Object.News as News
 import Cambiatus.Object.NewsVersion as Version
 import Cambiatus.Scalar
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, div, h2, p, text)
+import Html exposing (Html, a, div, h2, p, span, text)
 import Html.Attributes exposing (class, classList, style)
 import Icons
 import Iso8601
@@ -85,7 +85,7 @@ viewList shared attrs news =
                             identity
                             shared
                             firstNews.insertedAt
-                        , div [ class "divide-y divide-gray-500 space-y-4 mt-4" ]
+                        , div [ class "divide-y divide-gray-500" ]
                             (List.map
                                 (\theseNews ->
                                     -- TODO - Use real data for hasRead
@@ -101,38 +101,28 @@ viewList shared attrs news =
 
 viewSummary : Bool -> Model -> Html msg
 viewSummary hasRead news =
-    let
-        speechBubbleColor =
-            if hasRead then
-                "text-gray-900"
-
-            else
-                "text-purple-500"
-    in
-    div
-        [ class "grid items-center pt-4 first:pt-0"
-        , style "grid-template-columns" "28px 1fr 80px"
-        ]
-        [ Icons.speechBubble ("flex-shrink-0 stroke-current " ++ speechBubbleColor)
-        , div
-            [ class "truncate ml-4 mr-16"
-            , classList
-                [ ( "text-gray-900", hasRead )
-                , ( "text-purple-500", not hasRead )
-                ]
+    a
+        [ class "grid items-center py-4 focus-ring rounded-sm"
+        , classList
+            [ ( "text-gray-900 hover:text-gray-400", hasRead )
+            , ( "text-purple-500 hover:opacity-80", not hasRead )
             ]
+        , style "grid-template-columns" "28px 1fr 80px"
+        , Route.href (Route.News (Just news.id))
+        ]
+        [ Icons.speechBubble "flex-shrink-0 stroke-current"
+        , div [ class "truncate ml-4 mr-16" ]
             [ h2 [ class "font-bold truncate" ] [ text news.title ]
             , p [ class "truncate" ]
                 [ text <| View.MarkdownEditor.removeFormatting news.description ]
             ]
         , if not hasRead then
-            a
+            span
                 [ class "button button-primary w-auto px-4"
-                , Route.href (Route.News (Just news.id))
                 ]
                 -- TODO - I18N
                 [ text "Read" ]
 
           else
-            text ""
+            Icons.arrowDown "-rotate-90 fill-current ml-auto"
         ]

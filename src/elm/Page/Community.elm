@@ -285,7 +285,7 @@ viewSponsorCards loggedIn community =
                                     (List.take 2 news)
                                 , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
                                     [ a
-                                        [ class "text-orange-300 hover:underline"
+                                        [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
                                         , Route.href (Route.News Nothing)
                                         ]
                                         -- TODO - I18N
