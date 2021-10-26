@@ -13,7 +13,7 @@ import Eos.Account
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, hr, img, p, text)
 import Html.Attributes exposing (class, disabled, src, tabindex, type_)
 import Html.Events exposing (onSubmit)
@@ -163,7 +163,7 @@ type FormMsg
     | SetDatePicker DatePicker.Msg
     | EnteredPublicationTime String
     | ClickedSave
-    | CompletedSaving (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | CompletedSaving (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
     | GotEditorSummaryMsg Profile.Summary.Msg
 
 
@@ -399,7 +399,7 @@ updateForm msg form loggedIn =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     let
-                        mutation : Maybe Cambiatus.Scalar.DateTime -> SelectionSet (Maybe ()) RootMutation
+                        mutation : Maybe Cambiatus.Scalar.DateTime -> SelectionSet (Maybe Community.News.Model) RootMutation
                         mutation scheduling =
                             case form.action of
                                 CreateNew ->
@@ -411,7 +411,7 @@ updateForm msg form loggedIn =
                                         , description = String.trim form.descriptionEditor.contents
                                         , title = form.title
                                         }
-                                        SelectionSet.empty
+                                        Community.News.selectionSet
 
                                 EditExisting news _ ->
                                     Cambiatus.Mutation.updateNews
@@ -423,7 +423,7 @@ updateForm msg form loggedIn =
                                             }
                                         )
                                         { id = news.id }
-                                        SelectionSet.empty
+                                        Community.News.selectionSet
 
                         saveNews : Maybe Cambiatus.Scalar.DateTime -> Cmd FormMsg
                         saveNews scheduling =
@@ -457,10 +457,18 @@ updateForm msg form loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
-        CompletedSaving (RemoteData.Success _) ->
+        CompletedSaving (RemoteData.Success maybeNewsId) ->
             { form | isSaving = False }
                 |> UR.init
                 -- TODO - I18N
+                |> UR.addExt
+                    (LoggedIn.UpdatedLoggedIn
+                        { loggedIn
+                            | selectedCommunity =
+                                RemoteData.map (\community -> { community | highlightedNews = maybeNewsId })
+                                    loggedIn.selectedCommunity
+                        }
+                    )
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "The communication is active")
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunitySettingsNews)
 
