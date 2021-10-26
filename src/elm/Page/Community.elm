@@ -263,7 +263,7 @@ viewSponsorCards loggedIn community =
                 ]
                 [ text_ "community.index.see_all_supporters" ]
             ]
-        , div [ class "w-full bg-white rounded p-4 relative hidden md:block" ]
+        , div [ class "w-full bg-white rounded p-4 relative hidden md:block overflow-hidden" ]
             [ h2 [ class "text-lg font-bold" ]
                 [ span [ class "text-gray-900" ] [ text_ "community.index.our_messages" ]
                 , text " "
@@ -272,8 +272,8 @@ viewSponsorCards loggedIn community =
             , p [ class "text-center text-gray-900 mt-24 font-bold text-lg" ]
                 [ text_ "menu.coming_soon" ]
             , img
-                [ class "absolute bottom-0 right-0 rounded-br"
-                , src "images/woman_announcer.svg"
+                [ class "absolute bottom-0 -right-8 rounded-br"
+                , src "/images/woman_announcer.svg"
                 ]
                 []
             ]
