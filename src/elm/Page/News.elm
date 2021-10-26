@@ -19,7 +19,6 @@ import View.MarkdownEditor
 
 
 
--- TODO - If there are no news, this page "shouldn't exist"
 -- TODO - Scroll to top on init
 -- MODEL
 
@@ -29,7 +28,7 @@ type alias Model =
 
 
 init : Maybe Int -> LoggedIn.Model -> UpdateResult
-init maybeNewsId loggedIn =
+init maybeNewsId _ =
     { newsId = maybeNewsId }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
@@ -52,8 +51,10 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update _ model _ =
-    UR.init model
+update msg model _ =
+    case msg of
+        NoOp ->
+            UR.init model
 
 
 
@@ -70,9 +71,31 @@ view loggedIn model =
         content =
             case Community.getField loggedIn.selectedCommunity .news of
                 RemoteData.Success ( community, news ) ->
+                    let
+                        maybeSelectedNews : Maybe Community.News.Model
+                        maybeSelectedNews =
+                            if not community.hasNews then
+                                Nothing
+
+                            else
+                                model.newsId
+                                    |> Maybe.andThen (\newsId -> List.Extra.find (\{ id } -> id == newsId) news)
+                                    |> Maybe.Extra.orElse community.highlightedNews
+                                    |> Maybe.Extra.orElse (List.head news)
+                    in
                     div []
                         [ Page.viewHeader loggedIn title
-                        , view_ loggedIn.shared model community news
+                        , case maybeSelectedNews of
+                            Nothing ->
+                                Page.fullPageNotFound
+                                    -- TODO - I18N
+                                    "There's nothing to see here"
+                                    "Your community hasn't posted any communications"
+
+                            Just selectedNews ->
+                                view_ loggedIn.shared
+                                    selectedNews
+                                    (List.filter ((/=) selectedNews) news)
                         ]
 
                 RemoteData.Failure failure ->
@@ -94,16 +117,10 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : Shared -> Model -> Community.Model -> List Community.News.Model -> Html Msg
-view_ shared model community news =
+view_ : Shared -> Community.News.Model -> List Community.News.Model -> Html Msg
+view_ shared selectedNews news =
     div []
-        [ model.newsId
-            |> Maybe.andThen (\newsId -> List.Extra.find (\{ id } -> id == newsId) news)
-            |> Maybe.Extra.orElse community.highlightedNews
-            |> Maybe.Extra.orElse (List.head news)
-            |> Maybe.map viewMainNews
-            -- TODO - Maybe show something when there are no news
-            |> Maybe.withDefault (text "")
+        [ viewMainNews selectedNews
         , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
             [ text "Read "
             , span [ class "text-purple-500" ] [ text "other news" ]
@@ -207,6 +224,7 @@ viewNewsSummary hasRead news =
 
 
 msgToString : Msg -> List String
-msgToString _ =
-    -- TODO
-    []
+msgToString msg =
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
