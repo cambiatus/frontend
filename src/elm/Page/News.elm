@@ -1,25 +1,23 @@
 module Page.News exposing (Model, Msg, init, msgToString, update, view)
 
+import Browser.Dom
 import Community
 import Community.News
-import Html exposing (Html, a, div, h1, h2, img, p, span, text)
-import Html.Attributes exposing (class, classList, src, style)
-import Icons
+import Html exposing (Html, div, h1, span, text)
+import Html.Attributes exposing (class)
 import List.Extra
 import Maybe.Extra
 import Page
 import RemoteData
-import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
+import Task
 import UpdateResult as UR
-import Utils
-import View.Components
 import View.MarkdownEditor
 
 
 
--- TODO - Scroll to top on init
+-- TODO - Mark news as read
 -- MODEL
 
 
@@ -32,6 +30,10 @@ init maybeNewsId _ =
     { newsId = maybeNewsId }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
+        |> UR.addCmd
+            (Browser.Dom.setViewport 0 0
+                |> Task.perform (\_ -> NoOp)
+            )
 
 
 
@@ -122,47 +124,14 @@ view_ shared selectedNews news =
     div []
         [ viewMainNews selectedNews
         , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+            -- TODO - I18N
             [ text "Read "
             , span [ class "text-purple-500" ] [ text "other news" ]
             ]
         , div [ class "bg-white" ]
-            [ div [ class "container mx-auto px-4 pt-6 divide-y divide-gray-500 space-y-4" ]
-                (news
-                    |> List.Extra.groupWhile
-                        (\n1 n2 ->
-                            Utils.areSameDay
-                                shared.timezone
-                                n1.insertedAt
-                                n2.insertedAt
-                        )
-                    |> List.map
-                        (\( firstNews, otherNews ) ->
-                            div [ class "pt-4 first:pt-0" ]
-                                [ View.Components.dateViewer
-                                    [ class "text-black text-sm font-bold uppercase" ]
-                                    identity
-                                    shared
-                                    firstNews.insertedAt
-                                , div [ class "divide-y divide-gray-500 space-y-4 mt-4" ]
-                                    (List.map
-                                        (\theseNews ->
-                                            viewNewsSummary
-                                                -- TODO - Use real data for hasRead
-                                                (modBy 2 theseNews.id == 0)
-                                                theseNews
-                                        )
-                                        (firstNews :: otherNews)
-                                    )
-                                ]
-                        )
-                )
-            , div [ class "container mx-auto px-4 mt-16" ]
-                [ img
-                    [ class "mx-auto md:mr-0"
-                    , src "/images/woman_announcer.svg"
-                    ]
-                    []
-                ]
+            [ Community.News.viewList shared
+                [ class "container mx-auto px-4 pt-6" ]
+                news
             ]
         ]
 
@@ -177,45 +146,6 @@ viewMainNews news =
             ]
 
         -- TODO - Add Reactions
-        ]
-
-
-viewNewsSummary : Bool -> Community.News.Model -> Html Msg
-viewNewsSummary hasRead news =
-    let
-        speechBubbleColor =
-            if hasRead then
-                "text-gray-900"
-
-            else
-                "text-purple-500"
-    in
-    div
-        [ class "grid items-center pt-4 first:pt-0"
-        , style "grid-template-columns" "28px 1fr 80px"
-        ]
-        [ Icons.speechBubble ("flex-shrink-0 stroke-current " ++ speechBubbleColor)
-        , div
-            [ class "truncate ml-4 mr-16"
-            , classList
-                [ ( "text-gray-900", hasRead )
-                , ( "text-purple-500", not hasRead )
-                ]
-            ]
-            [ h2 [ class "font-bold truncate" ] [ text news.title ]
-            , p [ class "truncate" ]
-                [ text <| View.MarkdownEditor.removeFormatting news.description ]
-            ]
-        , if not hasRead then
-            a
-                [ class "button button-primary w-auto px-4"
-                , Route.href (Route.News (Just news.id))
-                ]
-                -- TODO - I18N
-                [ text "Read" ]
-
-          else
-            text ""
         ]
 
 
