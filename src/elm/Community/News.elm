@@ -15,6 +15,7 @@ type alias Model =
     , id : Int
     , title : String
     , scheduling : Maybe Time.Posix
+    , insertedAt : Time.Posix
     , updatedAt : Time.Posix
     , lastEditor : Maybe Profile.Minimal
     }
@@ -37,15 +38,21 @@ selectionSet =
                     )
             )
         |> SelectionSet.with
+            (News.insertedAt
+                |> SelectionSet.map timeFromNaiveDateTime
+            )
+        |> SelectionSet.with
             (News.updatedAt
-                |> SelectionSet.map
-                    (\(Cambiatus.Scalar.NaiveDateTime dateTime) ->
-                        Iso8601.toTime dateTime
-                            |> Result.withDefault (Time.millisToPosix 0)
-                    )
+                |> SelectionSet.map timeFromNaiveDateTime
             )
         |> SelectionSet.with
             (News.versions
                 (Version.user Profile.minimalSelectionSet)
                 |> SelectionSet.map (List.filterMap identity >> List.head)
             )
+
+
+timeFromNaiveDateTime : Cambiatus.Scalar.NaiveDateTime -> Time.Posix
+timeFromNaiveDateTime (Cambiatus.Scalar.NaiveDateTime dateTime) =
+    Iso8601.toTime dateTime
+        |> Result.withDefault (Time.millisToPosix 0)
