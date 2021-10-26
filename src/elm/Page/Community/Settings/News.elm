@@ -50,8 +50,7 @@ type HighlightNewsConfirmationModal
 
 
 type Msg
-    = NoOp
-    | CompletedLoadCommunity Community.Model
+    = CompletedLoadCommunity Community.Model
     | ToggledHighlightNews Int Bool
     | CompletedSettingHighlightedNews (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
     | ClosedHighlightNewsConfirmationModal
@@ -69,9 +68,6 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        NoOp ->
-            UR.init model
-
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 UR.init model
@@ -302,9 +298,7 @@ viewNewsCard translators isHighlighted news =
                 ]
             , a
                 [ class "absolute right-0 bottom-0 bg-white pl-2 text-orange-300 hover:underline focus:underline outline-none"
-
-                -- TODO - Use correct route
-                , Route.href Route.Dashboard
+                , Route.href (Route.News (Just news.id))
                 ]
                 -- TODO - I18N
                 [ text "... Ver mais" ]
@@ -314,8 +308,6 @@ viewNewsCard translators isHighlighted news =
               label = text "Destacar esse comunicado"
             , id = "highlight-news-toggle-" ++ String.fromInt news.id
             , onToggle = ToggledHighlightNews news.id
-
-            -- TODO - Check if we can have no highlighted news
             , disabled = False
             , value = isHighlighted
             }
@@ -354,9 +346,6 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
