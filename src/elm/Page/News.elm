@@ -75,14 +75,9 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
-    case msg of
-        NoOp ->
-            UR.init model
-
-        CompletedMarkingNewsAsRead _ ->
-            -- TODO - Do something
-            UR.init model
+update _ model _ =
+    -- TODO
+    UR.init model
 
 
 

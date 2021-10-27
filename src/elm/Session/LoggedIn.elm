@@ -1125,7 +1125,7 @@ type Msg
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
-    | ReceivedNewHighlightedNews Encode.Value
+    | ReceivedNewHighlightedNews Value
 
 
 update : Msg -> Model -> UpdateResult

@@ -45,8 +45,8 @@ import View.MarkdownEditor as MarkdownEditor
 
 
 type Model
-    = WaitingNewsToCopy Int
-    | WaitingNewsToEdit Int
+    = WaitingNewsToCopy
+    | WaitingNewsToEdit
     | Editing Form
     | NewsNotFound
     | WithError (Graphql.Http.Error (Maybe Community.News.Model))
@@ -434,7 +434,7 @@ updateForm msg form loggedIn =
                         |> UR.logImpossible msg
                             "Tried to change communication publication date, but is set to publish immediately"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
+                            { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
                             []
 
                 SchedulePublication scheduling ->
@@ -491,7 +491,7 @@ updateForm msg form loggedIn =
                         |> UR.logImpossible msg
                             "Tried to change communication publication time, but is set to publish immediately"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
+                            { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
                             []
 
                 SchedulePublication scheduling ->

@@ -237,7 +237,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Tried toggling community news feature, but community wasn't loaded"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.Feature", function = "update" }
+                            { moduleName = "Page.Community.Settings.Features", function = "update" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         SaveSuccess ->
