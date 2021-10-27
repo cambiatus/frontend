@@ -1,4 +1,4 @@
-module Community.News exposing (Model, Receipt, receiptSelectionSet, selectionSet, viewList)
+module Community.News exposing (Model, Receipt, isPublished, receiptSelectionSet, selectionSet, viewList)
 
 import Cambiatus.Object
 import Cambiatus.Object.News as News
@@ -36,6 +36,20 @@ type alias Model =
 
 type alias Receipt =
     {}
+
+
+
+-- HELPERS
+
+
+isPublished : Time.Posix -> Model -> Bool
+isPublished now model =
+    case model.scheduling of
+        Nothing ->
+            True
+
+        Just scheduling ->
+            Time.posixToMillis now >= Time.posixToMillis scheduling
 
 
 

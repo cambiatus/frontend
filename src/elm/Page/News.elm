@@ -21,7 +21,6 @@ import View.MarkdownEditor
 
 
 -- TODO - Add Reactions
--- TODO - Filter out news that haven't been published yet (scheduled)
 -- TODO - Validation on News Editor - non-empty description, non-empty title, future date
 -- MODEL
 
@@ -123,9 +122,16 @@ view loggedIn model =
                                     "Your community hasn't posted any communications"
 
                             Just selectedNews ->
-                                view_ loggedIn.shared
-                                    selectedNews
-                                    (List.filter ((/=) selectedNews) news)
+                                news
+                                    |> List.filter
+                                        (\n ->
+                                            Community.News.isPublished
+                                                loggedIn.shared.now
+                                                n
+                                                && (n /= selectedNews)
+                                        )
+                                    |> view_ loggedIn.shared
+                                        selectedNews
                         ]
 
                 RemoteData.Failure failure ->

@@ -277,12 +277,15 @@ viewSponsorCards loggedIn community =
                     else
                         div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
                             [ viewNewsContainer loggedIn.shared.translators
-                                [ Community.News.viewList loggedIn.shared
-                                    [ class "hidden md:block" ]
-                                    news
-                                , Community.News.viewList loggedIn.shared
-                                    [ class "md:hidden" ]
-                                    (List.take 2 news)
+                                [ news
+                                    |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                                    |> Community.News.viewList loggedIn.shared
+                                        [ class "hidden md:block" ]
+                                , news
+                                    |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                                    |> List.take 2
+                                    |> Community.News.viewList loggedIn.shared
+                                        [ class "md:hidden" ]
                                 , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
                                     [ a
                                         [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
