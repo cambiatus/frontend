@@ -370,7 +370,7 @@ window.customElements.define('key-listener',
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
+    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled', 'elm-has-error' ] }
 
     constructor () {
       super()
@@ -438,6 +438,8 @@ window.customElements.define('markdown-editor',
     attributeChangedCallback (name) {
       if (name === 'elm-disabled') {
         this.setDisabled()
+      } else if (name === 'elm-has-error') {
+        this.toggleHasError()
       } else {
         this.setTooltipTexts()
       }
@@ -452,6 +454,16 @@ window.customElements.define('markdown-editor',
       const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
       if (removeButton) {
         removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+      }
+    }
+
+    toggleHasError () {
+      const hasError = this.getAttribute('elm-has-error') === 'true'
+      console.log({ hasError, classes: this._parentContainer.classList })
+      if (hasError) {
+        this._parentContainer.classList.add('with-error')
+      } else {
+        this._parentContainer.classList.remove('with-error')
       }
     }
 

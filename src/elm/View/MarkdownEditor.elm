@@ -262,6 +262,14 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                 View.Form.label [] model.id label
             , node "markdown-editor"
                 [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
+                , attribute "elm-has-error"
+                    (case problem of
+                        Nothing ->
+                            "false"
+
+                        Just _ ->
+                            "true"
+                    )
                 , attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
                 , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
                 , attribute "elm-disabled"

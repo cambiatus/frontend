@@ -73,17 +73,17 @@ body > * {
   }
 
   .input-border {
-    @apply border border-gray-500 rounded-md ring-0 duration-100;
+    @apply border border-gray-500 rounded-md ring-0 duration-100 focus-ring focus-within:ring;
 
     transition-property: box-shadow, color, border-color;
   }
 
   .input-border:not(.with-error) {
-    @apply focus-within:ring focus-within:ring-green focus-within:border-green focus-within:ring-opacity-50;
+    @apply focus-within:border-green focus-within:ring-green focus-within:ring-opacity-50;
   }
 
   .input-border.with-error {
-    @apply focus-within:ring-red focus-within:ring-opacity-30;
+    @apply border-red focus-within:ring-red focus-within:ring-opacity-30;
   }
 
   .form-checkbox {
