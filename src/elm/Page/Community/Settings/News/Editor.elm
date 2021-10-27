@@ -1,6 +1,7 @@
 module Page.Community.Settings.News.Editor exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Api.Graphql
+import Browser.Dom
 import Cambiatus.Mutation
 import Cambiatus.Query
 import Cambiatus.Scalar
@@ -14,16 +15,19 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, hr, img, p, text)
+import Html exposing (Html, a, button, div, hr, img, p, span, text)
 import Html.Attributes exposing (class, disabled, src, tabindex, type_)
 import Html.Events exposing (onSubmit)
 import Iso8601
 import Log
+import Maybe.Extra
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Shared)
+import Task
 import Time
 import Time.Extra
 import UpdateResult as UR
@@ -79,9 +83,10 @@ init kind loggedIn =
 
 type alias Form =
     { title : String
+    , titleError : Maybe String
     , descriptionEditor : MarkdownEditor.Model
+    , descriptionError : Maybe String
     , publicationMode : PublicationMode
-    , timeError : Maybe String
     , action : Action
     , isSaving : Bool
     }
@@ -95,11 +100,28 @@ descriptionEditorId =
 emptyForm : Form
 emptyForm =
     { title = ""
+    , titleError = Nothing
     , descriptionEditor = MarkdownEditor.init descriptionEditorId
+    , descriptionError = Nothing
     , publicationMode = PublishImmediately
-    , timeError = Nothing
     , action = CreateNew
     , isSaving = False
+    }
+
+
+emptySchedulingForm : Shared -> SchedulingForm
+emptySchedulingForm shared =
+    let
+        defaultDate =
+            shared.now
+                |> Date.fromPosix shared.timezone
+                |> Date.add Date.Days 1
+    in
+    { datePicker = DatePicker.initFromDate defaultDate
+    , selectedDate = defaultDate
+    , selectedTime = "13:00"
+    , timeError = Nothing
+    , dateError = Nothing
     }
 
 
@@ -111,9 +133,10 @@ formFromExistingNews timezone news action =
                 |> MarkdownEditor.forceSetContents news.description
     in
     ( { title = news.title
+      , titleError = Nothing
       , descriptionEditor = markdownEditor
+      , descriptionError = Nothing
       , publicationMode = publicationModeFromMaybePosix timezone news.scheduling
-      , timeError = Nothing
       , action = action
       , isSaving = False
       }
@@ -140,9 +163,13 @@ publicationModeFromMaybePosix timezone maybeTime =
                     Time.toMinute timezone time
                         |> String.fromInt
             in
-            SchedulePublication (DatePicker.initFromDate date)
-                date
-                (String.join ":" [ hour, minute ])
+            SchedulePublication
+                { datePicker = DatePicker.initFromDate date
+                , selectedDate = date
+                , selectedTime = String.join ":" [ hour, minute ]
+                , timeError = Nothing
+                , dateError = Nothing
+                }
 
 
 
@@ -157,7 +184,8 @@ type Msg
 
 
 type FormMsg
-    = EnteredTitle String
+    = NoOp
+    | EnteredTitle String
     | GotDescriptionEditorMsg MarkdownEditor.Msg
     | SelectedPublicationMode PublicationMode
     | SetDatePicker DatePicker.Msg
@@ -182,7 +210,16 @@ type Action
 
 type PublicationMode
     = PublishImmediately
-    | SchedulePublication DatePicker.DatePicker Date.Date String
+    | SchedulePublication SchedulingForm
+
+
+type alias SchedulingForm =
+    { datePicker : DatePicker.DatePicker
+    , selectedDate : Date.Date
+    , selectedTime : String
+    , timeError : Maybe String
+    , dateError : Maybe String
+    }
 
 
 type ParsedDateTime
@@ -201,6 +238,7 @@ update msg model loggedIn =
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 UR.init model
+                    |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
             else
                 UR.init model
@@ -330,16 +368,57 @@ update msg model loggedIn =
 updateForm : FormMsg -> Form -> LoggedIn.Model -> FormUpdateResult
 updateForm msg form loggedIn =
     case msg of
+        NoOp ->
+            UR.init form
+
         EnteredTitle title ->
-            { form | title = title }
+            { form
+                | title = title
+                , titleError =
+                    if String.isEmpty title then
+                        -- TODO - I18N
+                        Just "Title can't be empty"
+
+                    else
+                        Nothing
+            }
                 |> UR.init
 
         GotDescriptionEditorMsg subMsg ->
             let
                 ( descriptionEditor, cmd ) =
                     MarkdownEditor.update subMsg form.descriptionEditor
+
+                previousContents =
+                    String.trim form.descriptionEditor.contents
+
+                newContents =
+                    String.trim descriptionEditor.contents
+
+                contentChanged =
+                    newContents /= previousContents
+
+                hasError =
+                    case form.descriptionError of
+                        Nothing ->
+                            False
+
+                        Just _ ->
+                            True
             in
-            { form | descriptionEditor = descriptionEditor }
+            { form
+                | descriptionEditor = descriptionEditor
+                , descriptionError =
+                    if
+                        String.isEmpty newContents
+                            && (contentChanged || hasError)
+                    then
+                        -- TODO - I18N
+                        Just "Description can't be empty"
+
+                    else
+                        Nothing
+            }
                 |> UR.init
                 |> UR.addCmd (Cmd.map GotDescriptionEditorMsg cmd)
 
@@ -358,10 +437,12 @@ updateForm msg form loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             []
 
-                SchedulePublication datePicker selectedDate publicationTime ->
+                SchedulePublication scheduling ->
                     let
                         ( newDatePicker, dateEvent ) =
-                            DatePicker.update datePickerSettings subMsg datePicker
+                            DatePicker.update (datePickerSettings (Maybe.Extra.isJust scheduling.dateError))
+                                subMsg
+                                scheduling.datePicker
 
                         newSelectedDate =
                             case dateEvent of
@@ -369,9 +450,37 @@ updateForm msg form loggedIn =
                                     newDate
 
                                 _ ->
-                                    selectedDate
+                                    scheduling.selectedDate
+
+                        schedulingWithDate =
+                            { scheduling
+                                | datePicker = newDatePicker
+                                , selectedDate = newSelectedDate
+                            }
                     in
-                    { form | publicationMode = SchedulePublication newDatePicker newSelectedDate publicationTime }
+                    { form
+                        | publicationMode =
+                            SchedulePublication
+                                { schedulingWithDate
+                                    | dateError =
+                                        if Maybe.Extra.isJust scheduling.timeError then
+                                            Nothing
+
+                                        else
+                                            case parseSchedulingForm loggedIn.shared.timezone schedulingWithDate of
+                                                Just time ->
+                                                    if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
+                                                        -- TODO - I18N
+                                                        Just "Use a time in the future"
+
+                                                    else
+                                                        Nothing
+
+                                                Nothing ->
+                                                    -- TODO - I18N
+                                                    Just "Use a valid time"
+                                }
+                    }
                         |> UR.init
 
         EnteredPublicationTime publicationTime ->
@@ -385,13 +494,30 @@ updateForm msg form loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             []
 
-                SchedulePublication datePicker selectedDate _ ->
+                SchedulePublication scheduling ->
+                    let
+                        schedulingWithTime =
+                            { scheduling | selectedTime = publicationTime }
+                    in
                     { form
                         | publicationMode =
-                            SchedulePublication datePicker
-                                selectedDate
-                                publicationTime
-                        , timeError = Nothing
+                            -- TODO - parsePublication and show error
+                            SchedulePublication
+                                { schedulingWithTime
+                                    | timeError =
+                                        case parseSchedulingForm loggedIn.shared.timezone schedulingWithTime of
+                                            Just time ->
+                                                if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
+                                                    -- TODO - I18N
+                                                    Just "Use a time in the future"
+
+                                                else
+                                                    Nothing
+
+                                            Nothing ->
+                                                -- TODO - I18N
+                                                Just "Use a valid time"
+                                }
                     }
                         |> UR.init
 
@@ -431,22 +557,50 @@ updateForm msg form loggedIn =
                                 (Just loggedIn.authToken)
                                 (mutation scheduling)
                                 CompletedSaving
+
+                        isModelValid =
+                            Maybe.Extra.isNothing form.titleError
+                                && not (String.isEmpty form.title)
+                                && Maybe.Extra.isNothing form.descriptionError
+                                && not (String.isEmpty form.descriptionEditor.contents)
                     in
-                    case parseDateTime loggedIn.shared.timezone form.publicationMode of
-                        NoTimeToParse ->
-                            { form | isSaving = True }
-                                |> UR.init
-                                |> UR.addCmd (saveNews Nothing)
+                    if not isModelValid then
+                        { form
+                            | titleError =
+                                if String.isEmpty form.title then
+                                    -- TODO - I18N
+                                    Just "Title can't be empty"
 
-                        ValidTime time ->
-                            { form | isSaving = True }
-                                |> UR.init
-                                |> UR.addCmd (saveNews (Just time))
+                                else
+                                    Nothing
+                            , descriptionError =
+                                if String.isEmpty form.descriptionEditor.contents then
+                                    -- TODO - I18N
+                                    Just "description can't be empty"
 
-                        InvalidTime ->
-                            -- TODO - I18N, better error message
-                            { form | timeError = Just "Invalid time" }
-                                |> UR.init
+                                else
+                                    Nothing
+                        }
+                            |> UR.init
+                            |> UR.addCmd
+                                (Browser.Dom.setViewport 0 0
+                                    |> Task.perform (\_ -> NoOp)
+                                )
+
+                    else
+                        case parseDateTime loggedIn.shared.timezone form.publicationMode of
+                            NoTimeToParse ->
+                                { form | isSaving = True }
+                                    |> UR.init
+                                    |> UR.addCmd (saveNews Nothing)
+
+                            ValidTime time ->
+                                { form | isSaving = True }
+                                    |> UR.init
+                                    |> UR.addCmd (saveNews (Just time))
+
+                            InvalidTime ->
+                                UR.init form
 
                 _ ->
                     form
@@ -525,23 +679,23 @@ parseDateTime timezone publicationMode =
         PublishImmediately ->
             NoTimeToParse
 
-        SchedulePublication _ selectedDate selectedTime ->
-            let
-                time =
-                    case String.split ":" selectedTime of
-                        [ hourString, minuteString ] ->
-                            Maybe.map2 (\hour minute -> { hour = hour, minute = minute })
-                                (String.toInt hourString)
-                                (String.toInt minuteString)
+        SchedulePublication schedulingForm ->
+            schedulingForm
+                |> parseSchedulingForm timezone
+                |> Maybe.map
+                    (Iso8601.fromTime
+                        >> Cambiatus.Scalar.DateTime
+                        >> ValidTime
+                    )
+                |> Maybe.withDefault InvalidTime
 
-                        _ ->
-                            Nothing
-            in
-            case time of
-                Nothing ->
-                    InvalidTime
 
-                Just { hour, minute } ->
+parseSchedulingForm : Time.Zone -> SchedulingForm -> Maybe Time.Posix
+parseSchedulingForm timezone { selectedDate, selectedTime } =
+    case String.split ":" selectedTime of
+        [ hourString, minuteString ] ->
+            Maybe.map2
+                (\hour minute ->
                     Time.Extra.partsToPosix timezone
                         { year = Date.year selectedDate
                         , month = Date.month selectedDate
@@ -551,9 +705,12 @@ parseDateTime timezone publicationMode =
                         , second = 0
                         , millisecond = 0
                         }
-                        |> Iso8601.fromTime
-                        |> Cambiatus.Scalar.DateTime
-                        |> ValidTime
+                )
+                (String.toInt hourString)
+                (String.toInt minuteString)
+
+        _ ->
+            Nothing
 
 
 
@@ -597,14 +754,6 @@ viewForm ({ shared } as loggedIn) form =
     let
         { translators } =
             shared
-
-        defaultSchedulingDate =
-            shared.now
-                |> Date.fromPosix shared.timezone
-                |> Date.add Date.Days 1
-
-        defaultDatePicker =
-            DatePicker.initFromDate defaultSchedulingDate
     in
     Html.form
         [ class "px-4"
@@ -618,7 +767,7 @@ viewForm ({ shared } as loggedIn) form =
             , disabled = form.isSaving
             , value = form.title
             , placeholder = Just "Lorem ipsum dolor"
-            , problems = Nothing
+            , problems = Maybe.map List.singleton form.titleError
             , translators = translators
             }
             |> Input.toHtml
@@ -628,7 +777,7 @@ viewForm ({ shared } as loggedIn) form =
 
             -- TODO - I18N
             , label = "Description"
-            , problem = Nothing
+            , problem = form.descriptionError
             , disabled = form.isSaving
             }
             []
@@ -651,14 +800,14 @@ viewForm ({ shared } as loggedIn) form =
                         PublishImmediately ->
                             "publish-immediately"
 
-                        SchedulePublication _ _ _ ->
+                        SchedulePublication _ ->
                             "schedule-publication"
             , activeOption = form.publicationMode
             , onSelect = SelectedPublicationMode
             , areOptionsEqual =
                 \option1 option2 ->
                     case ( option1, option2 ) of
-                        ( SchedulePublication _ _ _, SchedulePublication _ _ _ ) ->
+                        ( SchedulePublication _, SchedulePublication _ ) ->
                             True
 
                         ( PublishImmediately, PublishImmediately ) ->
@@ -672,7 +821,7 @@ viewForm ({ shared } as loggedIn) form =
                 (\_ -> text "Publish immediately")
             -- TODO - I18N
             |> Radio.withOption
-                (SchedulePublication defaultDatePicker defaultSchedulingDate "")
+                (SchedulePublication (emptySchedulingForm shared))
                 (\_ -> text "Schedule publication")
             |> Radio.withVertical True
             |> Radio.withDisabled form.isSaving
@@ -681,15 +830,15 @@ viewForm ({ shared } as loggedIn) form =
             PublishImmediately ->
                 text ""
 
-            SchedulePublication datePicker selectedDate publicationTime ->
+            SchedulePublication scheduling ->
                 div [ class "flex space-x-4" ]
-                    [ div [ class "w-full" ]
+                    [ div [ class "w-full mb-4" ]
                         [ -- TODO - I18N
                           View.Form.label [] "datepicker-input" "Initial date"
                         , div [ class "relative" ]
-                            [ DatePicker.view (Just selectedDate)
-                                datePickerSettings
-                                datePicker
+                            [ DatePicker.view (Just scheduling.selectedDate)
+                                (datePickerSettings (Maybe.Extra.isJust scheduling.dateError))
+                                scheduling.datePicker
                                 |> Html.map SetDatePicker
                             , img
                                 [ src "/icons/calendar.svg"
@@ -698,6 +847,13 @@ viewForm ({ shared } as loggedIn) form =
                                 ]
                                 []
                             ]
+                        , case scheduling.dateError of
+                            Nothing ->
+                                text ""
+
+                            Just error ->
+                                span [ class "form-error" ]
+                                    [ text error ]
                         ]
                     , Input.init
                         { -- TODO - I18N
@@ -705,9 +861,9 @@ viewForm ({ shared } as loggedIn) form =
                         , id = "time-input"
                         , onInput = EnteredPublicationTime
                         , disabled = form.isSaving
-                        , value = publicationTime
+                        , value = scheduling.selectedTime
                         , placeholder = Nothing
-                        , problems = form.timeError |> Maybe.map List.singleton
+                        , problems = scheduling.timeError |> Maybe.map List.singleton
                         , translators = translators
                         }
                         |> Input.withContainerAttrs [ class "w-full" ]
@@ -769,8 +925,8 @@ viewLatestEditions ({ shared } as loggedIn) news profileSummary =
                 ]
 
 
-datePickerSettings : DatePicker.Settings
-datePickerSettings =
+datePickerSettings : Bool -> DatePicker.Settings
+datePickerSettings hasError =
     let
         defaultSettings =
             DatePicker.defaultSettings
@@ -778,8 +934,11 @@ datePickerSettings =
     { defaultSettings
         | changeYear = DatePicker.off
         , inputId = Just "datepicker-input"
-        , inputClassList = [ ( "input w-full", True ) ]
-        , containerClassList = [ ( "relative-table mb-4", True ) ]
+        , inputClassList =
+            [ ( "input w-full", True )
+            , ( "with-error", hasError )
+            ]
+        , containerClassList = [ ( "relative-table", True ) ]
         , dateFormatter = Date.format "E, d MMM y"
     }
 
@@ -817,6 +976,9 @@ msgToString msg =
 formMsgToString : FormMsg -> List String
 formMsgToString formMsg =
     case formMsg of
+        NoOp ->
+            [ "NoOp" ]
+
         EnteredTitle _ ->
             [ "EnteredTitle" ]
 

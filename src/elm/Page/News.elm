@@ -21,7 +21,6 @@ import View.MarkdownEditor
 
 
 -- TODO - Add Reactions
--- TODO - Validation on News Editor - non-empty description, non-empty title, future date
 -- MODEL
 
 
