@@ -457,18 +457,39 @@ updateForm msg form loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
-        CompletedSaving (RemoteData.Success maybeNewsId) ->
+        CompletedSaving (RemoteData.Success maybeNews) ->
+            let
+                setAsHighlighted =
+                    case maybeNews of
+                        Nothing ->
+                            identity
+
+                        Just news ->
+                            case news.scheduling of
+                                Nothing ->
+                                    setHighlighted news
+
+                                Just scheduling ->
+                                    if Time.posixToMillis scheduling <= Time.posixToMillis loggedIn.shared.now then
+                                        setHighlighted news
+
+                                    else
+                                        identity
+
+                setHighlighted news =
+                    UR.addExt
+                        (LoggedIn.UpdatedLoggedIn
+                            { loggedIn
+                                | selectedCommunity =
+                                    RemoteData.map (\community -> { community | highlightedNews = Just news })
+                                        loggedIn.selectedCommunity
+                            }
+                        )
+            in
             { form | isSaving = False }
                 |> UR.init
+                |> setAsHighlighted
                 -- TODO - I18N
-                |> UR.addExt
-                    (LoggedIn.UpdatedLoggedIn
-                        { loggedIn
-                            | selectedCommunity =
-                                RemoteData.map (\community -> { community | highlightedNews = maybeNewsId })
-                                    loggedIn.selectedCommunity
-                        }
-                    )
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "The communication is active")
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunitySettingsNews)
 

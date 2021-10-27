@@ -31,6 +31,7 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
+import Community.News
 import Dict
 import Eos
 import Eos.Account as Eos
@@ -38,7 +39,7 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
+import Html exposing (Html, a, button, div, footer, h1, img, li, nav, p, text, ul)
 import Html.Attributes exposing (class, classList, src, type_)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -64,6 +65,7 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -176,6 +178,7 @@ type alias Model =
     , authToken : String
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
+    , maybeHighlightedNews : Maybe Community.News.Model
     }
 
 
@@ -202,6 +205,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     , authToken = authToken
     , hasSeenDashboard = False
     , queuedCommunityFields = []
+    , maybeHighlightedNews = Nothing
     }
 
 
@@ -350,6 +354,13 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                 ]
             ]
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
+            :: (case model.maybeHighlightedNews of
+                    Just news ->
+                        viewHighlightedNews pageMsg news
+
+                    Nothing ->
+                        text ""
+               )
             :: mainView
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
@@ -369,6 +380,31 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                ]
         )
+
+
+viewHighlightedNews : (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
+viewHighlightedNews toPageMsg news =
+    div [ class "bg-purple-500 p-4" ]
+        [ div [ class "container mx-auto px-4 text-white flex items-center" ]
+            [ Icons.speechBubble "stroke-current flex-shrink-0"
+            , div [ class "truncate ml-4 mr-8" ]
+                [ h1 [ class "font-bold truncate" ] [ text news.title ]
+                , p [ class "truncate" ] [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                ]
+            , a
+                [ class "button button-primary w-auto px-4 ml-auto mr-6"
+                , Route.href (Route.News (Just news.id))
+                , onClick (toPageMsg ClickedReadHighlightedNews)
+                ]
+                -- TODO - I18N
+                [ text "Read" ]
+            , button
+                [ class "hover:text-red focus:text-red focus:outline-none"
+                , onClick (toPageMsg ClosedHighlightedNews)
+                ]
+                [ Icons.close "fill-current" ]
+            ]
+        ]
 
 
 viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
@@ -1080,6 +1116,8 @@ type Msg
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
+    | ClickedReadHighlightedNews
+    | ClosedHighlightedNews
 
 
 update : Msg -> Model -> UpdateResult
@@ -1236,7 +1274,12 @@ update msg model =
                         (Profile.contributionCountQuery community.symbol model.accountName)
                         CompletedLoadContributionCount
             in
-            { newModel | selectedCommunity = RemoteData.Success newCommunity }
+            { newModel
+                | selectedCommunity = RemoteData.Success newCommunity
+
+                -- TODO - Check if user has already read news
+                , maybeHighlightedNews = community.highlightedNews
+            }
                 |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
@@ -1536,6 +1579,14 @@ update msg model =
 
         CompletedLoadContributionCount _ ->
             model
+                |> UR.init
+
+        ClosedHighlightedNews ->
+            { model | maybeHighlightedNews = Nothing }
+                |> UR.init
+
+        ClickedReadHighlightedNews ->
+            { model | maybeHighlightedNews = Nothing }
                 |> UR.init
 
 
@@ -1920,3 +1971,9 @@ msgToString msg =
 
         CompletedLoadContributionCount r ->
             [ "CompletedLoadContributionCount", UR.remoteDataToString r ]
+
+        ClosedHighlightedNews ->
+            [ "ClosedHighlightedNews" ]
+
+        ClickedReadHighlightedNews ->
+            [ "ClickedReadHighlightedNews" ]
