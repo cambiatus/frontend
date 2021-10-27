@@ -27,7 +27,7 @@ body > * {
 
 @layer components {
   .button {
-    @apply uppercase text-base font-bold leading-5 flex items-center justify-center text-center w-40 h-10 px-2;
+    @apply uppercase text-base font-bold leading-5 flex items-center justify-center text-center w-40 h-10 px-2 focus-ring;
   }
 
   .button:disabled {
@@ -39,7 +39,7 @@ body > * {
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:outline-none;
+    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:ring-orange-500 focus-visible:ring-opacity-25 focus-visible:outline-none;
   }
 
   .button-sm {
