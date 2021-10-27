@@ -27,6 +27,7 @@ type alias Model =
     { description : String
     , id : Int
     , title : String
+    , receipt : Maybe Receipt
     , scheduling : Maybe Time.Posix
     , insertedAt : Time.Posix
     , updatedAt : Time.Posix
@@ -62,6 +63,7 @@ selectionSet =
         |> SelectionSet.with News.description
         |> SelectionSet.with News.id
         |> SelectionSet.with News.title
+        |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
         |> SelectionSet.with
             (News.scheduling
                 |> SelectionSet.map

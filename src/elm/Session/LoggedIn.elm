@@ -357,7 +357,12 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
             :: (case model.maybeHighlightedNews of
                     Just news ->
-                        viewHighlightedNews pageMsg news
+                        case news.receipt of
+                            Just _ ->
+                                viewHighlightedNews pageMsg news
+
+                            Nothing ->
+                                text ""
 
                     Nothing ->
                         text ""
