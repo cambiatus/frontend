@@ -34,11 +34,18 @@ insertedAt =
     Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
 
 
+newsReceipt :
+    SelectionSet decodesTo Cambiatus.Object.NewsReceipt
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.News
+newsReceipt object_ =
+    Object.selectionForCompositeField "newsReceipt" [] object_ (identity >> Decode.nullable)
+
+
 reactions :
     SelectionSet decodesTo Cambiatus.Object.ReactionType
-    -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.News
+    -> SelectionSet (List decodesTo) Cambiatus.Object.News
 reactions object_ =
-    Object.selectionForCompositeField "reactions" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "reactions" [] object_ (identity >> Decode.list)
 
 
 scheduling : SelectionSet (Maybe Cambiatus.ScalarCodecs.DateTime) Cambiatus.Object.News
@@ -65,6 +72,6 @@ user object_ =
 
 versions :
     SelectionSet decodesTo Cambiatus.Object.NewsVersion
-    -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.News
+    -> SelectionSet (List decodesTo) Cambiatus.Object.News
 versions object_ =
-    Object.selectionForCompositeField "versions" [] object_ (identity >> Decode.nullable >> Decode.list)
+    Object.selectionForCompositeField "versions" [] object_ (identity >> Decode.list)

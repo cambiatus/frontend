@@ -7,6 +7,7 @@ import Community
 import Community.News
 import Eos
 import Graphql.Http
+import Graphql.OptionalArgument
 import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h1, p, small, text)
 import Html.Attributes exposing (class)
@@ -52,7 +53,7 @@ type HighlightNewsConfirmationModal
 type Msg
     = CompletedLoadCommunity Community.Model
     | ToggledHighlightNews Int Bool
-    | CompletedSettingHighlightedNews (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
+    | CompletedSettingHighlightedNews Bool (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
     | ClosedHighlightNewsConfirmationModal
     | ConfirmedHighlightNews Int
 
@@ -84,12 +85,17 @@ update msg model loggedIn =
                             UR.init model
                                 |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
 
-                        Just _ ->
-                            { model
-                                | highlightNewsConfirmationModal =
-                                    Visible { newsId = newsId, isHighlighted = isHighlighted }
-                            }
-                                |> UR.init
+                        Just highlightedNews ->
+                            if highlightedNews.id == newsId then
+                                UR.init model
+                                    |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+
+                            else
+                                { model
+                                    | highlightNewsConfirmationModal =
+                                        Visible { newsId = newsId, isHighlighted = isHighlighted }
+                                }
+                                    |> UR.init
 
                 _ ->
                     UR.init model
@@ -99,7 +105,7 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.Settings.News", function = "update" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
-        CompletedSettingHighlightedNews (RemoteData.Success maybeNews) ->
+        CompletedSettingHighlightedNews isHighlighted (RemoteData.Success maybeNews) ->
             { model | highlightNewsConfirmationModal = NotVisible }
                 |> UR.init
                 |> UR.addExt
@@ -108,13 +114,20 @@ update msg model loggedIn =
                             | selectedCommunity =
                                 RemoteData.map
                                     (\community ->
-                                        { community | highlightedNews = maybeNews }
+                                        { community
+                                            | highlightedNews =
+                                                if isHighlighted then
+                                                    maybeNews
+
+                                                else
+                                                    Nothing
+                                        }
                                     )
                                     loggedIn.selectedCommunity
                         }
                     )
 
-        CompletedSettingHighlightedNews (RemoteData.Failure err) ->
+        CompletedSettingHighlightedNews _ (RemoteData.Failure err) ->
             { model | highlightNewsConfirmationModal = NotVisible }
                 |> UR.init
                 |> UR.logGraphqlError msg
@@ -126,10 +139,10 @@ update msg model loggedIn =
                 -- TODO - I18N
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something wrong happened when highlighting news")
 
-        CompletedSettingHighlightedNews RemoteData.NotAsked ->
+        CompletedSettingHighlightedNews _ RemoteData.NotAsked ->
             UR.init model
 
-        CompletedSettingHighlightedNews RemoteData.Loading ->
+        CompletedSettingHighlightedNews _ RemoteData.Loading ->
             UR.init model
 
         ClosedHighlightNewsConfirmationModal ->
@@ -155,19 +168,24 @@ update msg model loggedIn =
 
 setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> Cmd Msg
 setHighlightNews loggedIn community newsId isHighlighted =
-    -- TODO - Check if we can have no highlighted news
     Api.Graphql.mutation loggedIn.shared
         (Just loggedIn.authToken)
         (Cambiatus.Mutation.highlightedNews
-            { communityId = Eos.symbolToString community.symbol
-            , newsId = newsId
-            }
+            (\optionals ->
+                { optionals
+                    | newsId =
+                        if isHighlighted then
+                            Graphql.OptionalArgument.Present newsId
+
+                        else
+                            Graphql.OptionalArgument.Null
+                }
+            )
+            { communityId = Eos.symbolToString community.symbol }
             (Cambiatus.Object.Community.highlightedNews Community.News.selectionSet)
-            -- We need to remove nested Maybes (one from the highlightedNews
-            -- mutation, and another one from the highlightedNews selectionSet)
             |> Graphql.SelectionSet.map (Maybe.andThen identity)
         )
-        CompletedSettingHighlightedNews
+        (CompletedSettingHighlightedNews isHighlighted)
 
 
 
@@ -352,7 +370,7 @@ msgToString msg =
         ToggledHighlightNews _ _ ->
             [ "ToggledHighlightNews" ]
 
-        CompletedSettingHighlightedNews r ->
+        CompletedSettingHighlightedNews _ r ->
             [ "CompletedSettingHighlightedNews", UR.remoteDataToString r ]
 
         ClosedHighlightNewsConfirmationModal ->

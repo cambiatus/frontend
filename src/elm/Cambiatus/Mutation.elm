@@ -101,20 +101,31 @@ hasNews requiredArgs object_ =
     Object.selectionForCompositeField "hasNews" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "hasNews" requiredArgs.hasNews Encode.bool ] object_ (identity >> Decode.nullable)
 
 
+type alias HighlightedNewsOptionalArguments =
+    { newsId : OptionalArgument Int }
+
+
 type alias HighlightedNewsRequiredArguments =
-    { communityId : String
-    , newsId : Int
-    }
+    { communityId : String }
 
 
-{-| [Auth required - Admin only] Set highlighted news of community
+{-| [Auth required - Admin only] Set highlighted news of community. If news\_id is not present, sets highlighted as nil
 -}
 highlightedNews :
-    HighlightedNewsRequiredArguments
+    (HighlightedNewsOptionalArguments -> HighlightedNewsOptionalArguments)
+    -> HighlightedNewsRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Community
     -> SelectionSet (Maybe decodesTo) RootMutation
-highlightedNews requiredArgs object_ =
-    Object.selectionForCompositeField "highlightedNews" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+highlightedNews fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { newsId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "newsId" filledInOptionals.newsId Encode.int ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "highlightedNews" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias NewsOptionalArguments =

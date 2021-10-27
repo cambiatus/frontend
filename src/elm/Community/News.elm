@@ -75,9 +75,9 @@ selectionSet =
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.insertedAt)
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.updatedAt)
         |> SelectionSet.with
-            (News.versions
-                (Version.user Profile.minimalSelectionSet)
-                |> SelectionSet.map (List.filterMap identity >> List.head)
+            (Version.user Profile.minimalSelectionSet
+                |> News.versions
+                |> SelectionSet.map List.head
             )
 
 
