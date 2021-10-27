@@ -1336,7 +1336,9 @@ update msg model =
         CompletedLoadCommunityField community (RemoteData.Success (Just fieldValue)) ->
             let
                 newCommunity =
-                    Community.setFieldValue fieldValue community
+                    model.selectedCommunity
+                        |> RemoteData.withDefault community
+                        |> Community.setFieldValue fieldValue
             in
             { model | selectedCommunity = RemoteData.Success newCommunity }
                 |> UR.init
@@ -1373,7 +1375,9 @@ update msg model =
         CompletedLoadCommunityFields community (RemoteData.Success fieldValues) ->
             let
                 newCommunity =
-                    List.foldl Community.setFieldValue community fieldValues
+                    List.foldl Community.setFieldValue
+                        (RemoteData.withDefault community model.selectedCommunity)
+                        fieldValues
 
                 addBroadcasts uResult =
                     List.foldl
