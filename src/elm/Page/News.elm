@@ -1,14 +1,17 @@
 module Page.News exposing (Model, Msg, init, msgToString, update, view)
 
+import Api.Graphql
 import Browser.Dom
+import Cambiatus.Mutation
 import Community
 import Community.News
+import Graphql.Http
 import Html exposing (Html, div, h1, span, text)
 import Html.Attributes exposing (class)
 import List.Extra
 import Maybe.Extra
 import Page
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Task
@@ -17,7 +20,9 @@ import View.MarkdownEditor
 
 
 
--- TODO - Mark news as read
+-- TODO - Add Reactions
+-- TODO - Filter out news that haven't been published yet (scheduled)
+-- TODO - Validation on News Editor - non-empty description, non-empty title, future date
 -- MODEL
 
 
@@ -26,10 +31,28 @@ type alias Model =
 
 
 init : Maybe Int -> LoggedIn.Model -> UpdateResult
-init maybeNewsId _ =
+init maybeNewsId loggedIn =
+    let
+        markNewsAsRead =
+            case maybeNewsId of
+                Nothing ->
+                    identity
+
+                Just newsId ->
+                    UR.addCmd
+                        (Api.Graphql.mutation loggedIn.shared
+                            (Just loggedIn.authToken)
+                            (Cambiatus.Mutation.read
+                                { newsId = newsId }
+                                Community.News.receiptSelectionSet
+                            )
+                            CompletedMarkingNewsAsRead
+                        )
+    in
     { newsId = maybeNewsId }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
+        |> markNewsAsRead
         |> UR.addCmd
             (Browser.Dom.setViewport 0 0
                 |> Task.perform (\_ -> NoOp)
@@ -42,6 +65,7 @@ init maybeNewsId _ =
 
 type Msg
     = NoOp
+    | CompletedMarkingNewsAsRead (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
 
 
 type alias UpdateResult =
@@ -56,6 +80,10 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model _ =
     case msg of
         NoOp ->
+            UR.init model
+
+        CompletedMarkingNewsAsRead _ ->
+            -- TODO - Do something
             UR.init model
 
 
@@ -158,3 +186,6 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedMarkingNewsAsRead r ->
+            [ "CompletedMarkingNewsAsRead", UR.remoteDataToString r ]

@@ -1,4 +1,4 @@
-module Community.News exposing (Model, selectionSet, viewList)
+module Community.News exposing (Model, Receipt, receiptSelectionSet, selectionSet, viewList)
 
 import Cambiatus.Object
 import Cambiatus.Object.News as News
@@ -19,6 +19,10 @@ import View.Components
 import View.MarkdownEditor
 
 
+
+-- TYPES
+
+
 type alias Model =
     { description : String
     , id : Int
@@ -28,6 +32,14 @@ type alias Model =
     , updatedAt : Time.Posix
     , lastEditor : Maybe Profile.Minimal
     }
+
+
+type alias Receipt =
+    {}
+
+
+
+-- GRAPHQL
 
 
 selectionSet : SelectionSet Model Cambiatus.Object.News
@@ -46,14 +58,8 @@ selectionSet =
                         )
                     )
             )
-        |> SelectionSet.with
-            (News.insertedAt
-                |> SelectionSet.map timeFromNaiveDateTime
-            )
-        |> SelectionSet.with
-            (News.updatedAt
-                |> SelectionSet.map timeFromNaiveDateTime
-            )
+        |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.insertedAt)
+        |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.updatedAt)
         |> SelectionSet.with
             (News.versions
                 (Version.user Profile.minimalSelectionSet)
@@ -61,10 +67,23 @@ selectionSet =
             )
 
 
+receiptSelectionSet : SelectionSet Receipt Cambiatus.Object.NewsReceipt
+receiptSelectionSet =
+    SelectionSet.succeed Receipt
+
+
+
+-- GRAPHQL HELPERS
+
+
 timeFromNaiveDateTime : Cambiatus.Scalar.NaiveDateTime -> Time.Posix
 timeFromNaiveDateTime (Cambiatus.Scalar.NaiveDateTime dateTime) =
     Iso8601.toTime dateTime
         |> Result.withDefault (Time.millisToPosix 0)
+
+
+
+-- VIEW
 
 
 viewList : Shared -> List (Html.Attribute msg) -> List Model -> Html msg
