@@ -459,7 +459,6 @@ window.customElements.define('markdown-editor',
 
     toggleHasError () {
       const hasError = this.getAttribute('elm-has-error') === 'true'
-      console.log({ hasError, classes: this._parentContainer.classList })
       if (hasError) {
         this._parentContainer.classList.add('with-error')
       } else {
@@ -1425,6 +1424,7 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
 let newCommunityNotifier = null
 let transferNotifier = null
 let notificationNotifier = null
+let highlightedNewsNotifier = null
 
 const absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
 
@@ -1934,6 +1934,90 @@ async function handleJavascriptPort (arg) {
       }
 
       AbsintheSocket.observe(absintheSocket, notificationNotifier, {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      })
+
+      return { isSubscription: true }
+    }
+    case 'subscribeToHighlightedNewsChanged': {
+      // Cancel existing notifier
+      if (highlightedNewsNotifier) {
+        AbsintheSocket.cancel(absintheSocket, highlightedNewsNotifier)
+      }
+
+      // Create new notifier
+      highlightedNewsNotifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
+
+      const onStart = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Started listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onAbort = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Aborted listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onCancel = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Cancelled listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onError = data => {
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Error listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
+      }
+
+      const onResult = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Got a result when listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          meta: data
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      AbsintheSocket.observe(absintheSocket, highlightedNewsNotifier, {
         onAbort,
         onError,
         onCancel,

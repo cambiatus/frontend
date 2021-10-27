@@ -19,6 +19,20 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias HighlightedNewsChangeRequiredArguments =
+    { communityId : String }
+
+
+{-| Subscribe to highlighted\_news change
+-}
+highlightedNewsChange :
+    HighlightedNewsChangeRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) RootSubscription
+highlightedNewsChange requiredArgs object_ =
+    Object.selectionForCompositeField "highlightedNewsChange" [ Argument.required "communityId" requiredArgs.communityId Encode.string ] object_ (identity >> Decode.nullable)
+
+
 type alias NewcommunityRequiredArguments =
     { input : Cambiatus.InputObject.NewCommunityInput }
 

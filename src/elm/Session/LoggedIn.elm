@@ -357,12 +357,13 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
             :: (case model.maybeHighlightedNews of
                     Just news ->
-                        case news.receipt of
-                            Just _ ->
-                                viewHighlightedNews pageMsg news
-
-                            Nothing ->
-                                text ""
+                        -- case news.receipt of
+                        --     Just _ ->
+                        --         viewHighlightedNews pageMsg news
+                        --     Nothing ->
+                        --         text ""
+                        -- TODO - Conditionally show the highlighted news
+                        viewHighlightedNews pageMsg news
 
                     Nothing ->
                         text ""
@@ -1124,6 +1125,7 @@ type Msg
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
+    | ReceivedNewHighlightedNews Encode.Value
 
 
 update : Msg -> Model -> UpdateResult
@@ -1289,6 +1291,19 @@ update msg model =
                 |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
+                |> UR.addPort
+                    { responseAddress = ReceivedNewHighlightedNews Encode.null
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "subscribeToHighlightedNewsChanged" )
+                            , ( "subscription"
+                              , highlightedNewsSubscription newCommunity.symbol
+                                    |> Graphql.Document.serializeSubscription
+                                    |> Encode.string
+                              )
+                            ]
+                    }
                 |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
                 |> UR.addCmd
                     (Community.queryForFields community.symbol
@@ -1599,6 +1614,44 @@ update msg model =
             { model | maybeHighlightedNews = Nothing }
                 |> UR.init
 
+        ReceivedNewHighlightedNews payload ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    case
+                        Decode.decodeValue
+                            (highlightedNewsSubscription community.symbol
+                                |> Graphql.Document.decoder
+                            )
+                            payload
+                    of
+                        Ok highlightedNews ->
+                            { model
+                                | selectedCommunity =
+                                    RemoteData.Success
+                                        { community | highlightedNews = highlightedNews }
+                                , maybeHighlightedNews = highlightedNews
+                            }
+                                |> UR.init
+
+                        Err err ->
+                            model
+                                |> UR.init
+                                |> UR.logDecodingError msg
+                                    (Just model.accountName)
+                                    "Got an error when loading highlighted news"
+                                    { moduleName = "Session.LoggedIn", function = "update" }
+                                    []
+                                    err
+
+                _ ->
+                    -- TODO - Log impossible
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Received new highlighted news, but community wasn't loaded"
+                            (Just model.accountName)
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            [ Log.contextFromCommunity model.selectedCommunity ]
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
 handleActionMsg ({ shared } as model) actionMsg =
@@ -1872,6 +1925,12 @@ unreadCountSubscription name =
     Subscription.unreads args unreadSelection
 
 
+highlightedNewsSubscription : Eos.Symbol -> SelectionSet (Maybe Community.News.Model) RootSubscription
+highlightedNewsSubscription symbol =
+    Subscription.highlightedNewsChange { communityId = Eos.symbolToString symbol }
+        Community.News.selectionSet
+
+
 
 -- BROADCAST
 
@@ -1897,6 +1956,11 @@ jsAddressToMsg addr val =
         "CompletedLoadUnread" :: [] ->
             Decode.decodeValue (Decode.field "meta" Decode.value) val
                 |> Result.map CompletedLoadUnread
+                |> Result.toMaybe
+
+        "ReceivedNewHighlightedNews" :: _ ->
+            Decode.decodeValue (Decode.field "meta" Decode.value) val
+                |> Result.map ReceivedNewHighlightedNews
                 |> Result.toMaybe
 
         "GotActionMsg" :: remainAddress ->
@@ -1987,3 +2051,6 @@ msgToString msg =
 
         ClickedReadHighlightedNews ->
             [ "ClickedReadHighlightedNews" ]
+
+        ReceivedNewHighlightedNews _ ->
+            [ "ReceivedNewHighlightedNews" ]

@@ -2,7 +2,7 @@ module Community.News exposing (Model, Receipt, isPublished, receiptSelectionSet
 
 import Cambiatus.Object
 import Cambiatus.Object.News as News
-import Cambiatus.Object.NewsVersion as Version
+import Cambiatus.Object.NewsReceipt as NewsReceipt
 import Cambiatus.Scalar
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, div, h2, p, span, text)
@@ -36,7 +36,8 @@ type alias Model =
 
 
 type alias Receipt =
-    {}
+    { reactions : List String
+    }
 
 
 
@@ -63,7 +64,9 @@ selectionSet =
         |> SelectionSet.with News.description
         |> SelectionSet.with News.id
         |> SelectionSet.with News.title
-        |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
+        -- |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
+        -- TODO - There is an issue where the subscription doesn't work if we include this field
+        |> SelectionSet.hardcoded Nothing
         |> SelectionSet.with
             (News.scheduling
                 |> SelectionSet.map
@@ -76,16 +79,19 @@ selectionSet =
             )
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.insertedAt)
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.updatedAt)
-        |> SelectionSet.with
-            (Version.user Profile.minimalSelectionSet
-                |> News.versions
-                |> SelectionSet.map List.head
-            )
+        -- |> SelectionSet.with
+        --     (Version.user Profile.minimalSelectionSet
+        --         |> News.versions
+        --         |> SelectionSet.map List.head
+        --     )
+        -- TODO - There is an issue where we can only query this field as the admin
+        |> SelectionSet.hardcoded Nothing
 
 
 receiptSelectionSet : SelectionSet Receipt Cambiatus.Object.NewsReceipt
 receiptSelectionSet =
     SelectionSet.succeed Receipt
+        |> SelectionSet.with NewsReceipt.reactions
 
 
 
