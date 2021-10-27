@@ -138,6 +138,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
+        , Time.every (60 * 1000) GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
 
