@@ -370,7 +370,7 @@ window.customElements.define('key-listener',
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled', 'elm-has-error' ] }
+    static get observedAttributes () { return ['elm-edit-text', 'elm-remove-text', 'elm-disabled', 'elm-has-error'] }
 
     constructor () {
       super()
@@ -385,8 +385,8 @@ window.customElements.define('markdown-editor',
           modules: {
             toolbar: [
               [{ 'header': 1 }, { 'header': 2 }],
-              [ 'bold', 'italic', 'strike' ],
-              [ 'link' ],
+              ['bold', 'italic', 'strike'],
+              ['link'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
@@ -539,7 +539,7 @@ window.customElements.define('markdown-editor',
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
+    static get observedAttributes () { return ['elm-distance-to-request', 'elm-element-to-track'] }
 
     connectedCallback () {
       this.listenToScroll()
@@ -600,7 +600,7 @@ window.customElements.define('infinite-list',
 
 window.customElements.define('date-formatter',
   class DateFormatter extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-locale', 'elm-date' ] }
+    static get observedAttributes () { return ['elm-locale', 'elm-date'] }
 
     constructor () {
       super()
@@ -1065,8 +1065,8 @@ if (process.env.NODE_ENV === 'development') {
           supported = true
           return null
         },
-        hasBody: function (obj) {},
-        body: function (obj, config) {}
+        hasBody: function (obj) { },
+        body: function (obj, config) { }
       }
     ]
     console.log('elm-debug-transformer: checking for formatter support.', {})
