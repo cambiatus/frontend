@@ -1,12 +1,15 @@
-module Community.News exposing (Model, Receipt, isPublished, receiptSelectionSet, selectionSet, viewList)
+module Community.News exposing (Model, Reaction, Receipt, isPublished, listReactions, mockSelectedReactions, reactToNews, reactionName, reactionToString, receiptSelectionSet, selectionSet, viewList)
 
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.News as News
 import Cambiatus.Object.NewsReceipt as NewsReceipt
 import Cambiatus.Scalar
+import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, div, h2, p, span, text)
 import Html.Attributes exposing (class, classList, style)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
 import Iso8601
 import List.Extra
@@ -40,6 +43,19 @@ type alias Receipt =
     }
 
 
+type Reaction
+    = Smile
+    | HeartEyes
+    | Frown
+    | RaisedEyebrow
+    | ThumbsUp
+    | ThumbsDown
+    | Clap
+    | Tada
+    | Heart
+    | Rocket
+
+
 
 -- HELPERS
 
@@ -52,6 +68,97 @@ isPublished now model =
 
         Just scheduling ->
             Time.posixToMillis now >= Time.posixToMillis scheduling
+
+
+reactionToString : Reaction -> String
+reactionToString reaction =
+    case reaction of
+        Smile ->
+            "😃"
+
+        HeartEyes ->
+            "😍"
+
+        Frown ->
+            "🙁"
+
+        RaisedEyebrow ->
+            "\u{1F928}"
+
+        ThumbsUp ->
+            "👍"
+
+        ThumbsDown ->
+            "👎"
+
+        Clap ->
+            "👏"
+
+        Tada ->
+            "🎉"
+
+        Heart ->
+            "❤️"
+
+        Rocket ->
+            "🚀"
+
+
+reactionName : Reaction -> String
+reactionName reaction =
+    case reaction of
+        Smile ->
+            "smile"
+
+        HeartEyes ->
+            "heartEyes"
+
+        Frown ->
+            "frown"
+
+        RaisedEyebrow ->
+            "raisedEyebrow"
+
+        ThumbsUp ->
+            "thumbsUp"
+
+        ThumbsDown ->
+            "thumbsDown"
+
+        Clap ->
+            "clap"
+
+        Tada ->
+            "tada"
+
+        Heart ->
+            "heart"
+
+        Rocket ->
+            "rocket"
+
+
+listReactions : List Reaction
+listReactions =
+    [ Smile
+    , HeartEyes
+    , Frown
+    , RaisedEyebrow
+    , ThumbsUp
+    , ThumbsDown
+    , Clap
+    , Tada
+    , Heart
+    , Rocket
+    ]
+
+
+mockSelectedReactions : List { reaction : Reaction, count : Int }
+mockSelectedReactions =
+    [ { reaction = Smile, count = 5 }
+    , { reaction = Frown, count = 0 }
+    , { reaction = RaisedEyebrow, count = 10 }
+    ]
 
 
 
@@ -92,6 +199,15 @@ receiptSelectionSet : SelectionSet Receipt Cambiatus.Object.NewsReceipt
 receiptSelectionSet =
     SelectionSet.succeed Receipt
         |> SelectionSet.with NewsReceipt.reactions
+
+
+reactToNews : { newsId : Int, reactions : List Reaction } -> SelectionSet (Maybe Receipt) Graphql.Operation.RootMutation
+reactToNews args =
+    Cambiatus.Mutation.reactToNews
+        { newsId = args.newsId
+        , reactions = List.map reactionName args.reactions
+        }
+        receiptSelectionSet
 
 
 
@@ -151,7 +267,7 @@ viewSummary hasRead news =
         , style "grid-template-columns" "28px 1fr 80px"
         , Route.href (Route.News (Just news.id))
         ]
-        [ Icons.speechBubble "flex-shrink-0 stroke-current"
+        [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
         , div [ class "truncate ml-4 mr-16" ]
             [ h2 [ class "font-bold truncate" ] [ text news.title ]
             , p [ class "truncate" ]

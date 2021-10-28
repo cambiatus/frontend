@@ -39,8 +39,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, h1, img, li, nav, p, text, ul)
-import Html.Attributes exposing (class, classList, src, type_)
+import Html exposing (Html, a, button, div, footer, h1, img, li, nav, p, span, text, ul)
+import Html.Attributes exposing (alt, class, classList, src, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -393,7 +394,12 @@ viewHighlightedNews : (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
 viewHighlightedNews toPageMsg news =
     div [ class "bg-purple-500 p-4" ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
-            [ Icons.speechBubble "stroke-current flex-shrink-0"
+            [ Icons.speechBubble
+                [ alt "" ]
+                "stroke-current flex-shrink-0"
+
+            -- TODO - I18N
+            , span [ class "sr-only" ] [ text "Community news" ]
             , div [ class "truncate ml-4 mr-8" ]
                 [ h1 [ class "font-bold truncate" ] [ text news.title ]
                 , p [ class "truncate" ] [ text <| View.MarkdownEditor.removeFormatting news.description ]
@@ -407,6 +413,9 @@ viewHighlightedNews toPageMsg news =
                 [ text "Read" ]
             , button
                 [ class "hover:text-red focus:text-red focus:outline-none"
+
+                -- TODO - I18N
+                , ariaLabel "close"
                 , onClick (toPageMsg ClosedHighlightedNews)
                 ]
                 [ Icons.close "fill-current" ]
