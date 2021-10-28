@@ -71,12 +71,12 @@ init kind loggedIn =
             ( Editing emptyForm, initWithCommunity )
 
         Route.EditNews newsId ->
-            ( WaitingNewsToEdit newsId
+            ( WaitingNewsToEdit
             , Cmd.batch [ queryForNews newsId, initWithCommunity ]
             )
 
         Route.CopyNews newsId ->
-            ( WaitingNewsToCopy newsId
+            ( WaitingNewsToCopy
             , Cmd.batch [ queryForNews newsId, initWithCommunity ]
             )
 
@@ -270,7 +270,7 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
-                WaitingNewsToCopy _ ->
+                WaitingNewsToCopy ->
                     let
                         ( form, cmd ) =
                             formFromExistingNews loggedIn.shared.timezone news CreateNew
@@ -279,7 +279,7 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addCmd cmd
 
-                WaitingNewsToEdit _ ->
+                WaitingNewsToEdit ->
                     let
                         ( form, cmd ) =
                             formFromExistingNews loggedIn.shared.timezone
@@ -336,14 +336,14 @@ update msg model loggedIn =
                     updateForm subMsg form loggedIn
                         |> UR.map Editing GotFormMsg UR.addExt
 
-                WaitingNewsToCopy _ ->
+                WaitingNewsToCopy ->
                     UR.init model
                         |> UR.logIncompatibleMsg msg
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             []
 
-                WaitingNewsToEdit _ ->
+                WaitingNewsToEdit ->
                     UR.init model
                         |> UR.logIncompatibleMsg msg
                             (Just loggedIn.accountName)
@@ -740,10 +740,10 @@ view loggedIn model =
                     Page.fullPageGraphQLError "Got an error when fetching communication"
                         err
 
-                WaitingNewsToCopy _ ->
+                WaitingNewsToCopy ->
                     Page.fullPageLoading loggedIn.shared
 
-                WaitingNewsToEdit _ ->
+                WaitingNewsToEdit ->
                     Page.fullPageLoading loggedIn.shared
             ]
     }
