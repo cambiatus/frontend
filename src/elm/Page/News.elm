@@ -218,38 +218,29 @@ view loggedIn model =
         content =
             case Community.getField loggedIn.selectedCommunity .news of
                 RemoteData.Success ( community, news ) ->
-                    let
-                        maybeSelectedNews : Maybe Community.News.Model
-                        maybeSelectedNews =
-                            if not community.hasNews then
-                                Nothing
-
-                            else
-                                model.newsId
-                                    |> Maybe.andThen (\newsId -> List.Extra.find (\{ id } -> id == newsId) news)
-                                    |> Maybe.Extra.orElse community.highlightedNews
-                                    |> Maybe.Extra.orElse (List.head news)
-                    in
                     div []
                         [ Page.viewHeader loggedIn title
-                        , case maybeSelectedNews of
-                            Nothing ->
-                                Page.fullPageNotFound
-                                    (t "news.no_news.title")
-                                    (t "news.no_news.description")
+                        , if not community.hasNews || List.isEmpty news then
+                            Page.fullPageNotFound
+                                (t "news.no_news.title")
+                                (t "news.no_news.description")
 
-                            Just selectedNews ->
-                                news
-                                    |> List.filter
-                                        (\n ->
-                                            Community.News.isPublished
-                                                loggedIn.shared.now
-                                                n
-                                                && (n /= selectedNews)
-                                        )
-                                    |> view_ loggedIn
-                                        model
-                                        selectedNews
+                          else
+                            news
+                                |> List.filter
+                                    (\n ->
+                                        Community.News.isPublished loggedIn.shared.now n
+                                            && (Just n.id /= model.newsId)
+                                    )
+                                |> view_ loggedIn
+                                    model
+                                    (model.newsId
+                                        |> Maybe.andThen
+                                            (\newsId ->
+                                                List.Extra.find (\{ id } -> id == newsId)
+                                                    news
+                                            )
+                                    )
                         ]
 
                 RemoteData.Failure failure ->
@@ -269,25 +260,34 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : LoggedIn.Model -> Model -> Community.News.Model -> List Community.News.Model -> Html Msg
-view_ ({ shared } as loggedIn) model selectedNews news =
+view_ : LoggedIn.Model -> Model -> Maybe Community.News.Model -> List Community.News.Model -> Html Msg
+view_ ({ shared } as loggedIn) model maybeSelectedNews news =
     let
         { t } =
             shared.translators
     in
     div []
-        [ viewMainNews loggedIn model selectedNews
-        , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
-            [ span [] [ text <| t "news.read" ]
-            , text " "
-            , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
+        (List.concat
+            [ case maybeSelectedNews of
+                Just selectedNews ->
+                    [ viewMainNews loggedIn model selectedNews
+                    , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+                        [ span [] [ text <| t "news.read" ]
+                        , text " "
+                        , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
+                        ]
+                    ]
+
+                Nothing ->
+                    []
+            , [ div [ class "bg-white" ]
+                    [ Community.News.viewList shared
+                        [ class "container mx-auto px-4 pt-6" ]
+                        news
+                    ]
+              ]
             ]
-        , div [ class "bg-white" ]
-            [ Community.News.viewList shared
-                [ class "container mx-auto px-4 pt-6" ]
-                news
-            ]
-        ]
+        )
 
 
 viewMainNews : LoggedIn.Model -> Model -> Community.News.Model -> Html Msg
