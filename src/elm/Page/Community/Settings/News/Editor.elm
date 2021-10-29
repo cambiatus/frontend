@@ -876,44 +876,43 @@ viewForm ({ shared } as loggedIn) form =
 
 viewLatestEditions : LoggedIn.Model -> Community.News.Model -> Profile.Summary.Model -> Html FormMsg
 viewLatestEditions ({ shared } as loggedIn) news profileSummary =
-    case news.lastEditor of
-        Nothing ->
-            text ""
+    if news.insertedAt == news.updatedAt then
+        text ""
 
-        Just lastEditor ->
-            div []
-                [ p [ class "label mb-6" ] [ text "Latest editions" ]
-                , div [ class "flex items-center" ]
-                    [ profileSummary
-                        |> Profile.Summary.withoutName
-                        |> Profile.Summary.withImageSize "h-8 w-8"
-                        |> Profile.Summary.view shared
-                            loggedIn.accountName
-                            lastEditor
-                        |> Html.map GotEditorSummaryMsg
-                    , p [ class "text-gray-900 ml-2" ]
-                        [ text <| shared.translators.t "news.edited_by"
-                        , a
-                            [ class "font-bold hover:underline"
-                            , Route.href (Route.Profile lastEditor.account)
-                            ]
-                            [ lastEditor.name
-                                |> Maybe.withDefault (Eos.Account.nameToString lastEditor.account)
-                                |> text
-                            ]
-                        , View.Components.dateViewer []
-                            (\translations ->
-                                { translations
-                                    | today = Nothing
-                                    , yesterday = Nothing
-                                    , other = shared.translators.t "edited_date"
-                                }
-                            )
-                            shared
-                            news.updatedAt
+    else
+        div []
+            [ p [ class "label mb-6" ] [ text "Latest editions" ]
+            , div [ class "flex items-center" ]
+                [ profileSummary
+                    |> Profile.Summary.withoutName
+                    |> Profile.Summary.withImageSize "h-8 w-8"
+                    |> Profile.Summary.view shared
+                        loggedIn.accountName
+                        news.creator
+                    |> Html.map GotEditorSummaryMsg
+                , p [ class "text-gray-900 ml-2" ]
+                    [ text <| shared.translators.t "news.edited_by"
+                    , a
+                        [ class "font-bold hover:underline"
+                        , Route.href (Route.Profile news.creator.account)
                         ]
+                        [ news.creator.name
+                            |> Maybe.withDefault (Eos.Account.nameToString news.creator.account)
+                            |> text
+                        ]
+                    , View.Components.dateViewer []
+                        (\translations ->
+                            { translations
+                                | today = Nothing
+                                , yesterday = Nothing
+                                , other = shared.translators.t "edited_date"
+                            }
+                        )
+                        shared
+                        news.updatedAt
                     ]
                 ]
+            ]
 
 
 datePickerSettings : Bool -> DatePicker.Settings

@@ -6,8 +6,9 @@ import Cambiatus.Mutation
 import Community
 import Community.News
 import Dict
+import Eos.Account
 import Graphql.Http
-import Html exposing (Html, button, details, div, h1, li, span, summary, text, ul)
+import Html exposing (Html, a, button, details, div, h1, li, p, span, summary, text, ul)
 import Html.Attributes exposing (class, classList, id, style, tabindex)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
@@ -17,9 +18,11 @@ import List.Extra
 import Log
 import Maybe.Extra
 import Page
+import Profile.Summary
 import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (onClickPreventAll)
@@ -36,6 +39,7 @@ type alias Model =
     , showReactionPicker : Bool
     , reactionCounts : List { reaction : Community.News.Reaction, count : Int }
     , selectedReactions : List Community.News.Reaction
+    , lastEditorSummary : Profile.Summary.Model
     }
 
 
@@ -68,6 +72,7 @@ init maybeNewsId loggedIn =
             |> List.head
             |> Maybe.map (.reaction >> List.singleton)
             |> Maybe.withDefault []
+    , lastEditorSummary = Profile.Summary.init False
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
@@ -88,6 +93,7 @@ type Msg
     | ClickedToggleReactions
     | ToggledReaction Community.News.Reaction
     | CompletedTogglingReaction Community.News.Reaction (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
+    | GotLastEditorSummaryMsg Profile.Summary.Msg
 
 
 type alias UpdateResult =
@@ -191,6 +197,10 @@ update msg model loggedIn =
         CompletedTogglingReaction _ RemoteData.NotAsked ->
             UR.init model
 
+        GotLastEditorSummaryMsg subMsg ->
+            { model | lastEditorSummary = Profile.Summary.update subMsg model.lastEditorSummary }
+                |> UR.init
+
 
 
 -- VIEW
@@ -237,7 +247,7 @@ view loggedIn model =
                                                 n
                                                 && (n /= selectedNews)
                                         )
-                                    |> view_ loggedIn.shared
+                                    |> view_ loggedIn
                                         model
                                         selectedNews
                         ]
@@ -259,14 +269,14 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : Shared -> Model -> Community.News.Model -> List Community.News.Model -> Html Msg
-view_ shared model selectedNews news =
+view_ : LoggedIn.Model -> Model -> Community.News.Model -> List Community.News.Model -> Html Msg
+view_ ({ shared } as loggedIn) model selectedNews news =
     let
         { t } =
             shared.translators
     in
     div []
-        [ viewMainNews shared.translators model selectedNews
+        [ viewMainNews loggedIn model selectedNews
         , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
             [ span [] [ text <| t "news.read" ]
             , text " "
@@ -280,8 +290,12 @@ view_ shared model selectedNews news =
         ]
 
 
-viewMainNews : Translators -> Model -> Community.News.Model -> Html Msg
-viewMainNews translators model news =
+viewMainNews : LoggedIn.Model -> Model -> Community.News.Model -> Html Msg
+viewMainNews ({ shared } as loggedIn) model news =
+    let
+        { translators } =
+            shared
+    in
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
             [ h1 [ class "text-lg text-black font-bold" ] [ text news.title ]
@@ -291,8 +305,40 @@ viewMainNews translators model news =
                 (viewReactionPicker translators model
                     ++ viewReactions translators model
                 )
+            , if news.insertedAt /= news.updatedAt then
+                div [ class "flex items-center mt-6" ]
+                    [ model.lastEditorSummary
+                        |> Profile.Summary.withoutName
+                        |> Profile.Summary.withImageSize "h-8 w-8"
+                        |> Profile.Summary.view shared
+                            loggedIn.accountName
+                            news.creator
+                        |> Html.map GotLastEditorSummaryMsg
+                    , p [ class "text-gray-900 ml-2" ]
+                        [ text <| translators.t "news.edited_by"
+                        , a
+                            [ class "font-bold hover:underline"
+                            , Route.href (Route.Profile news.creator.account)
+                            ]
+                            [ news.creator.name
+                                |> Maybe.withDefault (Eos.Account.nameToString news.creator.account)
+                                |> text
+                            ]
+                        , View.Components.dateViewer []
+                            (\translations ->
+                                { translations
+                                    | today = Nothing
+                                    , yesterday = Nothing
+                                    , other = translators.t "news.edited_date"
+                                }
+                            )
+                            shared
+                            news.updatedAt
+                        ]
+                    ]
 
-            -- TODO - Show last edit
+              else
+                text ""
             ]
         ]
 
@@ -417,3 +463,6 @@ msgToString msg =
 
         CompletedTogglingReaction _ _ ->
             [ "CompletedTogglingReaction" ]
+
+        GotLastEditorSummaryMsg subMsg ->
+            "GotLastEditorSummaryMsg" :: Profile.Summary.msgToString subMsg

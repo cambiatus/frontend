@@ -1288,8 +1288,6 @@ update msg model =
             in
             { newModel
                 | selectedCommunity = RemoteData.Success newCommunity
-
-                -- TODO - Check if user has already read news
                 , maybeHighlightedNews = community.highlightedNews
             }
                 |> UR.init

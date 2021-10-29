@@ -34,7 +34,7 @@ type alias Model =
     , scheduling : Maybe Time.Posix
     , insertedAt : Time.Posix
     , updatedAt : Time.Posix
-    , lastEditor : Maybe Profile.Minimal
+    , creator : Profile.Minimal
     }
 
 
@@ -186,13 +186,7 @@ selectionSet =
             )
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.insertedAt)
         |> SelectionSet.with (SelectionSet.map timeFromNaiveDateTime News.updatedAt)
-        -- |> SelectionSet.with
-        --     (Version.user Profile.minimalSelectionSet
-        --         |> News.versions
-        --         |> SelectionSet.map List.head
-        --     )
-        -- TODO - There is an issue where we can only query this field as the admin
-        |> SelectionSet.hardcoded Nothing
+        |> SelectionSet.with (News.user Profile.minimalSelectionSet)
 
 
 receiptSelectionSet : SelectionSet Receipt Cambiatus.Object.NewsReceipt
