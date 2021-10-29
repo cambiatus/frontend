@@ -11,14 +11,17 @@ import Graphql.OptionalArgument
 import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h1, p, small, text)
 import Html.Attributes exposing (class)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Log
 import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
+import Time
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 import View.Form.Toggle
 import View.MarkdownEditor as MarkdownEditor
@@ -136,8 +139,10 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.Settings.News", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity ]
                     err
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something wrong happened when highlighting news")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (loggedIn.shared.translators.t "news.error_highlighting")
+                    )
 
         CompletedSettingHighlightedNews _ RemoteData.NotAsked ->
             UR.init model
@@ -216,16 +221,14 @@ view loggedIn model =
                                     { closeMsg = ClosedHighlightNewsConfirmationModal
                                     , isVisible = True
                                     }
-                                    -- TODO - I18N
-                                    |> Modal.withHeader "Destacar o comunicado"
+                                    |> Modal.withHeader (t "news.highlight")
                                     |> Modal.withBody
                                         [ p []
-                                            -- TODO - I18N
-                                            [ text "Você já tem um comunicado ativo" ]
+                                            [ text <| t "news.already_highlighted" ]
                                         , p [ class "my-2" ]
-                                            [ text "Ao destacar este comunicado ele substituirá o comunicado existente" ]
+                                            [ text <| t "news.replace_notice" ]
                                         , p [ class "mb-6" ]
-                                            [ text "Tem certeza que deseja destacá-lo?" ]
+                                            [ text <| t "news.replace_confirmation" ]
                                         ]
                                     |> Modal.withFooter
                                         [ div [ class "w-full flex flex-col md:flex-row md:space-x-4" ]
@@ -274,7 +277,7 @@ view_ shared community =
                     div [ class "grid gap-4 md:grid-cols-2" ]
                         (List.map
                             (\newsForCard ->
-                                viewNewsCard shared.translators
+                                viewNewsCard shared
                                     (Just newsForCard == community.highlightedNews)
                                     newsForCard
                             )
@@ -283,8 +286,7 @@ view_ shared community =
 
                 RemoteData.Failure err ->
                     Page.fullPageGraphQLError
-                        -- TODO - I18N
-                        "Something went wrong while fetching communications"
+                        (shared.translators.t "news.error_fetching")
                         err
 
                 RemoteData.NotAsked ->
@@ -296,34 +298,42 @@ view_ shared community =
         ]
 
 
-viewNewsCard : Translators -> Bool -> Community.News.Model -> Html Msg
-viewNewsCard translators isHighlighted news =
+viewNewsCard : Shared -> Bool -> Community.News.Model -> Html Msg
+viewNewsCard ({ translators } as shared) isHighlighted news =
     div [ class "bg-white rounded p-4 pb-6 flex flex-col" ]
         [ h1 [ class "font-bold" ]
             [ text news.title ]
-        , small [ class "uppercase text-gray-900 text-[12px] font-bold block mt-4" ]
-            -- TODO - Use new typography classes (#622)
-            -- TODO - I18N
-            [ text "Criado: OUT/01/2019" ]
-        , small [ class "uppercase text-gray-900 text-[12px] font-bold block mt-2 mb-6" ]
-            -- TODO - I18N
-            -- TODO - Use new typography classes (#622)
-            [ text "AGENDADO: 09/06/2021 AS 8:00" ]
+        , small [ class "uppercase text-gray-900 text-sm font-bold block mt-4" ]
+            [ text <| translators.t "news.created_at"
+            , View.Components.dateViewer [] identity shared news.insertedAt
+            ]
+        , case news.scheduling of
+            Nothing ->
+                text ""
+
+            Just scheduling ->
+                small [ class "uppercase text-gray-900 text-sm font-bold block mt-2 mb-6" ]
+                    [ text <| translators.t "news.scheduled_at"
+                    , View.Components.dateViewer [] identity shared news.insertedAt
+                    , text <|
+                        translators.tr "news.scheduled_at_time"
+                            [ ( "hour", String.fromInt (Time.toHour shared.timezone scheduling) )
+                            , ( "minute", String.fromInt (Time.toMinute shared.timezone scheduling) )
+                            ]
+                    ]
         , div [ class "mb-10 relative" ]
-            [ p [ class "text-gray-900 max-h-[44px] overflow-hidden" ]
-                -- TODO - Use new typography classes (#622) and check spacing with "See more" link
+            [ p [ class "text-gray-900 max-h-11 overflow-hidden" ]
                 [ text (MarkdownEditor.removeFormatting news.description)
                 ]
             , a
                 [ class "absolute right-0 bottom-0 bg-white pl-2 text-orange-300 hover:underline focus:underline outline-none"
                 , Route.href (Route.News (Just news.id))
+                , ariaLabel <| translators.t "news.view_more"
                 ]
-                -- TODO - I18N
-                [ text "... Ver mais" ]
+                [ text <| translators.t "news.view_more_with_ellipsis" ]
             ]
         , View.Form.Toggle.init
-            { -- TODO - I18N
-              label = text "Destacar esse comunicado"
+            { label = text <| translators.t "news.highlight"
             , id = "highlight-news-toggle-" ++ String.fromInt news.id
             , onToggle = ToggledHighlightNews news.id
             , disabled = False
@@ -336,14 +346,12 @@ viewNewsCard translators isHighlighted news =
             [ class "button button-primary w-full mt-10 mb-4"
             , Route.href (Route.CommunitySettingsNewsEditor (Route.EditNews news.id))
             ]
-            -- TODO - I18N
-            [ text "Edit" ]
+            [ text <| translators.t "news.edit" ]
         , a
             [ class "button button-secondary w-full"
             , Route.href (Route.CommunitySettingsNewsEditor (Route.CopyNews news.id))
             ]
-            -- TODO - I18N
-            [ text "Create a copy" ]
+            [ text <| translators.t "news.copy" ]
         ]
 
 

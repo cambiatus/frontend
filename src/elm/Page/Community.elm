@@ -155,7 +155,7 @@ view loggedIn model =
                                 text ""
                             , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
                                 Just _ ->
-                                    viewSponsorCards loggedIn community
+                                    viewSponsorAndNewsCards loggedIn community
 
                                 Nothing ->
                                     text ""
@@ -172,8 +172,8 @@ view loggedIn model =
     }
 
 
-viewSponsorCards : LoggedIn.Model -> Community.Model -> Html msg
-viewSponsorCards loggedIn community =
+viewSponsorAndNewsCards : LoggedIn.Model -> Community.Model -> Html msg
+viewSponsorAndNewsCards loggedIn community =
     let
         { t, tr } =
             loggedIn.shared.translators
@@ -291,8 +291,7 @@ viewSponsorCards loggedIn community =
                                         [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
                                         , Route.href (Route.News Nothing)
                                         ]
-                                        -- TODO - I18N
-                                        [ text "Veja mais" ]
+                                        [ text_ "news.view_more" ]
                                     ]
                                 , img
                                     [ class "mx-auto -mb-4 md:hidden"
@@ -322,8 +321,7 @@ viewSponsorCards loggedIn community =
                 RemoteData.Failure _ ->
                     viewNewsContainer loggedIn.shared.translators
                         [ p [ class "text-lg font-bold text-gray-900" ]
-                            -- TODO - I18N
-                            [ text "Something went wrong fetching news" ]
+                            [ text_ "news.error_fetching" ]
                         ]
         ]
 

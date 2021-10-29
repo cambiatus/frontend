@@ -1197,9 +1197,59 @@
     }
   },
   "news": {
-    "title": "Notícies",
+    "title": "Anuncis",
     "description": "Permet que l'equip de la comunitat enviï comunicacions",
-    "create": "Nova comunicació"
+    "create": "Nova comunicació",
+    "community_news": "Anuncis de la comunitat",
+    "read": "Llegeix",
+    "other_news": "altres anuncis",
+    "view_more": "Veure més",
+    "view_more_with_ellipsis": "... Veure més",
+    "edit": "Editar",
+    "copy": "Crear una còpia",
+    "error_fetching": "S'ha produït un error en cercar anuncis de la comunitat",
+    "error_highlighting": "S'ha produït un error en ressaltar la publicació",
+    "highlight": "Ressaltar comunicació",
+    "already_highlighted": "Ja hi ha una comunicació destacada",
+    "saved": "L'anunci s'ha desat correctament",
+    "failed_saving": "S'ha produït un error en desar la versió",
+    "not_found_title": "No s'ha pogut trobar la comunicació",
+    "not_found_description": "Torneu-ho a provar amb una comunicació vàlida",
+    "replace_notice": "Si ressalteu aquesta comunicació, substituirà la comunicació que ja està destacada",
+    "replace_confirmation": "Esteu segur que voleu destacar aquesta comunicació?",
+    "created_at": "Creat: ",
+    "scheduled_at": "Programat: ",
+    "scheduled_at_time": " a les {{hour}}:{{minute}}",
+    "edited_by": "Editat per ",
+    "edited_date": " el {{date}}",
+    "reaction": {
+      "choose": "Triar una reacció",
+      "reactions": "{{count}} persones van reaccionar amb {{reaction}}"
+    },
+    "no_news": {
+      "title": "No hi ha res a veure per aquí",
+      "description": "La teva comunitat encara no ha publicat cap comunicació."
+    },
+    "editor": {
+      "title": "Editor de comunicacions",
+      "field": {
+        "title": "Títol",
+        "description": "Descripció",
+        "publication_mode": "Publicar o programar",
+        "publish_immediately": "Publicar immediatament",
+        "schedule": "Programar publicació",
+        "initial_date": "Data inicial",
+        "time": "Horari"
+      },
+      "error": {
+        "title": "La comunicació necessita un títol",
+        "description": "La comunicació necessita una descripció",
+        "future_date": "La data de programació ha de ser en el futur",
+        "invalid_date": "Data no vàlida",
+        "future_time": "El horari de programació ha de ser en el futur",
+        "invalid_time": "Hora no vàlida"
+      }
+    }
   },
   "markdown": {
     "link_form": {

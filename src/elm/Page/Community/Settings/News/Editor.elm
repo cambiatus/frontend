@@ -376,8 +376,7 @@ updateForm msg form loggedIn =
                 | title = title
                 , titleError =
                     if String.isEmpty title then
-                        -- TODO - I18N
-                        Just "Title can't be empty"
+                        Just "news.editor.error.title"
 
                     else
                         Nothing
@@ -413,8 +412,7 @@ updateForm msg form loggedIn =
                         String.isEmpty newContents
                             && (contentChanged || hasError)
                     then
-                        -- TODO - I18N
-                        Just "Description can't be empty"
+                        Just "news.editor.error.description"
 
                     else
                         Nothing
@@ -470,15 +468,13 @@ updateForm msg form loggedIn =
                                             case parseSchedulingForm loggedIn.shared.timezone schedulingWithDate of
                                                 Just time ->
                                                     if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
-                                                        -- TODO - I18N
-                                                        Just "Use a time in the future"
+                                                        Just "news.editor.error.future_date"
 
                                                     else
                                                         Nothing
 
                                                 Nothing ->
-                                                    -- TODO - I18N
-                                                    Just "Use a valid time"
+                                                    Just "news.editor.error.invalid_date"
                                 }
                     }
                         |> UR.init
@@ -501,22 +497,19 @@ updateForm msg form loggedIn =
                     in
                     { form
                         | publicationMode =
-                            -- TODO - parsePublication and show error
                             SchedulePublication
                                 { schedulingWithTime
                                     | timeError =
                                         case parseSchedulingForm loggedIn.shared.timezone schedulingWithTime of
                                             Just time ->
                                                 if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
-                                                    -- TODO - I18N
-                                                    Just "Use a time in the future"
+                                                    Just "news.editor.error.future_time"
 
                                                 else
                                                     Nothing
 
                                             Nothing ->
-                                                -- TODO - I18N
-                                                Just "Use a valid time"
+                                                Just "news.editor.error.invalid_time"
                                 }
                     }
                         |> UR.init
@@ -568,15 +561,13 @@ updateForm msg form loggedIn =
                         { form
                             | titleError =
                                 if String.isEmpty form.title then
-                                    -- TODO - I18N
-                                    Just "Title can't be empty"
+                                    Just "news.editor.error.title"
 
                                 else
                                     Nothing
                             , descriptionError =
                                 if String.isEmpty form.descriptionEditor.contents then
-                                    -- TODO - I18N
-                                    Just "description can't be empty"
+                                    Just "news.editor.error.description"
 
                                 else
                                     Nothing
@@ -643,14 +634,19 @@ updateForm msg form loggedIn =
             { form | isSaving = False }
                 |> UR.init
                 |> setAsHighlighted
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "The communication is active")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Success
+                        (loggedIn.shared.translators.t "news.saved")
+                    )
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunitySettingsNews)
 
         CompletedSaving (RemoteData.Failure _) ->
             { form | isSaving = False }
                 |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something wrong happened when saving the communication")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (loggedIn.shared.translators.t "news.failed_saving")
+                    )
 
         CompletedSaving RemoteData.NotAsked ->
             UR.init form
@@ -719,10 +715,17 @@ parseSchedulingForm timezone { selectedDate, selectedTime } =
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    { title = "News editor"
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        title =
+            t "news.editor.title"
+    in
+    { title = title
     , content =
         div [ class "bg-white" ]
-            [ Page.viewHeader loggedIn "News editor"
+            [ Page.viewHeader loggedIn title
             , case model of
                 Editing form ->
                     div [ class "container mx-auto pt-4 pb-10" ]
@@ -731,13 +734,12 @@ view loggedIn model =
                         ]
 
                 NewsNotFound ->
-                    -- TODO - I18N
-                    Page.fullPageNotFound "Could not find communication"
-                        "Try again with a valid communication"
+                    Page.fullPageNotFound (t "news.not_found_title")
+                        (t "news.not_found_description")
 
                 WithError err ->
-                    -- TODO - I18N
-                    Page.fullPageGraphQLError "Got an error when fetching communication"
+                    Page.fullPageGraphQLError
+                        (t "news.error_fetching")
                         err
 
                 WaitingNewsToCopy ->
@@ -760,24 +762,21 @@ viewForm ({ shared } as loggedIn) form =
         , onSubmit ClickedSave
         ]
         [ Input.init
-            { -- TODO - I18N
-              label = "Title"
+            { label = translators.t "news.field.title"
             , id = "title-input"
             , onInput = EnteredTitle
             , disabled = form.isSaving
             , value = form.title
             , placeholder = Just "Lorem ipsum dolor"
-            , problems = Maybe.map List.singleton form.titleError
+            , problems = Maybe.map (translators.t >> List.singleton) form.titleError
             , translators = translators
             }
             |> Input.toHtml
         , MarkdownEditor.view
             { translators = translators
             , placeholder = Nothing
-
-            -- TODO - I18N
-            , label = "Description"
-            , problem = form.descriptionError
+            , label = translators.t "news.field.description"
+            , problem = Maybe.map translators.t form.descriptionError
             , disabled = form.isSaving
             }
             []
@@ -791,8 +790,7 @@ viewForm ({ shared } as loggedIn) form =
                 viewLatestEditions loggedIn news profileSummary
         , hr [ class "mt-5 mb-10 text-gray-500" ] []
         , Radio.init
-            { -- TODO - I18N
-              label = "Publish or schedule"
+            { label = translators.t "news.editor.field.publication_mode"
             , name = "publish-mode-radio"
             , optionToString =
                 \option ->
@@ -816,13 +814,10 @@ viewForm ({ shared } as loggedIn) form =
                         _ ->
                             False
             }
-            -- TODO - I18N
             |> Radio.withOption PublishImmediately
-                (\_ -> text "Publish immediately")
-            -- TODO - I18N
-            |> Radio.withOption
-                (SchedulePublication (emptySchedulingForm shared))
-                (\_ -> text "Schedule publication")
+                (\_ -> text <| translators.t "news.editor.field.publish_immediately")
+            |> Radio.withOption (SchedulePublication (emptySchedulingForm shared))
+                (\_ -> text <| translators.t "news.editor.field.schedule")
             |> Radio.withVertical True
             |> Radio.withDisabled form.isSaving
             |> Radio.toHtml translators
@@ -833,8 +828,9 @@ viewForm ({ shared } as loggedIn) form =
             SchedulePublication scheduling ->
                 div [ class "flex space-x-4" ]
                     [ div [ class "w-full mb-4" ]
-                        [ -- TODO - I18N
-                          View.Form.label [] "datepicker-input" "Initial date"
+                        [ View.Form.label []
+                            "datepicker-input"
+                            (translators.t "news.editor.field.initial_date")
                         , div [ class "relative" ]
                             [ DatePicker.view (Just scheduling.selectedDate)
                                 (datePickerSettings (Maybe.Extra.isJust scheduling.dateError))
@@ -853,17 +849,16 @@ viewForm ({ shared } as loggedIn) form =
 
                             Just error ->
                                 span [ class "form-error" ]
-                                    [ text error ]
+                                    [ text <| translators.t error ]
                         ]
                     , Input.init
-                        { -- TODO - I18N
-                          label = "Time"
+                        { label = translators.t "news.editor.field.time"
                         , id = "time-input"
                         , onInput = EnteredPublicationTime
                         , disabled = form.isSaving
                         , value = scheduling.selectedTime
                         , placeholder = Nothing
-                        , problems = scheduling.timeError |> Maybe.map List.singleton
+                        , problems = Maybe.map (translators.t >> List.singleton) scheduling.timeError
                         , translators = translators
                         }
                         |> Input.withContainerAttrs [ class "w-full" ]
@@ -875,8 +870,7 @@ viewForm ({ shared } as loggedIn) form =
             , disabled form.isSaving
             , class "button button-primary w-full"
             ]
-            -- TODO - I18N
-            [ text "Save" ]
+            [ text <| translators.t "menu.save" ]
         ]
 
 
@@ -898,8 +892,7 @@ viewLatestEditions ({ shared } as loggedIn) news profileSummary =
                             lastEditor
                         |> Html.map GotEditorSummaryMsg
                     , p [ class "text-gray-900 ml-2" ]
-                        -- TODO - I18N
-                        [ text "Edited by "
+                        [ text <| shared.translators.t "news.edited_by"
                         , a
                             [ class "font-bold hover:underline"
                             , Route.href (Route.Profile lastEditor.account)
@@ -913,9 +906,7 @@ viewLatestEditions ({ shared } as loggedIn) news profileSummary =
                                 { translations
                                     | today = Nothing
                                     , yesterday = Nothing
-
-                                    -- TODO - I18N
-                                    , other = " on {{date}}"
+                                    , other = shared.translators.t "edited_date"
                                 }
                             )
                             shared

@@ -15,7 +15,7 @@ import Iso8601
 import List.Extra
 import Profile
 import Route
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
@@ -246,7 +246,8 @@ viewList shared attrs news =
                             (List.map
                                 (\theseNews ->
                                     -- TODO - Use real data for hasRead
-                                    viewSummary (modBy 2 theseNews.id == 0)
+                                    viewSummary shared.translators
+                                        (modBy 2 theseNews.id == 0)
                                         theseNews
                                 )
                                 (firstNews :: otherNews)
@@ -256,8 +257,8 @@ viewList shared attrs news =
         )
 
 
-viewSummary : Bool -> Model -> Html msg
-viewSummary hasRead news =
+viewSummary : Translators -> Bool -> Model -> Html msg
+viewSummary { t } hasRead news =
     a
         [ class "grid items-center py-4 focus-ring rounded-sm"
         , classList
@@ -277,8 +278,7 @@ viewSummary hasRead news =
             span
                 [ class "button button-primary w-auto px-4"
                 ]
-                -- TODO - I18N
-                [ text "Read" ]
+                [ text <| t "news.read" ]
 
           else
             Icons.arrowDown "-rotate-90 fill-current ml-auto"

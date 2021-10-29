@@ -8,8 +8,8 @@ import Community.News
 import Dict
 import Graphql.Http
 import Html exposing (Html, button, details, div, h1, li, span, summary, text, ul)
-import Html.Attributes exposing (class, classList, id, style)
-import Html.Attributes.Aria exposing (ariaHasPopup, ariaLabel, role)
+import Html.Attributes exposing (class, classList, id, style, tabindex)
+import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode
@@ -19,7 +19,7 @@ import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
 import Utils exposing (onClickPreventAll)
@@ -199,9 +199,11 @@ update msg model loggedIn =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         title =
-            -- TODO - I18N
-            "News"
+            t "news.title"
 
         content =
             case Community.getField loggedIn.selectedCommunity .news of
@@ -223,9 +225,8 @@ view loggedIn model =
                         , case maybeSelectedNews of
                             Nothing ->
                                 Page.fullPageNotFound
-                                    -- TODO - I18N
-                                    "There's nothing to see here"
-                                    "Your community hasn't posted any communications"
+                                    (t "news.no_news.title")
+                                    (t "news.no_news.description")
 
                             Just selectedNews ->
                                 news
@@ -244,12 +245,10 @@ view loggedIn model =
                 RemoteData.Failure failure ->
                     case failure of
                         Community.FieldError err ->
-                            -- TODO - I18N
-                            Page.fullPageGraphQLError "Error fetching news" err
+                            Page.fullPageGraphQLError title err
 
                         Community.CommunityError err ->
-                            -- TODO - I18N
-                            Page.fullPageGraphQLError "Error fetching community" err
+                            Page.fullPageGraphQLError title err
 
                 RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
@@ -262,52 +261,35 @@ view loggedIn model =
 
 view_ : Shared -> Model -> Community.News.Model -> List Community.News.Model -> Html Msg
 view_ shared model selectedNews news =
+    let
+        { t } =
+            shared.translators
+    in
     div []
-        (viewMainNews model selectedNews
-            :: h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
-                -- TODO - I18N
-                [ text "Read "
-                , span [ class "text-purple-500" ] [ text "other news" ]
-                ]
-            :: div [ class "bg-white" ]
-                [ Community.News.viewList shared
-                    [ class "container mx-auto px-4 pt-6" ]
-                    news
-                ]
-            :: (if model.showReactionPicker then
-                    [ button
-                        [ class "fixed top-0 right-0 w-screen h-screen cursor-auto"
-                        , onClick ClickedToggleReactions
-
-                        -- TODO - I18N, test GitHub's with TalkBack
-                        , ariaLabel "Close reaction picker"
-                        ]
-                        []
-                    , View.Components.keyListener
-                        { onKeyDown =
-                            { acceptedKeys = [ View.Components.Escape ]
-                            , toMsg = \_ -> ClickedToggleReactions
-                            , stopPropagation = True
-                            }
-                        }
-                    ]
-
-                else
-                    []
-               )
-        )
+        [ viewMainNews shared.translators model selectedNews
+        , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+            [ span [] [ text <| t "news.read" ]
+            , text " "
+            , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
+            ]
+        , div [ class "bg-white" ]
+            [ Community.News.viewList shared
+                [ class "container mx-auto px-4 pt-6" ]
+                news
+            ]
+        ]
 
 
-viewMainNews : Model -> Community.News.Model -> Html Msg
-viewMainNews model news =
+viewMainNews : Translators -> Model -> Community.News.Model -> Html Msg
+viewMainNews translators model news =
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
             [ h1 [ class "text-lg text-black font-bold" ] [ text news.title ]
             , View.MarkdownEditor.viewReadOnly [ class "mt-6 text-black colored-links" ]
                 news.description
-            , div [ class "flex items-center gap-4 mt-8" ]
-                (viewReactionPicker model
-                    :: viewReactions model
+            , div [ class "flex items-center mt-8" ]
+                (viewReactionPicker translators model
+                    ++ viewReactions translators model
                 )
 
             -- TODO - Show last edit
@@ -315,8 +297,8 @@ viewMainNews model news =
         ]
 
 
-viewReactionPicker : Model -> Html Msg
-viewReactionPicker model =
+viewReactionPicker : Translators -> Model -> List (Html Msg)
+viewReactionPicker { t } model =
     details
         [ class "inline-block relative z-10"
         , onClickPreventAll ClickedToggleReactions
@@ -329,9 +311,7 @@ viewReactionPicker model =
         [ summary
             [ role "button"
             , ariaHasPopup "true"
-
-            -- TODO - I18N
-            , ariaLabel "Choose your reaction"
+            , ariaLabel (t "news.reaction.choose")
             , class "list-none bg-gray-200 rounded-full p-0.5 focus-ring transition-colors hover:bg-gray-500 active:bg-gray-300"
             ]
             [ Icons.smilingFace "fill-current text-gray-900 w-6 h-6"
@@ -350,7 +330,7 @@ viewReactionPicker model =
                             [ button
                                 [ class "w-8 h-8 flex items-center justify-center rounded-sm focus-ring transition-colors"
                                 , classList
-                                    [ ( "bg-green hover:bg-opacity-80", List.member reaction model.selectedReactions )
+                                    [ ( "bg-green bg-opacity-80 hover:bg-opacity-60", List.member reaction model.selectedReactions )
                                     , ( "bg-white hover:bg-gray-200 focus-visible:bg-gray-200", not (List.member reaction model.selectedReactions) )
                                     ]
 
@@ -358,7 +338,6 @@ viewReactionPicker model =
                                 , onClick NoOp
                                 , id ("reaction-" ++ String.fromInt index)
                                 ]
-                                -- TODO - Add alt attribute
                                 [ text (Community.News.reactionToString reaction) ]
                             ]
                     )
@@ -366,10 +345,30 @@ viewReactionPicker model =
                 )
             ]
         ]
+        :: (if model.showReactionPicker then
+                [ button
+                    [ class "fixed top-0 right-0 w-screen h-screen cursor-auto"
+                    , onClick ClickedToggleReactions
+                    , ariaLabel "close reaction picker"
+                    , tabindex -1
+                    ]
+                    []
+                , View.Components.keyListener
+                    { onKeyDown =
+                        { acceptedKeys = [ View.Components.Escape ]
+                        , toMsg = \_ -> ClickedToggleReactions
+                        , stopPropagation = True
+                        }
+                    }
+                ]
+
+            else
+                []
+           )
 
 
-viewReactions : Model -> List (Html Msg)
-viewReactions model =
+viewReactions : Translators -> Model -> List (Html Msg)
+viewReactions { tr } model =
     let
         isSelected reaction =
             List.member reaction model.selectedReactions
@@ -379,18 +378,20 @@ viewReactions model =
         |> List.map
             (\{ reaction, count } ->
                 button
-                    [ class "rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
+                    [ class "ml-4 rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
                     , classList
                         [ ( "bg-green bg-opacity-50 border border-green hover:bg-opacity-40 active:bg-opacity-60", isSelected reaction )
                         , ( "bg-gray-200 hover:bg-gray-500 active:bg-gray-300", not (isSelected reaction) )
                         ]
-
-                    -- TODO - I18N
-                    , ariaLabel (String.fromInt count ++ " people reacted with " ++ Community.News.reactionName reaction)
+                    , ariaLabel <|
+                        tr "news.reaction.reactions"
+                            [ ( "count", String.fromInt count )
+                            , ( "reaction", Community.News.reactionName reaction )
+                            ]
                     , onClick (ToggledReaction reaction)
                     ]
-                    [ span [] [ text (Community.News.reactionToString reaction) ]
-                    , span [] [ text (String.fromInt count) ]
+                    [ span [ ariaHidden True ] [ text (Community.News.reactionToString reaction) ]
+                    , span [ ariaHidden True ] [ text (String.fromInt count) ]
                     ]
             )
 

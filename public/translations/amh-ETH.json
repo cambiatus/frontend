@@ -1158,7 +1158,57 @@
   "news": {
     "title": "ዜና",
     "description": "የማህበረሰቡ ቡድን ግንኙነቶችን እንዲልክ ፍቀድለት",
-    "create": "አዲስ ግንኙነት"
+    "create": "አዲስ ግንኙነት",
+    "community_news": "የማህበረሰብ ማስታወቂያዎች",
+    "read": "አንብብ",
+    "other_news": "ሌሎች ማስታወቂያዎች",
+    "view_more": "ተጨማሪ ይመልከቱ",
+    "view_more_with_ellipsis": "... ተጨማሪ ይመልከቱ",
+    "edit": "ለማርትዕ",
+    "copy": "ቅጂ ይፍጠሩ",
+    "error_fetching": "የማህበረሰብ ማስታወቂያዎችን ሲፈልጉ የሆነ ችግር ተፈጥሯል",
+    "error_highlighting": "ልቀቱን ሲያደምቅ የሆነ ችግር ተፈጥሯል",
+    "highlight": "ጋዜጣዊ መግለጫን ያድምቁ",
+    "already_highlighted": "አስቀድሞ የደመቀ ልቀት አለ",
+    "saved": "ማስታወቂያ በተሳካ ሁኔታ ተቀምጧል",
+    "failed_saving": "ልቀቱን በማስቀመጥ ላይ ሳለ የሆነ ችግር ተፈጥሯል",
+    "not_found_title": "የተለቀቀውን ማግኘት አልተቻለም",
+    "not_found_description": "እባክዎ ልክ በሆነ መግለጫ እንደገና ይሞክሩ",
+    "replace_notice": "ይህን ልቀት ካደመቁ አስቀድሞ የደመቀውን ልቀት ይተካል",
+    "replace_confirmation": "እርግጠኛ ነዎት ይህን ልቀት ማድመቅ ይፈልጋሉ?",
+    "created_at": "የተፈጠረ: ",
+    "scheduled_at": "መርሐግብር ተይዞለታል፡ ",
+    "scheduled_at_time": " በ {{hour}}:{{minute}}",
+    "edited_by": "በ",
+    "edited_date": " በ{{date}} ተስተካክሏል",
+    "reaction": {
+      "choose": "ምላሽ ይምረጡ",
+      "reactions": "{{count}} ሰዎች በ{{reaction}} ምላሽ ሰጥተዋል"
+    },
+    "no_news": {
+      "title": "እዚህ ምንም የሚታይ ነገር የለም",
+      "description": "የእርስዎ ማህበረሰብ እስካሁን ምንም ማስታወቂያዎችን አልለጠፈም"
+    },
+    "editor": {
+      "title": "ጋዜጣዊ መግለጫ አርታዒ",
+      "field": {
+        "title": "ርዕስ",
+        "description": "መግለጫ",
+        "publication_mode": "አትም ወይም መርሐግብር",
+        "publish_immediately": "ወዲያውኑ አትም",
+        "schedule": "የህትመት መርሐግብር ያስይዙ",
+        "initial_date": "የመጀመሪያ ቀን",
+        "time": "መርሐግብር"
+      },
+      "error": {
+        "title": "ልቀቱ ርዕስ ያስፈልገዋል",
+        "description": "ልቀቱ መግለጫ ያስፈልገዋል",
+        "future_date": "የታቀደው ቀን ወደፊት መሆን አለበት",
+        "invalid_date": "ልክ ያልሆነ ቀን",
+        "future_time": "የታቀደው ጊዜ ወደፊት መሆን አለበት",
+        "invalid_time": "ልክ ያልሆነ ጊዜ"
+      }
+    }
   },
   "markdown": {
     "link_form": {

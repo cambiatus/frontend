@@ -1195,9 +1195,59 @@
     }
   },
   "news": {
-    "title": "News",
+    "title": "Communications",
     "description": "Allow the community team to send communications",
-    "create": "New communication"
+    "create": "New communication",
+    "community_news": "Community communications",
+    "read": "Read",
+    "other_news": "other communications",
+    "view_more": "View more",
+    "view_more_with_ellipsis": "... View more",
+    "edit": "Edit",
+    "copy": "Create a copy",
+    "error_fetching": "Something went wrong fetching communications from the community",
+    "error_highlighting": "Something went wrong when highlighting communication",
+    "highlight": "Highlight communication",
+    "already_highlighted": "There already is a highlighted communication",
+    "saved": "Successfully saved communication",
+    "failed_saving": "Something wrong happened when saving communication",
+    "not_found_title": "Could not find communication",
+    "not_found_description": "Try again with a valid communication",
+    "replace_notice": "By highlighting this communication, it will replace the already highlighted communication",
+    "replace_confirmation": "Are you sure you want to highlight this communication?",
+    "created_at": "Created: ",
+    "scheduled_at": "Scheduled: ",
+    "scheduled_at_time": " at {{hour}}:{{minute}}",
+    "edited_by": "Edited by ",
+    "edited_date": " on {{date}}",
+    "reaction": {
+      "choose": "Choose a reaction",
+      "reactions": "{{count}} people reacted with {{reaction}}"
+    },
+    "no_news": {
+      "title": "There's nothing to see here",
+      "description": "Your community hasn't posted any communications"
+    },
+    "editor": {
+      "title": "Communications editor",
+      "field": {
+        "title": "Title",
+        "description": "Description",
+        "publication_mode": "Publish or schedule",
+        "publish_immediately": "Publish immediately",
+        "schedule": "Schedule publication",
+        "initial_date": "Initial date",
+        "time": "Time"
+      },
+      "error": {
+        "title": "The communication must have a title",
+        "description": "The communication must have a description",
+        "future_date": "The scheduled date must be in the future",
+        "invalid_date": "The date entered is invalid",
+        "future_time": "The scheduled time must be in the future",
+        "invalid_time": "The time entered is invalid"
+      }
+    }
   },
   "markdown": {
     "link_form": {

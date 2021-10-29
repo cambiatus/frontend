@@ -1006,7 +1006,6 @@ statusToRoute status session =
             Just Route.CommunitySettingsNews
 
         CommunitySettingsNewsEditor _ ->
-            -- TODO - Change CreateNews
             Just (Route.CommunitySettingsNewsEditor Route.CreateNews)
 
         CommunitySettingsCurrency _ ->

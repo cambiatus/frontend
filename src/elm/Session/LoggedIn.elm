@@ -57,7 +57,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Shop
 import Task
 import Time
@@ -364,7 +364,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                         --     Nothing ->
                         --         text ""
                         -- TODO - Conditionally show the highlighted news
-                        viewHighlightedNews pageMsg news
+                        viewHighlightedNews shared.translators pageMsg news
 
                     Nothing ->
                         text ""
@@ -390,16 +390,14 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
         )
 
 
-viewHighlightedNews : (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
-viewHighlightedNews toPageMsg news =
+viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
+viewHighlightedNews { t } toPageMsg news =
     div [ class "bg-purple-500 p-4" ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
                 [ alt "" ]
                 "stroke-current flex-shrink-0"
-
-            -- TODO - I18N
-            , span [ class "sr-only" ] [ text "Community news" ]
+            , span [ class "sr-only" ] [ text <| t "news.community_news" ]
             , div [ class "truncate ml-4 mr-8" ]
                 [ h1 [ class "font-bold truncate" ] [ text news.title ]
                 , p [ class "truncate" ] [ text <| View.MarkdownEditor.removeFormatting news.description ]
@@ -409,13 +407,10 @@ viewHighlightedNews toPageMsg news =
                 , Route.href (Route.News (Just news.id))
                 , onClick (toPageMsg ClickedReadHighlightedNews)
                 ]
-                -- TODO - I18N
-                [ text "Read" ]
+                [ text <| t "news.read" ]
             , button
                 [ class "hover:text-red focus:text-red focus:outline-none"
-
-                -- TODO - I18N
-                , ariaLabel "close"
+                , ariaLabel <| t "menu.close"
                 , onClick (toPageMsg ClosedHighlightedNews)
                 ]
                 [ Icons.close "fill-current" ]
@@ -1653,7 +1648,6 @@ update msg model =
                                     err
 
                 _ ->
-                    -- TODO - Log impossible
                     UR.init model
                         |> UR.logImpossible msg
                             "Received new highlighted news, but community wasn't loaded"
