@@ -150,22 +150,22 @@ update msg model loggedIn =
                 Just id ->
                     model
                         |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (Community.News.reactToNews
+                                    { newsId = id
+                                    , reactions =
+                                        if List.member reaction model.selectedReactions then
+                                            List.filter ((/=) reaction) model.selectedReactions
 
-                -- TODO
-                -- |> UR.addCmd
-                --     (Api.Graphql.mutation loggedIn.shared
-                --         (Just loggedIn.authToken)
-                --         (Community.News.reactToNews
-                --             { newsId = id
-                --             , reactions =
-                --                 if List.member reaction model.selectedReactions then
-                --                     List.filter ((/=) reaction) model.selectedReactions
-                --                 else
-                --                     reaction :: model.selectedReactions
-                --             }
-                --         )
-                --         (CompletedTogglingReaction reaction)
-                --     )
+                                        else
+                                            reaction :: model.selectedReactions
+                                    }
+                                )
+                                (CompletedTogglingReaction reaction)
+                            )
+
                 Nothing ->
                     model
                         |> UR.init
@@ -416,4 +416,4 @@ msgToString msg =
             [ "ToggledReaction" ]
 
         CompletedTogglingReaction _ _ ->
-            [ "CompletedSettingReactions" ]
+            [ "CompletedTogglingReaction" ]
