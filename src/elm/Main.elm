@@ -742,6 +742,10 @@ broadcast broadcastMessage status =
                     Join.receiveBroadcast broadcastMessage
                         |> Maybe.map GotJoinMsg
 
+                News _ ->
+                    News.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotNewsMsg
+
                 PaymentHistory _ ->
                     PaymentHistory.receiveBroadcast broadcastMessage
                         |> Maybe.map GotPaymentHistoryMsg

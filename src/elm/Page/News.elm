@@ -1,7 +1,8 @@
-module Page.News exposing (Model, Msg, init, msgToString, update, view)
+module Page.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Api.Graphql
 import Browser.Dom
+import Cambiatus.Mutation
 import Community
 import Community.News
 import Dict
@@ -41,33 +42,13 @@ type alias Model =
 
 
 init : Maybe Int -> LoggedIn.Model -> UpdateResult
-init maybeNewsId loggedIn =
-    let
-        markNewsAsRead =
-            case maybeNewsId of
-                Nothing ->
-                    identity
-
-                Just newsId ->
-                    -- UR.addCmd
-                    --     (Api.Graphql.mutation loggedIn.shared
-                    --         (Just loggedIn.authToken)
-                    --         (Cambiatus.Mutation.read
-                    --             { newsId = newsId }
-                    --             Community.News.receiptSelectionSet
-                    --         )
-                    --         CompletedMarkingNewsAsRead
-                    --     )
-                    -- TODO
-                    identity
-    in
+init maybeNewsId _ =
     { newsId = maybeNewsId
     , showReactionPicker = False
     , lastEditorSummary = Profile.Summary.init False
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.NewsField)
-        |> markNewsAsRead
         |> UR.addCmd
             (Browser.Dom.setViewport 0 0
                 |> Task.perform (\_ -> NoOp)
@@ -80,6 +61,7 @@ init maybeNewsId loggedIn =
 
 type Msg
     = NoOp
+    | CompletedLoadNews (List Community.News.Model)
     | CompletedMarkingNewsAsRead (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
     | ClickedToggleReactions
     | ToggledReaction Community.News.Reaction
@@ -100,6 +82,40 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        CompletedLoadNews news ->
+            let
+                markNewsAsRead =
+                    case
+                        model.newsId
+                            |> Maybe.andThen
+                                (\newsId ->
+                                    List.Extra.find (\{ id } -> id == newsId) news
+                                )
+                    of
+                        Nothing ->
+                            identity
+
+                        Just selectedNews ->
+                            case selectedNews.receipt of
+                                Just _ ->
+                                    identity
+
+                                Nothing ->
+                                    -- Only mark as read if the user hasn't read it yet
+                                    UR.addCmd
+                                        (Api.Graphql.mutation loggedIn.shared
+                                            (Just loggedIn.authToken)
+                                            (Cambiatus.Mutation.read
+                                                { newsId = selectedNews.id }
+                                                Community.News.receiptSelectionSet
+                                            )
+                                            CompletedMarkingNewsAsRead
+                                        )
+            in
+            model
+                |> UR.init
+                |> markNewsAsRead
 
         CompletedMarkingNewsAsRead (RemoteData.Success _) ->
             UR.init model
@@ -531,11 +547,24 @@ viewReactions { tr } news =
 -- UTILS
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityFieldLoaded _ (Community.NewsValue news) ->
+            Just (CompletedLoadNews news)
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadNews _ ->
+            [ "CompletedLoadNews" ]
 
         CompletedMarkingNewsAsRead r ->
             [ "CompletedMarkingNewsAsRead", UR.remoteDataToString r ]
