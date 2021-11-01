@@ -5,6 +5,7 @@
 module Cambiatus.Mutation exposing (..)
 
 import Cambiatus.Enum.CurrencyType
+import Cambiatus.Enum.ReactionEnum
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -160,7 +161,7 @@ news fillInOptionals requiredArgs object_ =
 
 type alias ReactToNewsRequiredArguments =
     { newsId : Int
-    , reactions : List String
+    , reactions : List Cambiatus.Enum.ReactionEnum.ReactionEnum
     }
 
 
@@ -171,7 +172,7 @@ reactToNews :
     -> SelectionSet decodesTo Cambiatus.Object.NewsReceipt
     -> SelectionSet (Maybe decodesTo) RootMutation
 reactToNews requiredArgs object_ =
-    Object.selectionForCompositeField "reactToNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int, Argument.required "reactions" requiredArgs.reactions (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "reactToNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int, Argument.required "reactions" requiredArgs.reactions (Encode.enum Cambiatus.Enum.ReactionEnum.toString |> Encode.list) ] object_ (identity >> Decode.nullable)
 
 
 type alias ReadRequiredArguments =

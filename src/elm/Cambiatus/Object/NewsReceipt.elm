@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.NewsReceipt exposing (..)
 
+import Cambiatus.Enum.ReactionEnum
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -24,9 +25,9 @@ insertedAt =
     Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
 
 
-reactions : SelectionSet (List String) Cambiatus.Object.NewsReceipt
+reactions : SelectionSet (List Cambiatus.Enum.ReactionEnum.ReactionEnum) Cambiatus.Object.NewsReceipt
 reactions =
-    Object.selectionForField "(List String)" "reactions" [] (Decode.string |> Decode.list)
+    Object.selectionForField "(List Enum.ReactionEnum.ReactionEnum)" "reactions" [] (Cambiatus.Enum.ReactionEnum.decoder |> Decode.list)
 
 
 updatedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.NewsReceipt

@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.ReactionType exposing (..)
 
+import Cambiatus.Enum.ReactionEnum
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -24,6 +25,6 @@ count =
     Object.selectionForField "Int" "count" [] Decode.int
 
 
-reaction : SelectionSet String Cambiatus.Object.ReactionType
+reaction : SelectionSet Cambiatus.Enum.ReactionEnum.ReactionEnum Cambiatus.Object.ReactionType
 reaction =
-    Object.selectionForField "String" "reaction" [] Decode.string
+    Object.selectionForField "Enum.ReactionEnum.ReactionEnum" "reaction" [] Cambiatus.Enum.ReactionEnum.decoder

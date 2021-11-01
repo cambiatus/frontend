@@ -1,9 +1,11 @@
-module Community.News exposing (Model, Reaction, Receipt, isPublished, listReactions, mockSelectedReactions, reactToNews, reactionName, reactionToString, receiptSelectionSet, selectionSet, viewList)
+module Community.News exposing (Model, Reaction, Receipt, isPublished, listReactions, reactToNews, reactionName, reactionToString, receiptSelectionSet, selectionSet, viewList)
 
+import Cambiatus.Enum.ReactionEnum as Reaction exposing (ReactionEnum(..))
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.News as News
 import Cambiatus.Object.NewsReceipt as NewsReceipt
+import Cambiatus.Object.ReactionType
 import Cambiatus.Scalar
 import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -13,6 +15,7 @@ import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
 import Iso8601
 import List.Extra
+import Maybe.Extra
 import Profile
 import Route
 import Session.Shared exposing (Shared, Translators)
@@ -31,6 +34,7 @@ type alias Model =
     , id : Int
     , title : String
     , receipt : Maybe Receipt
+    , reactions : List ReactionWithCount
     , scheduling : Maybe Time.Posix
     , insertedAt : Time.Posix
     , updatedAt : Time.Posix
@@ -39,21 +43,16 @@ type alias Model =
 
 
 type alias Receipt =
-    { reactions : List String
+    { reactions : List Reaction
     }
 
 
-type Reaction
-    = Smile
-    | HeartEyes
-    | Frown
-    | RaisedEyebrow
-    | ThumbsUp
-    | ThumbsDown
-    | Clap
-    | Tada
-    | Heart
-    | Rocket
+type alias Reaction =
+    Reaction.ReactionEnum
+
+
+type alias ReactionWithCount =
+    { count : Int, reaction : Reaction }
 
 
 
@@ -73,92 +72,46 @@ isPublished now model =
 reactionToString : Reaction -> String
 reactionToString reaction =
     case reaction of
-        Smile ->
-            "😃"
-
-        HeartEyes ->
-            "😍"
-
-        Frown ->
-            "🙁"
-
-        RaisedEyebrow ->
-            "\u{1F928}"
-
-        ThumbsUp ->
-            "👍"
-
-        ThumbsDown ->
-            "👎"
-
-        Clap ->
+        ClappingHands ->
             "👏"
 
-        Tada ->
+        FaceWithRaisedEyebrow ->
+            "\u{1F928}"
+
+        GrinningFaceWithBigEyes ->
+            "😃"
+
+        PartyPopper ->
             "🎉"
 
-        Heart ->
+        RedHeart ->
             "❤️"
 
         Rocket ->
             "🚀"
 
+        SlightlyFrowningFace ->
+            "🙁"
 
-reactionName : Reaction -> String
-reactionName reaction =
-    case reaction of
-        Smile ->
-            "smile"
-
-        HeartEyes ->
-            "heartEyes"
-
-        Frown ->
-            "frown"
-
-        RaisedEyebrow ->
-            "raisedEyebrow"
-
-        ThumbsUp ->
-            "thumbsUp"
+        SmilingFaceWithHeartEyes ->
+            "😍"
 
         ThumbsDown ->
-            "thumbsDown"
+            "👎"
 
-        Clap ->
-            "clap"
+        ThumbsUp ->
+            "👍"
 
-        Tada ->
-            "tada"
 
-        Heart ->
-            "heart"
-
-        Rocket ->
-            "rocket"
+reactionName : Reaction -> String
+reactionName =
+    Reaction.toString
+        >> String.replace "_" " "
 
 
 listReactions : List Reaction
 listReactions =
-    [ Smile
-    , HeartEyes
-    , Frown
-    , RaisedEyebrow
-    , ThumbsUp
-    , ThumbsDown
-    , Clap
-    , Tada
-    , Heart
-    , Rocket
-    ]
-
-
-mockSelectedReactions : List { reaction : Reaction, count : Int }
-mockSelectedReactions =
-    [ { reaction = Smile, count = 5 }
-    , { reaction = Frown, count = 0 }
-    , { reaction = RaisedEyebrow, count = 10 }
-    ]
+    Reaction.list
 
 
 
@@ -171,9 +124,8 @@ selectionSet =
         |> SelectionSet.with News.description
         |> SelectionSet.with News.id
         |> SelectionSet.with News.title
-        -- |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
-        -- TODO - There is an issue where the subscription doesn't work if we include this field
-        |> SelectionSet.hardcoded Nothing
+        |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
+        |> SelectionSet.with (News.reactions reactionWithCountSelectionSet)
         |> SelectionSet.with
             (News.scheduling
                 |> SelectionSet.map
@@ -195,11 +147,28 @@ receiptSelectionSet =
         |> SelectionSet.with NewsReceipt.reactions
 
 
-reactToNews : { newsId : Int, reactions : List Reaction } -> SelectionSet (Maybe Receipt) Graphql.Operation.RootMutation
-reactToNews args =
+reactionWithCountSelectionSet : SelectionSet ReactionWithCount Cambiatus.Object.ReactionType
+reactionWithCountSelectionSet =
+    SelectionSet.succeed ReactionWithCount
+        |> SelectionSet.with Cambiatus.Object.ReactionType.count
+        |> SelectionSet.with Cambiatus.Object.ReactionType.reaction
+
+
+reactToNews : Model -> { newsId : Int, reaction : Reaction } -> SelectionSet (Maybe Receipt) Graphql.Operation.RootMutation
+reactToNews news args =
     Cambiatus.Mutation.reactToNews
         { newsId = args.newsId
-        , reactions = List.map reactionName args.reactions
+        , reactions =
+            case news.receipt of
+                Nothing ->
+                    [ args.reaction ]
+
+                Just receipt ->
+                    if List.member args.reaction receipt.reactions then
+                        List.filter ((/=) args.reaction) receipt.reactions
+
+                    else
+                        args.reaction :: receipt.reactions
         }
         receiptSelectionSet
 
@@ -239,9 +208,8 @@ viewList shared attrs news =
                         , div [ class "divide-y divide-gray-500" ]
                             (List.map
                                 (\theseNews ->
-                                    -- TODO - Use real data for hasRead
                                     viewSummary shared.translators
-                                        (modBy 2 theseNews.id == 0)
+                                        (Maybe.Extra.isJust theseNews.receipt)
                                         theseNews
                                 )
                                 (firstNews :: otherNews)

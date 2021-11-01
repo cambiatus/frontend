@@ -2,7 +2,6 @@ module Page.News exposing (Model, Msg, init, msgToString, update, view)
 
 import Api.Graphql
 import Browser.Dom
-import Cambiatus.Mutation
 import Community
 import Community.News
 import Dict
@@ -12,11 +11,11 @@ import Html exposing (Html, a, button, details, div, h1, li, p, span, summary, t
 import Html.Attributes exposing (class, classList, id, style, tabindex)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
+import Html.Keyed
 import Icons
 import Json.Encode
 import List.Extra
 import Log
-import Maybe.Extra
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -37,8 +36,6 @@ import View.MarkdownEditor
 type alias Model =
     { newsId : Maybe Int
     , showReactionPicker : Bool
-    , reactionCounts : List { reaction : Community.News.Reaction, count : Int }
-    , selectedReactions : List Community.News.Reaction
     , lastEditorSummary : Profile.Summary.Model
     }
 
@@ -52,26 +49,20 @@ init maybeNewsId loggedIn =
                     identity
 
                 Just newsId ->
-                    UR.addCmd
-                        (Api.Graphql.mutation loggedIn.shared
-                            (Just loggedIn.authToken)
-                            (Cambiatus.Mutation.read
-                                { newsId = newsId }
-                                Community.News.receiptSelectionSet
-                            )
-                            CompletedMarkingNewsAsRead
-                        )
+                    -- UR.addCmd
+                    --     (Api.Graphql.mutation loggedIn.shared
+                    --         (Just loggedIn.authToken)
+                    --         (Cambiatus.Mutation.read
+                    --             { newsId = newsId }
+                    --             Community.News.receiptSelectionSet
+                    --         )
+                    --         CompletedMarkingNewsAsRead
+                    --     )
+                    -- TODO
+                    identity
     in
     { newsId = maybeNewsId
     , showReactionPicker = False
-
-    -- TODO - Use real data
-    , reactionCounts = Community.News.mockSelectedReactions
-    , selectedReactions =
-        Community.News.mockSelectedReactions
-            |> List.head
-            |> Maybe.map (.reaction >> List.singleton)
-            |> Maybe.withDefault []
     , lastEditorSummary = Profile.Summary.init False
     }
         |> UR.init
@@ -92,7 +83,7 @@ type Msg
     | CompletedMarkingNewsAsRead (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
     | ClickedToggleReactions
     | ToggledReaction Community.News.Reaction
-    | CompletedTogglingReaction Community.News.Reaction (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
+    | CompletedTogglingReaction Community.News.Reaction Community.News.Model (RemoteData (Graphql.Http.Error (Maybe Community.News.Receipt)) (Maybe Community.News.Receipt))
     | GotLastEditorSummaryMsg Profile.Summary.Msg
 
 
@@ -152,36 +143,103 @@ update msg model loggedIn =
                     )
 
         ToggledReaction reaction ->
-            case model.newsId of
-                Just id ->
+            let
+                maybeSelectedNews =
+                    Community.getField loggedIn.selectedCommunity .news
+                        |> RemoteData.toMaybe
+                        |> Maybe.map Tuple.second
+                        |> Maybe.andThen
+                            (\news ->
+                                model.newsId
+                                    |> Maybe.andThen
+                                        (\currentId ->
+                                            List.Extra.find (\{ id } -> id == currentId)
+                                                news
+                                        )
+                            )
+            in
+            case maybeSelectedNews of
+                Just selectedNews ->
                     model
                         |> UR.init
                         |> UR.addCmd
                             (Api.Graphql.mutation loggedIn.shared
                                 (Just loggedIn.authToken)
-                                (Community.News.reactToNews
-                                    { newsId = id
-                                    , reactions =
-                                        if List.member reaction model.selectedReactions then
-                                            List.filter ((/=) reaction) model.selectedReactions
-
-                                        else
-                                            reaction :: model.selectedReactions
+                                (Community.News.reactToNews selectedNews
+                                    { newsId = selectedNews.id
+                                    , reaction = reaction
                                     }
                                 )
-                                (CompletedTogglingReaction reaction)
+                                (CompletedTogglingReaction reaction selectedNews)
                             )
 
                 Nothing ->
                     model
                         |> UR.init
 
-        CompletedTogglingReaction reaction (RemoteData.Success receipt) ->
-            -- TODO
-            model
-                |> UR.init
+        CompletedTogglingReaction reaction selectedNews (RemoteData.Success receipt) ->
+            case Community.getField loggedIn.selectedCommunity .news of
+                RemoteData.Success ( _, news ) ->
+                    let
+                        hasAdded =
+                            receipt
+                                |> Maybe.map .reactions
+                                |> Maybe.withDefault []
+                                |> List.member reaction
 
-        CompletedTogglingReaction _ (RemoteData.Failure err) ->
+                        reactionAlreadyExists =
+                            selectedNews.reactions
+                                |> List.any
+                                    (\reactionWithCount ->
+                                        reactionWithCount.reaction == reaction
+                                    )
+
+                        newReactions =
+                            if reactionAlreadyExists then
+                                List.Extra.updateIf
+                                    (\reactionWithCount ->
+                                        reactionWithCount.reaction == reaction
+                                    )
+                                    (\prevReaction ->
+                                        { count =
+                                            if hasAdded then
+                                                prevReaction.count + 1
+
+                                            else
+                                                prevReaction.count - 1
+                                        , reaction = reaction
+                                        }
+                                    )
+                                    selectedNews.reactions
+
+                            else
+                                { count = 1, reaction = reaction }
+                                    :: selectedNews.reactions
+
+                        newNews =
+                            news
+                                |> List.Extra.updateIf ((==) selectedNews)
+                                    (\_ ->
+                                        { selectedNews
+                                            | receipt = receipt
+                                            , reactions = newReactions
+                                        }
+                                    )
+                    in
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.SetCommunityField (Community.NewsValue newNews))
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Completed toggling reaction, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.News", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+
+        CompletedTogglingReaction _ _ (RemoteData.Failure err) ->
             model
                 |> UR.init
                 |> UR.logGraphqlError msg
@@ -191,10 +249,10 @@ update msg model loggedIn =
                     []
                     err
 
-        CompletedTogglingReaction _ RemoteData.Loading ->
+        CompletedTogglingReaction _ _ RemoteData.Loading ->
             UR.init model
 
-        CompletedTogglingReaction _ RemoteData.NotAsked ->
+        CompletedTogglingReaction _ _ RemoteData.NotAsked ->
             UR.init model
 
         GotLastEditorSummaryMsg subMsg ->
@@ -227,6 +285,7 @@ view loggedIn model =
 
                           else
                             news
+                                |> Debug.log "NEWS"
                                 |> List.filter
                                     (\n ->
                                         Community.News.isPublished loggedIn.shared.now n
@@ -271,11 +330,15 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
             [ case maybeSelectedNews of
                 Just selectedNews ->
                     [ viewMainNews loggedIn model selectedNews
-                    , h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
-                        [ span [] [ text <| t "news.read" ]
-                        , text " "
-                        , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
-                        ]
+                    , if List.isEmpty news then
+                        text ""
+
+                      else
+                        h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+                            [ span [] [ text <| t "news.read" ]
+                            , text " "
+                            , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
+                            ]
                     ]
 
                 Nothing ->
@@ -295,6 +358,9 @@ viewMainNews ({ shared } as loggedIn) model news =
     let
         { translators } =
             shared
+
+        _ =
+            Debug.log "VIEW MAIN NEWS" news
     in
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
@@ -302,8 +368,8 @@ viewMainNews ({ shared } as loggedIn) model news =
             , View.MarkdownEditor.viewReadOnly [ class "mt-6 text-black colored-links" ]
                 news.description
             , div [ class "flex items-center mt-8" ]
-                (viewReactionPicker translators model
-                    ++ viewReactions translators model
+                (viewReactionPicker translators model news
+                    ++ [ viewReactions translators news ]
                 )
             , if news.insertedAt /= news.updatedAt then
                 div [ class "flex items-center mt-6" ]
@@ -343,8 +409,17 @@ viewMainNews ({ shared } as loggedIn) model news =
         ]
 
 
-viewReactionPicker : Translators -> Model -> List (Html Msg)
-viewReactionPicker { t } model =
+viewReactionPicker : Translators -> Model -> Community.News.Model -> List (Html Msg)
+viewReactionPicker { t } model news =
+    let
+        hasReaction reaction =
+            case news.receipt of
+                Nothing ->
+                    False
+
+                Just receipt ->
+                    List.member reaction receipt.reactions
+    in
     details
         [ class "inline-block relative z-10"
         , onClickPreventAll ClickedToggleReactions
@@ -376,12 +451,10 @@ viewReactionPicker { t } model =
                             [ button
                                 [ class "w-8 h-8 flex items-center justify-center rounded-sm focus-ring transition-colors"
                                 , classList
-                                    [ ( "bg-green bg-opacity-80 hover:bg-opacity-60", List.member reaction model.selectedReactions )
-                                    , ( "bg-white hover:bg-gray-200 focus-visible:bg-gray-200", not (List.member reaction model.selectedReactions) )
+                                    [ ( "bg-green bg-opacity-80 hover:bg-opacity-60", hasReaction reaction )
+                                    , ( "bg-white hover:bg-gray-200 focus-visible:bg-gray-200", not (hasReaction reaction) )
                                     ]
-
-                                -- TODO - Handle click
-                                , onClick NoOp
+                                , onClick (ToggledReaction reaction)
                                 , id ("reaction-" ++ String.fromInt index)
                                 ]
                                 [ text (Community.News.reactionToString reaction) ]
@@ -413,33 +486,45 @@ viewReactionPicker { t } model =
            )
 
 
-viewReactions : Translators -> Model -> List (Html Msg)
-viewReactions { tr } model =
+viewReactions : Translators -> Community.News.Model -> Html Msg
+viewReactions { tr } news =
     let
-        isSelected reaction =
-            List.member reaction model.selectedReactions
+        hasReaction reaction =
+            case news.receipt of
+                Nothing ->
+                    False
+
+                Just receipt ->
+                    List.member reaction receipt.reactions
+
+        _ =
+            Debug.log "REACTIONS" news
     in
-    model.reactionCounts
-        |> List.filter (\{ count } -> count > 0)
-        |> List.map
-            (\{ reaction, count } ->
-                button
-                    [ class "ml-4 rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
-                    , classList
-                        [ ( "bg-green bg-opacity-50 border border-green hover:bg-opacity-40 active:bg-opacity-60", isSelected reaction )
-                        , ( "bg-gray-200 hover:bg-gray-500 active:bg-gray-300", not (isSelected reaction) )
-                        ]
-                    , ariaLabel <|
-                        tr "news.reaction.reactions"
-                            [ ( "count", String.fromInt count )
-                            , ( "reaction", Community.News.reactionName reaction )
+    Html.Keyed.ul [ class "flex items-center" ]
+        (news.reactions
+            |> List.filter (\{ count } -> count > 0)
+            |> List.map
+                (\{ reaction, count } ->
+                    ( Community.News.reactionName reaction
+                    , button
+                        [ class "ml-4 rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
+                        , classList
+                            [ ( "bg-green bg-opacity-50 border border-green hover:bg-opacity-40 active:bg-opacity-60", hasReaction reaction )
+                            , ( "bg-gray-200 hover:bg-gray-500 active:bg-gray-300", not (hasReaction reaction) )
                             ]
-                    , onClick (ToggledReaction reaction)
-                    ]
-                    [ span [ ariaHidden True ] [ text (Community.News.reactionToString reaction) ]
-                    , span [ ariaHidden True ] [ text (String.fromInt count) ]
-                    ]
-            )
+                        , ariaLabel <|
+                            tr "news.reaction.reactions"
+                                [ ( "count", String.fromInt count )
+                                , ( "reaction", Community.News.reactionName reaction )
+                                ]
+                        , onClick (ToggledReaction reaction)
+                        ]
+                        [ span [ ariaHidden True ] [ text (Community.News.reactionToString reaction) ]
+                        , span [ ariaHidden True ] [ text (String.fromInt count) ]
+                        ]
+                    )
+                )
+        )
 
 
 
@@ -461,7 +546,7 @@ msgToString msg =
         ToggledReaction _ ->
             [ "ToggledReaction" ]
 
-        CompletedTogglingReaction _ _ ->
+        CompletedTogglingReaction _ _ _ ->
             [ "CompletedTogglingReaction" ]
 
         GotLastEditorSummaryMsg subMsg ->

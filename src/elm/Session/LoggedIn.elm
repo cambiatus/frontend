@@ -858,6 +858,7 @@ type External msg
     | ReloadResource Resource
     | RequestedReloadCommunityField Community.Field
     | RequestedCommunityField Community.Field
+    | SetCommunityField Community.FieldValue
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
@@ -883,6 +884,9 @@ mapExternal mapFn msg =
 
         RequestedCommunityField field ->
             RequestedCommunityField field
+
+        SetCommunityField value ->
+            SetCommunityField value
 
         RequestedReloadCommunityField field ->
             RequestedReloadCommunityField field
@@ -1067,6 +1071,30 @@ updateExternal externalMsg ({ shared } as model) =
                                 | queuedCommunityFields =
                                     field :: model.queuedCommunityFields
                             }
+                    }
+
+        SetCommunityField value ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | selectedCommunity =
+                                    Community.setFieldValue value community
+                                        |> RemoteData.Success
+                            }
+                    }
+
+                _ ->
+                    -- TODO - add log
+                    { defaultResult
+                        | cmd =
+                            Log.fromImpossible externalMsg
+                                "Tried setting community field, but community wasn't loaded"
+                                (Just model.accountName)
+                                { moduleName = "Session.LoggedIn", function = "updateExternal" }
+                                [ Log.contextFromCommunity model.selectedCommunity ]
+                                |> Log.send externalMsgToString
                     }
 
         RequiredAuthentication afterAuthMsg ->
@@ -2055,3 +2083,40 @@ msgToString msg =
 
         ReceivedNewHighlightedNews _ ->
             [ "ReceivedNewHighlightedNews" ]
+
+
+externalMsgToString : External msg -> List String
+externalMsgToString externalMsg =
+    case externalMsg of
+        UpdatedLoggedIn _ ->
+            [ "UpdatedLoggedIn" ]
+
+        AddedCommunity _ ->
+            [ "AddedCommunity" ]
+
+        CreatedCommunity symbol _ ->
+            [ "CreatedCommunity", Eos.symbolToString symbol ]
+
+        ExternalBroadcast _ ->
+            [ "ExternalBroadcast" ]
+
+        ReloadResource _ ->
+            [ "ReloadResource" ]
+
+        RequestedReloadCommunityField _ ->
+            [ "RequestedReloadCommunityField" ]
+
+        RequestedCommunityField _ ->
+            [ "RequestedCommunityField" ]
+
+        SetCommunityField _ ->
+            [ "SetCommunityField" ]
+
+        RequiredAuthentication _ ->
+            [ "RequiredAuthentication" ]
+
+        ShowFeedback _ _ ->
+            [ "ShowFeedback" ]
+
+        HideFeedback ->
+            [ "HideFeedback" ]
