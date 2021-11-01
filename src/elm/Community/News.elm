@@ -48,7 +48,7 @@ type alias Receipt =
 
 
 type alias Reaction =
-    Reaction.ReactionEnum
+    ReactionEnum
 
 
 type alias ReactionWithCount =

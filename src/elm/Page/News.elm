@@ -301,7 +301,6 @@ view loggedIn model =
 
                           else
                             news
-                                |> Debug.log "NEWS"
                                 |> List.filter
                                     (\n ->
                                         Community.News.isPublished loggedIn.shared.now n
@@ -374,9 +373,6 @@ viewMainNews ({ shared } as loggedIn) model news =
     let
         { translators } =
             shared
-
-        _ =
-            Debug.log "VIEW MAIN NEWS" news
     in
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
@@ -512,9 +508,6 @@ viewReactions { tr } news =
 
                 Just receipt ->
                     List.member reaction receipt.reactions
-
-        _ =
-            Debug.log "REACTIONS" news
     in
     Html.Keyed.ul [ class "flex items-center" ]
         (news.reactions
