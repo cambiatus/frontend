@@ -110,7 +110,7 @@ productSelection =
         |> with (Eos.nameSelectionSet Cambiatus.Object.Product.creatorId)
         |> with Cambiatus.Object.Product.price
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
-        |> with Cambiatus.Object.Product.image
+        |> with (detectEmptyString Cambiatus.Object.Product.image)
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
@@ -126,9 +126,22 @@ productPreviewSelectionSet =
             )
         |> with Cambiatus.Object.ProductPreview.description
         |> with Cambiatus.Object.ProductPreview.id
-        |> with Cambiatus.Object.ProductPreview.image
+        |> with (detectEmptyString Cambiatus.Object.ProductPreview.image)
         |> with Cambiatus.Object.ProductPreview.price
         |> with Cambiatus.Object.ProductPreview.title
+
+
+detectEmptyString : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
+detectEmptyString =
+    SelectionSet.map
+        (\selection ->
+            case selection of
+                Just "" ->
+                    Nothing
+
+                _ ->
+                    selection
+        )
 
 
 productPreviewProfile : Eos.Name -> ShopProfile
