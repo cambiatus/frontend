@@ -290,18 +290,12 @@ viewCard model ({ shared } as loggedIn) index card =
         tr rId replaces =
             shared.translators.tr rId replaces
 
-        title =
-            if String.length card.product.title > 17 then
-                String.slice 0 17 card.product.title ++ " ..."
-
-            else
-                card.product.title
-
         profileSummaryId =
             "shop-item-card-" ++ String.fromInt card.product.id
     in
     a
         [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
+        , Html.Attributes.title card.product.title
         , Route.href (Route.ViewSale card.product.id)
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
@@ -354,7 +348,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
-                [ p [ class "text-xl" ] [ text title ]
+                [ p [ class "text-xl truncate" ] [ text card.product.title ]
                 ]
             , if card.product.units == 0 && card.product.trackStock then
                 div [ class "flex flex-none w-full px-6 pb-2" ]
