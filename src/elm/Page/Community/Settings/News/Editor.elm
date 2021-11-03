@@ -762,7 +762,7 @@ viewForm ({ shared } as loggedIn) form =
         , onSubmit ClickedSave
         ]
         [ Input.init
-            { label = translators.t "news.field.title"
+            { label = translators.t "news.editor.field.title"
             , id = "title-input"
             , onInput = EnteredTitle
             , disabled = form.isSaving
@@ -775,7 +775,7 @@ viewForm ({ shared } as loggedIn) form =
         , MarkdownEditor.view
             { translators = translators
             , placeholder = Nothing
-            , label = translators.t "news.field.description"
+            , label = translators.t "news.editor.field.description"
             , problem = Maybe.map translators.t form.descriptionError
             , disabled = form.isSaving
             }
