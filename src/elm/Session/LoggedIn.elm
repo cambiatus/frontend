@@ -41,7 +41,7 @@ import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, h1, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
-import Html.Attributes.Aria exposing (ariaLabel)
+import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -392,7 +392,12 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 
 viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
 viewHighlightedNews { t } toPageMsg news =
-    div [ class "bg-purple-500 p-4" ]
+    div
+        [ class "bg-purple-500 p-4"
+
+        -- TODO - Check this when subscription works
+        , ariaLive "polite"
+        ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
                 [ alt "" ]
