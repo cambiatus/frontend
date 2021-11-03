@@ -546,7 +546,16 @@ update msg model loggedIn =
                                 trackNo
                     in
                     initForm loggedIn.shared.translators initDescriptionEditor
-                        |> EditingUpdate balances sale RemoteData.NotAsked Closed
+                        |> EditingUpdate balances
+                            sale
+                            (case sale.image of
+                                Nothing ->
+                                    RemoteData.NotAsked
+
+                                Just img ->
+                                    RemoteData.Success img
+                            )
+                            Closed
                         |> updateForm
                             (\form ->
                                 { form
