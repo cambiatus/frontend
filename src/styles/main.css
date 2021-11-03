@@ -458,6 +458,20 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .animation-delay-300 {
     animation-delay: 300ms;
   }
+
+  /* Hides the default triangle on a summary element inside a details element.
+  The `-webkit-details-marker` and `marker` are needed for Safari */
+  .marker-hidden {
+    @apply list-none;
+  }
+
+  .marker-hidden::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .marker-hidden::marker {
+    @apply hidden;
+  }
 }
 
 /* End of extra utilities */

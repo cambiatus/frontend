@@ -445,7 +445,7 @@ viewReactionPicker { t } model news =
             [ role "button"
             , ariaHasPopup "true"
             , ariaLabel (t "news.reaction.choose")
-            , class "list-none bg-gray-200 rounded-full p-0.5 focus-ring transition-colors hover:bg-gray-500 active:bg-gray-300"
+            , class "marker-hidden bg-gray-200 rounded-full p-0.5 focus-ring transition-colors hover:bg-gray-500 active:bg-gray-300"
             ]
             [ Icons.smilingFace "fill-current text-gray-900 w-6 h-6"
             ]
