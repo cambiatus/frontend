@@ -10,7 +10,7 @@ import Cambiatus.Scalar
 import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, div, h2, p, span, text)
-import Html.Attributes exposing (class, classList, style)
+import Html.Attributes exposing (class, classList, style, title)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
 import Iso8601
@@ -228,6 +228,7 @@ viewSummary { t } hasRead news =
             , ( "text-purple-500 hover:opacity-80", not hasRead )
             ]
         , style "grid-template-columns" "28px 1fr 80px"
+        , title news.title
         , Route.href (Route.News (Just news.id))
         ]
         [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"

@@ -358,7 +358,7 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
 
                 Nothing ->
                     []
-            , [ div [ class "bg-white" ]
+            , [ div [ class "bg-white pb-4" ]
                     [ Community.News.viewList shared
                         [ class "container mx-auto px-4 pt-6" ]
                         news
