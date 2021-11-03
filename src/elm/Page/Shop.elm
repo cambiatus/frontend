@@ -17,7 +17,7 @@ import Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, id, src, value)
-import Html.Events exposing (on, onClick)
+import Html.Events exposing (onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
@@ -271,7 +271,15 @@ viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
 viewCard model ({ shared } as loggedIn) index card =
     let
         image =
-            Maybe.withDefault "" card.product.image
+            Maybe.withDefault
+                ("/icons/shop-placeholder"
+                    ++ (index
+                            |> modBy 3
+                            |> String.fromInt
+                       )
+                    ++ ".svg"
+                )
+                card.product.image
 
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
@@ -303,7 +311,6 @@ viewCard model ({ shared } as loggedIn) index card =
                 [ img
                     [ class "rounded-l-lg object-cover h-32 w-full"
                     , src image
-                    , on "error" (Json.Decode.succeed (OnImageError index))
                     ]
                     []
                 ]
@@ -336,7 +343,11 @@ viewCard model ({ shared } as loggedIn) index card =
             [ div
                 [ class "w-full relative bg-gray-500 rounded-t-lg"
                 ]
-                [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
+                [ img
+                    [ class "w-full h-48 object-cover rounded-t-lg"
+                    , src image
+                    ]
+                    []
                 , div
                     [ class "absolute right-1 bottom-1"
                     , id profileSummaryId
@@ -384,7 +395,6 @@ type Msg
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | OnImageError Int
     | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
 
 
@@ -438,47 +448,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-        OnImageError index ->
-            case model.cards of
-                Loaded cards ->
-                    case LE.getAt index cards of
-                        Just card ->
-                            let
-                                oldSale =
-                                    card.product
-
-                                icon =
-                                    "/icons/shop-placeholder" ++ (index |> modBy 3 |> String.fromInt) ++ ".svg"
-
-                                newSale =
-                                    { oldSale | image = Just icon }
-
-                                newCard =
-                                    { card | product = newSale }
-
-                                newList =
-                                    LE.setAt index newCard cards
-                            in
-                            { model | cards = Loaded newList } |> UR.init
-
-                        Nothing ->
-                            UR.init model
-                                |> UR.logImpossible msg
-                                    "Got an image error, but there isn't a card on the given index"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Shop", function = "update" }
-                                    [ { name = "Card info"
-                                      , extras =
-                                            Dict.fromList
-                                                [ ( "errorIndex", Encode.int index )
-                                                , ( "cardsLength", Encode.int (List.length cards) )
-                                                ]
-                                      }
-                                    ]
-
-                _ ->
-                    model |> UR.init
 
         GotProfileSummaryMsg index isAvailable subMsg ->
             case model.cards of
@@ -593,9 +562,6 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
-
-        OnImageError _ ->
-            [ "OnImageError" ]
 
         GotProfileSummaryMsg _ _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
