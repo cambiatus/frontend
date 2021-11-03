@@ -21,6 +21,7 @@ import Http
 import Icons
 import List.Extra
 import Log
+import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -111,6 +112,12 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "community.objectives.title") e
 
                 RemoteData.Success community ->
+                    let
+                        showSponsorCard =
+                            community.contributionConfiguration
+                                |> Maybe.andThen .paypalAccount
+                                |> Maybe.Extra.isJust
+                    in
                     div []
                         [ Page.viewHeader loggedIn community.name
                         , div [ class "bg-white p-4" ]
@@ -153,12 +160,17 @@ view loggedIn model =
 
                               else
                                 text ""
-                            , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
-                                Just _ ->
-                                    viewSponsorAndNewsCards loggedIn community
+                            , div
+                                [ class "container mx-auto px-4 mb-4 flex flex-col md:grid gap-4"
+                                , classList [ ( "md:grid-cols-2", showSponsorCard ) ]
+                                ]
+                                [ if showSponsorCard then
+                                    viewSponsorCard loggedIn community
 
-                                Nothing ->
+                                  else
                                     text ""
+                                , viewNewsCard loggedIn community showSponsorCard
+                                ]
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
@@ -172,8 +184,8 @@ view loggedIn model =
     }
 
 
-viewSponsorAndNewsCards : LoggedIn.Model -> Community.Model -> Html msg
-viewSponsorAndNewsCards loggedIn community =
+viewSponsorCard : LoggedIn.Model -> Community.Model -> Html msg
+viewSponsorCard loggedIn community =
     let
         { t, tr } =
             loggedIn.shared.translators
@@ -214,121 +226,134 @@ viewSponsorAndNewsCards loggedIn community =
                             []
                     )
     in
-    div [ class "container mx-auto px-4 mb-4 flex flex-col md:grid gap-4 md:grid-cols-2" ]
-        [ div [ class "w-full bg-white rounded p-4" ]
-            [ h2 [ class "text-lg font-bold mb-6" ]
-                [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
-                , text " "
-                , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
-                ]
-            , if not hasContributed then
-                div [ class "flex items-center mb-4" ]
-                    [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
-                        [ text_ "community.index.you" ]
-                    , p [ class "ml-4" ]
-                        [ text <|
-                            tr "community.index.your_turn"
-                                [ ( "community", community.name ) ]
-                        ]
-                    ]
-
-              else
-                text ""
-            , a
-                [ class "button button-primary w-full mb-6"
-                , Route.href Route.CommunitySponsor
-                ]
-                [ text_ "community.index.support_us" ]
-            , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
-            , div [ class "flex mb-4" ]
-                (case community.contributions of
-                    RemoteData.Success contributions ->
-                        contributions
-                            |> List.map (.user >> .avatar)
-                            |> List.Extra.unique
-                            |> List.sortWith compareAvatars
-                            |> List.take 5
-                            |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white")
-
-                    RemoteData.Loading ->
-                        viewLoading
-
-                    RemoteData.NotAsked ->
-                        viewLoading
-
-                    RemoteData.Failure _ ->
-                        []
-                )
-            , a
-                [ class "button button-secondary w-full"
-                , Route.href Route.CommunitySupporters
-                ]
-                [ text_ "community.index.see_all_supporters" ]
+    div [ class "w-full bg-white rounded p-4" ]
+        [ h2 [ class "text-lg font-bold mb-6" ]
+            [ span [ class "text-gray-900" ] [ text_ "community.index.our_supporters" ]
+            , text " "
+            , span [ class "text-purple-500" ] [ text_ "community.index.supporters" ]
             ]
-        , if not community.hasNews then
-            viewNewsComingSoon loggedIn.shared.translators
+        , if not hasContributed then
+            div [ class "flex items-center mb-4" ]
+                [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                    [ text_ "community.index.you" ]
+                , p [ class "ml-4" ]
+                    [ text <|
+                        tr "community.index.your_turn"
+                            [ ( "community", community.name ) ]
+                    ]
+                ]
 
           else
-            case community.news of
-                RemoteData.Success news ->
-                    if List.isEmpty news then
-                        viewNewsComingSoon loggedIn.shared.translators
+            text ""
+        , a
+            [ class "button button-primary w-full mb-6"
+            , Route.href Route.CommunitySponsor
+            ]
+            [ text_ "community.index.support_us" ]
+        , p [ class "mb-4" ] [ text_ "community.index.see_supporters" ]
+        , div [ class "flex mb-4" ]
+            (case community.contributions of
+                RemoteData.Success contributions ->
+                    contributions
+                        |> List.map (.user >> .avatar)
+                        |> List.Extra.unique
+                        |> List.sortWith compareAvatars
+                        |> List.take 5
+                        |> List.map (\avatar -> Avatar.view avatar "w-14 h-14 object-cover rounded-full -mr-2 border border-white")
 
-                    else
-                        div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
-                            [ viewNewsContainer loggedIn.shared.translators
-                                [ news
-                                    |> List.filter (Community.News.isPublished loggedIn.shared.now)
-                                    |> Community.News.viewList loggedIn.shared
-                                        [ class "hidden md:block" ]
-                                , news
-                                    |> List.filter (Community.News.isPublished loggedIn.shared.now)
-                                    |> List.take 2
-                                    |> Community.News.viewList loggedIn.shared
-                                        [ class "md:hidden" ]
-                                , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
-                                    [ a
-                                        [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
-                                        , Route.href (Route.News Nothing)
-                                        ]
-                                        [ text_ "news.view_more" ]
+                RemoteData.Loading ->
+                    viewLoading
+
+                RemoteData.NotAsked ->
+                    viewLoading
+
+                RemoteData.Failure _ ->
+                    []
+            )
+        , a
+            [ class "button button-secondary w-full"
+            , Route.href Route.CommunitySupporters
+            ]
+            [ text_ "community.index.see_all_supporters" ]
+        ]
+
+
+viewNewsCard : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
+viewNewsCard loggedIn community isSponsorCardVisible =
+    let
+        text_ =
+            loggedIn.shared.translators.t >> text
+    in
+    if not community.hasNews then
+        viewNewsComingSoon loggedIn.shared.translators isSponsorCardVisible
+
+    else
+        case community.news of
+            RemoteData.Success news ->
+                if List.isEmpty news then
+                    viewNewsComingSoon loggedIn.shared.translators isSponsorCardVisible
+
+                else
+                    div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
+                        [ viewNewsContainer loggedIn.shared.translators
+                            isSponsorCardVisible
+                            [ news
+                                |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                                |> Community.News.viewList loggedIn.shared
+                                    [ class "hidden md:block" ]
+                            , news
+                                |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                                |> List.take 2
+                                |> Community.News.viewList loggedIn.shared
+                                    [ class "md:hidden" ]
+                            , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
+                                [ a
+                                    [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
+                                    , Route.href (Route.News Nothing)
                                     ]
-                                , img
-                                    [ class "mx-auto -mb-4 md:hidden"
-                                    , src "/images/woman_announcer.svg"
-                                    ]
-                                    []
+                                    [ text_ "news.view_more" ]
                                 ]
                             , img
-                                [ class "absolute bottom-0 -right-8 hidden pointer-events-none md:block"
+                                [ class "mx-auto -mb-4 md:hidden"
                                 , src "/images/woman_announcer.svg"
                                 ]
                                 []
                             ]
-
-                RemoteData.Loading ->
-                    viewNewsContainer loggedIn.shared.translators
-                        [ View.Components.loadingLogoAnimated loggedIn.shared.translators
-                            ""
+                        , img
+                            [ class "absolute bottom-0 -right-8 hidden pointer-events-none md:block"
+                            , src "/images/woman_announcer.svg"
+                            ]
+                            []
                         ]
 
-                RemoteData.NotAsked ->
-                    viewNewsContainer loggedIn.shared.translators
-                        [ View.Components.loadingLogoAnimated loggedIn.shared.translators
-                            ""
-                        ]
+            RemoteData.Loading ->
+                viewNewsContainer loggedIn.shared.translators
+                    isSponsorCardVisible
+                    [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                        ""
+                    ]
 
-                RemoteData.Failure _ ->
-                    viewNewsContainer loggedIn.shared.translators
-                        [ p [ class "text-lg font-bold text-gray-900" ]
-                            [ text_ "news.error_fetching" ]
-                        ]
+            RemoteData.NotAsked ->
+                viewNewsContainer loggedIn.shared.translators
+                    isSponsorCardVisible
+                    [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                        ""
+                    ]
+
+            RemoteData.Failure _ ->
+                viewNewsContainer loggedIn.shared.translators
+                    isSponsorCardVisible
+                    [ p [ class "text-lg font-bold text-gray-900" ]
+                        [ text_ "news.error_fetching" ]
+                    ]
+
+
+viewNewsContainer : Translators -> Bool -> List (Html msg) -> Html msg
+viewNewsContainer { t } isSponsorCardVisible children =
+    div
+        [ class "flex flex-col w-full bg-white rounded p-4 relative md:overflow-y-auto"
+        , classList [ ( "md:flex-basis-0 md:flex-grow-1", isSponsorCardVisible ) ]
         ]
-
-
-viewNewsContainer : Translators -> List (Html msg) -> Html msg
-viewNewsContainer { t } children =
-    div [ class "flex flex-col w-full bg-white rounded p-4 relative md:overflow-y-auto md:flex-basis-0 md:flex-grow-1" ]
         (h2 [ class "text-lg font-bold mb-6" ]
             [ span [ class "text-gray-900" ] [ text <| t "community.index.our_messages" ]
             , text " "
@@ -338,9 +363,10 @@ viewNewsContainer { t } children =
         )
 
 
-viewNewsComingSoon : Translators -> Html msg
-viewNewsComingSoon translators =
+viewNewsComingSoon : Translators -> Bool -> Html msg
+viewNewsComingSoon translators isSponsorCardVisible =
     viewNewsContainer translators
+        isSponsorCardVisible
         [ p [ class "text-lg font-bold text-gray-900 m-auto" ]
             [ text <| translators.t "menu.coming_soon" ]
         , img
