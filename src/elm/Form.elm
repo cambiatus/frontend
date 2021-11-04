@@ -3,6 +3,7 @@ module Form exposing
     , succeed, with
     , textField
     , view
+    , ViewModel, initViewModel
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -87,7 +88,11 @@ documentation if you're stuck.
 -}
 
 import Form.Text as Text
-import Html exposing (Html)
+import Html exposing (Html, button)
+import Html.Attributes exposing (class, type_)
+import Html.Events as Events
+import Maybe.Extra
+import Set exposing (Set)
 
 
 
@@ -286,22 +291,125 @@ fill (Form fill_) =
 -- VIEW
 
 
+type alias ViewModel values =
+    { values : values
+    , errorTracking : ErrorTracking
+    }
+
+
+type ErrorTracking
+    = ErrorTracking { showAllErrors : Bool, showFieldError : Set String }
+
+
+initViewModel : values -> ViewModel values
+initViewModel values =
+    { values = values
+    , errorTracking =
+        ErrorTracking
+            { showAllErrors = False
+            , showFieldError = Set.empty
+            }
+    }
+
+
 {-| Provide a form and a dirty model, and get back some HTML
 -}
-view : Form values output msg -> values -> (values -> msg) -> Html msg
-view form values inputMsg =
-    fill form values
-        |> .fields
-        |> List.map (viewField inputMsg)
-        |> Html.form []
+view :
+    List (Html.Attribute msg)
+    ->
+        { onChange : ViewModel values -> msg
+        , onSubmit : output -> msg
+        , buttonAttrs : List (Html.Attribute msg)
+        , buttonLabel : List (Html msg)
+        }
+    -> Form values output msg
+    -> ViewModel values
+    -> Html msg
+view formAttrs { onChange, onSubmit, buttonAttrs, buttonLabel } form viewModel =
+    let
+        filledForm =
+            fill form viewModel.values
+
+        (ErrorTracking errorTracking) =
+            viewModel.errorTracking
+
+        fields =
+            filledForm.fields
+                |> List.reverse
+                |> List.map
+                    (viewField
+                        (\values -> onChange { viewModel | values = values })
+                        (\fieldId ->
+                            onChange
+                                { viewModel
+                                    | errorTracking =
+                                        ErrorTracking
+                                            { errorTracking
+                                                | showFieldError =
+                                                    Set.insert fieldId
+                                                        errorTracking.showFieldError
+                                            }
+                                }
+                        )
+                        (\fieldId ->
+                            errorTracking.showAllErrors
+                                || Set.member fieldId errorTracking.showFieldError
+                        )
+                    )
+    in
+    Html.form
+        ((case filledForm.result of
+            Ok result ->
+                Events.onSubmit (onSubmit result)
+
+            Err _ ->
+                class ""
+         )
+            :: formAttrs
+        )
+        (fields
+            ++ [ button
+                    (type_ "submit"
+                        :: class "button button-primary"
+                        :: buttonAttrs
+                    )
+                    buttonLabel
+               ]
+        )
 
 
-viewField : (values -> msg) -> FilledField values msg -> Html msg
-viewField inputMsg { state, error } =
+viewField :
+    (values -> msg)
+    -> (String -> msg)
+    -> (String -> Bool)
+    -> FilledField values msg
+    -> Html msg
+viewField inputMsg onBlur showErrorById { state, error } =
     case state of
         Text options { value, update } ->
+            let
+                showError =
+                    showErrorById (Text.getId options)
+            in
             Text.view options
                 { onChange = update >> inputMsg
+                , onBlur = onBlur
                 , value = value
-                , error = error
+                , error = viewError (Text.getErrorAttrs options) showError error
+                , hasError = showError && Maybe.Extra.isJust error
                 }
+
+
+viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
+viewError attributes showError maybeError =
+    case maybeError of
+        Nothing ->
+            Html.text ""
+
+        Just error ->
+            if showError then
+                Html.p (class "form-error" :: attributes)
+                    [ Html.text error ]
+
+            else
+                Html.text ""

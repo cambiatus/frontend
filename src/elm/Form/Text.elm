@@ -4,6 +4,7 @@ module Form.Text exposing
     , withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
     , withMask
+    , getId, getErrorAttrs
     , view
     )
 
@@ -46,12 +47,22 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 @docs withMask
 
+
+# Getters
+
+@docs getId, getErrorAttrs
+
+
+# View
+
+@docs view
+
 -}
 
 import Eos
-import Html exposing (Html, div, p, ul)
+import Html exposing (Html, div, p)
 import Html.Attributes exposing (class, classList, disabled, id, placeholder, type_)
-import Html.Events exposing (onInput)
+import Html.Events as Events exposing (onInput)
 import Mask
 import Maybe.Extra
 import View.Form
@@ -277,8 +288,10 @@ view :
     Options msg
     ->
         { onChange : String -> msg
+        , onBlur : String -> msg
         , value : String
-        , error : Maybe String
+        , error : Html msg
+        , hasError : Bool
         }
     -> Html msg
 view (Options options) state =
@@ -290,13 +303,7 @@ view (Options options) state =
             View.Form.label options.labelAttrs options.id options.label
         , viewInput (Options options) state
         , div [ class "flex w-full px-1" ]
-            [ case state.error of
-                Nothing ->
-                    Html.text ""
-
-                Just error ->
-                    p (class "form-error" :: options.errorAttrs)
-                        [ Html.text error ]
+            [ state.error
             , case options.counter of
                 Nothing ->
                     Html.text ""
@@ -311,12 +318,14 @@ view (Options options) state =
 viewInput :
     Options msg
     ->
-        { onChange : String -> msg
-        , value : String
-        , error : Maybe String
+        { state
+            | onChange : String -> msg
+            , onBlur : String -> msg
+            , value : String
+            , hasError : Bool
         }
     -> Html msg
-viewInput (Options options) { onChange, value, error } =
+viewInput (Options options) { onChange, value, hasError, onBlur } =
     let
         ( inputElement, inputClass, typeAttr ) =
             case options.inputElement of
@@ -330,8 +339,9 @@ viewInput (Options options) { onChange, value, error } =
         (inputElement
             (id options.id
                 :: onInput onChange
+                :: Events.onBlur (onBlur options.id)
                 :: class ("w-full " ++ inputClass)
-                :: classList [ ( "with-error", Maybe.Extra.isJust error ) ]
+                :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
                 :: Html.Attributes.value value
                 :: placeholder (Maybe.withDefault "" options.placeholder)
@@ -341,6 +351,20 @@ viewInput (Options options) { onChange, value, error } =
             []
             :: options.extraElements
         )
+
+
+
+-- GETTERS
+
+
+getId : Options msg -> String
+getId (Options options) =
+    options.id
+
+
+getErrorAttrs : Options msg -> List (Html.Attribute msg)
+getErrorAttrs (Options options) =
+    options.errorAttrs
 
 
 
