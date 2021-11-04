@@ -3,7 +3,7 @@ module Form exposing
     , succeed, with
     , textField
     , view
-    , ViewModel, initViewModel
+    , Msg, ViewModel, initViewModel, update
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -87,12 +87,15 @@ documentation if you're stuck.
 
 -}
 
+import Browser.Dom
 import Form.Text as Text
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, type_)
 import Html.Events as Events
 import Maybe.Extra
 import Set exposing (Set)
+import Task
+import UpdateResult as UR
 
 
 
@@ -114,7 +117,7 @@ valid/clean model
 -}
 type alias FilledForm values output msg =
     { fields : List (FilledField values msg)
-    , result : Result String output
+    , result : Result ( String, List String ) output
     }
 
 
@@ -183,16 +186,9 @@ field build config =
                     )
 
         field_ values =
-            let
-                value =
-                    config.value values
-
-                update newValue =
-                    config.update newValue values
-            in
             build
-                { value = value
-                , update = update
+                { value = config.value values
+                , update = \newValue -> config.update newValue values
                 }
     in
     Form
@@ -212,7 +208,8 @@ field build config =
                                 Nothing
                   }
                 ]
-            , result = result
+            , result =
+                Result.mapError (\_ -> ( getId (field_ values), [] )) result
             }
         )
 
@@ -266,13 +263,16 @@ with new current =
                     Ok fn ->
                         Result.map fn filledNew.result
 
-                    Err currErr ->
+                    Err ( firstError, otherErrors ) ->
                         case filledNew.result of
                             Ok _ ->
-                                Err currErr
+                                Err ( firstError, otherErrors )
 
-                            Err newErr ->
-                                Err newErr
+                            Err ( secondFirstError, secondOtherErrors ) ->
+                                Err
+                                    ( firstError
+                                    , otherErrors ++ (secondFirstError :: secondOtherErrors)
+                                    )
             }
         )
 
@@ -291,6 +291,13 @@ fill (Form fill_) =
 -- VIEW
 
 
+type Msg values output
+    = NoOp
+    | ChangedValues values
+    | BlurredField String
+    | Submitted (Result ( String, List String ) output)
+
+
 type alias ViewModel values =
     { values : values
     , errorTracking : ErrorTracking
@@ -299,6 +306,53 @@ type alias ViewModel values =
 
 type ErrorTracking
     = ErrorTracking { showAllErrors : Bool, showFieldError : Set String }
+
+
+type alias UpdateResult values output =
+    UR.UpdateResult (ViewModel values) (Msg values output) output
+
+
+update : Msg values output -> ViewModel values -> UpdateResult values output
+update msg viewModel =
+    let
+        (ErrorTracking errorTracking) =
+            viewModel.errorTracking
+    in
+    case msg of
+        NoOp ->
+            UR.init viewModel
+
+        ChangedValues newValues ->
+            { viewModel | values = newValues }
+                |> UR.init
+
+        BlurredField fieldId ->
+            { viewModel
+                | errorTracking =
+                    ErrorTracking
+                        { errorTracking
+                            | showFieldError =
+                                Set.insert fieldId errorTracking.showFieldError
+                        }
+            }
+                |> UR.init
+
+        Submitted (Err ( firstError, _ )) ->
+            { viewModel
+                | errorTracking =
+                    ErrorTracking
+                        { errorTracking | showAllErrors = True }
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus firstError
+                        |> Task.attempt (\_ -> NoOp)
+                    )
+
+        Submitted (Ok validForm) ->
+            viewModel
+                |> UR.init
+                |> UR.addExt validForm
 
 
 initViewModel : values -> ViewModel values
@@ -315,17 +369,15 @@ initViewModel values =
 {-| Provide a form and a dirty model, and get back some HTML
 -}
 view :
-    List (Html.Attribute msg)
+    List (Html.Attribute (Msg values output))
     ->
-        { onChange : ViewModel values -> msg
-        , onSubmit : output -> msg
-        , buttonAttrs : List (Html.Attribute msg)
-        , buttonLabel : List (Html msg)
+        { buttonAttrs : List (Html.Attribute (Msg values output))
+        , buttonLabel : List (Html (Msg values output))
         }
-    -> Form values output msg
+    -> Form values output (Msg values output)
     -> ViewModel values
-    -> Html msg
-view formAttrs { onChange, onSubmit, buttonAttrs, buttonLabel } form viewModel =
+    -> Html (Msg values output)
+view formAttrs { buttonAttrs, buttonLabel } form viewModel =
     let
         filledForm =
             fill form viewModel.values
@@ -337,36 +389,17 @@ view formAttrs { onChange, onSubmit, buttonAttrs, buttonLabel } form viewModel =
             filledForm.fields
                 |> List.reverse
                 |> List.map
-                    (viewField
-                        (\values -> onChange { viewModel | values = values })
-                        (\fieldId ->
-                            onChange
-                                { viewModel
-                                    | errorTracking =
-                                        ErrorTracking
-                                            { errorTracking
-                                                | showFieldError =
-                                                    Set.insert fieldId
-                                                        errorTracking.showFieldError
-                                            }
-                                }
-                        )
-                        (\fieldId ->
-                            errorTracking.showAllErrors
-                                || Set.member fieldId errorTracking.showFieldError
-                        )
+                    (\field_ ->
+                        let
+                            shouldShowFieldError =
+                                Set.member (getId field_.state) errorTracking.showFieldError
+                        in
+                        viewField
+                            (shouldShowFieldError || errorTracking.showAllErrors)
+                            field_
                     )
     in
-    Html.form
-        ((case filledForm.result of
-            Ok result ->
-                Events.onSubmit (onSubmit result)
-
-            Err _ ->
-                class ""
-         )
-            :: formAttrs
-        )
+    Html.form (Events.onSubmit (Submitted filledForm.result) :: formAttrs)
         (fields
             ++ [ button
                     (type_ "submit"
@@ -378,23 +411,24 @@ view formAttrs { onChange, onSubmit, buttonAttrs, buttonLabel } form viewModel =
         )
 
 
-viewField :
-    (values -> msg)
-    -> (String -> msg)
-    -> (String -> Bool)
-    -> FilledField values msg
-    -> Html msg
-viewField inputMsg onBlur showErrorById { state, error } =
+getId : Field values msg -> String
+getId state =
     case state of
-        Text options { value, update } ->
-            let
-                showError =
-                    showErrorById (Text.getId options)
-            in
+        Text options _ ->
+            Text.getId options
+
+
+viewField :
+    Bool
+    -> FilledField values (Msg values output)
+    -> Html (Msg values output)
+viewField showError { state, error } =
+    case state of
+        Text options baseField ->
             Text.view options
-                { onChange = update >> inputMsg
-                , onBlur = onBlur
-                , value = value
+                { onChange = baseField.update >> ChangedValues
+                , onBlur = BlurredField
+                , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
                 , hasError = showError && Maybe.Extra.isJust error
                 }

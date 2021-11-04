@@ -1,39 +1,35 @@
 module UpdateResult exposing
     ( UpdateResult
-    , addBreadcrumb
-    , addCmd
-    , addExt
-    , addMsg
-    , addPort
-    , init
-    , logDecodingError
-    , logEvent
-    , logGraphqlError
-    , logHttpError
-    , logImpossible
-    , logIncompatibleMsg
-    , logJsonValue
-    , map
-    , mapModel
-    , remoteDataToString
-    , resultToString
-    , setModel
-    , toModelCmd
+    , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
+    , fromChild
+    , map, mapModel, setModel
+    , addBreadcrumb, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
     )
 
-{- This library allows us to have an observable update function which allows us to transmit message from
-   various model to and from other modules including the Main module. This enables us to request side effects from within modules
-   while maintaining a flexible codebase.
-   In a scenario such as displaying a request to sign a transfer or a sale is where the usefulness of this module really shines through
+{-| This library allows us to have an observable update function which allows us to transmit message from
+various model to and from other modules including the Main module. This enables us to request side effects from within modules
+while maintaining a flexible codebase.
+In a scenario such as displaying a request to sign a transfer or a sale is where the usefulness of this module really shines through
 
-   # Definition
-   @docs UpdateResult
 
-   # Common Helpers
-   @docs init, addCmd, addMsg, addExt, addPort,  logHttpError, logImpossible, logGraphqlError, toModelCmd
+# Definition
 
-   # Mapping UpdateResults
-   @docs map, mapModel, setModel
+@docs UpdateResult
+
+
+# Common Helpers
+
+@docs init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
+
+
+# Using components
+
+@docs fromChild
+
+
+# Mapping UpdateResults
+
+@docs map, mapModel, setModel
 
 -}
 
@@ -89,6 +85,47 @@ init model =
     , ports = []
     , breadcrumbs = []
     , events = []
+    }
+
+
+{-| If a component returns an `UpdateResult`, you can use this function to merge
+the component's update result with the page's update result. This function
+assumes the child component wants to send data to the parent element through
+it's `extMsg`, and converts the child's `extMsg`s into `Cmd`s that will be fired
+and the parent element will be able to treat however they want.
+-}
+fromChild :
+    (childModel -> model -> model)
+    -> (childMsg -> msg)
+    -> (childExtMsg -> msg)
+    -> model
+    -> UpdateResult childModel childMsg childExtMsg
+    -> UpdateResult model msg extMsg
+fromChild addChildModel fromChildMsg fromChildExt parent child =
+    init parent
+        |> addChild child addChildModel fromChildMsg fromChildExt
+
+
+{-| Similar to `fromChild`, but takes an already existant `UpdateResult` from
+the parent
+-}
+addChild :
+    UpdateResult childModel childMsg childExtMsg
+    -> (childModel -> model -> model)
+    -> (childMsg -> msg)
+    -> (childExtMsg -> msg)
+    -> UpdateResult model msg extMsg
+    -> UpdateResult model msg extMsg
+addChild child addChildModel fromChildMsg fromChildExt parent =
+    { parent
+        | model = addChildModel child.model parent.model
+        , cmds =
+            List.map (Cmd.map fromChildMsg) child.cmds
+                ++ List.map (Task.succeed >> Task.perform fromChildExt) child.exts
+                ++ parent.cmds
+        , ports = List.map (Ports.mapAddress fromChildMsg) child.ports ++ parent.ports
+        , breadcrumbs = List.map (Log.mapBreadcrumb fromChildMsg) child.breadcrumbs ++ parent.breadcrumbs
+        , events = List.map (Log.map fromChildMsg) child.events ++ parent.events
     }
 
 
