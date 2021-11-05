@@ -1961,7 +1961,7 @@ unreadCountSubscription name =
 
 highlightedNewsSubscription : Eos.Symbol -> SelectionSet (Maybe Community.News.Model) RootSubscription
 highlightedNewsSubscription symbol =
-    Subscription.highlightedNewsChange { communityId = Eos.symbolToString symbol }
+    Subscription.highlightedNews { communityId = Eos.symbolToString symbol }
         Community.News.selectionSet
 
 
