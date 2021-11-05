@@ -17,7 +17,7 @@ import Eos
 import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, id, src, value)
-import Html.Events exposing (on, onClick)
+import Html.Events exposing (onClick)
 import Html.Lazy as Lazy
 import Http
 import I18Next exposing (t)
@@ -271,7 +271,15 @@ viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
 viewCard model ({ shared } as loggedIn) index card =
     let
         image =
-            Maybe.withDefault "" card.product.image
+            Maybe.withDefault
+                ("/icons/shop-placeholder"
+                    ++ (index
+                            |> modBy 3
+                            |> String.fromInt
+                       )
+                    ++ ".svg"
+                )
+                card.product.image
 
         maybeBal =
             LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
@@ -290,18 +298,12 @@ viewCard model ({ shared } as loggedIn) index card =
         tr rId replaces =
             shared.translators.tr rId replaces
 
-        title =
-            if String.length card.product.title > 17 then
-                String.slice 0 17 card.product.title ++ " ..."
-
-            else
-                card.product.title
-
         profileSummaryId =
             "shop-item-card-" ++ String.fromInt card.product.id
     in
     a
         [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
+        , Html.Attributes.title card.product.title
         , Route.href (Route.ViewSale card.product.id)
         ]
         [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
@@ -309,7 +311,6 @@ viewCard model ({ shared } as loggedIn) index card =
                 [ img
                     [ class "rounded-l-lg object-cover h-32 w-full"
                     , src image
-                    , on "error" (Json.Decode.succeed (OnImageError index))
                     ]
                     []
                 ]
@@ -342,7 +343,11 @@ viewCard model ({ shared } as loggedIn) index card =
             [ div
                 [ class "w-full relative bg-gray-500 rounded-t-lg"
                 ]
-                [ img [ class "w-full h-48 object-cover rounded-t-lg", src image ] []
+                [ img
+                    [ class "w-full h-48 object-cover rounded-t-lg"
+                    , src image
+                    ]
+                    []
                 , div
                     [ class "absolute right-1 bottom-1"
                     , id profileSummaryId
@@ -354,7 +359,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     ]
                 ]
             , div [ class "w-full px-6 pt-4" ]
-                [ p [ class "text-xl" ] [ text title ]
+                [ p [ class "text-xl truncate" ] [ text card.product.title ]
                 ]
             , if card.product.units == 0 && card.product.trackStock then
                 div [ class "flex flex-none w-full px-6 pb-2" ]
@@ -390,7 +395,6 @@ type Msg
     | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | OnImageError Int
     | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
 
 
@@ -444,47 +448,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-        OnImageError index ->
-            case model.cards of
-                Loaded cards ->
-                    case LE.getAt index cards of
-                        Just card ->
-                            let
-                                oldSale =
-                                    card.product
-
-                                icon =
-                                    "/icons/shop-placeholder" ++ (index |> modBy 3 |> String.fromInt) ++ ".svg"
-
-                                newSale =
-                                    { oldSale | image = Just icon }
-
-                                newCard =
-                                    { card | product = newSale }
-
-                                newList =
-                                    LE.setAt index newCard cards
-                            in
-                            { model | cards = Loaded newList } |> UR.init
-
-                        Nothing ->
-                            UR.init model
-                                |> UR.logImpossible msg
-                                    "Got an image error, but there isn't a card on the given index"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Shop", function = "update" }
-                                    [ { name = "Card info"
-                                      , extras =
-                                            Dict.fromList
-                                                [ ( "errorIndex", Encode.int index )
-                                                , ( "cardsLength", Encode.int (List.length cards) )
-                                                ]
-                                      }
-                                    ]
-
-                _ ->
-                    model |> UR.init
 
         GotProfileSummaryMsg index isAvailable subMsg ->
             case model.cards of
@@ -599,9 +562,6 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
-
-        OnImageError _ ->
-            [ "OnImageError" ]
 
         GotProfileSummaryMsg _ _ subMsg ->
             "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
