@@ -1421,15 +1421,39 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
 })
 
 // All notifiers for GraphQL subscriptions through absinthe socket
-let newCommunityNotifier = null
-let transferNotifier = null
-let notificationNotifier = null
-let highlightedNewsNotifier = null
+let newCommunitySubscription = null
+let transferSubscription = null
+let notificationSubscription = null
+let highlightedNewsSubscription = null
 
 let absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
 
 app.ports.createAbsintheSocket.subscribe((token) => {
+  const oldAbsintheSocket = absintheSocket
+
   absintheSocket = AbsintheSocket.create(new PhoenixSocket(`${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`))
+
+  const resubscribe = (subscription) => {
+    if (subscription === null) {
+      return
+    }
+
+    const { notifier, handlers, operation } = subscription
+
+    AbsintheSocket.cancel(oldAbsintheSocket, notifier)
+
+    const newNotifier = AbsintheSocket.send(absintheSocket, {
+      operation: operation,
+      variables: {}
+    })
+
+    AbsintheSocket.observe(absintheSocket, newNotifier, handlers)
+  }
+
+  resubscribe(newCommunitySubscription)
+  resubscribe(transferSubscription)
+  resubscribe(notificationSubscription)
+  resubscribe(highlightedNewsSubscription)
 })
 
 async function handleJavascriptPort (arg) {
@@ -1682,12 +1706,12 @@ async function handleJavascriptPort (arg) {
     }
     case 'subscribeToNewCommunity': {
       // Cancel existing notifier
-      if (newCommunityNotifier) {
-        AbsintheSocket.cancel(absintheSocket, newCommunityNotifier)
+      if (newCommunitySubscription && newCommunitySubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, newCommunitySubscription.notifier)
       }
 
       // Create new notifier
-      newCommunityNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1761,24 +1785,32 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, newCommunityNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      newCommunitySubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToTransfer': {
       // Cancel existing notifier
-      if (transferNotifier) {
-        AbsintheSocket.cancel(absintheSocket, transferNotifier)
+      if (transferSubscription && transferSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, transferSubscription.notifier)
       }
 
       // Create new notifier
-      transferNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1853,24 +1885,32 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, transferNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      transferSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToUnreadCount': {
       // Cancel existing notifier
-      if (notificationNotifier) {
-        AbsintheSocket.cancel(absintheSocket, notificationNotifier)
+      if (notificationSubscription && notificationSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, notificationSubscription.notifier)
       }
 
       // Create new notifier
-      notificationNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1937,24 +1977,32 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, notificationNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      notificationSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToHighlightedNewsChanged': {
       // Cancel existing notifier
-      if (highlightedNewsNotifier) {
-        AbsintheSocket.cancel(absintheSocket, highlightedNewsNotifier)
+      if (highlightedNewsSubscription && highlightedNewsSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, highlightedNewsSubscription.notifier)
       }
 
       // Create new notifier
-      highlightedNewsNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -2021,13 +2069,21 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, highlightedNewsNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      highlightedNewsSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
