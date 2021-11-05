@@ -90,8 +90,8 @@ view loggedIn model =
                     t "community.not_found"
 
         objectivesContainer children =
-            div [ class "px-4 pb-4" ]
-                [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded-lg mt-4" ]
+            div [ class "px-4" ]
+                [ div [ class "container bg-white py-6 sm:py-8 px-3 sm:px-6 rounded mt-4" ]
                     children
                 ]
 
@@ -160,17 +160,25 @@ view loggedIn model =
 
                               else
                                 text ""
-                            , div
-                                [ class "container mx-auto px-4 mb-4 flex flex-col md:grid gap-4"
-                                , classList [ ( "md:grid-cols-2", showSponsorCard ) ]
-                                ]
-                                [ if showSponsorCard then
-                                    viewSponsorCard loggedIn community
+                            , if showSponsorCard || community.hasNews then
+                                div
+                                    [ class "container mx-auto px-4 my-4 flex flex-col md:grid gap-4"
+                                    , classList [ ( "md:grid-cols-2", showSponsorCard && community.hasNews ) ]
+                                    ]
+                                    [ if showSponsorCard then
+                                        viewSponsorCard loggedIn community
 
-                                  else
-                                    text ""
-                                , viewNewsCard loggedIn community showSponsorCard
-                                ]
+                                      else
+                                        text ""
+                                    , if community.hasNews then
+                                        viewNewsCard loggedIn community showSponsorCard
+
+                                      else
+                                        text ""
+                                    ]
+
+                              else
+                                text ""
                             , viewCommunityStats loggedIn.shared.translators community model
                             ]
                         ]
@@ -284,68 +292,73 @@ viewNewsCard loggedIn community isSponsorCardVisible =
         text_ =
             loggedIn.shared.translators.t >> text
     in
-    if not community.hasNews then
-        viewNewsComingSoon loggedIn.shared.translators isSponsorCardVisible
+    case community.news of
+        RemoteData.Success news ->
+            if List.isEmpty news then
+                viewNewsContainer loggedIn.shared.translators
+                    isSponsorCardVisible
+                    [ p [ class "text-lg font-bold text-gray-900 m-auto mt-4 mb-14" ]
+                        [ text_ "menu.coming_soon" ]
+                    , img
+                        [ class "mx-auto -mb-4"
+                        , src "/images/woman_announcer.svg"
+                        ]
+                        []
+                    ]
 
-    else
-        case community.news of
-            RemoteData.Success news ->
-                if List.isEmpty news then
-                    viewNewsComingSoon loggedIn.shared.translators isSponsorCardVisible
-
-                else
-                    div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
-                        [ viewNewsContainer loggedIn.shared.translators
-                            isSponsorCardVisible
-                            [ news
-                                |> List.filter (Community.News.isPublished loggedIn.shared.now)
-                                |> Community.News.viewList loggedIn.shared
-                                    [ class "hidden md:block" ]
-                            , news
-                                |> List.filter (Community.News.isPublished loggedIn.shared.now)
-                                |> List.take 2
-                                |> Community.News.viewList loggedIn.shared
-                                    [ class "md:hidden" ]
-                            , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
-                                [ a
-                                    [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
-                                    , Route.href (Route.News Nothing)
-                                    ]
-                                    [ text_ "news.view_more" ]
+            else
+                div [ class "w-full flex flex-col relative rounded overflow-hidden" ]
+                    [ viewNewsContainer loggedIn.shared.translators
+                        isSponsorCardVisible
+                        [ news
+                            |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                            |> Community.News.viewList loggedIn.shared
+                                [ class "hidden md:block" ]
+                        , news
+                            |> List.filter (Community.News.isPublished loggedIn.shared.now)
+                            |> List.take 2
+                            |> Community.News.viewList loggedIn.shared
+                                [ class "md:hidden" ]
+                        , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
+                            [ a
+                                [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
+                                , Route.href (Route.News Nothing)
                                 ]
-                            , img
-                                [ class "mx-auto -mb-4 md:hidden"
-                                , src "/images/woman_announcer.svg"
-                                ]
-                                []
+                                [ text_ "news.view_more" ]
                             ]
                         , img
-                            [ class "absolute bottom-0 -right-8 hidden pointer-events-none md:block"
+                            [ class "mx-auto -mb-4 md:hidden"
                             , src "/images/woman_announcer.svg"
                             ]
                             []
                         ]
-
-            RemoteData.Loading ->
-                viewNewsContainer loggedIn.shared.translators
-                    isSponsorCardVisible
-                    [ View.Components.loadingLogoAnimated loggedIn.shared.translators
-                        ""
+                    , img
+                        [ class "absolute bottom-0 -right-8 hidden pointer-events-none md:block"
+                        , src "/images/woman_announcer.svg"
+                        ]
+                        []
                     ]
 
-            RemoteData.NotAsked ->
-                viewNewsContainer loggedIn.shared.translators
-                    isSponsorCardVisible
-                    [ View.Components.loadingLogoAnimated loggedIn.shared.translators
-                        ""
-                    ]
+        RemoteData.Loading ->
+            viewNewsContainer loggedIn.shared.translators
+                isSponsorCardVisible
+                [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                    ""
+                ]
 
-            RemoteData.Failure _ ->
-                viewNewsContainer loggedIn.shared.translators
-                    isSponsorCardVisible
-                    [ p [ class "text-lg font-bold text-gray-900" ]
-                        [ text_ "news.error_fetching" ]
-                    ]
+        RemoteData.NotAsked ->
+            viewNewsContainer loggedIn.shared.translators
+                isSponsorCardVisible
+                [ View.Components.loadingLogoAnimated loggedIn.shared.translators
+                    ""
+                ]
+
+        RemoteData.Failure _ ->
+            viewNewsContainer loggedIn.shared.translators
+                isSponsorCardVisible
+                [ p [ class "text-lg font-bold text-gray-900" ]
+                    [ text_ "news.error_fetching" ]
+                ]
 
 
 viewNewsContainer : Translators -> Bool -> List (Html msg) -> Html msg
@@ -361,20 +374,6 @@ viewNewsContainer { t } isSponsorCardVisible children =
             ]
             :: children
         )
-
-
-viewNewsComingSoon : Translators -> Bool -> Html msg
-viewNewsComingSoon translators isSponsorCardVisible =
-    viewNewsContainer translators
-        isSponsorCardVisible
-        [ p [ class "text-lg font-bold text-gray-900 m-auto" ]
-            [ text <| translators.t "menu.coming_soon" ]
-        , img
-            [ class "mx-auto -mb-4"
-            , src "/images/woman_announcer.svg"
-            ]
-            []
-        ]
 
 
 viewCommunityStats : Translators -> Community.Model -> Model -> Html msg
