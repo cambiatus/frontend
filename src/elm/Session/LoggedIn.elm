@@ -1091,7 +1091,6 @@ updateExternal externalMsg ({ shared } as model) =
                     }
 
                 _ ->
-                    -- TODO - add log
                     { defaultResult
                         | cmd =
                             Log.fromImpossible externalMsg
