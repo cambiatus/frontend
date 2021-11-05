@@ -1223,7 +1223,10 @@
     "edited_date": " on {{date}}",
     "reaction": {
       "choose": "Choose a reaction",
-      "reactions": "{{count}} people reacted with {{reaction}}"
+      "reactions": "{{count}} people reacted with",
+      "remove": "Remove reaction",
+      "add": "React with",
+      "close": "Close reaction picker"
     },
     "no_news": {
       "title": "There's nothing to see here",

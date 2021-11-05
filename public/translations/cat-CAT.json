@@ -1225,7 +1225,10 @@
     "edited_date": " el {{date}}",
     "reaction": {
       "choose": "Triar una reacció",
-      "reactions": "{{count}} persones van reaccionar amb {{reaction}}"
+      "reactions": "{{count}} persones van reaccionar amb",
+      "remove": "Elimina la reacció",
+      "add": "Reacciona amb",
+      "close": "Tanqueu el selector de reacció"
     },
     "no_news": {
       "title": "No hi ha res a veure per aquí",

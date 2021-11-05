@@ -28,7 +28,7 @@ import Dict
 import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
-import Html exposing (Html, a, div, img, p, text)
+import Html exposing (Html, a, div, h1, img, p, text)
 import Html.Attributes exposing (class, src, title)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -206,7 +206,7 @@ viewHeader { shared, routeHistory } title =
                 , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
                     [ text (shared.translators.t "back") ]
                 ]
-            , p [ class "mx-auto text-white truncate pl-10 sm:pl-0" ] [ text title ]
+            , h1 [ class "mx-auto text-white truncate pl-10 sm:pl-0" ] [ text title ]
             ]
         ]
 

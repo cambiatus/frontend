@@ -1184,7 +1184,10 @@
     "edited_date": " በ{{date}} ተስተካክሏል",
     "reaction": {
       "choose": "ምላሽ ይምረጡ",
-      "reactions": "{{count}} ሰዎች በ{{reaction}} ምላሽ ሰጥተዋል"
+      "reactions": "{{count}} ሰዎች በ",
+      "remove": "ምላሽን ያስወግዱ",
+      "add": "ጋር ምላሽ ይስጡ",
+      "close": "የቅርብ ምላሽ መራጭ"
     },
     "no_news": {
       "title": "እዚህ ምንም የሚታይ ነገር የለም",

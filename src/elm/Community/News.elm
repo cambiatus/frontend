@@ -9,7 +9,7 @@ import Cambiatus.Object.ReactionType
 import Cambiatus.Scalar
 import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, div, h2, p, span, text)
+import Html exposing (Html, a, div, h3, h4, p, span, text)
 import Html.Attributes exposing (class, classList, style, title)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
@@ -200,11 +200,13 @@ viewList shared attrs news =
             |> List.map
                 (\( firstNews, otherNews ) ->
                     div [ class "pt-4 first:pt-0" ]
-                        [ View.Components.dateViewer
-                            [ class "text-black text-sm font-bold uppercase" ]
-                            identity
-                            shared
-                            firstNews.insertedAt
+                        [ h3 []
+                            [ View.Components.dateViewer
+                                [ class "text-black text-sm font-bold uppercase" ]
+                                identity
+                                shared
+                                firstNews.insertedAt
+                            ]
                         , div [ class "divide-y divide-gray-500" ]
                             (List.map
                                 (\theseNews ->
@@ -233,13 +235,24 @@ viewSummary { t } hasRead news =
         ]
         [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
         , div [ class "truncate ml-4 mr-16" ]
-            [ h2 [ class "font-bold truncate" ] [ text news.title ]
-            , p [ class "truncate" ]
+            [ h4 [ class "font-bold truncate" ] [ text news.title ]
+            , p
+                [ class "truncate"
+                , ariaHidden True
+                ]
                 [ text <| View.MarkdownEditor.removeFormatting news.description ]
+            , p [ class "sr-only" ]
+                [ if hasRead then
+                    text "Lido"
+
+                  else
+                    text "Não lido"
+                ]
             ]
         , if not hasRead then
             span
                 [ class "button button-primary w-auto px-4"
+                , ariaHidden True
                 ]
                 [ text <| t "news.read" ]
 

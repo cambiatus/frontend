@@ -8,8 +8,8 @@ import Community.News
 import Dict
 import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, button, details, div, h1, li, p, span, summary, text, ul)
-import Html.Attributes exposing (class, classList, id, style, tabindex)
+import Html exposing (Html, a, button, details, div, h2, li, p, span, summary, text, ul)
+import Html.Attributes exposing (class, classList, id, style, tabindex, type_)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Html.Keyed
@@ -154,8 +154,13 @@ update msg model loggedIn =
             { model | showReactionPicker = not model.showReactionPicker }
                 |> UR.init
                 |> UR.addCmd
-                    (Browser.Dom.focus "reaction-0"
-                        |> Task.attempt (\_ -> NoOp)
+                    (if model.showReactionPicker then
+                        Browser.Dom.focus "reaction-picker"
+                            |> Task.attempt (\_ -> NoOp)
+
+                     else
+                        Browser.Dom.focus "reaction-0"
+                            |> Task.attempt (\_ -> NoOp)
                     )
 
         ToggledReaction reaction ->
@@ -349,7 +354,7 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
                         text ""
 
                       else
-                        h1 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+                        h2 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
                             [ span [] [ text <| t "news.read" ]
                             , text " "
                             , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
@@ -376,7 +381,7 @@ viewMainNews ({ shared } as loggedIn) model news =
     in
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
-            [ h1 [ class "text-lg text-black font-bold" ] [ text news.title ]
+            [ h2 [ class "text-lg text-black font-bold" ] [ text news.title ]
             , View.MarkdownEditor.viewReadOnly [ class "mt-6 text-black colored-links" ]
                 news.description
             , div [ class "flex items-center mt-8" ]
@@ -434,6 +439,7 @@ viewReactionPicker { t } model news =
     in
     details
         [ class "inline-block relative z-10"
+        , id "reaction-picker"
         , onClickPreventAll ClickedToggleReactions
         , if model.showReactionPicker then
             Html.Attributes.attribute "open" ""
@@ -469,7 +475,15 @@ viewReactionPicker { t } model news =
                                 , onClick (ToggledReaction reaction)
                                 , id ("reaction-" ++ String.fromInt index)
                                 ]
-                                [ text (Community.News.reactionToString reaction) ]
+                                [ span [ class "sr-only" ]
+                                    [ if hasReaction reaction then
+                                        text <| t "news.reaction.remove"
+
+                                      else
+                                        text <| t "news.reaction.add"
+                                    ]
+                                , text (Community.News.reactionToString reaction)
+                                ]
                             ]
                     )
                     Community.News.listReactions
@@ -480,7 +494,7 @@ viewReactionPicker { t } model news =
                 [ button
                     [ class "fixed top-0 right-0 w-screen h-screen cursor-auto"
                     , onClick ClickedToggleReactions
-                    , ariaLabel "close reaction picker"
+                    , ariaLabel <| t "news.reaction.close"
                     , tabindex -1
                     ]
                     []
@@ -515,21 +529,24 @@ viewReactions { tr } news =
             |> List.map
                 (\{ reaction, count } ->
                     ( Community.News.reactionName reaction
-                    , button
-                        [ class "ml-4 rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
-                        , classList
-                            [ ( "bg-green bg-opacity-50 border border-green hover:bg-opacity-40 active:bg-opacity-60", hasReaction reaction )
-                            , ( "bg-gray-200 hover:bg-gray-500 active:bg-gray-300", not (hasReaction reaction) )
-                            ]
-                        , ariaLabel <|
-                            tr "news.reaction.reactions"
-                                [ ( "count", String.fromInt count )
-                                , ( "reaction", Community.News.reactionName reaction )
+                    , li []
+                        [ button
+                            [ class "ml-4 rounded-full py-0.5 px-2 flex gap-1 focus-ring transition-colors"
+                            , classList
+                                [ ( "bg-green bg-opacity-50 border border-green hover:bg-opacity-40 active:bg-opacity-60", hasReaction reaction )
+                                , ( "bg-gray-200 hover:bg-gray-500 active:bg-gray-300", not (hasReaction reaction) )
                                 ]
-                        , onClick (ToggledReaction reaction)
-                        ]
-                        [ span [ ariaHidden True ] [ text (Community.News.reactionToString reaction) ]
-                        , span [ ariaHidden True ] [ text (String.fromInt count) ]
+                            , type_ "button"
+                            , onClick (ToggledReaction reaction)
+                            ]
+                            [ span [ class "sr-only" ]
+                                [ text <|
+                                    tr "news.reaction.reactions"
+                                        [ ( "count", String.fromInt count ) ]
+                                ]
+                            , span [] [ text (Community.News.reactionToString reaction) ]
+                            , span [ ariaHidden True ] [ text (String.fromInt count) ]
+                            ]
                         ]
                     )
                 )

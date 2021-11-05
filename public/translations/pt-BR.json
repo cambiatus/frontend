@@ -1229,7 +1229,10 @@
     "edited_date": " em {{date}}",
     "reaction": {
       "choose": "Escolha uma reação",
-      "reactions": "{{count}} pessoas reagiram com {{reaction}}"
+      "reactions": "{{count}} pessoas reagiram com",
+      "remove": "Remover reação",
+      "add": "Reagir com",
+      "close": "Fechar seletor de reações"
     },
     "no_news": {
       "title": "Não tem nada para ver por aqui",
