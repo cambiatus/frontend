@@ -297,24 +297,7 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
         [ Page.viewHeader loggedIn pageTitle
         , div
             [ class "container mx-auto" ]
-            [ div [ class "px-4 py-6" ]
-                [ if isEdit then
-                    button
-                        [ class "btn delete-button"
-                        , disabled isDisabled
-                        , onClick ClickedDelete
-                        ]
-                        [ text (t "shop.delete") ]
-
-                  else
-                    text ""
-                , if isEdit && deleteModal == Open then
-                    viewConfirmDeleteModal t
-
-                  else
-                    text ""
-                ]
-            , FileUploader.init
+            [ FileUploader.init
                 { label = ""
                 , id = fieldId "image"
                 , onFileInput = EnteredImage
@@ -404,16 +387,29 @@ viewForm ({ shared } as loggedIn) imageStatus isEdit isDisabled deleteModal form
 
                     Just err ->
                         viewFieldErrors [ err ]
-                , div
-                    [ class "flex align-center justify-center mb-10"
-                    , disabled (isDisabled || RemoteData.isLoading imageStatus)
-                    ]
-                    [ button
+                , div [ class "flex flex-col-reverse sm:flex-row align-center justify-center mb-10" ]
+                    [ if isEdit then
+                        button
+                            [ class "button button-danger w-full mt-4 sm:w-40 sm:mt-0 sm:mr-4"
+                            , disabled isDisabled
+                            , onClick ClickedDelete
+                            ]
+                            [ text (t "shop.delete") ]
+
+                      else
+                        text ""
+                    , button
                         [ class "button button-primary w-full sm:w-40"
+                        , disabled (isDisabled || RemoteData.isLoading imageStatus)
                         , onClick ClickedSave
                         ]
                         [ text actionText ]
                     ]
+                , if isEdit && deleteModal == Open then
+                    viewConfirmDeleteModal t
+
+                  else
+                    text ""
                 ]
             ]
         ]
@@ -546,7 +542,16 @@ update msg model loggedIn =
                                 trackNo
                     in
                     initForm loggedIn.shared.translators initDescriptionEditor
-                        |> EditingUpdate balances sale RemoteData.NotAsked Closed
+                        |> EditingUpdate balances
+                            sale
+                            (case sale.image of
+                                Nothing ->
+                                    RemoteData.NotAsked
+
+                                Just img ->
+                                    RemoteData.Success img
+                            )
+                            Closed
                         |> updateForm
                             (\form ->
                                 { form
