@@ -3,7 +3,6 @@ module Form.Text exposing
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
     , withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
-    , withMask
     , getId, getErrorAttrs
     , view
     )
@@ -45,7 +44,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 ## Masks
 
-@docs withMask
+-- TODO - Add Masks
 
 
 # Getters
@@ -60,11 +59,10 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 -}
 
 import Eos
-import Html exposing (Html, div, p)
+import Html exposing (Html, div)
 import Html.Attributes exposing (class, classList, disabled, id, placeholder, type_)
 import Html.Events as Events exposing (onInput)
-import Mask
-import Maybe.Extra
+import Session.Shared as Shared
 import View.Form
 
 
@@ -87,8 +85,8 @@ type Options msg
         , counterAttrs : List (Html.Attribute msg)
         , counter : Maybe Counter
         , type_ : InputType
-        , mask : Maybe Mask
         , inputElement : InputElement
+        , beforeChangeEvent : String -> String
         }
 
 
@@ -110,8 +108,8 @@ init { label, id, disabled } =
         , extraElements = []
         , counter = Nothing
         , type_ = Text
-        , mask = Nothing
         , inputElement = TextInput
+        , beforeChangeEvent = identity
         }
 
 
@@ -125,8 +123,9 @@ type Counter
 {-| Determines the `type_` attribute of the input
 -}
 type InputType
-    = Time
-    | Text
+    = Text
+    | Telephone
+    | Number
 
 
 {-| Determines which element to render the input as
@@ -134,11 +133,6 @@ type InputType
 type InputElement
     = TextInput
     | TextareaInput
-
-
-type Mask
-    = NumberMask Mask.DecimalDigits
-    | StringMask { mask : String, replace : Char }
 
 
 
@@ -152,13 +146,38 @@ withPlaceholder placeholder (Options options) =
     Options { options | placeholder = Just placeholder }
 
 
-{-| Adds a character counter to your input. This does not limit the amount of
-characters automatically. Validation must be done in your onInput handler.
+{-| Adds a character counter to your input. Limits the amount of characters or
+words automatically
 -}
 withCounter : Counter -> Options msg -> Options msg
 withCounter counter (Options options) =
-    -- TODO - Check if we can add validation here
-    Options { options | counter = Just counter }
+    let
+        ( addMaxlength, beforeChangeEvent ) =
+            case counter of
+                CountLetters maxLetters ->
+                    ( withExtraAttrs [ Html.Attributes.maxlength maxLetters ]
+                    , String.left maxLetters
+                    )
+
+                CountWords maxWords ->
+                    ( identity
+                    , \value ->
+                        if List.length (String.words value) >= maxWords then
+                            value
+                                |> String.words
+                                |> List.take maxWords
+                                |> String.join " "
+
+                        else
+                            value
+                    )
+    in
+    Options
+        { options
+            | counter = Just counter
+            , beforeChangeEvent = beforeChangeEvent
+        }
+        |> addMaxlength
 
 
 {-| Adds an element to the input, so we can have elements inside the input
@@ -260,27 +279,6 @@ asNumeric =
 
 
 
--- MASKS
-
-
-withMask : { mask : String, replace : Char } -> Options msg -> Options msg
-withMask mask (Options options) =
-    Options
-        { options
-            | mask = Just (StringMask mask)
-
-            -- TODO - Figure out value = Mask.string mask options.value
-        }
-        |> withElements
-            [ Html.node "masked-input-helper"
-                [ Html.Attributes.attribute "target-id" options.id
-                , Html.Attributes.attribute "mask-type" "string"
-                ]
-                []
-            ]
-
-
-
 -- VIEW
 
 
@@ -292,6 +290,7 @@ view :
         , value : String
         , error : Html msg
         , hasError : Bool
+        , translators : Shared.Translators
         }
     -> Html msg
 view (Options options) state =
@@ -308,9 +307,30 @@ view (Options options) state =
                 Nothing ->
                     Html.text ""
 
-                Just _ ->
-                    -- TODO
-                    Html.text ""
+                Just counter ->
+                    let
+                        ( currentLength, max ) =
+                            case counter of
+                                CountLetters maxLetters ->
+                                    ( String.length state.value, maxLetters )
+
+                                CountWords maxWords ->
+                                    ( String.words state.value
+                                        |> List.filter (not << String.isEmpty)
+                                        |> List.length
+                                    , maxWords
+                                    )
+                    in
+                    Html.p
+                        (class "text-purple-100 mt-2 ml-auto uppercase font-bold text-sm flex-shrink-0"
+                            :: options.counterAttrs
+                        )
+                        [ Html.text <|
+                            state.translators.tr "edit.input_counter"
+                                [ ( "current", String.fromInt currentLength )
+                                , ( "max", String.fromInt max )
+                                ]
+                        ]
             ]
         ]
 
@@ -338,7 +358,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur } =
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput onChange
+                :: onInput (options.beforeChangeEvent >> onChange)
                 :: Events.onBlur (onBlur options.id)
                 :: class ("w-full " ++ inputClass)
                 :: classList [ ( "with-error", hasError ) ]
@@ -377,8 +397,11 @@ typeToString type_ =
         Text ->
             "text"
 
-        Time ->
-            "time"
+        Telephone ->
+            "tel"
+
+        Number ->
+            "number"
 
 
 viewCurrencyElement : Eos.Symbol -> Html a

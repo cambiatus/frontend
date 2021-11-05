@@ -93,6 +93,7 @@ import Html exposing (Html, button)
 import Html.Attributes exposing (class, type_)
 import Html.Events as Events
 import Maybe.Extra
+import Session.Shared as Shared
 import Set exposing (Set)
 import Task
 import UpdateResult as UR
@@ -151,7 +152,7 @@ type alias FieldConfig input output values =
     { parser : input -> Result String output
     , value : values -> input
     , update : input -> values -> values
-    , error : values -> Maybe String
+    , externalError : values -> Maybe String
     }
 
 
@@ -180,7 +181,7 @@ field build config =
             config.parser (config.value values)
                 |> Result.andThen
                     (\output ->
-                        config.error values
+                        config.externalError values
                             |> Maybe.map (\error -> Err error)
                             |> Maybe.withDefault (Ok output)
                     )
@@ -373,11 +374,12 @@ view :
     ->
         { buttonAttrs : List (Html.Attribute (Msg values output))
         , buttonLabel : List (Html (Msg values output))
+        , translators : Shared.Translators
         }
     -> Form values output (Msg values output)
     -> ViewModel values
     -> Html (Msg values output)
-view formAttrs { buttonAttrs, buttonLabel } form viewModel =
+view formAttrs { buttonAttrs, buttonLabel, translators } form viewModel =
     let
         filledForm =
             fill form viewModel.values
@@ -395,7 +397,9 @@ view formAttrs { buttonAttrs, buttonLabel } form viewModel =
                                 Set.member (getId field_.state) errorTracking.showFieldError
                         in
                         viewField
-                            (shouldShowFieldError || errorTracking.showAllErrors)
+                            { showError = shouldShowFieldError || errorTracking.showAllErrors
+                            , translators = translators
+                            }
                             field_
                     )
     in
@@ -419,10 +423,10 @@ getId state =
 
 
 viewField :
-    Bool
+    { showError : Bool, translators : Shared.Translators }
     -> FilledField values (Msg values output)
     -> Html (Msg values output)
-viewField showError { state, error } =
+viewField { showError, translators } { state, error } =
     case state of
         Text options baseField ->
             Text.view options
@@ -431,6 +435,7 @@ viewField showError { state, error } =
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
                 , hasError = showError && Maybe.Extra.isJust error
+                , translators = translators
                 }
 
 
