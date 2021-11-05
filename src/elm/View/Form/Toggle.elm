@@ -34,7 +34,7 @@ module View.Form.Toggle exposing
 
 -}
 
-import Html exposing (Html, div, input, label, text)
+import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, type_)
 import Html.Events exposing (onCheck)
 import Session.Shared exposing (Translators)
@@ -146,13 +146,12 @@ toHtml translators options =
 
 
 viewSimple : Translators -> Options msg -> Html msg
-viewSimple translators options =
-    label
+viewSimple _ options =
+    div
         (class "flex w-full items-center text-sm"
-            :: for options.id
             :: options.extraAttrs
         )
-        [ div [ class "form-switch" ]
+        [ label [ class "form-switch", for options.id ]
             [ input
                 [ type_ "checkbox"
                 , id options.id
@@ -170,7 +169,7 @@ viewSimple translators options =
                 ]
                 []
             ]
-        , div [ class "flex items-center" ]
+        , span [ class "flex items-center" ]
             [ options.label
             , viewTooltip options
             ]
@@ -178,7 +177,7 @@ viewSimple translators options =
 
 
 viewBig : Translators -> Options msg -> Html msg
-viewBig ({ t } as translators) options =
+viewBig { t } options =
     let
         text_ =
             t >> text
@@ -190,18 +189,17 @@ viewBig ({ t } as translators) options =
             else
                 "text-grey"
     in
-    label
+    div
         (class "flex w-full justify-between items-center text-sm"
-            :: for options.id
             :: options.extraAttrs
         )
-        [ div [ class "flex items-center" ]
+        [ label [ class "flex items-center", for options.id ]
             [ options.label
             , viewTooltip options
             ]
-        , div [ class ("flex items-center font-semibold lowercase ml-2 " ++ statusColor) ]
+        , span [ class ("flex items-center font-semibold lowercase ml-2 " ++ statusColor) ]
             [ label [ for options.id ] [ text_ (statusText options) ]
-            , div [ class "form-switch ml-7" ]
+            , span [ class "form-switch ml-7" ]
                 [ input
                     [ type_ "checkbox"
                     , id options.id
