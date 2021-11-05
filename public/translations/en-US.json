@@ -1199,6 +1199,7 @@
     "description": "Allow the community team to send communications",
     "create": "New communication",
     "community_news": "Community communications",
+    "got_community_news": "Got new community communication:",
     "read": "Read",
     "other_news": "other communications",
     "view_more": "View more",

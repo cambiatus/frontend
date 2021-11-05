@@ -1205,6 +1205,7 @@
     "description": "Permitir que o time da comunidade envie comunicados",
     "create": "Novo comunicado",
     "community_news": "Comunicados da comunidade",
+    "got_community_news": "Nova comunicação da comunidade recebida:",
     "read": "Ler",
     "other_news": "outros comunicados",
     "view_more": "Ver mais",

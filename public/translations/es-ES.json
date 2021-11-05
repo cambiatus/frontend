@@ -1202,6 +1202,7 @@
     "description": "Permitir que el equipo de la comunidad envíe comunicaciones",
     "create": "Nueva comunicación",
     "community_news": "Comunicaciones de la Comunidad",
+    "got_community_news": "Obtuve una nueva comunicación comunitaria:",
     "read": "Leer",
     "other_news": "otras comunicaciones",
     "view_more": "Ver más",

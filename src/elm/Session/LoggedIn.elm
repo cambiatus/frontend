@@ -39,7 +39,7 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, h1, img, li, nav, p, span, text, ul)
+import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
 import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
 import Html.Events exposing (onClick, onMouseEnter)
@@ -358,13 +358,11 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
             :: (case model.maybeHighlightedNews of
                     Just news ->
-                        -- case news.receipt of
-                        --     Just _ ->
-                        --         viewHighlightedNews pageMsg news
-                        --     Nothing ->
-                        --         text ""
-                        -- TODO - Conditionally show the highlighted news
-                        viewHighlightedNews shared.translators pageMsg news
+                        if Maybe.Extra.isJust news.receipt then
+                            text ""
+
+                        else
+                            viewHighlightedNews shared.translators pageMsg news
 
                     Nothing ->
                         text ""
@@ -394,18 +392,21 @@ viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model ->
 viewHighlightedNews { t } toPageMsg news =
     div
         [ class "bg-purple-500 p-4"
-
-        -- TODO - Check this when subscription works
-        , ariaLive "polite"
         ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
                 [ alt "" ]
                 "stroke-current flex-shrink-0"
-            , span [ class "sr-only" ] [ text <| t "news.community_news" ]
             , div [ class "truncate ml-4 mr-8" ]
-                [ h1 [ class "font-bold truncate" ] [ text news.title ]
-                , p [ class "truncate" ] [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                [ h2
+                    [ class "font-bold truncate"
+                    , ariaLive "polite"
+                    ]
+                    [ span [ class "sr-only" ] [ text <| t "news.got_community_news" ]
+                    , text news.title
+                    ]
+                , p [ class "truncate" ]
+                    [ text <| View.MarkdownEditor.removeFormatting news.description ]
                 ]
             , a
                 [ class "button button-primary w-auto px-4 ml-auto mr-6"
