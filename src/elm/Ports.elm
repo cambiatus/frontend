@@ -3,6 +3,7 @@ port module Ports exposing
     , JavascriptOut
     , JavascriptOutModel
     , addPlausibleScript
+    , createAbsintheSocket
     , getRecentSearches
     , gotRecentSearches
     , javascriptInPort
@@ -182,6 +183,11 @@ addPlausibleScript { domain, src } =
 
 
 port addPlausibleScriptPort : Value -> Cmd msg
+
+
+{-| Given an auth token, create the absinthe socket to receive subscription data
+-}
+port createAbsintheSocket : String -> Cmd msg
 
 
 

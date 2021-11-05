@@ -69,6 +69,7 @@ init flags navKey url =
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (fetchTranslations shared.language)
+                |> UR.addCmd (Ports.createAbsintheSocket authToken)
                 |> UR.addCmd fetchTimezone
                 |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
@@ -340,6 +341,7 @@ update msg session =
             in
             LoggedIn loggedIn
                 |> UR.init
+                |> UR.addCmd (Ports.createAbsintheSocket token)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
                 |> UR.addCmd (Ports.storeAuthToken token)
                 |> UR.addCmd

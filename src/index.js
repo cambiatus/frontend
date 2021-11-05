@@ -1426,7 +1426,11 @@ let transferNotifier = null
 let notificationNotifier = null
 let highlightedNewsNotifier = null
 
-const absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+let absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+
+app.ports.createAbsintheSocket.subscribe((token) => {
+  absintheSocket = AbsintheSocket.create(new PhoenixSocket(`${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`))
+})
 
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {

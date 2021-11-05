@@ -870,6 +870,7 @@ updateGuestUResult toStatus toMsg model uResult =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
+                                :: Ports.createAbsintheSocket token
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: Log.addBreadcrumb msgToString
                                     { type_ = Log.InfoBreadcrumb
