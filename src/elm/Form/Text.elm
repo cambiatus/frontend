@@ -3,6 +3,7 @@ module Form.Text exposing
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
     , withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
+    , withMask
     , getId, getErrorAttrs
     , view
     )
@@ -44,7 +45,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 ## Masks
 
--- TODO - Add Masks
+@docs withMask
 
 
 # Getters
@@ -62,6 +63,7 @@ import Eos
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, classList, disabled, id, placeholder, type_)
 import Html.Events as Events exposing (onInput)
+import Mask
 import Session.Shared as Shared
 import View.Form
 
@@ -86,7 +88,9 @@ type Options msg
         , counter : Maybe Counter
         , type_ : InputType
         , inputElement : InputElement
+        , beforeRenderingValue : String -> String
         , beforeChangeEvent : String -> String
+        , mask : Maybe Mask
         }
 
 
@@ -109,7 +113,9 @@ init { label, id, disabled } =
         , counter = Nothing
         , type_ = Text
         , inputElement = TextInput
+        , beforeRenderingValue = identity
         , beforeChangeEvent = identity
+        , mask = Nothing
         }
 
 
@@ -133,6 +139,21 @@ type InputType
 type InputElement
     = TextInput
     | TextareaInput
+
+
+{-| A mask formats the input as the user writes in it. A common place to find
+them is on phone inputs. Here is an example for a BR phone number:
+
+    StringMask { mask = "## ##### ####", replace = '#' }
+
+We can also use them to limit inputs that are meant to only receive numbers. In
+that case, we can limit the number of decimal digits. A NumberMask is already
+applied on symbol/currency inputs, based on that symbol's precision.
+
+-}
+type Mask
+    = NumberMask Mask.DecimalDigits
+    | StringMask { mask : String, replace : Char }
 
 
 
@@ -175,9 +196,37 @@ withCounter counter (Options options) =
     Options
         { options
             | counter = Just counter
-            , beforeChangeEvent = beforeChangeEvent
+            , beforeChangeEvent = beforeChangeEvent >> options.beforeChangeEvent
         }
         |> addMaxlength
+
+
+{-| Adds a regular string mask to the input
+-}
+withMask : { mask : String, replace : Char } -> Options msg -> Options msg
+withMask mask (Options options) =
+    Options
+        { options
+            | beforeChangeEvent = Mask.string mask >> options.beforeChangeEvent
+            , beforeRenderingValue = Mask.string mask
+            , mask = Just (StringMask mask)
+        }
+        |> withElements
+            [ Html.node "masked-input-helper"
+                [ Html.Attributes.attribute "target-id" options.id
+                , Html.Attributes.attribute "mask-type" "string"
+                ]
+                []
+            ]
+
+
+{-| Adds a number mask to the input
+-}
+withNumberMask : Mask.DecimalDigits -> Options msg -> Options msg
+withNumberMask decimalDigits (Options options) =
+    -- We can't wire up `beforeChangeEvent` and `beforeRenderingValue` here
+    -- because we need translators (to determine the digits separators) for that
+    Options { options | mask = Just (NumberMask decimalDigits) }
 
 
 {-| Adds an element to the input, so we can have elements inside the input
@@ -202,8 +251,7 @@ withCurrency symbol options =
     options
         |> withElements [ viewCurrencyElement symbol ]
         |> withExtraAttrs [ class "pr-20" ]
-        -- TODO - Add number mask
-        -- |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
+        |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
         |> asNumeric
 
 
@@ -343,9 +391,10 @@ viewInput :
             , onBlur : String -> msg
             , value : String
             , hasError : Bool
+            , translators : Shared.Translators
         }
     -> Html msg
-viewInput (Options options) { onChange, value, hasError, onBlur } =
+viewInput (Options options) { onChange, value, hasError, onBlur, translators } =
     let
         ( inputElement, inputClass, typeAttr ) =
             case options.inputElement of
@@ -354,21 +403,72 @@ viewInput (Options options) { onChange, value, hasError, onBlur } =
 
                 TextareaInput ->
                     ( Html.textarea, "form-input", class "" )
+
+        ( beforeRenderingValue, beforeChangeEvent, maskHelper ) =
+            case options.mask of
+                Just (NumberMask decimalDigits) ->
+                    let
+                        decimalDigitsAmount =
+                            case decimalDigits of
+                                Mask.Precisely x ->
+                                    x
+
+                                Mask.AtMost x ->
+                                    x
+
+                        separators =
+                            Shared.decimalSeparators translators
+
+                        previousDecimalSeparator =
+                            if decimalDigitsAmount == 0 then
+                                separators.decimalSeparator
+
+                            else
+                                value
+                                    |> String.dropRight decimalDigitsAmount
+                                    |> String.right 1
+
+                        valueWithoutSeparator =
+                            String.filter (\char -> Char.isDigit char || String.fromChar char == previousDecimalSeparator)
+                                >> String.replace previousDecimalSeparator "."
+                    in
+                    ( \v ->
+                        valueWithoutSeparator v
+                            |> Mask.floatString decimalDigits separators
+                            |> Maybe.withDefault (valueWithoutSeparator v)
+                    , \v ->
+                        Mask.updateFloatString decimalDigits
+                            separators
+                            { previousValue = value, newValue = v }
+                    , Html.node "masked-input-helper"
+                        [ Html.Attributes.attribute "target-id" options.id
+                        , Html.Attributes.attribute "mask-type" "number"
+                        , Html.Attributes.attribute "decimal-separator" separators.decimalSeparator
+                        ]
+                        []
+                    )
+
+                _ ->
+                    ( options.beforeRenderingValue
+                    , options.beforeChangeEvent
+                    , Html.text ""
+                    )
     in
     div (class "relative" :: options.inputContainerAttrs)
         (inputElement
             (id options.id
-                :: onInput (options.beforeChangeEvent >> onChange)
+                :: onInput (beforeChangeEvent >> onChange)
                 :: Events.onBlur (onBlur options.id)
                 :: class ("w-full " ++ inputClass)
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
-                :: Html.Attributes.value value
+                :: Html.Attributes.value (beforeRenderingValue value)
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
                 :: options.extraAttrs
             )
             []
+            :: maskHelper
             :: options.extraElements
         )
 
