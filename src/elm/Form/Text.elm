@@ -61,9 +61,10 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 import Eos
 import Html exposing (Html, div)
-import Html.Attributes exposing (class, classList, disabled, id, placeholder, type_)
+import Html.Attributes exposing (class, classList, disabled, id, placeholder, required, type_)
 import Html.Events as Events exposing (onInput)
 import Mask
+import Maybe.Extra
 import Session.Shared as Shared
 import View.Form
 
@@ -330,71 +331,66 @@ asNumeric =
 -- VIEW
 
 
-view :
-    Options msg
-    ->
-        { onChange : String -> msg
-        , onBlur : String -> msg
-        , value : String
-        , error : Html msg
-        , hasError : Bool
-        , translators : Shared.Translators
-        }
-    -> Html msg
-view (Options options) state =
+type alias ViewConfig msg =
+    { onChange : String -> msg
+    , onBlur : String -> msg
+    , value : String
+    , error : Html msg
+    , hasError : Bool
+    , translators : Shared.Translators
+    , isRequired : Bool
+    }
+
+
+view : Options msg -> ViewConfig msg -> Html msg
+view (Options options) viewConfig =
     div (class "relative mb-10" :: options.containerAttrs)
         [ if String.isEmpty options.label then
             Html.text ""
 
           else
             View.Form.label options.labelAttrs options.id options.label
-        , viewInput (Options options) state
-        , div [ class "flex w-full px-1" ]
-            [ state.error
-            , case options.counter of
-                Nothing ->
-                    Html.text ""
+        , viewInput (Options options) viewConfig
+        , if not viewConfig.hasError && Maybe.Extra.isNothing options.counter then
+            Html.text ""
 
-                Just counter ->
-                    let
-                        ( currentLength, max ) =
-                            case counter of
-                                CountLetters maxLetters ->
-                                    ( String.length state.value, maxLetters )
+          else
+            div [ class "flex w-full px-1" ]
+                [ viewConfig.error
+                , case options.counter of
+                    Nothing ->
+                        Html.text ""
 
-                                CountWords maxWords ->
-                                    ( String.words state.value
-                                        |> List.filter (not << String.isEmpty)
-                                        |> List.length
-                                    , maxWords
-                                    )
-                    in
-                    Html.p
-                        (class "text-purple-100 mt-2 ml-auto uppercase font-bold text-sm flex-shrink-0"
-                            :: options.counterAttrs
-                        )
-                        [ Html.text <|
-                            state.translators.tr "edit.input_counter"
-                                [ ( "current", String.fromInt currentLength )
-                                , ( "max", String.fromInt max )
-                                ]
-                        ]
-            ]
+                    Just counter ->
+                        let
+                            ( currentLength, max ) =
+                                case counter of
+                                    CountLetters maxLetters ->
+                                        ( String.length viewConfig.value, maxLetters )
+
+                                    CountWords maxWords ->
+                                        ( String.words viewConfig.value
+                                            |> List.filter (not << String.isEmpty)
+                                            |> List.length
+                                        , maxWords
+                                        )
+                        in
+                        Html.p
+                            (class "text-purple-100 mt-2 ml-auto uppercase font-bold text-sm flex-shrink-0"
+                                :: options.counterAttrs
+                            )
+                            [ Html.text <|
+                                viewConfig.translators.tr "edit.input_counter"
+                                    [ ( "current", String.fromInt currentLength )
+                                    , ( "max", String.fromInt max )
+                                    ]
+                            ]
+                ]
         ]
 
 
-viewInput :
-    Options msg
-    ->
-        { state
-            | onChange : String -> msg
-            , onBlur : String -> msg
-            , value : String
-            , hasError : Bool
-            , translators : Shared.Translators
-        }
-    -> Html msg
-viewInput (Options options) { onChange, value, hasError, onBlur, translators } =
+viewInput : Options msg -> ViewConfig msg -> Html msg
+viewInput (Options options) { onChange, value, hasError, onBlur, translators, isRequired } =
     let
         ( inputElement, inputClass, typeAttr ) =
             case options.inputElement of
@@ -465,6 +461,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators } =
                 :: Html.Attributes.value (beforeRenderingValue value)
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
+                :: required isRequired
                 :: options.extraAttrs
             )
             []

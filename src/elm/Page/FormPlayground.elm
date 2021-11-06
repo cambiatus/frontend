@@ -16,14 +16,19 @@ import UpdateResult as UR
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init _ =
-    ( { userFormModel = Form.initViewModel { name = "", age = "" }
+    ( { userFormModel =
+            Form.init
+                { name = ""
+                , middleName = ""
+                , age = ""
+                }
       }
     , Cmd.none
     )
 
 
 type alias Model =
-    { userFormModel : Form.ViewModel DirtyUser
+    { userFormModel : Form.Model DirtyUser
     }
 
 
@@ -41,7 +46,7 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model loggedIn =
+update msg model _ =
     case msg of
         GotUserFormMsg subMsg ->
             Form.update subMsg model.userFormModel
@@ -51,7 +56,11 @@ update msg model loggedIn =
                     SubmittedUser
                     model
 
-        SubmittedUser _ ->
+        SubmittedUser user ->
+            let
+                _ =
+                    Debug.log "SUBMITTED USER" user
+            in
             UR.init model
 
 
@@ -60,11 +69,11 @@ update msg model loggedIn =
 
 
 type alias DirtyUser =
-    { name : String, age : String }
+    { name : String, middleName : String, age : String }
 
 
 type alias User =
-    { name : String, age : Int }
+    { name : String, middleName : Maybe String, age : Int }
 
 
 userForm : Form DirtyUser User
@@ -80,6 +89,25 @@ userForm =
                     { parser = Ok
                     , value = .name
                     , update = \name user -> { user | name = name }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withOptional
+            (Form.Text.init
+                { label = "Middle name"
+                , id = "middle-name-input"
+                , disabled = False
+                }
+                |> Form.textField
+                    { parser =
+                        \middleName ->
+                            if String.length middleName > 3 then
+                                Ok middleName
+
+                            else
+                                Err "Middle name must be > 3 characters"
+                    , value = .middleName
+                    , update = \middleName user -> { user | middleName = middleName }
                     , externalError = always Nothing
                     }
             )
@@ -132,4 +160,9 @@ viewUserForm loggedIn model =
 
 msgToString : Msg -> List String
 msgToString msg =
-    []
+    case msg of
+        GotUserFormMsg subMsg ->
+            "GotUserFormMsg" :: Form.msgToString subMsg
+
+        SubmittedUser _ ->
+            [ "SubmittedUser" ]

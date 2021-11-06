@@ -1,9 +1,8 @@
 module Form exposing
     ( Form
-    , succeed, with
+    , succeed, with, withOptional
     , textField
-    , view
-    , Msg, ViewModel, initViewModel, update
+    , view, Model, init, Msg, update, msgToString
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -73,7 +72,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with
+@docs succeed, with, withOptional
 
 
 ## Fields
@@ -83,7 +82,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view
+@docs view, Model, init, Msg, update, msgToString
 
 -}
 
@@ -135,6 +134,7 @@ has an error! This is what we use to do that
 type alias FilledField values msg =
     { state : Field values msg
     , error : Maybe String
+    , isRequired : Bool
     }
 
 
@@ -214,10 +214,10 @@ field build config =
 
                             Ok _ ->
                                 Nothing
+                  , isRequired = True
                   }
                 ]
-            , result =
-                Result.mapError (\_ -> ( getId (field_ values), [] )) result
+            , result = Result.mapError (\_ -> ( getId (field_ values), [] )) result
             }
         )
 
@@ -285,6 +285,107 @@ with new current =
         )
 
 
+{-| Appends an optional form into another form. Similar to `with`, but the
+result of the form is a `Maybe output`. If the form to be appended is empty, we
+don't care if the parsed value is ok, and the result is `Nothing`. If the form
+to be appended has some content, the result is `Just` the parsed value.
+
+    type alias User =
+        { middleName : Maybe String }
+
+    type alias DirtyUser =
+        { middleName : String }
+
+    userForm : Form DirtyUser User
+    userForm =
+        Form.succeed User
+            |> Form.withOptional
+                (Form.Text.init {}
+                    |> Form.textField
+                        { parser =
+                            \middleName ->
+                                if String.length middleName > 3 then
+                                    Ok middleName
+
+                                else
+                                    Err "Middle name must be > 3 characters"
+                        , value = .middleName
+                        , update = \middleName dirtyUser -> { dirtyUser | middleName = middleName }
+                        , externalError = always Nothing
+                        }
+                )
+
+The above example pictures a form where the user can enter their middle name. If
+they don't have a middle name, they can just skip the form, and we will get back
+a user with `middleName` as `Nothing`. If they do have a middle name, for some
+reason we demand that their middle name is longer than 3 characters. If their
+actual middle name is less than 3 characters long, they're out of luck 🤷
+
+-}
+withOptional :
+    GenericForm values a msg
+    -> GenericForm values (Maybe a -> b) msg
+    -> GenericForm values b msg
+withOptional new current =
+    Form
+        (\values ->
+            let
+                filledNew =
+                    fill new values
+
+                filledCurrent =
+                    fill current values
+
+                isFilledNewEmpty =
+                    List.all (.state >> isEmpty) filledNew.fields
+
+                filledNewFields =
+                    if isFilledNewEmpty then
+                        List.map (\field_ -> { field_ | error = Nothing })
+                            filledNew.fields
+
+                    else
+                        filledNew.fields
+            in
+            { fields =
+                List.map (\field_ -> { field_ | isRequired = False }) filledNewFields
+                    ++ filledCurrent.fields
+            , result =
+                case ( filledCurrent.result, filledNew.result ) of
+                    ( Ok fn, Ok result ) ->
+                        if isFilledNewEmpty then
+                            Ok (fn Nothing)
+
+                        else
+                            Ok (fn (Just result))
+
+                    ( Err err, Ok _ ) ->
+                        Err err
+
+                    ( Ok fn, Err err ) ->
+                        if isFilledNewEmpty then
+                            Ok (fn Nothing)
+
+                        else
+                            Err err
+
+                    ( Err ( firstError, otherErrors ), Err ( secondFirstError, secondOtherErrors ) ) ->
+                        let
+                            listOfErrors =
+                                if isFilledNewEmpty then
+                                    otherErrors
+
+                                else
+                                    otherErrors ++ (secondFirstError :: secondOtherErrors)
+                        in
+                        Err
+                            ( firstError
+                            , listOfErrors
+                            )
+            }
+        )
+
+
 {-| Given some values (a dirty model), fill a form with them.
 -}
 fill :
@@ -296,82 +397,144 @@ fill (Form fill_) =
 
 
 
--- VIEW
+-- MODEL
+
+
+{-| This is what you should keep in your model. It basically keeps the value to
+feed to a `Form`, and which errors to show
+-}
+type Model values
+    = Model
+        { values : values
+        , errorTracking : ErrorTracking
+        }
+
+
+{-| Use this to initialize a `Model`, and store the result into your particular
+model. You give the initial values of the form, and can then use this `Model` to
+display a `Form` (see `update` and `view` below)
+-}
+init : values -> Model values
+init values =
+    Model
+        { values = values
+        , errorTracking =
+            ErrorTracking
+                { showAllErrors = False
+                , showFieldError = Set.empty
+                }
+        }
+
+
+{-| Determines which errors we should show. This is opaque so it can't be
+modified on the outside
+-}
+type ErrorTracking
+    = ErrorTracking { showAllErrors : Bool, showFieldError : Set String }
+
+
+
+-- UPDATE
+
+
+{-| The result of calling `update`. Use with `UR.fromChild` or `UR.addChild`.
+The external message is the output, meaning you can just give one of those `UR`
+functions a msg that will be fired whenever the user submits a valid form
+-}
+type alias UpdateResult values output =
+    UR.UpdateResult (Model values) (Msg values output) output
 
 
 type Msg values output
     = NoOp
     | ChangedValues values
     | BlurredField String
-    | Submitted (Result ( String, List String ) output)
+    | ClickedSubmit (Result ( String, List String ) output)
 
 
-type alias ViewModel values =
-    { values : values
-    , errorTracking : ErrorTracking
-    }
+{-| Call this inside your update function. Use with `UR.fromChild` or
+`UR.addChild`:
 
+    case msg of
+        GotFormMsg subMsg ->
+            Form.update subMsg model.form
+                |> UR.fromChild
+                    (\form -> { model | form = form })
+                    GotFormMsg
+                    SubmittedForm
+                    model
 
-type ErrorTracking
-    = ErrorTracking { showAllErrors : Bool, showFieldError : Set String }
+Where `SubmittedForm` is the message that will be fired whenever the form is
+submitted when valid:
 
+    type Msg
+        = GotFormMsg (Form.Msg DirtyForm ValidForm)
+        | SubmittedForm ValidForm
 
-type alias UpdateResult values output =
-    UR.UpdateResult (ViewModel values) (Msg values output) output
-
-
-update : Msg values output -> ViewModel values -> UpdateResult values output
-update msg viewModel =
+-}
+update : Msg values output -> Model values -> UpdateResult values output
+update msg (Model model) =
     let
         (ErrorTracking errorTracking) =
-            viewModel.errorTracking
+            model.errorTracking
     in
     case msg of
         NoOp ->
-            UR.init viewModel
+            UR.init (Model model)
 
         ChangedValues newValues ->
-            { viewModel | values = newValues }
+            Model { model | values = newValues }
                 |> UR.init
 
         BlurredField fieldId ->
-            { viewModel
-                | errorTracking =
-                    ErrorTracking
-                        { errorTracking
-                            | showFieldError =
-                                Set.insert fieldId errorTracking.showFieldError
-                        }
-            }
+            Model
+                { model
+                    | errorTracking =
+                        ErrorTracking
+                            { errorTracking
+                                | showFieldError =
+                                    Set.insert fieldId errorTracking.showFieldError
+                            }
+                }
                 |> UR.init
 
-        Submitted (Err ( firstError, _ )) ->
-            { viewModel
-                | errorTracking =
-                    ErrorTracking
-                        { errorTracking | showAllErrors = True }
-            }
+        ClickedSubmit (Err ( firstError, _ )) ->
+            Model
+                { model
+                    | errorTracking =
+                        ErrorTracking
+                            { errorTracking | showAllErrors = True }
+                }
                 |> UR.init
                 |> UR.addCmd
                     (Browser.Dom.focus firstError
                         |> Task.attempt (\_ -> NoOp)
                     )
 
-        Submitted (Ok validForm) ->
-            viewModel
+        ClickedSubmit (Ok validForm) ->
+            Model model
                 |> UR.init
                 |> UR.addExt validForm
 
 
-initViewModel : values -> ViewModel values
-initViewModel values =
-    { values = values
-    , errorTracking =
-        ErrorTracking
-            { showAllErrors = False
-            , showFieldError = Set.empty
-            }
-    }
+msgToString : Msg values output -> List String
+msgToString msg =
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ChangedValues _ ->
+            [ "ChangedValues" ]
+
+        BlurredField _ ->
+            [ "BlurredField" ]
+
+        ClickedSubmit r ->
+            [ "ClickedSubmit", UR.resultToString r ]
+
+
+
+-- VIEW
 
 
 {-| Provide a form and a dirty model, and get back some HTML
@@ -384,15 +547,15 @@ view :
         , translators : Shared.Translators
         }
     -> GenericForm values output (Msg values output)
-    -> ViewModel values
+    -> Model values
     -> Html (Msg values output)
-view formAttrs { buttonAttrs, buttonLabel, translators } form viewModel =
+view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) =
     let
         filledForm =
-            fill form viewModel.values
+            fill form model.values
 
         (ErrorTracking errorTracking) =
-            viewModel.errorTracking
+            model.errorTracking
 
         fields =
             filledForm.fields
@@ -410,7 +573,7 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form viewModel =
                             field_
                     )
     in
-    Html.form (Events.onSubmit (Submitted filledForm.result) :: formAttrs)
+    Html.form (Events.onSubmit (ClickedSubmit filledForm.result) :: formAttrs)
         (fields
             ++ [ button
                     (type_ "submit"
@@ -422,18 +585,11 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form viewModel =
         )
 
 
-getId : Field values msg -> String
-getId state =
-    case state of
-        Text options _ ->
-            Text.getId options
-
-
 viewField :
     { showError : Bool, translators : Shared.Translators }
     -> FilledField values (Msg values output)
     -> Html (Msg values output)
-viewField { showError, translators } { state, error } =
+viewField { showError, translators } { state, error, isRequired } =
     case state of
         Text options baseField ->
             Text.view options
@@ -442,6 +598,7 @@ viewField { showError, translators } { state, error } =
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
                 , hasError = showError && Maybe.Extra.isJust error
+                , isRequired = isRequired
                 , translators = translators
                 }
 
@@ -459,3 +616,21 @@ viewError attributes showError maybeError =
 
             else
                 Html.text ""
+
+
+
+-- INTERNAL HELPERS
+
+
+getId : Field values msg -> String
+getId state =
+    case state of
+        Text options _ ->
+            Text.getId options
+
+
+isEmpty : Field values msg -> Bool
+isEmpty field_ =
+    case field_ of
+        Text _ { value } ->
+            String.isEmpty value
