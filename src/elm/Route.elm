@@ -56,6 +56,7 @@ type Route
     | NewAction Int
     | EditAction Int Int
     | Claim Int Int Int
+    | FormPlayground
     | Shop Shop.Filter
     | NewSale
     | EditSale String
@@ -133,6 +134,7 @@ parser url =
         , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
+        , Url.map FormPlayground (s "form-playground")
         , Url.map Shop
             (s "shop"
                 <?> Query.map
@@ -465,6 +467,9 @@ routeToString route =
                       ]
                     , []
                     )
+
+                FormPlayground ->
+                    ( [ "form-playground" ], [] )
 
                 Shop maybeFilter ->
                     ( [ "shop" ]

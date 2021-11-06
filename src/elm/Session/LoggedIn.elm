@@ -242,6 +242,7 @@ type Page
     | ObjectiveEditor
     | ActionEditor
     | Claim
+    | FormPlayground
     | Notification
     | Shop
     | ShopEditor

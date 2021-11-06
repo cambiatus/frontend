@@ -108,7 +108,14 @@ import UpdateResult as UR
 have to manipulate this type much, and it will be used mostly just to add type
 annotations
 -}
-type Form values output msg
+type alias Form values output =
+    GenericForm values output (Msg values output)
+
+
+{-| Since `Form`s have their own `Msg`, we expose `Form` as the main type, but
+this is what does all the work, and can receive any generic msg
+-}
+type GenericForm values output msg
     = Form (values -> FilledForm values output msg)
 
 
@@ -174,7 +181,7 @@ define more specific field constructors, such as `textField`
 field :
     (BaseField input values -> Field values msg)
     -> FieldConfig input output values
-    -> Form values output msg
+    -> GenericForm values output msg
 field build config =
     let
         parse values =
@@ -221,7 +228,7 @@ what you can do with this field.
 textField :
     FieldConfig String output values
     -> Text.Options msg
-    -> Form values output msg
+    -> GenericForm values output msg
 textField config options =
     field (Text options) config
 
@@ -235,7 +242,7 @@ Graphql.SelectionSet, this is useful to start a pipeline chain. Give it a
 function that transforms a dirty model into a clean one, and build the form
 [`with`](#with) other fields.
 -}
-succeed : output -> Form values output msg
+succeed : output -> GenericForm values output msg
 succeed output =
     Form (\_ -> { fields = [], result = Ok output })
 
@@ -245,9 +252,9 @@ can use this to add the fields we need on a form. This is supposed to be used in
 a pipeline, together with `succeed`.
 -}
 with :
-    Form values a msg
-    -> Form values (a -> b) msg
-    -> Form values b msg
+    GenericForm values a msg
+    -> GenericForm values (a -> b) msg
+    -> GenericForm values b msg
 with new current =
     Form
         (\values ->
@@ -281,7 +288,7 @@ with new current =
 {-| Given some values (a dirty model), fill a form with them.
 -}
 fill :
-    Form values output msg
+    GenericForm values output msg
     -> values
     -> FilledForm values output msg
 fill (Form fill_) =
@@ -376,7 +383,7 @@ view :
         , buttonLabel : List (Html (Msg values output))
         , translators : Shared.Translators
         }
-    -> Form values output (Msg values output)
+    -> GenericForm values output (Msg values output)
     -> ViewModel values
     -> Html (Msg values output)
 view formAttrs { buttonAttrs, buttonLabel, translators } form viewModel =
