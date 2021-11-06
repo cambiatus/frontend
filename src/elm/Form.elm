@@ -20,11 +20,7 @@ documentation if you're stuck.
 
     nameField : Form DirtyUser String msg
     nameField =
-        Form.Text.init
-            { label = "Name"
-            , id = "name-input"
-            , disabled = False
-            }
+        Form.Text.init { label = "Name", id = "name-input" }
             |> Form.Text.withPlaceholder "Name"
             |> Form.textField
                 { parser = \dirtyName -> Ok dirtyName
@@ -35,11 +31,7 @@ documentation if you're stuck.
 
     ageField : Form DirtyUser Int msg
     ageField =
-        Form.Text.init
-            { label = "Age"
-            , id = "age-input"
-            , disabled = False
-            }
+        Form.Text.init { label = "Age", id = "age-input" }
             |> Form.textField
                 { parser =
                     \dirtyAge ->

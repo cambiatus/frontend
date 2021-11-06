@@ -80,11 +80,7 @@ userForm : Form DirtyUser User
 userForm =
     Form.succeed User
         |> Form.with
-            (Form.Text.init
-                { label = "Name"
-                , id = "name-input"
-                , disabled = False
-                }
+            (Form.Text.init { label = "Name", id = "name-input" }
                 |> Form.textField
                     { parser = Ok
                     , value = .name
@@ -93,11 +89,7 @@ userForm =
                     }
             )
         |> Form.withOptional
-            (Form.Text.init
-                { label = "Middle name"
-                , id = "middle-name-input"
-                , disabled = False
-                }
+            (Form.Text.init { label = "Middle name", id = "middle-name-input" }
                 |> Form.textField
                     { parser =
                         \middleName ->
@@ -112,11 +104,7 @@ userForm =
                     }
             )
         |> Form.with
-            (Form.Text.init
-                { label = "Age"
-                , id = "age-input"
-                , disabled = False
-                }
+            (Form.Text.init { label = "Age", id = "age-input" }
                 |> Form.Text.asNumeric
                 |> Form.Text.withType Form.Text.Number
                 |> Form.textField

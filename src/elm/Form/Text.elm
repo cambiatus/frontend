@@ -1,7 +1,7 @@
 module Form.Text exposing
     ( init, Options
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
-    , withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+    , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
     , withMask
     , getId, getErrorAttrs
@@ -14,7 +14,6 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
     Form.Text.init
         { label = "Username"
         , id = "username-input"
-        , disabled = False
         }
         |> Form.Text.withCounter (Form.Text.CountLetters 12)
         |> Form.textField
@@ -35,7 +34,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+@docs withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
 
 
 ## Changing types
@@ -97,12 +96,12 @@ type Options msg
 
 {-| Initializes an input
 -}
-init : { label : String, id : String, disabled : Bool } -> Options msg
-init { label, id, disabled } =
+init : { label : String, id : String } -> Options msg
+init { label, id } =
     Options
         { label = label
         , id = id
-        , disabled = disabled
+        , disabled = False
         , placeholder = Nothing
         , labelAttrs = []
         , extraAttrs = []
@@ -258,6 +257,13 @@ withCurrency symbol options =
 
 
 -- ADDING ATTRIBUTES
+
+
+{-| Determines if the input should be disabled
+-}
+withDisabled : Bool -> Options msg -> Options msg
+withDisabled disabled (Options options) =
+    Options { options | disabled = disabled }
 
 
 {-| Adds attributes to the label
