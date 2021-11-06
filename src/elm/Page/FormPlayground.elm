@@ -2,12 +2,17 @@ module Page.FormPlayground exposing (Model, Msg, init, msgToString, update, view
 
 -- TODO - Remove this before merging PR
 
+import Eos
 import Form exposing (Form)
 import Form.Text
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, div, p, strong, text)
+import Html.Attributes exposing (autocomplete, class, rows)
+import Icons
+import Mask
 import Session.LoggedIn as LoggedIn
+import Session.Shared as Shared
 import UpdateResult as UR
+import View.Form
 
 
 
@@ -20,8 +25,13 @@ init _ =
             Form.init
                 { name = ""
                 , middleName = ""
+                , phoneNumber = ""
                 , age = ""
+                , bio = "This is an example bio!"
+                , balance = "0"
+                , disabledField = "This field is disabled"
                 }
+      , user = Nothing
       }
     , Cmd.none
     )
@@ -29,6 +39,7 @@ init _ =
 
 type alias Model =
     { userFormModel : Form.Model DirtyUser
+    , user : Maybe User
     }
 
 
@@ -57,11 +68,8 @@ update msg model _ =
                     model
 
         SubmittedUser user ->
-            let
-                _ =
-                    Debug.log "SUBMITTED USER" user
-            in
-            UR.init model
+            { model | user = Just user }
+                |> UR.init
 
 
 
@@ -69,18 +77,42 @@ update msg model _ =
 
 
 type alias DirtyUser =
-    { name : String, middleName : String, age : String }
+    { name : String
+    , middleName : String
+    , phoneNumber : String
+    , age : String
+    , bio : String
+    , balance : String
+    , disabledField : String
+    }
 
 
 type alias User =
-    { name : String, middleName : Maybe String, age : Int }
+    { name : String
+    , middleName : Maybe String
+    , phoneNumber : String
+    , age : Int
+    , bio : String
+    , balance : Eos.Asset
+    , disabledField : String
+    }
 
 
-userForm : Form DirtyUser User
-userForm =
+userForm : Shared.Translators -> Form DirtyUser User
+userForm translators =
+    let
+        phoneMask =
+            { mask = "## ##### ####", replace = '#' }
+
+        communitySymbol =
+            Eos.symbolFromString "0,BUSS"
+                |> Maybe.withDefault Eos.cambiatusSymbol
+    in
     Form.succeed User
         |> Form.with
             (Form.Text.init { label = "Name", id = "name-input" }
+                |> Form.Text.withContainerAttrs [ class "bg-white p-2 rounded" ]
+                |> Form.Text.withCounter (Form.Text.CountWords 1)
                 |> Form.textField
                     { parser = Ok
                     , value = .name
@@ -90,6 +122,7 @@ userForm =
             )
         |> Form.withOptional
             (Form.Text.init { label = "Middle name", id = "middle-name-input" }
+                |> Form.Text.withInputContainerAttrs [ class "bg-white p-2 rounded" ]
                 |> Form.textField
                     { parser =
                         \middleName ->
@@ -104,13 +137,84 @@ userForm =
                     }
             )
         |> Form.with
+            (Form.Text.init { label = "Phone", id = "phone-input" }
+                |> Form.Text.withLabelAttrs [ class "bg-white p-2 rounded" ]
+                |> Form.Text.withPlaceholder "## ##### ####"
+                |> Form.Text.withMask phoneMask
+                |> Form.Text.withType Form.Text.Telephone
+                |> Form.Text.withElements
+                    [ Icons.phone "absolute right-4 top-1/2 transform -translate-y-1/2"
+                    ]
+                |> Form.textField
+                    { parser = Mask.remove phoneMask >> Ok
+                    , value = .phoneNumber
+                    , update = \phone user -> { user | phoneNumber = phone }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
             (Form.Text.init { label = "Age", id = "age-input" }
                 |> Form.Text.asNumeric
                 |> Form.Text.withType Form.Text.Number
+                |> Form.Text.withErrorAttrs [ class "bg-white p-2 rounded" ]
                 |> Form.textField
                     { parser = String.toInt >> Result.fromMaybe "Age must be an int"
                     , value = .age
                     , update = \age user -> { user | age = age }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = "Bio", id = "bio-input" }
+                |> Form.Text.withInputElement Form.Text.TextareaInput
+                |> Form.Text.withExtraAttrs
+                    [ class "p-4"
+                    , rows 2
+                    , View.Form.noGrammarly
+                    , autocomplete False
+                    ]
+                |> Form.Text.withCounter (Form.Text.CountLetters 255)
+                |> Form.Text.withCounterAttrs [ class "bg-white p-2 rounded" ]
+                |> Form.textField
+                    { parser =
+                        \bio ->
+                            if String.length bio >= 10 then
+                                Ok bio
+
+                            else
+                                Err "Bio must be >= 10 characters long"
+                    , value = .bio
+                    , update = \bio user -> { user | bio = bio }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = "Balance", id = "balance-input" }
+                |> Form.Text.withCurrency communitySymbol
+                |> Form.textField
+                    { parser =
+                        \stringBalance ->
+                            case
+                                Shared.floatStringFromSeparatedString translators stringBalance
+                                    |> String.toFloat
+                            of
+                                Just balance ->
+                                    Ok { symbol = communitySymbol, amount = balance }
+
+                                Nothing ->
+                                    Err "Balance must be a float"
+                    , value = .balance
+                    , update = \balance user -> { user | balance = balance }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = "Disabled field", id = "disabled-field" }
+                |> Form.Text.withDisabled True
+                |> Form.textField
+                    { parser = Ok
+                    , value = .disabledField
+                    , update = \disabled user -> { user | disabledField = disabled }
                     , externalError = always Nothing
                     }
             )
@@ -126,6 +230,38 @@ view loggedIn model =
     , content =
         div [ class "container mx-auto px-4 my-10" ]
             [ viewUserForm loggedIn model
+            , case model.user of
+                Nothing ->
+                    text ""
+
+                Just user ->
+                    let
+                        viewProperty property =
+                            p [] [ strong [] [ text property ] ]
+                    in
+                    div [ class "bg-white rounded p-8 grid grid-cols-2 mt-8" ]
+                        [ viewProperty "Name"
+                        , p [] [ text user.name ]
+                        , viewProperty "Middle name"
+                        , p []
+                            [ case user.middleName of
+                                Nothing ->
+                                    text "No middle name provided"
+
+                                Just middleName ->
+                                    text middleName
+                            ]
+                        , viewProperty "Phone number"
+                        , p [] [ text user.phoneNumber ]
+                        , viewProperty "Age"
+                        , p [] [ text <| String.fromInt user.age ]
+                        , viewProperty "Bio"
+                        , p [] [ text user.bio ]
+                        , viewProperty "Balance"
+                        , p [] [ text <| Eos.assetToString loggedIn.shared.translators user.balance ]
+                        , viewProperty "Disabled field"
+                        , p [] [ text user.disabledField ]
+                        ]
             ]
     }
 
@@ -133,11 +269,11 @@ view loggedIn model =
 viewUserForm : LoggedIn.Model -> Model -> Html Msg
 viewUserForm loggedIn model =
     Form.view []
-        { buttonAttrs = []
+        { buttonAttrs = [ class "mx-auto" ]
         , buttonLabel = [ text "Submit user" ]
         , translators = loggedIn.shared.translators
         }
-        userForm
+        (userForm loggedIn.shared.translators)
         model.userFormModel
         |> Html.map GotUserFormMsg
 

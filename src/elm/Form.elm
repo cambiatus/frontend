@@ -81,7 +81,7 @@ documentation if you're stuck.
 import Browser.Dom
 import Form.Text as Text
 import Html exposing (Html, button)
-import Html.Attributes exposing (class, type_)
+import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
 import Maybe.Extra
 import Session.Shared as Shared
@@ -565,7 +565,11 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) =
                             field_
                     )
     in
-    Html.form (Events.onSubmit (ClickedSubmit filledForm.result) :: formAttrs)
+    Html.form
+        (Events.onSubmit (ClickedSubmit filledForm.result)
+            :: novalidate True
+            :: formAttrs
+        )
         (fields
             ++ [ button
                     (type_ "submit"

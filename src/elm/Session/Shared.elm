@@ -6,6 +6,7 @@ module Session.Shared exposing
     , communityDomain
     , decimalSeparators
     , environmentFromUrl
+    , floatStringFromSeparatedString
     , init
     , langFlag
     , loadTranslation
@@ -152,6 +153,17 @@ decimalSeparators { t } =
     { decimalSeparator = t "decimal_separator"
     , thousandsSeparator = t "thousands_separator"
     }
+
+
+floatStringFromSeparatedString : Translators -> String -> String
+floatStringFromSeparatedString translators separatedString =
+    let
+        { decimalSeparator, thousandsSeparator } =
+            decimalSeparators translators
+    in
+    separatedString
+        |> String.filter (\c -> String.fromChar c /= thousandsSeparator)
+        |> String.replace decimalSeparator "."
 
 
 

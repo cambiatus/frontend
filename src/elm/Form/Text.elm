@@ -142,18 +142,14 @@ type InputElement
 
 
 {-| A mask formats the input as the user writes in it. A common place to find
-them is on phone inputs. Here is an example for a BR phone number:
-
-    StringMask { mask = "## ##### ####", replace = '#' }
-
-We can also use them to limit inputs that are meant to only receive numbers. In
-that case, we can limit the number of decimal digits. A NumberMask is already
-applied on symbol/currency inputs, based on that symbol's precision.
-
+them is on phone inputs. We can also use them to limit inputs that are meant to
+only receive numbers. In that case, we can limit the number of decimal digits. A
+NumberMask is already applied on symbol/currency inputs, based on that symbol's
+precision.
 -}
 type Mask
     = NumberMask Mask.DecimalDigits
-    | StringMask { mask : String, replace : Char }
+    | StringMask
 
 
 
@@ -209,7 +205,7 @@ withMask mask (Options options) =
         { options
             | beforeChangeEvent = Mask.string mask >> options.beforeChangeEvent
             , beforeRenderingValue = Mask.string mask
-            , mask = Just (StringMask mask)
+            , mask = Just StringMask
         }
         |> withElements
             [ Html.node "masked-input-helper"
@@ -398,13 +394,13 @@ view (Options options) viewConfig =
 viewInput : Options msg -> ViewConfig msg -> Html msg
 viewInput (Options options) { onChange, value, hasError, onBlur, translators, isRequired } =
     let
-        ( inputElement, inputClass, typeAttr ) =
+        ( inputElement, typeAttr ) =
             case options.inputElement of
                 TextInput ->
-                    ( Html.input, "input", type_ (typeToString options.type_) )
+                    ( Html.input, type_ (typeToString options.type_) )
 
                 TextareaInput ->
-                    ( Html.textarea, "form-input", class "" )
+                    ( Html.textarea, class "" )
 
         ( beforeRenderingValue, beforeChangeEvent, maskHelper ) =
             case options.mask of
@@ -461,7 +457,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
             (id options.id
                 :: onInput (beforeChangeEvent >> onChange)
                 :: Events.onBlur (onBlur options.id)
-                :: class ("w-full " ++ inputClass)
+                :: class "w-full input"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
                 :: Html.Attributes.value (beforeRenderingValue value)
