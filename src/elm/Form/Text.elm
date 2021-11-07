@@ -276,7 +276,7 @@ withExtraAttrs attrs (Options options) =
     Options { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
-{-| Adds attributes to the element that contains everything else
+{-| Adds attributes to the element that contains everything
 -}
 withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
 withContainerAttrs attrs (Options options) =

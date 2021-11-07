@@ -73,10 +73,18 @@ config =
             , "View.Form.FileUploader"
             , "View.Form.Checkbox"
             , "Form.Text"
+            , "Form.Checkbox"
             ]
           )
         , ( [ "Html.label" ]
-          , [ "View.Form", "View.Form.Toggle", "View.Form.FileUploader", "View.Form.Checkbox", "View.Form.Radio", "Page.Community.New" ]
+          , [ "View.Form"
+            , "View.Form.Toggle"
+            , "View.Form.FileUploader"
+            , "View.Form.Checkbox"
+            , "View.Form.Radio"
+            , "Page.Community.New"
+            , "Form.Checkbox"
+            ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )

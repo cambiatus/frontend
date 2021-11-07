@@ -4,6 +4,7 @@ module Page.FormPlayground exposing (Model, Msg, init, msgToString, update, view
 
 import Eos
 import Form exposing (Form)
+import Form.Checkbox
 import Form.Text
 import Html exposing (Html, div, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows)
@@ -30,6 +31,7 @@ init _ =
                 , bio = "This is an example bio!"
                 , balance = "0"
                 , disabledField = "This field is disabled"
+                , agrees = False
                 }
       , user = Nothing
       }
@@ -84,6 +86,7 @@ type alias DirtyUser =
     , bio : String
     , balance : String
     , disabledField : String
+    , agrees : Bool
     }
 
 
@@ -95,6 +98,7 @@ type alias User =
     , bio : String
     , balance : Eos.Asset
     , disabledField : String
+    , agrees : Bool
     }
 
 
@@ -218,6 +222,26 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
+        |> Form.with
+            (Form.Checkbox.init
+                { label = text "I have read something and I agree with it"
+                , id = "agree-checkbox"
+                }
+                |> Form.Checkbox.withContainerAttrs [ class "mb-10" ]
+                |> Form.Checkbox.withDisabled False
+                |> Form.checkbox
+                    { parser =
+                        \agrees ->
+                            if agrees then
+                                Ok agrees
+
+                            else
+                                Err "You need to agree to this. What is it? I don't know, just agree with it and move on"
+                    , value = .agrees
+                    , update = \agrees user -> { user | agrees = agrees }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 
@@ -261,6 +285,16 @@ view loggedIn model =
                         , p [] [ text <| Eos.assetToString loggedIn.shared.translators user.balance ]
                         , viewProperty "Disabled field"
                         , p [] [ text user.disabledField ]
+                        , viewProperty "Agrees"
+                        , p []
+                            [ text
+                                (if user.agrees then
+                                    "Yes"
+
+                                 else
+                                    "No"
+                                )
+                            ]
                         ]
             ]
     }

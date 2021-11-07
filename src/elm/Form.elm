@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField
+    , textField, checkbox
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField
+@docs textField, checkbox
 
 
 ## Viewing
@@ -79,6 +79,7 @@ documentation if you're stuck.
 -}
 
 import Browser.Dom
+import Form.Checkbox as Checkbox
 import Form.Text as Text
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
@@ -165,6 +166,7 @@ with these types
 -}
 type Field values msg
     = Text (Text.Options msg) (BaseField String values)
+    | Checkbox (Checkbox.Options msg) (BaseField Bool values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -223,6 +225,17 @@ textField :
     -> GenericForm values output msg
 textField config options =
     field (Text options) config
+
+
+{-| An input that represents either `True` or `False`. Checkout `Form.Checkbox`
+for more information on what you can do with this field.
+-}
+checkbox :
+    FieldConfig Bool output values
+    -> Checkbox.Options msg
+    -> GenericForm values output msg
+checkbox config options =
+    field (Checkbox options) config
 
 
 
@@ -586,6 +599,10 @@ viewField :
     -> FilledField values (Msg values output)
     -> Html (Msg values output)
 viewField { showError, translators } { state, error, isRequired } =
+    let
+        hasError =
+            showError && Maybe.Extra.isJust error
+    in
     case state of
         Text options baseField ->
             Text.view options
@@ -593,9 +610,19 @@ viewField { showError, translators } { state, error, isRequired } =
                 , onBlur = BlurredField
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
-                , hasError = showError && Maybe.Extra.isJust error
+                , hasError = hasError
                 , isRequired = isRequired
                 , translators = translators
+                }
+
+        Checkbox options baseField ->
+            Checkbox.view options
+                { value = baseField.value
+                , onCheck = baseField.update >> ChangedValues
+                , onBlur = BlurredField
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
                 }
 
 
@@ -624,9 +651,17 @@ getId state =
         Text options _ ->
             Text.getId options
 
+        Checkbox options _ ->
+            Checkbox.getId options
+
 
 isEmpty : Field values msg -> Bool
 isEmpty field_ =
     case field_ of
         Text _ { value } ->
             String.isEmpty value
+
+        Checkbox _ _ ->
+            -- There's no way a checkbox can be empty - we don't use the
+            -- indeterminate state, so it's value is either `True` or `False`
+            False

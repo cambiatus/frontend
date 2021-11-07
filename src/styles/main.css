@@ -68,6 +68,7 @@ body > * {
 /* Form */
 
 @layer components {
+  /* TODO - Clean up form-related CSS (move to Elm with Tailwind) */
   .form-input {
     @apply bg-white px-3 py-2 placeholder-gray-900 input-border text-base;
   }
@@ -132,7 +133,7 @@ body > * {
     @apply h-40;
   }
 
-  .input.with-error {
+  .with-error {
     @apply border-red text-red;
   }
 
