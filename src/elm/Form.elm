@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, checkbox
+    , textField, checkbox, radio
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, checkbox
+@docs textField, checkbox, radio
 
 
 ## Viewing
@@ -80,6 +80,7 @@ documentation if you're stuck.
 
 import Browser.Dom
 import Form.Checkbox as Checkbox
+import Form.Radio as Radio
 import Form.Text as Text
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
@@ -167,6 +168,7 @@ with these types
 type Field values msg
     = Text (Text.Options msg) (BaseField String values)
     | Checkbox (Checkbox.Options msg) (BaseField Bool values)
+    | Radio (Radio.Options String msg) (BaseField String values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -236,6 +238,18 @@ checkbox :
     -> GenericForm values output msg
 checkbox config options =
     field (Checkbox options) config
+
+
+{-| An input that lets you select one out of a list of options. Checkout
+`Form.Radio` for more information on what you can do with this field.
+-}
+radio :
+    FieldConfig String output values
+    -> Radio.Options String msg
+    -> GenericForm values output msg
+radio config options =
+    -- TODO - Try using `input` instead of `String`
+    field (Radio options) config
 
 
 
@@ -625,6 +639,15 @@ viewField { showError, translators } { state, error, isRequired } =
                 , isRequired = isRequired
                 }
 
+        Radio options baseField ->
+            Radio.view options
+                { onSelect = baseField.update >> ChangedValues
+                , onBlur = BlurredField
+                , value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                }
+
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
@@ -654,6 +677,9 @@ getId state =
         Checkbox options _ ->
             Checkbox.getId options
 
+        Radio options _ ->
+            Radio.getId options
+
 
 isEmpty : Field values msg -> Bool
 isEmpty field_ =
@@ -664,4 +690,7 @@ isEmpty field_ =
         Checkbox _ _ ->
             -- There's no way a checkbox can be empty - we don't use the
             -- indeterminate state, so it's value is either `True` or `False`
+            False
+
+        Radio _ _ ->
             False

@@ -106,16 +106,18 @@ body > * {
   }
 
   .form-radio {
-    @apply rounded-full border h-6 w-6 input-border;
+    @apply h-5 w-5 bg-none rounded-full border text-green input-border checked:bg-none disabled:text-gray-900 disabled:border-gray-900;
+
+    /* --default-tailwind-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000); */
+
+    /* --shadow-size: 1.25rem;
+
+    box-shadow: var(--default-tailwind-shadow), inset 0 0 0 var(--shadow-size) white !important; */
   }
 
-  .form-radio:checked {
-    background-image: url('/icons/radio.svg');
-  }
-
-  .form-radio:checked:disabled {
-    background-image: url('/icons/radio-disabled.svg');
-  }
+  /* .form-radio:not(.with-error):checked {
+    --shadow-size: 0.25rem;
+  } */
 
   /* End of form */
 
@@ -458,6 +460,14 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .animation-delay-300 {
     animation-delay: 300ms;
+  }
+
+  .shadow-form-control {
+    --shadow-size: 1.25rem;
+  }
+
+  .shadow-form-control:checked {
+    --shadow-size: 0.25rem;
   }
 }
 

@@ -5,6 +5,7 @@ module Page.FormPlayground exposing (Model, Msg, init, msgToString, update, view
 import Eos
 import Form exposing (Form)
 import Form.Checkbox
+import Form.Radio
 import Form.Text
 import Html exposing (Html, div, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows)
@@ -32,6 +33,7 @@ init _ =
                 , balance = "0"
                 , disabledField = "This field is disabled"
                 , agrees = False
+                , accountType = "personal"
                 }
       , user = Nothing
       }
@@ -87,6 +89,7 @@ type alias DirtyUser =
     , balance : String
     , disabledField : String
     , agrees : Bool
+    , accountType : String
     }
 
 
@@ -99,7 +102,13 @@ type alias User =
     , balance : Eos.Asset
     , disabledField : String
     , agrees : Bool
+    , accountType : AccountType
     }
+
+
+type AccountType
+    = Juridical
+    | Personal
 
 
 userForm : Shared.Translators -> Form DirtyUser User
@@ -239,6 +248,28 @@ userForm translators =
                                 Err "You need to agree to this. What is it? I don't know, just agree with it and move on"
                     , value = .agrees
                     , update = \agrees user -> { user | agrees = agrees }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Radio.init { label = "Account type", id = "account-type-radio" }
+                |> Form.Radio.withOption "personal" (text "Personal")
+                |> Form.Radio.withOption "juridical" (text "Juridical")
+                -- |> Form.Radio.withDisabled True
+                |> Form.radio
+                    { parser =
+                        \accountTypeString ->
+                            case accountTypeString of
+                                "personal" ->
+                                    Ok Personal
+
+                                "juridical" ->
+                                    Ok Juridical
+
+                                _ ->
+                                    Err "Invalid account type"
+                    , value = .accountType
+                    , update = \accountType user -> { user | accountType = accountType }
                     , externalError = always Nothing
                     }
             )
