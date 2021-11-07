@@ -54,7 +54,7 @@ module Form.Radio exposing
 
 import Html exposing (Html, div, fieldset, input, label)
 import Html.Attributes exposing (checked, class, classList, disabled, name, type_, value)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onBlur, onClick)
 
 
 
@@ -189,6 +189,7 @@ view (Options options) viewConfig =
                 [ class "flex items-center transition-colors duration-100"
                 , classList
                     [ ( "text-green", isSelected && not options.disabled )
+                    , ( "text-red", isSelected && viewConfig.hasError )
                     , ( "text-gray-900", options.disabled )
                     ]
                 ]
@@ -198,7 +199,9 @@ view (Options options) viewConfig =
                     , value option
                     , checked isSelected
                     , onClick (viewConfig.onSelect option)
+                    , onBlur (viewConfig.onBlur options.id)
                     , class "form-radio mr-2 shadow-form-control"
+                    , classList [ ( "with-error", isSelected && viewConfig.hasError ) ]
                     ]
                     []
                 , label
@@ -214,4 +217,5 @@ view (Options options) viewConfig =
             , classList [ ( "flex-col", options.direction == Vertical ) ]
             ]
             (List.map viewOption options.options)
+        , viewConfig.error
         ]
