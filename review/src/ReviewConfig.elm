@@ -74,6 +74,7 @@ config =
             , "View.Form.Checkbox"
             , "Form.Text"
             , "Form.Checkbox"
+            , "Form.Radio"
             ]
           )
         , ( [ "Html.label" ]
@@ -84,6 +85,7 @@ config =
             , "View.Form.Radio"
             , "Page.Community.New"
             , "Form.Checkbox"
+            , "Form.Radio"
             ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select" ] )

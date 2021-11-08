@@ -3,8 +3,9 @@ module Form.Radio exposing
     , withOption, withOptions
     , withDisabled, withContainerAttrs, withGroupAttrs
     , Direction(..), withDirection
-    , getId
+    , getId, getOptionToString
     , view
+    , map
     )
 
 {-| Creates a Cambiatus-style radio button group. Use it within a `Form.Form`:
@@ -43,17 +44,22 @@ module Form.Radio exposing
 
 # Getters
 
-@docs getId
+@docs getId, getOptionToString
 
 
 # View
 
 @docs view
 
+
+# Helpers
+
+@docs map
+
 -}
 
-import Html exposing (Html, div, fieldset, input, label)
-import Html.Attributes exposing (checked, class, classList, disabled, name, type_, value)
+import Html exposing (Html, div, fieldset, input)
+import Html.Attributes exposing (checked, class, classList, disabled, name, type_)
 import Html.Events exposing (onBlur, onClick)
 
 
@@ -65,7 +71,8 @@ type Options option msg
     = Options
         { label : String
         , id : String
-        , options : List ( option, Html msg )
+        , optionToString : option -> String
+        , options : List { option : option, label : Html msg }
         , disabled : Bool
         , containerAttrs : List (Html.Attribute msg)
         , groupAttrs : List (Html.Attribute msg)
@@ -75,16 +82,33 @@ type Options option msg
 
 {-| Initializes a radio group
 -}
-init : { label : String, id : String } -> Options options msg
-init { label, id } =
+init : { label : String, id : String, optionToString : option -> String } -> Options option msg
+init { label, id, optionToString } =
     Options
         { label = label
         , id = id
+        , optionToString = optionToString
         , options = []
         , disabled = False
         , containerAttrs = []
         , groupAttrs = []
         , direction = Horizontal
+        }
+
+
+map : (option -> mappedOption) -> (mappedOption -> option) -> Options option msg -> Options mappedOption msg
+map fn reverseFn (Options options) =
+    Options
+        { label = options.label
+        , id = options.id
+        , optionToString = reverseFn >> options.optionToString
+        , options =
+            List.map (\{ option, label } -> { option = fn option, label = label })
+                options.options
+        , disabled = options.disabled
+        , containerAttrs = options.containerAttrs
+        , groupAttrs = options.groupAttrs
+        , direction = options.direction
         }
 
 
@@ -96,7 +120,14 @@ init { label, id } =
 -}
 withOption : option -> Html msg -> Options option msg -> Options option msg
 withOption optionValue optionLabel (Options options) =
-    Options { options | options = ( optionValue, optionLabel ) :: options.options }
+    Options
+        { options
+            | options =
+                { option = optionValue
+                , label = optionLabel
+                }
+                    :: options.options
+        }
 
 
 {-| Similar to `withOption`, but you can throw in an entire list at a time
@@ -106,7 +137,20 @@ withOptions optionList (Options options) =
     -- We reverse the list on view in order to display things on the correct
     -- order (because on `withOption` we insert options in the beginning of the
     -- list, for some performance), so we need to insert it reversed here
-    Options { options | options = List.reverse optionList ++ options.options }
+    Options
+        { options
+            | options =
+                (optionList
+                    |> List.map
+                        (\( optionValue, optionLabel ) ->
+                            { option = optionValue
+                            , label = optionLabel
+                            }
+                        )
+                    |> List.reverse
+                )
+                    ++ options.options
+        }
 
 
 
@@ -163,6 +207,11 @@ getId (Options options) =
     options.id
 
 
+getOptionToString : Options option msg -> (option -> String)
+getOptionToString (Options options) =
+    options.optionToString
+
+
 
 -- VIEW
 
@@ -176,32 +225,37 @@ type alias ViewConfig option msg =
     }
 
 
-view : Options String msg -> ViewConfig String msg -> Html msg
+view : Options option msg -> ViewConfig option msg -> Html msg
 view (Options options) viewConfig =
     let
-        viewOption : ( String, Html msg ) -> Html msg
-        viewOption ( option, label ) =
+        viewOption : { option : option, label : Html msg } -> Html msg
+        viewOption { option, label } =
             let
                 isSelected =
                     option == viewConfig.value
             in
             Html.label
-                [ class "flex items-center transition-colors duration-100"
-                , classList
-                    [ ( "text-green", isSelected && not options.disabled )
-                    , ( "text-red", isSelected && viewConfig.hasError )
-                    , ( "text-gray-900", options.disabled )
-                    ]
-                ]
+                (class "flex items-center transition-colors duration-100"
+                    :: classList
+                        [ ( "text-green", isSelected && not options.disabled )
+                        , ( "text-red", isSelected && viewConfig.hasError )
+                        , ( "text-gray-900", options.disabled )
+                        ]
+                    :: options.groupAttrs
+                )
                 [ input
                     [ type_ "radio"
                     , name options.id
-                    , value option
+                    , Html.Attributes.value (options.optionToString option)
                     , checked isSelected
                     , onClick (viewConfig.onSelect option)
                     , onBlur (viewConfig.onBlur options.id)
                     , class "form-radio mr-2 shadow-form-control"
-                    , classList [ ( "with-error", isSelected && viewConfig.hasError ) ]
+                    , classList
+                        [ ( "with-error", isSelected && viewConfig.hasError )
+                        , ( "hover:border-green", not viewConfig.hasError )
+                        , ( "hover:border-red", viewConfig.hasError )
+                        ]
                     ]
                     []
                 , label
@@ -213,9 +267,15 @@ view (Options options) viewConfig =
         )
         [ Html.legend [ class "label" ] [ Html.text options.label ]
         , div
-            [ class "flex gap-4"
-            , classList [ ( "flex-col", options.direction == Vertical ) ]
+            [ class "flex"
+            , classList
+                [ ( "flex-col gap-4", options.direction == Vertical )
+                , ( "gap-8", options.direction == Horizontal )
+                ]
             ]
-            (List.map viewOption options.options)
+            (options.options
+                |> List.reverse
+                |> List.map viewOption
+            )
         , viewConfig.error
         ]

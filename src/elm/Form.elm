@@ -244,12 +244,18 @@ checkbox config options =
 `Form.Radio` for more information on what you can do with this field.
 -}
 radio :
-    FieldConfig String output values
-    -> Radio.Options String msg
+    (String -> input)
+    -> FieldConfig input output values
+    -> Radio.Options input msg
     -> GenericForm values output msg
-radio config options =
-    -- TODO - Try using `input` instead of `String`
-    field (Radio options) config
+radio optionFromString config options =
+    let
+        optionToString =
+            Radio.getOptionToString options
+    in
+    field
+        (Radio (Radio.map optionToString optionFromString options))
+        (mapFieldConfig optionToString optionFromString config)
 
 
 
@@ -694,3 +700,16 @@ isEmpty field_ =
 
         Radio _ _ ->
             False
+
+
+mapFieldConfig :
+    (input -> mappedInput)
+    -> (mappedInput -> input)
+    -> FieldConfig input output values
+    -> FieldConfig mappedInput output values
+mapFieldConfig fn reverseFn config =
+    { parser = reverseFn >> config.parser
+    , value = config.value >> fn
+    , update = \mappedInput -> config.update (reverseFn mappedInput)
+    , externalError = config.externalError
+    }

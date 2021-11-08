@@ -33,7 +33,7 @@ init _ =
                 , balance = "0"
                 , disabledField = "This field is disabled"
                 , agrees = False
-                , accountType = "personal"
+                , accountType = Personal
                 }
       , user = Nothing
       }
@@ -89,7 +89,7 @@ type alias DirtyUser =
     , balance : String
     , disabledField : String
     , agrees : Bool
-    , accountType : String
+    , accountType : AccountType
     }
 
 
@@ -252,22 +252,20 @@ userForm translators =
                     }
             )
         |> Form.with
-            (Form.Radio.init { label = "Account type", id = "account-type-radio" }
-                |> Form.Radio.withOption "personal" (text "Personal")
-                |> Form.Radio.withOption "juridical" (text "Juridical")
-                -- |> Form.Radio.withDisabled True
+            (Form.Radio.init
+                { label = "Account type"
+                , id = "account-type-radio"
+                , optionToString = accountTypeToString
+                }
+                |> Form.Radio.withOption Personal (text "Personal")
+                |> Form.Radio.withOptions [ ( Juridical, text "Juridical" ) ]
+                |> Form.Radio.withDisabled False
+                |> Form.Radio.withContainerAttrs [ class "bg-white p-4" ]
+                |> Form.Radio.withGroupAttrs [ class "border p-4 rounded-sm" ]
+                |> Form.Radio.withDirection Form.Radio.Vertical
                 |> Form.radio
-                    { parser =
-                        \accountTypeString ->
-                            case accountTypeString of
-                                "personal" ->
-                                    Ok Personal
-
-                                "juridical" ->
-                                    Ok Juridical
-
-                                _ ->
-                                    Err "Invalid account type"
+                    (accountTypeFromString >> Maybe.withDefault Personal)
+                    { parser = Ok
                     , value = .accountType
                     , update = \accountType user -> { user | accountType = accountType }
                     , externalError = always Nothing
@@ -326,6 +324,8 @@ view loggedIn model =
                                     "No"
                                 )
                             ]
+                        , viewProperty "Account type"
+                        , p [] [ text (accountTypeToString user.accountType) ]
                         ]
             ]
     }
@@ -355,3 +355,26 @@ msgToString msg =
 
         SubmittedUser _ ->
             [ "SubmittedUser" ]
+
+
+accountTypeToString : AccountType -> String
+accountTypeToString accountType =
+    case accountType of
+        Personal ->
+            "personal"
+
+        Juridical ->
+            "juridical"
+
+
+accountTypeFromString : String -> Maybe AccountType
+accountTypeFromString accountType =
+    case accountType of
+        "juridical" ->
+            Just Juridical
+
+        "personal" ->
+            Just Personal
+
+        _ ->
+            Nothing
