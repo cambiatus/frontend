@@ -647,7 +647,11 @@ quillOpToMarkdown quillOp =
                 ++ formatAfter
                 ++ String.repeat spacesAfter " "
     in
-    List.foldr addFormatting quillOp.insert quillOp.attributes
+    if String.isEmpty (String.trim quillOp.insert) then
+        ""
+
+    else
+        List.foldr addFormatting quillOp.insert quillOp.attributes
 
 
 quillOpFromMarkdown : String -> Result (List (Parser.Advanced.DeadEnd String Parser.Problem)) (List QuillOp)
