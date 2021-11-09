@@ -1069,7 +1069,7 @@
     },
     "features": {
       "title": "Features",
-      "description": "Objectives, Actions, Shop, Sponsorship",
+      "description": "Objectives, Actions, Shop, Sponsorship, News",
       "enabled": "Enabled",
       "disabled": "Disabled"
     }
