@@ -905,7 +905,7 @@ viewLatestEditions ({ shared } as loggedIn) news profileSummary =
                             { translations
                                 | today = Nothing
                                 , yesterday = Nothing
-                                , other = shared.translators.t "edited_date"
+                                , other = shared.translators.t "news.edited_date"
                             }
                         )
                         shared
