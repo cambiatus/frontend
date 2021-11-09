@@ -124,7 +124,7 @@ selectionSet =
         |> SelectionSet.with News.description
         |> SelectionSet.with News.id
         |> SelectionSet.with News.title
-        |> SelectionSet.with (News.newsReceipt receiptSelectionSet)
+        |> SelectionSet.with (News.receipt receiptSelectionSet)
         |> SelectionSet.with (News.reactions reactionWithCountSelectionSet)
         |> SelectionSet.with
             (News.scheduling
