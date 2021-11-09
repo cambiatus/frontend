@@ -358,7 +358,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
             :: (case model.maybeHighlightedNews of
                     Just news ->
-                        if Maybe.Extra.isJust news.receipt then
+                        if Maybe.Extra.isJust news.receipt || isAdminPage page then
                             text ""
 
                         else
@@ -832,6 +832,23 @@ isActive page route =
 
         _ ->
             False
+
+
+isAdminPage : Page -> Bool
+isAdminPage page =
+    List.member page
+        [ CommunitySettings
+        , CommunitySettingsInfo
+        , CommunitySettingsNews
+        , CommunitySettingsNewsEditor
+        , CommunitySettingsCurrency
+        , CommunitySettingsFeatures
+        , CommunitySettingsSponsorship
+        , CommunitySettingsSponsorshipFiat
+        , CommunitySettingsSponsorshipThankYouMessage
+        , ObjectiveEditor
+        , ActionEditor
+        ]
 
 
 viewFooter : Shared -> Html msg
