@@ -354,6 +354,7 @@ type Formatting
     = Bold
     | Italic
     | Strike
+    | Underline
     | LinkFormatting String
     | Header Int
     | OrderedList
@@ -386,13 +387,14 @@ formattingDecoder =
             Decode.optional key (Json.Decode.succeed (Just formatting)) Nothing
     in
     Json.Decode.succeed
-        (\bold italic strike link header list ->
-            [ bold, italic, strike, link, header, list ]
+        (\bold italic strike underline link header list ->
+            [ bold, italic, strike, underline, link, header, list ]
                 |> List.filterMap identity
         )
         |> optionalFormatting "bold" Bold
         |> optionalFormatting "italic" Italic
         |> optionalFormatting "strike" Strike
+        |> optionalFormatting "underline" Underline
         |> Decode.optional "link"
             (Json.Decode.string
                 |> Json.Decode.map (LinkFormatting >> Just)
@@ -432,6 +434,9 @@ formatStrings formatting =
 
         Strike ->
             ( "~~", "~~" )
+
+        Underline ->
+            ( "<u>", "</u>" )
 
         LinkFormatting link ->
             ( "[", "](" ++ link ++ ")" )
@@ -686,6 +691,12 @@ quillOpFromMarkdownBlock block =
                 |> List.concat
                 |> (\l -> l ++ [ { insert = "\n", attributes = [] } ])
 
+        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement "u" _ children) ->
+            -- Parse underlined text
+            children
+                |> List.concatMap quillOpFromMarkdownBlock
+                |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
+
         _ ->
             []
 
@@ -715,6 +726,15 @@ quillOpFromMarkdownInline inline =
 
         Markdown.Block.Text content ->
             [ { insert = content, attributes = [] } ]
+
+        Markdown.Block.HtmlInline (Markdown.Block.HtmlElement "u" _ children) ->
+            -- Parse underlined text
+            children
+                |> List.concatMap quillOpFromMarkdownBlock
+                -- Paragraph blocks automatically add a newline at the end
+                -- Since this is an inline element, we don't want that
+                |> List.filter (\quillOp -> not (quillOp.insert == "\n" && List.isEmpty quillOp.attributes))
+                |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
 
         _ ->
             []
@@ -823,6 +843,9 @@ encodeFormatting formatting =
 
         Strike ->
             ( "strike", Json.Encode.bool True )
+
+        Underline ->
+            ( "underline", Json.Encode.bool True )
 
         LinkFormatting url ->
             ( "link", Json.Encode.string url )

@@ -385,12 +385,12 @@ window.customElements.define('markdown-editor',
           modules: {
             toolbar: [
               [{ 'header': 1 }, { 'header': 2 }],
-              ['bold', 'italic', 'strike'],
+              ['bold', 'italic', 'strike', 'underline'],
               ['link'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
-          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'list'],
+          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'underline', 'list'],
           placeholder: this.getAttribute('elm-placeholder'),
           theme: 'snow'
         }
