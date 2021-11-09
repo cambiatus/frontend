@@ -17,10 +17,9 @@ module View.MarkdownEditor exposing
     , withSubscription
     )
 
-import Browser.Events
 import Dict
 import Html exposing (Html, a, button, div, node, p, text)
-import Html.Attributes exposing (attribute, class, href, id, target, type_)
+import Html.Attributes exposing (attribute, class, href, id, novalidate, target, type_)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
@@ -35,6 +34,7 @@ import Parser
 import Parser.Advanced
 import Ports
 import Session.Shared exposing (Translators)
+import Utils
 import View.Form
 import View.Form.Input as Input
 import View.Modal as Modal
@@ -75,8 +75,7 @@ type LinkModalState
 
 
 type Msg
-    = KeyDown String
-    | ClickedIncludeLink Link
+    = ClickedIncludeLink Link
     | ClosedLinkModal
     | EnteredLinkLabel String
     | EnteredLinkUrl String
@@ -93,13 +92,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        KeyDown key ->
-            if key == "Enter" then
-                update ClickedAcceptLink model
-
-            else
-                ( model, Cmd.none )
-
         ClickedIncludeLink link ->
             ( { model | linkModalState = Editing link }, Cmd.none )
 
@@ -302,42 +294,47 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                     }
                     |> Modal.withHeader (t "markdown.link_form.header")
                     |> Modal.withBody
-                        [ Input.init
-                            { label = t "markdown.link_form.label"
-                            , id = "link-modal-label"
-                            , onInput = EnteredLinkLabel
-                            , disabled = False
-                            , value = linkModal.label
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.toHtml
-                        , Input.init
-                            { label = t "markdown.link_form.url"
-                            , id = "link-modal-url"
-                            , onInput = EnteredLinkUrl
-                            , disabled = False
-                            , value = linkModal.url
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.toHtml
-                        ]
-                    |> Modal.withFooter
-                        [ button
-                            [ class "modal-cancel"
-                            , onClick ClosedLinkModal
-                            , type_ "button"
+                        [ Html.form
+                            [ Utils.onSubmitPreventAll ClickedAcceptLink
+                            , novalidate True
                             ]
-                            [ text <| t "menu.cancel" ]
-                        , button
-                            [ class "modal-accept"
-                            , onClick ClickedAcceptLink
-                            , type_ "button"
+                            [ Input.init
+                                { label = t "markdown.link_form.label"
+                                , id = "link-modal-label"
+                                , onInput = EnteredLinkLabel
+                                , disabled = False
+                                , value = linkModal.label
+                                , placeholder = Nothing
+                                , problems = Nothing
+                                , translators = translators
+                                }
+                                |> Input.toHtml
+                            , Input.init
+                                { label = t "markdown.link_form.url"
+                                , id = "link-modal-url"
+                                , onInput = EnteredLinkUrl
+                                , disabled = False
+                                , value = linkModal.url
+                                , placeholder = Nothing
+                                , problems = Nothing
+                                , translators = translators
+                                }
+                                |> Input.withType Input.Url
+                                |> Input.toHtml
+                            , div [ class "flex justify-center items-center" ]
+                                [ button
+                                    [ class "modal-cancel"
+                                    , onClick ClosedLinkModal
+                                    , type_ "button"
+                                    ]
+                                    [ text <| t "menu.cancel" ]
+                                , button
+                                    [ class "modal-accept"
+                                    , type_ "submit"
+                                    ]
+                                    [ text <| t "menu.save" ]
+                                ]
                             ]
-                            [ text <| t "menu.save" ]
                         ]
                     |> Modal.toHtml
 
@@ -664,6 +661,7 @@ quillOpFromMarkdownBlock block =
                         >> (\line -> line ++ [ { insert = "\n", attributes = [ listType ] } ])
                     )
                 |> List.concat
+                |> (\list -> { insert = "\n", attributes = [] } :: list)
     in
     case block of
         Markdown.Block.UnorderedList _ children ->
@@ -689,13 +687,13 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.map quillOpFromMarkdownInline
                 |> List.concat
-                |> (\l -> l ++ [ { insert = "\n", attributes = [] } ])
 
         Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement "u" _ children) ->
             -- Parse underlined text
             children
                 |> List.concatMap quillOpFromMarkdownBlock
                 |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
+                |> (\l -> l ++ [ { insert = " ", attributes = [] } ])
 
         _ ->
             []
@@ -731,9 +729,6 @@ quillOpFromMarkdownInline inline =
             -- Parse underlined text
             children
                 |> List.concatMap quillOpFromMarkdownBlock
-                -- Paragraph blocks automatically add a newline at the end
-                -- Since this is an inline element, we don't want that
-                |> List.filter (\quillOp -> not (quillOp.insert == "\n" && List.isEmpty quillOp.attributes))
                 |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
 
         _ ->
@@ -748,12 +743,11 @@ quillOpFromMarkdownInline inline =
 when the editor is focused. This is useful because users expect to add a new
 line when they press `Enter`, not to submit the form.
 -}
-withSubscription : Model -> (Msg -> msg) -> Sub msg -> Sub msg
-withSubscription model toMsg parentSubscription =
+withSubscription : Model -> Sub msg -> Sub msg
+withSubscription model parentSubscription =
     case model.linkModalState of
         Editing _ ->
-            Sub.map KeyDown (Browser.Events.onKeyDown (Json.Decode.field "key" Json.Decode.string))
-                |> Sub.map toMsg
+            Sub.none
 
         NotShowing ->
             if model.isFocused then
@@ -871,9 +865,6 @@ linkDecoder =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        KeyDown _ ->
-            [ "KeyDown" ]
-
         ClickedIncludeLink _ ->
             [ "ClickedIncludeLink" ]
 

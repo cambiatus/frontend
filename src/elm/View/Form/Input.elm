@@ -468,6 +468,9 @@ fieldTypeToString fieldType =
         Time ->
             "time"
 
+        Url ->
+            "url"
+
 
 type alias InputOptions a =
     { label : String
@@ -507,3 +510,4 @@ type FieldType
     | Telephone
     | Number
     | Time
+    | Url

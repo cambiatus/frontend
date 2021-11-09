@@ -5,7 +5,6 @@ module Page.Community.ActionEditor exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -1889,17 +1888,6 @@ viewVerifierSelect loggedIn model isDisabled =
                         (getInput verifiersValidator)
                     )
                 ]
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
-        |> MarkdownEditor.withSubscription model.form.description GotDescriptionEditorMsg
-        |> MarkdownEditor.withSubscription model.form.instructions GotInstructionsEditorMsg
 
 
 

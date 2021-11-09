@@ -488,14 +488,6 @@ window.customElements.define('markdown-editor',
       }
       const text = this._quill.getText(range)
       const currentFormat = this._quill.getFormat(range)
-      this.dispatchEvent(new CustomEvent('clicked-include-link',
-        {
-          detail: {
-            label: text,
-            url: currentFormat.link || ''
-          }
-        }
-      ))
 
       usePortAsPromise(app.ports.markdownLink, (link) => {
         if (link.id === this.id) {
@@ -506,10 +498,21 @@ window.customElements.define('markdown-editor',
           )
 
           this._quill.setSelection(range.index + link.label.length, 0, 'silent')
+
+          return { unsubscribeFromPort: true }
         } else {
           return { unsubscribeFromPort: false }
         }
       })
+
+      this.dispatchEvent(new CustomEvent('clicked-include-link',
+        {
+          detail: {
+            label: text,
+            url: currentFormat.link || ''
+          }
+        }
+      ))
     }
 
     /** Gets the range from the formatting that the `index` position is affected
