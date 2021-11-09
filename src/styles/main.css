@@ -472,6 +472,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .marker-hidden::marker {
     @apply hidden;
   }
+
+  .inline-children > * {
+    @apply inline;
+  }
 }
 
 /* End of extra utilities */

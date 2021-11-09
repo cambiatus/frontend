@@ -18,7 +18,7 @@ module View.MarkdownEditor exposing
     )
 
 import Dict
-import Html exposing (Html, a, button, div, node, p, text)
+import Html exposing (Html, a, button, div, node, p, text, u)
 import Html.Attributes exposing (attribute, class, href, id, novalidate, target, type_)
 import Html.Events exposing (on, onClick)
 import Json.Decode
@@ -27,6 +27,7 @@ import Json.Encode
 import List.Extra as List
 import Log
 import Markdown.Block
+import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
 import Maybe.Extra
@@ -217,6 +218,11 @@ viewReadOnly attributes content =
                                     Nothing ->
                                         a [ href link.destination, target "_blank" ]
                                             linkContent
+                        , html =
+                            Markdown.Html.oneOf
+                                [ Markdown.Html.tag "u"
+                                    (\children -> u [ class "inline-children" ] children)
+                                ]
                     }
             in
             case Markdown.Renderer.render renderer blocks of
@@ -603,6 +609,9 @@ quillOpToMarkdown quillOp =
                         Strike ->
                             True
 
+                        Underline ->
+                            True
+
                         _ ->
                             False
 
@@ -657,7 +666,7 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.map
                     (List.map quillOpFromMarkdownBlock
-                        >> List.concat
+                        >> List.intercalate [ { insert = " ", attributes = [] } ]
                         >> (\line -> line ++ [ { insert = "\n", attributes = [ listType ] } ])
                     )
                 |> List.concat
@@ -693,7 +702,6 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.concatMap quillOpFromMarkdownBlock
                 |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
-                |> (\l -> l ++ [ { insert = " ", attributes = [] } ])
 
         _ ->
             []
@@ -810,6 +818,11 @@ removeFormattingFromBlock block =
         Markdown.Block.Paragraph inlines ->
             Markdown.Block.extractInlineText inlines
                 |> Just
+
+        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement _ _ children) ->
+            List.map removeFormattingFromBlock children
+                |> Maybe.Extra.combine
+                |> Maybe.map (String.join " ")
 
         _ ->
             Nothing
