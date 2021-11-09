@@ -652,6 +652,12 @@ quillOpToMarkdown quillOp =
 
     else
         List.foldr addFormatting quillOp.insert quillOp.attributes
+            -- We need the following replacements to make sure we can correctly
+            -- parse some special sequences. In practice, these should be rare
+            |> String.replace "*****" "__*__"
+            |> String.replace "***" "_*_"
+            |> String.replace "_____" "**_**"
+            |> String.replace "___" "*_*"
 
 
 quillOpFromMarkdown : String -> Result (List (Parser.Advanced.DeadEnd String Parser.Problem)) (List QuillOp)
