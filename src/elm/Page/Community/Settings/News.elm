@@ -340,7 +340,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
             , value = isHighlighted
             }
             |> View.Form.Toggle.withStatusText View.Form.Toggle.YesNo
-            |> View.Form.Toggle.withAttrs [ class "mt-auto" ]
+            |> View.Form.Toggle.withAttrs [ class "mt-auto text-base" ]
             |> View.Form.Toggle.toHtml translators
         , a
             [ class "button button-primary w-full mt-10 mb-4"
