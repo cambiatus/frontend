@@ -128,6 +128,7 @@
     "unavailablePin": "PIN está indisponível",
     "phone": "Por favor insira um número de telefone válido",
     "invalid_image_file": "Erro ao fazer upload de imagem",
+    "file_upload": "Erro ao fazer upload do arquivo",
     "zipcode": "CEP inválido",
     "contracts": {
       "transfer": {

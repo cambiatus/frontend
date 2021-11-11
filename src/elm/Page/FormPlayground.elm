@@ -5,12 +5,15 @@ module Page.FormPlayground exposing (Model, Msg, init, msgToString, update, view
 import Eos
 import Form exposing (Form)
 import Form.Checkbox
+import Form.File
 import Form.Radio
 import Form.Text
 import Html exposing (Html, div, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows)
+import Http
 import Icons
 import Mask
+import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import UpdateResult as UR
@@ -34,6 +37,7 @@ init _ =
                 , disabledField = "This field is disabled"
                 , agrees = False
                 , accountType = Personal
+                , avatar = RemoteData.NotAsked
                 }
       , user = Nothing
       }
@@ -52,7 +56,7 @@ type alias Model =
 
 
 type Msg
-    = GotUserFormMsg (Form.Msg DirtyUser User)
+    = GotUserFormMsg (Form.Msg DirtyUser)
     | SubmittedUser User
 
 
@@ -61,14 +65,14 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model _ =
+update msg model loggedIn =
     case msg of
         GotUserFormMsg subMsg ->
-            Form.update subMsg model.userFormModel
+            Form.update loggedIn.shared subMsg model.userFormModel
                 |> UR.fromChild
                     (\userFormModel -> { model | userFormModel = userFormModel })
                     GotUserFormMsg
-                    SubmittedUser
+                    LoggedIn.executeFeedback
                     model
 
         SubmittedUser user ->
@@ -90,6 +94,7 @@ type alias DirtyUser =
     , disabledField : String
     , agrees : Bool
     , accountType : AccountType
+    , avatar : RemoteData Http.Error String
     }
 
 
@@ -103,6 +108,7 @@ type alias User =
     , disabledField : String
     , agrees : Bool
     , accountType : AccountType
+    , avatarUrl : String
     }
 
 
@@ -271,6 +277,23 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
+        |> Form.with
+            (Form.File.init { label = "Avatar", id = "avatar-input" }
+                |> Form.File.withVariant Form.File.SmallCircle
+                |> Form.file
+                    { parser =
+                        \avatar ->
+                            case avatar of
+                                RemoteData.Success a ->
+                                    Ok a
+
+                                _ ->
+                                    Err "Something went wrong. Avatar is necessary"
+                    , value = .avatar
+                    , update = \avatar user -> { user | avatar = avatar }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 
@@ -340,7 +363,8 @@ viewUserForm loggedIn model =
         }
         (userForm loggedIn.shared.translators)
         model.userFormModel
-        |> Html.map GotUserFormMsg
+        GotUserFormMsg
+        SubmittedUser
 
 
 

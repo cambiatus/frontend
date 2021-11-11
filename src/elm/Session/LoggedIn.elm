@@ -6,6 +6,7 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
+    , executeFeedback
     , init
     , initLogin
     , isAccount
@@ -812,6 +813,16 @@ type External msg
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
+
+
+executeFeedback : Feedback.Model -> External msg
+executeFeedback feedback =
+    case feedback of
+        Feedback.Visible status message ->
+            ShowFeedback status message
+
+        Feedback.Hidden ->
+            HideFeedback
 
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg

@@ -128,6 +128,7 @@
     "unavailablePin": "ፒን የለም",
     "phone": "እባኮን ትክክለኛ ስልክ ቁጥር ይጠቀሙ",
     "invalid_image_file": "ምስል በመስቀል ላይ ስህተት",
+    "file_upload": "ፋይል በመስቀል ላይ ስህተት",
     "zipcode": "የተሳሳተ አካባቢያዊ መለያ ቁጥር",
     "contracts": {
       "transfer": {

@@ -128,6 +128,7 @@
     "unavailablePin": "El PIN no està disponible",
     "phone": "Utilitzeu un número de telèfon vàlid",
     "invalid_image_file": "S'ha produït un error en penjar la imatge",
+    "file_upload": "S'ha produït un error en carregar el fitxer",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
       "transfer": {

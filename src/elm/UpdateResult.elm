@@ -89,15 +89,12 @@ init model =
 
 
 {-| If a component returns an `UpdateResult`, you can use this function to merge
-the component's update result with the page's update result. This function
-assumes the child component wants to send data to the parent element through
-it's `extMsg`, and converts the child's `extMsg`s into `Cmd`s that will be fired
-and the parent element will be able to treat however they want.
+the component's update result with the page's update result.
 -}
 fromChild :
     (childModel -> model)
     -> (childMsg -> msg)
-    -> (childExtMsg -> msg)
+    -> (childExtMsg -> extMsg)
     -> model
     -> UpdateResult childModel childMsg childExtMsg
     -> UpdateResult model msg extMsg
@@ -116,19 +113,18 @@ addChild :
     UpdateResult childModel childMsg childExtMsg
     -> (childModel -> model -> model)
     -> (childMsg -> msg)
-    -> (childExtMsg -> msg)
+    -> (childExtMsg -> extMsg)
     -> UpdateResult model msg extMsg
     -> UpdateResult model msg extMsg
 addChild childResult addChildModel fromChildMsg fromChildExt parentResult =
-    { parentResult
-        | model = addChildModel childResult.model parentResult.model
-        , cmds =
-            List.map (Cmd.map fromChildMsg) childResult.cmds
-                ++ List.map (Task.succeed >> Task.perform fromChildExt) childResult.exts
-                ++ parentResult.cmds
-        , ports = List.map (Ports.mapAddress fromChildMsg) childResult.ports ++ parentResult.ports
-        , breadcrumbs = List.map (Log.mapBreadcrumb fromChildMsg) childResult.breadcrumbs ++ parentResult.breadcrumbs
-        , events = List.map (Log.map fromChildMsg) childResult.events ++ parentResult.events
+    { model = addChildModel childResult.model parentResult.model
+    , cmds =
+        List.map (Cmd.map fromChildMsg) childResult.cmds
+            ++ parentResult.cmds
+    , ports = List.map (Ports.mapAddress fromChildMsg) childResult.ports ++ parentResult.ports
+    , breadcrumbs = List.map (Log.mapBreadcrumb fromChildMsg) childResult.breadcrumbs ++ parentResult.breadcrumbs
+    , events = List.map (Log.map fromChildMsg) childResult.events ++ parentResult.events
+    , exts = List.map fromChildExt childResult.exts ++ parentResult.exts
     }
 
 

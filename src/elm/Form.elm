@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, checkbox, radio
+    , textField, checkbox, radio, file
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, checkbox, radio
+@docs textField, checkbox, radio, file
 
 
 ## Viewing
@@ -78,18 +78,24 @@ documentation if you're stuck.
 
 -}
 
+import Api
 import Browser.Dom
+import File
 import Form.Checkbox as Checkbox
+import Form.File
 import Form.Radio as Radio
 import Form.Text as Text
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
+import Http
 import Maybe.Extra
-import Session.Shared as Shared
+import RemoteData exposing (RemoteData)
+import Session.Shared as Shared exposing (Shared)
 import Set exposing (Set)
 import Task
 import UpdateResult as UR
+import View.Feedback as Feedback
 
 
 
@@ -101,23 +107,16 @@ import UpdateResult as UR
 have to manipulate this type much, and it will be used mostly just to add type
 annotations
 -}
-type alias Form values output =
-    GenericForm values output (Msg values output)
-
-
-{-| Since `Form`s have their own `Msg`, we expose `Form` as the main type, but
-this is what does all the work, and can receive any generic msg
--}
-type GenericForm values output msg
-    = Form (values -> FilledForm values output msg)
+type Form values output
+    = Form (values -> FilledForm values output)
 
 
 {-| A `FilledForm` represents a form with some (dirty) values in it. It also
 tries to parse the form, and hols the result as either an error or the
 valid/clean model
 -}
-type alias FilledForm values output msg =
-    { fields : List (FilledField values msg)
+type alias FilledForm values output =
+    { fields : List (FilledField values)
     , result : Result ( String, List String ) output
     }
 
@@ -125,8 +124,8 @@ type alias FilledForm values output msg =
 {-| We need a way to hold a single field's information, and whether or not it
 has an error! This is what we use to do that
 -}
-type alias FilledField values msg =
-    { state : Field values msg
+type alias FilledField values =
+    { state : Field values
     , error : Maybe String
     , isRequired : Bool
     }
@@ -134,10 +133,18 @@ type alias FilledField values msg =
 
 {-| Every field must have at least a value and a way to update the dirty model
 with this value. This is used to construct a `Field` given some values.
+
+The `updateWithValues` function should only be used by inputs that are async.
+For example, a file selector needs to upload the file to the server, and update
+the model when it's done. In order to not override other changes the user might
+have done on the form, we use the model at the time the file was uploaded to
+update the model
+
 -}
 type alias BaseField value values =
     { value : value
     , update : value -> values
+    , updateWithValues : value -> values -> values
     }
 
 
@@ -165,19 +172,20 @@ type alias FieldConfig input output values =
 the corresponding function (i.e. `textField` for `Text`, etc) to build fields
 with these types
 -}
-type Field values msg
-    = Text (Text.Options msg) (BaseField String values)
-    | Checkbox (Checkbox.Options msg) (BaseField Bool values)
-    | Radio (Radio.Options String msg) (BaseField String values)
+type Field values
+    = Text (Text.Options (Msg values)) (BaseField String values)
+    | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
+    | Radio (Radio.Options String (Msg values)) (BaseField String values)
+    | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
 define more specific field constructors, such as `textField`
 -}
 field :
-    (BaseField input values -> Field values msg)
+    (BaseField input values -> Field values)
     -> FieldConfig input output values
-    -> GenericForm values output msg
+    -> Form values output
 field build config =
     let
         parse values =
@@ -193,6 +201,7 @@ field build config =
             build
                 { value = config.value values
                 , update = \newValue -> config.update newValue values
+                , updateWithValues = config.update
                 }
     in
     Form
@@ -223,8 +232,8 @@ what you can do with this field.
 -}
 textField :
     FieldConfig String output values
-    -> Text.Options msg
-    -> GenericForm values output msg
+    -> Text.Options (Msg values)
+    -> Form values output
 textField config options =
     field (Text options) config
 
@@ -234,8 +243,8 @@ for more information on what you can do with this field.
 -}
 checkbox :
     FieldConfig Bool output values
-    -> Checkbox.Options msg
-    -> GenericForm values output msg
+    -> Checkbox.Options (Msg values)
+    -> Form values output
 checkbox config options =
     field (Checkbox options) config
 
@@ -246,8 +255,8 @@ checkbox config options =
 radio :
     (String -> input)
     -> FieldConfig input output values
-    -> Radio.Options input msg
-    -> GenericForm values output msg
+    -> Radio.Options input (Msg values)
+    -> Form values output
 radio optionFromString config options =
     let
         optionToString =
@@ -256,6 +265,17 @@ radio optionFromString config options =
     field
         (Radio (Radio.map optionToString optionFromString options))
         (mapFieldConfig optionToString optionFromString config)
+
+
+{-| An input that receives files. Checkout `Form.File` for more information on
+what you can do with this field.
+-}
+file :
+    FieldConfig (RemoteData Http.Error String) output values
+    -> Form.File.Options (Msg values)
+    -> Form values output
+file config options =
+    field (File options) config
 
 
 
@@ -267,7 +287,7 @@ Graphql.SelectionSet, this is useful to start a pipeline chain. Give it a
 function that transforms a dirty model into a clean one, and build the form
 [`with`](#with) other fields.
 -}
-succeed : output -> GenericForm values output msg
+succeed : output -> Form values output
 succeed output =
     Form (\_ -> { fields = [], result = Ok output })
 
@@ -277,9 +297,9 @@ can use this to add the fields we need on a form. This is supposed to be used in
 a pipeline, together with `succeed`.
 -}
 with :
-    GenericForm values a msg
-    -> GenericForm values (a -> b) msg
-    -> GenericForm values b msg
+    Form values a
+    -> Form values (a -> b)
+    -> Form values b
 with new current =
     Form
         (\values ->
@@ -348,9 +368,9 @@ actual middle name is less than 3 characters long, they're out of luck 🤷
 
 -}
 withOptional :
-    GenericForm values a msg
-    -> GenericForm values (Maybe a -> b) msg
-    -> GenericForm values b msg
+    Form values a
+    -> Form values (Maybe a -> b)
+    -> Form values b
 withOptional new current =
     Form
         (\values ->
@@ -414,9 +434,9 @@ withOptional new current =
 {-| Given some values (a dirty model), fill a form with them.
 -}
 fill :
-    GenericForm values output msg
+    Form values output
     -> values
-    -> FilledForm values output msg
+    -> FilledForm values output
 fill (Form fill_) =
     fill_
 
@@ -466,15 +486,17 @@ type ErrorTracking
 The external message is the output, meaning you can just give one of those `UR`
 functions a msg that will be fired whenever the user submits a valid form
 -}
-type alias UpdateResult values output =
-    UR.UpdateResult (Model values) (Msg values output) output
+type alias UpdateResult values =
+    UR.UpdateResult (Model values) (Msg values) Feedback.Model
 
 
-type Msg values output
+type Msg values
     = NoOp
     | ChangedValues values
+    | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
+    | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
-    | ClickedSubmit (Result ( String, List String ) output)
+    | ClickedSubmitWithErrors ( String, List String )
 
 
 {-| Call this inside your update function. Use with `UR.fromChild` or
@@ -497,8 +519,8 @@ submitted when valid:
         | SubmittedForm ValidForm
 
 -}
-update : Msg values output -> Model values -> UpdateResult values output
-update msg (Model model) =
+update : Shared -> Msg values -> Model values -> UpdateResult values
+update shared msg (Model model) =
     let
         (ErrorTracking errorTracking) =
             model.errorTracking
@@ -509,6 +531,36 @@ update msg (Model model) =
 
         ChangedValues newValues ->
             Model { model | values = newValues }
+                |> UR.init
+
+        RequestedUploadFile updateFn fileToUpload ->
+            { model | values = updateFn RemoteData.Loading model.values }
+                |> Model
+                |> UR.init
+                |> UR.addCmd
+                    (Api.uploadImage shared
+                        fileToUpload
+                        (CompletedUploadingFile updateFn)
+                    )
+
+        CompletedUploadingFile updateFn (Err error) ->
+            { model | values = updateFn (RemoteData.Failure error) model.values }
+                |> Model
+                |> UR.init
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure
+                        (shared.translators.t "error.file_upload")
+                    )
+                |> UR.logHttpError msg
+                    Nothing
+                    "Error uploading file"
+                    { moduleName = "Form", function = "update" }
+                    []
+                    error
+
+        CompletedUploadingFile updateFn fileResult ->
+            { model | values = updateFn (RemoteData.fromResult fileResult) model.values }
+                |> Model
                 |> UR.init
 
         BlurredField fieldId ->
@@ -523,26 +575,17 @@ update msg (Model model) =
                 }
                 |> UR.init
 
-        ClickedSubmit (Err ( firstError, _ )) ->
-            Model
-                { model
-                    | errorTracking =
-                        ErrorTracking
-                            { errorTracking | showAllErrors = True }
-                }
+        ClickedSubmitWithErrors ( firstError, _ ) ->
+            { model | errorTracking = ErrorTracking { errorTracking | showAllErrors = True } }
+                |> Model
                 |> UR.init
                 |> UR.addCmd
                     (Browser.Dom.focus firstError
                         |> Task.attempt (\_ -> NoOp)
                     )
 
-        ClickedSubmit (Ok validForm) ->
-            Model model
-                |> UR.init
-                |> UR.addExt validForm
 
-
-msgToString : Msg values output -> List String
+msgToString : Msg values -> List String
 msgToString msg =
     case msg of
         NoOp ->
@@ -551,11 +594,17 @@ msgToString msg =
         ChangedValues _ ->
             [ "ChangedValues" ]
 
+        RequestedUploadFile _ _ ->
+            [ "RequestedUploadFile" ]
+
+        CompletedUploadingFile _ r ->
+            [ "CompletedUploadingFile", UR.resultToString r ]
+
         BlurredField _ ->
             [ "BlurredField" ]
 
-        ClickedSubmit r ->
-            [ "ClickedSubmit", UR.resultToString r ]
+        ClickedSubmitWithErrors _ ->
+            [ "ClickedSubmit" ]
 
 
 
@@ -565,16 +614,18 @@ msgToString msg =
 {-| Provide a form and a dirty model, and get back some HTML
 -}
 view :
-    List (Html.Attribute (Msg values output))
+    List (Html.Attribute msg)
     ->
-        { buttonAttrs : List (Html.Attribute (Msg values output))
-        , buttonLabel : List (Html (Msg values output))
+        { buttonAttrs : List (Html.Attribute (Msg values))
+        , buttonLabel : List (Html (Msg values))
         , translators : Shared.Translators
         }
-    -> GenericForm values output (Msg values output)
+    -> Form values output
     -> Model values
-    -> Html (Msg values output)
-view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) =
+    -> (Msg values -> msg)
+    -> (output -> msg)
+    -> Html msg
+view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) toMsg onSubmit =
     let
         filledForm =
             fill form model.values
@@ -599,25 +650,34 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) =
                     )
     in
     Html.form
-        (Events.onSubmit (ClickedSubmit filledForm.result)
-            :: novalidate True
+        (novalidate True
+            :: Events.onSubmit
+                (case filledForm.result of
+                    Ok validForm ->
+                        onSubmit validForm
+
+                    Err errors ->
+                        toMsg (ClickedSubmitWithErrors errors)
+                )
             :: formAttrs
         )
-        (fields
-            ++ [ button
-                    (type_ "submit"
-                        :: class "button button-primary"
-                        :: buttonAttrs
-                    )
-                    buttonLabel
-               ]
+        (List.map (Html.map toMsg)
+            (fields
+                ++ [ button
+                        (type_ "submit"
+                            :: class "button button-primary"
+                            :: buttonAttrs
+                        )
+                        buttonLabel
+                   ]
+            )
         )
 
 
 viewField :
     { showError : Bool, translators : Shared.Translators }
-    -> FilledField values (Msg values output)
-    -> Html (Msg values output)
+    -> FilledField values
+    -> Html (Msg values)
 viewField { showError, translators } { state, error, isRequired } =
     let
         hasError =
@@ -654,6 +714,16 @@ viewField { showError, translators } { state, error, isRequired } =
                 , hasError = hasError
                 }
 
+        File options baseField ->
+            Form.File.view options
+                { onInput = RequestedUploadFile baseField.updateWithValues
+                , value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                , translators = translators
+                }
+
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
@@ -674,7 +744,7 @@ viewError attributes showError maybeError =
 -- INTERNAL HELPERS
 
 
-getId : Field values msg -> String
+getId : Field values -> String
 getId state =
     case state of
         Text options _ ->
@@ -686,8 +756,11 @@ getId state =
         Radio options _ ->
             Radio.getId options
 
+        File options _ ->
+            Form.File.getId options
 
-isEmpty : Field values msg -> Bool
+
+isEmpty : Field values -> Bool
 isEmpty field_ =
     case field_ of
         Text _ { value } ->
@@ -700,6 +773,9 @@ isEmpty field_ =
 
         Radio _ _ ->
             False
+
+        File _ { value } ->
+            not (RemoteData.isSuccess value)
 
 
 mapFieldConfig :

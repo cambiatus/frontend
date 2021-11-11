@@ -128,6 +128,7 @@
     "unavailablePin": "PIN is unavailable",
     "phone": "Please use a valid phone number",
     "invalid_image_file": "Error uploading image",
+    "file_upload": "Error uploading file",
     "zipcode": "Invalid zipcode",
     "contracts": {
       "transfer": {

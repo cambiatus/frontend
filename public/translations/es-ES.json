@@ -128,6 +128,7 @@
     "unavailablePin": "El PIN no está disponible",
     "phone": "Utilice un número de teléfono válido",
     "invalid_image_file": "Error subiendo imagen",
+    "file_upload": "Error subiendo archivo",
     "zipcode": "Código postal no válido",
     "contracts": {
       "transfer": {
