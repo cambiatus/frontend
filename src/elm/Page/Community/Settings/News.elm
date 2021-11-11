@@ -312,7 +312,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                 text ""
 
             Just scheduling ->
-                small [ class "uppercase text-gray-900 text-sm font-bold block mt-2 mb-6" ]
+                small [ class "uppercase text-gray-900 text-sm font-bold block mt-2" ]
                     [ text <| translators.t "news.scheduled_at"
                     , View.Components.dateViewer [] identity shared news.insertedAt
                     , text <|
@@ -321,7 +321,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                             , ( "minute", String.fromInt (Time.toMinute shared.timezone scheduling) )
                             ]
                     ]
-        , div [ class "mb-10 relative" ]
+        , div [ class "mb-10 relative mt-4" ]
             [ p [ class "text-gray-900 max-h-11 overflow-hidden" ]
                 [ text (MarkdownEditor.removeFormatting news.description)
                 ]
