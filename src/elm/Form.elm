@@ -271,11 +271,36 @@ radio optionFromString config options =
 what you can do with this field.
 -}
 file :
-    FieldConfig (RemoteData Http.Error String) output values
+    { parser : String -> output
+    , failureErrorMessage : Http.Error -> String
+    , loadingErrorMessage : String
+    , notAskedErrorMessage : String
+    , value : values -> RemoteData Http.Error String
+    , update : RemoteData Http.Error String -> values -> values
+    , externalError : values -> Maybe String
+    }
     -> Form.File.Options (Msg values)
     -> Form values output
 file config options =
-    field (File options) config
+    field (File options)
+        { parser =
+            \remoteData ->
+                case remoteData of
+                    RemoteData.Success a ->
+                        Ok (config.parser a)
+
+                    RemoteData.Failure err ->
+                        Err (config.failureErrorMessage err)
+
+                    RemoteData.Loading ->
+                        Err config.loadingErrorMessage
+
+                    RemoteData.NotAsked ->
+                        Err config.notAskedErrorMessage
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
 
 
 
@@ -604,7 +629,7 @@ msgToString msg =
             [ "BlurredField" ]
 
         ClickedSubmitWithErrors _ ->
-            [ "ClickedSubmit" ]
+            [ "ClickedSubmitWithErrors" ]
 
 
 

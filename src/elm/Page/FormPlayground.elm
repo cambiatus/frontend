@@ -8,8 +8,8 @@ import Form.Checkbox
 import Form.File
 import Form.Radio
 import Form.Text
-import Html exposing (Html, div, p, strong, text)
-import Html.Attributes exposing (autocomplete, class, rows)
+import Html exposing (Html, div, img, p, strong, text)
+import Html.Attributes exposing (autocomplete, class, rows, src)
 import Http
 import Icons
 import Mask
@@ -17,6 +17,7 @@ import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import UpdateResult as UR
+import View.Components
 import View.Form
 
 
@@ -38,6 +39,7 @@ init _ =
                 , agrees = False
                 , accountType = Personal
                 , avatar = RemoteData.NotAsked
+                , resume = RemoteData.NotAsked
                 }
       , user = Nothing
       }
@@ -95,6 +97,7 @@ type alias DirtyUser =
     , agrees : Bool
     , accountType : AccountType
     , avatar : RemoteData Http.Error String
+    , resume : RemoteData Http.Error String
     }
 
 
@@ -109,6 +112,7 @@ type alias User =
     , agrees : Bool
     , accountType : AccountType
     , avatarUrl : String
+    , resumeUrl : Maybe String
     }
 
 
@@ -280,17 +284,30 @@ userForm translators =
         |> Form.with
             (Form.File.init { label = "Avatar", id = "avatar-input" }
                 |> Form.File.withVariant Form.File.SmallCircle
+                |> Form.File.withContainerAttrs [ class "my-10" ]
                 |> Form.file
-                    { parser =
-                        \avatar ->
-                            case avatar of
-                                RemoteData.Success a ->
-                                    Ok a
-
-                                _ ->
-                                    Err "Something went wrong. Avatar is necessary"
+                    { parser = identity
+                    , failureErrorMessage = \_ -> "Something went wrong when uploading avatar"
+                    , loadingErrorMessage = "Please wait for the avatar to be finished uploading"
+                    , notAskedErrorMessage = "Avatar is required"
                     , value = .avatar
                     , update = \avatar user -> { user | avatar = avatar }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withOptional
+            (Form.File.init { label = "Resume", id = "resume-input" }
+                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+                |> Form.File.withFileTypes [ Form.File.PDF ]
+                |> Form.File.withContainerAttrs [ class "my-10" ]
+                |> Form.File.withDisabled True
+                |> Form.file
+                    { parser = identity
+                    , failureErrorMessage = \_ -> "Something went wrong when uploading resume"
+                    , loadingErrorMessage = "Please wait for your resume to be finished uploading"
+                    , notAskedErrorMessage = ""
+                    , value = .resume
+                    , update = \resume user -> { user | resume = resume }
                     , externalError = always Nothing
                     }
             )
@@ -349,6 +366,19 @@ view loggedIn model =
                             ]
                         , viewProperty "Account type"
                         , p [] [ text (accountTypeToString user.accountType) ]
+                        , viewProperty "Avatar"
+                        , img [ src user.avatarUrl ] []
+                        , viewProperty "Resume"
+                        , case user.resumeUrl of
+                            Nothing ->
+                                text "No resume provided"
+
+                            Just resumeUrl ->
+                                View.Components.pdfViewer []
+                                    { url = resumeUrl
+                                    , childClass = ""
+                                    , maybeTranslators = Nothing
+                                    }
                         ]
             ]
     }

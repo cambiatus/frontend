@@ -1,6 +1,6 @@
 module Form.File exposing
     ( init, Options
-    , withDisabled, withContainerAttrs, withFileTypes, withVariant, Variant(..), RectangleBackground(..)
+    , withDisabled, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
     , view
     )
@@ -23,7 +23,7 @@ module Form.File exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withFileTypes, withVariant, Variant, RectangleBackground
+@docs withDisabled, withContainerAttrs, withFileTypes, FileType, withVariant, Variant, RectangleBackground
 
 
 # Getters
@@ -41,7 +41,7 @@ import File exposing (File)
 import Html exposing (Html, div, img, input, label, p, span)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Attributes.Aria exposing (ariaLive)
-import Html.Events exposing (on, onBlur)
+import Html.Events exposing (on)
 import Http
 import Icons
 import Json.Decode
@@ -162,6 +162,7 @@ viewInput (Options options) viewConfig =
         , acceptFileTypes options.fileTypes
         , multiple False
         , required viewConfig.isRequired
+        , disabled options.disabled
         ]
         []
 
@@ -180,9 +181,13 @@ viewLargeRectangle background (Options options) viewConfig =
     div options.containerAttrs
         [ View.Form.label [] options.id options.label
         , label
-            [ class "relative w-full h-56 rounded-sm flex justify-center items-center cursor-pointer"
+            [ class "relative w-full h-56 rounded-sm flex justify-center items-center"
             , class backgroundColor
             , class foregroundColor
+            , classList
+                [ ( "cursor-pointer", not options.disabled )
+                , ( "cursor-not-allowed", options.disabled )
+                ]
             ]
             [ viewInput (Options options) viewConfig
             , case viewConfig.value of
@@ -194,7 +199,7 @@ viewLargeRectangle background (Options options) viewConfig =
                         [ span [ class "absolute bottom-4 right-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera "" ]
                         , if List.member PDF options.fileTypes then
-                            View.Components.pdfViewer [ class "h-full w-full text-white" ]
+                            View.Components.pdfViewer [ class "h-full w-full" ]
                                 { url = url
                                 , childClass = "max-h-full max-w-full"
                                 , maybeTranslators = Just viewConfig.translators
@@ -263,7 +268,11 @@ viewSmallCircle (Options options) viewConfig =
             [ viewInput (Options options) viewConfig
             , label
                 [ for options.id
-                , class "block cursor-pointer"
+                , class "block"
+                , classList
+                    [ ( "cursor-pointer", not options.disabled )
+                    , ( "cursor-not-allowed", options.disabled )
+                    ]
                 ]
                 [ viewImg
                 , span
