@@ -362,7 +362,7 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
                         text ""
 
                       else
-                        h2 [ class "container mx-auto px-4 mt-8 mb-4 text-lg font-bold text-gray-900" ]
+                        h2 [ class "container mx-auto px-4 mt-16 mb-4 text-lg font-bold text-gray-900" ]
                             [ span [] [ text <| t "news.read" ]
                             , text " "
                             , span [ class "text-purple-500" ] [ text <| t "news.other_news" ]
