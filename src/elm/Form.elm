@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, checkbox, radio, file
+    , textField, checkbox, radio, select, file
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, checkbox, radio, file
+@docs textField, checkbox, radio, select, file
 
 
 ## Viewing
@@ -84,6 +84,7 @@ import File
 import Form.Checkbox as Checkbox
 import Form.File
 import Form.Radio as Radio
+import Form.Select as Select
 import Form.Text as Text
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
@@ -177,6 +178,7 @@ type Field values
     | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
     | Radio (Radio.Options String (Msg values)) (BaseField String values)
     | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
+    | Select (Select.Options String (Msg values)) (BaseField String values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -268,7 +270,8 @@ radio optionFromString config options =
 
 
 {-| An input that receives files. Checkout `Form.File` for more information on
-what you can do with this field.
+what you can do with this field. Whenever a user selects a file, it is
+automatically uploaded to our servers.
 -}
 file :
     { parser : String -> output
@@ -301,6 +304,23 @@ file config options =
         , update = config.update
         , externalError = config.externalError
         }
+
+
+{-| An input that lets you select one out of a list of options. Checkout
+`Form.Select` for more information on what you can do with this field.
+-}
+select :
+    (String -> input)
+    -> FieldConfig input output values
+    -> Select.Options input (Msg values)
+    -> Form values output
+select optionFromString config options =
+    let
+        optionToString =
+            Select.getOptionToString options
+    in
+    field (Select (Select.map optionToString optionFromString options))
+        (mapFieldConfig optionToString optionFromString config)
 
 
 
@@ -749,6 +769,16 @@ viewField { showError, translators } { state, error, isRequired } =
                 , translators = translators
                 }
 
+        Select options baseField ->
+            Select.view options
+                { onSelect = baseField.update >> ChangedValues
+                , onBlur = BlurredField
+                , value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                }
+
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
@@ -784,6 +814,9 @@ getId state =
         File options _ ->
             Form.File.getId options
 
+        Select options _ ->
+            Select.getId options
+
 
 isEmpty : Field values -> Bool
 isEmpty field_ =
@@ -801,6 +834,10 @@ isEmpty field_ =
 
         File _ { value } ->
             not (RemoteData.isSuccess value)
+
+        Select _ _ ->
+            -- TODO
+            False
 
 
 mapFieldConfig :

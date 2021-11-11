@@ -7,6 +7,7 @@ import Form exposing (Form)
 import Form.Checkbox
 import Form.File
 import Form.Radio
+import Form.Select
 import Form.Text
 import Html exposing (Html, div, img, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows, src)
@@ -40,6 +41,7 @@ init _ =
                 , accountType = Personal
                 , avatar = RemoteData.NotAsked
                 , resume = RemoteData.NotAsked
+                , interest = Programming
                 }
       , user = Nothing
       }
@@ -98,6 +100,7 @@ type alias DirtyUser =
     , accountType : AccountType
     , avatar : RemoteData Http.Error String
     , resume : RemoteData Http.Error String
+    , interest : Interest
     }
 
 
@@ -113,12 +116,19 @@ type alias User =
     , accountType : AccountType
     , avatarUrl : String
     , resumeUrl : Maybe String
+    , interest : Interest
     }
 
 
 type AccountType
     = Juridical
     | Personal
+
+
+type Interest
+    = Programming
+    | Sports
+    | Gaming
 
 
 userForm : Shared.Translators -> Form DirtyUser User
@@ -311,6 +321,20 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
+        |> Form.with
+            (Form.Select.init
+                { label = "Interest"
+                , id = "interest-select"
+                , optionToString = interestToString
+                }
+                |> Form.select
+                    (interestFromString >> Maybe.withDefault Programming)
+                    { parser = Ok
+                    , value = .interest
+                    , update = \interest user -> { user | interest = interest }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 
@@ -429,6 +453,35 @@ accountTypeFromString accountType =
 
         "personal" ->
             Just Personal
+
+        _ ->
+            Nothing
+
+
+interestToString : Interest -> String
+interestToString interest =
+    case interest of
+        Programming ->
+            "programming"
+
+        Sports ->
+            "sports"
+
+        Gaming ->
+            "gaming"
+
+
+interestFromString : String -> Maybe Interest
+interestFromString interest =
+    case interest of
+        "programming" ->
+            Just Programming
+
+        "sports" ->
+            Just Sports
+
+        "gaming" ->
+            Just Gaming
 
         _ ->
             Nothing
