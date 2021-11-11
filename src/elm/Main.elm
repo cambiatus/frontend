@@ -1832,7 +1832,7 @@ view model =
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
         News subModel ->
-            viewLoggedIn subModel LoggedIn.News GotNewsMsg News.view
+            viewLoggedIn subModel (LoggedIn.News subModel.newsId) GotNewsMsg News.view
 
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view

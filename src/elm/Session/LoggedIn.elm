@@ -231,7 +231,7 @@ type Page
     | ComingSoon
     | Invite
     | Dashboard
-    | News
+    | News (Maybe Int)
     | Community
     | CommunitySettings
     | CommunitySettingsInfo
@@ -358,11 +358,25 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
             :: (case model.maybeHighlightedNews of
                     Just news ->
-                        if Maybe.Extra.isJust news.receipt || isAdminPage page then
-                            text ""
+                        let
+                            isInNewsPage =
+                                case page of
+                                    News maybeNewsId ->
+                                        maybeNewsId == Just news.id
+
+                                    _ ->
+                                        False
+
+                            showHighlightedNews =
+                                not (Maybe.Extra.isJust news.receipt)
+                                    && not (isAdminPage page)
+                                    && not isInNewsPage
+                        in
+                        if showHighlightedNews then
+                            viewHighlightedNews shared.translators pageMsg news
 
                         else
-                            viewHighlightedNews shared.translators pageMsg news
+                            text ""
 
                     Nothing ->
                         text ""

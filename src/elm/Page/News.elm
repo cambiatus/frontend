@@ -117,8 +117,16 @@ update msg model loggedIn =
                 |> UR.init
                 |> markNewsAsRead
 
-        CompletedMarkingNewsAsRead (RemoteData.Success _) ->
+        CompletedMarkingNewsAsRead (RemoteData.Success maybeReceipt) ->
             UR.init model
+                |> UR.addExt
+                    (LoggedIn.UpdatedLoggedIn
+                        { loggedIn
+                            | maybeHighlightedNews =
+                                Maybe.map (\highlightedNews -> { highlightedNews | receipt = maybeReceipt })
+                                    loggedIn.maybeHighlightedNews
+                        }
+                    )
                 |> UR.addBreadcrumb
                     { type_ = Log.InfoBreadcrumb
                     , category = msg
