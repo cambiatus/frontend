@@ -327,6 +327,12 @@ userForm translators =
                 , id = "interest-select"
                 , optionToString = interestToString
                 }
+                |> Form.Select.withOption Programming "Programming"
+                |> Form.Select.withOption Sports "Sports"
+                |> Form.Select.withOption Gaming "Gaming"
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.Select.withAttrs [ class "w-1/3" ]
+                |> Form.Select.withDisabled True
                 |> Form.select
                     (interestFromString >> Maybe.withDefault Programming)
                     { parser = Ok
@@ -403,6 +409,8 @@ view loggedIn model =
                                     , childClass = ""
                                     , maybeTranslators = Nothing
                                     }
+                        , viewProperty "Interest"
+                        , p [] [ text (interestToString user.interest) ]
                         ]
             ]
     }

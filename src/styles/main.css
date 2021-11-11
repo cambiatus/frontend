@@ -74,13 +74,13 @@ body > * {
   }
 
   .input-border {
-    @apply border border-gray-500 rounded-md ring-0 duration-100;
+    @apply border border-gray-500 rounded-md ring-0 duration-100 focus-within:ring focus:ring;
 
     transition-property: box-shadow, color, border-color;
   }
 
   .input-border:not(.with-error) {
-    @apply focus-within:ring focus-within:ring-green focus-within:border-green focus-within:ring-opacity-50;
+    @apply focus-within:ring-green focus-within:border-green focus-within:ring-opacity-50;
   }
 
   .input-border.with-error {
@@ -99,6 +99,14 @@ body > * {
 
   .form-select {
     @apply input pr-10 bg-no-repeat focus:outline-none;
+
+    background-position: right 0.5rem center;
+    background-size: 2rem;
+    background-image: url('/icons/select-arrow.svg');
+  }
+
+  .form-select-icon {
+    @apply bg-no-repeat;
 
     background-position: right 0.5rem center;
     background-size: 2rem;
@@ -136,7 +144,7 @@ body > * {
   }
 
   .with-error {
-    @apply border-red text-red;
+    @apply border-red text-red focus:border-red;
   }
 
   .field-with-error,

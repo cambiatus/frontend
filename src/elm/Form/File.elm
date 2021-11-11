@@ -144,6 +144,7 @@ type alias ViewConfig msg =
 
 view : Options msg -> ViewConfig msg -> Html msg
 view (Options options) viewConfig =
+    -- TODO - Focus styles
     case options.variant of
         LargeRectangle background ->
             viewLargeRectangle background (Options options) viewConfig

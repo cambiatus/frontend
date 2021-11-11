@@ -90,7 +90,7 @@ config =
             , "Form.File"
             ]
           )
-        , ( [ "Html.select" ], [ "View.Form.Select" ] )
+        , ( [ "Html.select" ], [ "View.Form.Select", "Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
         ]
     ]
