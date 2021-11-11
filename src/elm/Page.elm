@@ -28,8 +28,9 @@ import Dict
 import Eos.Account
 import Flags exposing (Flags)
 import Graphql.Http
-import Html exposing (Html, a, div, h1, img, p, text)
-import Html.Attributes exposing (class, src, title)
+import Html exposing (Html, a, div, h1, img, nav, p, span, text)
+import Html.Attributes exposing (class, id, src, title)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabelledby)
 import Http
 import I18Next exposing (Delims(..), Translations)
 import Icons
@@ -192,21 +193,31 @@ viewTitle text_ =
 
 viewHeader : LoggedIn.Model -> String -> Html msg
 viewHeader { shared, routeHistory } title =
-    div [ class "w-full h-16 flex px-4 items-center bg-indigo-500" ]
-        [ div [ class "flex items-center container mx-auto relative" ]
+    div [ class "w-full h-16 flex items-center bg-indigo-500" ]
+        [ nav [ class "flex items-center container mx-auto px-4 relative" ]
             [ a
-                [ class "flex items-center mr-4 absolute sm:left-0 sm:inset-y-0"
+                [ class "flex items-center sm:w-full"
                 , routeHistory
                     |> List.drop 1
                     |> List.head
                     |> Maybe.withDefault Route.Dashboard
                     |> Route.href
+                , ariaLabelledby "previous-page-button"
                 ]
                 [ Icons.back ""
-                , p [ class "ml-2 text-white text-sm hidden md:visible md:flex" ]
+                , p
+                    [ class "ml-2 text-white text-sm hidden md:visible md:flex"
+                    , id "previous-page-button"
+                    ]
                     [ text (shared.translators.t "back") ]
                 ]
-            , h1 [ class "mx-auto text-white truncate pl-10 sm:pl-0" ] [ text title ]
+            , h1 [ class "text-white truncate w-full text-center ml-1 mr-8 sm:ml-0 sm:mr-0" ]
+                [ text title ]
+            , span
+                [ class "w-full hidden sm:inline"
+                , ariaHidden True
+                ]
+                []
             ]
         ]
 
