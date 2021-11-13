@@ -674,7 +674,7 @@ viewExpiryFields ({ t } as translators) community model =
             input
                 |> Input.withAttrs [ class "pr-20" ]
                 |> Input.withElements
-                    [ span [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2" ]
+                    [ span [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2" ]
                         [ text (t "settings.community_currency.seconds") ]
                     ]
     in

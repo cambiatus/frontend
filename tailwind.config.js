@@ -149,11 +149,7 @@ module.exports = {
         super: '2.5rem'
       },
       inset: {
-        '1': '1rem',
-        '-1': '-0.25rem',
-        '1/2': '50%',
-        modal: '10rem',
-        'full': '100%'
+        modal: '10rem'
       },
       width: {
         form: '45.625rem',

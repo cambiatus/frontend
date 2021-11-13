@@ -250,7 +250,7 @@ viewSubdomain { translators } isDisabled defVal _ =
         }
         |> Input.withElements
             [ span
-                [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
+                [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
                 , classList
                     [ ( "hidden", String.isEmpty defVal )
                     , ( "bg-gray-500", isDisabled )

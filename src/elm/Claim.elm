@@ -964,7 +964,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             , Utils.onClickNoBubble (OpenPhotoModal claim)
                             ]
                             [ div
-                                [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
+                                [ class "z-10 absolute bottom-4 left-4 bg-black bg-opacity-60 p-4" ]
                                 [ p [ class "text-sm text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
                                 , p [ class "font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]

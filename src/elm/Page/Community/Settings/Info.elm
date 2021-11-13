@@ -1052,7 +1052,7 @@ viewSubdomain shared model =
                 ]
             |> Input.withElements
                 [ span
-                    [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2 transition-opacity"
+                    [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2 transition-opacity"
                     , classList
                         [ ( "opacity-0", String.isEmpty model.subdomainInput )
                         , ( "bg-gray-500", model.isLoading )
