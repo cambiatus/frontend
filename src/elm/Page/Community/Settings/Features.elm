@@ -1,9 +1,12 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Api.Graphql
+import Cambiatus.Mutation
 import Community
 import Dict
 import Eos
 import Eos.Account
+import Graphql.SelectionSet
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (Value)
@@ -32,6 +35,7 @@ initModel =
     , hasShop = False
     , hasObjectives = False
     , hasKyc = False
+    , hasNews = False
     }
 
 
@@ -40,6 +44,7 @@ type alias Model =
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
+    , hasNews : Bool
     }
 
 
@@ -61,6 +66,7 @@ type Msg
     | ToggleObjectives Bool
     | ToggleKyc
     | ToggleSponsorship
+    | ToggleNews Bool
     | SaveSuccess
 
 
@@ -129,6 +135,13 @@ view loggedIn model =
                                 , disabled = True
                                 , value = Maybe.Extra.isJust community.contributionConfiguration
                                 }
+                             , View.Form.Toggle.init
+                                { label = text (t "news.title")
+                                , id = "news-toggle"
+                                , onToggle = ToggleNews
+                                , disabled = False
+                                , value = model.hasNews
+                                }
                              ]
                                 |> List.map
                                     (View.Form.Toggle.withAttrs [ class "py-6" ]
@@ -171,6 +184,7 @@ update msg model loggedIn =
                     , hasShop = community.hasShop
                     , hasObjectives = community.hasObjectives
                     , hasKyc = community.hasKyc
+                    , hasNews = community.hasNews
                 }
 
         ClosedAuthModal ->
@@ -199,6 +213,32 @@ update msg model loggedIn =
         ToggleSponsorship ->
             model
                 |> UR.init
+
+        ToggleNews newsValue ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    { model | hasNews = newsValue }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (Cambiatus.Mutation.hasNews
+                                    { communityId = Eos.symbolToString community.symbol
+                                    , hasNews = newsValue
+                                    }
+                                    Graphql.SelectionSet.empty
+                                )
+                                (\_ -> SaveSuccess)
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Tried toggling community news feature, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Features", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         SaveSuccess ->
             let
@@ -239,6 +279,7 @@ updateCommunity community model =
         | hasShop = model.hasShop
         , hasObjectives = model.hasObjectives
         , hasKyc = model.hasKyc
+        , hasNews = model.hasNews
     }
 
 
@@ -355,6 +396,9 @@ msgToString msg =
 
         ToggleSponsorship ->
             [ "ToggleSponsorship" ]
+
+        ToggleNews _ ->
+            [ "ToggleNews" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]

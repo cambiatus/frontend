@@ -27,7 +27,7 @@ body > * {
 
 @layer components {
   .button {
-    @apply uppercase text-base font-bold leading-5 flex items-center justify-center text-center w-40 h-10 px-2;
+    @apply uppercase text-base font-bold leading-5 flex items-center justify-center text-center w-40 h-10 px-2 focus-ring;
   }
 
   .button:disabled {
@@ -39,7 +39,7 @@ body > * {
   }
 
   .button-secondary {
-    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:outline-none;
+    @apply bg-white text-orange-300 rounded-full border hover:border-orange-300 focus-visible:border-orange-300 focus-visible:ring-orange-500 focus-visible:ring-opacity-25 focus-visible:outline-none;
   }
 
   .button-sm {
@@ -73,17 +73,17 @@ body > * {
   }
 
   .input-border {
-    @apply border border-gray-500 rounded-md ring-0 duration-100;
+    @apply border border-gray-500 rounded-md ring-0 duration-100 focus-ring focus-within:ring;
 
     transition-property: box-shadow, color, border-color;
   }
 
   .input-border:not(.with-error) {
-    @apply focus-within:ring focus-within:ring-green focus-within:border-green focus-within:ring-opacity-50;
+    @apply focus-within:border-green focus-within:ring-green focus-within:ring-opacity-50;
   }
 
   .input-border.with-error {
-    @apply focus-within:ring-red focus-within:ring-opacity-30;
+    @apply border-red focus-within:ring-red focus-within:ring-opacity-30;
   }
 
   .form-checkbox {
@@ -458,6 +458,24 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .animation-delay-300 {
     animation-delay: 300ms;
   }
+
+  /* Hides the default triangle on a summary element inside a details element.
+  The `-webkit-details-marker` and `marker` are needed for Safari */
+  .marker-hidden {
+    @apply list-none;
+  }
+
+  .marker-hidden::-webkit-details-marker {
+    @apply hidden;
+  }
+
+  .marker-hidden::marker {
+    @apply hidden;
+  }
+
+  .inline-children > * {
+    @apply inline;
+  }
 }
 
 /* End of extra utilities */
@@ -474,6 +492,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
 .markdown-viewer a {
   @apply underline hover:opacity-80;
+}
+
+.markdown-viewer.colored-links a {
+  @apply text-orange-300;
 }
 
 .markdown-viewer h1 {

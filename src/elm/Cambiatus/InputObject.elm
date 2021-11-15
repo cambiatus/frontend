@@ -137,31 +137,6 @@ encodeChecksInput input =
         [ ( "validator", Encode.string |> Encode.optional input.validator ) ]
 
 
-buildClaimInput :
-    ClaimInputRequiredFields
-    -> ClaimInput
-buildClaimInput required =
-    { id = required.id }
-
-
-type alias ClaimInputRequiredFields =
-    { id : Int }
-
-
-{-| Type for the ClaimInput input object.
--}
-type alias ClaimInput =
-    { id : Int }
-
-
-{-| Encode a ClaimInput into a value that can be used as an argument.
--}
-encodeClaimInput : ClaimInput -> Value
-encodeClaimInput input =
-    Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
-
-
 buildClaimsFilter :
     (ClaimsFilterOptionalFields -> ClaimsFilterOptionalFields)
     -> ClaimsFilter
@@ -340,31 +315,6 @@ encodeNewCommunityInput : NewCommunityInput -> Value
 encodeNewCommunityInput input =
     Encode.maybeObject
         [ ( "symbol", Encode.string input.symbol |> Just ) ]
-
-
-buildObjectiveInput :
-    ObjectiveInputRequiredFields
-    -> ObjectiveInput
-buildObjectiveInput required =
-    { id = required.id }
-
-
-type alias ObjectiveInputRequiredFields =
-    { id : Int }
-
-
-{-| Type for the ObjectiveInput input object.
--}
-type alias ObjectiveInput =
-    { id : Int }
-
-
-{-| Encode a ObjectiveInput into a value that can be used as an argument.
--}
-encodeObjectiveInput : ObjectiveInput -> Value
-encodeObjectiveInput input =
-    Encode.maybeObject
-        [ ( "id", Encode.int input.id |> Just ) ]
 
 
 buildProductsFilterInput :

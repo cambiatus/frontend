@@ -157,6 +157,25 @@ input options =
                 TextArea ->
                     ( Html.textarea, "form-input", class "" )
 
+        transformedValue =
+            case options.fieldType of
+                Time ->
+                    case String.split ":" options.value of
+                        [ hour, minute ] ->
+                            -- We need to pad values with 0. From MDN:
+                            -- The value of the time input is always in 24-hour
+                            -- format that includes leading zeros: hh:mm
+                            [ String.repeat (2 - String.length hour) "0" ++ hour
+                            , String.repeat (2 - String.length minute) "0" ++ minute
+                            ]
+                                |> String.join ":"
+
+                        _ ->
+                            options.value
+
+                _ ->
+                    options.value
+
         beforeInputFunction =
             case options.mask of
                 Nothing ->
@@ -178,7 +197,7 @@ input options =
                 :: class ("w-full " ++ inputClass)
                 :: classList [ ( "with-error", hasErrors options ) ]
                 :: disabled options.disabled
-                :: value options.value
+                :: value transformedValue
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
                 :: options.extraAttrs
@@ -446,6 +465,12 @@ fieldTypeToString fieldType =
         Number ->
             "number"
 
+        Time ->
+            "time"
+
+        Url ->
+            "url"
+
 
 type alias InputOptions a =
     { label : String
@@ -484,3 +509,5 @@ type FieldType
     = Text
     | Telephone
     | Number
+    | Time
+    | Url

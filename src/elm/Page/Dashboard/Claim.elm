@@ -653,7 +653,7 @@ fetchClaim claimId shared authToken =
     Api.Graphql.query
         shared
         (Just authToken)
-        (Cambiatus.Query.claim { input = { id = claimId } } (Claim.selectionSet shared.now))
+        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet shared.now))
         ClaimLoaded
 
 

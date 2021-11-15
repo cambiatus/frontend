@@ -2,7 +2,7 @@ module View.Form.Toggle exposing
     ( init
     , withAttrs, withTooltip, withVariant
     , toHtml
-    , Variant(..)
+    , StatusText(..), Variant(..), withStatusText
     )
 
 {-| Creates a Cambiatus-style toggle input
@@ -34,7 +34,7 @@ module View.Form.Toggle exposing
 
 -}
 
-import Html exposing (Html, div, input, label, text)
+import Html exposing (Html, div, input, label, span, text)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, name, type_)
 import Html.Events exposing (onCheck)
 import Session.Shared exposing (Translators)
@@ -63,12 +63,18 @@ type alias Options msg =
     , variant : Variant
     , tooltip : Maybe { message : String, iconClass : String }
     , extraAttrs : List (Html.Attribute msg)
+    , statusText : StatusText
     }
 
 
 type Variant
     = Simple
     | Big
+
+
+type StatusText
+    = EnabledDisabled
+    | YesNo
 
 
 {-| Initialize a Toggle with some required options
@@ -83,6 +89,7 @@ init requiredOptions =
     , variant = Big
     , tooltip = Nothing
     , extraAttrs = []
+    , statusText = EnabledDisabled
     }
 
 
@@ -111,6 +118,13 @@ withVariant variant options =
     { options | variant = variant }
 
 
+{-| Selects the kind of status text to be displayed next to the toggle
+-}
+withStatusText : StatusText -> Options a -> Options a
+withStatusText statusText_ options =
+    { options | statusText = statusText_ }
+
+
 
 -- TO HTML
 
@@ -132,13 +146,12 @@ toHtml translators options =
 
 
 viewSimple : Translators -> Options msg -> Html msg
-viewSimple translators options =
-    label
+viewSimple _ options =
+    div
         (class "flex w-full items-center text-sm"
-            :: for options.id
             :: options.extraAttrs
         )
-        [ div [ class "form-switch" ]
+        [ label [ class "form-switch", for options.id ]
             [ input
                 [ type_ "checkbox"
                 , id options.id
@@ -156,7 +169,7 @@ viewSimple translators options =
                 ]
                 []
             ]
-        , div [ class "flex items-center" ]
+        , span [ class "flex items-center" ]
             [ options.label
             , viewTooltip options
             ]
@@ -164,7 +177,7 @@ viewSimple translators options =
 
 
 viewBig : Translators -> Options msg -> Html msg
-viewBig ({ t } as translators) options =
+viewBig { t } options =
     let
         text_ =
             t >> text
@@ -176,18 +189,17 @@ viewBig ({ t } as translators) options =
             else
                 "text-grey"
     in
-    label
+    div
         (class "flex w-full justify-between items-center text-sm"
-            :: for options.id
             :: options.extraAttrs
         )
-        [ div [ class "flex items-center" ]
+        [ label [ class "flex items-center", for options.id ]
             [ options.label
             , viewTooltip options
             ]
-        , div [ class ("flex items-center font-semibold lowercase ml-2 " ++ statusColor) ]
+        , span [ class ("flex items-center font-semibold lowercase ml-2 " ++ statusColor) ]
             [ label [ for options.id ] [ text_ (statusText options) ]
-            , div [ class "form-switch ml-7" ]
+            , span [ class "form-switch ml-7" ]
                 [ input
                     [ type_ "checkbox"
                     , id options.id
@@ -225,8 +237,17 @@ viewTooltip options =
 
 statusText : Options msg -> String
 statusText options =
-    if options.value then
-        "settings.features.enabled"
+    case options.statusText of
+        EnabledDisabled ->
+            if options.value then
+                "settings.features.enabled"
 
-    else
-        "settings.features.disabled"
+            else
+                "settings.features.disabled"
+
+        YesNo ->
+            if options.value then
+                "community.actions.form.yes"
+
+            else
+                "community.actions.form.no"

@@ -4,7 +4,6 @@ module Page.Profile.Editor exposing
     , init
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -451,12 +450,6 @@ modelToProfile model profile =
                 |> RemoteData.map Avatar.fromString
                 |> RemoteData.withDefault profile.avatar
     }
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
-        |> MarkdownEditor.withSubscription model.bio GotBioEditorMsg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

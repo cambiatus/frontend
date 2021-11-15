@@ -470,8 +470,8 @@
       "transfers": "Transações",
       "our_supporters": "Nossos",
       "supporters": "Apoiadores",
-      "our_messages": "Nossas",
-      "messages": "Mensagens",
+      "our_messages": "Nossos",
+      "messages": "Comunicados",
       "you": "Você",
       "your_turn": "{{community}} te ajudou, agora é sua vez!",
       "support_us": "Nos apoie",
@@ -1075,7 +1075,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Objetivos, Ações, Loja, Patrocínio",
+      "description": "Objetivos, Ações, Loja, Patrocínio, Comunicados",
       "enabled": "Habilitado",
       "disabled": "Desabilitado"
     }
@@ -1198,6 +1198,65 @@
       "subtitle": "Agora você pode patrocinar esta comunidade.",
       "explanation": "Faça sua contribuição clicando no botão abaixo. Você será redirecionado ao PayPal para completar sua transação.",
       "sponsor": "Patrocinar {{community_name}}"
+    }
+  },
+  "news": {
+    "title": "Comunicados",
+    "description": "Permitir que o time da comunidade envie comunicados",
+    "create": "Novo comunicado",
+    "community_news": "Comunicados da comunidade",
+    "got_community_news": "Nova comunicação da comunidade recebida:",
+    "read": "Ler",
+    "other_news": "outros comunicados",
+    "view_more": "Ver mais",
+    "view_more_with_ellipsis": "... Ver mais",
+    "edit": "Editar",
+    "copy": "Criar cópia",
+    "error_fetching": "Algo de errado aconteceu ao buscar os comunicados da comunidade",
+    "error_highlighting": "Algo de errado aconteceu ao destacar o comunicado",
+    "highlight": "Destacar comunicado",
+    "already_highlighted": "Já existe um comunicado em destaque",
+    "saved": "Comunicado salvo com sucesso",
+    "failed_saving": "Algo de errado aconteceu ao salvar o comunicado",
+    "not_found_title": "Não foi possível achar o comunicado",
+    "not_found_description": "Tente novamente com um comunicado válido",
+    "replace_notice": "Ao destacar esse comunicado, ele vai substituir o existente",
+    "replace_confirmation": "Tem certeza que deseja destacá-lo?",
+    "created_at": "Criado: ",
+    "scheduled_at": "Agendado: ",
+    "scheduled_at_time": " às {{hour}}:{{minute}}",
+    "edited_by": "Editado por ",
+    "edited_date": " em {{date}}",
+    "reaction": {
+      "choose": "Escolha uma reação",
+      "reactions": "{{count}} pessoas reagiram com",
+      "remove": "Remover reação",
+      "add": "Reagir com",
+      "close": "Fechar seletor de reações"
+    },
+    "no_news": {
+      "title": "Não tem nada para ver por aqui",
+      "description": "Sua comunidade ainda não postou nenhum comunicado"
+    },
+    "editor": {
+      "title": "Editor de comunicados",
+      "field": {
+        "title": "Título",
+        "description": "Descrição",
+        "publication_mode": "Publicar ou agendar",
+        "publish_immediately": "Publicar imediatamente",
+        "schedule": "Agendar publicação",
+        "initial_date": "Data inicial",
+        "time": "Horário"
+      },
+      "error": {
+        "title": "O comunicado precisa de um título",
+        "description": "O comunicado precisa de uma descrição",
+        "future_date": "A data agendada precisa ser no futuro",
+        "invalid_date": "Data inválida",
+        "future_time": "O horário agendado precisa ser no futuro",
+        "invalid_time": "Horário inválido"
+      }
     }
   },
   "markdown": {

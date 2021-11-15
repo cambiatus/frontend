@@ -17,10 +17,9 @@ module View.MarkdownEditor exposing
     , withSubscription
     )
 
-import Browser.Events
 import Dict
-import Html exposing (Html, a, button, div, node, p, text)
-import Html.Attributes exposing (attribute, class, href, id, target, type_)
+import Html exposing (Html, a, button, div, node, p, text, u)
+import Html.Attributes exposing (attribute, class, href, id, novalidate, target, type_)
 import Html.Events exposing (on, onClick)
 import Json.Decode
 import Json.Decode.Pipeline as Decode
@@ -28,6 +27,7 @@ import Json.Encode
 import List.Extra as List
 import Log
 import Markdown.Block
+import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
 import Maybe.Extra
@@ -35,6 +35,7 @@ import Parser
 import Parser.Advanced
 import Ports
 import Session.Shared exposing (Translators)
+import Utils
 import View.Form
 import View.Form.Input as Input
 import View.Modal as Modal
@@ -75,8 +76,7 @@ type LinkModalState
 
 
 type Msg
-    = KeyDown String
-    | ClickedIncludeLink Link
+    = ClickedIncludeLink Link
     | ClosedLinkModal
     | EnteredLinkLabel String
     | EnteredLinkUrl String
@@ -93,13 +93,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        KeyDown key ->
-            if key == "Enter" then
-                update ClickedAcceptLink model
-
-            else
-                ( model, Cmd.none )
-
         ClickedIncludeLink link ->
             ( { model | linkModalState = Editing link }, Cmd.none )
 
@@ -225,6 +218,11 @@ viewReadOnly attributes content =
                                     Nothing ->
                                         a [ href link.destination, target "_blank" ]
                                             linkContent
+                        , html =
+                            Markdown.Html.oneOf
+                                [ Markdown.Html.tag "u"
+                                    (\children -> u [ class "inline-children" ] children)
+                                ]
                     }
             in
             case Markdown.Renderer.render renderer blocks of
@@ -262,6 +260,14 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                 View.Form.label [] model.id label
             , node "markdown-editor"
                 [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
+                , attribute "elm-has-error"
+                    (case problem of
+                        Nothing ->
+                            "false"
+
+                        Just _ ->
+                            "true"
+                    )
                 , attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
                 , attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
                 , attribute "elm-disabled"
@@ -294,42 +300,47 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                     }
                     |> Modal.withHeader (t "markdown.link_form.header")
                     |> Modal.withBody
-                        [ Input.init
-                            { label = t "markdown.link_form.label"
-                            , id = "link-modal-label"
-                            , onInput = EnteredLinkLabel
-                            , disabled = False
-                            , value = linkModal.label
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.toHtml
-                        , Input.init
-                            { label = t "markdown.link_form.url"
-                            , id = "link-modal-url"
-                            , onInput = EnteredLinkUrl
-                            , disabled = False
-                            , value = linkModal.url
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.toHtml
-                        ]
-                    |> Modal.withFooter
-                        [ button
-                            [ class "modal-cancel"
-                            , onClick ClosedLinkModal
-                            , type_ "button"
+                        [ Html.form
+                            [ Utils.onSubmitPreventAll ClickedAcceptLink
+                            , novalidate True
                             ]
-                            [ text <| t "menu.cancel" ]
-                        , button
-                            [ class "modal-accept"
-                            , onClick ClickedAcceptLink
-                            , type_ "button"
+                            [ Input.init
+                                { label = t "markdown.link_form.label"
+                                , id = "link-modal-label"
+                                , onInput = EnteredLinkLabel
+                                , disabled = False
+                                , value = linkModal.label
+                                , placeholder = Nothing
+                                , problems = Nothing
+                                , translators = translators
+                                }
+                                |> Input.toHtml
+                            , Input.init
+                                { label = t "markdown.link_form.url"
+                                , id = "link-modal-url"
+                                , onInput = EnteredLinkUrl
+                                , disabled = False
+                                , value = linkModal.url
+                                , placeholder = Nothing
+                                , problems = Nothing
+                                , translators = translators
+                                }
+                                |> Input.withType Input.Url
+                                |> Input.toHtml
+                            , div [ class "flex justify-center items-center" ]
+                                [ button
+                                    [ class "modal-cancel"
+                                    , onClick ClosedLinkModal
+                                    , type_ "button"
+                                    ]
+                                    [ text <| t "menu.cancel" ]
+                                , button
+                                    [ class "modal-accept"
+                                    , type_ "submit"
+                                    ]
+                                    [ text <| t "menu.save" ]
+                                ]
                             ]
-                            [ text <| t "menu.save" ]
                         ]
                     |> Modal.toHtml
 
@@ -346,6 +357,7 @@ type Formatting
     = Bold
     | Italic
     | Strike
+    | Underline
     | LinkFormatting String
     | Header Int
     | OrderedList
@@ -378,13 +390,14 @@ formattingDecoder =
             Decode.optional key (Json.Decode.succeed (Just formatting)) Nothing
     in
     Json.Decode.succeed
-        (\bold italic strike link header list ->
-            [ bold, italic, strike, link, header, list ]
+        (\bold italic strike underline link header list ->
+            [ bold, italic, strike, underline, link, header, list ]
                 |> List.filterMap identity
         )
         |> optionalFormatting "bold" Bold
         |> optionalFormatting "italic" Italic
         |> optionalFormatting "strike" Strike
+        |> optionalFormatting "underline" Underline
         |> Decode.optional "link"
             (Json.Decode.string
                 |> Json.Decode.map (LinkFormatting >> Just)
@@ -424,6 +437,9 @@ formatStrings formatting =
 
         Strike ->
             ( "~~", "~~" )
+
+        Underline ->
+            ( "<u>", "</u>" )
 
         LinkFormatting link ->
             ( "[", "](" ++ link ++ ")" )
@@ -593,6 +609,9 @@ quillOpToMarkdown quillOp =
                         Strike ->
                             True
 
+                        Underline ->
+                            True
+
                         _ ->
                             False
 
@@ -628,7 +647,17 @@ quillOpToMarkdown quillOp =
                 ++ formatAfter
                 ++ String.repeat spacesAfter " "
     in
-    List.foldr addFormatting quillOp.insert quillOp.attributes
+    if String.isEmpty (String.trim quillOp.insert) then
+        ""
+
+    else
+        List.foldr addFormatting quillOp.insert quillOp.attributes
+            -- We need the following replacements to make sure we can correctly
+            -- parse some special sequences. In practice, these should be rare
+            |> String.replace "*****" "__*__"
+            |> String.replace "***" "_*_"
+            |> String.replace "_____" "**_**"
+            |> String.replace "___" "*_*"
 
 
 quillOpFromMarkdown : String -> Result (List (Parser.Advanced.DeadEnd String Parser.Problem)) (List QuillOp)
@@ -647,10 +676,11 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.map
                     (List.map quillOpFromMarkdownBlock
-                        >> List.concat
+                        >> List.intercalate [ { insert = " ", attributes = [] } ]
                         >> (\line -> line ++ [ { insert = "\n", attributes = [ listType ] } ])
                     )
                 |> List.concat
+                |> (\list -> { insert = "\n", attributes = [] } :: list)
     in
     case block of
         Markdown.Block.UnorderedList _ children ->
@@ -676,7 +706,12 @@ quillOpFromMarkdownBlock block =
             children
                 |> List.map quillOpFromMarkdownInline
                 |> List.concat
-                |> (\l -> l ++ [ { insert = "\n", attributes = [] } ])
+
+        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement "u" _ children) ->
+            -- Parse underlined text
+            children
+                |> List.concatMap quillOpFromMarkdownBlock
+                |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
 
         _ ->
             []
@@ -708,6 +743,12 @@ quillOpFromMarkdownInline inline =
         Markdown.Block.Text content ->
             [ { insert = content, attributes = [] } ]
 
+        Markdown.Block.HtmlInline (Markdown.Block.HtmlElement "u" _ children) ->
+            -- Parse underlined text
+            children
+                |> List.concatMap quillOpFromMarkdownBlock
+                |> List.map (\quillOp -> { quillOp | attributes = Underline :: quillOp.attributes })
+
         _ ->
             []
 
@@ -720,12 +761,11 @@ quillOpFromMarkdownInline inline =
 when the editor is focused. This is useful because users expect to add a new
 line when they press `Enter`, not to submit the form.
 -}
-withSubscription : Model -> (Msg -> msg) -> Sub msg -> Sub msg
-withSubscription model toMsg parentSubscription =
+withSubscription : Model -> Sub msg -> Sub msg
+withSubscription model parentSubscription =
     case model.linkModalState of
         Editing _ ->
-            Sub.map KeyDown (Browser.Events.onKeyDown (Json.Decode.field "key" Json.Decode.string))
-                |> Sub.map toMsg
+            Sub.none
 
         NotShowing ->
             if model.isFocused then
@@ -789,6 +829,11 @@ removeFormattingFromBlock block =
             Markdown.Block.extractInlineText inlines
                 |> Just
 
+        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement _ _ children) ->
+            List.map removeFormattingFromBlock children
+                |> Maybe.Extra.combine
+                |> Maybe.map (String.join " ")
+
         _ ->
             Nothing
 
@@ -816,6 +861,9 @@ encodeFormatting formatting =
         Strike ->
             ( "strike", Json.Encode.bool True )
 
+        Underline ->
+            ( "underline", Json.Encode.bool True )
+
         LinkFormatting url ->
             ( "link", Json.Encode.string url )
 
@@ -840,9 +888,6 @@ linkDecoder =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        KeyDown _ ->
-            [ "KeyDown" ]
-
         ClickedIncludeLink _ ->
             [ "ClickedIncludeLink" ]
 

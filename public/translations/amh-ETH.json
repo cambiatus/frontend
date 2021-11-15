@@ -425,7 +425,7 @@
       "our_supporters": "የእኛ",
       "supporters": "ደጋፊዎች",
       "our_messages": "የእኛ",
-      "messages": "መልእክቶች",
+      "messages": "ማስታወቂያዎች",
       "you": "አንቺ",
       "your_turn": "{{community}} ረድቶዎታል ፣ አሁን የእርስዎ ተራ ነው!",
       "support_us": "ይደግፉን",
@@ -1030,7 +1030,7 @@
     },
     "features": {
       "title": "ገጽታ",
-      "description": "ዓላማዎች ፣ እርምጃዎች ፣ መደብር ፣ ስፖንሰርነት",
+      "description": "ዓላማዎች ፣ እርምጃዎች ፣ መደብር ፣ ስፖንሰርነት ፣ ዜና",
       "enabled": "ተችሏል",
       "disabled": "አልተቻለም"
     }
@@ -1153,6 +1153,65 @@
       "subtitle": "አሁን ይህንን ማህበረሰብ ስፖንሰር ማድረግ ይችላሉ።",
       "explanation": "ከታች ያለውን አዝራር ጠቅ በማድረግ አስተዋፅኦዎን ያበርክቱ። ግብይትዎን ለማጠናቀቅ ወደ PayPal ይዛወራሉ።",
       "sponsor": "ስፖንሰር {{community_name}}"
+    }
+  },
+  "news": {
+    "title": "ዜና",
+    "description": "የማህበረሰቡ ቡድን ግንኙነቶችን እንዲልክ ፍቀድለት",
+    "create": "አዲስ ግንኙነት",
+    "community_news": "የማህበረሰብ ማስታወቂያዎች",
+    "got_community_news": "አዲስ የማህበረሰብ ግንኙነት አግኝቷል፡",
+    "read": "አንብብ",
+    "other_news": "ሌሎች ማስታወቂያዎች",
+    "view_more": "ተጨማሪ ይመልከቱ",
+    "view_more_with_ellipsis": "... ተጨማሪ ይመልከቱ",
+    "edit": "ለማርትዕ",
+    "copy": "ቅጂ ይፍጠሩ",
+    "error_fetching": "የማህበረሰብ ማስታወቂያዎችን ሲፈልጉ የሆነ ችግር ተፈጥሯል",
+    "error_highlighting": "ልቀቱን ሲያደምቅ የሆነ ችግር ተፈጥሯል",
+    "highlight": "ጋዜጣዊ መግለጫን ያድምቁ",
+    "already_highlighted": "አስቀድሞ የደመቀ ልቀት አለ",
+    "saved": "ማስታወቂያ በተሳካ ሁኔታ ተቀምጧል",
+    "failed_saving": "ልቀቱን በማስቀመጥ ላይ ሳለ የሆነ ችግር ተፈጥሯል",
+    "not_found_title": "የተለቀቀውን ማግኘት አልተቻለም",
+    "not_found_description": "እባክዎ ልክ በሆነ መግለጫ እንደገና ይሞክሩ",
+    "replace_notice": "ይህንን ልቀት በማድመቅ ነባሩን ይተካል",
+    "replace_confirmation": "እርግጠኛ ነህ ማድመቅ ትፈልጋለህ?",
+    "created_at": "የተፈጠረ: ",
+    "scheduled_at": "መርሐግብር ተይዞለታል፡ ",
+    "scheduled_at_time": " በ {{hour}}:{{minute}}",
+    "edited_by": "በ",
+    "edited_date": " በ{{date}} ተስተካክሏል",
+    "reaction": {
+      "choose": "ምላሽ ይምረጡ",
+      "reactions": "{{count}} ሰዎች በ",
+      "remove": "ምላሽን ያስወግዱ",
+      "add": "ጋር ምላሽ ይስጡ",
+      "close": "የቅርብ ምላሽ መራጭ"
+    },
+    "no_news": {
+      "title": "እዚህ ምንም የሚታይ ነገር የለም",
+      "description": "የእርስዎ ማህበረሰብ እስካሁን ምንም ማስታወቂያዎችን አልለጠፈም"
+    },
+    "editor": {
+      "title": "ጋዜጣዊ መግለጫ አርታዒ",
+      "field": {
+        "title": "ርዕስ",
+        "description": "መግለጫ",
+        "publication_mode": "አትም ወይም መርሐግብር",
+        "publish_immediately": "ወዲያውኑ አትም",
+        "schedule": "የህትመት መርሐግብር ያስይዙ",
+        "initial_date": "የመጀመሪያ ቀን",
+        "time": "መርሐግብር"
+      },
+      "error": {
+        "title": "ልቀቱ ርዕስ ያስፈልገዋል",
+        "description": "ልቀቱ መግለጫ ያስፈልገዋል",
+        "future_date": "የታቀደው ቀን ወደፊት መሆን አለበት",
+        "invalid_date": "ልክ ያልሆነ ቀን",
+        "future_time": "የታቀደው ጊዜ ወደፊት መሆን አለበት",
+        "invalid_time": "ልክ ያልሆነ ጊዜ"
+      }
     }
   },
   "markdown": {

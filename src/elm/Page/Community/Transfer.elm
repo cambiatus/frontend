@@ -5,7 +5,6 @@ module Page.Community.Transfer exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -763,17 +762,6 @@ maxTransferAmount model =
     RemoteData.map2 (\balance token -> balance.asset.amount - token.minBalance.amount)
         (RemoteData.mapError BalanceError model.balance)
         (RemoteData.mapError TokenError model.token)
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.transferStatus of
-        EditingTransfer form ->
-            Sub.none
-                |> MarkdownEditor.withSubscription form.memo GotMemoEditorMsg
-
-        _ ->
-            Sub.none
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

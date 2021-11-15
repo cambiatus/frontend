@@ -370,7 +370,7 @@ window.customElements.define('key-listener',
 
 window.customElements.define('markdown-editor',
   class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-edit-text', 'elm-remove-text', 'elm-disabled' ] }
+    static get observedAttributes () { return ['elm-edit-text', 'elm-remove-text', 'elm-disabled', 'elm-has-error'] }
 
     constructor () {
       super()
@@ -385,12 +385,12 @@ window.customElements.define('markdown-editor',
           modules: {
             toolbar: [
               [{ 'header': 1 }, { 'header': 2 }],
-              [ 'bold', 'italic', 'strike' ],
-              [ 'link' ],
+              ['bold', 'italic', 'strike', 'underline'],
+              ['link'],
               [{ 'list': 'ordered' }, { 'list': 'bullet' }]
             ]
           },
-          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'list'],
+          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'underline', 'list'],
           placeholder: this.getAttribute('elm-placeholder'),
           theme: 'snow'
         }
@@ -438,6 +438,8 @@ window.customElements.define('markdown-editor',
     attributeChangedCallback (name) {
       if (name === 'elm-disabled') {
         this.setDisabled()
+      } else if (name === 'elm-has-error') {
+        this.toggleHasError()
       } else {
         this.setTooltipTexts()
       }
@@ -452,6 +454,15 @@ window.customElements.define('markdown-editor',
       const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
       if (removeButton) {
         removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
+      }
+    }
+
+    toggleHasError () {
+      const hasError = this.getAttribute('elm-has-error') === 'true'
+      if (hasError) {
+        this._parentContainer.classList.add('with-error')
+      } else {
+        this._parentContainer.classList.remove('with-error')
       }
     }
 
@@ -477,14 +488,6 @@ window.customElements.define('markdown-editor',
       }
       const text = this._quill.getText(range)
       const currentFormat = this._quill.getFormat(range)
-      this.dispatchEvent(new CustomEvent('clicked-include-link',
-        {
-          detail: {
-            label: text,
-            url: currentFormat.link || ''
-          }
-        }
-      ))
 
       usePortAsPromise(app.ports.markdownLink, (link) => {
         if (link.id === this.id) {
@@ -495,10 +498,21 @@ window.customElements.define('markdown-editor',
           )
 
           this._quill.setSelection(range.index + link.label.length, 0, 'silent')
+
+          return { unsubscribeFromPort: true }
         } else {
           return { unsubscribeFromPort: false }
         }
       })
+
+      this.dispatchEvent(new CustomEvent('clicked-include-link',
+        {
+          detail: {
+            label: text,
+            url: currentFormat.link || ''
+          }
+        }
+      ))
     }
 
     /** Gets the range from the formatting that the `index` position is affected
@@ -528,7 +542,7 @@ window.customElements.define('markdown-editor',
 
 window.customElements.define('infinite-list',
   class InfiniteList extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-distance-to-request', 'elm-element-to-track' ] }
+    static get observedAttributes () { return ['elm-distance-to-request', 'elm-element-to-track'] }
 
     connectedCallback () {
       this.listenToScroll()
@@ -589,7 +603,7 @@ window.customElements.define('infinite-list',
 
 window.customElements.define('date-formatter',
   class DateFormatter extends HTMLElement {
-    static get observedAttributes () { return [ 'elm-locale', 'elm-date' ] }
+    static get observedAttributes () { return ['elm-locale', 'elm-date'] }
 
     constructor () {
       super()
@@ -1054,8 +1068,8 @@ if (process.env.NODE_ENV === 'development') {
           supported = true
           return null
         },
-        hasBody: function (obj) {},
-        body: function (obj, config) {}
+        hasBody: function (obj) { },
+        body: function (obj, config) { }
       }
     ]
     console.log('elm-debug-transformer: checking for formatter support.', {})
@@ -1165,7 +1179,7 @@ const usePortAsPromise = (port, handler) => {
   return new Promise((resolve, reject) => {
     const internalHandler = (...args) => {
       const result = handler(...args)
-      if (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false) {
+      if (result && (result.unsubcribeFromPort === undefined || result.unsubscribeFromPort !== false)) {
         port.unsubscribe(internalHandler)
         resolve(result)
       }
@@ -1410,11 +1424,40 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
 })
 
 // All notifiers for GraphQL subscriptions through absinthe socket
-let newCommunityNotifier = null
-let transferNotifier = null
-let notificationNotifier = null
+let newCommunitySubscription = null
+let transferSubscription = null
+let notificationSubscription = null
+let highlightedNewsSubscription = null
 
-const absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+let absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+
+app.ports.createAbsintheSocket.subscribe((token) => {
+  const oldAbsintheSocket = absintheSocket
+
+  absintheSocket = AbsintheSocket.create(new PhoenixSocket(`${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`))
+
+  const resubscribe = (subscription) => {
+    if (subscription === null) {
+      return
+    }
+
+    const { notifier, handlers, operation } = subscription
+
+    AbsintheSocket.cancel(oldAbsintheSocket, notifier)
+
+    const newNotifier = AbsintheSocket.send(absintheSocket, {
+      operation: operation,
+      variables: {}
+    })
+
+    AbsintheSocket.observe(absintheSocket, newNotifier, handlers)
+  }
+
+  resubscribe(newCommunitySubscription)
+  resubscribe(transferSubscription)
+  resubscribe(notificationSubscription)
+  resubscribe(highlightedNewsSubscription)
+})
 
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
@@ -1666,12 +1709,12 @@ async function handleJavascriptPort (arg) {
     }
     case 'subscribeToNewCommunity': {
       // Cancel existing notifier
-      if (newCommunityNotifier) {
-        AbsintheSocket.cancel(absintheSocket, newCommunityNotifier)
+      if (newCommunitySubscription && newCommunitySubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, newCommunitySubscription.notifier)
       }
 
       // Create new notifier
-      newCommunityNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1745,24 +1788,32 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, newCommunityNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      newCommunitySubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToTransfer': {
       // Cancel existing notifier
-      if (transferNotifier) {
-        AbsintheSocket.cancel(absintheSocket, transferNotifier)
+      if (transferSubscription && transferSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, transferSubscription.notifier)
       }
 
       // Create new notifier
-      transferNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1837,24 +1888,32 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, transferNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
-      })
+      }
+
+      transferSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToUnreadCount': {
       // Cancel existing notifier
-      if (notificationNotifier) {
-        AbsintheSocket.cancel(absintheSocket, notificationNotifier)
+      if (notificationSubscription && notificationSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, notificationSubscription.notifier)
       }
 
       // Create new notifier
-      notificationNotifier = AbsintheSocket.send(absintheSocket, {
+      const notifier = AbsintheSocket.send(absintheSocket, {
         operation: arg.data.subscription,
         variables: {}
       })
@@ -1921,13 +1980,113 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      AbsintheSocket.observe(absintheSocket, notificationNotifier, {
+      const handlers = {
         onAbort,
         onError,
         onCancel,
         onStart,
         onResult
+      }
+
+      notificationSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
+
+      return { isSubscription: true }
+    }
+    case 'subscribeToHighlightedNewsChanged': {
+      // Cancel existing notifier
+      if (highlightedNewsSubscription && highlightedNewsSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, highlightedNewsSubscription.notifier)
+      }
+
+      // Create new notifier
+      const notifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
       })
+
+      const onStart = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Started listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onAbort = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Aborted listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onCancel = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Cancelled listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onError = data => {
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Error listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
+      }
+
+      const onResult = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Got a result when listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          meta: data
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      const handlers = {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      }
+
+      highlightedNewsSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }

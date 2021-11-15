@@ -1,5 +1,6 @@
 module Route exposing
-    ( Route(..)
+    ( NewsEditorKind(..)
+    , Route(..)
     , communityFullDomain
     , externalHref
     , fromUrl
@@ -22,6 +23,12 @@ import Url.Parser as Url exposing ((</>), (<?>), Parser, int, oneOf, s, string, 
 import Url.Parser.Query as Query
 
 
+type NewsEditorKind
+    = CreateNews
+    | EditNews Int
+    | CopyNews Int
+
+
 type Route
     = Root
     | ComingSoon
@@ -39,9 +46,12 @@ type Route
     | Dashboard
     | Community
     | NewCommunity
+    | News (Maybe Int)
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsNews
+    | CommunitySettingsNewsEditor NewsEditorKind
     | CommunitySettingsCurrency
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
@@ -109,10 +119,16 @@ parser url =
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
+        , Url.map (News Nothing) (s "news")
+        , Url.map (Just >> News) (s "news" </> int)
         , Url.map Community (s "community")
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
+        , Url.map CommunitySettingsNews (s "community" </> s "settings" </> s "news")
+        , Url.map (CommunitySettingsNewsEditor CreateNews) (s "community" </> s "settings" </> s "news" </> s "new")
+        , Url.map (EditNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "edit" </> int)
+        , Url.map (CopyNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "copy" </> int)
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
@@ -407,6 +423,18 @@ routeToString route =
                 CommunitySettingsInfo ->
                     ( [ "community", "settings", "info" ], [] )
 
+                CommunitySettingsNews ->
+                    ( [ "community", "settings", "news" ], [] )
+
+                CommunitySettingsNewsEditor CreateNews ->
+                    ( [ "community", "settings", "news", "new" ], [] )
+
+                CommunitySettingsNewsEditor (EditNews newsId) ->
+                    ( [ "community", "settings", "news", "edit", String.fromInt newsId ], [] )
+
+                CommunitySettingsNewsEditor (CopyNews newsId) ->
+                    ( [ "community", "settings", "news", "copy", String.fromInt newsId ], [] )
+
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
 
@@ -435,6 +463,12 @@ routeToString route =
 
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
+
+                News Nothing ->
+                    ( [ "news" ], [] )
+
+                News (Just newsId) ->
+                    ( [ "news", String.fromInt newsId ], [] )
 
                 Objectives ->
                     ( [ "community", "objectives" ], [] )
