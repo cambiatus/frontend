@@ -1,3 +1,6 @@
+@import './quill.snow.css';
+@import './elm-datepicker.css';
+
 @tailwind base;
 
 @tailwind components;
@@ -525,8 +528,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
 /* QuillJS classes */
 
-@import '../../node_modules/quill/dist/quill.snow.css';
-
 .ql-toolbar.ql-snow {
   @apply bg-white border-0 border-b border-gray-500 rounded-t-md px-3 py-2;
 }
@@ -629,8 +630,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of Legacy CSS leftover */
-
-@import './elm-datepicker.css';
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;

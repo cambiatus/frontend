@@ -27,7 +27,7 @@ testChapter : Chapter x
 testChapter =
     Chapter.chapter "Test component"
         |> Chapter.withComponentList
-            [ ( "Normal", Html.button [] [ Html.text "Normal" ] )
+            [ ( "Normal", Html.button [ Html.Attributes.class "button button-primary" ] [ Html.text "Normal" ] )
             , ( "Disabled", Html.button [ Html.Attributes.disabled True ] [ Html.text "Disabled" ] )
             ]
         |> Chapter.render """
