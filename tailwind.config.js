@@ -237,6 +237,8 @@ module.exports = {
   ],
   purge: [
     './src/**/*.elm',
+    // We need this for elm-book
+    '../src/**/*.elm',
     './src/index.js'
   ],
   mode: 'jit'

@@ -1,6 +1,12 @@
-module Book.Form exposing (introduction)
+module Book.Form exposing (chapters)
 
+import Book.Form.Toggle
 import ElmBook.Chapter as Chapter exposing (Chapter)
+
+
+chapters : List (Chapter { x | toggleModel : Book.Form.Toggle.Model })
+chapters =
+    [ introduction, Book.Form.Toggle.chapter ]
 
 
 introduction : Chapter x
@@ -119,5 +125,7 @@ In order to actually render them and get input from them, we need a
             AttemptedLogin
 
 In the following chapters, we will take an in-depth look at all of our
-form components!
+form components. If you're testing these, please make sure they're
+keyboard-accessible (you can navigate and use them only with your keyboard) and
+also screen-reader-friendly!
 """
