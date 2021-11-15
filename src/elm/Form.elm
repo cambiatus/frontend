@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, checkbox, radio, select, file
+    , textField, toggle, checkbox, radio, select, file
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, checkbox, radio, select, file
+@docs textField, toggle, checkbox, radio, select, file
 
 
 ## Viewing
@@ -86,6 +86,7 @@ import Form.File
 import Form.Radio as Radio
 import Form.Select as Select
 import Form.Text as Text
+import Form.Toggle as Toggle
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
@@ -175,6 +176,7 @@ with these types
 -}
 type Field values
     = Text (Text.Options (Msg values)) (BaseField String values)
+    | Toggle (Toggle.Options (Msg values)) (BaseField Bool values)
     | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
     | Radio (Radio.Options String (Msg values)) (BaseField String values)
     | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
@@ -238,6 +240,17 @@ textField :
     -> Form values output
 textField config options =
     field (Text options) config
+
+
+{-| An input that represents either `True` or `False`. Checkout `Form.Toggle`
+for more infromation on what you can do with this field.
+-}
+toggle :
+    FieldConfig Bool output values
+    -> Toggle.Options (Msg values)
+    -> Form values output
+toggle config options =
+    field (Toggle options) config
 
 
 {-| An input that represents either `True` or `False`. Checkout `Form.Checkbox`
@@ -740,6 +753,17 @@ viewField { showError, translators } { state, error, isRequired } =
                 , translators = translators
                 }
 
+        Toggle options baseField ->
+            Toggle.view options
+                { onToggle = baseField.update >> ChangedValues
+                , onBlur = BlurredField
+                , value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                , translators = translators
+                }
+
         Checkbox options baseField ->
             Checkbox.view options
                 { value = baseField.value
@@ -805,6 +829,9 @@ getId state =
         Text options _ ->
             Text.getId options
 
+        Toggle options _ ->
+            Toggle.getId options
+
         Checkbox options _ ->
             Checkbox.getId options
 
@@ -823,6 +850,9 @@ isEmpty field_ =
     case field_ of
         Text _ { value } ->
             String.isEmpty value
+
+        Toggle _ _ ->
+            False
 
         Checkbox _ _ ->
             -- There's no way a checkbox can be empty - we don't use the

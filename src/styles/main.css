@@ -192,11 +192,11 @@ body > * {
 
 /* Icon Tooltip */
 .icon-tooltip {
-  @apply relative inline-block align-middle;
+  @apply relative flex;
 }
 
 .icon-tooltip .icon-tooltip-content {
-  @apply invisible absolute bg-black rounded-sm p-2 text-sm text-white;
+  @apply invisible absolute top-full bg-black rounded-sm p-2 text-sm text-white;
 
   width: 18em;
   line-height: 1.4;
@@ -362,6 +362,24 @@ body > * {
   @apply right-0 bg-white;
 
   margin-right: 0.05rem;
+}
+
+[type='checkbox']:focus-visible + .form-switch-label2 {
+  @apply focus:outline-none ring ring-green ring-opacity-50 active:ring-0;
+}
+
+[type='checkbox']:focus-visible + .form-switch-label2.with-error {
+  @apply ring-red ring-opacity-30;
+}
+
+.form-switch-label2::before {
+  @apply block bg-gray-900 w-4 h-4 rounded-full absolute inset-y-0.5 mx-0.5 transition-all duration-200 ease-in right-6;
+
+  content: '';
+}
+
+.form-switch-label2.checked::before {
+  @apply bg-white right-0;
 }
 
 @layer utilities {

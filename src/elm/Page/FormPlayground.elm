@@ -9,6 +9,7 @@ import Form.File
 import Form.Radio
 import Form.Select
 import Form.Text
+import Form.Toggle
 import Html exposing (Html, div, img, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows, src)
 import Http
@@ -42,6 +43,7 @@ init _ =
                 , avatar = RemoteData.NotAsked
                 , resume = RemoteData.NotAsked
                 , interest = Programming
+                , toggleTest = False
                 }
       , user = Nothing
       }
@@ -101,6 +103,7 @@ type alias DirtyUser =
     , avatar : RemoteData Http.Error String
     , resume : RemoteData Http.Error String
     , interest : Interest
+    , toggleTest : Bool
     }
 
 
@@ -117,6 +120,7 @@ type alias User =
     , avatarUrl : String
     , resumeUrl : Maybe String
     , interest : Interest
+    , toggleTest : Bool
     }
 
 
@@ -341,6 +345,19 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
+        |> Form.with
+            (Form.Toggle.init
+                { label = text "Toggle test"
+                , id = "toggle-test"
+                }
+                |> Form.Toggle.withTooltip { message = "Test tooltip Test tooltip Test tooltip", iconClass = "" }
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .toggleTest
+                    , update = \toggle user -> { user | toggleTest = toggle }
+                    , externalError = always (Just "Error")
+                    }
+            )
 
 
 
@@ -411,6 +428,16 @@ view loggedIn model =
                                     }
                         , viewProperty "Interest"
                         , p [] [ text (interestToString user.interest) ]
+                        , viewProperty "Toggle test"
+                        , p []
+                            [ text
+                                (if user.toggleTest then
+                                    "Enabled"
+
+                                 else
+                                    "Disabled"
+                                )
+                            ]
                         ]
             ]
     }
