@@ -76,6 +76,7 @@ config =
             , "Form.Checkbox"
             , "Form.Radio"
             , "Form.File"
+            , "Form.Toggle"
             ]
           )
         , ( [ "Html.label" ]
@@ -88,6 +89,7 @@ config =
             , "Form.Checkbox"
             , "Form.Radio"
             , "Form.File"
+            , "Form.Toggle"
             ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select", "Form.Select" ] )

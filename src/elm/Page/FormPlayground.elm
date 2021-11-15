@@ -351,6 +351,7 @@ userForm translators =
                 , id = "toggle-test"
                 }
                 |> Form.Toggle.withTooltip { message = "Test tooltip Test tooltip Test tooltip", iconClass = "" }
+                |> Form.Toggle.withDisabled True
                 |> Form.toggle
                     { parser = Ok
                     , value = .toggleTest
