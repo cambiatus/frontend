@@ -1,5 +1,6 @@
 module CambiatusBook exposing (main)
 
+import Book.Form
 import ElmBook as Book exposing (Book)
 import ElmBook.Chapter as Chapter exposing (Chapter)
 import ElmBook.ThemeOptions as ThemeOptions
@@ -16,26 +17,8 @@ main =
             , ThemeOptions.navAccent "white"
             ]
         |> Book.withChapterGroups
-            [ ( "Form elements"
-              , [ testChapter
+            [ ( "Forms"
+              , [ Book.Form.introduction
                 ]
               )
             ]
-
-
-testChapter : Chapter x
-testChapter =
-    Chapter.chapter "Test component"
-        |> Chapter.withComponentList
-            [ ( "Normal", Html.button [ Html.Attributes.class "button button-primary" ] [ Html.text "Normal" ] )
-            , ( "Disabled", Html.button [ Html.Attributes.disabled True ] [ Html.text "Disabled" ] )
-            ]
-        |> Chapter.render """
-This is a test. Try clicking these buttons:
-
-<component with-label="Normal" />
-
-Also, a disabled one:
-
-<component with-label="Disabled" />
-"""
