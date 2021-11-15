@@ -3,7 +3,6 @@ module Book.Form.Toggle exposing (Model, chapter, initModel)
 import Book.Helpers
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
-import Form
 import Form.Toggle
 import Html exposing (Html)
 import Html.Attributes
@@ -123,7 +122,7 @@ view model =
             { onToggle = ToggledValue
             , onBlur = \_ -> BlurredField
             , value = model.value
-            , error = Form.viewError [] hasError (Just model.error)
+            , error = Book.Helpers.viewError [] hasError (Just model.error)
             , hasError = hasError
             , isRequired = False
             , translators = Book.Helpers.mockTranslators
@@ -196,7 +195,7 @@ chapter =
                         |> (\options ->
                                 { options
                                     | hasError = True
-                                    , error = Form.viewError [] True (Just "Some error that needs to be addressed")
+                                    , error = Book.Helpers.viewError [] True (Just "Some error that needs to be addressed")
                                 }
                            )
                     )

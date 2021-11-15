@@ -2,7 +2,7 @@ module Form exposing
     ( Form
     , succeed, with, withOptional
     , textField, toggle, checkbox, radio, select, file
-    , view, Model, init, Msg, update, msgToString, viewError
+    , view, Model, init, Msg, update, msgToString
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -74,7 +74,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, Model, init, Msg, update, msgToString, viewError
+@docs view, Model, init, Msg, update, msgToString
 
 -}
 
