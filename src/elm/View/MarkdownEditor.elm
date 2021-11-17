@@ -251,7 +251,7 @@ view { translators, placeholder, label, problem, disabled } attributes model =
 
               else
                 View.Form.label [] model.id label
-            , node "markdown-editor"
+            , node "richtext-editor"
                 [ attribute "elm-placeholder" (Maybe.withDefault "" placeholder)
                 , attribute "elm-has-error"
                     (case problem of

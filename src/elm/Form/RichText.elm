@@ -144,7 +144,7 @@ view (Options options) viewConfig toMsg =
 
               else
                 View.Form.label [] options.id options.label
-            , Html.node "markdown-editor"
+            , Html.node "richtext-editor"
                 [ Html.Attributes.attribute "elm-placeholder" (Maybe.withDefault "" options.placeholder)
                 , Html.Attributes.attribute "elm-has-error" (boolToString viewConfig.hasError)
                 , Html.Attributes.attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
