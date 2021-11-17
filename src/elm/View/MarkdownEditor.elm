@@ -48,7 +48,6 @@ type alias Model =
     { linkModalState : LinkModalState
     , id : String
     , contents : String
-    , isFocused : Bool
     }
 
 
@@ -57,7 +56,6 @@ init id =
     { linkModalState = NotShowing
     , id = id
     , contents = ""
-    , isFocused = False
     }
 
 
@@ -82,7 +80,6 @@ type Msg
     | ClickedAcceptLink
     | ChangedText (List QuillOp)
     | RequestedSetContents
-    | ChangedFocus Bool
 
 
 
@@ -172,9 +169,6 @@ update msg model =
                     }
                         |> Log.send msgToString
             )
-
-        ChangedFocus isFocused ->
-            ( { model | isFocused = isFocused }, Cmd.none )
 
 
 setContents : String -> Model -> Model
@@ -279,8 +273,6 @@ view { translators, placeholder, label, problem, disabled } attributes model =
                 , on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
                 , on "component-loaded" (Json.Decode.succeed RequestedSetContents)
-                , on "focus" (Json.Decode.succeed (ChangedFocus True))
-                , on "blur" (Json.Decode.succeed (ChangedFocus False))
                 , id model.id
                 ]
                 []
@@ -885,6 +877,3 @@ msgToString msg =
 
         RequestedSetContents ->
             [ "RequestedSetContents" ]
-
-        ChangedFocus _ ->
-            [ "ChangedFocus" ]

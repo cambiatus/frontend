@@ -1,12 +1,16 @@
 module Book.Form exposing (chapters)
 
+import Book.Form.RichText
 import Book.Form.Toggle
 import ElmBook.Chapter as Chapter exposing (Chapter)
 
 
 chapters : List (Chapter { x | toggleModel : Book.Form.Toggle.Model })
 chapters =
-    [ introduction, Book.Form.Toggle.chapter ]
+    [ introduction
+    , Book.Form.RichText.chapter
+    , Book.Form.Toggle.chapter
+    ]
 
 
 introduction : Chapter x

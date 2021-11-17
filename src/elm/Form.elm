@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, toggle, checkbox, radio, select, file
+    , textField, richText, toggle, checkbox, radio, select, file
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, toggle, checkbox, radio, select, file
+@docs textField, richText, toggle, checkbox, radio, select, file
 
 
 ## Viewing
@@ -84,6 +84,7 @@ import File
 import Form.Checkbox as Checkbox
 import Form.File
 import Form.Radio as Radio
+import Form.RichText as RichText
 import Form.Select as Select
 import Form.Text as Text
 import Form.Toggle as Toggle
@@ -145,6 +146,7 @@ update the model
 -}
 type alias BaseField value values =
     { value : value
+    , getValue : values -> value
     , update : value -> values
     , updateWithValues : value -> values -> values
     }
@@ -176,6 +178,7 @@ with these types
 -}
 type Field values
     = Text (Text.Options (Msg values)) (BaseField String values)
+    | RichText (RichText.Options (Msg values)) (BaseField RichText.Model values)
     | Toggle (Toggle.Options (Msg values)) (BaseField Bool values)
     | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
     | Radio (Radio.Options String (Msg values)) (BaseField String values)
@@ -204,6 +207,7 @@ field build config =
         field_ values =
             build
                 { value = config.value values
+                , getValue = config.value
                 , update = \newValue -> config.update newValue values
                 , updateWithValues = config.update
                 }
@@ -240,6 +244,18 @@ textField :
     -> Form values output
 textField config options =
     field (Text options) config
+
+
+{-| An input that receives rich text. Allows formatting like bold, italic,
+underline and links. Checkout `Form.RichText` for more information on what you
+can do with this field.
+-}
+richText :
+    FieldConfig RichText.Model output values
+    -> RichText.Options (Msg values)
+    -> Form values output
+richText config options =
+    field (RichText options) config
 
 
 {-| An input that represents either `True` or `False`. Checkout `Form.Toggle`
@@ -551,6 +567,8 @@ type alias UpdateResult values =
 type Msg values
     = NoOp
     | ChangedValues values
+    | ChangedValuesWithCmd values (Cmd (Msg values))
+    | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
     | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
     | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
@@ -590,6 +608,20 @@ update shared msg (Model model) =
         ChangedValues newValues ->
             Model { model | values = newValues }
                 |> UR.init
+
+        ChangedValuesWithCmd newValues cmd ->
+            Model { model | values = newValues }
+                |> UR.init
+                |> UR.addCmd cmd
+
+        GotRichTextMsg getModel updateFn subMsg ->
+            let
+                ( newModel, cmd ) =
+                    RichText.update subMsg (getModel model.values)
+            in
+            Model { model | values = updateFn newModel model.values }
+                |> UR.init
+                |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
         RequestedUploadFile updateFn fileToUpload ->
             { model | values = updateFn RemoteData.Loading model.values }
@@ -648,6 +680,12 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        ChangedValuesWithCmd _ _ ->
+            [ "ChangedValuesWithCmd" ]
+
+        GotRichTextMsg _ _ subMsg ->
+            "GotRichTextMsg" :: RichText.msgToString subMsg
 
         ChangedValues _ ->
             [ "ChangedValues" ]
@@ -753,6 +791,24 @@ viewField { showError, translators } { state, error, isRequired } =
                 , translators = translators
                 }
 
+        RichText options baseField ->
+            RichText.view options
+                { onChange =
+                    \( richTextModel, richTextCmd ) ->
+                        ChangedValuesWithCmd (baseField.update richTextModel)
+                            (Cmd.map
+                                (GotRichTextMsg baseField.getValue baseField.updateWithValues)
+                                richTextCmd
+                            )
+                , onBlur = BlurredField
+                , value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                , translators = translators
+                }
+                (GotRichTextMsg baseField.getValue baseField.updateWithValues)
+
         Toggle options baseField ->
             Toggle.view options
                 { onToggle = baseField.update >> ChangedValues
@@ -829,6 +885,9 @@ getId state =
         Text options _ ->
             Text.getId options
 
+        RichText options _ ->
+            RichText.getId options
+
         Toggle options _ ->
             Toggle.getId options
 
@@ -850,6 +909,10 @@ isEmpty field_ =
     case field_ of
         Text _ { value } ->
             String.isEmpty value
+
+        RichText _ _ ->
+            -- TODO - Get text and remove formatting
+            False
 
         Toggle _ _ ->
             False

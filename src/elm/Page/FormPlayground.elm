@@ -7,6 +7,7 @@ import Form exposing (Form)
 import Form.Checkbox
 import Form.File
 import Form.Radio
+import Form.RichText
 import Form.Select
 import Form.Text
 import Form.Toggle
@@ -44,6 +45,7 @@ init _ =
                 , resume = RemoteData.NotAsked
                 , interest = Programming
                 , toggleTest = False
+                , richtextTest = Form.RichText.initModel "richtext-input"
                 }
       , user = Nothing
       }
@@ -104,6 +106,7 @@ type alias DirtyUser =
     , resume : RemoteData Http.Error String
     , interest : Interest
     , toggleTest : Bool
+    , richtextTest : Form.RichText.Model
     }
 
 
@@ -121,6 +124,7 @@ type alias User =
     , resumeUrl : Maybe String
     , interest : Interest
     , toggleTest : Bool
+    , richtextTest : Form.RichText.Model
     }
 
 
@@ -357,6 +361,18 @@ userForm translators =
                     , value = .toggleTest
                     , update = \toggle user -> { user | toggleTest = toggle }
                     , externalError = always (Just "Error")
+                    }
+            )
+        |> Form.with
+            (Form.RichText.init
+                { label = "Richtext test"
+                , id = "richtext-input"
+                }
+                |> Form.richText
+                    { parser = Ok
+                    , value = .richtextTest
+                    , update = \richtext user -> { user | richtextTest = richtext }
+                    , externalError = always Nothing
                     }
             )
 

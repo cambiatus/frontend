@@ -425,12 +425,6 @@ window.customElements.define('markdown-editor',
         this.linkHandler()
       })
 
-      const editor = this.querySelector('.ql-editor')
-      if (editor) {
-        editor.addEventListener('focus', () => { this.dispatchEvent(new CustomEvent('focus', {})) })
-        editor.addEventListener('blur', () => { this.dispatchEvent(new CustomEvent('blur', {})) })
-      }
-
       this.setTooltipTexts()
       this.setDisabled()
     }

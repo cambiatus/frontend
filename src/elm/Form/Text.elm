@@ -132,6 +132,7 @@ type InputType
     = Text
     | Telephone
     | Number
+    | Url
 
 
 {-| Determines which element to render the input as
@@ -501,6 +502,9 @@ typeToString type_ =
 
         Number ->
             "number"
+
+        Url ->
+            "url"
 
 
 viewCurrencyElement : Eos.Symbol -> Html a
