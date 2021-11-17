@@ -76,7 +76,6 @@ subscriptions model =
 
         Just form ->
             Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
-                |> MarkdownEditor.withSubscription form.description
 
 
 

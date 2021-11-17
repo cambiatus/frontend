@@ -64,7 +64,6 @@ init _ =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
-        |> MarkdownEditor.withSubscription model.description
 
 
 

@@ -14,7 +14,6 @@ module View.MarkdownEditor exposing
     , update
     , view
     , viewReadOnly
-    , withSubscription
     )
 
 import Dict
@@ -751,28 +750,6 @@ quillOpFromMarkdownInline inline =
 
         _ ->
             []
-
-
-
--- SUBSCRIPTIONS
-
-
-{-| We do this so pages that listen to an `Enter` keypress don't fire that event
-when the editor is focused. This is useful because users expect to add a new
-line when they press `Enter`, not to submit the form.
--}
-withSubscription : Model -> Sub msg -> Sub msg
-withSubscription model parentSubscription =
-    case model.linkModalState of
-        Editing _ ->
-            Sub.none
-
-        NotShowing ->
-            if model.isFocused then
-                Sub.none
-
-            else
-                parentSubscription
 
 
 
