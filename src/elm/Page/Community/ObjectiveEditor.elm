@@ -1,4 +1,4 @@
-module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, subscriptions, update, view)
+module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action
 import Api.Graphql
@@ -889,21 +889,6 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                 >> LoggedIn.withAuthentication loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.status of
-        Authorized (CreatingObjective form _) ->
-            Sub.none
-                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
-
-        Authorized (EditingObjective _ form _) ->
-            Sub.none
-                |> MarkdownEditor.withSubscription form.description GotDescriptionEditorMsg
-
-        _ ->
-            Sub.none
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

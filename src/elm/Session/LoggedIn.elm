@@ -32,6 +32,7 @@ import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
+import Community.News
 import Dict
 import Eos
 import Eos.Account as Eos
@@ -39,8 +40,9 @@ import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, img, li, nav, p, text, ul)
-import Html.Attributes exposing (class, classList, src, type_)
+import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
+import Html.Attributes exposing (alt, class, classList, src, type_)
+import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -56,7 +58,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Shop
 import Task
 import Time
@@ -65,6 +67,7 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
+import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -137,6 +140,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
+        , Time.every (60 * 1000) GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
 
@@ -177,6 +181,7 @@ type alias Model =
     , authToken : String
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
+    , maybeHighlightedNews : Maybe Community.News.Model
     }
 
 
@@ -203,6 +208,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     , authToken = authToken
     , hasSeenDashboard = False
     , queuedCommunityFields = []
+    , maybeHighlightedNews = Nothing
     }
 
 
@@ -226,9 +232,12 @@ type Page
     | ComingSoon
     | Invite
     | Dashboard
+    | News (Maybe Int)
     | Community
     | CommunitySettings
     | CommunitySettingsInfo
+    | CommunitySettingsNews
+    | CommunitySettingsNewsEditor
     | CommunitySettingsCurrency
     | CommunitySettingsFeatures
     | CommunitySettingsSponsorship
@@ -349,6 +358,31 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                 ]
             ]
             :: (Feedback.view model.feedback |> Html.map (GotFeedbackMsg >> pageMsg))
+            :: (case model.maybeHighlightedNews of
+                    Just news ->
+                        let
+                            isInNewsPage =
+                                case page of
+                                    News maybeNewsId ->
+                                        maybeNewsId == Just news.id
+
+                                    _ ->
+                                        False
+
+                            showHighlightedNews =
+                                not (Maybe.Extra.isJust news.receipt)
+                                    && not (isAdminPage page)
+                                    && not isInNewsPage
+                        in
+                        if showHighlightedNews then
+                            viewHighlightedNews shared.translators pageMsg news
+
+                        else
+                            text ""
+
+                    Nothing ->
+                        text ""
+               )
             :: mainView
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
@@ -368,6 +402,42 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                ]
         )
+
+
+viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
+viewHighlightedNews { t } toPageMsg news =
+    div
+        [ class "bg-purple-500 p-4 sticky top-0 z-10"
+        ]
+        [ div [ class "container mx-auto px-4 text-white flex items-center" ]
+            [ Icons.speechBubble
+                [ alt "" ]
+                "stroke-current flex-shrink-0"
+            , div [ class "truncate ml-4 mr-8" ]
+                [ h2
+                    [ class "font-bold truncate"
+                    , ariaLive "polite"
+                    ]
+                    [ span [ class "sr-only" ] [ text <| t "news.got_community_news" ]
+                    , text news.title
+                    ]
+                , p [ class "truncate" ]
+                    [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                ]
+            , a
+                [ class "button button-primary w-auto px-4 ml-auto mr-6"
+                , Route.href (Route.News (Just news.id))
+                , onClick (toPageMsg ClickedReadHighlightedNews)
+                ]
+                [ text <| t "news.read" ]
+            , button
+                [ class "hover:text-red focus:text-red focus:outline-none"
+                , ariaLabel <| t "menu.close"
+                , onClick (toPageMsg ClosedHighlightedNews)
+                ]
+                [ Icons.close "fill-current" ]
+            ]
+        ]
 
 
 viewPageBody : Model -> Profile.Model -> Page -> Html pageMsg -> List (Html pageMsg)
@@ -780,6 +850,23 @@ isActive page route =
             False
 
 
+isAdminPage : Page -> Bool
+isAdminPage page =
+    List.member page
+        [ CommunitySettings
+        , CommunitySettingsInfo
+        , CommunitySettingsNews
+        , CommunitySettingsNewsEditor
+        , CommunitySettingsCurrency
+        , CommunitySettingsFeatures
+        , CommunitySettingsSponsorship
+        , CommunitySettingsSponsorshipFiat
+        , CommunitySettingsSponsorshipThankYouMessage
+        , ObjectiveEditor
+        , ActionEditor
+        ]
+
+
 viewFooter : Shared -> Html msg
 viewFooter _ =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
@@ -810,6 +897,7 @@ type External msg
     | ReloadResource Resource
     | RequestedReloadCommunityField Community.Field
     | RequestedCommunityField Community.Field
+    | SetCommunityField Community.FieldValue
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
@@ -845,6 +933,9 @@ mapExternal mapFn msg =
 
         RequestedCommunityField field ->
             RequestedCommunityField field
+
+        SetCommunityField value ->
+            SetCommunityField value
 
         RequestedReloadCommunityField field ->
             RequestedReloadCommunityField field
@@ -1031,6 +1122,29 @@ updateExternal externalMsg ({ shared } as model) =
                             }
                     }
 
+        SetCommunityField value ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    { defaultResult
+                        | model =
+                            { model
+                                | selectedCommunity =
+                                    Community.setFieldValue value community
+                                        |> RemoteData.Success
+                            }
+                    }
+
+                _ ->
+                    { defaultResult
+                        | cmd =
+                            Log.fromImpossible externalMsg
+                                "Tried setting community field, but community wasn't loaded"
+                                (Just model.accountName)
+                                { moduleName = "Session.LoggedIn", function = "updateExternal" }
+                                [ Log.contextFromCommunity model.selectedCommunity ]
+                                |> Log.send externalMsgToString
+                    }
+
         RequiredAuthentication afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
@@ -1089,6 +1203,9 @@ type Msg
     | ClickedProfileIcon
     | GotTimeInternal Time.Posix
     | CompletedLoadContributionCount (RemoteData (Graphql.Http.Error (Maybe Int)) (Maybe Int))
+    | ClickedReadHighlightedNews
+    | ClosedHighlightedNews
+    | ReceivedNewHighlightedNews Value
 
 
 update : Msg -> Model -> UpdateResult
@@ -1245,10 +1362,26 @@ update msg model =
                         (Profile.contributionCountQuery community.symbol model.accountName)
                         CompletedLoadContributionCount
             in
-            { newModel | selectedCommunity = RemoteData.Success newCommunity }
+            { newModel
+                | selectedCommunity = RemoteData.Success newCommunity
+                , maybeHighlightedNews = community.highlightedNews
+            }
                 |> UR.init
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
+                |> UR.addPort
+                    { responseAddress = ReceivedNewHighlightedNews Encode.null
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "subscribeToHighlightedNewsChanged" )
+                            , ( "subscription"
+                              , highlightedNewsSubscription newCommunity.symbol
+                                    |> Graphql.Document.serializeSubscription
+                                    |> Encode.string
+                              )
+                            ]
+                    }
                 |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
                 |> UR.addCmd
                     (Community.queryForFields community.symbol
@@ -1302,7 +1435,9 @@ update msg model =
         CompletedLoadCommunityField community (RemoteData.Success (Just fieldValue)) ->
             let
                 newCommunity =
-                    Community.setFieldValue fieldValue community
+                    model.selectedCommunity
+                        |> RemoteData.withDefault community
+                        |> Community.setFieldValue fieldValue
             in
             { model | selectedCommunity = RemoteData.Success newCommunity }
                 |> UR.init
@@ -1339,7 +1474,9 @@ update msg model =
         CompletedLoadCommunityFields community (RemoteData.Success fieldValues) ->
             let
                 newCommunity =
-                    List.foldl Community.setFieldValue community fieldValues
+                    List.foldl Community.setFieldValue
+                        (RemoteData.withDefault community model.selectedCommunity)
+                        fieldValues
 
                 addBroadcasts uResult =
                     List.foldl
@@ -1546,6 +1683,51 @@ update msg model =
         CompletedLoadContributionCount _ ->
             model
                 |> UR.init
+
+        ClosedHighlightedNews ->
+            { model | maybeHighlightedNews = Nothing }
+                |> UR.init
+
+        ClickedReadHighlightedNews ->
+            { model | maybeHighlightedNews = Nothing }
+                |> UR.init
+
+        ReceivedNewHighlightedNews payload ->
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    case
+                        Decode.decodeValue
+                            (highlightedNewsSubscription community.symbol
+                                |> Graphql.Document.decoder
+                            )
+                            payload
+                    of
+                        Ok highlightedNews ->
+                            { model
+                                | selectedCommunity =
+                                    RemoteData.Success
+                                        { community | highlightedNews = highlightedNews }
+                                , maybeHighlightedNews = highlightedNews
+                            }
+                                |> UR.init
+
+                        Err err ->
+                            model
+                                |> UR.init
+                                |> UR.logDecodingError msg
+                                    (Just model.accountName)
+                                    "Got an error when loading highlighted news"
+                                    { moduleName = "Session.LoggedIn", function = "update" }
+                                    []
+                                    err
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Received new highlighted news, but community wasn't loaded"
+                            (Just model.accountName)
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            [ Log.contextFromCommunity model.selectedCommunity ]
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
@@ -1820,6 +2002,12 @@ unreadCountSubscription name =
     Subscription.unreads args unreadSelection
 
 
+highlightedNewsSubscription : Eos.Symbol -> SelectionSet (Maybe Community.News.Model) RootSubscription
+highlightedNewsSubscription symbol =
+    Subscription.highlightedNews { communityId = Eos.symbolToString symbol }
+        Community.News.selectionSet
+
+
 
 -- BROADCAST
 
@@ -1845,6 +2033,11 @@ jsAddressToMsg addr val =
         "CompletedLoadUnread" :: [] ->
             Decode.decodeValue (Decode.field "meta" Decode.value) val
                 |> Result.map CompletedLoadUnread
+                |> Result.toMaybe
+
+        "ReceivedNewHighlightedNews" :: _ ->
+            Decode.decodeValue (Decode.field "meta" Decode.value) val
+                |> Result.map ReceivedNewHighlightedNews
                 |> Result.toMaybe
 
         "GotActionMsg" :: remainAddress ->
@@ -1929,3 +2122,49 @@ msgToString msg =
 
         CompletedLoadContributionCount r ->
             [ "CompletedLoadContributionCount", UR.remoteDataToString r ]
+
+        ClosedHighlightedNews ->
+            [ "ClosedHighlightedNews" ]
+
+        ClickedReadHighlightedNews ->
+            [ "ClickedReadHighlightedNews" ]
+
+        ReceivedNewHighlightedNews _ ->
+            [ "ReceivedNewHighlightedNews" ]
+
+
+externalMsgToString : External msg -> List String
+externalMsgToString externalMsg =
+    case externalMsg of
+        UpdatedLoggedIn _ ->
+            [ "UpdatedLoggedIn" ]
+
+        AddedCommunity _ ->
+            [ "AddedCommunity" ]
+
+        CreatedCommunity symbol _ ->
+            [ "CreatedCommunity", Eos.symbolToString symbol ]
+
+        ExternalBroadcast _ ->
+            [ "ExternalBroadcast" ]
+
+        ReloadResource _ ->
+            [ "ReloadResource" ]
+
+        RequestedReloadCommunityField _ ->
+            [ "RequestedReloadCommunityField" ]
+
+        RequestedCommunityField _ ->
+            [ "RequestedCommunityField" ]
+
+        SetCommunityField _ ->
+            [ "SetCommunityField" ]
+
+        RequiredAuthentication _ ->
+            [ "RequiredAuthentication" ]
+
+        ShowFeedback _ _ ->
+            [ "ShowFeedback" ]
+
+        HideFeedback ->
+            [ "HideFeedback" ]

@@ -134,8 +134,8 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
 
 
 type alias DateTranslations =
-    { today : String
-    , yesterday : String
+    { today : Maybe String
+    , yesterday : Maybe String
     , other : String
     }
 
@@ -171,17 +171,19 @@ dateViewer attrs fillInTranslations shared time =
 
         translations =
             fillInTranslations
-                { today = shared.translators.t "dates.today"
-                , yesterday = shared.translators.t "dates.yesterday"
+                { today = Just (shared.translators.t "dates.today")
+                , yesterday = Just (shared.translators.t "dates.yesterday")
                 , other = "{{date}}"
                 }
 
         translationString =
             if Utils.areSameDay shared.timezone shared.now time then
                 translations.today
+                    |> Maybe.withDefault translations.other
 
             else if Utils.areSameDay shared.timezone shared.now yesterday then
                 translations.yesterday
+                    |> Maybe.withDefault translations.other
 
             else
                 translations.other
@@ -194,10 +196,10 @@ dateViewer attrs fillInTranslations shared time =
             }
 
     else if Utils.areSameDay shared.timezone shared.now time then
-        span attrs [ text translations.today ]
+        span attrs [ text (Maybe.withDefault translations.other translations.today) ]
 
     else if Utils.areSameDay shared.timezone shared.now yesterday then
-        span attrs [ text translations.yesterday ]
+        span attrs [ text (Maybe.withDefault translations.other translations.yesterday) ]
 
     else
         text ""

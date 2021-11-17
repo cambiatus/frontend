@@ -189,13 +189,19 @@ module.exports = {
           '100%': {
             'background-color': '#eeeeee'
           }
+        },
+        'bounce-in-keyframes': {
+          '0%': { opacity: 0, transform: 'scale(0)' },
+          '85%': { opacity: 1, transform: 'scale(1.05)' },
+          '100%': { opacity: 1, transform: 'scale(1)' }
         }
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
         'fade-in-from-above': 'appear-from-above 75ms ease-out',
         'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
-        'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate'
+        'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate',
+        'bounce-in': 'bounce-in-keyframes 150ms ease-out'
       }
     }
   },

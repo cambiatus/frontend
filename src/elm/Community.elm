@@ -60,6 +60,7 @@ import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
+import Community.News
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -119,11 +120,14 @@ type alias Model =
     , members : List Profile.Minimal
     , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
     , contributionConfiguration : Maybe ContributionConfiguration
+    , news : RemoteData (Graphql.Http.Error (List Community.News.Model)) (List Community.News.Model)
+    , highlightedNews : Maybe Community.News.Model
     , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
+    , hasNews : Bool
     , validators : List Eos.Name
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
@@ -165,6 +169,7 @@ type Field
     | ObjectivesField
     | UploadsField
     | MembersField
+    | NewsField
 
 
 {-| `FieldValue` is useful to wrap results of queries for fields that aren't
@@ -177,6 +182,7 @@ type FieldValue
     | ObjectivesValue (List Objective)
     | UploadsValue (List String)
     | MembersValue (List Profile.Minimal)
+    | NewsValue (List Community.News.Model)
 
 
 {-| When we want to extract a field that is not loaded by default with the
@@ -218,6 +224,9 @@ setFieldValue fieldValue model =
         MembersValue members ->
             { model | members = members }
 
+        NewsValue news ->
+            { model | news = RemoteData.Success news }
+
 
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
@@ -234,6 +243,9 @@ setFieldAsLoading field model =
         MembersField ->
             model
 
+        NewsField ->
+            { model | news = RemoteData.Loading }
+
 
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
@@ -249,6 +261,9 @@ isFieldLoading field model =
 
         MembersField ->
             False
+
+        NewsField ->
+            RemoteData.isLoading model.news
 
 
 maybeFieldValue : Field -> Model -> Maybe FieldValue
@@ -271,6 +286,11 @@ maybeFieldValue field model =
 
         MembersField ->
             Just (MembersValue model.members)
+
+        NewsField ->
+            model.news
+                |> RemoteData.toMaybe
+                |> Maybe.map NewsValue
 
 
 mergeFields : RemoteData x Model -> Model -> Model
@@ -324,10 +344,13 @@ communitySelectionSet =
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
+        |> with (Community.highlightedNews Community.News.selectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
         |> with Community.autoInvite
+        |> with Community.hasNews
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
@@ -377,6 +400,10 @@ selectionSetForField field =
         MembersField ->
             Community.members Profile.minimalSelectionSet
                 |> SelectionSet.map MembersValue
+
+        NewsField ->
+            Community.news Community.News.selectionSet
+                |> SelectionSet.map NewsValue
 
 
 queryForField :

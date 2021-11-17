@@ -9,6 +9,7 @@ module Utils exposing
     , fromMaybeDateTime
     , onClickNoBubble
     , onClickPreventAll
+    , onSubmitPreventAll
     , previousDay
     )
 
@@ -123,8 +124,20 @@ onClickNoBubble message =
 {-| Click event listener that stops propagation and prevents default
 -}
 onClickPreventAll : msg -> Html.Attribute msg
-onClickPreventAll message =
-    Html.Events.custom "click"
+onClickPreventAll =
+    preventAll "click"
+
+
+{-| Submit event listener that stops propagation and prevents default
+-}
+onSubmitPreventAll : msg -> Html.Attribute msg
+onSubmitPreventAll =
+    preventAll "submit"
+
+
+preventAll : String -> msg -> Html.Attribute msg
+preventAll eventName message =
+    Html.Events.custom eventName
         (Decode.succeed
             { message = message
             , stopPropagation = True

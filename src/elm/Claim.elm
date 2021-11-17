@@ -767,8 +767,8 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 [ View.Components.dateViewer [ class "text-xs uppercase block text-gray-900" ]
                     (\translations ->
                         { translations
-                            | today = t "claim.claimed_today"
-                            , yesterday = t "claim.claimed_yesterday"
+                            | today = Just (t "claim.claimed_today")
+                            , yesterday = Just (t "claim.claimed_yesterday")
                             , other = t "claim.claimed_on"
                         }
                     )

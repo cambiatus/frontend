@@ -99,6 +99,11 @@ hasKyc =
     Object.selectionForField "Bool" "hasKyc" [] Decode.bool
 
 
+hasNews : SelectionSet Bool Cambiatus.Object.Community
+hasNews =
+    Object.selectionForField "Bool" "hasNews" [] Decode.bool
+
+
 hasObjectives : SelectionSet Bool Cambiatus.Object.Community
 hasObjectives =
     Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
@@ -107,6 +112,13 @@ hasObjectives =
 hasShop : SelectionSet Bool Cambiatus.Object.Community
 hasShop =
     Object.selectionForField "Bool" "hasShop" [] Decode.bool
+
+
+highlightedNews :
+    SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+highlightedNews object_ =
+    Object.selectionForCompositeField "highlightedNews" [] object_ (identity >> Decode.nullable)
 
 
 invitedReward : SelectionSet Float Cambiatus.Object.Community
@@ -161,6 +173,13 @@ mints object_ =
 name : SelectionSet String Cambiatus.Object.Community
 name =
     Object.selectionForField "String" "name" [] Decode.string
+
+
+news :
+    SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+news object_ =
+    Object.selectionForCompositeField "news" [] object_ (identity >> Decode.list)
 
 
 objectives :

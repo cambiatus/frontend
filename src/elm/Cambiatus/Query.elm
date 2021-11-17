@@ -50,7 +50,7 @@ analyzedClaims fillInOptionals requiredArgs object_ =
 
 
 type alias ClaimRequiredArguments =
-    { input : Cambiatus.InputObject.ClaimInput }
+    { id : Int }
 
 
 {-| [Auth required] A single claim
@@ -60,7 +60,7 @@ claim :
     -> SelectionSet decodesTo Cambiatus.Object.Claim
     -> SelectionSet decodesTo RootQuery
 claim requiredArgs object_ =
-    Object.selectionForCompositeField "claim" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeClaimInput ] object_ identity
+    Object.selectionForCompositeField "claim" [ Argument.required "id" requiredArgs.id Encode.int ] object_ identity
 
 
 {-| [Auth required] A list of communities in Cambiatus
@@ -162,6 +162,20 @@ invite requiredArgs object_ =
     Object.selectionForCompositeField "invite" [ Argument.required "id" requiredArgs.id Encode.string ] object_ (identity >> Decode.nullable)
 
 
+type alias NewsRequiredArguments =
+    { newsId : Int }
+
+
+{-| Get news
+-}
+news :
+    NewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) RootQuery
+news requiredArgs object_ =
+    Object.selectionForCompositeField "news" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
+
+
 {-| [Auth required] User's notifications
 -}
 notificationHistory :
@@ -172,7 +186,7 @@ notificationHistory object_ =
 
 
 type alias ObjectiveRequiredArguments =
-    { input : Cambiatus.InputObject.ObjectiveInput }
+    { id : Int }
 
 
 {-| [Auth required] A single objective
@@ -182,7 +196,7 @@ objective :
     -> SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet (Maybe decodesTo) RootQuery
 objective requiredArgs object_ =
-    Object.selectionForCompositeField "objective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeObjectiveInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "objective" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias PendingClaimsOptionalArguments =

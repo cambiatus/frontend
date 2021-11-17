@@ -85,6 +85,18 @@ type Network
     = Network
 
 
+type News
+    = News
+
+
+type NewsReceipt
+    = NewsReceipt
+
+
+type NewsVersion
+    = NewsVersion
+
+
 type NotificationHistory
     = NotificationHistory
 
@@ -111,6 +123,10 @@ type ProductPreview
 
 type PushSubscription
     = PushSubscription
+
+
+type ReactionType
+    = ReactionType
 
 
 type SearchResult

@@ -20,6 +20,8 @@ import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
+import Page.Community.Settings.News as CommunitySettingsNews
+import Page.Community.Settings.News.Editor as CommunitySettingsNewsEditor
 import Page.Community.Settings.Settings as CommunitySettings
 import Page.Community.Settings.Sponsorship as CommunitySettingsSponsorship
 import Page.Community.Settings.Sponsorship.Fiat as CommunitySettingsSponsorshipFiat
@@ -34,6 +36,7 @@ import Page.Dashboard.Claim as Claim
 import Page.FormPlayground as FormPlayground
 import Page.Join as Join
 import Page.Login as Login
+import Page.News as News
 import Page.NotFound as NotFound
 import Page.Notification as Notification
 import Page.PaymentHistory as PaymentHistory
@@ -134,10 +137,6 @@ subscriptions model =
                 CommunityEditor.subscriptions subModel
                     |> Sub.map GotCommunityEditorMsg
 
-            CommunitySettingsInfo subModel ->
-                CommunitySettingsInfo.subscriptions subModel
-                    |> Sub.map GotCommunitySettingsInfoMsg
-
             CommunitySponsor subModel ->
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
@@ -145,22 +144,6 @@ subscriptions model =
             ShopEditor _ subModel ->
                 ShopEditor.subscriptions subModel
                     |> Sub.map GotShopEditorMsg
-
-            ActionEditor subModel ->
-                ActionEditor.subscriptions subModel
-                    |> Sub.map GotActionEditorMsg
-
-            ObjectiveEditor subModel ->
-                ObjectiveEditor.subscriptions subModel
-                    |> Sub.map GotObjectiveEditorMsg
-
-            ProfileEditor subModel ->
-                ProfileEditor.subscriptions subModel
-                    |> Sub.map GotProfileEditorMsg
-
-            Transfer subModel ->
-                Transfer.subscriptions subModel
-                    |> Sub.map GotTransferMsg
 
             _ ->
                 Sub.none
@@ -188,6 +171,8 @@ type Status
     | CommunitySettings CommunitySettings.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
     | CommunitySettingsInfo CommunitySettingsInfo.Model
+    | CommunitySettingsNews CommunitySettingsNews.Model
+    | CommunitySettingsNewsEditor CommunitySettingsNewsEditor.Model
     | CommunitySettingsCurrency CommunitySettingsCurrency.Model
     | CommunitySettingsSponsorship CommunitySettingsSponsorship.Model
     | CommunitySettingsSponsorshipFiat CommunitySettingsSponsorshipFiat.Model
@@ -204,6 +189,7 @@ type Status
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
+    | News News.Model
     | Profile Profile.Model
     | ProfileContributions ProfileContributions.Model
     | ProfileEditor ProfileEditor.Model
@@ -237,6 +223,8 @@ type Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
     | GotCommunitySettingsInfoMsg CommunitySettingsInfo.Msg
+    | GotCommunitySettingsNewsMsg CommunitySettingsNews.Msg
+    | GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.Msg
     | GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.Msg
     | GotCommunitySettingsSponsorshipMsg CommunitySettingsSponsorship.Msg
     | GotCommunitySettingsSponsorshipFiatMsg CommunitySettingsSponsorshipFiat.Msg
@@ -250,6 +238,7 @@ type Msg
     | GotFormPlaygroundMsg FormPlayground.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
+    | GotNewsMsg News.Msg
     | GotPaymentHistoryMsg PaymentHistory.Msg
     | GotProfileMsg Profile.Msg
     | GotProfileContributionsMsg ProfileContributions.Msg
@@ -418,6 +407,11 @@ update msg model =
                 >> updateGuestUResult (Login maybeRedirect) GotLoginMsg model
                 |> withGuest
 
+        ( GotNewsMsg subMsg, News subModel ) ->
+            News.update subMsg subModel
+                >> updateLoggedInUResult News GotNewsMsg model
+                |> withLoggedIn
+
         ( GotNotificationMsg subMsg, Notification subModel ) ->
             -- Will return a function expecting a LoggedIn Model
             Notification.update subMsg subModel
@@ -496,6 +490,16 @@ update msg model =
         ( GotCommunitySettingsInfoMsg subMsg, CommunitySettingsInfo subModel ) ->
             CommunitySettingsInfo.update subMsg subModel
                 >> updateLoggedInUResult CommunitySettingsInfo GotCommunitySettingsInfoMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsNewsMsg subMsg, CommunitySettingsNews subModel ) ->
+            CommunitySettingsNews.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
+                |> withLoggedIn
+
+        ( GotCommunitySettingsNewsEditorMsg subMsg, CommunitySettingsNewsEditor subModel ) ->
+            CommunitySettingsNewsEditor.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
                 |> withLoggedIn
 
         ( GotCommunitySettingsCurrencyMsg subMsg, CommunitySettingsCurrency subModel ) ->
@@ -662,6 +666,14 @@ broadcast broadcastMessage status =
                     CommunitySettingsInfo.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsInfoMsg
 
+                CommunitySettingsNews _ ->
+                    CommunitySettingsNews.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsNewsMsg
+
+                CommunitySettingsNewsEditor _ ->
+                    CommunitySettingsNewsEditor.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsNewsEditorMsg
+
                 CommunitySettingsCurrency _ ->
                     CommunitySettingsCurrency.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsCurrencyMsg
@@ -717,6 +729,10 @@ broadcast broadcastMessage status =
                 Join _ ->
                     Join.receiveBroadcast broadcastMessage
                         |> Maybe.map GotJoinMsg
+
+                News _ ->
+                    News.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotNewsMsg
 
                 PaymentHistory _ ->
                     PaymentHistory.receiveBroadcast broadcastMessage
@@ -842,6 +858,7 @@ updateGuestUResult toStatus toMsg model uResult =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
+                                :: Ports.createAbsintheSocket token
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: Log.addBreadcrumb msgToString
                                     { type_ = Log.InfoBreadcrumb
@@ -978,6 +995,12 @@ statusToRoute status session =
         CommunitySettingsInfo _ ->
             Just Route.CommunitySettingsInfo
 
+        CommunitySettingsNews _ ->
+            Just Route.CommunitySettingsNews
+
+        CommunitySettingsNewsEditor _ ->
+            Just (Route.CommunitySettingsNewsEditor Route.CreateNews)
+
         CommunitySettingsCurrency _ ->
             Just Route.CommunitySettingsCurrency
 
@@ -1044,6 +1067,9 @@ statusToRoute status session =
                             guest.maybeInvitation
             in
             Just (Route.Login maybeInvitation maybeRedirect)
+
+        News subModel ->
+            Just (Route.News subModel.newsId)
 
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
@@ -1293,6 +1319,11 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
                 |> withGuest maybeInvitation maybeRedirect
 
+        Just (Route.News maybeNewsId) ->
+            News.init maybeNewsId
+                >> updateLoggedInUResult News GotNewsMsg model
+                |> withLoggedIn (Route.News maybeNewsId)
+
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init accountName
                 >> updateStatusWith PaymentHistory GotPaymentHistoryMsg model
@@ -1362,6 +1393,16 @@ changeRouteTo maybeRoute model =
             CommunitySettingsInfo.init
                 >> updateStatusWith CommunitySettingsInfo GotCommunitySettingsInfoMsg model
                 |> withLoggedIn Route.CommunitySettingsInfo
+
+        Just Route.CommunitySettingsNews ->
+            CommunitySettingsNews.init
+                >> updateLoggedInUResult CommunitySettingsNews GotCommunitySettingsNewsMsg model
+                |> withLoggedIn Route.CommunitySettingsNews
+
+        Just (Route.CommunitySettingsNewsEditor editorKind) ->
+            CommunitySettingsNewsEditor.init editorKind
+                >> updateStatusWith CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
+                |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
 
         Just Route.CommunitySettingsCurrency ->
             CommunitySettingsCurrency.init
@@ -1600,6 +1641,12 @@ msgToString msg =
         GotCommunitySettingsInfoMsg subMsg ->
             "GotCommunitySettingsInfoMsg" :: CommunitySettingsInfo.msgToString subMsg
 
+        GotCommunitySettingsNewsMsg subMsg ->
+            "GotCommunitySettingsNewsMsg" :: CommunitySettingsNews.msgToString subMsg
+
+        GotCommunitySettingsNewsEditorMsg subMsg ->
+            "GotCommunitySettingsNewsEditorMsg" :: CommunitySettingsNewsEditor.msgToString subMsg
+
         GotCommunitySettingsCurrencyMsg subMsg ->
             "GotCommunitySettingsCurrencyMsg" :: CommunitySettingsCurrency.msgToString subMsg
 
@@ -1641,6 +1688,9 @@ msgToString msg =
 
         GotLoginMsg subMsg ->
             "GotLoginMsg" :: Login.msgToString subMsg
+
+        GotNewsMsg subMsg ->
+            "GotNewsMsg" :: News.msgToString subMsg
 
         GotPaymentHistoryMsg subMsg ->
             "GotPaymentHistoryMsg" :: PaymentHistory.msgToString subMsg
@@ -1800,6 +1850,9 @@ view model =
         Login _ subModel ->
             viewGuest subModel Guest.Login GotLoginMsg Login.view
 
+        News subModel ->
+            viewLoggedIn subModel (LoggedIn.News subModel.newsId) GotNewsMsg News.view
+
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
 
@@ -1814,6 +1867,12 @@ view model =
 
         CommunitySettingsInfo subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsInfo GotCommunitySettingsInfoMsg CommunitySettingsInfo.view
+
+        CommunitySettingsNews subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsNews GotCommunitySettingsNewsMsg CommunitySettingsNews.view
+
+        CommunitySettingsNewsEditor subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg CommunitySettingsNewsEditor.view
 
         CommunitySettingsCurrency subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsCurrency GotCommunitySettingsCurrencyMsg CommunitySettingsCurrency.view

@@ -468,7 +468,7 @@
       "our_supporters": "Nuestros",
       "supporters": "Partidarios",
       "our_messages": "Nuestros",
-      "messages": "Mensajes",
+      "messages": "Anuncios",
       "you": "Tú",
       "your_turn": "{{community}} te ayudó, ¡ahora te toca a ti!",
       "support_us": "Apoyanos",
@@ -1073,7 +1073,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Objetivos, Acciones, Tienda, Patrocinio",
+      "description": "Objetivos, Acciones, Tienda, Patrocinio, Comunicaciones",
       "enabled": "Activado",
       "disabled": "Desactivado"
     }
@@ -1196,6 +1196,65 @@
       "subtitle": "Ahora puedes patrocinar esta comunidad.",
       "explanation": "Haga su contribución en efectivo haciendo clic en el botón de abajo. Serás redirigido a PayPal para completar tu transacción.",
       "sponsor": "Patrocinar {{community_name}}"
+    }
+  },
+  "news": {
+    "title": "Comunicaciones",
+    "description": "Permitir que el equipo de la comunidad envíe comunicaciones",
+    "create": "Nueva comunicación",
+    "community_news": "Comunicaciones de la Comunidad",
+    "got_community_news": "Obtuve una nueva comunicación comunitaria:",
+    "read": "Leer",
+    "other_news": "otras comunicaciones",
+    "view_more": "Ver más",
+    "view_more_with_ellipsis": "... Ver más",
+    "edit": "Editar",
+    "copy": "Crear una copia",
+    "error_fetching": "Se produjo un error al obtener las comunicaciones de la comunidad",
+    "error_highlighting": "Algo salió mal al resaltar la comunicación",
+    "highlight": "Resaltar la comunicación",
+    "already_highlighted": "Ya hay una comunicación resaltada",
+    "saved": "Comunicación guardada con éxito",
+    "failed_saving": "Se produjo un error al guardar la comunicación",
+    "not_found_title": "No se pudo encontrar la comunicación",
+    "not_found_description": "Vuelve a intentarlo con una comunicación válida",
+    "replace_notice": "Al resaltar esta comunicación, reemplazará la existente",
+    "replace_confirmation": "¿Estás seguro de que quieres resaltarla?",
+    "created_at": "Creado: ",
+    "scheduled_at": "Programado: ",
+    "scheduled_at_time": " a las {{hour}}:{{minute}}",
+    "edited_by": "Editado por ",
+    "edited_date": " el {{date}}",
+    "reaction": {
+      "choose": "Elige una reacción",
+      "reactions": "{{count}} personas reaccionaron con",
+      "remove": "Eliminar reacción",
+      "add": "Reaccionar con",
+      "close": "Cerrar el selector de reacciones"
+    },
+    "no_news": {
+      "title": "No hay nada que ver aqui",
+      "description": "Tu comunidad no ha publicado ninguna comunicación"
+    },
+    "editor": {
+      "title": "Editor de comunicaciones",
+      "field": {
+        "title": "Título",
+        "description": "Descripción",
+        "publication_mode": "Publicar o programar",
+        "publish_immediately": "Publicar inmediatamente",
+        "schedule": "Programar publicación",
+        "initial_date": "Fecha inicial",
+        "time": "Horario"
+      },
+      "error": {
+        "title": "La comunicación debe tener un título",
+        "description": "La comunicación debe tener una descripción",
+        "future_date": "La fecha programada debe ser futura",
+        "invalid_date": "La fecha ingresada no es válida",
+        "future_time": "La hora programada debe ser en el futuro",
+        "invalid_time": "La hora ingresada no es válida"
+      }
     }
   },
   "markdown": {

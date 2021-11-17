@@ -5,7 +5,6 @@ module Page.Community.Settings.Info exposing
     , jsAddressToMsg
     , msgToString
     , receiveBroadcast
-    , subscriptions
     , update
     , view
     )
@@ -1151,12 +1150,6 @@ symbolPlaceholder symbol amount =
 
     else
         String.fromInt amount ++ "." ++ String.concat (List.repeat precision "0")
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
-        |> MarkdownEditor.withSubscription model.descriptionInput GotDescriptionEditorMsg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
