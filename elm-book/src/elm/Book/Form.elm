@@ -1,19 +1,42 @@
-module Book.Form exposing (chapters)
+module Book.Form exposing (Msg, chapters, update)
 
 import Book.Form.RichText
 import Book.Form.Toggle
 import ElmBook.Chapter as Chapter exposing (Chapter)
 
 
-chapters : List (Chapter { x | toggleModel : Book.Form.Toggle.Model })
+type alias SharedState x =
+    { x
+        | toggleModel : Book.Form.Toggle.Model
+        , richTextModel : Book.Form.RichText.Model
+    }
+
+
+type Msg
+    = GotRichTextMsg Book.Form.RichText.Msg
+    | GotToggleMsg Book.Form.Toggle.Msg
+
+
+update : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
+update msg sharedState =
+    case msg of
+        GotRichTextMsg subMsg ->
+            Book.Form.RichText.updateSharedState subMsg sharedState
+                |> Tuple.mapSecond (Cmd.map GotRichTextMsg)
+
+        GotToggleMsg subMsg ->
+            ( sharedState, Cmd.none )
+
+
+chapters : List (Chapter (SharedState x) Msg)
 chapters =
     [ introduction
-    , Book.Form.RichText.chapter
-    , Book.Form.Toggle.chapter
+    , Chapter.mapCustom GotRichTextMsg Book.Form.RichText.chapter
+    , Chapter.map GotToggleMsg Book.Form.Toggle.chapter
     ]
 
 
-introduction : Chapter x
+introduction : Chapter x msg
 introduction =
     Chapter.chapter "Introduction"
         |> Chapter.render """

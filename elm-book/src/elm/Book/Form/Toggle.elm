@@ -1,4 +1,4 @@
-module Book.Form.Toggle exposing (Model, chapter, initModel)
+module Book.Form.Toggle exposing (Model, Msg, chapter, initModel)
 
 import Book.Helpers
 import ElmBook.Actions as Actions
@@ -134,7 +134,7 @@ view model =
 -- CHAPTER
 
 
-chapter : Chapter { x | toggleModel : Model }
+chapter : Chapter { x | toggleModel : Model } Msg
 chapter =
     let
         baseToggle id =
