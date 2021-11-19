@@ -144,9 +144,7 @@ view options viewConfig toMsg =
                     [ class "absolute right-0 top-0 focus:outline-none"
                     , tabindex -1
                     , onClick ClickedCalendarIcon
-
-                    -- TODO - I18N
-                    , ariaLabel "Select a date"
+                    , ariaLabel (viewConfig.translators.t "dates.select")
                     ]
                     [ Icons.calendar "h-12"
                     ]
@@ -155,9 +153,7 @@ view options viewConfig toMsg =
                 button
                     [ class "h-12 ml-4 group focus-ring rounded-sm focus-visible:ring-red focus-visible:ring-opacity-30"
                     , onClick ClickedClear
-
-                    -- TODO - I18N
-                    , ariaLabel "Clear date"
+                    , ariaLabel (viewConfig.translators.t "dates.clear")
                     ]
                     [ Icons.trash "group-hover:opacity-80" ]
 

@@ -5,7 +5,9 @@
   "thousands_separator": ".",
   "dates": {
     "today": "Avui",
-    "yesterday": "Ahir"
+    "yesterday": "Ahir",
+    "select": "Selecciona una data",
+    "clear": "Esborra la data"
   },
   "loading": {
     "title": "Espera un moment",

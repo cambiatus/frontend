@@ -5,7 +5,9 @@
   "thousands_separator": ",",
   "dates": {
     "today": "ዛሬ",
-    "yesterday": "ትናንት"
+    "yesterday": "ትናንት",
+    "select": "ቀን ይምረጡ",
+    "clear": "ግልጽ ቀን"
   },
   "loading": {
     "title": "አንድ አፍታ ይጠብቁ",

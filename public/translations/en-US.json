@@ -5,7 +5,9 @@
   "thousands_separator": ",",
   "dates": {
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "select": "Select a date",
+    "clear": "Clear date"
   },
   "loading": {
     "title": "Wait a moment",
