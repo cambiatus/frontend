@@ -1,14 +1,52 @@
-module Markdown exposing (Formatting(..), Markdown, QuillOp, encodeQuillOp, fromQuillOps, quillOpDecoder, toQuillOps)
+module Markdown exposing
+    ( view
+    , Markdown
+    , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
+    )
 
+{-| This module helps you manipulate markdown/rich-text strings. Since we use
+the QuillJS editor, we have some helper functions to translate their own data
+model to regular markdown.
+
+
+# View markdown
+
+@docs view
+
+
+# Produce markdown
+
+@docs Markdown
+
+
+## Interop with QuillJS
+
+@docs QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
+
+-}
+
+import Html exposing (Html)
+import Html.Attributes
 import Json.Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode
 import List.Extra
 import Markdown.Block
+import Markdown.Html
 import Markdown.Parser
+import Markdown.Renderer
 import View.MarkdownEditor exposing (QuillOp)
 
 
+{-| Markdown is just a string. It's an opaque type so we can ensure it's
+actually markdown and not just some random string that might have other
+formattings. If you want to produce some markdown, you probably need to get it
+from the server, or request user input using `Form.RichText`.
+
+The same reasoning behind using opaque types is used throughout this module, to
+prevent people from generating markdown at will.
+
+-}
 type Markdown
     = Markdown String
 
@@ -17,6 +55,9 @@ type Markdown
 -- PRODUCING MARKDOWN
 
 
+{-| This what we get when we ask for the QuillJS editor's contents: a `String`
+with some `Formatting`s
+-}
 type QuillOp
     = QuillOp
         { insert : String
@@ -39,6 +80,9 @@ type Formatting
 -- TO QUILL OPS
 
 
+{-| It might be useful to convert markdown into something QuillJS can understand,
+so we can set the content of an input programmatically.
+-}
 toQuillOps : Markdown -> List QuillOp
 toQuillOps (Markdown markdown) =
     Markdown.Parser.parse markdown
@@ -134,6 +178,9 @@ quillOpFromMarkdownInline inline =
 -- FROM QUILLOPS
 
 
+{-| This is what we use to get data from QuillJS into valid Markdown. Used in
+`Form.RichText`
+-}
 fromQuillOps : List QuillOp -> Markdown
 fromQuillOps quillOps =
     let
@@ -374,6 +421,9 @@ formattingStrings formatting =
 -- ENCODING
 
 
+{-| In order to send data to QuillJS (checkout `toQuillOp`), we need to send it
+as a Json Value
+-}
 encodeQuillOp : QuillOp -> Json.Encode.Value
 encodeQuillOp (QuillOp quillOp) =
     Json.Encode.object
@@ -414,6 +464,9 @@ encodeFormatting formatting =
 -- DECODING
 
 
+{-| In order to get data from QuillJs (checkout `fromQuillOp`), we need to
+receive it as a Json Value
+-}
 quillOpDecoder : Json.Decode.Decoder QuillOp
 quillOpDecoder =
     Json.Decode.succeed (\insert attributes -> QuillOp { insert = insert, attributes = attributes })
@@ -457,3 +510,58 @@ formattingObjectDecoder =
                                 Json.Decode.fail "Expected either `bullet` or `ordered` as a list type"
                     )
             )
+
+
+
+-- VIEWING
+
+
+{-| Display some Markdown with some attributes
+-}
+view : List (Html.Attribute msg) -> Markdown -> Html msg
+view attributes (Markdown content) =
+    case Markdown.Parser.parse content of
+        Ok blocks ->
+            let
+                defaultRenderer =
+                    Markdown.Renderer.defaultHtmlRenderer
+
+                renderer =
+                    { defaultRenderer
+                        | link =
+                            \link linkContent ->
+                                case link.title of
+                                    Just title ->
+                                        Html.a
+                                            [ Html.Attributes.href link.destination
+                                            , Html.Attributes.title title
+                                            , Html.Attributes.target "_blank"
+                                            ]
+                                            linkContent
+
+                                    Nothing ->
+                                        Html.a
+                                            [ Html.Attributes.href link.destination
+                                            , Html.Attributes.target "_blank"
+                                            ]
+                                            linkContent
+                        , html =
+                            Markdown.Html.oneOf
+                                [ Markdown.Html.tag "u"
+                                    (\children ->
+                                        Html.u
+                                            [ Html.Attributes.class "inline-children" ]
+                                            children
+                                    )
+                                ]
+                    }
+            in
+            case Markdown.Renderer.render renderer blocks of
+                Ok asHtml ->
+                    Html.div (Html.Attributes.class "markdown-viewer" :: attributes) asHtml
+
+                Err _ ->
+                    Html.text ""
+
+        Err _ ->
+            Html.text ""

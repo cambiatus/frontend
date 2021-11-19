@@ -52,7 +52,7 @@ import Html.Events
 import Json.Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode
-import Markdown exposing (Formatting(..), Markdown, QuillOp)
+import Markdown exposing (Markdown, QuillOp)
 import Ports
 import Session.Shared as Shared
 import Utils

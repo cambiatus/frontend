@@ -92,6 +92,7 @@ import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
 import Http
+import Markdown exposing (Markdown)
 import Maybe.Extra
 import RemoteData exposing (RemoteData)
 import Session.Shared as Shared exposing (Shared)
@@ -251,11 +252,21 @@ underline and links. Checkout `Form.RichText` for more information on what you
 can do with this field.
 -}
 richText :
-    FieldConfig RichText.Model output values
+    -- FieldConfig RichText.Model Markdown values
+    { parser : Markdown -> Result String output
+    , value : values -> RichText.Model
+    , update : RichText.Model -> values -> values
+    , externalError : values -> Maybe String
+    }
     -> RichText.Options (Msg values)
     -> Form values output
 richText config options =
-    field (RichText options) config
+    field (RichText options)
+        { parser = RichText.getMarkdownContent >> config.parser
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
 
 
 {-| An input that represents either `True` or `False`. Checkout `Form.Toggle`
