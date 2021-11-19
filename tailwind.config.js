@@ -243,9 +243,11 @@ module.exports = {
   ],
   purge: [
     './src/**/*.elm',
-    // We need this for elm-book
+    './src/customElements/*.js',
+    './src/index.js',
+    // We need these next ones for elm-book
     '../src/**/*.elm',
-    './src/index.js'
+    '../src/customElements/*.js'
   ],
   mode: 'jit'
 }
