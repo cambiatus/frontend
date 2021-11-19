@@ -1,9 +1,8 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, richText, toggle, checkbox, radio, select, file
+    , textField, richText, toggle, checkbox, radio, select, file, datePicker
     , view, Model, init, Msg, update, msgToString
-    , datePicker
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -70,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file
+@docs textField, richText, toggle, checkbox, radio, select, file, datePicker
 
 
 ## Viewing
@@ -366,6 +365,9 @@ select optionFromString config options =
         (mapFieldConfig optionToString optionFromString config)
 
 
+{-| An input that lets you select a date. Checkout `Form.DatePicker` for more
+information on what you can do with this field.
+-}
 datePicker :
     { parser : Maybe Date -> Result String output
     , value : values -> DatePicker.Model
