@@ -35,7 +35,6 @@ main =
             ]
 
 
-
 type Msg
     = GotFormMsg Book.Form.Msg
 

@@ -13,7 +13,7 @@
     "start-book": "cd elm-book && yarn start",
     "review": "elm-review",
     "check-format": "elm-format ./ --validate",
-    "check-css": "stylelint \"./src/**/*.css\"",
+    "check-css": "stylelint \"./src/**/*.css\" \"./elm-book/src/**/*.css\"",
     "make": "elm make",
     "repl": "elm repl",
     "reactor": "elm reactor",
