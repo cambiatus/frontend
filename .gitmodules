@@ -1,0 +1,3 @@
+[submodule "elm-book-fork"]
+	path = elm-book-fork
+	url = git@github.com:NeoVier/elm-book.git
