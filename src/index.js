@@ -11,7 +11,7 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
-import customElements from './customElements/index'
+import { register as registerCustomElements } from './customElements/index'
 
 // =========================================
 // Initial constants
@@ -325,9 +325,7 @@ addBreadcrumb({
   level: 'info'
 })
 
-Object.keys(customElements).forEach((key) => {
-  window.customElements.define(key, customElements[key](app, config, addBreadcrumb))
-})
+registerCustomElements(app, config, addBreadcrumb)
 
 addBreadcrumb({
   type: 'debug',
