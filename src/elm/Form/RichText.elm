@@ -1,9 +1,9 @@
 module Form.RichText exposing
     ( init, Options
     , withDisabled, withPlaceholder, withContainerAttrs
-    , getId
+    , getId, getMarkdownContent
     , view
-    , Model, Msg, initModel, msgToString, update
+    , Model, initModel, update, Msg, msgToString
     )
 
 {-| Creates a Cambiatus-style RichText. Use it within a `Form.Form`:
@@ -29,21 +29,30 @@ module Form.RichText exposing
 
 # Getters
 
-@docs getId
+@docs getId, getMarkdownContent
 
 
 # View
 
 @docs view
 
+
+# The elm architecture
+
+This is how you actually use this component!
+
+@docs Model, initModel, update, Msg, msgToString
+
 -}
 
 import Form.Text
-import Html exposing (Html, button, div, input, label)
+import Html exposing (Html, button, div, label)
 import Html.Attributes exposing (class, disabled)
-import Html.Events exposing (onBlur)
+import Html.Events
 import Json.Decode
 import Json.Decode.Pipeline as Decode
+import Json.Encode
+import Markdown exposing (Formatting(..), Markdown, QuillOp)
 import Ports
 import Session.Shared as Shared
 import Utils
@@ -58,7 +67,6 @@ import View.Modal as Modal
 type Options msg
     = Options
         { label : String
-        , id : String
         , disabled : Bool
         , placeholder : Maybe String
         , containerAttrs : List (Html.Attribute msg)
@@ -67,11 +75,10 @@ type Options msg
 
 {-| Initializes a RichText
 -}
-init : { label : String, id : String } -> Options msg
-init { label, id } =
+init : { label : String } -> Options msg
+init { label } =
     Options
         { label = label
-        , id = id
         , disabled = False
         , placeholder = Nothing
         , containerAttrs = []
@@ -143,7 +150,7 @@ view (Options options) viewConfig toMsg =
                 Html.text ""
 
               else
-                View.Form.label [] options.id options.label
+                View.Form.label [] model.id options.label
             , Html.node "richtext-editor"
                 [ Html.Attributes.attribute "elm-placeholder" (Maybe.withDefault "" options.placeholder)
                 , Html.Attributes.attribute "elm-has-error" (boolToString viewConfig.hasError)
@@ -152,8 +159,8 @@ view (Options options) viewConfig toMsg =
                 , Html.Attributes.attribute "elm-disabled" (boolToString options.disabled)
                 , Html.Events.on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , Html.Events.on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
-                , Html.Events.on "component-loaded" (Json.Decode.succeed RequestedSetContents)
-                , Html.Attributes.id options.id
+                , Html.Events.on "component-loaded" (Json.Decode.succeed ComponentLoaded)
+                , Html.Attributes.id model.id
                 ]
                 []
                 |> Html.map toMsg
@@ -176,7 +183,7 @@ view (Options options) viewConfig toMsg =
                             ]
                             [ Form.Text.init
                                 { label = t "markdown.link_form.label"
-                                , id = options.id ++ "-link-modal-label"
+                                , id = model.id ++ "-link-modal-label"
                                 }
                                 |> (\config ->
                                         Form.Text.view config
@@ -191,7 +198,7 @@ view (Options options) viewConfig toMsg =
                                    )
                             , Form.Text.init
                                 { label = t "markdown.link_form.url"
-                                , id = options.id ++ "-link-modal-url"
+                                , id = model.id ++ "-link-modal-url"
                                 }
                                 |> Form.Text.withType Form.Text.Url
                                 |> (\config ->
@@ -229,9 +236,14 @@ view (Options options) viewConfig toMsg =
 -- GETTERS
 
 
-getId : Options msg -> String
-getId (Options options) =
-    options.id
+getId : Model -> String
+getId (Model model) =
+    model.id
+
+
+getMarkdownContent : Model -> Markdown
+getMarkdownContent (Model model) =
+    Markdown.fromQuillOps model.contents
 
 
 
@@ -242,20 +254,21 @@ getId (Options options) =
 type Model
     = Model
         { linkModalState : LinkModalState
-
-        -- TODO - We might not need id on options if we have it here
         , id : String
-        , contents : String
+        , contents : List QuillOp
         , isFocused : Bool
         }
 
 
-initModel : String -> Model
-initModel id =
+initModel : String -> Maybe Markdown -> Model
+initModel id maybeMarkdown =
     Model
         { linkModalState = NotShowing
         , id = id
-        , contents = ""
+        , contents =
+            maybeMarkdown
+                |> Maybe.map Markdown.toQuillOps
+                |> Maybe.withDefault []
         , isFocused = False
         }
 
@@ -281,11 +294,7 @@ type Msg
     | EnteredLinkUrl String
     | ClickedAcceptLink
     | ChangedText (List QuillOp)
-    | RequestedSetContents
-
-
-type alias QuillOp =
-    {}
+    | ComponentLoaded
 
 
 
@@ -299,7 +308,6 @@ update msg (Model model) =
             ( Model model, Cmd.none )
 
         ClickedIncludeLink link ->
-            -- TODO - Add RichText custom type and selectionset
             ( Model { model | linkModalState = Showing link }, Cmd.none )
 
         ClosedLinkModal ->
@@ -335,13 +343,17 @@ update msg (Model model) =
                 NotShowing ->
                     ( Model model, Cmd.none )
 
-        ChangedText _ ->
-            -- TODO
-            ( Model model, Cmd.none )
+        ChangedText quillOps ->
+            -- TODO - Use delta from JS side
+            ( Model { model | contents = quillOps }, Cmd.none )
 
-        RequestedSetContents ->
-            -- TODO
-            ( Model model, Cmd.none )
+        ComponentLoaded ->
+            ( Model model
+            , Ports.setMarkdownContent
+                { id = model.id
+                , content = Json.Encode.list Markdown.encodeQuillOp model.contents
+                }
+            )
 
 
 
@@ -350,8 +362,30 @@ update msg (Model model) =
 
 msgToString : Msg -> List String
 msgToString msg =
-    -- TODO
-    []
+    case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ClickedIncludeLink _ ->
+            [ "ClickedIncludeLink" ]
+
+        ClosedLinkModal ->
+            [ "ClosedLinkModal" ]
+
+        EnteredLinkLabel _ ->
+            [ "EnteredLinkLabel" ]
+
+        EnteredLinkUrl _ ->
+            [ "EnteredLinkUrl" ]
+
+        ClickedAcceptLink ->
+            [ "ClickedAcceptLink" ]
+
+        ChangedText _ ->
+            [ "ChangedText" ]
+
+        ComponentLoaded ->
+            [ "ComponentLoaded" ]
 
 
 
@@ -369,5 +403,4 @@ linkDecoder =
 
 textChangeDecoder : Json.Decode.Decoder (List QuillOp)
 textChangeDecoder =
-    -- TODO
-    Json.Decode.succeed []
+    Json.Decode.at [ "detail", "ops" ] (Json.Decode.list Markdown.quillOpDecoder)

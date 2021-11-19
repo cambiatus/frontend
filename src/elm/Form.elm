@@ -885,8 +885,8 @@ getId state =
         Text options _ ->
             Text.getId options
 
-        RichText options _ ->
-            RichText.getId options
+        RichText _ baseField ->
+            RichText.getId baseField.value
 
         Toggle options _ ->
             Toggle.getId options
