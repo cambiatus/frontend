@@ -90,6 +90,7 @@ config =
             , "Form.Radio"
             , "Form.File"
             , "Form.Toggle"
+            , "Form.RichText"
             ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select", "Form.Select" ] )

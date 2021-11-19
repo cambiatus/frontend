@@ -15,6 +15,7 @@ import Html exposing (Html, div, img, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows, src)
 import Http
 import Icons
+import Markdown exposing (Markdown)
 import Mask
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
@@ -45,7 +46,7 @@ init _ =
                 , resume = RemoteData.NotAsked
                 , interest = Programming
                 , toggleTest = False
-                , richtextTest = Form.RichText.initModel "richtext-input"
+                , richtextTest = Form.RichText.initModel "richtext-input" Nothing
                 }
       , user = Nothing
       }
@@ -124,7 +125,7 @@ type alias User =
     , resumeUrl : Maybe String
     , interest : Interest
     , toggleTest : Bool
-    , richtextTest : Form.RichText.Model
+    , richtextTest : Markdown
     }
 
 
@@ -355,19 +356,19 @@ userForm translators =
                 , id = "toggle-test"
                 }
                 |> Form.Toggle.withTooltip { message = "Test tooltip Test tooltip Test tooltip", iconClass = "" }
-                |> Form.Toggle.withDisabled True
+                |> Form.Toggle.withDisabled False
                 |> Form.toggle
                     { parser = Ok
                     , value = .toggleTest
                     , update = \toggle user -> { user | toggleTest = toggle }
-                    , externalError = always (Just "Error")
+                    , externalError = always Nothing
                     }
             )
         |> Form.with
-            (Form.RichText.init
-                { label = "Richtext test"
-                , id = "richtext-input"
-                }
+            (Form.RichText.init { label = "Richtext test" }
+                |> Form.RichText.withDisabled False
+                |> Form.RichText.withPlaceholder "Some placeholder"
+                |> Form.RichText.withContainerAttrs [ class "p-4 bg-white" ]
                 |> Form.richText
                     { parser = Ok
                     , value = .richtextTest
@@ -455,6 +456,8 @@ view loggedIn model =
                                     "Disabled"
                                 )
                             ]
+                        , viewProperty "Rich text test"
+                        , Markdown.view [] user.richtextTest
                         ]
             ]
     }
