@@ -5,6 +5,9 @@
   "engines": {
     "node": "16.8.0"
   },
+  "workspaces": [
+    "elm-book"
+  ],
   "scripts": {
     "build": "yarn bundle",
     "build-book": "cd elm-book && yarn build",
