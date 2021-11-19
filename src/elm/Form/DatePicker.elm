@@ -1,9 +1,9 @@
 module Form.DatePicker exposing
     ( init, Options
-    , withDisabled
-    , getId
-    , view
-    , Model, Msg, getDate, initModel, msgToString, update, withAbsolutePositioning
+    , withDisabled, withAbsolutePositioning
+    , getId, getDate
+    , view, ViewConfig
+    , Model, initModel, update, Msg, msgToString
     )
 
 {-| Creates a Cambiatus-style DatePicker. Use it within a `Form.Form`:
@@ -24,17 +24,24 @@ module Form.DatePicker exposing
 
 ## Adding attributes
 
-@docs withDisabled
+@docs withDisabled, withAbsolutePositioning
 
 
 # Getters
 
-@docs getId
+@docs getId, getDate
 
 
 # View
 
-@docs view
+@docs view, ViewConfig
+
+
+# The elm architecture
+
+This is how you actually use this component!
+
+@docs Model, initModel, update, Msg, msgToString
 
 -}
 
@@ -42,7 +49,7 @@ import Browser.Dom
 import Date exposing (Date)
 import DatePicker exposing (DatePicker)
 import Html exposing (Html, button, div, label, span, text)
-import Html.Attributes exposing (class, disabled, tabindex)
+import Html.Attributes exposing (class, disabled, tabindex, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -111,24 +118,32 @@ type alias ViewConfig msg =
     }
 
 
-settings : Options msg -> DatePicker.Settings
-settings (Options options) =
+settings : Options msg -> ViewConfig msg -> DatePicker.Settings
+settings (Options options) viewConfig =
     let
         defaultSettings_ =
             DatePicker.defaultSettings
     in
     { defaultSettings_
         | changeYear = DatePicker.off
-        , inputClassList = [ ( "input w-full", True ) ]
+        , inputClassList =
+            [ ( "input w-full", True )
+            , ( "with-error", viewConfig.hasError )
+            ]
         , containerClassList = [ ( "relative-table w-full", not options.absolutePositioning ) ]
         , dateFormatter = Date.format "E, d MMM y"
         , inputId = Just options.id
+
+        -- The isDisabled call only disables the dates inside the expanded
+        -- calendar. We manually add the disabled attribute on the input so the
+        -- calendar can't be open
         , isDisabled = \_ -> options.disabled
+        , inputAttributes = [ disabled options.disabled ]
     }
 
 
 view : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
-view options viewConfig toMsg =
+view ((Options options) as wrappedOptions) viewConfig toMsg =
     let
         (Model model) =
             viewConfig.value
@@ -137,7 +152,7 @@ view options viewConfig toMsg =
         [ span [ class "flex" ]
             [ span [ class "relative w-full" ]
                 [ DatePicker.view model.selectedDate
-                    (settings options)
+                    (settings wrappedOptions viewConfig)
                     model.picker
                     |> Html.map (GotDatePickerMsg { usingArrowKeys = False })
                 , button
@@ -145,6 +160,8 @@ view options viewConfig toMsg =
                     , tabindex -1
                     , onClick ClickedCalendarIcon
                     , ariaLabel (viewConfig.translators.t "dates.select")
+                    , type_ "button"
+                    , disabled options.disabled
                     ]
                     [ Icons.calendar "h-12"
                     ]
@@ -154,6 +171,8 @@ view options viewConfig toMsg =
                     [ class "h-12 ml-4 group focus-ring rounded-sm focus-visible:ring-red focus-visible:ring-opacity-30"
                     , onClick ClickedClear
                     , ariaLabel (viewConfig.translators.t "dates.clear")
+                    , type_ "button"
+                    , disabled options.disabled
                     ]
                     [ Icons.trash "group-hover:opacity-80" ]
 
@@ -228,21 +247,22 @@ type Msg
     | ClickedKey Key
 
 
-updateDatePicker : { usingArrowKeys : Bool } -> Options msg -> DatePicker.Msg -> Model -> ( Model, Cmd Msg )
-updateDatePicker { usingArrowKeys } options msg (Model model) =
+updateDatePicker : { usingArrowKeys : Bool } -> Options msg -> ViewConfig msg -> DatePicker.Msg -> Model -> ( Model, Cmd Msg )
+updateDatePicker { usingArrowKeys } options viewConfig msg (Model model) =
     let
         openWithArrowKeys : Model -> ( Model, Cmd Msg )
         openWithArrowKeys newModel =
             if usingArrowKeys then
                 updateDatePicker { usingArrowKeys = False }
                     options
+                    viewConfig
                     DatePicker.open
                     newModel
 
             else
                 ( newModel, Cmd.none )
     in
-    case DatePicker.update (settings options) msg model.picker of
+    case DatePicker.update (settings options viewConfig) msg model.picker of
         ( newPicker, DatePicker.Picked newDate ) ->
             { model
                 | picker = newPicker
@@ -257,14 +277,18 @@ updateDatePicker { usingArrowKeys } options msg (Model model) =
                 |> openWithArrowKeys
 
 
-update : Options msg -> Msg -> Model -> ( Model, Cmd Msg )
-update ((Options options) as wrappedOptions) msg (Model model) =
+update : Options msg -> ViewConfig msg -> Msg -> Model -> ( Model, Cmd Msg )
+update ((Options options) as wrappedOptions) viewConfig msg (Model model) =
     case msg of
         NoOp ->
             ( Model model, Cmd.none )
 
         GotDatePickerMsg usingArrowKeys subMsg ->
-            updateDatePicker usingArrowKeys wrappedOptions subMsg (Model model)
+            updateDatePicker usingArrowKeys
+                wrappedOptions
+                viewConfig
+                subMsg
+                (Model model)
 
         ClickedCalendarIcon ->
             ( Model model
@@ -288,6 +312,7 @@ update ((Options options) as wrappedOptions) msg (Model model) =
                         Just selectedDate ->
                             updateDatePicker { usingArrowKeys = True }
                                 wrappedOptions
+                                viewConfig
                                 (DatePicker.pick (Date.add Date.Days amount selectedDate))
                                 (Model model)
 
@@ -301,12 +326,14 @@ update ((Options options) as wrappedOptions) msg (Model model) =
                             Just selectedDate ->
                                 updateDatePicker { usingArrowKeys = False }
                                     wrappedOptions
+                                    viewConfig
                                     (DatePicker.pick selectedDate)
                                     (Model model)
 
                     else
                         updateDatePicker { usingArrowKeys = False }
                             wrappedOptions
+                            viewConfig
                             DatePicker.open
                             (Model model)
             in

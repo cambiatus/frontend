@@ -601,7 +601,7 @@ type Msg values
     = NoOp
     | ChangedValues values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
-    | GotDatePickerMsg (DatePicker.Options (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
+    | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
     | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
@@ -651,14 +651,14 @@ update shared msg (Model model) =
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
-        GotDatePickerMsg options getModel updateFn subMsg ->
+        GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
             let
                 ( newModel, cmd ) =
-                    DatePicker.update options subMsg (getModel model.values)
+                    DatePicker.update options viewConfig subMsg (getModel model.values)
             in
             Model { model | values = updateFn newModel model.values }
                 |> UR.init
-                |> UR.addCmd (Cmd.map (GotDatePickerMsg options getModel updateFn) cmd)
+                |> UR.addCmd (Cmd.map (GotDatePickerMsg options viewConfig getModel updateFn) cmd)
 
         RequestedUploadFile updateFn fileToUpload ->
             { model | values = updateFn RemoteData.Loading model.values }
@@ -721,7 +721,7 @@ msgToString msg =
         GotRichTextMsg _ _ subMsg ->
             "GotRichTextMsg" :: RichText.msgToString subMsg
 
-        GotDatePickerMsg _ _ _ subMsg ->
+        GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
 
         ChangedValues _ ->
@@ -890,14 +890,18 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         DatePicker options baseField ->
+            let
+                viewConfig =
+                    { value = baseField.value
+                    , error = viewError [] showError error
+                    , hasError = hasError
+                    , isRequired = isRequired
+                    , translators = translators
+                    }
+            in
             DatePicker.view options
-                { value = baseField.value
-                , error = viewError [] showError error
-                , hasError = hasError
-                , isRequired = isRequired
-                , translators = translators
-                }
-                (GotDatePickerMsg options baseField.getValue baseField.updateWithValues)
+                viewConfig
+                (GotDatePickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
 
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg

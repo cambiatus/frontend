@@ -34,9 +34,9 @@ initModel =
 
 type Msg
     = NoOp
-    | GotRelativeDatePickerMsg (Form.DatePicker.Options Msg) Form.DatePicker.Msg
-    | GotAbsoluteDatePickerMsg (Form.DatePicker.Options Msg) Form.DatePicker.Msg
-    | GotErrorDatePickerMsg (Form.DatePicker.Options Msg) Form.DatePicker.Msg
+    | GotRelativeDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
+    | GotAbsoluteDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
+    | GotErrorDatePickerMsg (Form.DatePicker.Options Msg) (Form.DatePicker.ViewConfig Msg) Form.DatePicker.Msg
 
 
 type alias SharedState x =
@@ -53,37 +53,40 @@ updateSharedState msg sharedState =
         NoOp ->
             ( sharedState, Cmd.none )
 
-        GotRelativeDatePickerMsg options subMsg ->
+        GotRelativeDatePickerMsg options viewConfig subMsg ->
             let
                 ( newModel, subCmd ) =
                     Form.DatePicker.update options
+                        viewConfig
                         subMsg
                         sharedState.datepickerModel.relative
             in
             ( { sharedState | datepickerModel = { model | relative = newModel } }
-            , Cmd.map (GotRelativeDatePickerMsg options) subCmd
+            , Cmd.map (GotRelativeDatePickerMsg options viewConfig) subCmd
             )
 
-        GotAbsoluteDatePickerMsg options subMsg ->
+        GotAbsoluteDatePickerMsg options viewConfig subMsg ->
             let
                 ( newModel, subCmd ) =
                     Form.DatePicker.update options
+                        viewConfig
                         subMsg
                         sharedState.datepickerModel.absolute
             in
             ( { sharedState | datepickerModel = { model | absolute = newModel } }
-            , Cmd.map (GotAbsoluteDatePickerMsg options) subCmd
+            , Cmd.map (GotAbsoluteDatePickerMsg options viewConfig) subCmd
             )
 
-        GotErrorDatePickerMsg options subMsg ->
+        GotErrorDatePickerMsg options viewConfig subMsg ->
             let
                 ( newModel, subCmd ) =
                     Form.DatePicker.update options
+                        viewConfig
                         subMsg
                         sharedState.datepickerModel.withError
             in
             ( { sharedState | datepickerModel = { model | withError = newModel } }
-            , Cmd.map (GotErrorDatePickerMsg options) subCmd
+            , Cmd.map (GotErrorDatePickerMsg options viewConfig) subCmd
             )
 
 
@@ -100,28 +103,36 @@ chapter =
                     Form.DatePicker.init { label = "Pick a date", id = "relative-datepicker" }
                         |> Form.DatePicker.withAbsolutePositioning False
                         |> (\options ->
+                                let
+                                    viewConfig =
+                                        { value = sharedState.datepickerModel.relative
+                                        , error = Html.text ""
+                                        , hasError = False
+                                        , isRequired = True
+                                        , translators = Book.Helpers.mockTranslators
+                                        }
+                                in
                                 Form.DatePicker.view options
-                                    { value = sharedState.datepickerModel.relative
-                                    , error = Html.text ""
-                                    , hasError = False
-                                    , isRequired = True
-                                    , translators = Book.Helpers.mockTranslators
-                                    }
-                                    (GotRelativeDatePickerMsg options)
+                                    viewConfig
+                                    (GotRelativeDatePickerMsg options viewConfig)
                            )
               )
             , ( "Live example with absolute positioning"
               , \sharedState ->
                     Form.DatePicker.init { label = "Pick a date", id = "absolute-datepicker" }
                         |> (\options ->
+                                let
+                                    viewConfig =
+                                        { value = sharedState.datepickerModel.absolute
+                                        , error = Html.text ""
+                                        , hasError = False
+                                        , isRequired = True
+                                        , translators = Book.Helpers.mockTranslators
+                                        }
+                                in
                                 Form.DatePicker.view options
-                                    { value = sharedState.datepickerModel.absolute
-                                    , error = Html.text ""
-                                    , hasError = False
-                                    , isRequired = True
-                                    , translators = Book.Helpers.mockTranslators
-                                    }
-                                    (GotAbsoluteDatePickerMsg options)
+                                    viewConfig
+                                    (GotAbsoluteDatePickerMsg options viewConfig)
                            )
               )
             , ( "Live example with error and disabled"
@@ -129,14 +140,18 @@ chapter =
                     Form.DatePicker.init { label = "Pick a date", id = "disabled-datepicker" }
                         |> Form.DatePicker.withDisabled True
                         |> (\options ->
+                                let
+                                    viewConfig =
+                                        { value = sharedState.datepickerModel.withError
+                                        , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
+                                        , hasError = True
+                                        , isRequired = True
+                                        , translators = Book.Helpers.mockTranslators
+                                        }
+                                in
                                 Form.DatePicker.view options
-                                    { value = sharedState.datepickerModel.withError
-                                    , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
-                                    , hasError = True
-                                    , isRequired = True
-                                    , translators = Book.Helpers.mockTranslators
-                                    }
-                                    (GotAbsoluteDatePickerMsg options)
+                                    viewConfig
+                                    (GotErrorDatePickerMsg options viewConfig)
                            )
               )
             ]
