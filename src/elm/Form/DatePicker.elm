@@ -126,6 +126,7 @@ settings (Options options) viewConfig =
     in
     { defaultSettings_
         | changeYear = DatePicker.off
+        , placeholder = viewConfig.translators.t "dates.select"
         , inputClassList =
             [ ( "input w-full", True )
             , ( "with-error", viewConfig.hasError )
