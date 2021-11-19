@@ -213,10 +213,9 @@ viewModalDetails options =
             , footer
             ]
         , View.Components.keyListener
-            { onKeyDown =
-                { acceptedKeys = [ View.Components.Escape ]
-                , toMsg = \_ -> options.closeMsg
-                , stopPropagation = True
-                }
+            { acceptedKeys = [ View.Components.Escape ]
+            , toMsg = \_ -> options.closeMsg
+            , stopPropagation = True
+            , preventDefault = False
             }
         ]

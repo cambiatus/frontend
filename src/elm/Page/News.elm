@@ -507,11 +507,10 @@ viewReactionPicker { t } model news =
                     ]
                     []
                 , View.Components.keyListener
-                    { onKeyDown =
-                        { acceptedKeys = [ View.Components.Escape ]
-                        , toMsg = \_ -> ClickedToggleReactions
-                        , stopPropagation = True
-                        }
+                    { acceptedKeys = [ View.Components.Escape ]
+                    , toMsg = \_ -> ClickedToggleReactions
+                    , stopPropagation = True
+                    , preventDefault = False
                     }
                 ]
 
