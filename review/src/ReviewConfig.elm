@@ -91,6 +91,7 @@ config =
             , "Form.File"
             , "Form.Toggle"
             , "Form.RichText"
+            , "Form.DatePicker"
             ]
           )
         , ( [ "Html.select" ], [ "View.Form.Select", "Form.Select" ] )

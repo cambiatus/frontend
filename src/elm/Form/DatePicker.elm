@@ -229,7 +229,7 @@ type Msg
     | GotDatePickerMsg { usingArrowKeys : Bool } DatePicker.Msg
     | ClickedCalendarIcon
     | ClickedClear
-    | ClickedKey View.Components.Key
+    | ClickedKey Key
 
 
 updateDatePicker : { usingArrowKeys : Bool } -> Options msg -> DatePicker.Msg -> Model -> ( Model, Cmd Msg )
@@ -353,4 +353,4 @@ msgToString msg =
             [ "ClickedClear" ]
 
         ClickedKey _ ->
-            [ "ClickedArrowKey" ]
+            [ "ClickedKey" ]

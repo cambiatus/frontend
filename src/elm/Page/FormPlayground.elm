@@ -2,9 +2,11 @@ module Page.FormPlayground exposing (Model, Msg, init, msgToString, update, view
 
 -- TODO - Remove this before merging PR
 
+import Date exposing (Date)
 import Eos
 import Form exposing (Form)
 import Form.Checkbox
+import Form.DatePicker
 import Form.File
 import Form.Radio
 import Form.RichText
@@ -30,7 +32,7 @@ import View.Form
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
-init _ =
+init { shared } =
     ( { userFormModel =
             Form.init
                 { name = ""
@@ -47,6 +49,7 @@ init _ =
                 , interest = Programming
                 , toggleTest = False
                 , richtextTest = Form.RichText.initModel "richtext-input" Nothing
+                , dateTest = Form.DatePicker.initModel (Date.fromPosix shared.timezone shared.now)
                 }
       , user = Nothing
       }
@@ -108,6 +111,7 @@ type alias DirtyUser =
     , interest : Interest
     , toggleTest : Bool
     , richtextTest : Form.RichText.Model
+    , dateTest : Form.DatePicker.Model
     }
 
 
@@ -126,6 +130,7 @@ type alias User =
     , interest : Interest
     , toggleTest : Bool
     , richtextTest : Markdown
+    , dateTest : Date
     }
 
 
@@ -373,6 +378,17 @@ userForm translators =
                     { parser = Ok
                     , value = .richtextTest
                     , update = \richtext user -> { user | richtextTest = richtext }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.DatePicker.init { label = "Date test", id = "datepicker-test" }
+                |> Form.DatePicker.withDisabled False
+                |> Form.DatePicker.withAbsolutePositioning False
+                |> Form.datePicker
+                    { parser = Result.fromMaybe "Date is mandatory"
+                    , value = .dateTest
+                    , update = \dateTest user -> { user | dateTest = dateTest }
                     , externalError = always Nothing
                     }
             )
