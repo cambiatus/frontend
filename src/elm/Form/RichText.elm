@@ -116,8 +116,7 @@ withContainerAttrs attrs (Options options) =
 
 
 type alias ViewConfig msg =
-    { onChange : ( Model, Cmd Msg ) -> msg
-    , onBlur : String -> msg
+    { onBlur : String -> msg
     , value : Model
     , error : Html msg
     , hasError : Bool

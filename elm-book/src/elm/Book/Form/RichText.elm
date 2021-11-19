@@ -11,7 +11,7 @@ import Markdown
 
 
 
--- UPDATE
+-- MODEL
 
 
 type alias Model =
@@ -23,9 +23,12 @@ initModel =
     Form.RichText.initModel "rich-text-example" Nothing
 
 
+
+-- UPDATE
+
+
 type Msg
-    = ChangedModel ( Form.RichText.Model, Cmd Form.RichText.Msg )
-    | GotRichTextMsg Form.RichText.Msg
+    = GotRichTextMsg Form.RichText.Msg
     | NoOp
 
 
@@ -36,11 +39,6 @@ type alias SharedState x =
 updateSharedState : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
 updateSharedState msg sharedState =
     case msg of
-        ChangedModel ( model, subCmd ) ->
-            ( { sharedState | richTextModel = model }
-            , Cmd.map GotRichTextMsg subCmd
-            )
-
         GotRichTextMsg subMsg ->
             let
                 ( newModel, subCmd ) =
@@ -68,8 +66,7 @@ chapter =
                         [ Form.RichText.init { label = "Rich text" }
                             |> (\options ->
                                     Form.RichText.view options
-                                        { onChange = ChangedModel
-                                        , onBlur = \_ -> NoOp
+                                        { onBlur = \_ -> NoOp
                                         , value = sharedState.richTextModel
                                         , error = Html.text ""
                                         , hasError = False
@@ -82,39 +79,39 @@ chapter =
                             (Form.RichText.getMarkdownContent sharedState.richTextModel)
                         ]
               )
-            , ( "Disabled example"
-              , \_ ->
-                    Form.RichText.init { label = "Disabled rich text input" }
-                        |> Form.RichText.withDisabled True
-                        |> (\options ->
-                                Form.RichText.view options
-                                    { onChange = \_ -> NoOp
-                                    , onBlur = \_ -> NoOp
-                                    , value = Form.RichText.initModel "disabled-rich-text" Nothing
-                                    , error = Html.text ""
-                                    , hasError = False
-                                    , isRequired = True
-                                    , translators = Book.Helpers.mockTranslators
-                                    }
-                                    (\_ -> NoOp)
-                           )
+            ]
+        |> Chapter.withComponentList
+            [ ( "Disabled example"
+              , Form.RichText.init
+                    { label = "Disabled rich text input" }
+                    |> Form.RichText.withDisabled True
+                    |> (\options ->
+                            Form.RichText.view options
+                                { onBlur = \_ -> NoOp
+                                , value = Form.RichText.initModel "disabled-rich-text" Nothing
+                                , error = Html.text ""
+                                , hasError = False
+                                , isRequired = True
+                                , translators = Book.Helpers.mockTranslators
+                                }
+                                (\_ -> NoOp)
+                       )
               )
             , ( "Placeholder and error"
-              , \_ ->
-                    Form.RichText.init { label = "Input with placeholder and error" }
-                        |> Form.RichText.withPlaceholder "Lorem ipsum dolor sit amet"
-                        |> (\options ->
-                                Form.RichText.view options
-                                    { onChange = \_ -> NoOp
-                                    , onBlur = \_ -> NoOp
-                                    , value = Form.RichText.initModel "disabled-rich-text" Nothing
-                                    , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
-                                    , hasError = True
-                                    , isRequired = True
-                                    , translators = Book.Helpers.mockTranslators
-                                    }
-                                    (\_ -> NoOp)
-                           )
+              , Form.RichText.init
+                    { label = "Input with placeholder and error" }
+                    |> Form.RichText.withPlaceholder "Lorem ipsum dolor sit amet"
+                    |> (\options ->
+                            Form.RichText.view options
+                                { onBlur = \_ -> NoOp
+                                , value = Form.RichText.initModel "disabled-rich-text" Nothing
+                                , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
+                                , hasError = True
+                                , isRequired = True
+                                , translators = Book.Helpers.mockTranslators
+                                }
+                                (\_ -> NoOp)
+                       )
               )
             ]
         |> Chapter.render """
