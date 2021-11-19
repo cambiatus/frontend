@@ -3,6 +3,7 @@ module Form exposing
     , succeed, with, withOptional
     , textField, richText, toggle, checkbox, radio, select, file
     , view, Model, init, Msg, update, msgToString
+    , datePicker
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -80,8 +81,10 @@ documentation if you're stuck.
 
 import Api
 import Browser.Dom
+import Date exposing (Date)
 import File
 import Form.Checkbox as Checkbox
+import Form.DatePicker as DatePicker
 import Form.File
 import Form.Radio as Radio
 import Form.RichText as RichText
@@ -185,6 +188,7 @@ type Field values
     | Radio (Radio.Options String (Msg values)) (BaseField String values)
     | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
     | Select (Select.Options String (Msg values)) (BaseField String values)
+    | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -252,7 +256,6 @@ underline and links. Checkout `Form.RichText` for more information on what you
 can do with this field.
 -}
 richText :
-    -- FieldConfig RichText.Model Markdown values
     { parser : Markdown -> Result String output
     , value : values -> RichText.Model
     , update : RichText.Model -> values -> values
@@ -361,6 +364,23 @@ select optionFromString config options =
     in
     field (Select (Select.map optionToString optionFromString options))
         (mapFieldConfig optionToString optionFromString config)
+
+
+datePicker :
+    { parser : Maybe Date -> Result String output
+    , value : values -> DatePicker.Model
+    , update : DatePicker.Model -> values -> values
+    , externalError : values -> Maybe String
+    }
+    -> DatePicker.Options (Msg values)
+    -> Form values output
+datePicker config options =
+    field (DatePicker options)
+        { parser = DatePicker.getDate >> config.parser
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
 
 
 
@@ -578,8 +598,8 @@ type alias UpdateResult values =
 type Msg values
     = NoOp
     | ChangedValues values
-    | ChangedValuesWithCmd values (Cmd (Msg values))
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
+    | GotDatePickerMsg (DatePicker.Options (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
     | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
@@ -620,11 +640,6 @@ update shared msg (Model model) =
             Model { model | values = newValues }
                 |> UR.init
 
-        ChangedValuesWithCmd newValues cmd ->
-            Model { model | values = newValues }
-                |> UR.init
-                |> UR.addCmd cmd
-
         GotRichTextMsg getModel updateFn subMsg ->
             let
                 ( newModel, cmd ) =
@@ -633,6 +648,15 @@ update shared msg (Model model) =
             Model { model | values = updateFn newModel model.values }
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
+
+        GotDatePickerMsg options getModel updateFn subMsg ->
+            let
+                ( newModel, cmd ) =
+                    DatePicker.update options subMsg (getModel model.values)
+            in
+            Model { model | values = updateFn newModel model.values }
+                |> UR.init
+                |> UR.addCmd (Cmd.map (GotDatePickerMsg options getModel updateFn) cmd)
 
         RequestedUploadFile updateFn fileToUpload ->
             { model | values = updateFn RemoteData.Loading model.values }
@@ -692,11 +716,11 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        ChangedValuesWithCmd _ _ ->
-            [ "ChangedValuesWithCmd" ]
-
         GotRichTextMsg _ _ subMsg ->
             "GotRichTextMsg" :: RichText.msgToString subMsg
+
+        GotDatePickerMsg _ _ _ subMsg ->
+            "GotDatePickerMsg" :: DatePicker.msgToString subMsg
 
         ChangedValues _ ->
             [ "ChangedValues" ]
@@ -804,14 +828,7 @@ viewField { showError, translators } { state, error, isRequired } =
 
         RichText options baseField ->
             RichText.view options
-                { onChange =
-                    \( richTextModel, richTextCmd ) ->
-                        ChangedValuesWithCmd (baseField.update richTextModel)
-                            (Cmd.map
-                                (GotRichTextMsg baseField.getValue baseField.updateWithValues)
-                                richTextCmd
-                            )
-                , onBlur = BlurredField
+                { onBlur = BlurredField
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -870,6 +887,16 @@ viewField { showError, translators } { state, error, isRequired } =
                 , isRequired = isRequired
                 }
 
+        DatePicker options baseField ->
+            DatePicker.view options
+                { value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                , translators = translators
+                }
+                (GotDatePickerMsg options baseField.getValue baseField.updateWithValues)
+
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
@@ -914,6 +941,9 @@ getId state =
         Select options _ ->
             Select.getId options
 
+        DatePicker options _ ->
+            DatePicker.getId options
+
 
 isEmpty : Field values -> Bool
 isEmpty field_ =
@@ -942,6 +972,9 @@ isEmpty field_ =
         Select _ _ ->
             -- TODO
             False
+
+        DatePicker _ { value } ->
+            Maybe.Extra.isNothing (DatePicker.getDate value)
 
 
 mapFieldConfig :

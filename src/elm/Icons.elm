@@ -5,6 +5,7 @@ module Icons exposing
     , arrowDown
     , arrowsLeft
     , back
+    , calendar
     , cambiatusCoin
     , camera
     , clearInput
@@ -45,7 +46,7 @@ import Html exposing (Html)
 import Html.Attributes exposing (alt)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Svg exposing (Svg, defs, feBlend, feColorMatrix, feComposite, feFlood, feGaussianBlur, feOffset, g, linearGradient, stop, svg)
-import Svg.Attributes exposing (class, clipPath, clipRule, colorInterpolationFilters, d, dx, dy, fill, fillRule, filter, filterUnits, floodOpacity, gradientUnits, height, id, in2, in_, k2, k3, offset, operator, result, stdDeviation, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, values, viewBox, width, x, x1, x2, y, y1, y2)
+import Svg.Attributes exposing (class, clipPath, clipRule, colorInterpolationFilters, d, dx, dy, enableBackground, fill, fillRule, filter, filterUnits, floodOpacity, gradientUnits, height, id, in2, in_, k2, k3, offset, operator, result, stdDeviation, stopColor, stroke, strokeLinecap, strokeLinejoin, strokeMiterlimit, strokeWidth, style, values, viewBox, width, x, x1, x2, y, y1, y2)
 
 
 shop : String -> Svg msg
@@ -484,3 +485,28 @@ smilingFace class_ =
         , alt ""
         ]
         [ Svg.path [ d "M7.99998 14.6667C4.31798 14.6667 1.33331 11.682 1.33331 8.00001C1.33331 4.31801 4.31798 1.33334 7.99998 1.33334C11.682 1.33334 14.6666 4.31801 14.6666 8.00001C14.6666 11.682 11.682 14.6667 7.99998 14.6667ZM7.99998 13.3333C9.41447 13.3333 10.771 12.7714 11.7712 11.7712C12.7714 10.7711 13.3333 9.4145 13.3333 8.00001C13.3333 6.58552 12.7714 5.22897 11.7712 4.22877C10.771 3.22858 9.41447 2.66668 7.99998 2.66668C6.58549 2.66668 5.22894 3.22858 4.22874 4.22877C3.22855 5.22897 2.66665 6.58552 2.66665 8.00001C2.66665 9.4145 3.22855 10.7711 4.22874 11.7712C5.22894 12.7714 6.58549 13.3333 7.99998 13.3333ZM4.66665 8.66668H5.99998C5.99998 9.19711 6.21069 9.70582 6.58577 10.0809C6.96084 10.456 7.46955 10.6667 7.99998 10.6667C8.53041 10.6667 9.03912 10.456 9.41419 10.0809C9.78927 9.70582 9.99998 9.19711 9.99998 8.66668H11.3333C11.3333 9.55073 10.9821 10.3986 10.357 11.0237C9.73188 11.6488 8.88403 12 7.99998 12C7.11592 12 6.26808 11.6488 5.64296 11.0237C5.01784 10.3986 4.66665 9.55073 4.66665 8.66668ZM5.33331 7.33334C5.0681 7.33334 4.81374 7.22799 4.62621 7.04045C4.43867 6.85291 4.33331 6.59856 4.33331 6.33334C4.33331 6.06813 4.43867 5.81377 4.62621 5.62624C4.81374 5.4387 5.0681 5.33334 5.33331 5.33334C5.59853 5.33334 5.85288 5.4387 6.04042 5.62624C6.22796 5.81377 6.33331 6.06813 6.33331 6.33334C6.33331 6.59856 6.22796 6.85291 6.04042 7.04045C5.85288 7.22799 5.59853 7.33334 5.33331 7.33334ZM10.6666 7.33334C10.4014 7.33334 10.1471 7.22799 9.95954 7.04045C9.772 6.85291 9.66665 6.59856 9.66665 6.33334C9.66665 6.06813 9.772 5.81377 9.95954 5.62624C10.1471 5.4387 10.4014 5.33334 10.6666 5.33334C10.9319 5.33334 11.1862 5.4387 11.3738 5.62624C11.5613 5.81377 11.6666 6.06813 11.6666 6.33334C11.6666 6.59856 11.5613 6.85291 11.3738 7.04045C11.1862 7.22799 10.9319 7.33334 10.6666 7.33334Z" ] [] ]
+
+
+calendar : String -> Html msg
+calendar class_ =
+    svg
+        [ enableBackground "new 0 0 24 24"
+        , viewBox "0 0 24 24"
+        , class class_
+        ]
+        [ g [ fill "#999" ]
+            [ Svg.path [ d "m18.1 7.6h-2.5v-1.6h-.9v1.6h-5.4v-1.6h-.9v1.6h-2.5c-.4 0-.7.3-.7.7v9.4c0 .4.3.7.7.7h12.2c.4 0 .7-.3.7-.7v-9.5c-.1-.3-.4-.6-.7-.6zm-.2 9.9h-11.7v-9h2.2v1.1h.9v-1.1h5.4v1.1h.9v-1.1h2.2v9z" ] []
+            , Svg.path [ d "m7.9 11.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m10.4 11.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m12.7 11.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m15.1 11.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m7.9 13.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m10.4 13.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m12.7 13.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m15.1 13.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m7.9 15.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m10.4 15.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m12.7 15.2h.9v.9h-.9z" ] []
+            , Svg.path [ d "m15.1 15.2h.9v.9h-.9z" ] []
+            ]
+        ]
