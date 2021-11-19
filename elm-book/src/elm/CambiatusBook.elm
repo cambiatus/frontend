@@ -1,6 +1,7 @@
 module CambiatusBook exposing (main)
 
 import Book.Form
+import Book.Form.DatePicker
 import Book.Form.RichText
 import Book.Form.Toggle
 import ElmBook as Book exposing (Book)
@@ -50,6 +51,7 @@ update msg sharedState =
 type alias SharedState =
     { toggleModel : Book.Form.Toggle.Model
     , richTextModel : Book.Form.RichText.Model
+    , datepickerModel : Book.Form.DatePicker.Model
     }
 
 
@@ -57,6 +59,7 @@ initialState : SharedState
 initialState =
     { toggleModel = Book.Form.Toggle.initModel
     , richTextModel = Book.Form.RichText.initModel
+    , datepickerModel = Book.Form.DatePicker.initModel
     }
 
 

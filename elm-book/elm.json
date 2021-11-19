@@ -8,6 +8,7 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "CurrySoftware/elm-datepicker": "4.0.0",
             "NeoVier/elm-mask": "2.0.4",
             "NoRedInk/elm-json-decode-pipeline": "1.0.0",
             "NoRedInk/elm-simple-fuzzy": "1.0.3",
@@ -15,7 +16,7 @@
             "dillonkearns/elm-graphql": "5.0.7",
             "dillonkearns/elm-markdown": "7.0.0",
             "elm/browser": "1.0.2",
-            "elm/core": "1.0.3",
+            "elm/core": "1.0.5",
             "elm/file": "1.0.5",
             "elm/html": "1.0.0",
             "elm/http": "2.0.0",
@@ -28,7 +29,7 @@
             "elm-community/list-extra": "8.5.1",
             "elm-community/maybe-extra": "5.2.1",
             "fapian/elm-html-aria": "1.4.0",
-            "justinmimbs/date": "4.0.0",
+            "justinmimbs/date": "3.2.1",
             "krisajenkins/remotedata": "6.0.1",
             "pablohirafuji/elm-syntax-highlight": "3.4.1",
             "robinheghan/elm-phone-numbers": "1.0.0",
