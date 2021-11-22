@@ -139,7 +139,10 @@ settings (Options options) viewConfig =
         -- calendar. We manually add the disabled attribute on the input so the
         -- calendar can't be open
         , isDisabled = \_ -> options.disabled
-        , inputAttributes = [ disabled options.disabled ]
+        , inputAttributes =
+            [ disabled options.disabled
+            , Html.Attributes.attribute "inputmode" "none"
+            ]
     }
 
 
