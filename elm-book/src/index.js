@@ -9,8 +9,6 @@ const config = configuration[env]
 
 const app = Elm.CambiatusBook.init()
 
-console.log({ ports: app.ports })
-
 const logBreadcrumb = (breadcrumb) => {
   const { message, ...rest } = breadcrumb
   console.log('[==== BREADCRUMB]: ', message, rest)

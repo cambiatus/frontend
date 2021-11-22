@@ -37,7 +37,13 @@ export default (app) => (
         }
       )
 
-      app.ports.setMarkdown.subscribe((data) => { this.setMarkdownListener(data) })
+      this.setMarkdownListener = (data) => {
+        if (data.id === this.id) {
+          this._quill.setContents(data.content)
+        }
+      }
+
+      app.ports.setMarkdown.subscribe(this.setMarkdownListener)
 
       this._quill.on('text-change', (delta, oldDelta, source) => {
         const contents = this._quill.getContents()
@@ -68,8 +74,20 @@ export default (app) => (
       this.setDisabled()
     }
 
-    attributeChangedCallback (name) {
+    disconnectedCallback () {
+      app.ports.setMarkdown.unsubscribe(this.setMarkdownListener)
+    }
+
+    attributeChangedCallback (name, oldValue) {
       if (name === 'elm-disabled') {
+        // If oldValue is null, it means this is the first render, and this
+        // function is called before this.connectedCallback, so this._quill
+        // hasn't been initialized (and we get an error). We call
+        // this.setDisabled on this.connectedCallback to disable quill initially
+        if (oldValue === null) {
+          return
+        }
+
         this.setDisabled()
       } else if (name === 'elm-has-error') {
         this.toggleHasError()
@@ -163,12 +181,6 @@ export default (app) => (
         }
       }
       return { index: 0, length: 0 }
-    }
-
-    setMarkdownListener (data) {
-      if (data.id === this.id) {
-        this._quill.setContents(data.content)
-      }
     }
   }
 )

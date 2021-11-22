@@ -104,7 +104,7 @@ chapter =
                     |> (\options ->
                             Form.RichText.view options
                                 { onBlur = \_ -> NoOp
-                                , value = Form.RichText.initModel "disabled-rich-text" Nothing
+                                , value = Form.RichText.initModel "error-rich-text" Nothing
                                 , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
                                 , hasError = True
                                 , isRequired = True
