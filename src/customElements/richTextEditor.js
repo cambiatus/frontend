@@ -18,6 +18,9 @@ export default (app) => (
       this._parentContainer.className = 'placeholder-gray-400 input-border'
 
       this._parentContainer.appendChild(this._quillContainer)
+    }
+
+    connectedCallback () {
       this._quill = new Quill(this._quillContainer,
         {
           modules: {
@@ -43,9 +46,7 @@ export default (app) => (
 
       const toolbar = this._quill.getModule('toolbar')
       toolbar.addHandler('link', () => { this.linkHandler() })
-    }
 
-    connectedCallback () {
       // If we dont include the timeout, we get some annoying bugs in
       // development where the text is cleared, and hot reloading bugs out and
       // crashes the app
