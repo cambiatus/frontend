@@ -12,9 +12,10 @@
     "build": "yarn bundle",
     "build-book": "cd elm-book && yarn build",
     "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
-    "start": "standard && GRAPHQL_SECRET=gAK2_Fdjyy8 node scripts/start.js",
+    "start": "yarn check-js && GRAPHQL_SECRET=gAK2_Fdjyy8 node scripts/start.js",
     "start-book": "cd elm-book && yarn start",
     "review": "elm-review",
+    "check-js": "standard scripts src config elm-book",
     "check-format": "elm-format ./ --validate",
     "check-css": "stylelint \"./src/**/*.css\" \"./elm-book/src/**/*.css\"",
     "make": "elm make",
@@ -26,7 +27,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-push": "echo \"Checking JS with StandardJS...\" && standard && echo \"Checking CSS with StyleLint\" && yarn check-css && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review && echo \"Checking Elm with elm-test\" && yarn test"
+      "pre-push": "echo \"Checking JS with StandardJS...\" && yarn check-js && echo \"Checking CSS with StyleLint\" && yarn check-css && echo \"Checking Elm with elm-format...\" && yarn check-format && echo \"Checking Elm with elm-review...\" && yarn review && echo \"Checking Elm with elm-test\" && yarn test"
     }
   },
   "standard": {
