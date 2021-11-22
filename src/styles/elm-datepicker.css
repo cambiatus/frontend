@@ -114,11 +114,11 @@
 }
 
 .elm-datepicker--picked:hover {
-  background: #45469b;
+  @apply text-white bg-purple-500;
 }
 
 .elm-datepicker--today {
-  @apply font-bold bg-light-grey;
+  @apply font-bold bg-light-grey text-gray-333;
 }
 
 .elm-datepicker--other-month {
