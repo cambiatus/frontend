@@ -27,6 +27,7 @@ type alias Config msg item =
     , highlightedItemStyles : List Style
     , inputId : String
     , inputClass : String
+    , inputClassList : List ( String, Bool )
     , inputStyles : List Style
     , inputControlClass : String
     , inputControlStyles : List Style
@@ -74,6 +75,7 @@ newConfig requiredConfig =
     , underlineStyles = []
     , inputId = Styles.inputId
     , inputClass = ""
+    , inputClassList = []
     , inputControlClass = ""
     , inputControlStyles = []
     , inputStyles = []

@@ -1,8 +1,8 @@
 module Select.Select.Item exposing (baseItemClasses, baseItemStyles, view, viewNotFound)
 
-import Html exposing (Html, div, text)
+import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, style)
-import Html.Events exposing (onMouseDown)
+import Html.Events exposing (onClick)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
@@ -47,9 +47,9 @@ view config state itemCount index item =
                 Just fn ->
                     Html.map (\_ -> NoOp) (fn item)
     in
-    div
+    button
         ([ class classes
-         , onMouseDown (OnSelect item)
+         , onClick (OnSelect item)
          , referenceAttr config state
          ]
             ++ (styles |> List.map (\( f, s ) -> style f s))

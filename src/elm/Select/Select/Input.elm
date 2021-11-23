@@ -7,6 +7,7 @@ import Html.Attributes
         ( attribute
         , autocomplete
         , class
+        , classList
         , disabled
         , id
         , placeholder
@@ -238,15 +239,8 @@ singleInput : Config msg item -> State -> List item -> List item -> Maybe (List 
 singleInput config model availableItems selectedItems maybeMatchedItems =
     let
         val =
-            case model.query of
-                Nothing ->
-                    selectedItems
-                        |> List.head
-                        |> Maybe.map config.toLabel
-                        |> Maybe.withDefault ""
-
-                Just query ->
-                    query
+            model.query
+                |> Maybe.withDefault ""
     in
     [ Html.input
         (inputAttributes config model availableItems selectedItems maybeMatchedItems ++ [ value val, placeholder config.prompt ])
@@ -317,6 +311,7 @@ inputAttributes config model _ selectedItems maybeMatchedItems =
     , onFocus Msg.OnFocus
     , Utils.referenceAttr config model
     , class inputClasses
+    , classList config.inputClassList
     ]
         ++ inputStylesAttrs
 

@@ -4,7 +4,7 @@ module Select exposing
     , withMultiSelection, withOnRemoveItem, withMultiInputItemContainerClass, withMultiInputItemContainerStyles, withMultiInputItemClass, withMultiInputItemStyles
     , withInputControlClass, withInputControlStyles
     , withInputWrapperClass, withInputWrapperStyles
-    , withInputId, withInputClass, withInputStyles, withOnFocus
+    , withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus
     , withUnderlineClass, withUnderlineStyles
     , withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
     , withMenuClass, withMenuStyles
@@ -54,7 +54,7 @@ This is the element that wraps the selected item(s) and the input
 
 # Configure the input
 
-@docs withInputId, withInputClass, withInputStyles, withOnFocus
+@docs withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus
 
 
 # Configure the clear button
@@ -258,6 +258,20 @@ withInputClass classes config =
     let
         fn c =
             { c | inputClass = classes }
+    in
+    mapConfig fn config
+
+
+{-| Add conditional classes to the input
+
+    Select.withInputClassList [ ( "with-error", hasError ) ] config
+
+-}
+withInputClassList : List ( String, Bool ) -> Config msg item -> Config msg item
+withInputClassList classes config =
+    let
+        fn c =
+            { c | inputClassList = classes }
     in
     mapConfig fn config
 
