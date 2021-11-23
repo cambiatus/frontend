@@ -23,7 +23,7 @@ import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Profile
 import Profile.Contact as Contact
 import Route
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared
 import Utils exposing (onClickNoBubble)
 import View.Components
 import View.MarkdownEditor as MarkdownEditor
@@ -130,7 +130,7 @@ withAttrs attrs model =
     { model | extraAttrs = model.extraAttrs ++ attrs }
 
 
-view : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+view : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 view shared loggedInAccount profile model =
     div [ Utils.onClickPreventAll Ignored ]
         [ desktopView shared loggedInAccount profile model
@@ -138,7 +138,7 @@ view shared loggedInAccount profile model =
         ]
 
 
-mobileView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+mobileView : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 mobileView shared loggedInAccount profile model =
     div [ class "md:hidden cursor-auto" ]
         [ viewUserImg profile True model
@@ -150,7 +150,7 @@ mobileView shared loggedInAccount profile model =
         ]
 
 
-desktopView : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+desktopView : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 desktopView shared loggedInAccount profile model =
     div
         [ class "mx-auto hidden md:block" ]
@@ -163,7 +163,7 @@ desktopView shared loggedInAccount profile model =
         ]
 
 
-viewUserNameTag : Shared -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+viewUserNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 viewUserNameTag shared loggedInAccount profile model =
     if model.showNameTag then
         div [ class "mt-2" ]

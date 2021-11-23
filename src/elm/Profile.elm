@@ -48,7 +48,7 @@ import Kyc exposing (ProfileKyc)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Select
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import Simple.Fuzzy
 import Time
 
@@ -347,16 +347,16 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
 viewProfileNameTag shared loggedInAccount profile =
     p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
         [ viewProfileName shared loggedInAccount profile ]
 
 
-viewProfileName : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName shared loggedInAccount profile =
+viewProfileName : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName { translators } loggedInAccount profile =
     if profile.account == loggedInAccount then
-        text (shared.translators.t "transfer_result.you")
+        text (translators.t "transfer_result.you")
 
     else
         case profile.name of
