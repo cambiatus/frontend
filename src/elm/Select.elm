@@ -4,7 +4,7 @@ module Select exposing
     , withMultiSelection, withOnRemoveItem, withMultiInputItemContainerClass, withMultiInputItemContainerStyles, withMultiInputItemClass, withMultiInputItemStyles
     , withInputControlClass, withInputControlStyles
     , withInputWrapperClass, withInputWrapperStyles
-    , withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus
+    , withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus, withOnBlur
     , withUnderlineClass, withUnderlineStyles
     , withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
     , withMenuClass, withMenuStyles
@@ -54,7 +54,7 @@ This is the element that wraps the selected item(s) and the input
 
 # Configure the input
 
-@docs withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus
+@docs withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus, withOnBlur
 
 
 # Configure the clear button
@@ -580,6 +580,20 @@ withOnFocus msg config =
     let
         fn c =
             { c | onFocus = Just msg }
+    in
+    mapConfig fn config
+
+
+{-| Add a callback for when the input field loses focus
+
+    Select.withOnBlur OnBlur
+
+-}
+withOnBlur : msg -> Config msg item -> Config msg item
+withOnBlur msg config =
+    let
+        fn c =
+            { c | onBlur = Just msg }
     in
     mapConfig fn config
 

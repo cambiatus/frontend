@@ -79,7 +79,17 @@ update config msg model =
                 ( { model | showMenu = True }, cmd )
 
         OnBlur ->
-            ( { model | showMenu = False }, Cmd.none )
+            let
+                cmd =
+                    case config.onBlur of
+                        Nothing ->
+                            Cmd.none
+
+                        Just blurMessage ->
+                            Task.succeed Nothing
+                                |> Task.perform (\_ -> blurMessage)
+            in
+            ( { model | showMenu = False }, cmd )
 
         OnRemoveItem item ->
             let

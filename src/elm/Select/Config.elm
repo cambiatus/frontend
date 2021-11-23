@@ -50,6 +50,7 @@ type alias Config msg item =
     , onQueryChange : Maybe (String -> msg)
     , onSelect : item -> msg
     , onFocus : Maybe msg
+    , onBlur : Maybe msg
     , onRemoveItem : Maybe (item -> msg)
     , prompt : String
     , promptClass : String
@@ -98,6 +99,7 @@ newConfig requiredConfig =
     , onQueryChange = Nothing
     , onSelect = requiredConfig.onSelect
     , onFocus = Nothing
+    , onBlur = Nothing
     , onRemoveItem = Nothing
     , prompt = ""
     , promptClass = ""
