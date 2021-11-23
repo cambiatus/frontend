@@ -5,6 +5,7 @@ type alias State =
     { id : String
     , query : Maybe String
     , highlightedItem : Maybe Int
+    , showMenu : Bool
     }
 
 
@@ -13,4 +14,5 @@ newState id =
     { id = id
     , query = Nothing
     , highlightedItem = Nothing
+    , showMenu = False
     }

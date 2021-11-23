@@ -248,8 +248,7 @@ singleInput config model availableItems selectedItems maybeMatchedItems =
                 Just query ->
                     query
     in
-    [ Html.div [] []
-    , Html.input
+    [ Html.input
         (inputAttributes config model availableItems selectedItems maybeMatchedItems ++ [ value val, placeholder config.prompt ])
         []
     ]

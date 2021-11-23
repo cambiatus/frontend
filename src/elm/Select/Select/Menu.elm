@@ -55,9 +55,13 @@ menu config model matchedItems =
             matchedItems
                 |> List.indexedMap (Item.view config model itemCount)
     in
-    div
-        (viewClassAttr config :: menuStyle)
-        (noResultElement :: elements)
+    if model.showMenu then
+        div
+            (viewClassAttr config :: menuStyle)
+            (noResultElement :: elements)
+
+    else
+        text ""
 
 
 viewClassAttr : Config msg item -> Attribute msg2

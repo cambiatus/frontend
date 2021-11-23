@@ -23,7 +23,7 @@ update config msg model =
             ( model, Cmd.none )
 
         OnEsc ->
-            ( { model | query = Nothing }, Cmd.none )
+            ( { model | showMenu = False }, Cmd.none )
 
         OnDownArrow ->
             let
@@ -64,7 +64,7 @@ update config msg model =
                                 |> Task.perform (\_ -> focusMessage)
             in
             if config.emptySearch then
-                ( { model | query = Just "" }
+                ( { model | query = Just "", showMenu = True }
                 , Cmd.batch
                     [ cmd
                     , if config.emptySearch then
@@ -76,10 +76,10 @@ update config msg model =
                 )
 
             else
-                ( model, cmd )
+                ( { model | showMenu = True }, cmd )
 
         OnBlur ->
-            ( { model | query = Nothing }, Cmd.none )
+            ( { model | showMenu = False }, Cmd.none )
 
         OnRemoveItem item ->
             let
