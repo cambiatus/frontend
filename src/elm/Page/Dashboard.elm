@@ -1002,7 +1002,7 @@ type Msg
     | GotTransfersFiltersProfileSummaryMsg Profile.Summary.Msg
     | ClickedClearTransfersFiltersUser
     | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
-    | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
+    | SelectedTransfersFiltersOtherAccount Profile.Minimal
     | ClickedApplyTransfersFilters
     | ClickedTransferCard Int
     | ClickedSupportUsButton
@@ -1319,7 +1319,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd cmd
 
-        SelectedTransfersFiltersOtherAccount maybeMinimalProfile ->
+        SelectedTransfersFiltersOtherAccount minimalProfile ->
             let
                 oldTransfersFiltersBeingEdited =
                     model.transfersFiltersBeingEdited
@@ -1332,7 +1332,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     { oldTransfersFiltersBeingEdited
                         | filters =
                             { oldFilters
-                                | otherAccount = maybeMinimalProfile
+                                | otherAccount = Just minimalProfile
                             }
                     }
             }

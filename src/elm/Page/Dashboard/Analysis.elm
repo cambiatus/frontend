@@ -441,7 +441,7 @@ type Msg
     | ClickedApplyFilters
     | SelectMsg (Select.Msg Profile.Minimal)
     | SelectedTab Tab
-    | OnSelectVerifier (Maybe Profile.Minimal)
+    | OnSelectVerifier Profile.Minimal
     | ShowMore
     | ClearSelectSelection
     | SelectStatusFilter StatusFilter
@@ -735,12 +735,12 @@ update msg model loggedIn =
                     , level = Log.Info
                     }
 
-        OnSelectVerifier maybeProfile ->
+        OnSelectVerifier profile ->
             let
                 oldFilters =
                     model.filtersBeingEdited
             in
-            { model | filtersBeingEdited = { oldFilters | profile = maybeProfile } }
+            { model | filtersBeingEdited = { oldFilters | profile = Just profile } }
                 |> UR.init
 
         ShowMore ->

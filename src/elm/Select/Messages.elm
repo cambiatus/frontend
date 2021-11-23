@@ -5,7 +5,6 @@ type Msg item
     = NoOp
     | OnFocus
     | OnBlur
-    | OnClear
     | OnRemoveItem item
     | OnEsc
     | OnDownArrow

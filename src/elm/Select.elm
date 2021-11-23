@@ -5,7 +5,6 @@ module Select exposing
     , withInputControlClass, withInputControlStyles
     , withInputWrapperClass, withInputWrapperStyles
     , withInputId, withInputClass, withInputStyles, withOnFocus
-    , withClear, withClearClass, withClearStyles, withClearSvgClass
     , withUnderlineClass, withUnderlineStyles
     , withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
     , withMenuClass, withMenuStyles
@@ -120,7 +119,7 @@ import Select.Update
 
 -}
 type alias RequiredConfig msg item =
-    { onSelect : Maybe item -> msg
+    { onSelect : item -> msg
     , toLabel : item -> String
     , filter : String -> List item -> Maybe (List item)
     }
@@ -217,62 +216,6 @@ withUnderlineStyles styles config =
     let
         fn c =
             { c | underlineStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Remove the clear button entirely
-
-    Select.withClear False
-
--}
-withClear : Bool -> Config msg item -> Config msg item
-withClear value config =
-    let
-        fn c =
-            { c | hasClear = value }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the clear button
-
-    Select.withClearClass "clear" config
-
--}
-withClearClass : String -> Config msg item -> Config msg item
-withClearClass classes config =
-    let
-        fn c =
-            { c | clearClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to the clear button
-
-    Select.withClearStyles [ ( "width", "2rem" ) ] config
-
--}
-withClearStyles : List ( String, String ) -> Config msg item -> Config msg item
-withClearStyles styles config =
-    let
-        fn c =
-            { c | clearStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the clear SVG icon
-
-    Select.withClearSvgClass "clear" config
-
--}
-withClearSvgClass : String -> Config msg item -> Config msg item
-withClearSvgClass classes config =
-    let
-        fn c =
-            { c | clearSvgClass = classes }
     in
     mapConfig fn config
 

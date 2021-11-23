@@ -20,7 +20,6 @@ import Select.Events exposing (onBlurAttribute)
 import Select.Messages as Msg exposing (Msg)
 import Select.Models exposing (State)
 import Select.Search as Search
-import Select.Select.Clear as Clear
 import Select.Select.RemoveItem as RemoveItem
 import Select.Styles as Styles
 import Select.Utils as Utils
@@ -107,32 +106,6 @@ view config model availableItems selectedItems =
         inputWrapperStylesAttrs =
             Utils.stylesToAttrs inputWrapperStyles
 
-        clearClasses : String
-        clearClasses =
-            Styles.clearClass ++ config.clearClass
-
-        clearStyles : List ( String, String )
-        clearStyles =
-            List.append
-                Styles.clearStyles
-                config.clearStyles
-
-        clear : Html (Msg item)
-        clear =
-            if List.isEmpty selectedItems || config.hasClear == False then
-                Html.text ""
-
-            else
-                Html.div
-                    ([ class clearClasses
-                     , onClickWithoutPropagation Msg.OnClear
-                     ]
-                        ++ (clearStyles
-                                |> List.map (\( f, s ) -> style f s)
-                           )
-                    )
-                    [ Clear.view config ]
-
         underlineClasses : String
         underlineClasses =
             Styles.underlineClass ++ config.underlineClass
@@ -182,7 +155,6 @@ view config model availableItems selectedItems =
             (class inputWrapperClass :: inputWrapperStylesAttrs)
             input
         , underline
-        , clear
         ]
 
 

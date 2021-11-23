@@ -58,7 +58,7 @@ type Msg
     | CompletedLoadCommunity Community.Model
     | RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
     | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
-    | OnSelect (Maybe ProfileBase)
+    | OnSelect ProfileBase
     | SelectMsg (Select.Msg ProfileBase)
     | ClearSelect
     | SetDatePicker DatePicker.Msg
@@ -495,7 +495,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                             { moduleName = "Page.PaymentHistory", function = "update" }
                             []
 
-        OnSelect maybeProfile ->
+        OnSelect profile ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     let
@@ -503,7 +503,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                             { model
                                 | incomingTransfers = Nothing
                                 , incomingTransfersPageInfo = Nothing
-                                , autocompleteSelectedProfile = maybeProfile
+                                , autocompleteSelectedProfile = Just profile
                             }
                     in
                     newModel

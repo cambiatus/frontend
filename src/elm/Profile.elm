@@ -385,7 +385,6 @@ selectConfig : Select.Config msg (Basic p) -> Shared -> Bool -> Select.Config ms
 selectConfig select shared isDisabled =
     select
         |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
-        |> Select.withClear False
         |> Select.withMultiInputItemContainerClass "hidden h-0"
         |> Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
         |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"

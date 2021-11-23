@@ -394,7 +394,7 @@ type Msg
     | CompletedLoadBalance (Result Http.Error (Maybe Community.Balance))
     | CompletedLoadToken (Result Http.Error Token.Model)
     | ClosedAuthModal
-    | OnSelect (Maybe Profile.Minimal)
+    | OnSelect Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredAmount String
     | GotMemoEditorMsg MarkdownEditor.Msg
@@ -500,13 +500,13 @@ update msg model ({ shared } as loggedIn) =
             in
             UR.init { model | transferStatus = EditingTransfer form }
 
-        OnSelect maybeProfile ->
+        OnSelect profile ->
             case model.transferStatus of
                 EditingTransfer form ->
                     { model
                         | transferStatus =
                             EditingTransfer
-                                ({ form | selectedProfile = maybeProfile }
+                                ({ form | selectedProfile = Just profile }
                                     |> validateSelectedProfile loggedIn.accountName
                                 )
                     }

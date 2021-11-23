@@ -13,20 +13,16 @@ type alias Style =
 
 
 type alias RequiredConfig msg item =
-    { onSelect : Maybe item -> msg
+    { onSelect : item -> msg
     , toLabel : item -> String
     , filter : String -> List item -> Maybe (List item)
     }
 
 
 type alias Config msg item =
-    { clearClass : String
-    , clearStyles : List Style
-    , clearSvgClass : String
-    , cutoff : Maybe Int
+    { cutoff : Maybe Int
     , emptySearch : Bool
     , filter : String -> List item -> Maybe (List item)
-    , hasClear : Bool
     , highlightedItemClass : String
     , highlightedItemStyles : List Style
     , inputId : String
@@ -51,7 +47,7 @@ type alias Config msg item =
     , notFoundShown : Bool
     , notFoundStyles : List Style
     , onQueryChange : Maybe (String -> msg)
-    , onSelect : Maybe item -> msg
+    , onSelect : item -> msg
     , onFocus : Maybe msg
     , onRemoveItem : Maybe (item -> msg)
     , prompt : String
@@ -70,13 +66,9 @@ type alias Config msg item =
 
 newConfig : RequiredConfig msg item -> Config msg item
 newConfig requiredConfig =
-    { clearClass = ""
-    , clearStyles = []
-    , clearSvgClass = ""
-    , emptySearch = False
+    { emptySearch = False
     , filter = requiredConfig.filter
     , cutoff = Nothing
-    , hasClear = True
     , highlightedItemClass = ""
     , highlightedItemStyles = []
     , underlineStyles = []

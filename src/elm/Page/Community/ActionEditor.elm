@@ -479,7 +479,7 @@ type Msg
     = NoOp
     | CompletedLoadObjectives Community.Model (List Community.Objective)
     | ClosedAuthModal
-    | OnSelectVerifier (Maybe Profile.Minimal)
+    | OnSelectVerifier Profile.Minimal
     | OnRemoveVerifier Profile.Minimal
     | SelectMsg (Select.Msg Profile.Minimal)
     | EnteredReward String
@@ -608,7 +608,7 @@ update msg model ({ shared } as loggedIn) =
             { model | form = { oldForm | saveStatus = NotAsked } }
                 |> UR.init
 
-        OnSelectVerifier maybeProfile ->
+        OnSelectVerifier profile ->
             let
                 verification =
                     case model.form.verification of
@@ -619,9 +619,7 @@ update msg model ({ shared } as loggedIn) =
                             let
                                 newVerifiers : List Profile.Minimal
                                 newVerifiers =
-                                    maybeProfile
-                                        |> Maybe.map (List.singleton >> List.append (getInput m.verifiersValidator))
-                                        |> Maybe.withDefault (getInput m.verifiersValidator)
+                                    profile :: getInput m.verifiersValidator
                             in
                             Manual
                                 { m
