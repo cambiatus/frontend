@@ -4,6 +4,7 @@ import Book.Form
 import Book.Form.DatePicker
 import Book.Form.RichText
 import Book.Form.Toggle
+import Book.Form.UserPicker
 import ElmBook as Book exposing (Book)
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
@@ -52,6 +53,7 @@ type alias SharedState =
     { toggleModel : Book.Form.Toggle.Model
     , richTextModel : Book.Form.RichText.Model
     , datepickerModel : Book.Form.DatePicker.Model
+    , userpickerModel : Book.Form.UserPicker.Model
     }
 
 
@@ -60,6 +62,7 @@ initialState =
     { toggleModel = Book.Form.Toggle.initModel
     , richTextModel = Book.Form.RichText.initModel
     , datepickerModel = Book.Form.DatePicker.initModel
+    , userpickerModel = Book.Form.UserPicker.initModel
     }
 
 

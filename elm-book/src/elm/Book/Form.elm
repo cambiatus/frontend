@@ -3,6 +3,7 @@ module Book.Form exposing (Msg, chapters, update)
 import Book.Form.DatePicker
 import Book.Form.RichText
 import Book.Form.Toggle
+import Book.Form.UserPicker
 import ElmBook.Chapter as Chapter exposing (Chapter)
 
 
@@ -11,6 +12,7 @@ type alias SharedState x =
         | toggleModel : Book.Form.Toggle.Model
         , richTextModel : Book.Form.RichText.Model
         , datepickerModel : Book.Form.DatePicker.Model
+        , userpickerModel : Book.Form.UserPicker.Model
     }
 
 
@@ -18,6 +20,7 @@ type Msg
     = GotRichTextMsg Book.Form.RichText.Msg
     | GotToggleMsg Book.Form.Toggle.Msg
     | GotDatePickerMsg Book.Form.DatePicker.Msg
+    | GotUserPickerMsg Book.Form.UserPicker.Msg
 
 
 update : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
@@ -34,6 +37,10 @@ update msg sharedState =
             Book.Form.DatePicker.updateSharedState subMsg sharedState
                 |> Tuple.mapSecond (Cmd.map GotDatePickerMsg)
 
+        GotUserPickerMsg subMsg ->
+            Book.Form.UserPicker.updateSharedState subMsg sharedState
+                |> Tuple.mapSecond (Cmd.map GotUserPickerMsg)
+
 
 chapters : List (Chapter (SharedState x) Msg)
 chapters =
@@ -41,6 +48,7 @@ chapters =
     , Chapter.mapCustom GotRichTextMsg Book.Form.RichText.chapter
     , Chapter.map GotToggleMsg Book.Form.Toggle.chapter
     , Chapter.mapCustom GotDatePickerMsg Book.Form.DatePicker.chapter
+    , Chapter.mapCustom GotUserPickerMsg Book.Form.UserPicker.chapter
     ]
 
 
