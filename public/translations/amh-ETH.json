@@ -574,6 +574,7 @@
         "manual_detail": " በሌሎች እንደገና ሲታይ ተጠቃሚዉን ይሸልማል",
         "verifier_placeholder": "የተጠቃሚን ስም ፃፍ",
         "verifier_not_found": "ምንም ተጠቃሚ አልተገኘም",
+        "unselect_user": "{{username}}ን አይምረጡ",
         "usages_placeholder": "ቁጥሩን ፃፍ",
         "date_label": "ቀን ምረጥ",
         "quantity_label": "አጠቃቀም ምረጥ",

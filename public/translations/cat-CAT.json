@@ -616,6 +616,7 @@
         "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
         "verifier_not_found": "No s'ha trobat cap usuari",
+        "unselect_user": "Desseleccioneu {{username}}",
         "usages_placeholder": "Escriviu un número",
         "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",

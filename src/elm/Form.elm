@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withOptional
-    , textField, richText, toggle, checkbox, radio, select, file, datePicker
+    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, msgToString
     )
 
@@ -69,7 +69,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, datePicker
+@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
 
 
 ## Viewing
@@ -90,12 +90,14 @@ import Form.RichText as RichText
 import Form.Select as Select
 import Form.Text as Text
 import Form.Toggle as Toggle
+import Form.UserPicker as UserPicker
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
 import Http
 import Markdown exposing (Markdown)
 import Maybe.Extra
+import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared as Shared exposing (Shared)
 import Set exposing (Set)
@@ -188,6 +190,7 @@ type Field values
     | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
     | Select (Select.Options String (Msg values)) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
+    | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -379,6 +382,46 @@ datePicker :
 datePicker config options =
     field (DatePicker options)
         { parser = DatePicker.getDate >> config.parser
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
+
+
+userPicker :
+    { parser : Maybe Profile.Minimal -> Result String output
+    , value : values -> UserPicker.SinglePickerModel
+    , update : UserPicker.SinglePickerModel -> values -> values
+    , externalError : values -> Maybe String
+    }
+    -> UserPicker.Options (Msg values)
+    -> Form values output
+userPicker config options =
+    field
+        (mapBaseField UserPicker.fromSinglePicker UserPicker.toSinglePicker
+            >> UserPicker options
+        )
+        { parser = UserPicker.getSingleProfile >> config.parser
+        , value = config.value
+        , update = config.update
+        , externalError = config.externalError
+        }
+
+
+userPickerMultiple :
+    { parser : List Profile.Minimal -> Result String output
+    , value : values -> UserPicker.MultiplePickerModel
+    , update : UserPicker.MultiplePickerModel -> values -> values
+    , externalError : values -> Maybe String
+    }
+    -> UserPicker.Options (Msg values)
+    -> Form values output
+userPickerMultiple config options =
+    field
+        (mapBaseField UserPicker.fromMultiplePicker UserPicker.toMultiplePicker
+            >> UserPicker options
+        )
+        { parser = UserPicker.getMultipleProfiles >> config.parser
         , value = config.value
         , update = config.update
         , externalError = config.externalError
@@ -602,6 +645,7 @@ type Msg values
     | ChangedValues values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
+    | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
     | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
     | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
@@ -659,6 +703,24 @@ update shared msg (Model model) =
             Model { model | values = updateFn newModel model.values }
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotDatePickerMsg options viewConfig getModel updateFn) cmd)
+
+        GotUserPickerMsg options viewConfig getModel updateFn subMsg ->
+            let
+                ( newModel, cmd, maybeExternalMsg ) =
+                    UserPicker.update options viewConfig subMsg (getModel model.values)
+
+                maybeAddMsg maybeMsg =
+                    case maybeMsg of
+                        Nothing ->
+                            identity
+
+                        Just externalMsg ->
+                            UR.addMsg externalMsg
+            in
+            Model { model | values = updateFn newModel model.values }
+                |> UR.init
+                |> UR.addCmd (Cmd.map (GotUserPickerMsg options viewConfig getModel updateFn) cmd)
+                |> maybeAddMsg maybeExternalMsg
 
         RequestedUploadFile updateFn fileToUpload ->
             { model | values = updateFn RemoteData.Loading model.values }
@@ -723,6 +785,9 @@ msgToString msg =
 
         GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
+
+        GotUserPickerMsg _ _ _ _ subMsg ->
+            "GotUserPickerMsg" :: UserPicker.msgToString subMsg
 
         ChangedValues _ ->
             [ "ChangedValues" ]
@@ -903,6 +968,20 @@ viewField { showError, translators } { state, error, isRequired } =
                 viewConfig
                 (GotDatePickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
 
+        UserPicker options baseField ->
+            let
+                viewConfig =
+                    { onBlur = BlurredField
+                    , value = baseField.value
+                    , error = viewError [] showError error
+                    , hasError = hasError
+                    , translators = translators
+                    }
+            in
+            UserPicker.view options
+                viewConfig
+                (GotUserPickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
+
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
@@ -950,6 +1029,9 @@ getId state =
         DatePicker options _ ->
             DatePicker.getId options
 
+        UserPicker _ baseField ->
+            UserPicker.getId baseField.value
+
 
 isEmpty : Field values -> Bool
 isEmpty field_ =
@@ -982,6 +1064,10 @@ isEmpty field_ =
         DatePicker _ { value } ->
             Maybe.Extra.isNothing (DatePicker.getDate value)
 
+        UserPicker _ { value } ->
+            -- TODO
+            UserPicker.isEmpty value
+
 
 mapFieldConfig :
     (input -> mappedInput)
@@ -993,4 +1079,17 @@ mapFieldConfig fn reverseFn config =
     , value = config.value >> fn
     , update = \mappedInput -> config.update (reverseFn mappedInput)
     , externalError = config.externalError
+    }
+
+
+mapBaseField :
+    (value -> mappedValue)
+    -> (mappedValue -> value)
+    -> BaseField value values
+    -> BaseField mappedValue values
+mapBaseField fn reverseFn baseField =
+    { value = fn baseField.value
+    , getValue = baseField.getValue >> fn
+    , update = reverseFn >> baseField.update
+    , updateWithValues = reverseFn >> baseField.updateWithValues
     }

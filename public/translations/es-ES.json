@@ -617,6 +617,7 @@
         "verifier_placeholder": "Escribe el nombre de usuario",
         "usages_placeholder": "Escribe un número",
         "verifier_not_found": "Ningún usuario encontrado",
+        "unselect_user": "Deseleccionar {{username}}",
         "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
         "proof_validation": "Validación de foto o PDF",
