@@ -344,8 +344,7 @@ initGeneric selectedProfile id profiles =
 
 
 type Msg
-    = NoOp
-    | GotSelectMsg (Select.Msg Profile.Minimal)
+    = GotSelectMsg (Select.Msg Profile.Minimal)
     | SelectedUser Profile.Minimal
     | GotProfileSummaryMsg Profile.Minimal Profile.Summary.Msg
     | ClickedRemoveProfile Profile.Minimal
@@ -355,9 +354,6 @@ type Msg
 update : Options msg -> ViewConfig msg -> Msg -> Model -> ( Model, Cmd Msg, Maybe msg )
 update options viewConfig msg (Model model) =
     case msg of
-        NoOp ->
-            ( Model model, Cmd.none, Nothing )
-
         GotSelectMsg subMsg ->
             let
                 ( newState, cmd ) =
@@ -444,9 +440,6 @@ update options viewConfig msg (Model model) =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         GotSelectMsg _ ->
             [ "GotSelectMsg" ]
 
