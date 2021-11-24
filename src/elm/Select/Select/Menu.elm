@@ -1,6 +1,6 @@
-module Select.Select.Menu exposing (menu, view, viewClassAttr, viewStyles)
+module Select.Select.Menu exposing (menu, view, viewStyles)
 
-import Html exposing (Attribute, Html, div, text)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
@@ -57,16 +57,11 @@ menu config model matchedItems =
     in
     if model.showMenu then
         div
-            (viewClassAttr config :: menuStyle)
+            (class config.menuClass :: menuStyle)
             (noResultElement :: elements)
 
     else
         text ""
-
-
-viewClassAttr : Config msg item -> Attribute msg2
-viewClassAttr config =
-    class (Styles.menuClass ++ config.menuClass)
 
 
 viewStyles : Config msg item -> List ( String, String )

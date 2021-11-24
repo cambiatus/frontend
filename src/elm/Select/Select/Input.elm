@@ -107,10 +107,6 @@ view config model availableItems selectedItems =
         inputWrapperStylesAttrs =
             Utils.stylesToAttrs inputWrapperStyles
 
-        underlineClasses : String
-        underlineClasses =
-            Styles.underlineClass ++ config.underlineClass
-
         underlineStyles : List ( String, String )
         underlineStyles =
             List.append
@@ -120,7 +116,7 @@ view config model availableItems selectedItems =
         underline : Html (Msg item)
         underline =
             Html.div
-                (class underlineClasses
+                (class config.underlineClass
                     :: (underlineStyles |> List.map (\( f, s ) -> style f s))
                 )
                 []

@@ -10,7 +10,7 @@ import Svg.Attributes as Attrs
 view : Config userMsg item -> Svg msg
 view config =
     svg
-        ([ Attrs.class (config.removeItemSvgClass ++ Styles.removeItemSvgClass)
+        ([ Attrs.class config.removeItemSvgClass
          , Attrs.width "14"
          , Attrs.height "14"
          , Attrs.viewBox "0 0 20 20"

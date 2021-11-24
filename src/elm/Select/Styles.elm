@@ -1,4 +1,4 @@
-module Select.Styles exposing (clearClass, clearStyles, hiddenMenuStyles, inputClass, inputControlClass, inputControlStyles, inputId, inputStyles, inputWrapperClass, inputWrapperStyles, menuClass, menuItemClass, menuItemStyles, multiInputClass, multiInputItemClass, multiInputItemContainerClass, multiInputItemContainerStyles, multiInputItemStyles, multiInputItemText, multiInputRemoveItem, multiInputStyles, removeItemSvgClass, removeItemSvgStyles, underlineClass, underlineStyles, visibleMenuStyles)
+module Select.Styles exposing (clearStyles, hiddenMenuStyles, inputClass, inputControlClass, inputControlStyles, inputId, inputStyles, inputWrapperClass, inputWrapperStyles, menuItemStyles, multiInputClass, multiInputItemClass, multiInputItemContainerClass, multiInputItemContainerStyles, multiInputItemStyles, multiInputItemText, multiInputRemoveItem, multiInputStyles, removeItemSvgStyles, underlineStyles, visibleMenuStyles)
 
 -- INPUT CONSTANTS
 
@@ -109,11 +109,6 @@ multiInputRemoveItem =
 -- UNDERLINE
 
 
-underlineClass : String
-underlineClass =
-    "elm-select-underline "
-
-
 underlineStyles : List ( String, String )
 underlineStyles =
     []
@@ -121,11 +116,6 @@ underlineStyles =
 
 
 -- ITEM CONSTANTS
-
-
-menuItemClass : String
-menuItemClass =
-    "elm-select-item "
 
 
 menuItemStyles : List ( String, String )
@@ -136,11 +126,6 @@ menuItemStyles =
 
 
 -- CLEAR CONSTANTS
-
-
-clearClass : String
-clearClass =
-    "elm-select-clear "
 
 
 clearStyles : List ( String, String )
@@ -159,11 +144,6 @@ clearStyles =
 -- MENU CONSTANTS
 
 
-menuClass : String
-menuClass =
-    "elm-select-menu "
-
-
 visibleMenuStyles : List ( String, String )
 visibleMenuStyles =
     [ ( "position", "absolute" ) ]
@@ -176,11 +156,6 @@ hiddenMenuStyles =
 
 
 -- REMOVE ITEM CONSTANTS
-
-
-removeItemSvgClass : String
-removeItemSvgClass =
-    "elm-select-remove-item "
 
 
 removeItemSvgStyles : List ( String, String )

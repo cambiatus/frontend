@@ -162,14 +162,6 @@ body > * {
 
 /* End of form */
 
-/* Elm Select */
-
-.elm-select-menu .elm-select-item:last-of-type .items-center > .border-dotted {
-  border-style: unset;
-}
-
-/* End of Elm Select */
-
 /* Tooltip */
 
 .tooltip-container p {

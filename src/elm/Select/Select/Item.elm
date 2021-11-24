@@ -1,7 +1,7 @@
-module Select.Select.Item exposing (baseItemClasses, baseItemStyles, view, viewNotFound)
+module Select.Select.Item exposing (baseItemStyles, view, viewNotFound)
 
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, style, tabindex)
 import Html.Events exposing (onClick)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
@@ -28,7 +28,7 @@ view config state itemCount index item =
 
         classes =
             String.join " "
-                [ baseItemClasses config
+                [ config.itemClass
                 , highlightedItemClass
                 ]
 
@@ -51,6 +51,7 @@ view config state itemCount index item =
         ([ class classes
          , onClick (OnSelect item)
          , referenceAttr config state
+         , tabindex -1
          ]
             ++ (styles |> List.map (\( f, s ) -> style f s))
         )
@@ -63,7 +64,7 @@ viewNotFound config =
     let
         classes =
             String.join " "
-                [ baseItemClasses config
+                [ config.itemClass
                 , config.notFoundClass
                 ]
 
@@ -80,11 +81,6 @@ viewNotFound config =
             )
             [ text config.notFound
             ]
-
-
-baseItemClasses : Config msg item -> String
-baseItemClasses config =
-    Styles.menuItemClass ++ config.itemClass
 
 
 baseItemStyles : Config msg item -> List ( String, String )
