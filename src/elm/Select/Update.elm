@@ -1,5 +1,6 @@
 module Select.Update exposing (update)
 
+import Browser.Dom
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
@@ -30,12 +31,18 @@ update config msg model =
                 newHightlightedItem =
                     case model.highlightedItem of
                         Nothing ->
-                            Just 0
+                            0
 
                         Just n ->
-                            Just (n + 1)
+                            n + 1
             in
-            ( { model | highlightedItem = newHightlightedItem }, Cmd.none )
+            ( { model | highlightedItem = Just newHightlightedItem }
+            , focusItem
+                { inputId = config.inputId
+                , itemIndex = newHightlightedItem
+                }
+                config.onFocusItem
+            )
 
         OnUpArrow ->
             let
@@ -50,7 +57,24 @@ update config msg model =
                         Just n ->
                             Just (n - 1)
             in
-            ( { model | highlightedItem = newHightlightedItem }, Cmd.none )
+            ( { model | highlightedItem = newHightlightedItem }
+            , case newHightlightedItem of
+                Nothing ->
+                    Browser.Dom.focus config.inputId
+                        |> Task.attempt (\_ -> Maybe.withDefault config.onFocusItem config.onFocus)
+
+                Just highlightedItem ->
+                    focusItem
+                        { inputId = config.inputId
+                        , itemIndex = highlightedItem
+                        }
+                        config.onFocusItem
+            )
+
+        OnResetFocusToFirstItem ->
+            ( { model | highlightedItem = Just 0 }
+            , focusItem { inputId = config.inputId, itemIndex = 0 } config.onFocusItem
+            )
 
         OnFocus ->
             let
@@ -126,3 +150,9 @@ update config msg model =
                         |> Task.perform config.onSelect
             in
             ( { model | query = Nothing }, cmd )
+
+
+focusItem : { inputId : String, itemIndex : Int } -> msg -> Cmd msg
+focusItem { inputId, itemIndex } onFocusItem =
+    Browser.Dom.focus (inputId ++ "-menu-item-" ++ String.fromInt itemIndex)
+        |> Task.attempt (\_ -> onFocusItem)

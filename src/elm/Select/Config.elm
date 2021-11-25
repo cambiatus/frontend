@@ -16,6 +16,7 @@ type alias RequiredConfig msg item =
     { onSelect : item -> msg
     , toLabel : item -> String
     , filter : String -> List item -> Maybe (List item)
+    , onFocusItem : msg
     }
 
 
@@ -63,6 +64,7 @@ type alias Config msg item =
     , underlineClass : String
     , underlineStyles : List Style
     , disabled : Bool
+    , onFocusItem : msg
     }
 
 
@@ -111,4 +113,5 @@ newConfig requiredConfig =
     , transformQuery = identity
     , underlineClass = ""
     , disabled = False
+    , onFocusItem = requiredConfig.onFocusItem
     }

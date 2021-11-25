@@ -430,7 +430,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded Tab (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
+    = NoOp
+    | ClaimsLoaded Tab (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
@@ -453,6 +454,9 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         ClaimsLoaded tab (RemoteData.Success results) ->
             let
                 initProfileSummaries claims =
@@ -929,6 +933,7 @@ selectConfiguration shared isDisabled =
             { onSelect = OnSelectVerifier
             , toLabel = \p -> Eos.nameToString p.account
             , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
+            , onFocusItem = NoOp
             }
             |> Select.withMultiSelection True
             |> Select.withMenuClass "max-h-44 overflow-y-auto"
@@ -1003,6 +1008,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         ClaimsLoaded _ r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 

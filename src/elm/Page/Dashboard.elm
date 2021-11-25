@@ -617,6 +617,7 @@ selectConfiguration shared =
             { onSelect = SelectedTransfersFiltersOtherAccount
             , toLabel = toLabel
             , filter = filter 2
+            , onFocusItem = NoOp
             }
             |> Select.withMenuClass "max-h-44 overflow-y-auto !relative"
         )

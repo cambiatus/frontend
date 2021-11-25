@@ -1855,6 +1855,7 @@ selectConfiguration shared isDisabled =
             { onSelect = OnSelectVerifier
             , toLabel = \p -> Eos.nameToString p.account
             , filter = filter 2 (\p -> Eos.nameToString p.account)
+            , onFocusItem = NoOp
             }
             |> Select.withMultiSelection True
         )

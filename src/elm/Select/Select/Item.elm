@@ -1,7 +1,7 @@
 module Select.Select.Item exposing (baseItemStyles, view, viewNotFound)
 
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, style, tabindex)
+import Html.Attributes exposing (class, id, style, tabindex, type_)
 import Html.Events exposing (onClick)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
@@ -52,6 +52,8 @@ view config state itemCount index item =
          , onClick (OnSelect item)
          , referenceAttr config state
          , tabindex -1
+         , type_ "button"
+         , id (config.inputId ++ "-menu-item-" ++ String.fromInt index)
          ]
             ++ (styles |> List.map (\( f, s ) -> style f s))
         )

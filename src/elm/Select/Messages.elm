@@ -9,5 +9,6 @@ type Msg item
     | OnEsc
     | OnDownArrow
     | OnUpArrow
+    | OnResetFocusToFirstItem
     | OnQueryChange String
     | OnSelect item
