@@ -83,17 +83,24 @@ type Options msg
         { label : String
         , disabled : Bool
         , currentUser : Eos.Account.Name
+        , profiles : List Profile.Minimal
         }
 
 
 {-| Initializes a UserPicker
 -}
-init : { label : String, currentUser : Eos.Account.Name } -> Options msg
-init { label, currentUser } =
+init :
+    { label : String
+    , currentUser : Eos.Account.Name
+    , profiles : List Profile.Minimal
+    }
+    -> Options msg
+init { label, currentUser, profiles } =
     Options
         { label = label
         , disabled = False
         , currentUser = currentUser
+        , profiles = profiles
         }
 
 
@@ -157,17 +164,17 @@ settings (Options options) viewConfig =
                     (accountItems ++ nameItems)
                         |> List.Extra.unique
                         |> Just
+        , onFocusItem = NoOp
         }
         |> Select.withInputClass "w-full input"
         |> Select.withInputClassList [ ( "with-error", viewConfig.hasError ) ]
         |> Select.withNotFound (t "community.actions.form.verifier_not_found")
         |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded bg-white px-8 max-w-max"
         |> Select.withDisabled options.disabled
-        |> Select.withHighlightedItemClass "bg-opacity-80"
-        |> Select.withItemClass "bg-indigo-500"
+        |> Select.withItemClass "bg-indigo-500 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-90"
         |> Select.withPrompt (t "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml viewUserItem
-        |> Select.withMenuClass "flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white"
+        |> Select.withMenuClass "flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto"
         |> Select.withOnBlur BlurredPicker
 
 
@@ -201,7 +208,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
                 Single (Just profile) ->
                     [ profile ]
     in
-    div []
+    div [ class "mb-10" ]
         [ View.Form.label [] model.id options.label
         , Select.view (settings wrappedOptions viewConfig)
             model.selectState
@@ -211,7 +218,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
                         |> List.member profile
                         |> not
                 )
-                model.profiles
+                options.profiles
             )
             (List.map .profile selectedProfiles)
             |> Html.map (toMsg << GotSelectMsg)
@@ -279,7 +286,6 @@ type Model
     = Model
         { selectState : Select.State
         , id : String
-        , profiles : List Profile.Minimal
         , selectedProfile : SelectedProfile
         }
 
@@ -288,7 +294,6 @@ type SinglePickerModel
     = SinglePickerModel
         { selectState : Select.State
         , id : String
-        , profiles : List Profile.Minimal
         , selectedProfile : Maybe ProfileWithSummary
         }
 
@@ -297,7 +302,6 @@ type MultiplePickerModel
     = MultiplePickerModel
         { selectState : Select.State
         , id : String
-        , profiles : List Profile.Minimal
         , selectedProfiles : List ProfileWithSummary
         }
 
@@ -316,26 +320,24 @@ type alias ProfileWithSummary =
 {-| Initialize a `Model` that will take can have multiple profiles selected at
 once
 -}
-initMultiple : String -> List Profile.Minimal -> Model
-initMultiple =
-    initGeneric (Multiple [])
+initMultiple : { id : String } -> MultiplePickerModel
+initMultiple { id } =
+    MultiplePickerModel
+        { selectState = Select.newState id
+        , id = id
+        , selectedProfiles = []
+        }
 
 
 {-| Initialize a `Model` that will have at most 1 selected profile at a time.
-Selecting a new profile will replace the previously selected one
+Selecting a new profile will replace the previously selected one.
 -}
-initSingle : String -> List Profile.Minimal -> Model
-initSingle =
-    initGeneric (Single Nothing)
-
-
-initGeneric : SelectedProfile -> String -> List Profile.Minimal -> Model
-initGeneric selectedProfile id profiles =
-    Model
+initSingle : { id : String } -> SinglePickerModel
+initSingle { id } =
+    SinglePickerModel
         { selectState = Select.newState id
         , id = id
-        , profiles = profiles
-        , selectedProfile = selectedProfile
+        , selectedProfile = Nothing
         }
 
 
@@ -344,7 +346,8 @@ initGeneric selectedProfile id profiles =
 
 
 type Msg
-    = GotSelectMsg (Select.Msg Profile.Minimal)
+    = NoOp
+    | GotSelectMsg (Select.Msg Profile.Minimal)
     | SelectedUser Profile.Minimal
     | GotProfileSummaryMsg Profile.Minimal Profile.Summary.Msg
     | ClickedRemoveProfile Profile.Minimal
@@ -354,6 +357,9 @@ type Msg
 update : Options msg -> ViewConfig msg -> Msg -> Model -> ( Model, Cmd Msg, Maybe msg )
 update options viewConfig msg (Model model) =
     case msg of
+        NoOp ->
+            ( Model model, Cmd.none, Nothing )
+
         GotSelectMsg subMsg ->
             let
                 ( newState, cmd ) =
@@ -440,6 +446,9 @@ update options viewConfig msg (Model model) =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         GotSelectMsg _ ->
             [ "GotSelectMsg" ]
 
@@ -485,7 +494,6 @@ fromSinglePicker (SinglePickerModel model) =
     Model
         { selectState = model.selectState
         , id = model.id
-        , profiles = model.profiles
         , selectedProfile = Single model.selectedProfile
         }
 
@@ -497,7 +505,6 @@ toSinglePicker (Model model) =
             SinglePickerModel
                 { selectState = model.selectState
                 , id = model.id
-                , profiles = model.profiles
                 , selectedProfile = maybeProfile
                 }
 
@@ -505,7 +512,6 @@ toSinglePicker (Model model) =
             SinglePickerModel
                 { selectState = model.selectState
                 , id = model.id
-                , profiles = model.profiles
                 , selectedProfile = List.head selectedProfiles
                 }
 
@@ -515,7 +521,6 @@ fromMultiplePicker (MultiplePickerModel model) =
     Model
         { selectState = model.selectState
         , id = model.id
-        , profiles = model.profiles
         , selectedProfile = Multiple model.selectedProfiles
         }
 
@@ -527,7 +532,6 @@ toMultiplePicker (Model model) =
             MultiplePickerModel
                 { selectState = model.selectState
                 , id = model.id
-                , profiles = model.profiles
                 , selectedProfiles =
                     maybeProfile
                         |> Maybe.map List.singleton
@@ -538,6 +542,5 @@ toMultiplePicker (Model model) =
             MultiplePickerModel
                 { selectState = model.selectState
                 , id = model.id
-                , profiles = model.profiles
                 , selectedProfiles = profiles
                 }
