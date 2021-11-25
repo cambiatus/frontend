@@ -8,10 +8,7 @@ module Form.RichText exposing
 
 {-| Creates a Cambiatus-style RichText. Use it within a `Form.Form`:
 
-    Form.RichText.init
-        { label = text "Memo (optional)"
-        , id = "memo-input"
-        }
+    Form.RichText.init { label = "Memo (optional)" }
 
 
 # Initializing
