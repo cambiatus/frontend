@@ -1,6 +1,7 @@
 module Markdown exposing
     ( view
     , Markdown
+    , encode
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
     )
 
@@ -17,6 +18,11 @@ model to regular markdown.
 # Produce markdown
 
 @docs Markdown
+
+
+## Interop with JSON
+
+@docs encode
 
 
 ## Interop with QuillJS
@@ -419,6 +425,11 @@ formattingStrings formatting =
 
 
 -- ENCODING
+
+
+encode : Markdown -> Json.Encode.Value
+encode (Markdown markdown) =
+    Json.Encode.string markdown
 
 
 {-| In order to send data to QuillJS (checkout `toQuillOp`), we need to send it
