@@ -21,7 +21,7 @@ main =
     Book.book "Cambiatus"
         |> Book.withThemeOptions
             [ ThemeOptions.logo <| Html.img [ Html.Attributes.src "/images/cambiatus-logo-mobile.svg" ] []
-            , ThemeOptions.backgroundGradient "#5859a1" "#45469B"
+            , ThemeOptions.background "#5859a1"
             , ThemeOptions.navAccent "white"
             ]
         |> Book.withStatefulOptions
