@@ -1,8 +1,9 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional
+    , succeed, with, withOptional, withDecoration
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, msgToString
+    , withDisabled
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -64,7 +65,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional
+@docs succeed, with, withOptional, withDecoration
 
 
 ## Fields
@@ -75,6 +76,11 @@ documentation if you're stuck.
 ## Viewing
 
 @docs view, Model, init, Msg, update, msgToString
+
+
+### Changing attributes and state
+
+@docs withDisabled
 
 -}
 
@@ -191,6 +197,7 @@ type Field values
     | Select (Select.Options String (Msg values)) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
+    | DecorativeField (Html Never)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -388,6 +395,9 @@ datePicker config options =
         }
 
 
+{-| An input that lets you select a single user. Checkout `Form.UserPicker` for
+more information on what you can do with this field.
+-}
 userPicker :
     { parser : Maybe Profile.Minimal -> Result String output
     , value : values -> UserPicker.SinglePickerModel
@@ -408,6 +418,9 @@ userPicker config options =
         }
 
 
+{-| An input that lets you select multiple users. Checkout `Form.UserPicker` for
+more information on what you can do with this field.
+-}
 userPickerMultiple :
     { parser : List Profile.Minimal -> Result String output
     , value : values -> UserPicker.MultiplePickerModel
@@ -476,6 +489,30 @@ with new current =
                                     ( firstError
                                     , otherErrors ++ (secondFirstError :: secondOtherErrors)
                                     )
+            }
+        )
+
+
+{-| Adds some decorative Html on the form. Note it is **purely decorative**
+(instead of `Html msg` we use `Html Never`). If you want something that emits
+messages, you should probably use some kind of field!
+-}
+withDecoration : Html Never -> Form values a -> Form values a
+withDecoration decoration current =
+    Form
+        (\values ->
+            let
+                filled =
+                    fill current values
+
+                decorativeField =
+                    { state = DecorativeField decoration
+                    , error = Nothing
+                    , isRequired = False
+                    }
+            in
+            { fields = decorativeField :: filled.fields
+            , result = filled.result
             }
         )
 
@@ -602,6 +639,7 @@ type Model values
     = Model
         { values : values
         , errorTracking : ErrorTracking
+        , disabled : Bool
         }
 
 
@@ -618,7 +656,17 @@ init values =
                 { showAllErrors = False
                 , showFieldError = Set.empty
                 }
+        , disabled = False
         }
+
+
+{-| Set the entire form as disabled or enabled at once (if specific fields are
+set as disabled, they'll stay disabled even if you set this to `True`). Useful
+when you want to disable the form after the user submits it.
+-}
+withDisabled : Bool -> Model values -> Model values
+withDisabled disabled (Model model) =
+    Model { model | disabled = disabled }
 
 
 {-| Determines which errors we should show. This is opaque so it can't be
@@ -843,6 +891,7 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) toMs
                         viewField
                             { showError = shouldShowFieldError || errorTracking.showAllErrors
                             , translators = translators
+                            , disabled = model.disabled
                             }
                             field_
                     )
@@ -873,17 +922,25 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) toMs
 
 
 viewField :
-    { showError : Bool, translators : Shared.Translators }
+    { showError : Bool, translators : Shared.Translators, disabled : Bool }
     -> FilledField values
     -> Html (Msg values)
-viewField { showError, translators } { state, error, isRequired } =
+viewField { showError, translators, disabled } { state, error, isRequired } =
     let
         hasError =
             showError && Maybe.Extra.isJust error
+
+        disableIfNotAlreadyDisabled : options -> (Bool -> options -> options) -> options
+        disableIfNotAlreadyDisabled options setDisabled =
+            if disabled then
+                setDisabled True options
+
+            else
+                options
     in
     case state of
         Text options baseField ->
-            Text.view options
+            Text.view (disableIfNotAlreadyDisabled options Text.withDisabled)
                 { onChange = baseField.update >> ChangedValues
                 , onBlur = BlurredField
                 , value = baseField.value
@@ -894,7 +951,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         RichText options baseField ->
-            RichText.view options
+            RichText.view (disableIfNotAlreadyDisabled options RichText.withDisabled)
                 { onBlur = BlurredField
                 , value = baseField.value
                 , error = viewError [] showError error
@@ -905,7 +962,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 (GotRichTextMsg baseField.getValue baseField.updateWithValues)
 
         Toggle options baseField ->
-            Toggle.view options
+            Toggle.view (disableIfNotAlreadyDisabled options Toggle.withDisabled)
                 { onToggle = baseField.update >> ChangedValues
                 , onBlur = BlurredField
                 , value = baseField.value
@@ -916,7 +973,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         Checkbox options baseField ->
-            Checkbox.view options
+            Checkbox.view (disableIfNotAlreadyDisabled options Checkbox.withDisabled)
                 { value = baseField.value
                 , onCheck = baseField.update >> ChangedValues
                 , onBlur = BlurredField
@@ -926,7 +983,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         Radio options baseField ->
-            Radio.view options
+            Radio.view (disableIfNotAlreadyDisabled options Radio.withDisabled)
                 { onSelect = baseField.update >> ChangedValues
                 , onBlur = BlurredField
                 , value = baseField.value
@@ -935,7 +992,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         File options baseField ->
-            Form.File.view options
+            Form.File.view (disableIfNotAlreadyDisabled options Form.File.withDisabled)
                 { onInput = RequestedUploadFile baseField.updateWithValues
                 , value = baseField.value
                 , error = viewError [] showError error
@@ -945,7 +1002,7 @@ viewField { showError, translators } { state, error, isRequired } =
                 }
 
         Select options baseField ->
-            Select.view options
+            Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
                 { onSelect = baseField.update >> ChangedValues
                 , onBlur = BlurredField
                 , value = baseField.value
@@ -964,7 +1021,7 @@ viewField { showError, translators } { state, error, isRequired } =
                     , translators = translators
                     }
             in
-            DatePicker.view options
+            DatePicker.view (disableIfNotAlreadyDisabled options DatePicker.withDisabled)
                 viewConfig
                 (GotDatePickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
 
@@ -978,9 +1035,12 @@ viewField { showError, translators } { state, error, isRequired } =
                     , translators = translators
                     }
             in
-            UserPicker.view options
+            UserPicker.view (disableIfNotAlreadyDisabled options UserPicker.withDisabled)
                 viewConfig
                 (GotUserPickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
+
+        DecorativeField decoration ->
+            Html.map (\_ -> NoOp) decoration
 
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
@@ -1032,6 +1092,9 @@ getId state =
         UserPicker _ baseField ->
             UserPicker.getId baseField.value
 
+        DecorativeField _ ->
+            ""
+
 
 isEmpty : Field values -> Bool
 isEmpty field_ =
@@ -1067,6 +1130,9 @@ isEmpty field_ =
         UserPicker _ { value } ->
             -- TODO
             UserPicker.isEmpty value
+
+        DecorativeField _ ->
+            False
 
 
 mapFieldConfig :
