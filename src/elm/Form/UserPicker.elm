@@ -168,13 +168,14 @@ settings (Options options) viewConfig =
         }
         |> Select.withInputClass "w-full input"
         |> Select.withInputClassList [ ( "with-error", viewConfig.hasError ) ]
-        |> Select.withNotFound (t "community.actions.form.verifier_not_found")
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded bg-white px-8 max-w-max"
         |> Select.withDisabled options.disabled
         |> Select.withItemClass "bg-indigo-500 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-90"
         |> Select.withPrompt (t "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml viewUserItem
+        |> Select.withNotFound (t "community.actions.form.verifier_not_found")
+        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded !bg-white px-8 max-w-max"
         |> Select.withMenuClass "flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto"
+        |> Select.withEmptyMenuClass "bg-indigo-500 px-4 py-1"
         |> Select.withOnBlur BlurredPicker
 
 

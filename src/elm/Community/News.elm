@@ -76,7 +76,7 @@ reactionToString reaction =
             "👏"
 
         FaceWithRaisedEyebrow ->
-            "\u{1F928}"
+            "🤨"
 
         GrinningFaceWithBigEyes ->
             "😃"

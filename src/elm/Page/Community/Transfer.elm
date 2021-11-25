@@ -127,7 +127,6 @@ form2 loggedIn community balance =
                 , currentUser = loggedIn.accountName
 
                 -- TODO - Check userpicker book chapter
-                -- TODO - Check userpicker styles when no user is found
                 , profiles = community.members
                 }
                 |> Form.userPicker

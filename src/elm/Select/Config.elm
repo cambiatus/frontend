@@ -39,6 +39,7 @@ type alias Config msg item =
     , itemHtml : Maybe (item -> Html Never)
     , isMultiSelect : Bool
     , menuClass : String
+    , emptyMenuClass : String
     , menuStyles : List Style
     , multiInputItemContainerClass : String
     , multiInputItemContainerStyles : List Style
@@ -89,6 +90,7 @@ newConfig requiredConfig =
     , itemHtml = Nothing
     , isMultiSelect = False
     , menuClass = ""
+    , emptyMenuClass = ""
     , menuStyles = []
     , multiInputItemContainerClass = ""
     , multiInputItemContainerStyles = []

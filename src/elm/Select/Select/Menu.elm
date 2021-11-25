@@ -1,7 +1,7 @@
 module Select.Select.Menu exposing (menu, view, viewStyles)
 
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, classList, style)
 import Html.Events
 import Json.Decode
 import Select.Config exposing (Config)
@@ -81,6 +81,7 @@ menu config model matchedItems =
     if model.showMenu then
         div
             (class config.menuClass
+                :: classList [ ( config.emptyMenuClass, itemCount == 0 ) ]
                 :: Html.Events.on "focusout" focusoutDecoder
                 :: menuStyle
             )

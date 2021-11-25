@@ -7,7 +7,7 @@ module Select exposing
     , withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus, withOnBlur
     , withUnderlineClass, withUnderlineStyles
     , withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
-    , withMenuClass, withMenuStyles
+    , withMenuClass, withEmptyMenuClass, withMenuStyles
     , withNotFound, withNotFoundClass, withNotFoundShown, withNotFoundStyles
     , withPrompt, withPromptClass, withPromptStyles
     , newState, queryFromState
@@ -74,7 +74,7 @@ This is the element that wraps the selected item(s) and the input
 
 # Configure the menu
 
-@docs withMenuClass, withMenuStyles
+@docs withMenuClass, withEmptyMenuClass, withMenuStyles
 
 
 # Configure the not found message
@@ -373,6 +373,20 @@ withMenuClass classes config =
     let
         fn c =
             { c | menuClass = String.join " " [ c.menuClass, classes ] }
+    in
+    mapConfig fn config
+
+
+{-| Add classes to the menu when there are no matches
+
+    Select.withEmptyMenuClass "bg-white" config
+
+-}
+withEmptyMenuClass : String -> Config msg item -> Config msg item
+withEmptyMenuClass classes config =
+    let
+        fn c =
+            { c | emptyMenuClass = String.join " " [ c.emptyMenuClass, classes ] }
     in
     mapConfig fn config
 
