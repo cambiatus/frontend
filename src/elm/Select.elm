@@ -122,6 +122,7 @@ type alias RequiredConfig msg item =
     { onSelect : item -> msg
     , toLabel : item -> String
     , filter : String -> List item -> Maybe (List item)
+    , onFocusItem : msg
     }
 
 

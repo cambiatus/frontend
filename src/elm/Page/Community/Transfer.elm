@@ -15,6 +15,10 @@ import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Eos.EosError as EosError
+import Form
+import Form.RichText
+import Form.Text
+import Form.UserPicker
 import Graphql.Document
 import Html exposing (Html, button, div, form, span, text)
 import Html.Attributes exposing (class, classList, disabled, type_, value)
@@ -25,6 +29,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as LE
 import Log
+import Markdown exposing (Markdown)
 import Mask
 import Page
 import Profile
@@ -59,6 +64,8 @@ type alias Model =
     , autoCompleteState : Select.State
     , balance : RemoteData BalanceError Community.Balance
     , token : RemoteData Http.Error Token.Model
+    , form2 : Form.Model FormInput
+    , transferStatus2 : TransferStatus2
     }
 
 
@@ -79,6 +86,14 @@ initModel maybeTo =
     , autoCompleteState = Select.newState ""
     , balance = RemoteData.Loading
     , token = RemoteData.Loading
+    , form2 =
+        Form.init
+            { selectedProfile =
+                Form.UserPicker.initSingle { id = "transfer-profile-select" }
+            , amount = ""
+            , memo = Form.RichText.initModel "memo-editor" Nothing
+            }
+    , transferStatus2 = EditingTransfer2
     }
 
 
@@ -88,9 +103,119 @@ type TransferStatus
     | SendingTransfer Form
 
 
+type TransferStatus2
+    = EditingTransfer2
+    | CreatingSubscription2 FormOutput
+    | SendingTransfer2 FormOutput
+
+
 type Validation
     = Valid
     | Invalid String (Maybe I18Next.Replacements)
+
+
+form2 : LoggedIn.Model -> Community.Model -> Eos.Asset -> Form.Form FormInput FormOutput
+form2 loggedIn community balance =
+    let
+        { translators } =
+            loggedIn.shared
+    in
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.UserPicker.init
+                { label = translators.t "account.my_wallet.transfer.send_to"
+                , currentUser = loggedIn.accountName
+
+                -- TODO - Check userpicker book chapter
+                -- TODO - Check userpicker styles when no user is found
+                , profiles = community.members
+                }
+                |> Form.userPicker
+                    { parser =
+                        \maybeUser ->
+                            case maybeUser of
+                                Nothing ->
+                                    Err <| translators.t "transfer.no_profile"
+
+                                Just user ->
+                                    if user.account == loggedIn.accountName then
+                                        Err <| translators.t "transfer.to_self"
+
+                                    else
+                                        Ok user
+                    , value = .selectedProfile
+                    , update = \selectedProfile input -> { input | selectedProfile = selectedProfile }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label =
+                    translators.tr "account.my_wallet.transfer.amount"
+                        [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
+                , id = "transfer-amount-field"
+                }
+                |> Form.Text.withContainerAttrs [ class "mb-4" ]
+                |> Form.Text.withCurrency balance.symbol
+                |> Form.textField
+                    { parser =
+                        \stringAmount ->
+                            case
+                                Shared.floatStringFromSeparatedString translators stringAmount
+                                    |> String.toFloat
+                            of
+                                Just amount ->
+                                    if amount > balance.amount then
+                                        Err <|
+                                            translators.tr "transfer.too_much"
+                                                [ ( "token", Eos.symbolToSymbolCodeString balance.symbol )
+                                                , ( "max_asset", Eos.assetToString translators balance )
+                                                ]
+
+                                    else
+                                        Ok
+                                            { amount = amount
+                                            , symbol = community.symbol
+                                            }
+
+                                Nothing ->
+                                    Err "transfer.no_amount"
+                    , value = .amount
+                    , update = \amount input -> { input | amount = amount }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withDecoration
+            (span [ class "bg-gray-100 uppercase text-sm px-2 inline-block mb-10" ]
+                [ text <|
+                    translators.tr "account.my_wallet.your_current_balance"
+                        [ ( "balance", Eos.assetToString translators balance ) ]
+                ]
+            )
+        |> Form.with
+            (Form.RichText.init
+                { label = translators.t "account.my_wallet.transfer.memo" }
+                |> Form.richText
+                    { parser = Ok
+                    , value = .memo
+                    , update = \memo input -> { input | memo = memo }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+type alias FormInput =
+    { selectedProfile : Form.UserPicker.SinglePickerModel
+    , amount : String
+    , memo : Form.RichText.Model
+    }
+
+
+type alias FormOutput =
+    { selectedProfile : Profile.Minimal
+    , amount : Eos.Asset
+    , memo : Markdown
+    }
 
 
 type alias Form =
@@ -273,57 +398,67 @@ viewForm ({ shared } as loggedIn) model f community isDisabled =
     in
     div [ class "bg-white" ]
         [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
-        , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
-            [ div [ class "mb-10" ]
-                [ span [ class "label" ]
-                    [ text_ "account.my_wallet.transfer.send_to" ]
-                , div []
-                    [ viewAutoCompleteAccount shared model f isDisabled community ]
-                , viewError shared.translators f.selectedProfileValidation
-                ]
-            , Input.init
-                { label =
-                    shared.translators.tr "account.my_wallet.transfer.amount"
-                        [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
-                , id = "transfer-amount-field"
-                , onInput = EnteredAmount
-                , disabled = isDisabled
-                , value = f.amount
-                , placeholder = Just "0"
-                , problems =
-                    validationToString shared.translators f.amountValidation
-                        |> Maybe.map List.singleton
-                , translators = shared.translators
-                }
-                |> Input.withContainerAttrs [ class "mb-4" ]
-                |> Input.withCurrency community.symbol
-                |> Input.toHtml
-            , div [ class "bg-gray-100 uppercase text-sm px-2 inline-block mb-10" ]
-                [ text
-                    (shared.translators.tr "account.my_wallet.your_current_balance"
-                        [ ( "balance", Eos.assetToString shared.translators currBalance ) ]
-                    )
-                ]
-            , MarkdownEditor.view
-                { translators = shared.translators
-                , placeholder = Nothing
-                , label = shared.translators.t "account.my_wallet.transfer.memo"
-                , problem = Nothing
-                , disabled = isDisabled
-                }
-                []
-                f.memo
-                |> Html.map GotMemoEditorMsg
-            , div [ class "mt-6" ]
-                [ button
-                    [ class "button button-primary w-full"
-                    , classList [ ( "button-disabled", isDisabled ) ]
-                    , disabled isDisabled
-                    , type_ "submit"
-                    ]
-                    [ text_ "account.my_wallet.transfer.submit" ]
-                ]
-            ]
+
+        -- , form [ class "container mx-auto p-4", onSubmit SubmitForm ]
+        --     [ div [ class "mb-10" ]
+        --         [ span [ class "label" ]
+        --             [ text_ "account.my_wallet.transfer.send_to" ]
+        --         , div []
+        --             [ viewAutoCompleteAccount shared model f isDisabled community ]
+        --         , viewError shared.translators f.selectedProfileValidation
+        --         ]
+        --     , Input.init
+        --         { label =
+        --             shared.translators.tr "account.my_wallet.transfer.amount"
+        --                 [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]
+        --         , id = "transfer-amount-field"
+        --         , onInput = EnteredAmount
+        --         , disabled = isDisabled
+        --         , value = f.amount
+        --         , placeholder = Just "0"
+        --         , problems =
+        --             validationToString shared.translators f.amountValidation
+        --                 |> Maybe.map List.singleton
+        --         , translators = shared.translators
+        --         }
+        --         |> Input.withContainerAttrs [ class "mb-4" ]
+        --         |> Input.withCurrency community.symbol
+        --         |> Input.toHtml
+        --     , div [ class "bg-gray-100 uppercase text-sm px-2 inline-block mb-10" ]
+        --         [ text
+        --             (shared.translators.tr "account.my_wallet.your_current_balance"
+        --                 [ ( "balance", Eos.assetToString shared.translators currBalance ) ]
+        --             )
+        --         ]
+        --     , MarkdownEditor.view
+        --         { translators = shared.translators
+        --         , placeholder = Nothing
+        --         , label = shared.translators.t "account.my_wallet.transfer.memo"
+        --         , problem = Nothing
+        --         , disabled = isDisabled
+        --         }
+        --         []
+        --         f.memo
+        --         |> Html.map GotMemoEditorMsg
+        --     , div [ class "mt-6" ]
+        --         [ button
+        --             [ class "button button-primary w-full"
+        --             , classList [ ( "button-disabled", isDisabled ) ]
+        --             , disabled isDisabled
+        --             , type_ "submit"
+        --             ]
+        --             [ text_ "account.my_wallet.transfer.submit" ]
+        --         ]
+        --     ]
+        , Form.view [ class "container mx-auto p-4" ]
+            { buttonAttrs = [ class "w-full mt-6" ]
+            , buttonLabel = [ text_ "account.my_wallet.transfer.submit" ]
+            , translators = shared.translators
+            }
+            (form2 loggedIn community currBalance)
+            model.form2
+            GotForm2Msg
+            SubmittedForm2
         ]
 
 
@@ -375,6 +510,7 @@ selectConfiguration shared isDisabled =
             { onSelect = OnSelect
             , toLabel = \p -> Eos.nameToString p.account
             , filter = Profile.selectFilter 2 (\p -> Eos.nameToString p.account)
+            , onFocusItem = NoOp
             }
         )
         shared
@@ -390,7 +526,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Community.Balance))
     | CompletedLoadToken (Result Http.Error Token.Model)
     | ClosedAuthModal
@@ -402,6 +539,11 @@ type Msg
     | PushTransaction
     | GotTransferResult (Result (Maybe Value) String)
     | Redirect Value
+    | GotForm2Msg (Form.Msg FormInput)
+    | SubmittedForm2 FormOutput
+    | CreatedSubscription2
+    | GotTransferResult2 (Result (Maybe Value) String)
+    | GotTransferResultFromWebSocket Value
 
 
 getProfile : Maybe String -> Community.Model -> TransferStatus
@@ -436,6 +578,9 @@ update msg model ({ shared } as loggedIn) =
                     []
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             UR.init { model | transferStatus = getProfile model.maybeTo community }
                 |> UR.addCmd (fetchBalance shared loggedIn.accountName community)
@@ -498,7 +643,12 @@ update msg model ({ shared } as loggedIn) =
                         SendingTransfer form_ ->
                             form_
             in
-            UR.init { model | transferStatus = EditingTransfer form }
+            UR.init
+                { model
+                    | transferStatus = EditingTransfer form
+                    , transferStatus2 = EditingTransfer2
+                    , form2 = Form.withDisabled False model.form2
+                }
 
         OnSelect profile ->
             case model.transferStatus of
@@ -567,7 +717,7 @@ update msg model ({ shared } as loggedIn) =
                                         form
 
                                 subscriptionDoc =
-                                    Transfer.transferSucceedSubscription community.symbol (Eos.nameToString loggedIn.accountName) (Eos.nameToString to.account)
+                                    Transfer.transferSucceedSubscription community.symbol { from = loggedIn.accountName, to = to.account }
                                         |> Graphql.Document.serializeSubscription
                             in
                             if isFormValid newForm then
@@ -703,8 +853,9 @@ update msg model ({ shared } as loggedIn) =
                                 sub =
                                     Transfer.transferSucceedSubscription
                                         community.symbol
-                                        (Eos.nameToString loggedIn.accountName)
-                                        (Eos.nameToString to.account)
+                                        { from = loggedIn.accountName
+                                        , to = to.account
+                                        }
                                         |> Graphql.Document.decoder
                             in
                             case Decode.decodeValue sub value of
@@ -743,6 +894,129 @@ update msg model ({ shared } as loggedIn) =
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Community.Transfer", function = "update" }
                             []
+
+        GotForm2Msg subMsg ->
+            Form.update shared subMsg model.form2
+                |> UR.fromChild
+                    (\formModel -> { model | form2 = formModel })
+                    GotForm2Msg
+                    LoggedIn.executeFeedback
+                    model
+
+        SubmittedForm2 formOutput ->
+            if model.transferStatus2 /= EditingTransfer2 then
+                UR.init model
+
+            else
+                let
+                    subscriptionDoc =
+                        Transfer.transferSucceedSubscription
+                            formOutput.amount.symbol
+                            { from = loggedIn.accountName
+                            , to = formOutput.selectedProfile.account
+                            }
+                            |> Graphql.Document.serializeSubscription
+                in
+                { model
+                    | form2 = Form.withDisabled True model.form2
+                    , transferStatus2 = CreatingSubscription2 formOutput
+                }
+                    |> UR.init
+                    |> UR.addPort
+                        { responseAddress = SubmittedForm2 formOutput
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "subscribeToTransfer" )
+                                , ( "subscription", Encode.string subscriptionDoc )
+                                ]
+                        }
+
+        CreatedSubscription2 ->
+            case model.transferStatus2 of
+                CreatingSubscription2 formOutput ->
+                    { model | transferStatus2 = SendingTransfer2 formOutput }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = CreatedSubscription2
+                            , responseData = Encode.null
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.token
+                                      , name = "transfer"
+                                      , authorization =
+                                            { actor = loggedIn.accountName
+                                            , permissionName = Eos.samplePermission
+                                            }
+                                      , data =
+                                            { from = loggedIn.accountName
+                                            , to = formOutput.selectedProfile.account
+                                            , value = formOutput.amount
+                                            , memo = formOutput.memo
+                                            }
+                                                |> Transfer.encodeEosActionWithMarkdown
+                                      }
+                                    ]
+                            }
+                        |> LoggedIn.withAuthentication loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
+
+                _ ->
+                    UR.init model
+
+        GotTransferResult2 (Ok _) ->
+            UR.init model
+
+        GotTransferResult2 (Err eosErrorString) ->
+            case model.transferStatus2 of
+                SendingTransfer2 _ ->
+                    let
+                        errorMessage =
+                            EosError.parseTransferError loggedIn.shared.translators eosErrorString
+                    in
+                    { model
+                        | transferStatus2 = EditingTransfer2
+                        , form2 = Form.withDisabled False model.form2
+                    }
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+
+                _ ->
+                    onlyLogImpossible "Got transfer result with error, but wasn't sending transfer"
+
+        GotTransferResultFromWebSocket value ->
+            case model.transferStatus2 of
+                SendingTransfer2 formOutput ->
+                    let
+                        subscriptionDecoder =
+                            Transfer.transferSucceedSubscription formOutput.amount.symbol
+                                { from = loggedIn.accountName
+                                , to = formOutput.selectedProfile.account
+                                }
+                                |> Graphql.Document.decoder
+                    in
+                    case Decode.decodeValue subscriptionDecoder value of
+                        Ok res ->
+                            model
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Route.replaceUrl shared.navKey
+                                        (Route.ViewTransfer res.id)
+                                    )
+
+                        Err err ->
+                            model
+                                |> UR.init
+                                |> UR.logDecodingError msg
+                                    (Just loggedIn.accountName)
+                                    "Got an error when decoding transfer subscription"
+                                    { moduleName = "Page.Community.Transfer", function = "update" }
+                                    []
+                                    err
+
+                _ ->
+                    UR.init model
 
 
 fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
@@ -798,6 +1072,23 @@ jsAddressToMsg addr val =
                 _ ->
                     Nothing
 
+        [ "SubmittedForm2" ] ->
+            let
+                result =
+                    Decode.decodeValue (Decode.field "state" Decode.string) val
+            in
+            case result of
+                Ok "starting" ->
+                    Just CreatedSubscription2
+
+                Ok "responded" ->
+                    Decode.decodeValue (Decode.field "data" Decode.value) val
+                        |> Result.map Redirect
+                        |> Result.toMaybe
+
+                _ ->
+                    Nothing
+
         _ ->
             Nothing
 
@@ -815,6 +1106,9 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
@@ -850,3 +1144,18 @@ msgToString msg =
 
         Redirect _ ->
             [ "Redirect" ]
+
+        GotForm2Msg subMsg ->
+            "GotForm2Msg" :: Form.msgToString subMsg
+
+        SubmittedForm2 _ ->
+            [ "SubmittedForm2" ]
+
+        CreatedSubscription2 ->
+            [ "CreatedSubscription2" ]
+
+        GotTransferResult2 r ->
+            [ "GotTransferResult2", UR.resultToString r ]
+
+        GotTransferResultFromWebSocket _ ->
+            [ "GotTransferResultFromWebSocket" ]

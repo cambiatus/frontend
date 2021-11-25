@@ -7,6 +7,7 @@ module Transfer exposing
     , Transfer
     , createdTxToString
     , encodeEosActionData
+    , encodeEosActionWithMarkdown
     , getTransfers
     , transferConnectionSelectionSet
     , transferQuery
@@ -35,6 +36,7 @@ import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode exposing (Value)
+import Markdown exposing (Markdown)
 import Profile
 import Profile.Summary
 import Session.LoggedIn as LoggedIn
@@ -101,6 +103,24 @@ encodeEosActionData data =
         , ( "to", Eos.encodeName data.to )
         , ( "quantity", Eos.encodeAsset data.value )
         , ( "memo", Encode.string data.memo )
+        ]
+
+
+type alias EosActionDataWithMarkdown =
+    { from : Eos.Name
+    , to : Eos.Name
+    , value : Eos.Asset
+    , memo : Markdown
+    }
+
+
+encodeEosActionWithMarkdown : EosActionDataWithMarkdown -> Value
+encodeEosActionWithMarkdown data =
+    Encode.object
+        [ ( "from", Eos.encodeName data.from )
+        , ( "to", Eos.encodeName data.to )
+        , ( "quantity", Eos.encodeAsset data.value )
+        , ( "memo", Markdown.encode data.memo )
         ]
 
 
@@ -215,13 +235,13 @@ transferQuery tID =
     Cambiatus.Query.transfer args transferItemSelectionSet
 
 
-transferSucceedSubscription : Eos.Symbol -> String -> String -> SelectionSet Transfer Graphql.Operation.RootSubscription
-transferSucceedSubscription symbol fromAccount toAccount =
+transferSucceedSubscription : Eos.Symbol -> { from : Eos.Name, to : Eos.Name } -> SelectionSet Transfer Graphql.Operation.RootSubscription
+transferSucceedSubscription symbol { from, to } =
     let
         args =
             { input =
-                { from = fromAccount
-                , to = toAccount
+                { from = Eos.nameToString from
+                , to = Eos.nameToString to
                 , symbol = symbolToString symbol |> String.toUpper
                 }
             }
