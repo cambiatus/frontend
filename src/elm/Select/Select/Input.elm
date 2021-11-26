@@ -305,7 +305,6 @@ inputAttributes config model _ selectedItems maybeMatchedItems =
     , onKeyPressAttribute preselectedItem
     , onInput Msg.OnQueryChange
     , onFocus Msg.OnFocus
-    , Utils.referenceAttr config model
     , class inputClasses
     , classList config.inputClassList
     ]

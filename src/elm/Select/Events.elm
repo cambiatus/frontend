@@ -6,25 +6,29 @@ import Json.Decode as Decode
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
-import Select.Utils exposing (referenceDataName)
 
 
 onBlurAttribute : Config msg item -> State -> Attribute (Msg item)
-onBlurAttribute _ state =
+onBlurAttribute config state =
     let
         dataDecoder =
-            Decode.at [ "relatedTarget", "attributes", referenceDataName, "value" ] Decode.string
+            Decode.at [ "relatedTarget", "id" ] Decode.string
+                |> Decode.andThen
+                    (\targetId ->
+                        if String.startsWith (config.inputId ++ "-menu-item-") targetId then
+                            case state.highlightedItem of
+                                Nothing ->
+                                    Decode.fail "Focus is not leaving select container"
 
-        attrToMsg attr =
-            if attr == state.id then
-                NoOp
+                                Just highlightedItem ->
+                                    if String.endsWith (String.fromInt highlightedItem) targetId then
+                                        Decode.fail "Focus is not leaving select container"
 
-            else
-                OnBlur
+                                    else
+                                        Decode.succeed OnBlur
 
-        blur =
-            Decode.maybe dataDecoder
-                |> Decode.map (Maybe.map attrToMsg)
-                |> Decode.map (Maybe.withDefault OnBlur)
+                        else
+                            Decode.succeed OnBlur
+                    )
     in
-    on "focusout" blur
+    on "focusout" dataDecoder

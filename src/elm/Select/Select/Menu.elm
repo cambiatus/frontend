@@ -1,10 +1,9 @@
-module Select.Select.Menu exposing (menu, view, viewStyles)
+module Select.Select.Menu exposing (keyListener, menu, view, viewStyles)
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, classList, style)
-import Html.Events
-import Json.Decode
 import Select.Config exposing (Config)
+import Select.Events
 import Select.Messages as Msg exposing (Msg(..))
 import Select.Models exposing (State)
 import Select.Search as Search
@@ -44,26 +43,6 @@ menu config model matchedItems =
             else
                 viewStyles config |> List.map (\( f, s ) -> style f s)
 
-        focusoutDecoder =
-            Json.Decode.at [ "target", "id" ] Json.Decode.string
-                |> Json.Decode.andThen
-                    (\targetId ->
-                        if String.startsWith (config.inputId ++ "-menu-item-") targetId then
-                            case model.highlightedItem of
-                                Nothing ->
-                                    Json.Decode.fail "Focus is not leaving menu container"
-
-                                Just highlightedItem ->
-                                    if String.endsWith (String.fromInt highlightedItem) targetId then
-                                        Json.Decode.succeed Msg.OnBlur
-
-                                    else
-                                        Json.Decode.fail "Focus is not leaving menu container"
-
-                        else
-                            Json.Decode.succeed Msg.OnBlur
-                    )
-
         noResultElement =
             if matchedItems == [] then
                 Item.viewNotFound config
@@ -82,7 +61,7 @@ menu config model matchedItems =
         div
             (class config.menuClass
                 :: classList [ ( config.emptyMenuClass, itemCount == 0 ) ]
-                :: Html.Events.on "focusout" focusoutDecoder
+                :: Select.Events.onBlurAttribute config model
                 :: menuStyle
             )
             (noResultElement :: keyListener model itemCount :: elements)

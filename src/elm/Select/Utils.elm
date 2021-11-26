@@ -1,24 +1,18 @@
 module Select.Utils exposing
     ( difference
-    , referenceAttr
-    , referenceDataName
+    , menuItemId
     , stylesToAttrs
     )
 
-import Html exposing (Attribute)
-import Html.Attributes exposing (attribute, style)
+import Html
+import Html.Attributes exposing (id, style)
 import Select.Config exposing (Config)
-import Select.Models exposing (State)
+import Select.Messages exposing (Msg)
 
 
-referenceDataName : String
-referenceDataName =
-    "data-select-id"
-
-
-referenceAttr : Config msg item -> State -> Attribute msg2
-referenceAttr _ model =
-    attribute referenceDataName model.id
+menuItemId : Config msg item -> Int -> Html.Attribute (Msg item)
+menuItemId config index =
+    id (config.inputId ++ "-menu-item-" ++ String.fromInt index)
 
 
 difference : List item -> List item -> List item

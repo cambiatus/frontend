@@ -7,7 +7,7 @@ import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
 import Select.Models exposing (State)
 import Select.Styles as Styles
-import Select.Utils exposing (referenceAttr)
+import Select.Utils exposing (menuItemId)
 
 
 view : Config msg item -> State -> Int -> Int -> item -> Html (Msg item)
@@ -50,10 +50,9 @@ view config state itemCount index item =
     button
         ([ class classes
          , onClick (OnSelect item)
-         , referenceAttr config state
          , tabindex -1
          , type_ "button"
-         , id (config.inputId ++ "-menu-item-" ++ String.fromInt index)
+         , menuItemId config index
          ]
             ++ (styles |> List.map (\( f, s ) -> style f s))
         )
