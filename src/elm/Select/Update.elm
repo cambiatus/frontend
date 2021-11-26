@@ -148,8 +148,16 @@ update config msg model =
                 cmd =
                     Task.succeed item
                         |> Task.perform config.onSelect
+                blurCmd =
+                    case config.onBlur of
+                        Nothing ->
+                            Cmd.none
+
+                        Just blurMessage ->
+                            Task.succeed Nothing
+                                |> Task.perform (\_ -> blurMessage)
             in
-            ( { model | query = Nothing }, cmd )
+            ( { model | query = Nothing }, Cmd.batch [ cmd, blurCmd ] )
 
 
 focusItem : { inputId : String, itemIndex : Int } -> msg -> Cmd msg
