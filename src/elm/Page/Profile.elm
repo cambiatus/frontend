@@ -824,7 +824,7 @@ viewProfile loggedIn profile =
                     else
                         [ a
                             [ class "button button-primary w-full mt-4"
-                            , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
+                            , Route.href (Route.Transfer (Just profile.account))
                             ]
                             [ text_ "transfer.title" ]
                         , blockExplorerButton

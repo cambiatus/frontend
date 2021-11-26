@@ -74,7 +74,7 @@ type Route
     | ViewTransfer Int
     | Invite String
     | Join (Maybe Route)
-    | Transfer (Maybe String)
+    | Transfer (Maybe Eos.Account.Name)
     | Analysis
 
 
@@ -174,7 +174,13 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
+        , Url.map Transfer
+            (s "community"
+                </> s "transfer"
+                <?> (Query.string "to"
+                        |> Query.map (Maybe.map Eos.Account.stringToName)
+                    )
+            )
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
@@ -534,7 +540,12 @@ routeToString route =
                     ( [ "community"
                       , "transfer"
                       ]
-                    , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
+                    , [ Url.Builder.string "to"
+                            (maybeTo
+                                |> Maybe.map Eos.Account.nameToString
+                                |> Maybe.withDefault ""
+                            )
+                      ]
                     )
 
                 Analysis ->
