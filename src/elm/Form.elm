@@ -2,7 +2,7 @@ module Form exposing
     ( Form
     , succeed, with, withOptional, withDecoration
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
-    , view, Model, init, Msg, update, msgToString
+    , view, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
     )
 
@@ -75,7 +75,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, Model, init, Msg, update, msgToString
+@docs view, Model, init, Msg, update, updateValues, msgToString
 
 
 ### Changing attributes and state
@@ -658,6 +658,14 @@ init values =
                 }
         , disabled = False
         }
+
+
+{-| Manually update values from a form model. Useful if you get some remote data
+after initializing the form and need to change the state of the form.
+-}
+updateValues : (values -> values) -> Model values -> Model values
+updateValues updateFn (Model model) =
+    Model { model | values = updateFn model.values }
 
 
 {-| Set the entire form as disabled or enabled at once (if specific fields are
