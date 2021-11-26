@@ -14,7 +14,6 @@ module Profile exposing
     , profileToForm
     , query
     , selectConfig
-    , selectFilter
     , selectionSet
     , upsertKycMutation
     , userContactSelectionSet
@@ -49,7 +48,6 @@ import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Select
 import Session.Shared as Shared exposing (Shared)
-import Simple.Fuzzy
 import Time
 
 
@@ -394,15 +392,6 @@ selectConfig select shared isDisabled =
         |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
         |> Select.withItemHtml (viewAutoCompleteItem shared)
         |> Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
-
-
-selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-selectFilter minChars toLabel q items =
-    if String.length q > minChars then
-        Just <| Simple.Fuzzy.filter toLabel q items
-
-    else
-        Nothing
 
 
 viewAutoCompleteItem : Shared -> Basic p -> Html Never

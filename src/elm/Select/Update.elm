@@ -148,6 +148,7 @@ update config msg model =
                 cmd =
                     Task.succeed item
                         |> Task.perform config.onSelect
+
                 blurCmd =
                     case config.onBlur of
                         Nothing ->
