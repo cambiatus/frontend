@@ -5,7 +5,7 @@ module Form.UserPicker exposing
     , view, ViewConfig
     , Model, update, Msg, msgToString
     , MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
-    , SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile
+    , SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
     )
 
 {-| Creates a Cambiatus-style UserPicker. Use it within a `Form.Form`:
@@ -53,7 +53,7 @@ This is how you actually use this component!
 
 ## single user picker
 
-@docs SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile
+@docs SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
 
 -}
 
@@ -339,6 +339,24 @@ initSingle { id } =
         { selectState = Select.newState id
         , id = id
         , selectedProfile = Nothing
+        }
+
+
+{-| Set or reset the selected profile on a `SinglePickerModel`. Useful if you
+load a profile after initializing the picker.
+-}
+setSingle : Maybe Profile.Minimal -> SinglePickerModel -> SinglePickerModel
+setSingle maybeProfile (SinglePickerModel model) =
+    SinglePickerModel
+        { model
+            | selectedProfile =
+                maybeProfile
+                    |> Maybe.map
+                        (\profile ->
+                            { profile = profile
+                            , summary = Profile.Summary.init False
+                            }
+                        )
         }
 
 
