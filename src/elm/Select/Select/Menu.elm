@@ -1,7 +1,7 @@
 module Select.Select.Menu exposing (keyListener, menu, view, viewStyles)
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, classList, style)
+import Html exposing (Html, text, ul)
+import Html.Attributes exposing (class, classList, id, style)
 import Select.Config exposing (Config)
 import Select.Events
 import Select.Messages as Msg exposing (Msg(..))
@@ -58,10 +58,11 @@ menu config model matchedItems =
                 |> List.indexedMap (Item.view config model itemCount)
     in
     if model.showMenu then
-        div
+        ul
             (class config.menuClass
                 :: classList [ ( config.emptyMenuClass, itemCount == 0 ) ]
                 :: Select.Events.onBlurAttribute config model
+                :: id (model.id ++ "-items-list")
                 :: menuStyle
             )
             (noResultElement :: keyListener model itemCount :: elements)

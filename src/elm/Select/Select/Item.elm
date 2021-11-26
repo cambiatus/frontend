@@ -1,7 +1,8 @@
 module Select.Select.Item exposing (baseItemStyles, view, viewNotFound)
 
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, li, text)
 import Html.Attributes exposing (class, id, style, tabindex, type_)
+import Html.Attributes.Aria as Aria
 import Html.Events exposing (onClick)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg(..))
@@ -29,6 +30,7 @@ view config state itemCount index item =
         classes =
             String.join " "
                 [ config.itemClass
+                , "w-full"
                 , highlightedItemClass
                 ]
 
@@ -47,16 +49,21 @@ view config state itemCount index item =
                 Just fn ->
                     Html.map (\_ -> NoOp) (fn item)
     in
-    button
-        ([ class classes
-         , onClick (OnSelect item)
-         , tabindex -1
-         , type_ "button"
-         , menuItemId config index
-         ]
-            ++ (styles |> List.map (\( f, s ) -> style f s))
-        )
-        [ itemHtml
+    li
+        [ class "block w-full"
+        , Aria.role "option"
+        ]
+        [ button
+            ([ class classes
+             , onClick (OnSelect item)
+             , tabindex -1
+             , type_ "button"
+             , id (menuItemId config index)
+             ]
+                ++ (styles |> List.map (\( f, s ) -> style f s))
+            )
+            [ itemHtml
+            ]
         ]
 
 

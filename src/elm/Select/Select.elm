@@ -2,6 +2,7 @@ module Select.Select exposing (view)
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, id, style)
+import Html.Attributes.Aria exposing (ariaExpanded)
 import Select.Config exposing (Config)
 import Select.Messages exposing (Msg)
 import Select.Models exposing (State)
@@ -15,7 +16,19 @@ view config model availableItems selectedItems =
         classes =
             "elm-select"
     in
-    div [ id model.id, class classes, style "position" "relative", style "width" "100%" ]
+    div
+        [ id model.id
+        , class classes
+        , style "position" "relative"
+        , style "width" "100%"
+        , ariaExpanded
+            (if model.showMenu then
+                "true"
+
+             else
+                "false"
+            )
+        ]
         [ Select.Select.Input.view config model availableItems selectedItems
         , Select.Select.Menu.view config model availableItems selectedItems
         ]

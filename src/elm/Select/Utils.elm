@@ -5,14 +5,13 @@ module Select.Utils exposing
     )
 
 import Html
-import Html.Attributes exposing (id, style)
+import Html.Attributes exposing (style)
 import Select.Config exposing (Config)
-import Select.Messages exposing (Msg)
 
 
-menuItemId : Config msg item -> Int -> Html.Attribute (Msg item)
+menuItemId : Config msg item -> Int -> String
 menuItemId config index =
-    id (config.inputId ++ "-menu-item-" ++ String.fromInt index)
+    config.inputId ++ "-menu-item-" ++ String.fromInt index
 
 
 difference : List item -> List item -> List item

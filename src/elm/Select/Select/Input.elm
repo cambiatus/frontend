@@ -14,6 +14,7 @@ import Html.Attributes
         , style
         , value
         )
+import Html.Attributes.Aria as Aria
 import Html.Events exposing (keyCode, on, onFocus, onInput, stopPropagationOn)
 import Json.Decode as Decode
 import Select.Config exposing (Config)
@@ -292,6 +293,15 @@ inputAttributes config model _ selectedItems maybeMatchedItems =
 
                 _ ->
                     Nothing
+
+        activeDescendant =
+            case model.highlightedItem of
+                Nothing ->
+                    class ""
+
+                Just highlightedItem ->
+                    Aria.ariaActiveDescendant
+                        (Utils.menuItemId config highlightedItem)
     in
     [ autocomplete False
     , attribute "autocorrect" "off" -- for mobile Safari
@@ -307,6 +317,17 @@ inputAttributes config model _ selectedItems maybeMatchedItems =
     , onFocus Msg.OnFocus
     , class inputClasses
     , classList config.inputClassList
+    , Aria.role "combobox"
+    , activeDescendant
+    , attribute "aria-owns" (model.id ++ "-items-list")
+    , Aria.ariaExpanded
+        (if model.showMenu then
+            "true"
+
+         else
+            "false"
+        )
+    , attribute "aria-autocomplete" "list"
     ]
         ++ inputStylesAttrs
 
