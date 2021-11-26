@@ -20,9 +20,9 @@ type alias Model =
 
 initModel : Model
 initModel =
-    { single = Form.UserPicker.initSingle "single-picker" Book.Helpers.mockUsers
-    , multiple = Form.UserPicker.initMultiple "multiple-picker" Book.Helpers.mockUsers
-    , disabledWithError = Form.UserPicker.initMultiple "disabled-picker" Book.Helpers.mockUsers
+    { single = Form.UserPicker.initSingle { id = "single-picker" } |> Form.UserPicker.fromSinglePicker
+    , multiple = Form.UserPicker.initMultiple { id = "multiple-picker" } |> Form.UserPicker.fromMultiplePicker
+    , disabledWithError = Form.UserPicker.initMultiple { id = "disabled-picker" } |> Form.UserPicker.fromMultiplePicker
     }
 
 
@@ -110,6 +110,7 @@ chapter =
                     Form.UserPicker.init
                         { label = "Pick a user"
                         , currentUser = Eos.Account.stringToName ""
+                        , profiles = Book.Helpers.mockUsers
                         }
                         |> (\options ->
                                 Form.UserPicker.view options
@@ -131,6 +132,7 @@ chapter =
                     Form.UserPicker.init
                         { label = "Pick a few users"
                         , currentUser = Eos.Account.stringToName ""
+                        , profiles = Book.Helpers.mockUsers
                         }
                         |> (\options ->
                                 Form.UserPicker.view options
@@ -152,6 +154,7 @@ chapter =
                     Form.UserPicker.init
                         { label = "Pick a few users"
                         , currentUser = Eos.Account.stringToName ""
+                        , profiles = Book.Helpers.mockUsers
                         }
                         |> Form.UserPicker.withDisabled True
                         |> (\options ->
