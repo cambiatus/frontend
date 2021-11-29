@@ -1,8 +1,8 @@
 module Form.DatePicker exposing
-    ( init, Options
+    ( init, Options, map
     , withDisabled, withAbsolutePositioning
     , getId, getDate
-    , view, ViewConfig
+    , view, ViewConfig, mapViewConfig
     , Model, initModel, update, Msg, msgToString
     )
 
@@ -16,7 +16,7 @@ module Form.DatePicker exposing
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, map
 
 
 # Helpers
@@ -34,7 +34,7 @@ module Form.DatePicker exposing
 
 # View
 
-@docs view, ViewConfig
+@docs view, ViewConfig, mapViewConfig
 
 
 # The elm architecture
@@ -84,6 +84,13 @@ init { label, id } =
         }
 
 
+{-| Change the kind of `msg` on an Options record
+-}
+map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
+map _ (Options options) =
+    Options options
+
+
 
 -- ADDING ATTRIBUTES
 
@@ -115,6 +122,18 @@ type alias ViewConfig msg =
     , hasError : Bool
     , isRequired : Bool
     , translators : Shared.Translators
+    }
+
+
+{-| Change the kind of `msg` on a ViewConfig record
+-}
+mapViewConfig : (msg -> mappedMsg) -> ViewConfig msg -> ViewConfig mappedMsg
+mapViewConfig fn viewConfig =
+    { value = viewConfig.value
+    , error = Html.map fn viewConfig.error
+    , hasError = viewConfig.hasError
+    , isRequired = viewConfig.isRequired
+    , translators = viewConfig.translators
     }
 
 

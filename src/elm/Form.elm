@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional, withDecoration
+    , succeed, with, withOptional, withConditional, withNesting, withDecoration, withNoOutput
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
@@ -65,7 +65,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional, withDecoration
+@docs succeed, with, withOptional, withConditional, withNesting, withDecoration, withNoOutput
 
 
 ## Fields
@@ -493,6 +493,40 @@ with new current =
         )
 
 
+{-| Use this if you want to nest forms. If you need to break forms apart for any
+reason (reusability, making it easier to follow, etc.), you can use this function
+to nest them!
+
+    type alias Input =
+        { name : String, address : AddressInput }
+
+    type alias Output =
+        { name : String, address : Address }
+
+    addressForm : Form AddressInput Address
+
+    userForm : Form Input Output
+    userForm =
+        Form.succeed Output
+            |> Form.with nameField
+            |> Form.withNesting
+                { value = .address
+                , update = \address user -> { user | address = address }
+                }
+                addressForm
+
+-}
+withNesting :
+    { value : parent -> child
+    , update : child -> parent -> parent
+    }
+    -> Form child a
+    -> Form parent (a -> b)
+    -> Form parent b
+withNesting mappings child parent =
+    with (mapChild mappings child) parent
+
+
 {-| Adds some decorative Html on the form. Note it is **purely decorative**
 (instead of `Html msg` we use `Html Never`). If you want something that emits
 messages, you should probably use some kind of field!
@@ -614,6 +648,62 @@ withOptional new current =
                             ( firstError
                             , listOfErrors
                             )
+            }
+        )
+
+
+{-| Check the current values and append a form into another form. This is useful
+when building forms that can have "branching paths", and each path should display
+a different form.
+-}
+withConditional : (values -> Form values a) -> Form values (a -> b) -> Form values b
+withConditional buildNew current =
+    Form
+        (\values ->
+            let
+                filledNew =
+                    fill (buildNew values) values
+
+                filledCurrent =
+                    fill current values
+            in
+            { fields = filledNew.fields ++ filledCurrent.fields
+            , result =
+                case filledCurrent.result of
+                    Ok fn ->
+                        Result.map fn filledNew.result
+
+                    Err ( firstError, otherErrors ) ->
+                        case filledNew.result of
+                            Ok _ ->
+                                Err ( firstError, otherErrors )
+
+                            Err ( secondFirstError, secondOtherErrors ) ->
+                                Err
+                                    ( firstError
+                                    , otherErrors ++ (secondFirstError :: secondOtherErrors)
+                                    )
+            }
+        )
+
+
+{-| Add a field to a form that produces no output. It's similar to `withDecoration`,
+but you can use form fields. It's useful when the form has a field that is entirely
+computed based on other values from the form.
+-}
+withNoOutput : Form values x -> Form values output -> Form values output
+withNoOutput new current =
+    Form
+        (\values ->
+            let
+                filledNew =
+                    fill new values
+
+                filledCurrent =
+                    fill current values
+            in
+            { fields = filledNew.fields ++ filledCurrent.fields
+            , result = filledCurrent.result
             }
         )
 
@@ -1167,3 +1257,133 @@ mapBaseField fn reverseFn baseField =
     , update = reverseFn >> baseField.update
     , updateWithValues = reverseFn >> baseField.updateWithValues
     }
+
+
+mapBaseFieldValues :
+    (values -> mappedValues)
+    -> (mappedValues -> values)
+    -> BaseField value values
+    -> BaseField value mappedValues
+mapBaseFieldValues fn reverseFn baseField =
+    { value = baseField.value
+    , getValue = reverseFn >> baseField.getValue
+    , update = baseField.update >> fn
+    , updateWithValues =
+        \value values ->
+            reverseFn values
+                |> baseField.updateWithValues value
+                |> fn
+    }
+
+
+mapChild :
+    { value : parent -> child
+    , update : child -> parent -> parent
+    }
+    -> Form child output
+    -> Form parent output
+mapChild mappings child =
+    Form
+        (\values ->
+            let
+                filledChild =
+                    fill child (mappings.value values)
+            in
+            { fields =
+                List.map
+                    (mapFilledField (\child_ -> mappings.update child_ values) mappings.value)
+                    filledChild.fields
+            , result = filledChild.result
+            }
+        )
+
+
+mapFilledField : (values -> mappedValues) -> (mappedValues -> values) -> FilledField values -> FilledField mappedValues
+mapFilledField fn reverseFn filledField =
+    { state = mapField fn reverseFn filledField.state
+    , error = filledField.error
+    , isRequired = filledField.isRequired
+    }
+
+
+mapField : (values -> mappedValues) -> (mappedValues -> values) -> Field values -> Field mappedValues
+mapField fn reverseFn field_ =
+    let
+        baseMap fieldType specificMap options baseField =
+            fieldType (specificMap (mapMsg fn reverseFn) options)
+                (mapBaseFieldValues fn reverseFn baseField)
+    in
+    case field_ of
+        Text options baseField ->
+            baseMap Text Text.map options baseField
+
+        RichText options baseField ->
+            baseMap RichText RichText.map options baseField
+
+        Toggle options baseField ->
+            baseMap Toggle Toggle.map options baseField
+
+        Checkbox options baseField ->
+            baseMap Checkbox Checkbox.map options baseField
+
+        Radio options baseField ->
+            baseMap Radio Radio.mapMsg options baseField
+
+        File options baseField ->
+            baseMap File Form.File.map options baseField
+
+        Select options baseField ->
+            baseMap Select Select.mapMsg options baseField
+
+        DatePicker options baseField ->
+            baseMap DatePicker DatePicker.map options baseField
+
+        UserPicker options baseField ->
+            baseMap UserPicker UserPicker.map options baseField
+
+        DecorativeField decoration ->
+            DecorativeField decoration
+
+
+mapMsg : (values -> mappedValues) -> (mappedValues -> values) -> Msg values -> Msg mappedValues
+mapMsg fn reverseFn msg =
+    case msg of
+        NoOp ->
+            NoOp
+
+        ChangedValues values ->
+            ChangedValues (fn values)
+
+        GotRichTextMsg getModel updateFn subMsg ->
+            GotRichTextMsg
+                (reverseFn >> getModel)
+                (\value values -> reverseFn values |> updateFn value |> fn)
+                subMsg
+
+        GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
+            GotDatePickerMsg (DatePicker.map (mapMsg fn reverseFn) options)
+                (DatePicker.mapViewConfig (mapMsg fn reverseFn) viewConfig)
+                (reverseFn >> getModel)
+                (\value values -> reverseFn values |> updateFn value |> fn)
+                subMsg
+
+        GotUserPickerMsg options viewConfig getModel updateFn subMsg ->
+            GotUserPickerMsg (UserPicker.map (mapMsg fn reverseFn) options)
+                (UserPicker.mapViewConfig (mapMsg fn reverseFn) viewConfig)
+                (reverseFn >> getModel)
+                (\value values -> reverseFn values |> updateFn value |> fn)
+                subMsg
+
+        RequestedUploadFile updateFn file_ ->
+            RequestedUploadFile (\value values -> reverseFn values |> updateFn value |> fn)
+                file_
+
+        CompletedUploadingFile updateFn result ->
+            CompletedUploadingFile (\value values -> reverseFn values |> updateFn value |> fn)
+                result
+
+        BlurredField fieldId ->
+            BlurredField fieldId
+
+        ClickedSubmitWithErrors errors ->
+            ClickedSubmitWithErrors errors

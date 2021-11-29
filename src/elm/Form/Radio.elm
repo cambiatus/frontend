@@ -1,5 +1,5 @@
 module Form.Radio exposing
-    ( init, Options
+    ( init, Options, mapMsg
     , withOption, withOptions
     , withDisabled, withContainerAttrs, withGroupAttrs
     , Direction(..), withDirection
@@ -21,7 +21,7 @@ module Form.Radio exposing
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, mapMsg
 
 
 # Helpers
@@ -96,7 +96,27 @@ init { label, id, optionToString } =
         }
 
 
-map : (option -> mappedOption) -> (mappedOption -> option) -> Options option msg -> Options mappedOption msg
+{-| Change the kind of `msg` on an Options record
+-}
+mapMsg : (msg -> mappedMsg) -> Options option msg -> Options option mappedMsg
+mapMsg fn (Options options) =
+    Options
+        { label = options.label
+        , id = options.id
+        , optionToString = options.optionToString
+        , options = List.map (\opt -> { option = opt.option, label = Html.map fn opt.label }) options.options
+        , disabled = options.disabled
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        , groupAttrs = List.map (Html.Attributes.map fn) options.groupAttrs
+        , direction = options.direction
+        }
+
+
+map :
+    (option -> mappedOption)
+    -> (mappedOption -> option)
+    -> Options option msg
+    -> Options mappedOption msg
 map fn reverseFn (Options options) =
     Options
         { label = options.label

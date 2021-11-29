@@ -1,5 +1,5 @@
 module Form.Text exposing
-    ( init, Options
+    ( init, Options, map
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
     , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
@@ -21,7 +21,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, map
 
 
 # Helpers
@@ -91,6 +91,31 @@ type Options msg
         , beforeRenderingValue : String -> String
         , beforeChangeEvent : String -> String
         , mask : Maybe Mask
+        }
+
+
+{-| Change the kind of `msg` on an Options record
+-}
+map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
+map fn (Options options) =
+    Options
+        { label = options.label
+        , id = options.id
+        , disabled = options.disabled
+        , placeholder = options.placeholder
+        , labelAttrs = List.map (Html.Attributes.map fn) options.labelAttrs
+        , extraAttrs = List.map (Html.Attributes.map fn) options.extraAttrs
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        , inputContainerAttrs = List.map (Html.Attributes.map fn) options.inputContainerAttrs
+        , extraElements = List.map (Html.map fn) options.extraElements
+        , errorAttrs = List.map (Html.Attributes.map fn) options.errorAttrs
+        , counterAttrs = List.map (Html.Attributes.map fn) options.counterAttrs
+        , counter = options.counter
+        , type_ = options.type_
+        , inputElement = options.inputElement
+        , beforeRenderingValue = options.beforeRenderingValue
+        , beforeChangeEvent = options.beforeChangeEvent
+        , mask = options.mask
         }
 
 

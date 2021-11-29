@@ -1,8 +1,8 @@
 module Form.UserPicker exposing
-    ( init, Options
+    ( init, Options, map
     , withDisabled
     , getId, isEmpty
-    , view, ViewConfig
+    , view, ViewConfig, mapViewConfig
     , Model, update, Msg, msgToString
     , MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
     , SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
@@ -18,7 +18,7 @@ module Form.UserPicker exposing
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, map
 
 
 # Helpers
@@ -36,7 +36,7 @@ module Form.UserPicker exposing
 
 # View
 
-@docs view, ViewConfig
+@docs view, ViewConfig, mapViewConfig
 
 
 # The elm architecture
@@ -104,6 +104,13 @@ init { label, currentUser, profiles } =
         }
 
 
+{-| Change the kind of `msg` on an Options record
+-}
+map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
+map _ (Options options) =
+    Options options
+
+
 
 -- ADDING ATTRIBUTES
 
@@ -125,6 +132,18 @@ type alias ViewConfig msg =
     , error : Html msg
     , hasError : Bool
     , translators : Shared.Translators
+    }
+
+
+{-| Change the kind of `msg` on a ViewConfig record
+-}
+mapViewConfig : (msg -> mappedMsg) -> ViewConfig msg -> ViewConfig mappedMsg
+mapViewConfig fn viewConfig =
+    { onBlur = viewConfig.onBlur >> fn
+    , value = viewConfig.value
+    , error = Html.map fn viewConfig.error
+    , hasError = viewConfig.hasError
+    , translators = viewConfig.translators
     }
 
 

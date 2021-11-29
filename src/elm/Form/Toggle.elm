@@ -1,5 +1,5 @@
 module Form.Toggle exposing
-    ( init, Options
+    ( init, Options, map
     , withTooltip
     , withDisabled
     , getId
@@ -16,7 +16,7 @@ module Form.Toggle exposing
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, map
 
 
 # Helpers
@@ -72,6 +72,18 @@ init { label, id } =
         , id = id
         , disabled = False
         , tooltip = Nothing
+        }
+
+
+{-| Change the kind of `msg` on an Options record
+-}
+map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
+map fn (Options options) =
+    Options
+        { label = Html.map fn options.label
+        , id = options.id
+        , disabled = options.disabled
+        , tooltip = options.tooltip
         }
 
 

@@ -1,5 +1,5 @@
 module Form.Select exposing
-    ( init, Options
+    ( init, Options, mapMsg
     , withOption
     , withDisabled, withContainerAttrs, withAttrs
     , getId, getOptionToString
@@ -17,7 +17,7 @@ module Form.Select exposing
 
 # Initializing
 
-@docs init, Options
+@docs init, Options, mapMsg
 
 
 # Helpers
@@ -85,6 +85,21 @@ init { label, id, optionToString } =
         , options = []
         , containerAttrs = []
         , extraAttrs = []
+        }
+
+
+{-| Change the kind of `msg` on an Options record
+-}
+mapMsg : (msg -> mappedMsg) -> Options option msg -> Options option mappedMsg
+mapMsg fn (Options options) =
+    Options
+        { label = options.label
+        , id = options.id
+        , disabled = options.disabled
+        , optionToString = options.optionToString
+        , options = options.options
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        , extraAttrs = List.map (Html.Attributes.map fn) options.extraAttrs
         }
 
 
