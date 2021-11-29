@@ -16,7 +16,7 @@ import Html.Attributes
 import Html.Events
 
 
-main : Book SharedState Msg
+main : Book SharedState
 main =
     Book.book "Cambiatus"
         |> Book.withThemeOptions
@@ -26,27 +26,13 @@ main =
             ]
         |> Book.withStatefulOptions
             [ StatefulOptions.initialState initialState
-            , StatefulOptions.update update
             ]
         |> Book.withChapterGroups
             [ ( "", [ introduction ] )
             , ( "Forms"
               , Book.Form.chapters
-                    |> List.map (Chapter.map GotFormMsg)
               )
             ]
-
-
-type Msg
-    = GotFormMsg Book.Form.Msg
-
-
-update : Msg -> SharedState -> ( SharedState, Cmd Msg )
-update msg sharedState =
-    case msg of
-        GotFormMsg subMsg ->
-            Book.Form.update subMsg sharedState
-                |> Tuple.mapSecond (Cmd.map GotFormMsg)
 
 
 type alias SharedState =
@@ -66,7 +52,7 @@ initialState =
     }
 
 
-introduction : Chapter x msg
+introduction : Chapter x
 introduction =
     Chapter.chapter "Overview"
         |> Chapter.withChapterOptions [ ChapterOptions.hiddenTitle True ]

@@ -134,7 +134,7 @@ view model =
 -- CHAPTER
 
 
-chapter : Chapter { x | toggleModel : Model } Msg
+chapter : Chapter { x | toggleModel : Model }
 chapter =
     let
         baseToggle id =

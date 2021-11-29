@@ -1,10 +1,12 @@
-module Book.Form.UserPicker exposing (Model, Msg, chapter, initModel, updateSharedState)
+module Book.Form.UserPicker exposing (Model, Msg, chapter, initModel)
 
 import Book.Helpers
-import ElmBook.Chapter as Chapter exposing (CustomChapter)
+import ElmBook.Actions as Actions
+import ElmBook.Chapter as Chapter exposing (Chapter)
 import Eos.Account
 import Form.UserPicker
 import Html
+import Task
 
 
 
@@ -32,59 +34,35 @@ initModel =
 
 type Msg
     = NoOp
-    | GotSinglePickerMsg (Form.UserPicker.Options Msg) (Form.UserPicker.ViewConfig Msg) Form.UserPicker.Msg
-    | GotMultiplePickerMsg (Form.UserPicker.Options Msg) (Form.UserPicker.ViewConfig Msg) Form.UserPicker.Msg
-    | GotDisabledWithErrorPickerMsg (Form.UserPicker.Options Msg) (Form.UserPicker.ViewConfig Msg) Form.UserPicker.Msg
+    | GotPickerMsg (Form.UserPicker.Options Msg) (Form.UserPicker.ViewConfig Msg) Form.UserPicker.Msg
 
 
 type alias SharedState x =
     { x | userpickerModel : Model }
 
 
-updateSharedState : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
-updateSharedState msg sharedState =
-    let
-        model =
-            sharedState.userpickerModel
-    in
+update : Msg -> Form.UserPicker.Model -> ( Form.UserPicker.Model, Cmd Msg )
+update msg model =
     case msg of
         NoOp ->
-            ( sharedState, Cmd.none )
+            ( model, Cmd.none )
 
-        GotSinglePickerMsg options viewConfig subMsg ->
+        GotPickerMsg options viewConfig subMsg ->
             let
-                ( newModel, subCmd, _ ) =
-                    Form.UserPicker.update options
-                        viewConfig
-                        subMsg
-                        model.single
+                ( newModel, cmd, maybeNewMsg ) =
+                    Form.UserPicker.update options viewConfig subMsg model
             in
-            ( { sharedState | userpickerModel = { model | single = newModel } }
-            , Cmd.map (GotSinglePickerMsg options viewConfig) subCmd
-            )
+            ( newModel
+            , Cmd.batch
+                [ Cmd.map (GotPickerMsg options viewConfig) cmd
+                , case maybeNewMsg of
+                    Nothing ->
+                        Cmd.none
 
-        GotMultiplePickerMsg options viewConfig subMsg ->
-            let
-                ( newModel, subCmd, _ ) =
-                    Form.UserPicker.update options
-                        viewConfig
-                        subMsg
-                        model.multiple
-            in
-            ( { sharedState | userpickerModel = { model | multiple = newModel } }
-            , Cmd.map (GotMultiplePickerMsg options viewConfig) subCmd
-            )
-
-        GotDisabledWithErrorPickerMsg options viewConfig subMsg ->
-            let
-                ( newModel, subCmd, _ ) =
-                    Form.UserPicker.update options
-                        viewConfig
-                        subMsg
-                        model.disabledWithError
-            in
-            ( { sharedState | userpickerModel = { model | disabledWithError = newModel } }
-            , Cmd.map (GotMultiplePickerMsg options viewConfig) subCmd
+                    Just newMsg ->
+                        Task.succeed ()
+                            |> Task.perform (always newMsg)
+                ]
             )
 
 
@@ -92,7 +70,7 @@ updateSharedState msg sharedState =
 -- CHAPTER
 
 
-chapter : CustomChapter (SharedState x) Msg
+chapter : Chapter (SharedState x)
 chapter =
     Chapter.chapter "User picker"
         |> Chapter.withStatefulComponentList
@@ -115,7 +93,20 @@ chapter =
                         |> (\options ->
                                 Form.UserPicker.view options
                                     viewConfig
-                                    (GotSinglePickerMsg options viewConfig)
+                                    (GotPickerMsg options viewConfig)
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .userpickerModel >> .single
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        userpicker =
+                                                            shared.userpickerModel
+                                                    in
+                                                    { shared | userpickerModel = { userpicker | single = model } }
+                                            , update = update
+                                            }
+                                        )
                            )
               )
             , ( "Multiple user picker"
@@ -137,7 +128,20 @@ chapter =
                         |> (\options ->
                                 Form.UserPicker.view options
                                     viewConfig
-                                    (GotMultiplePickerMsg options viewConfig)
+                                    (GotPickerMsg options viewConfig)
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .userpickerModel >> .multiple
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        userpicker =
+                                                            shared.userpickerModel
+                                                    in
+                                                    { shared | userpickerModel = { userpicker | multiple = model } }
+                                            , update = update
+                                            }
+                                        )
                            )
               )
             , ( "With error and disabled"
@@ -160,7 +164,20 @@ chapter =
                         |> (\options ->
                                 Form.UserPicker.view options
                                     viewConfig
-                                    (GotDisabledWithErrorPickerMsg options viewConfig)
+                                    (GotPickerMsg options viewConfig)
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .userpickerModel >> .disabledWithError
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        userpicker =
+                                                            shared.userpickerModel
+                                                    in
+                                                    { shared | userpickerModel = { userpicker | disabledWithError = model } }
+                                            , update = update
+                                            }
+                                        )
                            )
               )
             ]

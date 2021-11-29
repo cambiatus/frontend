@@ -2,7 +2,8 @@ module Book.Form.DatePicker exposing (Model, Msg, chapter, initModel, updateShar
 
 import Book.Helpers
 import Date
-import ElmBook.Chapter as Chapter exposing (CustomChapter)
+import ElmBook.Actions as Actions
+import ElmBook.Chapter as Chapter exposing (Chapter)
 import Form.DatePicker
 import Html
 import Time
@@ -94,7 +95,7 @@ updateSharedState msg sharedState =
 -- CHAPTER
 
 
-chapter : CustomChapter (SharedState x) Msg
+chapter : Chapter (SharedState x)
 chapter =
     Chapter.chapter "Date picker"
         |> Chapter.withStatefulComponentList
@@ -114,7 +115,22 @@ chapter =
                                 in
                                 Form.DatePicker.view options
                                     viewConfig
-                                    (GotRelativeDatePickerMsg options viewConfig)
+                                    identity
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .datepickerModel >> .relative
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        prevDatePicker =
+                                                            shared.datepickerModel
+                                                    in
+                                                    { shared | datepickerModel = { prevDatePicker | relative = model } }
+                                            , update =
+                                                Form.DatePicker.update options
+                                                    viewConfig
+                                            }
+                                        )
                            )
               )
             , ( "Live example with absolute positioning"
@@ -132,7 +148,22 @@ chapter =
                                 in
                                 Form.DatePicker.view options
                                     viewConfig
-                                    (GotAbsoluteDatePickerMsg options viewConfig)
+                                    identity
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .datepickerModel >> .absolute
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        prevDatePicker =
+                                                            shared.datepickerModel
+                                                    in
+                                                    { shared | datepickerModel = { prevDatePicker | absolute = model } }
+                                            , update =
+                                                Form.DatePicker.update options
+                                                    viewConfig
+                                            }
+                                        )
                            )
               )
             , ( "Live example with error and disabled"
@@ -151,7 +182,22 @@ chapter =
                                 in
                                 Form.DatePicker.view options
                                     viewConfig
-                                    (GotErrorDatePickerMsg options viewConfig)
+                                    identity
+                                    |> Html.map
+                                        (Actions.mapUpdateWithCmd
+                                            { fromState = .datepickerModel >> .withError
+                                            , toState =
+                                                \shared model ->
+                                                    let
+                                                        prevDatePicker =
+                                                            shared.datepickerModel
+                                                    in
+                                                    { shared | datepickerModel = { prevDatePicker | withError = model } }
+                                            , update =
+                                                Form.DatePicker.update options
+                                                    viewConfig
+                                            }
+                                        )
                            )
               )
             ]

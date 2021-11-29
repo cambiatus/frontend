@@ -2,8 +2,7 @@
     "type": "application",
     "source-directories": [
         "src/elm",
-        "../src/elm",
-        "../elm-book-fork/src"
+        "../src/elm"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -15,6 +14,7 @@
             "billstclair/elm-sha256": "1.0.9",
             "dillonkearns/elm-graphql": "5.0.7",
             "dillonkearns/elm-markdown": "7.0.0",
+            "dtwrks/elm-book": "1.3.0",
             "elm/browser": "1.0.2",
             "elm/core": "1.0.5",
             "elm/file": "1.0.5",

@@ -1,4 +1,4 @@
-module Book.Form exposing (Msg, chapters, update)
+module Book.Form exposing (chapters)
 
 import Book.Form.DatePicker
 import Book.Form.RichText
@@ -16,43 +16,17 @@ type alias SharedState x =
     }
 
 
-type Msg
-    = GotRichTextMsg Book.Form.RichText.Msg
-    | GotToggleMsg Book.Form.Toggle.Msg
-    | GotDatePickerMsg Book.Form.DatePicker.Msg
-    | GotUserPickerMsg Book.Form.UserPicker.Msg
-
-
-update : Msg -> SharedState x -> ( SharedState x, Cmd Msg )
-update msg sharedState =
-    case msg of
-        GotRichTextMsg subMsg ->
-            Book.Form.RichText.updateSharedState subMsg sharedState
-                |> Tuple.mapSecond (Cmd.map GotRichTextMsg)
-
-        GotToggleMsg _ ->
-            ( sharedState, Cmd.none )
-
-        GotDatePickerMsg subMsg ->
-            Book.Form.DatePicker.updateSharedState subMsg sharedState
-                |> Tuple.mapSecond (Cmd.map GotDatePickerMsg)
-
-        GotUserPickerMsg subMsg ->
-            Book.Form.UserPicker.updateSharedState subMsg sharedState
-                |> Tuple.mapSecond (Cmd.map GotUserPickerMsg)
-
-
-chapters : List (Chapter (SharedState x) Msg)
+chapters : List (Chapter (SharedState x))
 chapters =
     [ introduction
-    , Chapter.mapCustom GotRichTextMsg Book.Form.RichText.chapter
-    , Chapter.map GotToggleMsg Book.Form.Toggle.chapter
-    , Chapter.mapCustom GotDatePickerMsg Book.Form.DatePicker.chapter
-    , Chapter.mapCustom GotUserPickerMsg Book.Form.UserPicker.chapter
+    , Book.Form.RichText.chapter
+    , Book.Form.Toggle.chapter
+    , Book.Form.DatePicker.chapter
+    , Book.Form.UserPicker.chapter
     ]
 
 
-introduction : Chapter x msg
+introduction : Chapter x
 introduction =
     Chapter.chapter "Introduction"
         |> Chapter.render """

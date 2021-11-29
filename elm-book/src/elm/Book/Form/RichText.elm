@@ -1,11 +1,10 @@
 module Book.Form.RichText exposing (Model, Msg, chapter, initModel, updateSharedState)
 
 import Book.Helpers
-import ElmBook
 import ElmBook.Actions as Actions
-import ElmBook.Chapter as Chapter exposing (CustomChapter)
+import ElmBook.Chapter as Chapter exposing (Chapter)
 import Form.RichText
-import Html exposing (div, node)
+import Html exposing (div)
 import Html.Attributes exposing (class)
 import Markdown
 
@@ -52,12 +51,33 @@ updateSharedState msg sharedState =
             ( sharedState, Cmd.none )
 
 
+update : Msg -> Form.RichText.Model -> ( Form.RichText.Model, Cmd Msg )
+update msg richtextModel =
+    case msg of
+        GotRichTextMsg subMsg ->
+            Form.RichText.update subMsg richtextModel
+                |> Tuple.mapSecond (Cmd.map GotRichTextMsg)
+
+        NoOp ->
+            ( richtextModel, Cmd.none )
+
+
 
 -- CHAPTER
 
 
-chapter : CustomChapter (SharedState x) Msg
+chapter : Chapter (SharedState x)
 chapter =
+    let
+        mapIntoNoOp =
+            Html.map
+                (Actions.mapUpdate
+                    { fromState = .richTextModel
+                    , toState = \shared model -> { shared | richTextModel = model }
+                    , update = \_ model -> model
+                    }
+                )
+    in
     Chapter.chapter "Rich Text"
         |> Chapter.withStatefulComponentList
             [ ( "Live example"
@@ -74,6 +94,15 @@ chapter =
                                         , translators = Book.Helpers.mockTranslators
                                         }
                                         GotRichTextMsg
+                                        |> Html.map
+                                            (Actions.mapUpdateWithCmd
+                                                { fromState = .richTextModel
+                                                , toState =
+                                                    \shared model ->
+                                                        { shared | richTextModel = model }
+                                                , update = update
+                                                }
+                                            )
                                )
                         , Markdown.view [ class "mt-10" ]
                             (Form.RichText.getMarkdownContent sharedState.richTextModel)
@@ -96,6 +125,7 @@ chapter =
                                 }
                                 (\_ -> NoOp)
                        )
+                    |> mapIntoNoOp
               )
             , ( "Placeholder and error"
               , Form.RichText.init
@@ -112,6 +142,7 @@ chapter =
                                 }
                                 (\_ -> NoOp)
                        )
+                    |> mapIntoNoOp
               )
             ]
         |> Chapter.render """
