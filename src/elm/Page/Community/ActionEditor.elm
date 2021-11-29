@@ -33,6 +33,14 @@ import DatePicker
 import Dict
 import Eos
 import Eos.Account as Eos
+import Form
+import Form.Checkbox
+import Form.DatePicker
+import Form.Radio
+import Form.RichText
+import Form.Text
+import Form.Toggle
+import Form.UserPicker
 import Html exposing (Html, b, button, div, img, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, id, src, tabindex)
 import Html.Events exposing (onClick, onMouseEnter, onMouseLeave)
@@ -42,6 +50,7 @@ import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown exposing (Markdown)
 import Mask
 import Page
 import Profile
@@ -160,6 +169,334 @@ type alias Form =
     , instructions : MarkdownEditor.Model
     , instructionsError : Maybe ( String, I18Next.Replacements )
     }
+
+
+type alias FormInput =
+    { description : Form.RichText.Model
+    , reward : String
+    , useDateValidation : Bool
+    , expirationDate : Form.DatePicker.Model
+    , useUsagesValidation : Bool
+    , maxUsages : String
+    , verificationInput : VerificationInput
+    }
+
+
+type alias FormOutput =
+    { description : Markdown
+    , reward : Float
+    , expirationDate : Maybe Date.Date
+    , maxUsages : Maybe Int
+    , verificationOutput : VerificationOutput
+    }
+
+
+createForm : LoggedIn.Model -> Form.Form FormInput FormOutput
+createForm loggedIn =
+    Form.succeed
+        (\description reward useDateValidation expirationDate useMaxUsages maxUsages verification ->
+            { description = description
+            , reward = reward
+            , expirationDate =
+                if useDateValidation then
+                    Just expirationDate
+
+                else
+                    Nothing
+            , maxUsages =
+                if useMaxUsages then
+                    Just maxUsages
+
+                else
+                    Nothing
+            , verificationOutput = verification
+            }
+        )
+        |> Form.with
+            (Form.RichText.init { label = "Description (TODO I18N)" }
+                |> Form.richText
+                    { parser = Ok
+                    , value = .description
+                    , update = \description input -> { input | description = description }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = "Claimants reward (TODO I18N)", id = "claimant-reward-input" }
+                |> Form.textField
+                    { -- TODO - Use symbol
+                      parser = String.toFloat >> Result.fromMaybe "Needs to be an int"
+                    , value = .reward
+                    , update = \reward input -> { input | reward = reward }
+                    , externalError = always Nothing
+                    }
+            )
+        -- TODO - Check this toggle
+        |> Form.withNoOutput
+            (Form.Toggle.init
+                { label = Html.text "Expiration on or off"
+                , id = "expiration-toggle"
+                }
+                |> Form.toggle
+                    { parser = Ok
+                    , value = \input -> input.useDateValidation || input.useUsagesValidation
+                    , update = \_ input -> input
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Checkbox.init
+                { label = Html.text "Validity by date (TODO I18N)"
+                , id = "date-validity-checkbox"
+                }
+                |> Form.checkbox
+                    { parser = Ok
+                    , value = .useDateValidation
+                    , update = \useDateValidation input -> { input | useDateValidation = useDateValidation }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.DatePicker.init { label = "Pick a date (TODO I18N)", id = "date-validation-picker" }
+                |> Form.datePicker
+                    { parser = Result.fromMaybe "Mandatory"
+                    , value = .expirationDate
+                    , update = \expirationDate input -> { input | expirationDate = expirationDate }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Checkbox.init
+                { label = Html.text "Validity by usages (TODO I18N)"
+                , id = "usages-validity-checkbox"
+                }
+                |> Form.checkbox
+                    { parser = Ok
+                    , value = .useUsagesValidation
+                    , update = \useUsagesValidation input -> { input | useUsagesValidation = useUsagesValidation }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = "Max usages (TODO I18N)"
+                , id = "usages-validity-input"
+                }
+                |> Form.textField
+                    { parser = String.toInt >> Result.fromMaybe "Invalid int"
+                    , value = .maxUsages
+                    , update = \maxUsages input -> { input | maxUsages = maxUsages }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNesting
+            { value = .verificationInput
+            , update = \child parent -> { parent | verificationInput = child }
+            }
+            (verificationForm loggedIn)
+
+
+type alias VerificationInput =
+    { verificationType : VerificationType.VerificationType
+    , minVotes : MinVotes
+    , verifiers : Form.UserPicker.MultiplePickerModel
+    , verifierReward : String
+    , fileValidation : FileValidationInput
+    }
+
+
+type VerificationOutput
+    = AutomaticFormOutput
+    | ManualFormOutput
+        { minVotes : MinVotes
+        , verifiers : List Profile.Minimal
+        , verifierReward : Float
+        , fileValidation : FileValidation
+        }
+
+
+type MinVotes
+    = Three
+    | Five
+    | Seven
+    | Nine
+
+
+verificationForm : LoggedIn.Model -> Form.Form VerificationInput VerificationOutput
+verificationForm loggedIn =
+    Form.succeed
+        (\verificationType minVotes verifiers verifierReward fileValidation ->
+            case verificationType of
+                VerificationType.Automatic ->
+                    AutomaticFormOutput
+
+                VerificationType.Claimable ->
+                    ManualFormOutput
+                        { minVotes = minVotes
+                        , verifiers = verifiers
+                        , verifierReward = verifierReward
+                        , fileValidation = fileValidation
+                        }
+        )
+        |> Form.with
+            (Form.Radio.init
+                { label = "Verification type (TODO I18N)"
+                , id = "verification-type-radio"
+                , optionToString = VerificationType.toString
+                }
+                |> Form.radio (VerificationType.fromString >> Maybe.withDefault VerificationType.Automatic)
+                    { parser = Ok
+                    , value = .verificationType
+                    , update = \verificationType input -> { input | verificationType = verificationType }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Radio.init
+                { label = "Minimum number of votes"
+                , id = "min-votes-radio"
+                , optionToString = minVotesToInt >> String.fromInt
+                }
+                |> Form.radio
+                    (String.toInt
+                        >> Maybe.andThen minVotesFromInt
+                        >> Maybe.withDefault Three
+                    )
+                    { parser = Ok
+                    , value = .minVotes
+                    , update = \minVotes input -> { input | minVotes = minVotes }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.UserPicker.init
+                { label = "Pick validators"
+                , currentUser = loggedIn.accountName
+                , profiles = []
+                }
+                |> Form.userPickerMultiple
+                    { parser = Ok
+                    , value = .verifiers
+                    , update = \verifiers input -> { input | verifiers = verifiers }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = "Verifier reward"
+                , id = "verifier-reward-input"
+                }
+                |> Form.textField
+                    { parser = String.toFloat >> Result.fromMaybe "Invalid float"
+                    , value = .verifierReward
+                    , update = \verifierReward input -> { input | verifierReward = verifierReward }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNesting
+            { value = .fileValidation
+            , update = \fileValidation input -> { input | fileValidation = fileValidation }
+            }
+            fileValidationForm
+
+
+type alias FileValidationInput =
+    { useFileValidation : Bool
+    , useVerificationCode : Bool
+    , instructions : Form.RichText.Model
+    }
+
+
+type FileValidation
+    = NoFileValidation
+    | WithFileValidation { useVerificationCode : Bool, instructions : Markdown }
+
+
+fileValidationForm : Form.Form FileValidationInput FileValidation
+fileValidationForm =
+    Form.succeed (\_ fileValidationOutput -> fileValidationOutput)
+        |> Form.with
+            (Form.Checkbox.init
+                { label = Html.text "Use PDF or photo"
+                , id = "file-validation-checkbox"
+                }
+                |> Form.checkbox
+                    { parser = Ok
+                    , value = .useFileValidation
+                    , update = \useFileValidation input -> { input | useFileValidation = useFileValidation }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withConditional
+            (\{ useFileValidation } ->
+                if useFileValidation then
+                    Form.succeed
+                        (\useVerificationCode instructions ->
+                            WithFileValidation
+                                { useVerificationCode = useVerificationCode
+                                , instructions = instructions
+                                }
+                        )
+                        |> Form.with
+                            (Form.Checkbox.init
+                                { label = Html.text "Use verificatino code"
+                                , id = "verification-code-checkbox"
+                                }
+                                |> Form.checkbox
+                                    { parser = Ok
+                                    , value = .useVerificationCode
+                                    , update = \useVerificationCode input -> { input | useVerificationCode = useVerificationCode }
+                                    , externalError = always Nothing
+                                    }
+                            )
+                        |> Form.with
+                            (Form.RichText.init { label = "Instructions" }
+                                |> Form.richText
+                                    { parser = Ok
+                                    , value = .instructions
+                                    , update = \instructions input -> { input | instructions = instructions }
+                                    , externalError = always Nothing
+                                    }
+                            )
+
+                else
+                    Form.succeed NoFileValidation
+            )
+
+
+minVotesToInt : MinVotes -> Int
+minVotesToInt minVotes =
+    case minVotes of
+        Three ->
+            3
+
+        Five ->
+            5
+
+        Seven ->
+            7
+
+        Nine ->
+            9
+
+
+minVotesFromInt : Int -> Maybe MinVotes
+minVotesFromInt minVotes =
+    case minVotes of
+        3 ->
+            Just Three
+
+        5 ->
+            Just Five
+
+        7 ->
+            Just Seven
+
+        9 ->
+            Just Nine
+
+        _ ->
+            Nothing
 
 
 initForm : Shared -> Form
