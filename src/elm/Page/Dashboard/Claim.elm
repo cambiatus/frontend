@@ -16,6 +16,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Profile
 import Profile.Summary
@@ -96,7 +97,7 @@ view ({ shared } as loggedIn) model =
             case model.statusClaim of
                 Loaded claim _ ->
                     claim.action.description
-                        |> View.MarkdownEditor.removeFormatting
+                        |> Markdown.toUnformattedString
                         |> String.Extra.softEllipsis 20
 
                 _ ->
@@ -302,8 +303,7 @@ viewDetails { shared } model claim =
         [ Claim.viewVotingProgress shared completionStatus
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.action" ]
-            , View.MarkdownEditor.viewReadOnly [ class "mb-2" ]
-                claim.action.description
+            , Markdown.view [ class "mb-2" ] claim.action.description
             , if claim.action.isCompleted then
                 div [ class "flex mb-2" ]
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]

@@ -44,6 +44,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
 import List.Extra as List
+import Markdown
 import Profile
 import Profile.Summary
 import Route
@@ -52,7 +53,6 @@ import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -494,7 +494,7 @@ viewClaimCard loggedIn profileSummaries claim =
               else
                 span [ class "text-purple-500 font-bold uppercase text-sm self-center" ]
                     [ text claimAgingText ]
-            , View.MarkdownEditor.viewReadOnly
+            , Markdown.view
                 [ class "truncate-children mb-2 mt-6"
                 , classList [ ( "text-gray-900", isCancelled ) ]
                 ]
@@ -955,7 +955,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             div
                 [ class "block mt-6" ]
                 [ p [ class "label" ] [ text (t "claim.action") ]
-                , View.MarkdownEditor.viewReadOnly [ class "text-left mt-2 mb-6 text-lg w-full" ]
+                , Markdown.view [ class "text-left mt-2 mb-6 text-lg w-full" ]
                     claim.action.description
                 , case claim.proofPhoto of
                     Just url ->

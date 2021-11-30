@@ -52,6 +52,7 @@ import List.Extra as List
 import Log
 import Markdown exposing (Markdown)
 import Mask
+import Maybe.Extra
 import Page
 import Profile
 import Profile.Summary
@@ -97,6 +98,7 @@ init loggedIn objectiveId actionId =
     , form = initForm loggedIn.shared
     , multiSelectState = Select.newState ""
     , showAutomaticActionTooltip = False
+    , status2 = Loading2
     }
         |> UR.init
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ObjectivesField)
@@ -113,6 +115,7 @@ type alias Model =
     , form : Form
     , multiSelectState : Select.State
     , showAutomaticActionTooltip : Bool
+    , status2 : Status2
     }
 
 
@@ -121,6 +124,13 @@ type Status
     | Loading
     | NotFound
     | Unauthorized
+
+
+type Status2
+    = Authorized2 FormInput
+    | Loading2
+    | NotFound2
+    | Unauthorized2
 
 
 type ActionValidation
@@ -179,6 +189,63 @@ type alias FormInput =
     , useUsagesValidation : Bool
     , maxUsages : String
     , verificationInput : VerificationInput
+    }
+
+
+initFormInput : Shared -> Maybe Action -> FormInput
+initFormInput shared maybeAction =
+    { description =
+        maybeAction
+            |> Maybe.map .description
+            |> Form.RichText.initModel "description-editor"
+    , reward =
+        maybeAction
+            |> Maybe.map (.reward >> String.fromFloat)
+            |> Maybe.withDefault ""
+    , useDateValidation =
+        maybeAction
+            |> Maybe.map (.deadline >> Maybe.Extra.isJust)
+            |> Maybe.withDefault False
+    , expirationDate =
+        maybeAction
+            |> Maybe.map (.deadline >> Utils.fromMaybeDateTime)
+            |> Maybe.withDefault shared.now
+            |> Date.fromPosix shared.timezone
+            |> Form.DatePicker.initModel
+    , useUsagesValidation =
+        maybeAction
+            |> Maybe.map .usages
+            |> Maybe.withDefault 0
+            |> (\usages -> usages > 0)
+    , maxUsages = ""
+    , verificationInput =
+        { verificationType =
+            maybeAction
+                |> Maybe.map .verificationType
+                |> Maybe.withDefault VerificationType.Automatic
+        , minVotes =
+            maybeAction
+                |> Maybe.andThen (.verifications >> minVotesFromInt)
+                |> Maybe.withDefault Three
+
+        -- TODO - Initialize verifiers
+        , verifiers = Form.UserPicker.initMultiple { id = "verifiers-picker" }
+        , verifierReward =
+            maybeAction
+                |> Maybe.map (.verifierReward >> String.fromFloat)
+                |> Maybe.withDefault ""
+        , fileValidation =
+            { useFileValidation =
+                maybeAction
+                    |> Maybe.map .hasProofPhoto
+                    |> Maybe.withDefault False
+            , useVerificationCode =
+                maybeAction
+                    |> Maybe.map .hasProofCode
+                    |> Maybe.withDefault False
+            , instructions = Form.RichText.initModel "proof-instructions-input" Nothing
+            }
+        }
     }
 
 
@@ -596,8 +663,8 @@ editForm { shared } form action =
                     }
     in
     { form
-        | description = MarkdownEditor.setContents action.description form.description
-        , reward = updateInput (String.fromFloat action.reward) form.reward
+        | -- description = MarkdownEditor.setContents action.description form.description
+          reward = updateInput (String.fromFloat action.reward) form.reward
         , validation = validation
         , verification = verification
         , usagesLeft = Just (updateInput (String.fromInt action.usagesLeft) defaultUsagesLeftValidator)

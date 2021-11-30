@@ -1,7 +1,8 @@
 module Markdown exposing
-    ( view
+    ( view, toUnformattedString
     , Markdown
     , encode
+    , selectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
     )
 
@@ -12,7 +13,7 @@ model to regular markdown.
 
 # View markdown
 
-@docs view
+@docs view, toUnformattedString
 
 
 # Produce markdown
@@ -25,12 +26,18 @@ model to regular markdown.
 @docs encode
 
 
+## Interop with GraphQL
+
+@docs selectionSet
+
+
 ## Interop with QuillJS
 
 @docs QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
 
 -}
 
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
 import Html.Attributes
 import Json.Decode
@@ -41,6 +48,7 @@ import Markdown.Block
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
+import Maybe.Extra
 import View.MarkdownEditor exposing (QuillOp)
 
 
@@ -59,6 +67,18 @@ type Markdown
 
 
 -- PRODUCING MARKDOWN
+-- GRAPHQL
+
+
+{-| Get some markdown from a Graphql endpoint.
+-}
+selectionSet : SelectionSet String typeLock -> SelectionSet Markdown typeLock
+selectionSet =
+    SelectionSet.map Markdown
+
+
+
+-- QUILLJS
 
 
 {-| This what we get when we ask for the QuillJS editor's contents: a `String`
@@ -576,3 +596,66 @@ view attributes (Markdown content) =
 
         Err _ ->
             Html.text ""
+
+
+
+-- REMOVING FORMATTING
+
+
+toUnformattedString : Markdown -> String
+toUnformattedString (Markdown markdown) =
+    case Markdown.Parser.parse markdown of
+        Ok blocks ->
+            blocks
+                |> List.map removeFormattingFromBlock
+                |> Maybe.Extra.combine
+                |> Maybe.map (String.join "\n")
+                |> Maybe.withDefault markdown
+                |> String.trim
+
+        Err _ ->
+            markdown
+
+
+removeFormattingFromBlock : Markdown.Block.Block -> Maybe String
+removeFormattingFromBlock block =
+    let
+        removeFormattingFromList : (Int -> String) -> List (List Markdown.Block.Block) -> String
+        removeFormattingFromList lineStarter blocks =
+            blocks
+                |> List.indexedMap
+                    (\index blockChild ->
+                        List.map removeFormattingFromBlock blockChild
+                            |> List.filterMap identity
+                            |> List.map (\line -> lineStarter index ++ line)
+                            |> String.concat
+                    )
+                |> String.join "\n"
+    in
+    case block of
+        Markdown.Block.UnorderedList _ children ->
+            children
+                |> List.map (\(Markdown.Block.ListItem _ children_) -> children_)
+                |> removeFormattingFromList (\_ -> "- ")
+                |> Just
+
+        Markdown.Block.OrderedList _ _ children ->
+            children
+                |> removeFormattingFromList (\index -> String.fromInt (index + 1) ++ ". ")
+                |> Just
+
+        Markdown.Block.Heading _ inlines ->
+            Markdown.Block.extractInlineText inlines
+                |> Just
+
+        Markdown.Block.Paragraph inlines ->
+            Markdown.Block.extractInlineText inlines
+                |> Just
+
+        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement _ _ children) ->
+            List.map removeFormattingFromBlock children
+                |> Maybe.Extra.combine
+                |> Maybe.map (String.join " ")
+
+        _ ->
+            Nothing

@@ -12,6 +12,7 @@ import Icons
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Profile.Summary
 import RemoteData
@@ -243,7 +244,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
     div [ class "flex flex-wrap sm:flex-nowrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
-            [ View.MarkdownEditor.viewReadOnly [ class "text-white truncate" ] action.description
+            [ Markdown.view [ class "text-white truncate" ] action.description
             , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
                 [ div [ class "mx-2 mb-2 text-white" ]
                     [ p [ class "label text-green" ]

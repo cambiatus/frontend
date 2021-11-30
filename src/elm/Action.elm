@@ -38,6 +38,7 @@ import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Markdown exposing (Markdown)
 import Ports
 import Profile
 import RemoteData exposing (RemoteData)
@@ -90,7 +91,7 @@ type alias ProofCode =
 
 type alias Action =
     { id : Int
-    , description : String
+    , description : Markdown
     , objective : Objective
     , reward : Float
     , verifierReward : Float
@@ -424,7 +425,7 @@ selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
-        |> with ActionObject.description
+        |> with (Markdown.selectionSet ActionObject.description)
         |> with
             (SelectionSet.map
                 (\o ->
@@ -559,7 +560,7 @@ viewSearchActions ({ t } as translators) today actions =
                 li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
                     [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
                     , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-                        [ p [ class "mb-8" ] [ text action.description ]
+                        [ Markdown.view [ class "mb-8" ] action.description
                         , div [ class "flex justify-between" ]
                             [ p []
                                 [ text (t "menu.search.gain")
@@ -693,7 +694,7 @@ encode action =
     Encode.object
         [ ( "action_id", Encode.int action.id )
         , ( "objective_id", Encode.int action.objective.id )
-        , ( "description", Encode.string action.description )
+        , ( "description", Markdown.encode action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
         , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
         , ( "deadline"

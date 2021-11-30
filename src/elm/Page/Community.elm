@@ -21,6 +21,7 @@ import Http
 import Icons
 import List.Extra
 import Log
+import Markdown
 import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
@@ -791,7 +792,7 @@ viewAction shared canEdit date action isDisabled =
     else
         div [ class "py-6 px-2" ]
             [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
-                [ View.MarkdownEditor.viewReadOnly [ class "text-text-grey text-sm sm:text-base" ]
+                [ Markdown.view [ class "text-text-grey text-sm sm:text-base" ]
                     action.description
                 , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                     [ div [ class "text-sm mt-5 sm:w-1/3" ]
