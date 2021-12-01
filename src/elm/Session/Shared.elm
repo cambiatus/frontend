@@ -155,6 +155,9 @@ decimalSeparators { t } =
     }
 
 
+{-| Normalize a masked float string into a string that can be parsed into a float
+by Elm
+-}
 floatStringFromSeparatedString : Translators -> String -> String
 floatStringFromSeparatedString translators separatedString =
     let
