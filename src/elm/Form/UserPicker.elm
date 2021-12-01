@@ -1,6 +1,6 @@
 module Form.UserPicker exposing
     ( init, Options, map
-    , withDisabled
+    , withDisabled, withContainerAttrs
     , getId, isEmpty
     , view, ViewConfig, mapViewConfig
     , Model, update, Msg, msgToString
@@ -26,7 +26,7 @@ module Form.UserPicker exposing
 
 ## Adding attributes
 
-@docs withDisabled
+@docs withDisabled, withContainerAttrs
 
 
 # Getters
@@ -51,7 +51,7 @@ This is how you actually use this component!
 @docs MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
 
 
-## single user picker
+## Single user picker
 
 @docs SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
 
@@ -84,6 +84,7 @@ type Options msg
         , disabled : Bool
         , currentUser : Eos.Account.Name
         , profiles : List Profile.Minimal
+        , containerAttrs : List (Html.Attribute msg)
         }
 
 
@@ -101,14 +102,21 @@ init { label, currentUser, profiles } =
         , disabled = False
         , currentUser = currentUser
         , profiles = profiles
+        , containerAttrs = []
         }
 
 
 {-| Change the kind of `msg` on an Options record
 -}
 map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
-map _ (Options options) =
-    Options options
+map fn (Options options) =
+    Options
+        { label = options.label
+        , disabled = options.disabled
+        , currentUser = options.currentUser
+        , profiles = options.profiles
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        }
 
 
 
@@ -120,6 +128,13 @@ map _ (Options options) =
 withDisabled : Bool -> Options msg -> Options msg
 withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
+
+
+{-| Add attributes to the element that holds the label, input and error
+-}
+withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withContainerAttrs attrs (Options options) =
+    Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
 
@@ -228,7 +243,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
                 Single (Just profile) ->
                     [ profile ]
     in
-    div [ class "mb-10" ]
+    div (class "mb-10" :: options.containerAttrs)
         [ View.Form.label [] model.id options.label
         , Select.view (settings wrappedOptions viewConfig)
             model.selectState
@@ -340,12 +355,19 @@ type alias ProfileWithSummary =
 {-| Initialize a `Model` that will take can have multiple profiles selected at
 once
 -}
-initMultiple : { id : String } -> MultiplePickerModel
-initMultiple { id } =
+initMultiple : { id : String, selectedProfiles : List Profile.Minimal } -> MultiplePickerModel
+initMultiple { id, selectedProfiles } =
     MultiplePickerModel
         { selectState = Select.newState id
         , id = id
-        , selectedProfiles = []
+        , selectedProfiles =
+            List.map
+                (\profile ->
+                    { profile = profile
+                    , summary = Profile.Summary.init False
+                    }
+                )
+                selectedProfiles
         }
 
 
