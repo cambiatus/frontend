@@ -1,7 +1,8 @@
 module Form.Toggle exposing
     ( init, Options, map
-    , withTooltip
-    , withDisabled
+    , withTooltip, withTopLabel
+    , withDisabled, withToggleSide
+    , Side(..)
     , getId
     , view
     )
@@ -24,12 +25,14 @@ module Form.Toggle exposing
 
 ## Adding elements
 
-@docs withTooltip
+@docs withTooltip, withTopLabel
 
 
 ## Adding attributes
 
-@docs withDisabled
+@docs withDisabled, withToggleSide
+
+@docs Side
 
 
 # Getters
@@ -48,6 +51,7 @@ import Html.Attributes exposing (checked, class, classList, disabled, for, id, r
 import Html.Events exposing (onBlur, onCheck)
 import Session.Shared as Shared
 import View.Components
+import View.Form
 
 
 
@@ -60,6 +64,8 @@ type Options msg
         , id : String
         , disabled : Bool
         , tooltip : Maybe { message : String, iconClass : String }
+        , side : Side
+        , topLabel : Maybe String
         }
 
 
@@ -72,7 +78,14 @@ init { label, id } =
         , id = id
         , disabled = False
         , tooltip = Nothing
+        , side = Right
+        , topLabel = Nothing
         }
+
+
+type Side
+    = Left
+    | Right
 
 
 {-| Change the kind of `msg` on an Options record
@@ -84,6 +97,8 @@ map fn (Options options) =
         , id = options.id
         , disabled = options.disabled
         , tooltip = options.tooltip
+        , side = options.side
+        , topLabel = options.topLabel
         }
 
 
@@ -97,6 +112,20 @@ need to give more information to the user
 withTooltip : { message : String, iconClass : String } -> Options msg -> Options msg
 withTooltip tooltip (Options options) =
     Options { options | tooltip = Just tooltip }
+
+
+{-| Change the side that the toggle itself is displayed relative to the label
+-}
+withToggleSide : Side -> Options msg -> Options msg
+withToggleSide side (Options options) =
+    Options { options | side = side }
+
+
+{-| Show a label on top of the toggle, like other form elements such as text input
+-}
+withTopLabel : String -> Options msg -> Options msg
+withTopLabel topLabel (Options options) =
+    Options { options | topLabel = Just topLabel }
 
 
 
@@ -125,63 +154,91 @@ type alias ViewConfig msg =
     }
 
 
+viewLabel : Options msg -> Html msg
+viewLabel (Options options) =
+    span [ class "flex items-center" ]
+        [ label
+            [ for options.id
+            , class "cursor-pointer"
+            ]
+            [ options.label ]
+        , case options.tooltip of
+            Nothing ->
+                Html.text ""
+
+            Just tooltip ->
+                View.Components.tooltip tooltip
+        ]
+
+
+viewStatusText : Options msg -> ViewConfig msg -> Html msg
+viewStatusText (Options options) viewConfig =
+    p
+        [ class "font-semibold lowercase"
+        , classList
+            [ ( "text-indigo-500", viewConfig.value && not options.disabled && not viewConfig.hasError )
+            , ( "text-gray-700", (not viewConfig.value || options.disabled) && not viewConfig.hasError )
+            , ( "text-red", viewConfig.hasError )
+            ]
+        ]
+        [ Html.text <| statusText viewConfig ]
+
+
+viewToggle : Options msg -> ViewConfig msg -> Html msg
+viewToggle (Options options) viewConfig =
+    span
+        [ class "select-none"
+        ]
+        [ input
+            [ type_ "checkbox"
+            , id options.id
+            , checked viewConfig.value
+            , onCheck viewConfig.onToggle
+            , onBlur (viewConfig.onBlur options.id)
+            , disabled options.disabled
+            , required viewConfig.isRequired
+            , class "sr-only"
+            ]
+            []
+        , span
+            [ class "relative block border-2 border-gray-100 rounded-full h-6 w-12 transition-colors ease-in duration-200 input form-switch-label2"
+            , classList
+                [ ( "bg-indigo-500 checked", viewConfig.value )
+                , ( "bg-white", not viewConfig.value )
+                , ( "border-red with-error", viewConfig.hasError )
+                ]
+            ]
+            []
+        ]
+
+
 view : Options msg -> ViewConfig msg -> Html msg
 view (Options options) viewConfig =
     div []
-        [ div
-            [ class "flex" ]
-            [ span [ class "flex items-center" ]
-                [ label
-                    [ for options.id
-                    , class "cursor-pointer"
-                    ]
-                    [ options.label ]
-                , case options.tooltip of
-                    Nothing ->
-                        Html.text ""
+        [ case options.topLabel of
+            Nothing ->
+                Html.text ""
 
-                    Just tooltip ->
-                        View.Components.tooltip tooltip
-                ]
-            , label
-                [ class "flex cursor-pointer ml-auto"
-                , for options.id
-                ]
-                [ p
-                    [ class "font-semibold lowercase"
-                    , classList
-                        [ ( "text-indigo-500", viewConfig.value && not options.disabled && not viewConfig.hasError )
-                        , ( "text-gray-700", (not viewConfig.value || options.disabled) && not viewConfig.hasError )
-                        , ( "text-red", viewConfig.hasError )
+            Just topLabel ->
+                View.Form.label [ class "mb-6" ] options.id topLabel
+        , case options.side of
+            Left ->
+                div [ class "flex space-x-2 text-sm" ]
+                    [ viewToggle (Options options) viewConfig
+                    , viewLabel (Options options)
+                    ]
+
+            Right ->
+                div [ class "flex" ]
+                    [ viewLabel (Options options)
+                    , label
+                        [ class "flex cursor-pointer ml-auto space-x-7"
+                        , for options.id
+                        ]
+                        [ viewStatusText (Options options) viewConfig
+                        , viewToggle (Options options) viewConfig
                         ]
                     ]
-                    [ Html.text <| statusText viewConfig ]
-                , span
-                    [ class "select-none ml-7"
-                    ]
-                    [ input
-                        [ type_ "checkbox"
-                        , id options.id
-                        , checked viewConfig.value
-                        , onCheck viewConfig.onToggle
-                        , onBlur (viewConfig.onBlur options.id)
-                        , disabled options.disabled
-                        , required viewConfig.isRequired
-                        , class "sr-only"
-                        ]
-                        []
-                    , span
-                        [ class "relative block border-2 border-gray-100 rounded-full h-6 w-12 transition-colors ease-in duration-200 input form-switch-label2"
-                        , classList
-                            [ ( "bg-indigo-500 checked", viewConfig.value )
-                            , ( "bg-white", not viewConfig.value )
-                            , ( "border-red with-error", viewConfig.hasError )
-                            ]
-                        ]
-                        []
-                    ]
-                ]
-            ]
         , viewConfig.error
         ]
 
