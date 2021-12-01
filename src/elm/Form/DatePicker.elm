@@ -1,6 +1,6 @@
 module Form.DatePicker exposing
     ( init, Options, map
-    , withDisabled, withAbsolutePositioning
+    , withDisabled, withAbsolutePositioning, withContainerAttrs
     , getId, getDate
     , view, ViewConfig, mapViewConfig
     , Model, initModel, update, Msg, msgToString
@@ -24,7 +24,7 @@ module Form.DatePicker exposing
 
 ## Adding attributes
 
-@docs withDisabled, withAbsolutePositioning
+@docs withDisabled, withAbsolutePositioning, withContainerAttrs
 
 
 # Getters
@@ -57,6 +57,7 @@ import Maybe.Extra
 import Session.Shared as Shared
 import Task
 import View.Components exposing (Key(..))
+import View.Form
 
 
 
@@ -69,6 +70,7 @@ type Options msg
         , id : String
         , disabled : Bool
         , absolutePositioning : Bool
+        , containerAttrs : List (Html.Attribute msg)
         }
 
 
@@ -81,14 +83,21 @@ init { label, id } =
         , id = id
         , disabled = False
         , absolutePositioning = True
+        , containerAttrs = []
         }
 
 
 {-| Change the kind of `msg` on an Options record
 -}
 map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
-map _ (Options options) =
-    Options options
+map fn (Options options) =
+    Options
+        { label = options.label
+        , id = options.id
+        , disabled = options.disabled
+        , absolutePositioning = options.absolutePositioning
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        }
 
 
 
@@ -100,6 +109,13 @@ map _ (Options options) =
 withDisabled : Bool -> Options msg -> Options msg
 withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
+
+
+{-| Add attributes to the container that holds the label and the input itself
+-}
+withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withContainerAttrs attrs (Options options) =
+    Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
 {-| Determines wheter or not to use an `absolute` class on the calendar that is
@@ -171,8 +187,9 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
         (Model model) =
             viewConfig.value
     in
-    div []
-        [ span [ class "flex" ]
+    div options.containerAttrs
+        [ View.Form.label [] options.id options.label
+        , span [ class "flex" ]
             [ span [ class "relative w-full" ]
                 [ DatePicker.view model.selectedDate
                     (settings wrappedOptions viewConfig)
