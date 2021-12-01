@@ -270,14 +270,15 @@ viewForm ({ shared } as loggedIn) model community maxTransferAmount =
     div [ class "bg-white" ]
         [ Page.viewHeader loggedIn (shared.translators.t "transfer.title")
         , Form.view [ class "container mx-auto p-4" ]
-            { buttonAttrs = [ class "w-full mt-6" ]
-            , buttonLabel = [ text_ "account.my_wallet.transfer.submit" ]
-            , translators = shared.translators
-            }
+            shared.translators
+            (\submitButton ->
+                [ submitButton [ class "w-full mt-6" ]
+                    [ text_ "account.my_wallet.transfer.submit" ]
+                ]
+            )
             (createForm loggedIn community currBalance maxTransferAmount)
             (Form.withDisabled isDisabled model.form)
-            GotFormMsg
-            SubmittedForm
+            { toMsg = GotFormMsg, onSubmit = SubmittedForm }
         ]
 
 

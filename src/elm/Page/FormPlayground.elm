@@ -482,14 +482,13 @@ view loggedIn model =
 viewUserForm : LoggedIn.Model -> Model -> Html Msg
 viewUserForm loggedIn model =
     Form.view []
-        { buttonAttrs = [ class "mx-auto" ]
-        , buttonLabel = [ text "Submit user" ]
-        , translators = loggedIn.shared.translators
-        }
+        loggedIn.shared.translators
+        (\submitButton ->
+            [ submitButton [ class "mx-auto" ] [ text "Submit user" ] ]
+        )
         (userForm loggedIn.shared.translators)
         model.userFormModel
-        GotUserFormMsg
-        SubmittedUser
+        { toMsg = GotUserFormMsg, onSubmit = SubmittedUser }
 
 
 

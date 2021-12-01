@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional, withConditional, withNesting, withDecoration, withNoOutput
+    , succeed, with, withOptional, withConditional, withNoOutput, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
@@ -65,7 +65,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional, withConditional, withNesting, withDecoration, withNoOutput
+@docs succeed, with, withOptional, withConditional, withNoOutput, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
 
 
 ## Fields
@@ -708,6 +708,25 @@ withNoOutput new current =
         )
 
 
+{-| Same thing as `withConditional` and `withNoOutput`, but combined
+-}
+withConditionalAndNoOutput : (values -> Form values x) -> Form values output -> Form values output
+withConditionalAndNoOutput buildNew current =
+    Form
+        (\values ->
+            let
+                filledNew =
+                    fill (buildNew values) values
+
+                filledCurrent =
+                    fill current values
+            in
+            { fields = filledNew.fields ++ filledCurrent.fields
+            , result = filledCurrent.result
+            }
+        )
+
+
 {-| Given some values (a dirty model), fill a form with them.
 -}
 fill :
@@ -959,17 +978,16 @@ msgToString msg =
 -}
 view :
     List (Html.Attribute msg)
-    ->
-        { buttonAttrs : List (Html.Attribute (Msg values))
-        , buttonLabel : List (Html (Msg values))
-        , translators : Shared.Translators
-        }
+    -> Shared.Translators
+    -> ((List (Html.Attribute msg) -> (List (Html msg) -> Html msg)) -> List (Html msg))
     -> Form values output
     -> Model values
-    -> (Msg values -> msg)
-    -> (output -> msg)
+    ->
+        { toMsg : Msg values -> msg
+        , onSubmit : output -> msg
+        }
     -> Html msg
-view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) toMsg onSubmit =
+view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
     let
         filledForm =
             fill form model.values
@@ -1006,16 +1024,15 @@ view formAttrs { buttonAttrs, buttonLabel, translators } form (Model model) toMs
                 )
             :: formAttrs
         )
-        (List.map (Html.map toMsg)
-            (fields
-                ++ [ button
+        (List.map (Html.map toMsg) fields
+            ++ footer
+                (\attrs ->
+                    button
                         (type_ "submit"
                             :: class "button button-primary"
-                            :: buttonAttrs
+                            :: attrs
                         )
-                        buttonLabel
-                   ]
-            )
+                )
         )
 
 
@@ -1276,6 +1293,12 @@ mapBaseFieldValues fn reverseFn baseField =
     }
 
 
+{-| You can use this function to nest forms inside one another! Just give a way
+to get the child form from the parent form, and a way to update the child on the
+parent. If you only want to use nesting (and not check values with
+`withConditional`, for example), you can use the more pipeline-friendly
+`withNesting`.
+-}
 mapChild :
     { value : parent -> child
     , update : child -> parent -> parent
