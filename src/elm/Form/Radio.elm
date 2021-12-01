@@ -1,7 +1,7 @@
 module Form.Radio exposing
     ( init, Options, mapMsg
     , withOption, withOptions
-    , withDisabled, withContainerAttrs, withGroupAttrs
+    , withDisabled, withContainerAttrs, withGroupAttrs, withHiddenRadioButton
     , Direction(..), withDirection
     , getId, getOptionToString
     , view
@@ -34,7 +34,7 @@ module Form.Radio exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withGroupAttrs
+@docs withDisabled, withContainerAttrs, withGroupAttrs, withHiddenRadioButton
 
 
 ## Controlling direction
@@ -77,6 +77,7 @@ type Options option msg
         , containerAttrs : List (Html.Attribute msg)
         , groupAttrs : List (Html.Attribute msg)
         , direction : Direction
+        , hideRadioButton : Bool
         }
 
 
@@ -93,6 +94,7 @@ init { label, id, optionToString } =
         , containerAttrs = []
         , groupAttrs = []
         , direction = Horizontal
+        , hideRadioButton = False
         }
 
 
@@ -109,6 +111,7 @@ mapMsg fn (Options options) =
         , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
         , groupAttrs = List.map (Html.Attributes.map fn) options.groupAttrs
         , direction = options.direction
+        , hideRadioButton = options.hideRadioButton
         }
 
 
@@ -129,6 +132,7 @@ map fn reverseFn (Options options) =
         , containerAttrs = options.containerAttrs
         , groupAttrs = options.groupAttrs
         , direction = options.direction
+        , hideRadioButton = options.hideRadioButton
         }
 
 
@@ -197,6 +201,13 @@ withContainerAttrs attrs (Options options) =
 withGroupAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withGroupAttrs attrs (Options options) =
     Options { options | groupAttrs = options.groupAttrs ++ attrs }
+
+
+{-| Determine if we should hide the radio button itself and only show the label
+-}
+withHiddenRadioButton : Bool -> Options option msg -> Options option msg
+withHiddenRadioButton hideRadioButton (Options options) =
+    Options { options | hideRadioButton = hideRadioButton }
 
 
 
@@ -275,6 +286,7 @@ view (Options options) viewConfig =
                         [ ( "with-error", isSelected && viewConfig.hasError )
                         , ( "hover:border-green", not viewConfig.hasError )
                         , ( "hover:border-red", viewConfig.hasError )
+                        , ( "sr-only", options.hideRadioButton )
                         ]
                     ]
                     []
