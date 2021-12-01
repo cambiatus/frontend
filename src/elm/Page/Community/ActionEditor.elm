@@ -41,8 +41,9 @@ import Form.RichText
 import Form.Text
 import Form.Toggle
 import Form.UserPicker
+import Form.Validate
 import Html exposing (Html, b, button, div, img, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, id, src, tabindex)
+import Html.Attributes exposing (class, classList, id, src, tabindex, type_)
 import Html.Events exposing (onClick, onMouseEnter, onMouseLeave)
 import I18Next
 import Icons
@@ -127,7 +128,7 @@ type Status
 
 
 type Status2
-    = Authorized2 FormInput
+    = Authorized2 (Form.Model FormInput)
     | Loading2
     | NotFound2
     | Unauthorized2
@@ -188,65 +189,85 @@ type alias FormInput =
     , expirationDate : Form.DatePicker.Model
     , useUsagesValidation : Bool
     , maxUsages : String
+    , usagesLeft : Maybe String
     , verificationInput : VerificationInput
     }
 
 
-initFormInput : Shared -> Maybe Action -> FormInput
+initFormInput : Shared -> Maybe Action -> Form.Model FormInput
 initFormInput shared maybeAction =
-    { description =
-        maybeAction
-            |> Maybe.map .description
-            |> Form.RichText.initModel "description-editor"
-    , reward =
-        maybeAction
-            |> Maybe.map (.reward >> String.fromFloat)
-            |> Maybe.withDefault ""
-    , useDateValidation =
-        maybeAction
-            |> Maybe.map (.deadline >> Maybe.Extra.isJust)
-            |> Maybe.withDefault False
-    , expirationDate =
-        maybeAction
-            |> Maybe.map (.deadline >> Utils.fromMaybeDateTime)
-            |> Maybe.withDefault shared.now
-            |> Date.fromPosix shared.timezone
-            |> Form.DatePicker.initModel
-    , useUsagesValidation =
-        maybeAction
-            |> Maybe.map .usages
-            |> Maybe.withDefault 0
-            |> (\usages -> usages > 0)
-    , maxUsages = ""
-    , verificationInput =
-        { verificationType =
+    Form.init
+        { description =
             maybeAction
-                |> Maybe.map .verificationType
-                |> Maybe.withDefault VerificationType.Automatic
-        , minVotes =
+                |> Maybe.map .description
+                |> Form.RichText.initModel "description-editor"
+        , reward =
             maybeAction
-                |> Maybe.andThen (.verifications >> minVotesFromInt)
-                |> Maybe.withDefault Three
-
-        -- TODO - Initialize verifiers
-        , verifiers = Form.UserPicker.initMultiple { id = "verifiers-picker" }
-        , verifierReward =
-            maybeAction
-                |> Maybe.map (.verifierReward >> String.fromFloat)
+                |> Maybe.map (.reward >> String.fromFloat)
                 |> Maybe.withDefault ""
-        , fileValidation =
-            { useFileValidation =
+        , useDateValidation =
+            maybeAction
+                |> Maybe.map (.deadline >> Maybe.Extra.isJust)
+                |> Maybe.withDefault False
+        , expirationDate =
+            maybeAction
+                |> Maybe.map (.deadline >> Utils.fromMaybeDateTime)
+                |> Maybe.withDefault shared.now
+                |> Date.fromPosix shared.timezone
+                |> Form.DatePicker.initModel
+        , useUsagesValidation =
+            maybeAction
+                |> Maybe.map .usages
+                |> Maybe.withDefault 0
+                |> (\usages -> usages > 0)
+        , maxUsages =
+            maybeAction
+                |> Maybe.map (.usages >> String.fromInt)
+                |> Maybe.withDefault ""
+        , usagesLeft =
+            maybeAction
+                |> Maybe.andThen
+                    (\action ->
+                        if action.usages > 0 then
+                            Just (String.fromInt action.usagesLeft)
+
+                        else
+                            Nothing
+                    )
+        , verificationInput =
+            { verificationType =
                 maybeAction
-                    |> Maybe.map .hasProofPhoto
-                    |> Maybe.withDefault False
-            , useVerificationCode =
+                    |> Maybe.map .verificationType
+                    |> Maybe.withDefault VerificationType.Automatic
+            , minVotes =
                 maybeAction
-                    |> Maybe.map .hasProofCode
-                    |> Maybe.withDefault False
-            , instructions = Form.RichText.initModel "proof-instructions-input" Nothing
+                    |> Maybe.andThen (.verifications >> minVotesFromInt)
+                    |> Maybe.withDefault Three
+            , verifiers =
+                Form.UserPicker.initMultiple
+                    { id = "verifiers-picker"
+                    , selectedProfiles =
+                        maybeAction
+                            |> Maybe.map .validators
+                            |> Maybe.withDefault []
+                    }
+            , verifierReward =
+                maybeAction
+                    |> Maybe.map (.verifierReward >> String.fromFloat)
+                    |> Maybe.withDefault ""
+            , fileValidation =
+                { useFileValidation =
+                    maybeAction
+                        |> Maybe.map .hasProofPhoto
+                        |> Maybe.withDefault False
+                , useVerificationCode =
+                    maybeAction
+                        |> Maybe.map .hasProofCode
+                        |> Maybe.withDefault False
+                , instructions = Form.RichText.initModel "proof-instructions-input" Nothing
+                }
             }
         }
-    }
 
 
 type alias FormOutput =
@@ -254,14 +275,19 @@ type alias FormOutput =
     , reward : Float
     , expirationDate : Maybe Date.Date
     , maxUsages : Maybe Int
+    , usagesLeft : Maybe Int
     , verificationOutput : VerificationOutput
     }
 
 
-createForm : LoggedIn.Model -> Form.Form FormInput FormOutput
-createForm loggedIn =
+createForm : LoggedIn.Model -> Community.Model -> Form.Form FormInput FormOutput
+createForm loggedIn community =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
     Form.succeed
-        (\description reward useDateValidation expirationDate useMaxUsages maxUsages verification ->
+        (\description reward useDateValidation expirationDate useMaxUsages maxUsages usagesLeft verification ->
             { description = description
             , reward = reward
             , expirationDate =
@@ -276,46 +302,82 @@ createForm loggedIn =
 
                 else
                     Nothing
+
+            -- TODO - Check this is correct for when user is creating action
+            , usagesLeft =
+                if useMaxUsages then
+                    Just usagesLeft
+
+                else
+                    Nothing
             , verificationOutput = verification
             }
         )
         |> Form.with
-            (Form.RichText.init { label = "Description (TODO I18N)" }
+            (Form.RichText.init { label = t "community.actions.form.description_label" }
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
                 |> Form.richText
-                    { parser = Ok
+                    { parser = Form.Validate.markdownLongerThan 10 loggedIn.shared.translators
                     , value = .description
                     , update = \description input -> { input | description = description }
                     , externalError = always Nothing
                     }
             )
         |> Form.with
-            (Form.Text.init { label = "Claimants reward (TODO I18N)", id = "claimant-reward-input" }
+            (Form.Text.init
+                { label = t "community.actions.form.reward_label"
+                , id = "claimant-reward-input"
+                }
+                |> Form.Text.withPlaceholder (Eos.formatSymbolAmount loggedIn.shared.translators community.symbol 0)
+                |> Form.Text.withContainerAttrs [ class "w-full sm:w-2/5" ]
+                |> Form.Text.withCurrency community.symbol
                 |> Form.textField
-                    { -- TODO - Use symbol
-                      parser = String.toFloat >> Result.fromMaybe "Needs to be an int"
+                    { parser = Form.Validate.maskedFloat loggedIn.shared.translators
                     , value = .reward
                     , update = \reward input -> { input | reward = reward }
                     , externalError = always Nothing
                     }
             )
-        -- TODO - Check this toggle
-        |> Form.withNoOutput
-            (Form.Toggle.init
-                { label = Html.text "Expiration on or off"
-                , id = "expiration-toggle"
-                }
-                |> Form.toggle
-                    { parser = Ok
-                    , value = \input -> input.useDateValidation || input.useUsagesValidation
-                    , update = \_ input -> input
-                    , externalError = always Nothing
+        |> Form.withConditionalAndNoOutput
+            (\values ->
+                Form.Toggle.init
+                    { label =
+                        p [ class "text-green" ]
+                            (if values.useDateValidation || values.useUsagesValidation then
+                                [ b []
+                                    [ text <| t "community.actions.form.validation_on"
+                                    ]
+                                , text <| t "community.actions.form.validation_on_detail"
+                                ]
+
+                             else
+                                [ b []
+                                    [ text <| t "community.actions.form.validation_off"
+                                    ]
+                                , text <| t "community.actions.form.validation_detail"
+                                ]
+                            )
+                    , id = "expiration-toggle"
                     }
+                    |> Form.Toggle.withTopLabel (t "community.actions.form.validity_label")
+                    |> Form.Toggle.withToggleSide Form.Toggle.Left
+                    |> Form.toggle
+                        { parser = Ok
+                        , value = \input -> input.useDateValidation || input.useUsagesValidation
+                        , update = \_ input -> input
+                        , externalError = always Nothing
+                        }
             )
         |> Form.with
             (Form.Checkbox.init
-                { label = Html.text "Validity by date (TODO I18N)"
+                { label =
+                    p []
+                        [ b [] [ text <| t "community.actions.form.date_validity" ]
+                        , text <| t "community.actions.form.date_validity_details"
+                        ]
                 , id = "date-validity-checkbox"
                 }
+                |> Form.Checkbox.withContainerAttrs [ class "flex mt-6 mb-3 sm:w-2/5" ]
                 |> Form.checkbox
                     { parser = Ok
                     , value = .useDateValidation
@@ -323,20 +385,38 @@ createForm loggedIn =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.DatePicker.init { label = "Pick a date (TODO I18N)", id = "date-validation-picker" }
-                |> Form.datePicker
-                    { parser = Result.fromMaybe "Mandatory"
-                    , value = .expirationDate
-                    , update = \expirationDate input -> { input | expirationDate = expirationDate }
-                    , externalError = always Nothing
-                    }
+        |> Form.withConditional
+            (\values ->
+                if values.useDateValidation then
+                    Form.DatePicker.init
+                        { label = t <| "community.actions.form.date_label"
+                        , id = "date-validation-picker"
+                        }
+                        |> Form.DatePicker.withContainerAttrs [ class "mb-6" ]
+                        |> Form.datePicker
+                            { parser =
+                                Form.Validate.required loggedIn.shared.translators
+                                    >> Result.andThen (Form.Validate.futureDate loggedIn.shared)
+                            , value = .expirationDate
+                            , update = \expirationDate input -> { input | expirationDate = expirationDate }
+                            , externalError = always Nothing
+                            }
+
+                else
+                    loggedIn.shared.now
+                        |> Date.fromPosix loggedIn.shared.timezone
+                        |> Form.succeed
             )
         |> Form.with
             (Form.Checkbox.init
-                { label = Html.text "Validity by usages (TODO I18N)"
+                { label =
+                    p []
+                        [ b [] [ text <| t "community.actions.form.quantity_validity" ]
+                        , text <| t "community.actions.form.quantity_validity_details"
+                        ]
                 , id = "usages-validity-checkbox"
                 }
+                |> Form.Checkbox.withContainerAttrs [ class "flex mb-3 sm:w-2/5" ]
                 |> Form.checkbox
                     { parser = Ok
                     , value = .useUsagesValidation
@@ -344,23 +424,58 @@ createForm loggedIn =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.Text.init
-                { label = "Max usages (TODO I18N)"
-                , id = "usages-validity-input"
-                }
-                |> Form.textField
-                    { parser = String.toInt >> Result.fromMaybe "Invalid int"
-                    , value = .maxUsages
-                    , update = \maxUsages input -> { input | maxUsages = maxUsages }
-                    , externalError = always Nothing
-                    }
+        |> Form.withConditional
+            (\values ->
+                if values.useUsagesValidation then
+                    Form.Text.init
+                        { label = t "community.actions.form.quantity_label"
+                        , id = "usages-validity-input"
+                        }
+                        |> Form.Text.withPlaceholder (t "community.actions.form.usages_placeholder")
+                        |> Form.Text.withType Form.Text.Number
+                        |> Form.Text.asNumeric
+                        |> Form.Text.withContainerAttrs [ class "sm:w-2/5" ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.intGreaterThan
+                                    0
+                                    loggedIn.shared.translators
+                            , value = .maxUsages
+                            , update = \maxUsages input -> { input | maxUsages = maxUsages }
+                            , externalError = always Nothing
+                            }
+
+                else
+                    Form.succeed 0
+            )
+        |> Form.withConditional
+            (\values ->
+                if values.useUsagesValidation && Maybe.Extra.isJust values.usagesLeft then
+                    Form.Text.init
+                        { label = t "community.actions.form.usages_left_label"
+                        , id = "usages-left-input"
+                        }
+                        |> Form.Text.withType Form.Text.Number
+                        |> Form.Text.asNumeric
+                        |> Form.Text.withContainerAttrs [ class "sm:w-2/5" ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.intGreaterThanOrEqualTo
+                                    0
+                                    loggedIn.shared.translators
+                            , value = .usagesLeft >> Maybe.withDefault ""
+                            , update = \usagesLeft_ input -> { input | usagesLeft = Just usagesLeft_ }
+                            , externalError = always Nothing
+                            }
+
+                else
+                    Form.succeed 0
             )
         |> Form.withNesting
             { value = .verificationInput
             , update = \child parent -> { parent | verificationInput = child }
             }
-            (verificationForm loggedIn)
+            (verificationForm loggedIn community)
 
 
 type alias VerificationInput =
@@ -389,8 +504,12 @@ type MinVotes
     | Nine
 
 
-verificationForm : LoggedIn.Model -> Form.Form VerificationInput VerificationOutput
-verificationForm loggedIn =
+verificationForm : LoggedIn.Model -> Community.Model -> Form.Form VerificationInput VerificationOutput
+verificationForm loggedIn community =
+    let
+        { t, tr } =
+            loggedIn.shared.translators
+    in
     Form.succeed
         (\verificationType minVotes verifiers verifierReward fileValidation ->
             case verificationType of
@@ -407,10 +526,30 @@ verificationForm loggedIn =
         )
         |> Form.with
             (Form.Radio.init
-                { label = "Verification type (TODO I18N)"
+                { label = t "community.actions.form.verification_label"
                 , id = "verification-type-radio"
                 , optionToString = VerificationType.toString
                 }
+                |> Form.Radio.withOption VerificationType.Automatic
+                    (span [ class "flex items-center space-x-2" ]
+                        [ p []
+                            [ b [] [ text <| t "community.actions.form.automatic" ]
+                            , text <| t "community.actions.form.automatic_detail"
+                            ]
+                        , View.Components.tooltip
+                            { message = t "community.actions.form.automatic_tooltip"
+                            , iconClass = ""
+                            }
+                        ]
+                    )
+                |> Form.Radio.withOption VerificationType.Claimable
+                    (p []
+                        [ b [] [ text <| t "community.actions.form.manual" ]
+                        , text <| t "community.actions.form.manual_detail"
+                        ]
+                    )
+                |> Form.Radio.withContainerAttrs [ class "my-6" ]
+                |> Form.Radio.withDirection Form.Radio.Vertical
                 |> Form.radio (VerificationType.fromString >> Maybe.withDefault VerificationType.Automatic)
                     { parser = Ok
                     , value = .verificationType
@@ -418,53 +557,106 @@ verificationForm loggedIn =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.Radio.init
-                { label = "Minimum number of votes"
-                , id = "min-votes-radio"
-                , optionToString = minVotesToInt >> String.fromInt
-                }
-                |> Form.radio
-                    (String.toInt
-                        >> Maybe.andThen minVotesFromInt
-                        >> Maybe.withDefault Three
-                    )
-                    { parser = Ok
-                    , value = .minVotes
-                    , update = \minVotes input -> { input | minVotes = minVotes }
-                    , externalError = always Nothing
-                    }
+        |> Form.withConditional
+            (\values ->
+                case values.verificationType of
+                    VerificationType.Automatic ->
+                        Form.succeed Three
+
+                    VerificationType.Claimable ->
+                        let
+                            withOption minVotes =
+                                Form.Radio.withOption minVotes
+                                    (span
+                                        [ class "h-8 w-8 rounded-full border flex items-center justify-center cursor-pointer sibling-focus ring-orange-300 ring-opacity-50 transition-all"
+                                        , classList
+                                            [ ( "bg-orange-300 border-orange-300 text-white", values.minVotes == minVotes )
+                                            , ( "hover:border-orange-300 hover:text-orange-500 border-gray-500", values.minVotes /= minVotes )
+                                            ]
+                                        ]
+                                        [ text (minVotesToInt minVotes |> String.fromInt) ]
+                                    )
+                        in
+                        Form.Radio.init
+                            { label = t "community.actions.form.votes_label"
+                            , id = "min-votes-radio"
+                            , optionToString = minVotesToInt >> String.fromInt
+                            }
+                            |> withOption Three
+                            |> withOption Five
+                            |> withOption Seven
+                            |> withOption Nine
+                            |> Form.Radio.withContainerAttrs [ class "ml-8 mb-6" ]
+                            |> Form.Radio.withHiddenRadioButton True
+                            |> Form.radio
+                                (String.toInt
+                                    >> Maybe.andThen minVotesFromInt
+                                    >> Maybe.withDefault Three
+                                )
+                                { parser = Ok
+                                , value = .minVotes
+                                , update = \minVotes input -> { input | minVotes = minVotes }
+                                , externalError = always Nothing
+                                }
             )
-        |> Form.with
-            (Form.UserPicker.init
-                { label = "Pick validators"
-                , currentUser = loggedIn.accountName
-                , profiles = []
-                }
-                |> Form.userPickerMultiple
-                    { parser = Ok
-                    , value = .verifiers
-                    , update = \verifiers input -> { input | verifiers = verifiers }
-                    , externalError = always Nothing
-                    }
+        |> Form.withConditional
+            (\values ->
+                case values.verificationType of
+                    VerificationType.Automatic ->
+                        Form.succeed []
+
+                    VerificationType.Claimable ->
+                        Form.UserPicker.init
+                            { label =
+                                tr "community.actions.form.verifiers_label_count"
+                                    [ ( "count", values.minVotes |> minVotesToInt |> String.fromInt ) ]
+                            , currentUser = loggedIn.accountName
+                            , profiles = community.members
+                            }
+                            |> Form.UserPicker.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                            |> Form.userPickerMultiple
+                                { parser =
+                                    Form.Validate.lengthGreaterThanOrEqualTo
+                                        (minVotesToInt values.minVotes)
+                                        loggedIn.shared.translators
+                                , value = .verifiers
+                                , update = \verifiers input -> { input | verifiers = verifiers }
+                                , externalError = always Nothing
+                                }
             )
-        |> Form.with
-            (Form.Text.init
-                { label = "Verifier reward"
-                , id = "verifier-reward-input"
-                }
-                |> Form.textField
-                    { parser = String.toFloat >> Result.fromMaybe "Invalid float"
-                    , value = .verifierReward
-                    , update = \verifierReward input -> { input | verifierReward = verifierReward }
-                    , externalError = always Nothing
-                    }
+        |> Form.withConditional
+            (\values ->
+                case values.verificationType of
+                    VerificationType.Automatic ->
+                        Form.succeed 0
+
+                    VerificationType.Claimable ->
+                        Form.Text.init
+                            { label = t "community.actions.form.verifiers_reward_label"
+                            , id = "verifier-reward-input"
+                            }
+                            |> Form.Text.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                            |> Form.Text.withCurrency community.symbol
+                            |> Form.textField
+                                { parser = Form.Validate.maskedFloat loggedIn.shared.translators
+                                , value = .verifierReward
+                                , update = \verifierReward input -> { input | verifierReward = verifierReward }
+                                , externalError = always Nothing
+                                }
             )
-        |> Form.withNesting
-            { value = .fileValidation
-            , update = \fileValidation input -> { input | fileValidation = fileValidation }
-            }
-            fileValidationForm
+        |> Form.withConditional
+            (\values ->
+                case values.verificationType of
+                    VerificationType.Automatic ->
+                        Form.succeed NoFileValidation
+
+                    VerificationType.Claimable ->
+                        Form.mapChild
+                            { value = .fileValidation
+                            , update = \fileValidation input -> { input | fileValidation = fileValidation }
+                            }
+                            (fileValidationForm loggedIn.shared.translators)
+            )
 
 
 type alias FileValidationInput =
@@ -479,14 +671,19 @@ type FileValidation
     | WithFileValidation { useVerificationCode : Bool, instructions : Markdown }
 
 
-fileValidationForm : Form.Form FileValidationInput FileValidation
-fileValidationForm =
+fileValidationForm : Shared.Translators -> Form.Form FileValidationInput FileValidation
+fileValidationForm { t } =
     Form.succeed (\_ fileValidationOutput -> fileValidationOutput)
         |> Form.with
             (Form.Checkbox.init
-                { label = Html.text "Use PDF or photo"
+                { label =
+                    div []
+                        [ p [] [ b [] [ text <| t "community.actions.form.proof_validation" ] ]
+                        , p [] [ text <| t "community.actions.form.proof_validation_hint" ]
+                        ]
                 , id = "file-validation-checkbox"
                 }
+                |> Form.Checkbox.withContainerAttrs [ class "flex ml-8 sm:w-2/5" ]
                 |> Form.checkbox
                     { parser = Ok
                     , value = .useFileValidation
@@ -506,9 +703,14 @@ fileValidationForm =
                         )
                         |> Form.with
                             (Form.Checkbox.init
-                                { label = Html.text "Use verificatino code"
+                                { label =
+                                    div []
+                                        [ p [] [ b [] [ text <| t "community.actions.form.verification_code" ] ]
+                                        , p [] [ text <| t "community.actions.form.verification_code_hint" ]
+                                        ]
                                 , id = "verification-code-checkbox"
                                 }
+                                |> Form.Checkbox.withContainerAttrs [ class "flex ml-8 my-6 sm:w-2/5" ]
                                 |> Form.checkbox
                                     { parser = Ok
                                     , value = .useVerificationCode
@@ -517,7 +719,8 @@ fileValidationForm =
                                     }
                             )
                         |> Form.with
-                            (Form.RichText.init { label = "Instructions" }
+                            (Form.RichText.init { label = t "community.actions.form.verification_instructions" }
+                                |> Form.RichText.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
                                 |> Form.richText
                                     { parser = Ok
                                     , value = .instructions
@@ -908,6 +1111,9 @@ type Msg
     | GotInstructionsEditorMsg MarkdownEditor.Msg
     | OpenedAutomaticActionTooltip
     | ClosedAutomaticActionTooltip
+      -- FORM 2
+    | GotForm2Msg (Form.Msg FormInput)
+    | SubmittedForm2 FormOutput
 
 
 
@@ -985,6 +1191,7 @@ update msg model ({ shared } as loggedIn) =
                             Just action ->
                                 { model
                                     | status = Authorized
+                                    , status2 = Authorized2 (initFormInput shared (Just action))
                                     , form = editForm loggedIn model.form action
                                 }
                                     |> UR.init
@@ -996,6 +1203,7 @@ update msg model ({ shared } as loggedIn) =
                     ( Just _, Nothing ) ->
                         { model
                             | status = Authorized
+                            , status2 = Authorized2 (initFormInput shared Nothing)
                             , form = initForm shared
                         }
                             |> UR.init
@@ -1486,6 +1694,24 @@ update msg model ({ shared } as loggedIn) =
             { model | showAutomaticActionTooltip = False }
                 |> UR.init
 
+        GotForm2Msg subMsg ->
+            case model.status2 of
+                Authorized2 formModel ->
+                    Form.update shared subMsg formModel
+                        |> UR.fromChild
+                            (\form -> { model | status2 = Authorized2 form })
+                            GotForm2Msg
+                            LoggedIn.executeFeedback
+                            model
+
+                _ ->
+                    UR.init model
+
+        SubmittedForm2 _ ->
+            -- TODO - Check update with `ValidateForm`
+            model
+                |> UR.init
+
 
 datePickerSettings : Shared -> DatePicker.Settings
 datePickerSettings shared =
@@ -1662,26 +1888,55 @@ view ({ shared } as loggedIn) model =
                 ++ t "community.actions.title"
 
         content =
-            case ( loggedIn.selectedCommunity, model.status ) of
+            case ( loggedIn.selectedCommunity, model.status2 ) of
                 ( RemoteData.Loading, _ ) ->
                     Page.fullPageLoading shared
 
                 ( RemoteData.NotAsked, _ ) ->
                     Page.fullPageLoading shared
 
-                ( _, Loading ) ->
+                ( _, Loading2 ) ->
                     Page.fullPageLoading shared
 
-                ( RemoteData.Success community, Authorized ) ->
+                ( RemoteData.Success community, Authorized2 form2 ) ->
                     div [ class "bg-white" ]
                         [ Page.viewHeader loggedIn (t "community.actions.title")
-                        , viewForm loggedIn community model
+                        , Form.view [ class "container mx-auto px-4 mt-6 mb-12" ]
+                            shared.translators
+                            (\submitButton ->
+                                [ div [ class "mt-18 sm:flex sm:align-center" ]
+                                    [ submitButton []
+                                        [ if Maybe.Extra.isJust model.actionId then
+                                            text <| t "menu.save"
+
+                                          else
+                                            text <| t "menu.create"
+                                        ]
+                                    , if Maybe.Extra.isJust model.actionId then
+                                        button
+                                            [ type_ "button"
+                                            , class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4"
+                                            , onClick MarkAsCompleted
+                                            ]
+                                            [ text <| t "community.actions.form.mark_completed" ]
+
+                                      else
+                                        text ""
+                                    ]
+                                ]
+                            )
+                            (createForm loggedIn community)
+                            form2
+                            { toMsg = GotForm2Msg
+                            , onSubmit = SubmittedForm2
+                            }
                         ]
 
-                ( RemoteData.Success _, Unauthorized ) ->
+                ( RemoteData.Success _, Unauthorized2 ) ->
+                    -- TODO - I18N
                     Page.fullPageNotFound "not authorized" ""
 
-                ( RemoteData.Success _, NotFound ) ->
+                ( RemoteData.Success _, NotFound2 ) ->
                     Page.fullPageNotFound (t "community.actions.form.not_found") ""
 
                 ( RemoteData.Failure e, _ ) ->
@@ -1717,11 +1972,11 @@ viewForm ({ shared } as loggedIn) community model =
     in
     div [ class "container mx-auto" ]
         [ div [ class "py-6 px-4" ]
-            [ viewLoading model
-            , viewDescription loggedIn model.form
-            , viewReward loggedIn community model.form
-            , viewValidations loggedIn model
-            , viewVerifications loggedIn model community
+            -- [  viewLoading model
+            -- , viewDescription loggedIn model.form
+            -- , viewReward loggedIn community model.form
+            -- , viewValidations loggedIn model
+            [ viewVerifications loggedIn model community
             , div [ class "sm:flex sm:align-center mt-18 mb-12" ]
                 [ button
                     [ class "button button-primary w-full sm:w-48"
@@ -1743,61 +1998,6 @@ viewForm ({ shared } as loggedIn) community model =
                 ]
             ]
         ]
-
-
-viewLoading : Model -> Html msg
-viewLoading model =
-    case model.form.saveStatus of
-        Saving ->
-            div [ class "modal container" ]
-                [ div [ class "modal-bg" ] []
-                , div [ class "full-spinner-container h-full" ]
-                    [ div [ class "spinner spinner--delay" ] [] ]
-                ]
-
-        _ ->
-            text ""
-
-
-viewDescription : LoggedIn.Model -> Form -> Html Msg
-viewDescription { shared } form =
-    let
-        { t, tr } =
-            shared.translators
-    in
-    MarkdownEditor.view
-        { translators = shared.translators
-        , placeholder = Nothing
-        , label = t "community.actions.form.description_label"
-        , problem =
-            form.descriptionError
-                |> Maybe.map (\( key, replacements ) -> tr key replacements)
-        , disabled = False
-        }
-        []
-        form.description
-        |> Html.map GotDescriptionEditorMsg
-
-
-viewReward : LoggedIn.Model -> Community.Model -> Form -> Html Msg
-viewReward { shared } community form =
-    let
-        { t } =
-            shared.translators
-    in
-    Input.init
-        { label = t "community.actions.form.reward_label"
-        , id = "action_reward_field"
-        , onInput = EnteredReward
-        , disabled = False
-        , value = getInput form.reward
-        , placeholder = Just (Eos.formatSymbolAmount shared.translators community.symbol 0)
-        , problems = Just (listErrors shared.translations form.reward)
-        , translators = shared.translators
-        }
-        |> Input.withContainerAttrs [ class "w-full sm:w-2/5" ]
-        |> Input.withCurrency community.symbol
-        |> Input.toHtml
 
 
 viewValidations : LoggedIn.Model -> Model -> Html Msg
@@ -2412,3 +2612,9 @@ msgToString msg =
 
         ClosedAutomaticActionTooltip ->
             [ "ClosedAutomaticActionTooltip" ]
+
+        GotForm2Msg subMsg ->
+            "GotForm2Msg" :: Form.msgToString subMsg
+
+        SubmittedForm2 _ ->
+            [ "SubmittedForm2" ]

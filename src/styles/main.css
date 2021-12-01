@@ -130,6 +130,14 @@ body > * {
     --shadow-size: 0.25rem;
   } */
 
+  * + .sibling-focus {
+    @apply ring-0 transition-shadow;
+  }
+
+  *:focus + .sibling-focus {
+    @apply ring;
+  }
+
   /* End of form */
 
   /* Input */
