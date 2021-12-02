@@ -4,6 +4,7 @@ module Form exposing
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
+    , parse
     )
 
 {-| This is how we deal with forms. The main idea behind a form is to take user
@@ -81,6 +82,11 @@ documentation if you're stuck.
 ### Changing attributes and state
 
 @docs withDisabled
+
+
+## Validating
+
+@docs parse
 
 -}
 
@@ -209,7 +215,7 @@ field :
     -> Form values output
 field build config =
     let
-        parse values =
+        parse_ values =
             config.parser (config.value values)
                 |> Result.andThen
                     (\output ->
@@ -230,7 +236,7 @@ field build config =
         (\values ->
             let
                 result =
-                    parse values
+                    parse_ values
             in
             { fields =
                 [ { state = field_ values
@@ -1015,25 +1021,46 @@ view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
     Html.form
         (novalidate True
             :: Events.onSubmit
-                (case filledForm.result of
-                    Ok validForm ->
-                        onSubmit validForm
-
-                    Err errors ->
-                        toMsg (ClickedSubmitWithErrors errors)
+                (parse form
+                    (Model model)
+                    { onError = toMsg
+                    , onSuccess = onSubmit
+                    }
                 )
             :: formAttrs
         )
         (List.map (Html.map toMsg) fields
-            ++ footer
-                (\attrs ->
-                    button
-                        (type_ "submit"
-                            :: class "button button-primary"
-                            :: attrs
-                        )
-                )
+            ++ footer (\attrs -> button (type_ "submit" :: attrs))
         )
+
+
+{-| Parse a form with some values. If there are errors, they are highlighted in
+the form. Otherwise, fire a msg containing the output of the form.
+
+You shouldn't need this function often, as it's already called when submitting a
+form, but it could be useful if you need more than one button to validate the
+form, or if you want to do it programatically.
+
+-}
+parse :
+    Form values output
+    -> Model values
+    ->
+        { onError : Msg values -> msg
+        , onSuccess : output -> msg
+        }
+    -> msg
+parse form (Model model) { onError, onSuccess } =
+    let
+        filledForm =
+            fill form model.values
+    in
+    case filledForm.result of
+        Err errors ->
+            onError (ClickedSubmitWithErrors errors)
+
+        Ok validForm ->
+            onSuccess validForm
 
 
 viewField :
