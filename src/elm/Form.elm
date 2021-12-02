@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional, withConditional, withNoOutput, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
+    , succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
@@ -66,7 +66,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional, withConditional, withNoOutput, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
+@docs succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
 
 
 ## Fields
@@ -693,28 +693,7 @@ withConditional buildNew current =
         )
 
 
-{-| Add a field to a form that produces no output. It's similar to `withDecoration`,
-but you can use form fields. It's useful when the form has a field that is entirely
-computed based on other values from the form.
--}
-withNoOutput : Form values x -> Form values output -> Form values output
-withNoOutput new current =
-    Form
-        (\values ->
-            let
-                filledNew =
-                    fill new values
-
-                filledCurrent =
-                    fill current values
-            in
-            { fields = filledNew.fields ++ filledCurrent.fields
-            , result = filledCurrent.result
-            }
-        )
-
-
-{-| Same thing as `withConditional` and `withNoOutput`, but combined
+{-| Same thing as `withConditional`, but don't include the result in the output
 -}
 withConditionalAndNoOutput : (values -> Form values x) -> Form values output -> Form values output
 withConditionalAndNoOutput buildNew current =

@@ -1,8 +1,8 @@
 module Form.Validate exposing
     ( required
-    , int, intGreaterThan, intGreaterThanOrEqualTo
-    , float, maskedFloat
-    , stringLongerThan, markdownLongerThan
+    , intGreaterThan, intGreaterThanOrEqualTo
+    , maskedFloat
+    , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
     )
@@ -23,11 +23,11 @@ throughout the app
 
 ## String inputs
 
-@docs int, intGreaterThan, intGreaterThanOrEqualTo
+@docs intGreaterThan, intGreaterThanOrEqualTo
 
-@docs float, maskedFloat
+@docs maskedFloat
 
-@docs stringLongerThan, markdownLongerThan
+@docs markdownLongerThan
 
 
 ## List inputs

@@ -187,8 +187,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = NoOp
-    | CompletedLoadObjectives Community.Model (List Community.Objective)
+    = CompletedLoadObjectives Community.Model (List Community.Objective)
     | ClosedAuthModal
     | GotFormMsg (Form.Msg FormInput)
     | SubmittedForm (Maybe Action) FormOutput
@@ -212,9 +211,6 @@ update msg model ({ shared } as loggedIn) =
                     status
     in
     case msg of
-        NoOp ->
-            UR.init model
-
         CompletedLoadObjectives community objectives ->
             if community.creator == loggedIn.accountName then
                 let
@@ -603,7 +599,7 @@ form loggedIn community =
             (\values ->
                 if values.useDateValidation then
                     Form.DatePicker.init
-                        { label = t <| "community.actions.form.date_label"
+                        { label = t "community.actions.form.date_label"
                         , id = "date-validation-picker"
                         }
                         |> Form.DatePicker.withContainerAttrs [ class "mb-6" ]
@@ -1096,7 +1092,7 @@ jsAddressToMsg addr val =
                 |> Result.withDefault Nothing
     in
     case addr of
-        "SubmittedForm2" :: _ ->
+        "SubmittedForm" :: _ ->
             decodeCompletedSavingAction
 
         "ClickedMarkAsComplete" :: _ ->
@@ -1109,9 +1105,6 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         CompletedLoadObjectives _ _ ->
             [ "CompletedLoadObjectives" ]
 
@@ -1119,10 +1112,10 @@ msgToString msg =
             [ "ClosedAuthModal" ]
 
         GotFormMsg subMsg ->
-            "GotForm2Msg" :: Form.msgToString subMsg
+            "GotFormMsg" :: Form.msgToString subMsg
 
         SubmittedForm _ _ ->
-            [ "SubmittedForm2" ]
+            [ "SubmittedForm" ]
 
         ClickedMarkAsComplete _ _ ->
             [ "ClickedMarkAsComplete" ]
