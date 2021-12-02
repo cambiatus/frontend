@@ -1,8 +1,7 @@
 module View.Form.Radio exposing
     ( init
-    , withOption, withOptions, withAttrs, withRowAttrs, withVertical, withDisabled, withVariant
+    , withOption, withAttrs, withVertical, withDisabled
     , toHtml
-    , Variant(..)
     )
 
 {-| Creates a Cambiatus-style radio button group
@@ -31,7 +30,7 @@ module View.Form.Radio exposing
 
 # Helpers
 
-@docs withOption, withOptions, withAttrs, withRowAttrs, withVertical, withDisabled, withVariant
+@docs withOption, withAttrs, withVertical, withDisabled
 
 
 # Converting to HTML
@@ -59,10 +58,8 @@ type alias Options option msg =
     , areOptionsEqual : option -> option -> Bool
     , options : List ( option, Bool -> Html msg )
     , extraAttrs : List (Html.Attribute msg)
-    , rowAttrs : List (Html.Attribute msg)
     , isVertical : Bool
     , isDisabled : Bool
-    , variant : Variant
     }
 
 
@@ -94,10 +91,8 @@ init initialOptions =
     , areOptionsEqual = initialOptions.areOptionsEqual
     , options = []
     , extraAttrs = []
-    , rowAttrs = []
     , isVertical = False
     , isDisabled = False
-    , variant = Default
     }
 
 
@@ -108,15 +103,8 @@ init initialOptions =
 {-| Adds an option to the radio group
 -}
 withOption : option -> (Bool -> Html msg) -> Options option msg -> Options option msg
-withOption option viewOption options =
-    { options | options = options.options ++ [ ( option, viewOption ) ] }
-
-
-{-| Adds multiple options to the radio group
--}
-withOptions : List ( option, Bool -> Html msg ) -> Options option msg -> Options option msg
-withOptions newOptions options =
-    { options | options = options.options ++ newOptions }
+withOption option viewOption_ options =
+    { options | options = options.options ++ [ ( option, viewOption_ ) ] }
 
 
 {-| Adds attributes to the div that holds the label and the options
@@ -124,13 +112,6 @@ withOptions newOptions options =
 withAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
-
-
-{-| Adds attribute to the div that holds the options
--}
-withRowAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withRowAttrs attrs options =
-    { options | rowAttrs = options.rowAttrs ++ attrs }
 
 
 {-| Defines if the group should be displayed in a row or in a column
@@ -147,13 +128,6 @@ withDisabled isDisabled options =
     { options | isDisabled = isDisabled }
 
 
-{-| Defines the variant to be shown
--}
-withVariant : Variant -> Options option msg -> Options option msg
-withVariant variant options =
-    { options | variant = variant }
-
-
 
 -- TO HTML
 
@@ -165,26 +139,16 @@ withVariant variant options =
 -}
 toHtml : Translators -> Options option msg -> Html msg
 toHtml { t } options =
-    let
-        viewOption ( option, view ) =
-            case options.variant of
-                Default ->
-                    viewOptionAsDefault options ( option, view )
-
-                Simplified ->
-                    viewOptionAsCircled options ( option, view )
-    in
     div options.extraAttrs
         [ span [ class "label" ] [ text (t options.label) ]
         , div
-            (class "flex mt-6"
-                :: classList
-                    [ ( "flex-col", options.isVertical )
-                    , ( "xs-max:flex-col flex-row xs:flex-wrap", not options.isVertical )
-                    ]
-                :: options.rowAttrs
-            )
-            (List.map viewOption options.options)
+            [ class "flex mt-6"
+            , classList
+                [ ( "flex-col", options.isVertical )
+                , ( "xs-max:flex-col flex-row xs:flex-wrap", not options.isVertical )
+                ]
+            ]
+            (List.map (viewOption options) options.options)
         ]
 
 
@@ -193,8 +157,8 @@ isActive options option =
     options.areOptionsEqual options.activeOption option
 
 
-viewOptionAsDefault : Options option msg -> ( option, Bool -> Html msg ) -> Html msg
-viewOptionAsDefault options ( option, view ) =
+viewOption : Options option msg -> ( option, Bool -> Html msg ) -> Html msg
+viewOption options ( option, view ) =
     label
         [ class "flex items-center"
         , classList
@@ -225,25 +189,3 @@ viewOptionAsDefault options ( option, view ) =
             ]
             [ view (isActive options option) ]
         ]
-
-
-viewOptionAsCircled : Options option msg -> ( option, Bool -> Html msg ) -> Html msg
-viewOptionAsCircled options ( option, view ) =
-    label []
-        [ view (isActive options option)
-        , input
-            [ type_ "radio"
-            , class "hidden absolute"
-            , name options.name
-            , value (options.optionToString option)
-            , checked (isActive options option)
-            , onClick (options.onSelect option)
-            , disabled options.isDisabled
-            ]
-            []
-        ]
-
-
-type Variant
-    = Default
-    | Simplified
