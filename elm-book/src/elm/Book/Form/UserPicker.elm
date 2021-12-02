@@ -23,8 +23,8 @@ type alias Model =
 initModel : Model
 initModel =
     { single = Form.UserPicker.initSingle { id = "single-picker" } |> Form.UserPicker.fromSinglePicker
-    , multiple = Form.UserPicker.initMultiple { id = "multiple-picker" } |> Form.UserPicker.fromMultiplePicker
-    , disabledWithError = Form.UserPicker.initMultiple { id = "disabled-picker" } |> Form.UserPicker.fromMultiplePicker
+    , multiple = Form.UserPicker.initMultiple { id = "multiple-picker", selectedProfiles = [] } |> Form.UserPicker.fromMultiplePicker
+    , disabledWithError = Form.UserPicker.initMultiple { id = "disabled-picker", selectedProfiles = [] } |> Form.UserPicker.fromMultiplePicker
     }
 
 
