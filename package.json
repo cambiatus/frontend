@@ -89,6 +89,7 @@
     "babel-runtime": "^6.26.0",
     "bip39": "^2.5.0",
     "copy-webpack-plugin": "^5.0.4",
+    "create-elm-app": "^4.0.0",
     "css-loader": "^0.28.9",
     "elm": "^0.19.1-5",
     "elm-asset-webpack-loader": "^1.1.1",
