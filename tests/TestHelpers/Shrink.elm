@@ -18,6 +18,7 @@ import Claim
 import Community
 import Eos
 import Iso8601
+import Markdown
 import Profile
 import Shrink exposing (Shrinker, andMap, bool, float, int, list, maybe, noShrink, string)
 import Time
@@ -112,7 +113,7 @@ action : Shrinker Action.Action
 action action_ =
     noShrink Action.Action
         |> andMap (int action_.id)
-        |> andMap (string action_.description)
+        |> andMap (Markdown.shrink action_.description)
         |> andMap (actionObjective action_.objective)
         |> andMap (float action_.reward)
         |> andMap (float action_.verifierReward)

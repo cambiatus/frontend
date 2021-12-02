@@ -27,6 +27,7 @@ import Community
 import Eos
 import Eos.Account as Eos
 import Iso8601
+import Markdown
 import Profile
 import Random
 import Random.Char
@@ -282,7 +283,7 @@ action : Random.Generator Action.Action
 action =
     Random.constant Action.Action
         |> with (Random.int 0 Random.maxInt)
-        |> with string
+        |> with (Markdown.generator string)
         |> with actionObjective
         |> with (Random.float 0 1000)
         |> with (Random.float 0 1000)

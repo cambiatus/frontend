@@ -4,6 +4,7 @@ module Markdown exposing
     , encode
     , selectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
+    , generator, shrink
     )
 
 {-| This module helps you manipulate markdown/rich-text strings. Since we use
@@ -35,6 +36,11 @@ model to regular markdown.
 
 @docs QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
 
+
+## Test helpers
+
+@docs generator, shrink
+
 -}
 
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -49,6 +55,8 @@ import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
 import Maybe.Extra
+import Random
+import Shrink exposing (Shrinker)
 import View.MarkdownEditor exposing (QuillOp)
 
 
@@ -666,3 +674,17 @@ removeFormattingFromBlock block =
 
         _ ->
             Nothing
+
+
+
+-- TESTING
+
+
+shrink : Shrinker Markdown
+shrink =
+    Shrink.convert Markdown (\(Markdown markdown) -> markdown) Shrink.string
+
+
+generator : Random.Generator String -> Random.Generator Markdown
+generator =
+    Random.map Markdown
