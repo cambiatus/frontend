@@ -258,7 +258,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
             (List.map .profile selectedProfiles)
             |> Html.map (toMsg << GotSelectMsg)
         , viewConfig.error
-        , ul [ class "mt-4 flex flex-wrap gap-4" ]
+        , ul [ class "mt-4 flex flex-wrap gap-6" ]
             (List.map
                 (viewSelectedProfile wrappedOptions viewConfig
                     >> Html.map toMsg
