@@ -22,7 +22,6 @@ import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
 import View.Components
-import View.MarkdownEditor
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -155,7 +154,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                 , onClick (OpenObjective index)
                 ]
                 [ div [ class "overflow-hidden" ]
-                    [ View.MarkdownEditor.viewReadOnly
+                    [ Markdown.view
                         [ class "text-sm"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]

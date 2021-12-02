@@ -74,6 +74,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
 import List.Extra
+import Markdown exposing (Markdown)
 import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
@@ -489,7 +490,7 @@ addPhotosMutation symbol photos =
 
 type alias Objective =
     { id : Int
-    , description : String
+    , description : Markdown
     , creator : Eos.Name
     , actions : List Action
     , community : Metadata
@@ -501,7 +502,7 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id
-        |> with Objective.description
+        |> with (Markdown.selectionSet Objective.description)
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity Action.selectionSet)
         |> with (Objective.community communitiesSelectionSet)
@@ -510,7 +511,7 @@ objectiveSelectionSet =
 
 type alias CreateObjectiveAction =
     { asset : Eos.Asset
-    , description : String
+    , description : Markdown
     , creator : Eos.Name
     }
 
@@ -519,14 +520,14 @@ encodeCreateObjectiveAction : CreateObjectiveAction -> Value
 encodeCreateObjectiveAction c =
     Encode.object
         [ ( "cmm_asset", Eos.encodeAsset c.asset )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "creator", Eos.encodeName c.creator )
         ]
 
 
 type alias UpdateObjectiveAction =
     { objectiveId : Int
-    , description : String
+    , description : Markdown
     , editor : Eos.Name
     }
 
@@ -535,7 +536,7 @@ encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
 encodeUpdateObjectiveAction c =
     Encode.object
         [ ( "objective_id", Encode.int c.objectiveId )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
 

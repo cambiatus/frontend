@@ -524,7 +524,7 @@ viewObjective loggedIn model metadata index objective =
                     onClick (ClickedOpenObjective index)
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
-                    [ View.MarkdownEditor.viewReadOnly
+                    [ Markdown.view
                         [ class "text-white font-semibold"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
