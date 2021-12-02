@@ -1,7 +1,7 @@
 module Form.Radio exposing
     ( init, Options, mapMsg
     , withOption, withOptions
-    , withDisabled, withContainerAttrs, withGroupAttrs, withHiddenRadioButton
+    , withDisabled, withContainerAttrs, withGroupAttrs, withLabelAttrs, withHiddenRadioButton
     , Direction(..), withDirection
     , getId, getOptionToString
     , view
@@ -34,7 +34,7 @@ module Form.Radio exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withGroupAttrs, withHiddenRadioButton
+@docs withDisabled, withContainerAttrs, withGroupAttrs, withLabelAttrs, withHiddenRadioButton
 
 
 ## Controlling direction
@@ -76,6 +76,7 @@ type Options option msg
         , disabled : Bool
         , containerAttrs : List (Html.Attribute msg)
         , groupAttrs : List (Html.Attribute msg)
+        , labelAttrs : List (Html.Attribute msg)
         , direction : Direction
         , hideRadioButton : Bool
         }
@@ -93,6 +94,7 @@ init { label, id, optionToString } =
         , disabled = False
         , containerAttrs = []
         , groupAttrs = []
+        , labelAttrs = []
         , direction = Horizontal
         , hideRadioButton = False
         }
@@ -110,6 +112,7 @@ mapMsg fn (Options options) =
         , disabled = options.disabled
         , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
         , groupAttrs = List.map (Html.Attributes.map fn) options.groupAttrs
+        , labelAttrs = List.map (Html.Attributes.map fn) options.labelAttrs
         , direction = options.direction
         , hideRadioButton = options.hideRadioButton
         }
@@ -131,6 +134,7 @@ map fn reverseFn (Options options) =
         , disabled = options.disabled
         , containerAttrs = options.containerAttrs
         , groupAttrs = options.groupAttrs
+        , labelAttrs = options.labelAttrs
         , direction = options.direction
         , hideRadioButton = options.hideRadioButton
         }
@@ -196,11 +200,18 @@ withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
-{-| Adds attribute to the element that contains the radio group itself
+{-| Adds attributes to the element that contains the radio group itself
 -}
 withGroupAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withGroupAttrs attrs (Options options) =
     Options { options | groupAttrs = options.groupAttrs ++ attrs }
+
+
+{-| Adds attributes to the label/legend element
+-}
+withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
+withLabelAttrs attrs (Options options) =
+    Options { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 {-| Determine if we should hide the radio button itself and only show the label
@@ -297,12 +308,13 @@ view (Options options) viewConfig =
         (disabled options.disabled
             :: options.containerAttrs
         )
-        [ Html.legend [ class "label" ] [ Html.text options.label ]
+        [ Html.legend (class "label" :: options.labelAttrs) [ Html.text options.label ]
         , div
             [ class "flex"
             , classList
                 [ ( "flex-col gap-4", options.direction == Vertical )
-                , ( "gap-8", options.direction == Horizontal )
+                , ( "gap-4", options.direction == Horizontal && options.hideRadioButton )
+                , ( "gap-8", options.direction == Horizontal && not options.hideRadioButton )
                 ]
             ]
             (options.options
