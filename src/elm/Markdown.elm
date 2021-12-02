@@ -1,6 +1,6 @@
 module Markdown exposing
     ( view, toUnformattedString
-    , Markdown
+    , Markdown, empty
     , encode
     , selectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
@@ -18,7 +18,7 @@ model to regular markdown.
 
 # Produce markdown
 
-@docs Markdown
+@docs Markdown, empty
 
 
 ## Interop with JSON
@@ -63,6 +63,13 @@ prevent people from generating markdown at will.
 -}
 type Markdown
     = Markdown String
+
+
+{-| Markdown that represents the empty string
+-}
+empty : Markdown
+empty =
+    Markdown ""
 
 
 
