@@ -1,8 +1,8 @@
 module View.Form.FileUploader exposing
     ( init
-    , withAttrs, withVariant, withFileTypes
+    , withAttrs, withVariant
     , toHtml
-    , FileType(..), Variant(..)
+    , Variant(..)
     )
 
 {-| Creates a Cambiatus-style file uploader that supports pictures
@@ -23,7 +23,7 @@ module View.Form.FileUploader exposing
 
 # Helpers
 
-@docs withAttrs, withVariant, withFileTypes
+@docs withAttrs, withVariant
 
 
 # Converting to HTML
@@ -57,7 +57,6 @@ type alias Options msg =
     , status : RemoteData Http.Error String
     , extraAttrs : List (Html.Attribute msg)
     , variant : Variant
-    , fileTypes : List FileType
     }
 
 
@@ -80,11 +79,6 @@ type Variant
     | Large
 
 
-type FileType
-    = Image
-    | PDF
-
-
 {-| Initializes a file uploader
 -}
 init : InitialOptions msg -> Options msg
@@ -95,7 +89,6 @@ init options =
     , status = options.status
     , extraAttrs = []
     , variant = Large
-    , fileTypes = [ Image ]
     }
 
 
@@ -115,13 +108,6 @@ withAttrs attrs options =
 withVariant : Variant -> Options msg -> Options msg
 withVariant variant options =
     { options | variant = variant }
-
-
-{-| Define the file types we can accept
--}
-withFileTypes : List FileType -> Options msg -> Options msg
-withFileTypes fileTypes options =
-    { options | fileTypes = fileTypes }
 
 
 
@@ -152,24 +138,6 @@ onFileChange toMsg =
         |> on "change"
 
 
-fileTypeToString : FileType -> String
-fileTypeToString fileType =
-    case fileType of
-        Image ->
-            "image/*"
-
-        PDF ->
-            ".pdf"
-
-
-acceptFileTypes : List FileType -> Html.Attribute msg
-acceptFileTypes fileTypes =
-    fileTypes
-        |> List.map fileTypeToString
-        |> String.join ","
-        |> accept
-
-
 viewLarge : Translators -> Options msg -> Html msg
 viewLarge ({ t } as translators) options =
     let
@@ -187,7 +155,7 @@ viewLarge ({ t } as translators) options =
                 [ id options.id
                 , class "hidden-img-input"
                 , type_ "file"
-                , acceptFileTypes options.fileTypes
+                , accept "image/*"
                 , onFileChange options.onFileInput
                 , multiple False
                 ]
@@ -200,15 +168,7 @@ viewLarge ({ t } as translators) options =
                     div [ class "w-full h-full flex items-center justify-center" ]
                         [ span [ class "absolute bottom-0 right-0 mr-4 mb-4 bg-orange-300 w-8 h-8 p-2 rounded-full" ]
                             [ Icons.camera "" ]
-                        , if List.member PDF options.fileTypes then
-                            View.Components.pdfViewer [ class "h-full w-full text-white" ]
-                                { url = url
-                                , childClass = "max-h-full max-w-full"
-                                , maybeTranslators = Just translators
-                                }
-
-                          else
-                            img [ src url, class "max-h-full max-w-full" ] []
+                        , img [ src url, class "max-h-full max-w-full" ] []
                         ]
 
                 _ ->
@@ -229,15 +189,7 @@ viewSmall { t } options =
         viewImg =
             case options.status of
                 RemoteData.Success url ->
-                    if List.member PDF options.fileTypes then
-                        View.Components.pdfViewer [ class imgClasses ]
-                            { url = url
-                            , childClass = imgClasses
-                            , maybeTranslators = Nothing
-                            }
-
-                    else
-                        img [ class imgClasses, src url ] []
+                    img [ class imgClasses, src url ] []
 
                 _ ->
                     div [ class (imgClasses ++ " bg-gray-500") ] []
@@ -250,7 +202,7 @@ viewSmall { t } options =
                 [ id options.id
                 , class "profile-img-input"
                 , type_ "file"
-                , acceptFileTypes options.fileTypes
+                , accept "image/*"
                 , onFileChange options.onFileInput
                 , multiple False
                 ]

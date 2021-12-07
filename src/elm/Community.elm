@@ -19,7 +19,6 @@ module Community exposing
     , createCommunityData
     , createCommunityDataDecoder
     , currencyTranslationKey
-    , decodeBalance
     , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
@@ -626,13 +625,6 @@ type alias Balance =
     { asset : Eos.Asset
     , lastActivity : Posix
     }
-
-
-decodeBalance : Decoder Balance
-decodeBalance =
-    Decode.succeed Balance
-        |> required "balance" Eos.decodeAsset
-        |> required "last_activity" Utils.decodeTimestamp
 
 
 

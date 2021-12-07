@@ -24,7 +24,6 @@ module Session.LoggedIn exposing
     )
 
 import Action
-import Api
 import Api.Graphql
 import Auth
 import Avatar
