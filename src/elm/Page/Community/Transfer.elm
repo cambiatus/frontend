@@ -272,7 +272,7 @@ viewForm ({ shared } as loggedIn) model community maxTransferAmount =
         , Form.view [ class "container mx-auto p-4" ]
             shared.translators
             (\submitButton ->
-                [ submitButton [ class "w-full mt-6" ]
+                [ submitButton [ class "w-full mt-6 button button-primary" ]
                     [ text_ "account.my_wallet.transfer.submit" ]
                 ]
             )
