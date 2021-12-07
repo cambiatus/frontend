@@ -1,6 +1,7 @@
 module View.PaypalButtons exposing
     ( Currency(..)
     , Error(..)
+    , currencyFromString
     , currencyToString
     , currencyToSymbol
     , maximumAmount
@@ -40,6 +41,19 @@ currencyToString currency =
 
         USD ->
             "USD"
+
+
+currencyFromString : String -> Maybe Currency
+currencyFromString currency =
+    case currency of
+        "BRL" ->
+            Just BRL
+
+        "USD" ->
+            Just USD
+
+        _ ->
+            Nothing
 
 
 currencyToSymbol : Currency -> Eos.Symbol
