@@ -310,10 +310,9 @@ userForm translators =
                 |> Form.File.withVariant Form.File.SmallCircle
                 |> Form.File.withContainerAttrs [ class "my-10" ]
                 |> Form.file
-                    { parser = identity
-                    , failureErrorMessage = \_ -> "Something went wrong when uploading avatar"
+                    { failureErrorMessage = \_ -> "Something went wrong when uploading avatar"
                     , loadingErrorMessage = "Please wait for the avatar to be finished uploading"
-                    , notAskedErrorMessage = "Avatar is required"
+                    , notAskedErrorMessage = Just "Avatar is required"
                     , value = .avatar
                     , update = \avatar user -> { user | avatar = avatar }
                     , externalError = always Nothing
@@ -326,10 +325,9 @@ userForm translators =
                 |> Form.File.withContainerAttrs [ class "my-10" ]
                 |> Form.File.withDisabled True
                 |> Form.file
-                    { parser = identity
-                    , failureErrorMessage = \_ -> "Something went wrong when uploading resume"
+                    { failureErrorMessage = \_ -> "Something went wrong when uploading resume"
                     , loadingErrorMessage = "Please wait for your resume to be finished uploading"
-                    , notAskedErrorMessage = ""
+                    , notAskedErrorMessage = Nothing
                     , value = .resume
                     , update = \resume user -> { user | resume = resume }
                     , externalError = always Nothing

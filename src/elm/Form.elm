@@ -332,23 +332,22 @@ what you can do with this field. Whenever a user selects a file, it is
 automatically uploaded to our servers.
 -}
 file :
-    { parser : String -> output
-    , failureErrorMessage : Http.Error -> String
+    { failureErrorMessage : Http.Error -> String
     , loadingErrorMessage : String
-    , notAskedErrorMessage : String
+    , notAskedErrorMessage : Maybe String
     , value : values -> RemoteData Http.Error String
     , update : RemoteData Http.Error String -> values -> values
     , externalError : values -> Maybe String
     }
     -> Form.File.Options (Msg values)
-    -> Form values output
+    -> Form values String
 file config options =
     field (File options)
         { parser =
             \remoteData ->
                 case remoteData of
                     RemoteData.Success a ->
-                        Ok (config.parser a)
+                        Ok a
 
                     RemoteData.Failure err ->
                         Err (config.failureErrorMessage err)
@@ -357,7 +356,9 @@ file config options =
                         Err config.loadingErrorMessage
 
                     RemoteData.NotAsked ->
-                        Err config.notAskedErrorMessage
+                        config.notAskedErrorMessage
+                            |> Maybe.withDefault ""
+                            |> Err
         , value = config.value
         , update = config.update
         , externalError = config.externalError
