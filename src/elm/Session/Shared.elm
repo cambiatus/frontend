@@ -28,6 +28,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
+import Mask
 import Ports
 import Time exposing (Posix)
 import Translation
@@ -159,14 +160,8 @@ decimalSeparators { t } =
 by Elm
 -}
 floatStringFromSeparatedString : Translators -> String -> String
-floatStringFromSeparatedString translators separatedString =
-    let
-        { decimalSeparator, thousandsSeparator } =
-            decimalSeparators translators
-    in
-    separatedString
-        |> String.filter (\c -> String.fromChar c /= thousandsSeparator)
-        |> String.replace decimalSeparator "."
+floatStringFromSeparatedString translators =
+    Mask.removeFloat (decimalSeparators translators)
 
 
 
