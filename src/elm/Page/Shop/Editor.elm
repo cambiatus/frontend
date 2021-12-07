@@ -859,12 +859,7 @@ encodeUpdateForm product form selectedCommunity =
             form.price
 
         quantity =
-            case Maybe.map (Eos.Asset price) (Just selectedCommunity) of
-                Nothing ->
-                    Encode.string ""
-
-                Just asset ->
-                    Eos.encodeAsset asset
+            Eos.encodeAsset { amount = price, symbol = selectedCommunity }
 
         trackStock =
             (case form.unitTracking of

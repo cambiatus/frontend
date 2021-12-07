@@ -1,8 +1,8 @@
 module View.Form.FileUploader exposing
     ( init
-    , withAttrs, withVariant, withBackground, withFileTypes
+    , withAttrs, withVariant, withFileTypes
     , toHtml
-    , Background(..), FileType(..), Variant(..)
+    , FileType(..), Variant(..)
     )
 
 {-| Creates a Cambiatus-style file uploader that supports pictures
@@ -23,7 +23,7 @@ module View.Form.FileUploader exposing
 
 # Helpers
 
-@docs withAttrs, withVariant, withBackground, withFileTypes
+@docs withAttrs, withVariant, withFileTypes
 
 
 # Converting to HTML
@@ -57,7 +57,6 @@ type alias Options msg =
     , status : RemoteData Http.Error String
     , extraAttrs : List (Html.Attribute msg)
     , variant : Variant
-    , background : Background
     , fileTypes : List FileType
     }
 
@@ -81,11 +80,6 @@ type Variant
     | Large
 
 
-type Background
-    = Purple
-    | Gray
-
-
 type FileType
     = Image
     | PDF
@@ -101,7 +95,6 @@ init options =
     , status = options.status
     , extraAttrs = []
     , variant = Large
-    , background = Purple
     , fileTypes = [ Image ]
     }
 
@@ -122,11 +115,6 @@ withAttrs attrs options =
 withVariant : Variant -> Options msg -> Options msg
 withVariant variant options =
     { options | variant = variant }
-
-
-withBackground : Background -> Options msg -> Options msg
-withBackground background options =
-    { options | background = background }
 
 
 {-| Define the file types we can accept
@@ -186,12 +174,7 @@ viewLarge : Translators -> Options msg -> Html msg
 viewLarge ({ t } as translators) options =
     let
         ( backgroundColor, foregroundColor, icon ) =
-            case options.background of
-                Purple ->
-                    ( "bg-purple-500", "text-white", Icons.camera "" )
-
-                Gray ->
-                    ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
+            ( "bg-purple-500", "text-white", Icons.camera "" )
     in
     div options.extraAttrs
         [ span [ class "label" ] [ text (t options.label) ]

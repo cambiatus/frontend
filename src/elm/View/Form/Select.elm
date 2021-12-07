@@ -2,7 +2,6 @@ module View.Form.Select exposing
     ( Option
     , init
     , toHtml
-    , withAttrs
     , withContainerAttrs
     , withOption
     , withOptions
@@ -48,15 +47,9 @@ init requiredOptions =
     , firstOption = requiredOptions.firstOption
     , valueToString = requiredOptions.valueToString
     , disabled = requiredOptions.disabled
-    , extraAttrs = []
     , containerAttrs = []
     , problems = requiredOptions.problems
     }
-
-
-withAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
-withAttrs extraAttrs select =
-    { select | extraAttrs = select.extraAttrs ++ extraAttrs }
 
 
 withContainerAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
@@ -111,20 +104,19 @@ toHtml select =
           else
             View.Form.label [] select.id select.label
         , Html.select
-            (class "form-select w-full"
-                :: classList
-                    [ ( "bg-gray-500", select.disabled )
-                    , ( "with-error"
-                      , select.problems
-                            |> Maybe.map List.length
-                            |> Maybe.withDefault 0
-                            |> (\length -> length > 0)
-                      )
-                    ]
-                :: onInput onInput_
-                :: disabled select.disabled
-                :: select.extraAttrs
-            )
+            [ class "form-select w-full"
+            , classList
+                [ ( "bg-gray-500", select.disabled )
+                , ( "with-error"
+                  , select.problems
+                        |> Maybe.map List.length
+                        |> Maybe.withDefault 0
+                        |> (\length -> length > 0)
+                  )
+                ]
+            , onInput onInput_
+            , disabled select.disabled
+            ]
             (List.map optionToHtml (select.firstOption :: select.options))
         , ul []
             (select.problems
@@ -147,7 +139,6 @@ type alias Select a msg =
     , firstOption : Option a
     , valueToString : a -> String
     , disabled : Bool
-    , extraAttrs : List (Html.Attribute msg)
     , containerAttrs : List (Html.Attribute msg)
     , problems : Maybe (List String)
     }
