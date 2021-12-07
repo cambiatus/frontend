@@ -1,7 +1,7 @@
 module Form.Select exposing
     ( init, Options, mapMsg
-    , withOption
-    , withDisabled, withContainerAttrs, withAttrs
+    , withOption, withOptions
+    , withDisabled, withContainerAttrs, withAttrs, withLabelAttrs
     , getId, getOptionToString
     , view
     , map
@@ -30,7 +30,7 @@ module Form.Select exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withAttrs
+@docs withDisabled, withContainerAttrs, withAttrs, withLabelAttrs
 
 
 # Getters
@@ -70,6 +70,7 @@ type Options option msg
         , options : List { option : option, label : String }
         , containerAttrs : List (Html.Attribute msg)
         , extraAttrs : List (Html.Attribute msg)
+        , labelAttrs : List (Html.Attribute msg)
         }
 
 
@@ -85,6 +86,7 @@ init { label, id, optionToString } =
         , options = []
         , containerAttrs = []
         , extraAttrs = []
+        , labelAttrs = []
         }
 
 
@@ -100,6 +102,7 @@ mapMsg fn (Options options) =
         , options = options.options
         , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
         , extraAttrs = List.map (Html.Attributes.map fn) options.extraAttrs
+        , labelAttrs = List.map (Html.Attributes.map fn) options.labelAttrs
         }
 
 
@@ -115,6 +118,7 @@ map fn reverseFn (Options options) =
                 options.options
         , containerAttrs = options.containerAttrs
         , extraAttrs = options.extraAttrs
+        , labelAttrs = options.labelAttrs
         }
 
 
@@ -136,6 +140,14 @@ withOption optionValue optionLabel (Options options) =
         }
 
 
+{-| Add a list of options at once. Useful when you have a list of data, so you
+can `List.map` it and use this function.
+-}
+withOptions : List { option : option, label : String } -> Options option msg -> Options option msg
+withOptions newOptions (Options options) =
+    Options { options | options = newOptions ++ options.options }
+
+
 
 -- ADDING ATTRIBUTES
 
@@ -155,6 +167,11 @@ withContainerAttrs attrs (Options options) =
 withAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withAttrs attrs (Options options) =
     Options { options | extraAttrs = options.extraAttrs ++ attrs }
+
+
+withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
+withLabelAttrs attrs (Options options) =
+    Options { options | labelAttrs = options.labelAttrs ++ attrs }
 
 
 
@@ -195,7 +212,7 @@ view (Options options) viewConfig =
                 options.options
     in
     div options.containerAttrs
-        [ View.Form.label [] options.id options.label
+        [ View.Form.label options.labelAttrs options.id options.label
         , Html.select
             (class "input pr-10 form-select-icon w-full"
                 :: classList [ ( "with-error", viewConfig.hasError ) ]
