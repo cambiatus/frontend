@@ -2,7 +2,7 @@ module Form exposing
     ( Form
     , succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
-    , view, Model, init, Msg, update, updateValues, msgToString
+    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
     , parse
     )
@@ -76,7 +76,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, Model, init, Msg, update, updateValues, msgToString
+@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
 
 
 ### Changing attributes and state
@@ -469,34 +469,8 @@ with :
     Form values a
     -> Form values (a -> b)
     -> Form values b
-with new current =
-    Form
-        (\values ->
-            let
-                filledNew =
-                    fill new values
-
-                filledCurrent =
-                    fill current values
-            in
-            { fields = filledNew.fields ++ filledCurrent.fields
-            , result =
-                case filledCurrent.result of
-                    Ok fn ->
-                        Result.map fn filledNew.result
-
-                    Err ( firstError, otherErrors ) ->
-                        case filledNew.result of
-                            Ok _ ->
-                                Err ( firstError, otherErrors )
-
-                            Err ( secondFirstError, secondOtherErrors ) ->
-                                Err
-                                    ( firstError
-                                    , otherErrors ++ (secondFirstError :: secondOtherErrors)
-                                    )
-            }
-        )
+with new =
+    withConditional (\_ -> new)
 
 
 {-| Use this if you want to nest forms. If you need to break forms apart for any
@@ -972,45 +946,69 @@ view :
         , onSubmit : output -> msg
         }
     -> Html msg
-view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
-    let
-        filledForm =
-            fill form model.values
-
-        (ErrorTracking errorTracking) =
-            model.errorTracking
-
-        fields =
-            filledForm.fields
-                |> List.reverse
-                |> List.map
-                    (\field_ ->
-                        let
-                            shouldShowFieldError =
-                                Set.member (getId field_.state) errorTracking.showFieldError
-                        in
-                        viewField
-                            { showError = shouldShowFieldError || errorTracking.showAllErrors
-                            , translators = translators
-                            , disabled = model.disabled
-                            }
-                            field_
-                    )
-    in
+view formAttrs translators footer form model { toMsg, onSubmit } =
     Html.form
         (novalidate True
             :: Events.onSubmit
                 (parse form
-                    (Model model)
+                    model
                     { onError = toMsg
                     , onSuccess = onSubmit
                     }
                 )
             :: formAttrs
         )
-        (List.map (Html.map toMsg) fields
+        (List.map (Html.map toMsg)
+            (viewFields translators form model)
             ++ footer (\attrs -> button (type_ "submit" :: attrs))
         )
+
+
+{-| Provide a form and a dirty model, and get back some HTML. You should usually
+use `view`, but you can use this function on the rare case where you need a form
+without a submit button. You can provide a custom footer, just like in `view`,
+but it won't include a submit button (and the form won't have a `onSubmit` event
+listener)
+-}
+viewWithoutSubmit :
+    List (Html.Attribute msg)
+    -> Shared.Translators
+    -> (values -> List (Html msg))
+    -> Form values output
+    -> Model values
+    -> { toMsg : Msg values -> msg }
+    -> Html msg
+viewWithoutSubmit formAttrs translators footer form (Model model) { toMsg } =
+    Html.form (novalidate True :: formAttrs)
+        (List.map (Html.map toMsg) (viewFields translators form (Model model))
+            ++ footer model.values
+        )
+
+
+viewFields : Shared.Translators -> Form values output -> Model values -> List (Html (Msg values))
+viewFields translators form (Model model) =
+    let
+        filledForm =
+            fill form model.values
+
+        (ErrorTracking errorTracking) =
+            model.errorTracking
+    in
+    filledForm.fields
+        |> List.reverse
+        |> List.map
+            (\field_ ->
+                let
+                    shouldShowFieldError =
+                        Set.member (getId field_.state) errorTracking.showFieldError
+                in
+                viewField
+                    { showError = shouldShowFieldError || errorTracking.showAllErrors
+                    , translators = translators
+                    , disabled = model.disabled
+                    }
+                    field_
+            )
 
 
 {-| Parse a form with some values. If there are errors, they are highlighted in
