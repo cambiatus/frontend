@@ -26,6 +26,7 @@ import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
+import Markdown exposing (Markdown)
 import Page exposing (Session(..))
 import Profile
 import RemoteData exposing (RemoteData)
@@ -628,7 +629,7 @@ viewCard :
     ->
         { product
             | title : String
-            , description : String
+            , description : Markdown
             , symbol : Eos.Symbol
             , price : Float
             , creator : Shop.ShopProfile
@@ -646,8 +647,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                 |> Maybe.withDefault (Eos.stringToName "")
     in
     [ div [ class "font-semibold text-3xl w-full" ] [ text sale.title ]
-    , View.MarkdownEditor.viewReadOnly [ class "text-gray w-full md:text-sm" ]
-        sale.description
+    , Markdown.view [ class "text-gray w-full md:text-sm" ] sale.description
     , div [ class "w-full flex items-center text-sm mt-4" ]
         [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
         , text_ "shop.sold_by"
