@@ -1218,9 +1218,11 @@ isEmpty field_ =
         Text _ { value } ->
             String.isEmpty value
 
-        RichText _ _ ->
-            -- TODO - Get text and remove formatting
-            False
+        RichText _ { value } ->
+            value
+                |> RichText.getMarkdownContent
+                |> Markdown.toUnformattedString
+                |> String.isEmpty
 
         Toggle _ _ ->
             False
@@ -1237,14 +1239,12 @@ isEmpty field_ =
             not (RemoteData.isSuccess value)
 
         Select _ _ ->
-            -- TODO
             False
 
         DatePicker _ { value } ->
             Maybe.Extra.isNothing (DatePicker.getDate value)
 
         UserPicker _ { value } ->
-            -- TODO
             UserPicker.isEmpty value
 
         DecorativeField _ ->
