@@ -1,19 +1,32 @@
 module Form.Validate exposing
-    ( required
-    , intGreaterThan, intGreaterThanOrEqualTo
-    , maskedFloat
+    ( Validator, succeed, validate, custom, Error
+    , required
+    , stringShorterThan, stringLongerThan
+    , int, intGreaterThan, intGreaterThanOrEqualTo
+    , maskedFloat, floatGreaterThan
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
-from `Form`s. These are all built using `Result`, so you can chain them together
-with `Result.andThen` and other helper functions. Since these are generic
-functions, they might not be enough for every case, so you might need to do
-custom validation per field. However, you should use these as much as possible
-(even when doing custom validations), so we get consistent error messages
-throughout the app
+from `Form`s. They are meant to use in a pipeline, like so:
+
+    parser =
+        Form.Validate.succeed
+            >> Form.Validate.int
+            >> Form.Validate.intGreaterThan 0
+            >> Form.Validate.validate translators
+
+Since these are generic functions, they might not be enough for every case, so
+you might need to do custom validation per field. You can do that with `custom`.
+However, you should use these as much as possible (even when doing custom
+validations), so we get consistent error messages throughout the app.
+
+
+## Pipeline helpers
+
+@docs Validator, succeed, validate, custom, Error
 
 
 ## Generic validations
@@ -23,9 +36,11 @@ throughout the app
 
 ## String inputs
 
-@docs intGreaterThan, intGreaterThanOrEqualTo
+@docs stringShorterThan, stringLongerThan
 
-@docs maskedFloat
+@docs int, intGreaterThan, intGreaterThanOrEqualTo
+
+@docs maskedFloat, floatGreaterThan
 
 @docs markdownLongerThan
 
@@ -43,119 +58,258 @@ throughout the app
 
 import Date exposing (Date)
 import Markdown exposing (Markdown)
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared
+import Time
+
+
+
+-- BUILDING PIPELINES
+
+
+{-| A validator is used to store the result of a pipeline of validations.
+-}
+type Validator output
+    = Validator (Result Error output)
+
+
+{-| Errors are just functions that take translators and return a translated
+string. It's designed this way so we only need to pass in `translators` once.
+-}
+type alias Error =
+    Shared.Translators -> String
+
+
+{-| Start a validation pipeline
+
+    parser =
+        Form.Validate.succeed
+            |> Form.Validate.int
+            |> Form.Validate.validate
+
+-}
+succeed : output -> Validator output
+succeed output =
+    Validator (Ok output)
+
+
+{-| Finish a validation pipeline. You can always chain custom validations with
+`Result.andThen` after calling `validate`
+
+    parser =
+        Form.Validate.succeed
+            |> Form.Validate.int
+            |> Form.Validate.validate
+
+-}
+validate : Shared.Translators -> Validator a -> Result String a
+validate translators (Validator result) =
+    Result.mapError (\error -> error translators) result
+
+
+{-| Create a custom validation in your pipeline! In fact most validations are
+implemented using this function.
+
+    required : Validator (Maybe output) -> Validator output
+    required =
+        custom (Result.fromMaybe (\{ t } -> t "error.required"))
+
+    parser : String -> Result String Int
+    parser =
+        Form.Validate.succeed
+            >> Form.Validate.int
+            >> Form.Validate.custom
+                (\x ->
+                    if x == 0 then
+                        Err (\t -> "x can't be 0")
+
+                    else
+                        Ok x
+                )
+            >> Form.Validate.validate translators
+
+-}
+custom : (a -> Result Error b) -> Validator a -> Validator b
+custom validation (Validator validator) =
+    validator
+        |> Result.andThen validation
+        |> Validator
 
 
 
 -- GENERIC
 
 
-required : Shared.Translators -> Maybe a -> Result String a
-required { t } maybeInput =
-    Result.fromMaybe (t "error.required") maybeInput
+required : Validator (Maybe output) -> Validator output
+required =
+    custom (Result.fromMaybe (\{ t } -> t "error.required"))
 
 
 
 -- STRINGS
 
 
-int : Shared.Translators -> String -> Result String Int
-int { t } =
-    String.toInt
-        >> Result.fromMaybe (t "error.validator.text.only_numbers")
+int : Validator String -> Validator Int
+int =
+    number String.toInt
 
 
-intGreaterThan : Int -> Shared.Translators -> String -> Result String Int
-intGreaterThan lowerBound translators =
-    int translators
-        >> Result.andThen
-            (\x ->
-                if x > lowerBound then
-                    Ok x
-
-                else
-                    Err <|
-                        translators.tr "error.validator.number.greater_than"
-                            [ ( "base", String.fromInt lowerBound ) ]
-            )
+float : Validator String -> Validator Float
+float =
+    number String.toFloat
 
 
-intGreaterThanOrEqualTo : Int -> Shared.Translators -> String -> Result String Int
-intGreaterThanOrEqualTo lowerBound translators =
-    int translators
-        >> Result.andThen
-            (\x ->
-                if x >= lowerBound then
-                    Ok x
-
-                else
-                    Err
-                        (translators.tr "error.validator.number.greater_than_or_equal"
-                            [ ( "base", String.fromInt lowerBound ) ]
-                        )
-            )
+intGreaterThan : Int -> Validator Int -> Validator Int
+intGreaterThan =
+    numberGreaterThan String.fromInt
 
 
-float : Shared.Translators -> String -> Result String Float
-float { t } =
-    String.toFloat
-        >> Result.fromMaybe (t "error.validator.text.only_numbers")
+intGreaterThanOrEqualTo : Int -> Validator Int -> Validator Int
+intGreaterThanOrEqualTo =
+    numberGreaterThanOrEqualTo String.fromInt
 
 
-maskedFloat : Shared.Translators -> String -> Result String Float
+floatGreaterThan : Float -> Validator Float -> Validator Float
+floatGreaterThan =
+    numberGreaterThan String.fromFloat
+
+
+maskedFloat : Shared.Translators -> Validator String -> Validator Float
 maskedFloat translators =
-    Shared.floatStringFromSeparatedString translators
-        >> float translators
+    mapValidation (Shared.floatStringFromSeparatedString translators)
+        >> float
 
 
-stringLongerThan : Int -> Shared.Translators -> String -> Result String String
-stringLongerThan minLength { tr } stringInput =
-    if String.length stringInput < minLength then
-        Err <|
-            tr "error.validator.text.longer_than"
-                [ ( "base", String.fromInt minLength ) ]
+stringShorterThan : Int -> Validator String -> Validator String
+stringShorterThan maxLength =
+    custom
+        (\stringInput ->
+            if String.length stringInput > maxLength then
+                Err
+                    (\{ tr } ->
+                        tr "error.valdator.text.shorter_than" [ ( "base", String.fromInt maxLength ) ]
+                    )
 
-    else
-        Ok stringInput
+            else
+                Ok stringInput
+        )
 
 
-markdownLongerThan : Int -> Shared.Translators -> Markdown -> Result String Markdown
-markdownLongerThan minLength translators markdownInput =
-    case stringLongerThan minLength translators (Markdown.toUnformattedString markdownInput) of
-        Ok _ ->
-            Ok markdownInput
+stringLongerThan : Int -> Validator String -> Validator String
+stringLongerThan minLength =
+    custom
+        (\stringInput ->
+            if String.length stringInput < minLength then
+                Err
+                    (\{ tr } ->
+                        tr "error.validator.text.longer_than"
+                            [ ( "base", String.fromInt minLength ) ]
+                    )
 
-        Err err ->
-            Err err
+            else
+                Ok stringInput
+        )
+
+
+markdownLongerThan : Int -> Validator Markdown -> Validator Markdown
+markdownLongerThan minLength =
+    custom
+        (\markdownInput ->
+            if String.length (Markdown.toUnformattedString markdownInput) < minLength then
+                Err
+                    (\{ tr } ->
+                        tr "error.validator.text.longer_than"
+                            [ ( "base", String.fromInt minLength ) ]
+                    )
+
+            else
+                Ok markdownInput
+        )
 
 
 
 -- LISTS
 
 
-lengthGreaterThanOrEqualTo : Int -> Shared.Translators -> List a -> Result String (List a)
-lengthGreaterThanOrEqualTo minLength { tr } items =
-    if List.length items >= minLength then
-        Ok items
+lengthGreaterThanOrEqualTo : Int -> Validator (List a) -> Validator (List a)
+lengthGreaterThanOrEqualTo minLength =
+    custom
+        (\items ->
+            if List.length items >= minLength then
+                Ok items
 
-    else
-        Err <|
-            tr "error.validator.number.length_greater_than_or_equal"
-                [ ( "count", String.fromInt minLength ) ]
+            else
+                Err
+                    (\{ tr } ->
+                        tr "error.validator.number.length_greater_than_or_equal"
+                            [ ( "count", String.fromInt minLength ) ]
+                    )
+        )
 
 
 
 -- DATES
 
 
-futureDate : Shared -> Date -> Result String Date
-futureDate shared selectedDate =
-    let
-        today =
-            Date.fromPosix shared.timezone shared.now
-    in
-    if Date.compare selectedDate today == LT then
-        Err <| shared.translators.t "error.validator.date.invalid"
+futureDate : Time.Zone -> Time.Posix -> Validator Date -> Validator Date
+futureDate timezone now =
+    custom
+        (\selectedDate ->
+            let
+                today =
+                    Date.fromPosix timezone now
+            in
+            if Date.compare selectedDate today == LT then
+                Err (\{ t } -> t "error.validator.date.invalid")
 
-    else
-        Ok selectedDate
+            else
+                Ok selectedDate
+        )
+
+
+
+-- INTERNAL HELPERS
+
+
+mapValidation : (a -> b) -> Validator a -> Validator b
+mapValidation fn (Validator validator) =
+    Validator (Result.map fn validator)
+
+
+number : (String -> Maybe number) -> Validator String -> Validator number
+number fromString =
+    custom
+        (fromString
+            >> Result.fromMaybe (\{ t } -> t "error.validator.text.only_numbers")
+        )
+
+
+numberGreaterThan : (number -> String) -> number -> Validator number -> Validator number
+numberGreaterThan numberToString lowerBound =
+    custom
+        (\x ->
+            if x > lowerBound then
+                Ok x
+
+            else
+                Err
+                    (\{ tr } ->
+                        tr "error.validator.number.greater_than"
+                            [ ( "base", numberToString lowerBound ) ]
+                    )
+        )
+
+
+numberGreaterThanOrEqualTo : (number -> String) -> number -> Validator number -> Validator number
+numberGreaterThanOrEqualTo numberToString lowerBound =
+    custom
+        (\x ->
+            if x > lowerBound then
+                Ok x
+
+            else
+                Err
+                    (\{ tr } ->
+                        tr "error.valdiator.number.greater_than_or_equal"
+                            [ ( "base", numberToString lowerBound ) ]
+                    )
+        )

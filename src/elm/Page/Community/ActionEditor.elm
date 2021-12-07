@@ -527,7 +527,10 @@ form loggedIn community =
             (Form.RichText.init { label = t "community.actions.form.description_label" }
                 |> Form.RichText.withContainerAttrs [ class "mb-10" ]
                 |> Form.richText
-                    { parser = Form.Validate.markdownLongerThan 10 loggedIn.shared.translators
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.markdownLongerThan 10
+                            >> Form.Validate.validate loggedIn.shared.translators
                     , value = .description
                     , update = \description input -> { input | description = description }
                     , externalError = always Nothing
@@ -542,7 +545,10 @@ form loggedIn community =
                 |> Form.Text.withContainerAttrs [ class "w-full sm:w-2/5" ]
                 |> Form.Text.withCurrency community.symbol
                 |> Form.textField
-                    { parser = Form.Validate.maskedFloat loggedIn.shared.translators
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat loggedIn.shared.translators
+                            >> Form.Validate.validate loggedIn.shared.translators
                     , value = .reward
                     , update = \reward input -> { input | reward = reward }
                     , externalError = always Nothing
@@ -605,8 +611,10 @@ form loggedIn community =
                         |> Form.DatePicker.withContainerAttrs [ class "mb-6" ]
                         |> Form.datePicker
                             { parser =
-                                Form.Validate.required loggedIn.shared.translators
-                                    >> Result.andThen (Form.Validate.futureDate loggedIn.shared)
+                                Form.Validate.succeed
+                                    >> Form.Validate.required
+                                    >> Form.Validate.futureDate loggedIn.shared.timezone loggedIn.shared.now
+                                    >> Form.Validate.validate loggedIn.shared.translators
                             , value = .expirationDate
                             , update = \expirationDate input -> { input | expirationDate = expirationDate }
                             , externalError = always Nothing
@@ -647,9 +655,10 @@ form loggedIn community =
                         |> Form.Text.withContainerAttrs [ class "mt-6 sm:w-2/5" ]
                         |> Form.textField
                             { parser =
-                                Form.Validate.intGreaterThan
-                                    0
-                                    loggedIn.shared.translators
+                                Form.Validate.succeed
+                                    >> Form.Validate.int
+                                    >> Form.Validate.intGreaterThan 0
+                                    >> Form.Validate.validate loggedIn.shared.translators
                             , value = .maxUsages
                             , update = \maxUsages input -> { input | maxUsages = maxUsages }
                             , externalError = always Nothing
@@ -670,9 +679,10 @@ form loggedIn community =
                         |> Form.Text.withContainerAttrs [ class "sm:w-2/5" ]
                         |> Form.textField
                             { parser =
-                                Form.Validate.intGreaterThanOrEqualTo
-                                    0
-                                    loggedIn.shared.translators
+                                Form.Validate.succeed
+                                    >> Form.Validate.int
+                                    >> Form.Validate.intGreaterThanOrEqualTo 0
+                                    >> Form.Validate.validate loggedIn.shared.translators
                             , value = .usagesLeft >> Maybe.withDefault ""
                             , update = \usagesLeft_ input -> { input | usagesLeft = Just usagesLeft_ }
                             , externalError = always Nothing
@@ -802,9 +812,9 @@ verificationForm loggedIn community =
                             |> Form.UserPicker.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
                             |> Form.userPickerMultiple
                                 { parser =
-                                    Form.Validate.lengthGreaterThanOrEqualTo
-                                        (minVotesToInt values.minVotes)
-                                        loggedIn.shared.translators
+                                    Form.Validate.succeed
+                                        >> Form.Validate.lengthGreaterThanOrEqualTo (minVotesToInt values.minVotes)
+                                        >> Form.Validate.validate loggedIn.shared.translators
                                 , value = .verifiers
                                 , update = \verifiers input -> { input | verifiers = verifiers }
                                 , externalError = always Nothing
@@ -824,7 +834,10 @@ verificationForm loggedIn community =
                             |> Form.Text.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
                             |> Form.Text.withCurrency community.symbol
                             |> Form.textField
-                                { parser = Form.Validate.maskedFloat loggedIn.shared.translators
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.maskedFloat loggedIn.shared.translators
+                                        >> Form.Validate.validate loggedIn.shared.translators
                                 , value = .verifierReward
                                 , update = \verifierReward input -> { input | verifierReward = verifierReward }
                                 , externalError = always Nothing
