@@ -354,7 +354,7 @@ file config options =
                         Err (config.translators.t "error.wait_file_upload")
 
                     RemoteData.NotAsked ->
-                        Err ""
+                        Err (config.translators.t "error.required")
         , value = config.value
         , update = config.update
         , externalError = config.externalError

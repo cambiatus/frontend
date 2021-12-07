@@ -339,7 +339,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     viewClaimWithProofs action p False
 
                 ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p True
+                    viewClaimWithProofs action p.proof True
 
                 _ ->
                     viewPageBody model profile_ page content
@@ -1763,7 +1763,6 @@ handleActionMsg ({ shared } as model) actionMsg =
             in
             Action.update (hasPrivateKey model)
                 shared
-                (Api.uploadImage shared)
                 community.symbol
                 model.accountName
                 actionMsg
@@ -1771,7 +1770,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg
-                    (\extMsg uR -> UR.addExt extMsg uR)
+                    (\feedback -> UR.mapModel (\prevModel -> { prevModel | feedback = feedback }))
                 |> UR.addCmd
                     (case actionMsg of
                         Action.AgreedToClaimWithProof _ ->
