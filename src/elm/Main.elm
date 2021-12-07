@@ -141,10 +141,6 @@ subscriptions model =
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
 
-            ShopEditor _ subModel ->
-                ShopEditor.subscriptions subModel
-                    |> Sub.map GotShopEditorMsg
-
             _ ->
                 Sub.none
         ]

@@ -332,9 +332,7 @@ what you can do with this field. Whenever a user selects a file, it is
 automatically uploaded to our servers.
 -}
 file :
-    { failureErrorMessage : Http.Error -> String
-    , loadingErrorMessage : String
-    , notAskedErrorMessage : Maybe String
+    { translators : Shared.Translators
     , value : values -> RemoteData Http.Error String
     , update : RemoteData Http.Error String -> values -> values
     , externalError : values -> Maybe String
@@ -349,16 +347,14 @@ file config options =
                     RemoteData.Success a ->
                         Ok a
 
-                    RemoteData.Failure err ->
-                        Err (config.failureErrorMessage err)
+                    RemoteData.Failure _ ->
+                        Err (config.translators.t "error.file_upload")
 
                     RemoteData.Loading ->
-                        Err config.loadingErrorMessage
+                        Err (config.translators.t "error.wait_file_upload")
 
                     RemoteData.NotAsked ->
-                        config.notAskedErrorMessage
-                            |> Maybe.withDefault ""
-                            |> Err
+                        Err ""
         , value = config.value
         , update = config.update
         , externalError = config.externalError

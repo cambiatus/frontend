@@ -131,6 +131,7 @@
     "phone": "Utilice un número de teléfono válido",
     "invalid_image_file": "Error subiendo imagen",
     "file_upload": "Error subiendo archivo",
+    "wait_file_upload": "Espere a que se cargue el archivo",
     "zipcode": "Código postal no válido",
     "contracts": {
       "transfer": {

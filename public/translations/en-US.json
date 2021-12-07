@@ -131,6 +131,7 @@
     "phone": "Please use a valid phone number",
     "invalid_image_file": "Error uploading image",
     "file_upload": "Error uploading file",
+    "wait_file_upload": "Please wait for the file to be uploaded",
     "zipcode": "Invalid zipcode",
     "contracts": {
       "transfer": {

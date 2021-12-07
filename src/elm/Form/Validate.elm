@@ -2,7 +2,7 @@ module Form.Validate exposing
     ( Validator, succeed, validate, custom, Error
     , required
     , stringShorterThan, stringLongerThan
-    , int, intGreaterThan, intGreaterThanOrEqualTo
+    , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
     , maskedFloat, floatGreaterThan
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
@@ -38,7 +38,7 @@ validations), so we get consistent error messages throughout the app.
 
 @docs stringShorterThan, stringLongerThan
 
-@docs int, intGreaterThan, intGreaterThanOrEqualTo
+@docs int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
 
 @docs maskedFloat, floatGreaterThan
 
@@ -166,6 +166,11 @@ intGreaterThan =
 intGreaterThanOrEqualTo : Int -> Validator Int -> Validator Int
 intGreaterThanOrEqualTo =
     numberGreaterThanOrEqualTo String.fromInt
+
+
+intLowerThanOrEqualTo : Int -> Validator Int -> Validator Int
+intLowerThanOrEqualTo =
+    numberLowerThanOrEqualTo String.fromInt
 
 
 floatGreaterThan : Float -> Validator Float -> Validator Float
@@ -303,13 +308,28 @@ numberGreaterThanOrEqualTo : (number -> String) -> number -> Validator number ->
 numberGreaterThanOrEqualTo numberToString lowerBound =
     custom
         (\x ->
-            if x > lowerBound then
+            if x >= lowerBound then
                 Ok x
 
             else
                 Err
                     (\{ tr } ->
-                        tr "error.valdiator.number.greater_than_or_equal"
+                        tr "error.validator.number.greater_than_or_equal"
                             [ ( "base", numberToString lowerBound ) ]
+                    )
+        )
+
+
+numberLowerThanOrEqualTo : (number -> String) -> number -> Validator number -> Validator number
+numberLowerThanOrEqualTo numberToString upperBound =
+    custom
+        (\x ->
+            if x <= upperBound then
+                Ok x
+
+            else
+                Err
+                    (\{ tr } ->
+                        tr "error.validator.number.lower_than_or_equal" [ ( "base", numberToString upperBound ) ]
                     )
         )

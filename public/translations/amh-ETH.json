@@ -131,6 +131,7 @@
     "phone": "እባኮን ትክክለኛ ስልክ ቁጥር ይጠቀሙ",
     "invalid_image_file": "ምስል በመስቀል ላይ ስህተት",
     "file_upload": "ፋይል በመስቀል ላይ ስህተት",
+    "wait_file_upload": "እባክዎ ፋይሉ እስኪሰቀል ድረስ ይጠብቁ",
     "zipcode": "የተሳሳተ አካባቢያዊ መለያ ቁጥር",
     "contracts": {
       "transfer": {
