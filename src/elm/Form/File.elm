@@ -203,7 +203,7 @@ type RectangleBackground
 
 
 type Msg
-    = RequestedUploadFile File.File
+    = RequestedUploadFile File
     | CompletedUploadingFile Int (Result Http.Error String)
     | SelectedFile Int
 

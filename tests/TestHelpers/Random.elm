@@ -345,7 +345,7 @@ createCommunityDataInput =
         |> with symbol
         |> with (url [] |> Random.map Url.toString)
         |> with string
-        |> with string
+        |> with (Markdown.generator string)
         |> with (cambiatusUrl Nothing |> Random.map Url.toString)
         |> with (Random.float 0 1000)
         |> with (Random.float 0 1000)

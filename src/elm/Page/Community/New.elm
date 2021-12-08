@@ -25,7 +25,6 @@ import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class, classList)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
-import List.Extra as List
 import Log
 import Markdown exposing (Markdown)
 import Page
@@ -249,7 +248,7 @@ createForm ({ t } as translators) { isDisabled } =
         |> Form.withDecoration (View.Form.label [] "require-invitation-toggle" (t "settings.community_info.invitation.title"))
         |> Form.with
             (Form.Toggle.init
-                { label = Html.text <| t "settings.community_info.fields.invitation"
+                { label = text <| t "settings.community_info.fields.invitation"
                 , id = "require-invitation-toggle"
                 }
                 |> Form.Toggle.withTooltip

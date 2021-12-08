@@ -166,7 +166,7 @@ createCommunityDataInput input =
         |> andMap (noShrink input.symbol)
         |> andMap (noShrink input.logoUrl)
         |> andMap (string input.name)
-        |> andMap (string input.description)
+        |> andMap (Markdown.shrink input.description)
         |> andMap (noShrink input.subdomain)
         |> andMap (float input.inviterReward)
         |> andMap (float input.invitedReward)

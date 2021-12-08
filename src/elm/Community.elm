@@ -28,7 +28,6 @@ module Community exposing
     , inviteQuery
     , isFieldLoading
     , isNonExistingCommunityError
-    , logoBackground
     , maybeFieldValue
     , mergeFields
     , newCommunitySubscription
@@ -451,30 +450,6 @@ symbolQuery symbol =
 subdomainQuery : String -> SelectionSet (Maybe Model) RootQuery
 subdomainQuery subdomain =
     Query.community (\optionals -> { optionals | subdomain = Present subdomain }) communitySelectionSet
-
-
-logoUrl : Maybe String -> String
-logoUrl maybeUrl =
-    let
-        logoPlaceholder =
-            "/icons/community_placeholder.png"
-    in
-    case maybeUrl of
-        Nothing ->
-            logoPlaceholder
-
-        Just url ->
-            if String.isEmpty (String.trim url) then
-                logoPlaceholder
-
-            else
-                url
-
-
-logoBackground : Maybe String -> Html.Attribute msg
-logoBackground maybeUrl =
-    Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl maybeUrl ++ ")")
 
 
 addPhotosMutation : Eos.Symbol -> List String -> SelectionSet (Maybe Model) RootMutation
