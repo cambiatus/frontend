@@ -102,7 +102,7 @@ type alias Metadata =
 
 type alias Model =
     { name : String
-    , description : String
+    , description : Markdown
     , symbol : Eos.Symbol
     , logo : String
     , subdomain : String
@@ -325,7 +325,7 @@ communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
-        |> with Community.description
+        |> with (Markdown.selectionSet Community.description)
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
@@ -636,7 +636,7 @@ type alias CreateCommunityData =
     , creator : Eos.Name
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -653,7 +653,7 @@ type alias CreateCommunityDataInput =
     , symbol : Eos.Symbol
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Float
     , invitedReward : Float
@@ -699,7 +699,7 @@ encodeCreateCommunityData c =
         , ( "creator", Eos.encodeName c.creator )
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
@@ -718,7 +718,7 @@ createCommunityDataDecoder =
         |> required "creator" Eos.nameDecoder
         |> required "logo" Decode.string
         |> required "name" Decode.string
-        |> required "description" Decode.string
+        |> required "description" Markdown.decoder
         |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
@@ -803,7 +803,7 @@ inviteQuery invitationId =
 
 type alias CommunityPreview =
     { name : String
-    , description : String
+    , description : Markdown
     , logo : String
     , symbol : Eos.Symbol
     , subdomain : String
@@ -821,7 +821,7 @@ communityPreviewSelectionSet : SelectionSet CommunityPreview Cambiatus.Object.Co
 communityPreviewSelectionSet =
     SelectionSet.succeed CommunityPreview
         |> with CommunityPreview.name
-        |> with CommunityPreview.description
+        |> with (Markdown.selectionSet CommunityPreview.description)
         |> with CommunityPreview.logo
         |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
         |> with (CommunityPreview.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))

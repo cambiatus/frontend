@@ -130,8 +130,7 @@ view loggedIn model =
                                     [ p [ class "text-4xl font-bold" ]
                                         [ text community.name ]
                                     ]
-                                , View.MarkdownEditor.viewReadOnly [ class "text-sm" ]
-                                    community.description
+                                , Markdown.view [ class "text-sm" ] community.description
                                 ]
                             ]
                         , div [ class "container mx-auto" ]

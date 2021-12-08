@@ -152,7 +152,9 @@ update msg model ({ shared } as loggedIn) =
             { model
                 | logo = RemoteData.Success community.logo
                 , nameInput = community.name
-                , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
+
+                -- TODO
+                -- , descriptionInput = MarkdownEditor.setContents community.description model.descriptionInput
                 , coverPhoto = coverPhoto
                 , subdomainInput =
                     community.subdomain
@@ -578,7 +580,9 @@ update msg model ({ shared } as loggedIn) =
                                 (LoggedIn.CommunityLoaded
                                     { community
                                         | name = model.nameInput
-                                        , description = model.descriptionInput.contents
+
+                                        -- TODO
+                                        -- , description = model.descriptionInput.contents
                                         , website =
                                             if String.isEmpty model.websiteInput then
                                                 Nothing

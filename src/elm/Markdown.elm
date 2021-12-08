@@ -1,7 +1,7 @@
 module Markdown exposing
     ( view, toUnformattedString
     , Markdown, empty
-    , encode
+    , encode, decoder
     , selectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
     , generator, shrink
@@ -24,7 +24,7 @@ model to regular markdown.
 
 ## Interop with JSON
 
-@docs encode
+@docs encode, decoder
 
 
 ## Interop with GraphQL
@@ -467,6 +467,11 @@ encode (Markdown markdown) =
     Json.Encode.string markdown
 
 
+decoder : Json.Decode.Decoder Markdown
+decoder =
+    Json.Decode.map Markdown Json.Decode.string
+
+
 {-| In order to send data to QuillJS (checkout `toQuillOp`), we need to send it
 as a Json Value
 -}
@@ -524,8 +529,8 @@ formattingObjectDecoder : Json.Decode.Decoder (List Formatting)
 formattingObjectDecoder =
     let
         baseDecoder : String -> Json.Decode.Decoder a -> Json.Decode.Decoder (Maybe a -> b) -> Json.Decode.Decoder b
-        baseDecoder key decoder =
-            Decode.optional key (Json.Decode.map Just decoder) Nothing
+        baseDecoder key formattingDecoder =
+            Decode.optional key (Json.Decode.map Just formattingDecoder) Nothing
 
         simpleFormatting key formatting =
             baseDecoder key (Json.Decode.succeed formatting)

@@ -7,6 +7,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
+import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -16,7 +17,6 @@ import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 
 
 
@@ -215,7 +215,7 @@ type alias GenericCommunity community =
     { community
         | name : String
         , hasAutoInvite : Bool
-        , description : String
+        , description : Markdown
         , uploads : List String
         , memberCount : Int
         , website : Maybe String
@@ -231,8 +231,7 @@ view_ isGuest ({ translators } as shared) community model =
         [ div [ class "bg-white rounded-b md:rounded lg:w-4/5 xl:w-7/12" ]
             [ Community.communityPreviewImage False shared community
             , div [ class "p-4" ]
-                (View.MarkdownEditor.viewReadOnly [ class "text-gray-333 block mb-7" ]
-                    community.description
+                (Markdown.view [ class "text-gray-333 block mb-7" ] community.description
                     :: (if community.hasAutoInvite then
                             [ button
                                 [ class "button button-primary w-full cursor-pointer"
