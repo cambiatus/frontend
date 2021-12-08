@@ -133,10 +133,6 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            CommunityEditor subModel ->
-                CommunityEditor.subscriptions subModel
-                    |> Sub.map GotCommunityEditorMsg
-
             CommunitySponsor subModel ->
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
