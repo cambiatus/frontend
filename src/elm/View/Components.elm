@@ -98,7 +98,7 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
 
 tooltip : { message : String, iconClass : String } -> Html msg
 tooltip { message, iconClass } =
-    span [ class "icon-tooltip ml-1" ]
+    span [ class "icon-tooltip ml-1 z-10" ]
         [ Icons.question ("inline-block " ++ iconClass)
         , p [ class "icon-tooltip-content" ]
             [ text message ]
