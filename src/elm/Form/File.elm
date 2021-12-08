@@ -2,7 +2,9 @@ module Form.File exposing
     ( init, Options, map
     , withDisabled, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
+    , isEmpty, parser
     , view
+    , Model, initModel, initModelWithChoices, update, Msg, msgToString
     )
 
 {-| Creates a Cambiatus-style File. Use it within a `Form.Form`:
@@ -31,24 +33,111 @@ module Form.File exposing
 @docs getId
 
 
+# Helpers
+
+@docs isEmpty, parser
+
+
 # View
 
 @docs view
 
+
+# The elm architecture
+
+@docs Model, initModel, initModelWithChoices, update, Msg, msgToString
+
 -}
 
+import Api
 import File exposing (File)
-import Html exposing (Html, div, img, input, label, p, span)
+import Html exposing (Html, button, div, img, input, label, p, span)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Attributes.Aria exposing (ariaLive)
-import Html.Events exposing (on)
+import Html.Events exposing (on, onClick)
 import Http
 import Icons
 import Json.Decode
+import List.Extra
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Translators)
+import Session.Shared as Shared exposing (Shared)
+import UpdateResult as UR
 import View.Components
+import View.Feedback as Feedback
 import View.Form
+
+
+type Model
+    = SingleFile (RemoteData Http.Error String)
+    | WithChoices
+        { files : List (RemoteData Http.Error String)
+        , selected : Int
+        }
+
+
+initModel : Maybe String -> Model
+initModel maybeImage =
+    maybeImage
+        |> Maybe.map RemoteData.Success
+        |> Maybe.withDefault RemoteData.NotAsked
+        |> SingleFile
+
+
+initModelWithChoices : List String -> Model
+initModelWithChoices choices =
+    WithChoices
+        { files = List.map RemoteData.Success choices
+        , selected = 0
+        }
+
+
+parser : Shared.Translators -> Model -> Result String String
+parser { t } model =
+    let
+        fromRemoteData remoteData =
+            case remoteData of
+                RemoteData.Success a ->
+                    Ok a
+
+                RemoteData.Failure _ ->
+                    Err (t "error.file_upload")
+
+                RemoteData.Loading ->
+                    Err (t "error.wait_file_upload")
+
+                RemoteData.NotAsked ->
+                    Err (t "error.required")
+    in
+    case model of
+        SingleFile file ->
+            fromRemoteData file
+
+        WithChoices { files, selected } ->
+            case List.Extra.getAt selected files of
+                Just remoteData ->
+                    fromRemoteData remoteData
+
+                Nothing ->
+                    Err (t "error.file_upload")
+
+
+isEmpty : Model -> Bool
+isEmpty model =
+    let
+        fromRemoteData remoteData =
+            not (RemoteData.isSuccess remoteData)
+    in
+    case model of
+        SingleFile file ->
+            fromRemoteData file
+
+        WithChoices { files, selected } ->
+            case List.Extra.getAt selected files of
+                Just remoteData ->
+                    fromRemoteData remoteData
+
+                Nothing ->
+                    True
 
 
 
@@ -110,6 +199,109 @@ type RectangleBackground
 
 
 
+-- UPDATE
+
+
+type Msg
+    = RequestedUploadFile File.File
+    | CompletedUploadingFile Int (Result Http.Error String)
+    | SelectedFile Int
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg Feedback.Model
+
+
+update : Shared -> Msg -> Model -> UpdateResult
+update shared msg model =
+    case msg of
+        RequestedUploadFile file ->
+            let
+                ( newModel, index ) =
+                    case model of
+                        SingleFile _ ->
+                            ( SingleFile RemoteData.Loading, 0 )
+
+                        WithChoices { files } ->
+                            ( WithChoices
+                                { selected = List.length files
+                                , files = files ++ [ RemoteData.Loading ]
+                                }
+                            , List.length files
+                            )
+            in
+            newModel
+                |> UR.init
+                |> UR.addCmd
+                    (Api.uploadImage shared
+                        file
+                        (CompletedUploadingFile index)
+                    )
+
+        CompletedUploadingFile index (Err error) ->
+            let
+                newModel =
+                    case model of
+                        SingleFile _ ->
+                            SingleFile (RemoteData.Failure error)
+
+                        WithChoices choices ->
+                            WithChoices
+                                { choices
+                                    | files =
+                                        List.Extra.updateAt
+                                            index
+                                            (\_ -> RemoteData.Failure error)
+                                            choices.files
+                                }
+            in
+            newModel
+                |> UR.init
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure
+                        (shared.translators.t "error.file_upload")
+                    )
+                |> UR.logHttpError msg
+                    Nothing
+                    "Error uploading file"
+                    { moduleName = "Form.File", function = "update" }
+                    []
+                    error
+
+        CompletedUploadingFile index (Ok url) ->
+            let
+                newModel =
+                    case model of
+                        SingleFile _ ->
+                            SingleFile (RemoteData.Success url)
+
+                        WithChoices choices ->
+                            WithChoices
+                                { choices
+                                    | files =
+                                        List.Extra.updateAt index
+                                            (\_ -> RemoteData.Success url)
+                                            choices.files
+                                }
+            in
+            newModel
+                |> UR.init
+
+        SelectedFile index ->
+            let
+                newModel =
+                    case model of
+                        SingleFile file ->
+                            SingleFile file
+
+                        WithChoices choices ->
+                            WithChoices { choices | selected = index }
+            in
+            newModel
+                |> UR.init
+
+
+
 -- ADDING ATTRIBUTES
 
 
@@ -147,33 +339,37 @@ withVariant variant (Options options) =
 
 
 type alias ViewConfig msg =
-    { onInput : File -> msg
-    , value : RemoteData Http.Error String
+    { value : Model
     , error : Html msg
     , hasError : Bool
     , isRequired : Bool
-    , translators : Translators
+    , translators : Shared.Translators
     }
 
 
-view : Options msg -> ViewConfig msg -> Html msg
-view (Options options) viewConfig =
-    -- TODO - Focus styles
-    case options.variant of
-        LargeRectangle background ->
-            viewLargeRectangle background (Options options) viewConfig
+view : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+view (Options options) viewConfig toMsg =
+    case viewConfig.value of
+        SingleFile file ->
+            -- TODO - Focus styles
+            case options.variant of
+                LargeRectangle background ->
+                    viewLargeRectangle background (Options options) viewConfig file toMsg
 
-        SmallCircle ->
-            viewSmallCircle (Options options) viewConfig
+                SmallCircle ->
+                    viewSmallCircle (Options options) viewConfig file toMsg
+
+        WithChoices choices ->
+            viewHardcodedChoices (Options options) viewConfig choices toMsg
 
 
-viewInput : Options msg -> ViewConfig msg -> Html msg
-viewInput (Options options) viewConfig =
+viewInput : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
+viewInput (Options options) viewConfig toMsg =
     input
         [ id options.id
         , class "sr-only"
         , type_ "file"
-        , onFileChange viewConfig.onInput
+        , onFileChange (RequestedUploadFile >> toMsg)
         , acceptFileTypes options.fileTypes
         , multiple False
         , required viewConfig.isRequired
@@ -182,8 +378,8 @@ viewInput (Options options) viewConfig =
         []
 
 
-viewLargeRectangle : RectangleBackground -> Options msg -> ViewConfig msg -> Html msg
-viewLargeRectangle background (Options options) viewConfig =
+viewLargeRectangle : RectangleBackground -> Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
+viewLargeRectangle background (Options options) viewConfig value toMsg =
     let
         ( backgroundColor, foregroundColor, icon ) =
             case background of
@@ -204,8 +400,8 @@ viewLargeRectangle background (Options options) viewConfig =
                 , ( "cursor-not-allowed", options.disabled )
                 ]
             ]
-            [ viewInput (Options options) viewConfig
-            , case viewConfig.value of
+            [ viewInput (Options options) viewConfig toMsg
+            , case value of
                 RemoteData.Loading ->
                     View.Components.loadingLogoAnimated viewConfig.translators ""
 
@@ -240,14 +436,14 @@ viewLargeRectangle background (Options options) viewConfig =
         ]
 
 
-viewSmallCircle : Options msg -> ViewConfig msg -> Html msg
-viewSmallCircle (Options options) viewConfig =
+viewSmallCircle : Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
+viewSmallCircle (Options options) viewConfig value toMsg =
     let
         imgClasses =
             "object-cover rounded-full w-20 h-20"
 
         viewImg =
-            case viewConfig.value of
+            case value of
                 RemoteData.Success url ->
                     if List.member PDF options.fileTypes then
                         View.Components.pdfViewer [ class imgClasses ]
@@ -267,10 +463,10 @@ viewSmallCircle (Options options) viewConfig =
                 _ ->
                     div
                         [ class (imgClasses ++ " bg-gray-500")
-                        , classList [ ( "animate-skeleton-loading", RemoteData.isLoading viewConfig.value ) ]
+                        , classList [ ( "animate-skeleton-loading", RemoteData.isLoading value ) ]
                         , ariaLive "polite"
                         ]
-                        [ if RemoteData.isLoading viewConfig.value then
+                        [ if RemoteData.isLoading value then
                             span [ class "sr-only" ] [ Html.text <| viewConfig.translators.t "menu.loading" ]
 
                           else
@@ -280,7 +476,7 @@ viewSmallCircle (Options options) viewConfig =
     div options.containerAttrs
         [ View.Form.label [] options.id options.label
         , div [ class "mt-2 m-auto w-20 h-20 relative" ]
-            [ viewInput (Options options) viewConfig
+            [ viewInput (Options options) viewConfig toMsg
             , label
                 [ for options.id
                 , class "block"
@@ -293,14 +489,78 @@ viewSmallCircle (Options options) viewConfig =
                 , span
                     [ class "absolute bottom-0 right-0 bg-orange-300 rounded-full transition-all"
                     , classList
-                        [ ( "w-8 h-8 p-2", not (RemoteData.isNotAsked viewConfig.value) )
-                        , ( "w-full h-full p-4", RemoteData.isNotAsked viewConfig.value )
+                        [ ( "w-8 h-8 p-2", not (RemoteData.isNotAsked value) )
+                        , ( "w-full h-full p-4", RemoteData.isNotAsked value )
                         ]
                     ]
                     [ Icons.camera "" ]
                 ]
             ]
         , viewConfig.error
+        ]
+
+
+viewHardcodedChoices :
+    Options msg
+    -> ViewConfig msg
+    -> { selected : Int, files : List (RemoteData Http.Error String) }
+    -> (Msg -> msg)
+    -> Html msg
+viewHardcodedChoices (Options options) viewConfig choices toMsg =
+    let
+        activeClass =
+            "border border-gray-900 shadow-lg"
+
+        itemClass =
+            "p-4 border border-white rounded-md w-full h-full flex items-center justify-center focus-outline-none focus:border hover:border-gray-900 focus:border-gray-900 hover:shadow-lg focus:shadow-lg"
+
+        viewItem index choiceStatus =
+            button
+                [ class itemClass
+                , classList [ ( activeClass, index == choices.selected ) ]
+                , type_ "button"
+                , onClick (SelectedFile index)
+                ]
+                [ case choiceStatus of
+                    RemoteData.Loading ->
+                        div [ class "w-16 h-16" ]
+                            [ View.Components.loadingLogoAnimatedFluid ]
+
+                    RemoteData.Success url ->
+                        div
+                            [ class "w-16 h-16 bg-contain bg-center bg-no-repeat"
+                            , Html.Attributes.style "background-image"
+                                ("url(" ++ url ++ ")")
+                            ]
+                            []
+
+                    _ ->
+                        div []
+                            []
+                ]
+                |> Html.map toMsg
+    in
+    div options.containerAttrs
+        [ View.Form.label []
+            options.id
+            options.label
+        , div
+            [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
+            (List.indexedMap viewItem choices.files
+                ++ [ viewInput (Options options) viewConfig toMsg
+                   , label
+                        [ for options.id
+                        , class ("flex-col text-center cursor-pointer " ++ itemClass)
+
+                        -- TODO - Disable
+                        ]
+                        [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
+                            [ Icons.imageMultiple "text-white fill-current w-8 h-8"
+                            ]
+                        , Html.text (viewConfig.translators.t "community.create.labels.upload_icon")
+                        ]
+                   ]
+            )
         ]
 
 
@@ -311,6 +571,23 @@ viewSmallCircle (Options options) viewConfig =
 getId : Options msg -> String
 getId (Options options) =
     options.id
+
+
+
+-- UTILS
+
+
+msgToString : Msg -> List String
+msgToString msg =
+    case msg of
+        RequestedUploadFile _ ->
+            [ "RequestedUploadFile" ]
+
+        CompletedUploadingFile _ r ->
+            [ "CompletedUploadingFile", UR.resultToString r ]
+
+        SelectedFile _ ->
+            [ "SelectedFile" ]
 
 
 

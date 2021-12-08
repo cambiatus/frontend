@@ -90,7 +90,7 @@ type DeleteModalStatus
 
 
 type alias FormInput =
-    { image : RemoteData Http.Error String
+    { image : Form.File.Model
     , title : String
     , description : Form.RichText.Model
     , trackUnits : Bool
@@ -257,7 +257,7 @@ boolFromString bool =
 initForm : Form.Model FormInput
 initForm =
     Form.init
-        { image = RemoteData.NotAsked
+        { image = Form.File.initModel Nothing
         , title = ""
         , description = Form.RichText.initModel "description-editor" Nothing
         , trackUnits = False
@@ -269,13 +269,7 @@ initForm =
 initEditingForm : Product -> Form.Model FormInput
 initEditingForm product =
     Form.init
-        { image =
-            case product.image of
-                Nothing ->
-                    RemoteData.NotAsked
-
-                Just image ->
-                    RemoteData.Success image
+        { image = Form.File.initModel product.image
         , title = product.title
         , description = Form.RichText.initModel "description-editor" (Just product.description)
         , trackUnits = product.trackStock

@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
+    , succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration, withGroup
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
@@ -66,7 +66,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration
+@docs succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration, withGroup
 
 
 ## Fields
@@ -90,10 +90,8 @@ documentation if you're stuck.
 
 -}
 
-import Api
 import Browser.Dom
 import Date exposing (Date)
-import File
 import Form.Checkbox as Checkbox
 import Form.DatePicker as DatePicker
 import Form.File
@@ -106,11 +104,9 @@ import Form.UserPicker as UserPicker
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
-import Http
 import Markdown exposing (Markdown)
 import Maybe.Extra
 import Profile
-import RemoteData exposing (RemoteData)
 import Session.Shared as Shared exposing (Shared)
 import Set exposing (Set)
 import Task
@@ -199,11 +195,12 @@ type Field values
     | Toggle (Toggle.Options (Msg values)) (BaseField Bool values)
     | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
     | Radio (Radio.Options String (Msg values)) (BaseField String values)
-    | File (Form.File.Options (Msg values)) (BaseField (RemoteData Http.Error String) values)
+    | File (Form.File.Options (Msg values)) (BaseField Form.File.Model values)
     | Select (Select.Options String (Msg values)) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
     | DecorativeField (Html Never)
+    | Group (List (Html.Attribute Never)) (List (FilledField values))
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -333,28 +330,15 @@ automatically uploaded to our servers.
 -}
 file :
     { translators : Shared.Translators
-    , value : values -> RemoteData Http.Error String
-    , update : RemoteData Http.Error String -> values -> values
+    , value : values -> Form.File.Model
+    , update : Form.File.Model -> values -> values
     , externalError : values -> Maybe String
     }
     -> Form.File.Options (Msg values)
     -> Form values String
 file config options =
     field (File options)
-        { parser =
-            \remoteData ->
-                case remoteData of
-                    RemoteData.Success a ->
-                        Ok a
-
-                    RemoteData.Failure _ ->
-                        Err (config.translators.t "error.file_upload")
-
-                    RemoteData.Loading ->
-                        Err (config.translators.t "error.wait_file_upload")
-
-                    RemoteData.NotAsked ->
-                        Err (config.translators.t "error.required")
+        { parser = Form.File.parser config.translators
         , value = config.value
         , update = config.update
         , externalError = config.externalError
@@ -502,6 +486,61 @@ withNesting :
     -> Form parent b
 withNesting mappings child parent =
     with (mapChild mappings child) parent
+
+
+{-| Display two fields as a group. You can pass in arbitrary HTML attributes, as
+long as they don't emit Msgs.
+-}
+withGroup :
+    List (Html.Attribute Never)
+    -> Form values a
+    -> Form values b
+    -> Form values (a -> b -> c)
+    -> Form values c
+withGroup attributes leftSide rightSide current =
+    Form
+        (\values ->
+            let
+                filledLeft =
+                    fill leftSide values
+
+                filledRight =
+                    fill rightSide values
+
+                filledCurrent =
+                    fill current values
+            in
+            { fields =
+                { state = Group attributes (filledLeft.fields ++ filledRight.fields)
+                , error = Nothing
+                , isRequired = False
+                }
+                    :: filledCurrent.fields
+            , result =
+                case filledCurrent.result of
+                    Ok fn ->
+                        Result.map2 fn filledLeft.result filledRight.result
+
+                    Err ( currentError, currentErrors ) ->
+                        case ( filledLeft.result, filledRight.result ) of
+                            ( Ok _, Ok _ ) ->
+                                Err ( currentError, currentErrors )
+
+                            ( Err ( leftError, leftErrors ), Ok _ ) ->
+                                Err ( currentError, currentErrors ++ (leftError :: leftErrors) )
+
+                            ( Ok _, Err ( rightError, rightErrors ) ) ->
+                                Err ( currentError, currentErrors ++ (rightError :: rightErrors) )
+
+                            ( Err ( leftError, leftErrors ), Err ( rightError, rightErrors ) ) ->
+                                Err
+                                    ( currentError
+                                    , currentErrors
+                                        ++ (leftError :: leftErrors)
+                                        ++ (rightError :: rightErrors)
+                                    )
+            }
+        )
 
 
 {-| Adds some decorative Html on the form. Note it is **purely decorative**
@@ -765,10 +804,9 @@ type Msg values
     = NoOp
     | ChangedValues values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
+    | GotFileMsg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
-    | RequestedUploadFile (RemoteData Http.Error String -> values -> values) File.File
-    | CompletedUploadingFile (RemoteData Http.Error String -> values -> values) (Result Http.Error String)
     | BlurredField String
     | ClickedSubmitWithErrors ( String, List String )
 
@@ -816,6 +854,13 @@ update shared msg (Model model) =
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
+        GotFileMsg getModel updateFn subMsg ->
+            Form.File.update shared subMsg (getModel model.values)
+                |> UR.fromChild (\newFile -> Model { model | values = updateFn newFile model.values })
+                    (GotFileMsg getModel updateFn)
+                    identity
+                    (Model model)
+
         GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
             let
                 ( newModel, cmd ) =
@@ -842,36 +887,6 @@ update shared msg (Model model) =
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotUserPickerMsg options viewConfig getModel updateFn) cmd)
                 |> maybeAddMsg maybeExternalMsg
-
-        RequestedUploadFile updateFn fileToUpload ->
-            { model | values = updateFn RemoteData.Loading model.values }
-                |> Model
-                |> UR.init
-                |> UR.addCmd
-                    (Api.uploadImage shared
-                        fileToUpload
-                        (CompletedUploadingFile updateFn)
-                    )
-
-        CompletedUploadingFile updateFn (Err error) ->
-            { model | values = updateFn (RemoteData.Failure error) model.values }
-                |> Model
-                |> UR.init
-                |> UR.addExt
-                    (Feedback.Visible Feedback.Failure
-                        (shared.translators.t "error.file_upload")
-                    )
-                |> UR.logHttpError msg
-                    Nothing
-                    "Error uploading file"
-                    { moduleName = "Form", function = "update" }
-                    []
-                    error
-
-        CompletedUploadingFile updateFn fileResult ->
-            { model | values = updateFn (RemoteData.fromResult fileResult) model.values }
-                |> Model
-                |> UR.init
 
         BlurredField fieldId ->
             Model
@@ -904,6 +919,9 @@ msgToString msg =
         GotRichTextMsg _ _ subMsg ->
             "GotRichTextMsg" :: RichText.msgToString subMsg
 
+        GotFileMsg _ _ subMsg ->
+            "GotFileMsg" :: Form.File.msgToString subMsg
+
         GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
 
@@ -912,12 +930,6 @@ msgToString msg =
 
         ChangedValues _ ->
             [ "ChangedValues" ]
-
-        RequestedUploadFile _ _ ->
-            [ "RequestedUploadFile" ]
-
-        CompletedUploadingFile _ r ->
-            [ "CompletedUploadingFile", UR.resultToString r ]
 
         BlurredField _ ->
             [ "BlurredField" ]
@@ -935,7 +947,7 @@ msgToString msg =
 view :
     List (Html.Attribute msg)
     -> Shared.Translators
-    -> ((List (Html.Attribute msg) -> (List (Html msg) -> Html msg)) -> List (Html msg))
+    -> ((List (Html.Attribute Never) -> (List (Html msg) -> Html msg)) -> List (Html msg))
     -> Form values output
     -> Model values
     ->
@@ -957,7 +969,13 @@ view formAttrs translators footer form model { toMsg, onSubmit } =
         )
         (List.map (Html.map toMsg)
             (viewFields translators form model)
-            ++ footer (\attrs -> button (type_ "submit" :: attrs))
+            ++ footer
+                (\attrs ->
+                    button
+                        (type_ "submit"
+                            :: List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs
+                        )
+                )
         )
 
 
@@ -1109,13 +1127,13 @@ viewField { showError, translators, disabled } { state, error, isRequired } =
 
         File options baseField ->
             Form.File.view (disableIfNotAlreadyDisabled options Form.File.withDisabled)
-                { onInput = RequestedUploadFile baseField.updateWithValues
-                , value = baseField.value
+                { value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
                 , isRequired = isRequired
                 , translators = translators
                 }
+                (GotFileMsg baseField.getValue baseField.updateWithValues)
 
         Select options baseField ->
             Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
@@ -1157,6 +1175,19 @@ viewField { showError, translators, disabled } { state, error, isRequired } =
 
         DecorativeField decoration ->
             Html.map (\_ -> NoOp) decoration
+
+        Group attrs fields ->
+            Html.div
+                (List.map (Html.Attributes.map (\_ -> NoOp)) attrs)
+                (List.map
+                    (viewField
+                        { showError = showError
+                        , translators = translators
+                        , disabled = disabled
+                        }
+                    )
+                    fields
+                )
 
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
@@ -1211,6 +1242,12 @@ getId state =
         DecorativeField _ ->
             ""
 
+        Group _ fields ->
+            fields
+                |> List.head
+                |> Maybe.map (.state >> getId)
+                |> Maybe.withDefault ""
+
 
 isEmpty : Field values -> Bool
 isEmpty field_ =
@@ -1236,7 +1273,7 @@ isEmpty field_ =
             False
 
         File _ { value } ->
-            not (RemoteData.isSuccess value)
+            Form.File.isEmpty value
 
         Select _ _ ->
             False
@@ -1249,6 +1286,11 @@ isEmpty field_ =
 
         DecorativeField _ ->
             False
+
+        Group _ fields ->
+            fields
+                |> List.map .state
+                |> List.any isEmpty
 
 
 mapFieldConfig :
@@ -1368,6 +1410,9 @@ mapField fn reverseFn field_ =
         DecorativeField decoration ->
             DecorativeField decoration
 
+        Group attributes fields ->
+            Group attributes (List.map (mapFilledField fn reverseFn) fields)
+
 
 mapMsg : (values -> mappedValues) -> (mappedValues -> values) -> Msg values -> Msg mappedValues
 mapMsg fn reverseFn msg =
@@ -1384,6 +1429,11 @@ mapMsg fn reverseFn msg =
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
 
+        GotFileMsg getModel updateFn subMsg ->
+            GotFileMsg (reverseFn >> getModel)
+                (\value values -> reverseFn values |> updateFn value |> fn)
+                subMsg
+
         GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
             GotDatePickerMsg (DatePicker.map (mapMsg fn reverseFn) options)
                 (DatePicker.mapViewConfig (mapMsg fn reverseFn) viewConfig)
@@ -1397,14 +1447,6 @@ mapMsg fn reverseFn msg =
                 (reverseFn >> getModel)
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
-
-        RequestedUploadFile updateFn file_ ->
-            RequestedUploadFile (\value values -> reverseFn values |> updateFn value |> fn)
-                file_
-
-        CompletedUploadingFile updateFn result ->
-            CompletedUploadingFile (\value values -> reverseFn values |> updateFn value |> fn)
-                result
 
         BlurredField fieldId ->
             BlurredField fieldId

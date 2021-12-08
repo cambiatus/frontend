@@ -15,11 +15,9 @@ import Form.Text
 import Form.Toggle
 import Html exposing (Html, div, img, p, strong, text)
 import Html.Attributes exposing (autocomplete, class, rows, src)
-import Http
 import Icons
 import Markdown exposing (Markdown)
 import Mask
-import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import UpdateResult as UR
@@ -44,8 +42,8 @@ init { shared } =
                 , disabledField = "This field is disabled"
                 , agrees = False
                 , accountType = Personal
-                , avatar = RemoteData.NotAsked
-                , resume = RemoteData.NotAsked
+                , avatar = Form.File.initModel Nothing
+                , resume = Form.File.initModel Nothing
                 , interest = Programming
                 , toggleTest = False
                 , richtextTest = Form.RichText.initModel "richtext-input" Nothing
@@ -106,8 +104,8 @@ type alias DirtyUser =
     , disabledField : String
     , agrees : Bool
     , accountType : AccountType
-    , avatar : RemoteData Http.Error String
-    , resume : RemoteData Http.Error String
+    , avatar : Form.File.Model
+    , resume : Form.File.Model
     , interest : Interest
     , toggleTest : Bool
     , richtextTest : Form.RichText.Model

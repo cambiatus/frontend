@@ -34,14 +34,12 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled, type_)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Markdown exposing (Markdown)
 import Ports
 import Profile
-import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
@@ -78,7 +76,7 @@ type ActionFeedback
 
 
 type Proof
-    = Proof (Form.Model (RemoteData Http.Error String)) (Maybe ProofCode)
+    = Proof (Form.Model Form.File.Model) (Maybe ProofCode)
 
 
 type alias ProofCode =
@@ -126,7 +124,7 @@ type Msg
     | GotProofTime Time.Posix
     | AskedForUint64Name
     | GotUint64Name (Result Encode.Value String)
-    | GotFormMsg (Form.Msg (RemoteData Http.Error String))
+    | GotFormMsg (Form.Msg Form.File.Model)
     | Tick Time.Posix
 
 
@@ -207,7 +205,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
         ( AgreedToClaimWithProof action, _ ) ->
             { model
                 | status =
-                    Proof (Form.init RemoteData.NotAsked) Nothing
+                    Proof (Form.init (Form.File.initModel Nothing)) Nothing
                         |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
@@ -271,7 +269,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
             in
             { model
                 | status =
-                    Proof (Form.init RemoteData.NotAsked) initProofCodeParts
+                    Proof (Form.init (Form.File.initModel Nothing)) initProofCodeParts
                         |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
@@ -579,7 +577,7 @@ viewSearchActions ({ t } as translators) today actions =
         (List.map viewAction actions)
 
 
-claimWithProofsForm : Translators -> Form.Form (RemoteData Http.Error String) String
+claimWithProofsForm : Translators -> Form.Form Form.File.Model String
 claimWithProofsForm translators =
     Form.File.init
         { label = translators.t "community.actions.proof.upload"
