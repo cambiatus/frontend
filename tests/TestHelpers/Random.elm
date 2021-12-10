@@ -262,7 +262,7 @@ minimalProfile =
         |> with name
         |> with avatar
         |> with (maybe email)
-        |> with (maybe string)
+        |> with (maybe (Markdown.generator string))
         |> with (Random.constant [])
 
 

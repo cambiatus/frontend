@@ -1,7 +1,7 @@
 module View.Form.Input exposing
     ( init
     , withCounter, withElements, withCurrency
-    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
     , withInputType, withType, withCounterType, asNumeric
     , withMask
     , toHtml
@@ -40,7 +40,7 @@ and character counters.
 
 ## Adding attributes
 
-@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+@docs withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
 
 
 ## Changing types
@@ -100,7 +100,6 @@ init options =
     , extraAttrs = []
     , counterAttrs = []
     , containerAttrs = []
-    , inputContainerAttrs = []
     , extraElements = []
     , errorAttrs = []
     , inputType = Input
@@ -190,7 +189,7 @@ input options =
                             (Shared.decimalSeparators options.translators)
                             { previousValue = options.value, newValue = v }
     in
-    div (class "relative" :: options.inputContainerAttrs)
+    div [ class "relative" ]
         (inputElement
             (id options.id
                 :: onInput (beforeInputFunction >> options.onInput)
@@ -251,13 +250,6 @@ withAttrs attrs options =
 withContainerAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
 withContainerAttrs attrs options =
     { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-{-| Adds attributes to the element that holds the input
--}
-withInputContainerAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
-withInputContainerAttrs attrs options =
-    { options | inputContainerAttrs = options.inputContainerAttrs ++ attrs }
 
 
 {-| Adds an element to the input, so we can have elements inside the input
@@ -486,7 +478,6 @@ type alias InputOptions a =
     , extraAttrs : List (Html.Attribute a)
     , counterAttrs : List (Html.Attribute a)
     , containerAttrs : List (Html.Attribute a)
-    , inputContainerAttrs : List (Html.Attribute a)
     , extraElements : List (Html a)
     , errorAttrs : List (Html.Attribute a)
     , inputType : InputType

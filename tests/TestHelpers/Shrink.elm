@@ -92,7 +92,7 @@ minimalProfile profile =
         |> andMap (noShrink profile.account)
         |> andMap (avatar profile.avatar)
         |> andMap (noShrink profile.email)
-        |> andMap (maybe string profile.bio)
+        |> andMap (maybe Markdown.shrink profile.bio)
         |> andMap (noShrink profile.contacts)
 
 
