@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withNoOutput, withNesting, withGroup
+    , succeed, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapChild
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
@@ -67,7 +67,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withNoOutput, withNesting, withGroup
+@docs succeed, with, withNoOutput, withDecoration, withNesting, withGroup
 
 
 ## Modifiers
@@ -743,6 +743,13 @@ withNoOutput new current =
             , result = filledCurrent.result
             }
         )
+
+
+{-| Add some decoration to a form
+-}
+withDecoration : Html Never -> Form values output -> Form values output
+withDecoration decoration =
+    withNoOutput (arbitrary (Html.map (\_ -> identity) decoration))
 
 
 {-| Given some values (a dirty model), fill a form with them.

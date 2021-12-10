@@ -1,12 +1,13 @@
 module Form.Validate exposing
     ( Validator, succeed, validate, custom, Error
     , required
-    , stringShorterThan, stringLongerThan
+    , stringShorterThan, stringLongerThan, url
     , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
     , maskedFloat, floatGreaterThan
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
+    , floatGreaterThanOrEqualTo, map
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
@@ -36,7 +37,7 @@ validations), so we get consistent error messages throughout the app.
 
 ## String inputs
 
-@docs stringShorterThan, stringLongerThan
+@docs stringShorterThan, stringLongerThan, url
 
 @docs int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
 
@@ -60,6 +61,7 @@ import Date exposing (Date)
 import Markdown exposing (Markdown)
 import Session.Shared as Shared
 import Time
+import Url
 
 
 
@@ -90,6 +92,13 @@ type alias Error =
 succeed : output -> Validator output
 succeed output =
     Validator (Ok output)
+
+
+{-| Change the type of output without performing additional validation
+-}
+map : (output -> mappedOutput) -> Validator output -> Validator mappedOutput
+map fn (Validator validator) =
+    Validator (Result.map fn validator)
 
 
 {-| Finish a validation pipeline. You can always chain custom validations with
@@ -178,6 +187,11 @@ floatGreaterThan =
     numberGreaterThan String.fromFloat
 
 
+floatGreaterThanOrEqualTo : Float -> Validator Float -> Validator Float
+floatGreaterThanOrEqualTo =
+    numberGreaterThanOrEqualTo String.fromFloat
+
+
 maskedFloat : Shared.Translators -> Validator String -> Validator Float
 maskedFloat translators =
     mapValidation (Shared.floatStringFromSeparatedString translators)
@@ -212,6 +226,30 @@ stringLongerThan minLength =
 
             else
                 Ok stringInput
+        )
+
+
+url : Validator String -> Validator Url.Url
+url =
+    custom
+        (\stringInput ->
+            let
+                withProtocol =
+                    if String.isEmpty stringInput then
+                        ""
+
+                    else if String.startsWith "https://" stringInput || String.startsWith "http://" stringInput then
+                        stringInput
+
+                    else
+                        "http://" ++ stringInput
+            in
+            case Url.fromString withProtocol of
+                Nothing ->
+                    Err (\{ t } -> t "settings.community_info.errors.website.invalid")
+
+                Just url_ ->
+                    Ok url_
         )
 
 
