@@ -133,7 +133,7 @@ createForm loggedIn =
             , price = price
             }
         )
-        |> Form.withOptional
+        |> Form.with
             (Form.File.init { label = "", id = "image-uploader" }
                 |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
                 |> Form.File.withContainerAttrs [ class "mb-10" ]
@@ -143,6 +143,7 @@ createForm loggedIn =
                     , update = \image input -> { input | image = image }
                     , externalError = always Nothing
                     }
+                |> Form.optional
             )
         |> Form.with
             (Form.Text.init { label = t "shop.what_label", id = "title-input" }
@@ -187,27 +188,29 @@ createForm loggedIn =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\values ->
-                if values.trackUnits then
-                    Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
-                        |> Form.Text.asNumeric
-                        |> Form.Text.withType Form.Text.Number
-                        |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
-                        |> Form.textField
-                            { parser =
-                                Form.Validate.succeed
-                                    >> Form.Validate.int
-                                    >> Form.Validate.intGreaterThanOrEqualTo 0
-                                    >> Form.Validate.intLowerThanOrEqualTo 2000
-                                    >> Form.Validate.validate translators
-                            , value = .unitsInStock
-                            , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
-                            , externalError = always Nothing
-                            }
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    if values.trackUnits then
+                        Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
+                            |> Form.Text.asNumeric
+                            |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.int
+                                        >> Form.Validate.intGreaterThanOrEqualTo 0
+                                        >> Form.Validate.intLowerThanOrEqualTo 2000
+                                        >> Form.Validate.validate translators
+                                , value = .unitsInStock
+                                , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
+                                , externalError = always Nothing
+                                }
 
-                else
-                    Form.succeed 0
+                    else
+                        Form.succeed 0
+                )
             )
         |> Form.with
             (Form.Text.init { label = t "shop.price_label", id = "price-input" }

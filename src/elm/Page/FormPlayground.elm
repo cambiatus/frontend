@@ -165,7 +165,7 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withOptional
+        |> Form.with
             (Form.Text.init { label = "Middle name", id = "middle-name-input" }
                 |> Form.Text.withInputContainerAttrs [ class "bg-white p-2 rounded" ]
                 |> Form.textField
@@ -180,6 +180,7 @@ userForm translators =
                     , update = \middleName user -> { user | middleName = middleName }
                     , externalError = always Nothing
                     }
+                |> Form.optional
             )
         |> Form.with
             (Form.Text.init { label = "Phone", id = "phone-input" }
@@ -314,7 +315,7 @@ userForm translators =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withOptional
+        |> Form.with
             (Form.File.init { label = "Resume", id = "resume-input" }
                 |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
                 |> Form.File.withFileTypes [ Form.File.PDF ]
@@ -326,6 +327,7 @@ userForm translators =
                     , update = \resume user -> { user | resume = resume }
                     , externalError = always Nothing
                     }
+                |> Form.optional
             )
         |> Form.with
             (Form.Select.init

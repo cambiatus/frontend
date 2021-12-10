@@ -165,12 +165,13 @@ createForm loggedIn community balance maxTransferAmount =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withDecoration
+        |> Form.withNoOutput
             (span [ class "bg-gray-100 uppercase text-sm px-2 inline-block mb-10" ]
                 [ text <|
                     translators.tr "account.my_wallet.your_current_balance"
                         [ ( "balance", Eos.assetToString translators balance ) ]
                 ]
+                |> Form.arbitrary
             )
         |> Form.with
             (Form.RichText.init

@@ -554,35 +554,37 @@ form loggedIn community =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditionalAndNoOutput
-            (\values ->
-                Form.Toggle.init
-                    { label =
-                        p [ class "text-green" ]
-                            (if values.useDateValidation || values.useUsagesValidation then
-                                [ b []
-                                    [ text <| t "community.actions.form.validation_on"
+        |> Form.withNoOutput
+            (Form.introspect
+                (\values ->
+                    Form.Toggle.init
+                        { label =
+                            p [ class "text-green" ]
+                                (if values.useDateValidation || values.useUsagesValidation then
+                                    [ b []
+                                        [ text <| t "community.actions.form.validation_on"
+                                        ]
+                                    , text <| t "community.actions.form.validation_on_detail"
                                     ]
-                                , text <| t "community.actions.form.validation_on_detail"
-                                ]
 
-                             else
-                                [ b []
-                                    [ text <| t "community.actions.form.validation_off"
+                                 else
+                                    [ b []
+                                        [ text <| t "community.actions.form.validation_off"
+                                        ]
+                                    , text <| t "community.actions.form.validation_detail"
                                     ]
-                                , text <| t "community.actions.form.validation_detail"
-                                ]
-                            )
-                    , id = "expiration-toggle"
-                    }
-                    |> Form.Toggle.withTopLabel (t "community.actions.form.validity_label")
-                    |> Form.Toggle.withToggleSide Form.Toggle.Left
-                    |> Form.toggle
-                        { parser = Ok
-                        , value = \input -> input.useDateValidation || input.useUsagesValidation
-                        , update = \_ input -> input
-                        , externalError = always Nothing
+                                )
+                        , id = "expiration-toggle"
                         }
+                        |> Form.Toggle.withTopLabel (t "community.actions.form.validity_label")
+                        |> Form.Toggle.withToggleSide Form.Toggle.Left
+                        |> Form.toggle
+                            { parser = Ok
+                            , value = \input -> input.useDateValidation || input.useUsagesValidation
+                            , update = \_ input -> input
+                            , externalError = always Nothing
+                            }
+                )
             )
         |> Form.with
             (Form.Checkbox.init
@@ -601,29 +603,31 @@ form loggedIn community =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\values ->
-                if values.useDateValidation then
-                    Form.DatePicker.init
-                        { label = t "community.actions.form.date_label"
-                        , id = "date-validation-picker"
-                        }
-                        |> Form.DatePicker.withContainerAttrs [ class "mb-6" ]
-                        |> Form.datePicker
-                            { parser =
-                                Form.Validate.succeed
-                                    >> Form.Validate.required
-                                    >> Form.Validate.futureDate loggedIn.shared.timezone loggedIn.shared.now
-                                    >> Form.Validate.validate loggedIn.shared.translators
-                            , value = .expirationDate
-                            , update = \expirationDate input -> { input | expirationDate = expirationDate }
-                            , externalError = always Nothing
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    if values.useDateValidation then
+                        Form.DatePicker.init
+                            { label = t "community.actions.form.date_label"
+                            , id = "date-validation-picker"
                             }
+                            |> Form.DatePicker.withContainerAttrs [ class "mb-6" ]
+                            |> Form.datePicker
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.required
+                                        >> Form.Validate.futureDate loggedIn.shared.timezone loggedIn.shared.now
+                                        >> Form.Validate.validate loggedIn.shared.translators
+                                , value = .expirationDate
+                                , update = \expirationDate input -> { input | expirationDate = expirationDate }
+                                , externalError = always Nothing
+                                }
 
-                else
-                    loggedIn.shared.now
-                        |> Date.fromPosix loggedIn.shared.timezone
-                        |> Form.succeed
+                    else
+                        loggedIn.shared.now
+                            |> Date.fromPosix loggedIn.shared.timezone
+                            |> Form.succeed
+                )
             )
         |> Form.with
             (Form.Checkbox.init
@@ -642,54 +646,58 @@ form loggedIn community =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\values ->
-                if values.useUsagesValidation then
-                    Form.Text.init
-                        { label = t "community.actions.form.quantity_label"
-                        , id = "usages-validity-input"
-                        }
-                        |> Form.Text.withPlaceholder (t "community.actions.form.usages_placeholder")
-                        |> Form.Text.withType Form.Text.Number
-                        |> Form.Text.asNumeric
-                        |> Form.Text.withContainerAttrs [ class "mt-6 sm:w-2/5" ]
-                        |> Form.textField
-                            { parser =
-                                Form.Validate.succeed
-                                    >> Form.Validate.int
-                                    >> Form.Validate.intGreaterThan 0
-                                    >> Form.Validate.validate loggedIn.shared.translators
-                            , value = .maxUsages
-                            , update = \maxUsages input -> { input | maxUsages = maxUsages }
-                            , externalError = always Nothing
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    if values.useUsagesValidation then
+                        Form.Text.init
+                            { label = t "community.actions.form.quantity_label"
+                            , id = "usages-validity-input"
                             }
+                            |> Form.Text.withPlaceholder (t "community.actions.form.usages_placeholder")
+                            |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.asNumeric
+                            |> Form.Text.withContainerAttrs [ class "mt-6 sm:w-2/5" ]
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.int
+                                        >> Form.Validate.intGreaterThan 0
+                                        >> Form.Validate.validate loggedIn.shared.translators
+                                , value = .maxUsages
+                                , update = \maxUsages input -> { input | maxUsages = maxUsages }
+                                , externalError = always Nothing
+                                }
 
-                else
-                    Form.succeed 0
+                    else
+                        Form.succeed 0
+                )
             )
-        |> Form.withConditional
-            (\values ->
-                if values.useUsagesValidation && Maybe.Extra.isJust values.usagesLeft then
-                    Form.Text.init
-                        { label = t "community.actions.form.usages_left_label"
-                        , id = "usages-left-input"
-                        }
-                        |> Form.Text.withType Form.Text.Number
-                        |> Form.Text.asNumeric
-                        |> Form.Text.withContainerAttrs [ class "sm:w-2/5" ]
-                        |> Form.textField
-                            { parser =
-                                Form.Validate.succeed
-                                    >> Form.Validate.int
-                                    >> Form.Validate.intGreaterThanOrEqualTo 0
-                                    >> Form.Validate.validate loggedIn.shared.translators
-                            , value = .usagesLeft >> Maybe.withDefault ""
-                            , update = \usagesLeft_ input -> { input | usagesLeft = Just usagesLeft_ }
-                            , externalError = always Nothing
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    if values.useUsagesValidation && Maybe.Extra.isJust values.usagesLeft then
+                        Form.Text.init
+                            { label = t "community.actions.form.usages_left_label"
+                            , id = "usages-left-input"
                             }
+                            |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.asNumeric
+                            |> Form.Text.withContainerAttrs [ class "sm:w-2/5" ]
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.int
+                                        >> Form.Validate.intGreaterThanOrEqualTo 0
+                                        >> Form.Validate.validate loggedIn.shared.translators
+                                , value = .usagesLeft >> Maybe.withDefault ""
+                                , update = \usagesLeft_ input -> { input | usagesLeft = Just usagesLeft_ }
+                                , externalError = always Nothing
+                                }
 
-                else
-                    Form.succeed 0
+                    else
+                        Form.succeed 0
+                )
             )
         |> Form.withNesting
             { value = .verificationInput
@@ -752,109 +760,117 @@ verificationForm loggedIn community =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\values ->
-                case values.verificationType of
-                    VerificationType.Automatic ->
-                        Form.succeed Three
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    case values.verificationType of
+                        VerificationType.Automatic ->
+                            Form.succeed Three
 
-                    VerificationType.Claimable ->
-                        let
-                            withOption minVotes =
-                                Form.Radio.withOption minVotes
-                                    (span
-                                        [ class "h-8 w-8 rounded-full border flex items-center justify-center cursor-pointer sibling-focus ring-orange-300 ring-opacity-50 transition-all"
-                                        , classList
-                                            [ ( "bg-orange-300 border-orange-300 text-white", values.minVotes == minVotes )
-                                            , ( "hover:border-orange-300 hover:text-orange-500 border-gray-500", values.minVotes /= minVotes )
+                        VerificationType.Claimable ->
+                            let
+                                withOption minVotes =
+                                    Form.Radio.withOption minVotes
+                                        (span
+                                            [ class "h-8 w-8 rounded-full border flex items-center justify-center cursor-pointer sibling-focus ring-orange-300 ring-opacity-50 transition-all"
+                                            , classList
+                                                [ ( "bg-orange-300 border-orange-300 text-white", values.minVotes == minVotes )
+                                                , ( "hover:border-orange-300 hover:text-orange-500 border-gray-500", values.minVotes /= minVotes )
+                                                ]
                                             ]
-                                        ]
-                                        [ text (minVotesToInt minVotes |> String.fromInt) ]
+                                            [ text (minVotesToInt minVotes |> String.fromInt) ]
+                                        )
+                            in
+                            Form.Radio.init
+                                { label = t "community.actions.form.votes_label"
+                                , id = "min-votes-radio"
+                                , optionToString = minVotesToInt >> String.fromInt
+                                }
+                                |> withOption Three
+                                |> withOption Five
+                                |> withOption Seven
+                                |> withOption Nine
+                                |> Form.Radio.withContainerAttrs [ class "ml-8 mt-12 mb-6" ]
+                                |> Form.Radio.withLabelAttrs [ class "mb-6" ]
+                                |> Form.Radio.withHiddenRadioButton True
+                                |> Form.radio
+                                    (String.toInt
+                                        >> Maybe.andThen minVotesFromInt
+                                        >> Maybe.withDefault Three
                                     )
-                        in
-                        Form.Radio.init
-                            { label = t "community.actions.form.votes_label"
-                            , id = "min-votes-radio"
-                            , optionToString = minVotesToInt >> String.fromInt
-                            }
-                            |> withOption Three
-                            |> withOption Five
-                            |> withOption Seven
-                            |> withOption Nine
-                            |> Form.Radio.withContainerAttrs [ class "ml-8 mt-12 mb-6" ]
-                            |> Form.Radio.withLabelAttrs [ class "mb-6" ]
-                            |> Form.Radio.withHiddenRadioButton True
-                            |> Form.radio
-                                (String.toInt
-                                    >> Maybe.andThen minVotesFromInt
-                                    >> Maybe.withDefault Three
-                                )
-                                { parser = Ok
-                                , value = .minVotes
-                                , update = \minVotes input -> { input | minVotes = minVotes }
-                                , externalError = always Nothing
-                                }
+                                    { parser = Ok
+                                    , value = .minVotes
+                                    , update = \minVotes input -> { input | minVotes = minVotes }
+                                    , externalError = always Nothing
+                                    }
+                )
             )
-        |> Form.withConditional
-            (\values ->
-                case values.verificationType of
-                    VerificationType.Automatic ->
-                        Form.succeed []
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    case values.verificationType of
+                        VerificationType.Automatic ->
+                            Form.succeed []
 
-                    VerificationType.Claimable ->
-                        Form.UserPicker.init
-                            { label =
-                                tr "community.actions.form.verifiers_label_count"
-                                    [ ( "count", values.minVotes |> minVotesToInt |> String.fromInt ) ]
-                            , currentUser = loggedIn.accountName
-                            , profiles = community.members
-                            }
-                            |> Form.UserPicker.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
-                            |> Form.userPickerMultiple
-                                { parser =
-                                    Form.Validate.succeed
-                                        >> Form.Validate.lengthGreaterThanOrEqualTo (minVotesToInt values.minVotes)
-                                        >> Form.Validate.validate loggedIn.shared.translators
-                                , value = .verifiers
-                                , update = \verifiers input -> { input | verifiers = verifiers }
-                                , externalError = always Nothing
+                        VerificationType.Claimable ->
+                            Form.UserPicker.init
+                                { label =
+                                    tr "community.actions.form.verifiers_label_count"
+                                        [ ( "count", values.minVotes |> minVotesToInt |> String.fromInt ) ]
+                                , currentUser = loggedIn.accountName
+                                , profiles = community.members
                                 }
+                                |> Form.UserPicker.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                                |> Form.userPickerMultiple
+                                    { parser =
+                                        Form.Validate.succeed
+                                            >> Form.Validate.lengthGreaterThanOrEqualTo (minVotesToInt values.minVotes)
+                                            >> Form.Validate.validate loggedIn.shared.translators
+                                    , value = .verifiers
+                                    , update = \verifiers input -> { input | verifiers = verifiers }
+                                    , externalError = always Nothing
+                                    }
+                )
             )
-        |> Form.withConditional
-            (\values ->
-                case values.verificationType of
-                    VerificationType.Automatic ->
-                        Form.succeed 0
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    case values.verificationType of
+                        VerificationType.Automatic ->
+                            Form.succeed 0
 
-                    VerificationType.Claimable ->
-                        Form.Text.init
-                            { label = t "community.actions.form.verifiers_reward_label"
-                            , id = "verifier-reward-input"
-                            }
-                            |> Form.Text.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
-                            |> Form.Text.withCurrency community.symbol
-                            |> Form.textField
-                                { parser =
-                                    Form.Validate.succeed
-                                        >> Form.Validate.maskedFloat loggedIn.shared.translators
-                                        >> Form.Validate.validate loggedIn.shared.translators
-                                , value = .verifierReward
-                                , update = \verifierReward input -> { input | verifierReward = verifierReward }
-                                , externalError = always Nothing
+                        VerificationType.Claimable ->
+                            Form.Text.init
+                                { label = t "community.actions.form.verifiers_reward_label"
+                                , id = "verifier-reward-input"
                                 }
+                                |> Form.Text.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                                |> Form.Text.withCurrency community.symbol
+                                |> Form.textField
+                                    { parser =
+                                        Form.Validate.succeed
+                                            >> Form.Validate.maskedFloat loggedIn.shared.translators
+                                            >> Form.Validate.validate loggedIn.shared.translators
+                                    , value = .verifierReward
+                                    , update = \verifierReward input -> { input | verifierReward = verifierReward }
+                                    , externalError = always Nothing
+                                    }
+                )
             )
-        |> Form.withConditional
-            (\values ->
-                case values.verificationType of
-                    VerificationType.Automatic ->
-                        Form.succeed NoFileValidation
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    case values.verificationType of
+                        VerificationType.Automatic ->
+                            Form.succeed NoFileValidation
 
-                    VerificationType.Claimable ->
-                        Form.mapChild
-                            { value = .fileValidation
-                            , update = \fileValidation input -> { input | fileValidation = fileValidation }
-                            }
-                            (fileValidationForm loggedIn.shared.translators)
+                        VerificationType.Claimable ->
+                            Form.mapChild
+                                { value = .fileValidation
+                                , update = \fileValidation input -> { input | fileValidation = fileValidation }
+                                }
+                                (fileValidationForm loggedIn.shared.translators)
+                )
             )
 
 
@@ -878,46 +894,48 @@ fileValidationForm { t } =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\{ useFileValidation } ->
-                if useFileValidation then
-                    Form.succeed
-                        (\useVerificationCode instructions ->
-                            WithFileValidation
-                                { useVerificationCode = useVerificationCode
-                                , instructions = instructions
-                                }
-                        )
-                        |> Form.with
-                            (Form.Checkbox.init
-                                { label =
-                                    div []
-                                        [ p [] [ b [] [ text <| t "community.actions.form.verification_code" ] ]
-                                        , p [] [ text <| t "community.actions.form.verification_code_hint" ]
-                                        ]
-                                , id = "verification-code-checkbox"
-                                }
-                                |> Form.Checkbox.withContainerAttrs [ class "flex ml-8 my-6 sm:w-2/5" ]
-                                |> Form.checkbox
-                                    { parser = Ok
-                                    , value = .useVerificationCode
-                                    , update = \useVerificationCode input -> { input | useVerificationCode = useVerificationCode }
-                                    , externalError = always Nothing
+        |> Form.with
+            (Form.introspect
+                (\{ useFileValidation } ->
+                    if useFileValidation then
+                        Form.succeed
+                            (\useVerificationCode instructions ->
+                                WithFileValidation
+                                    { useVerificationCode = useVerificationCode
+                                    , instructions = instructions
                                     }
                             )
-                        |> Form.with
-                            (Form.RichText.init { label = t "community.actions.form.verification_instructions" }
-                                |> Form.RichText.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
-                                |> Form.richText
-                                    { parser = Ok
-                                    , value = .instructions
-                                    , update = \instructions input -> { input | instructions = instructions }
-                                    , externalError = always Nothing
+                            |> Form.with
+                                (Form.Checkbox.init
+                                    { label =
+                                        div []
+                                            [ p [] [ b [] [ text <| t "community.actions.form.verification_code" ] ]
+                                            , p [] [ text <| t "community.actions.form.verification_code_hint" ]
+                                            ]
+                                    , id = "verification-code-checkbox"
                                     }
-                            )
+                                    |> Form.Checkbox.withContainerAttrs [ class "flex ml-8 my-6 sm:w-2/5" ]
+                                    |> Form.checkbox
+                                        { parser = Ok
+                                        , value = .useVerificationCode
+                                        , update = \useVerificationCode input -> { input | useVerificationCode = useVerificationCode }
+                                        , externalError = always Nothing
+                                        }
+                                )
+                            |> Form.with
+                                (Form.RichText.init { label = t "community.actions.form.verification_instructions" }
+                                    |> Form.RichText.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                                    |> Form.richText
+                                        { parser = Ok
+                                        , value = .instructions
+                                        , update = \instructions input -> { input | instructions = instructions }
+                                        , externalError = always Nothing
+                                        }
+                                )
 
-                else
-                    Form.succeed NoFileValidation
+                    else
+                        Form.succeed NoFileValidation
+                )
             )
 
 

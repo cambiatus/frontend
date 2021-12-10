@@ -1,7 +1,8 @@
 module Form exposing
     ( Form
-    , succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration, withGroup
-    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
+    , succeed, with, withNoOutput, withNesting, withGroup
+    , optional, introspect, mapChild
+    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
     , parse
@@ -66,12 +67,17 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withOptional, withConditional, withConditionalAndNoOutput, withNesting, mapChild, withDecoration, withGroup
+@docs succeed, with, withNoOutput, withNesting, withGroup
+
+
+## Modifiers
+
+@docs optional, introspect, mapChild
 
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple
+@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
 
 
 ## Viewing
@@ -106,6 +112,7 @@ import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
 import Markdown exposing (Markdown)
 import Maybe.Extra
+import OptionalResult exposing (OptionalResult(..))
 import Profile
 import Session.Shared as Shared exposing (Shared)
 import Set exposing (Set)
@@ -133,7 +140,7 @@ valid/clean model
 -}
 type alias FilledForm values output =
     { fields : List (FilledField values)
-    , result : Result ( String, List String ) output
+    , result : OptionalResult ( String, List String ) output
     }
 
 
@@ -199,8 +206,8 @@ type Field values
     | Select (Select.Options String (Msg values)) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
-    | DecorativeField (Html Never)
     | Group (List (Html.Attribute Never)) (List (FilledField values))
+    | Arbitrary (Html (values -> values))
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -220,6 +227,7 @@ field build config =
                             |> Maybe.map (\error -> Err error)
                             |> Maybe.withDefault (Ok output)
                     )
+                |> OptionalResult.fromResult
 
         field_ values =
             build
@@ -239,15 +247,18 @@ field build config =
                 [ { state = field_ values
                   , error =
                         case result of
-                            Err err ->
+                            OptErr err ->
                                 Just err
 
-                            Ok _ ->
+                            OptOk _ ->
+                                Nothing
+
+                            OptNothing ->
                                 Nothing
                   , isRequired = True
                   }
                 ]
-            , result = Result.mapError (\_ -> ( getId (field_ values), [] )) result
+            , result = OptionalResult.mapError (\_ -> ( getId (field_ values), [] )) result
             }
         )
 
@@ -439,7 +450,7 @@ function that transforms a dirty model into a clean one, and build the form
 -}
 succeed : output -> Form values output
 succeed output =
-    Form (\_ -> { fields = [], result = Ok output })
+    Form (\_ -> { fields = [], result = OptOk output })
 
 
 {-| Appends a form into another form. Since every field is a form on itself, we
@@ -450,8 +461,48 @@ with :
     Form values a
     -> Form values (a -> b)
     -> Form values b
-with new =
-    withConditional (\_ -> new)
+with new current =
+    Form
+        (\values ->
+            let
+                filledNew =
+                    fill new values
+
+                filledCurrent =
+                    fill current values
+            in
+            { fields = filledNew.fields ++ filledCurrent.fields
+            , result =
+                case filledCurrent.result of
+                    OptOk fn ->
+                        OptionalResult.map fn filledNew.result
+
+                    OptNothing ->
+                        case filledNew.result of
+                            OptErr errors ->
+                                OptErr errors
+
+                            OptOk _ ->
+                                OptNothing
+
+                            OptNothing ->
+                                OptNothing
+
+                    OptErr ( firstError, otherErrors ) ->
+                        case filledNew.result of
+                            OptOk _ ->
+                                OptErr ( firstError, otherErrors )
+
+                            OptNothing ->
+                                OptErr ( firstError, otherErrors )
+
+                            OptErr ( secondFirstError, secondOtherErrors ) ->
+                                OptErr
+                                    ( firstError
+                                    , otherErrors ++ (secondFirstError :: secondOtherErrors)
+                                    )
+            }
+        )
 
 
 {-| Use this if you want to nest forms. If you need to break forms apart for any
@@ -517,60 +568,87 @@ withGroup attributes leftSide rightSide current =
                 }
                     :: filledCurrent.fields
             , result =
+                let
+                    leftErrors =
+                        case filledLeft.result of
+                            OptErr ( first, others ) ->
+                                first :: others
+
+                            _ ->
+                                []
+
+                    rightErrors =
+                        case filledRight.result of
+                            OptErr ( first, others ) ->
+                                first :: others
+
+                            _ ->
+                                []
+
+                    leftAndRightErrors =
+                        leftErrors ++ rightErrors
+                in
                 case filledCurrent.result of
-                    Ok fn ->
-                        Result.map2 fn filledLeft.result filledRight.result
+                    OptOk fn ->
+                        OptionalResult.map2 fn filledLeft.result filledRight.result
 
-                    Err ( currentError, currentErrors ) ->
-                        case ( filledLeft.result, filledRight.result ) of
-                            ( Ok _, Ok _ ) ->
-                                Err ( currentError, currentErrors )
+                    OptErr ( currentError, currentErrors ) ->
+                        OptErr ( currentError, currentErrors ++ leftAndRightErrors )
 
-                            ( Err ( leftError, leftErrors ), Ok _ ) ->
-                                Err ( currentError, currentErrors ++ (leftError :: leftErrors) )
-
-                            ( Ok _, Err ( rightError, rightErrors ) ) ->
-                                Err ( currentError, currentErrors ++ (rightError :: rightErrors) )
-
-                            ( Err ( leftError, leftErrors ), Err ( rightError, rightErrors ) ) ->
-                                Err
-                                    ( currentError
-                                    , currentErrors
-                                        ++ (leftError :: leftErrors)
-                                        ++ (rightError :: rightErrors)
-                                    )
+                    OptNothing ->
+                        List.head leftAndRightErrors
+                            |> Maybe.map (\head -> OptErr ( head, List.drop 1 leftAndRightErrors ))
+                            |> Maybe.withDefault OptNothing
             }
         )
 
 
-{-| Adds some decorative Html on the form. Note it is **purely decorative**
-(instead of `Html msg` we use `Html Never`). If you want something that emits
-messages, you should probably use some kind of field!
--}
-withDecoration : Html Never -> Form values a -> Form values a
-withDecoration decoration current =
-    Form
-        (\values ->
-            let
-                filled =
-                    fill current values
+{-| Arbitrary HTML that can change the values of the form. You should
+usually not need this, but it can be useful for forms that need buttons to
+manipulate the input, or something similar. This is usually used with
+`withNoOutput`
 
-                decorativeField =
-                    { state = DecorativeField decoration
-                    , error = Nothing
-                    , isRequired = False
+    Form.withNoOutput
+        (button
+            [ onClick
+                (\values ->
+                    { values
+                        | interests = form.interest :: form.interests
+                        , interest = ""
                     }
-            in
-            { fields = decorativeField :: filled.fields
-            , result = filled.result
+                )
+            ]
+            [ text "Add" ]
+            |> Form.arbitrary
+        )
+
+-}
+arbitrary : Html (values -> values) -> Form values output
+arbitrary html =
+    Form
+        (\_ ->
+            { fields =
+                [ { state = Arbitrary html
+                  , error = Nothing
+                  , isRequired = False
+                  }
+                ]
+            , result = OptNothing
             }
         )
 
 
-{-| Appends an optional form into another form. Similar to `with`, but the
-result of the form is a `Maybe output`. If the form to be appended is empty, we
-don't care if the parsed value is ok, and the result is `Nothing`. If the form
-to be appended has some content, the result is `Just` the parsed value.
+{-| Look at the values of the form before building the next form. Useful when
+some form depends on other fields
+-}
+introspect : (values -> Form values output) -> Form values output
+introspect buildForm =
+    Form (\values -> fill (buildForm values) values)
+
+
+{-| Makes a form optional. Turns the result of the form into `Maybe output`. If
+the form is empty, we don't care if the parsed value is ok, and the result is
+`Nothing`. If the form has some content, the result is `Just` the parsed value.
 
     type alias User =
         { middleName : Maybe String }
@@ -581,7 +659,7 @@ to be appended has some content, the result is `Just` the parsed value.
     userForm : Form DirtyUser User
     userForm =
         Form.succeed User
-            |> Form.withOptional
+            |> Form.with
                 (Form.Text.init {}
                     |> Form.textField
                         { parser =
@@ -595,6 +673,7 @@ to be appended has some content, the result is `Just` the parsed value.
                         , update = \middleName dirtyUser -> { dirtyUser | middleName = middleName }
                         , externalError = always Nothing
                         }
+                    |> Form.optional
                 )
 
 The above example pictures a form where the user can enter their middle name. If
@@ -604,114 +683,58 @@ reason we demand that their middle name is longer than 3 characters. If their
 actual middle name is less than 3 characters long, they're out of luck 🤷
 
 -}
-withOptional :
-    Form values a
-    -> Form values (Maybe a -> b)
-    -> Form values b
-withOptional new current =
+optional : Form values output -> Form values (Maybe output)
+optional form =
+    Form
+        (\values ->
+            let
+                filledForm =
+                    fill form values
+
+                isFilledFormEmpty =
+                    List.all (.state >> isEmpty) filledForm.fields
+            in
+            { fields =
+                List.map
+                    (\field_ ->
+                        { field_
+                            | isRequired = False
+                            , error =
+                                if isFilledFormEmpty then
+                                    Nothing
+
+                                else
+                                    field_.error
+                        }
+                    )
+                    filledForm.fields
+            , result =
+                if isFilledFormEmpty then
+                    OptOk Nothing
+
+                else
+                    case filledForm.result of
+                        OptOk ok ->
+                            OptOk (Just ok)
+
+                        OptErr _ ->
+                            OptNothing
+
+                        OptNothing ->
+                            OptNothing
+            }
+        )
+
+
+{-| Just like `with`, but don't consider the result in the final output.
+-}
+withNoOutput : Form values x -> Form values output -> Form values output
+withNoOutput new current =
     Form
         (\values ->
             let
                 filledNew =
                     fill new values
-
-                filledCurrent =
-                    fill current values
-
-                isFilledNewEmpty =
-                    List.all (.state >> isEmpty) filledNew.fields
-
-                filledNewFields =
-                    if isFilledNewEmpty then
-                        List.map (\field_ -> { field_ | error = Nothing })
-                            filledNew.fields
-
-                    else
-                        filledNew.fields
-            in
-            { fields =
-                List.map (\field_ -> { field_ | isRequired = False }) filledNewFields
-                    ++ filledCurrent.fields
-            , result =
-                case ( filledCurrent.result, filledNew.result ) of
-                    ( Ok fn, Ok result ) ->
-                        if isFilledNewEmpty then
-                            Ok (fn Nothing)
-
-                        else
-                            Ok (fn (Just result))
-
-                    ( Err err, Ok _ ) ->
-                        Err err
-
-                    ( Ok fn, Err err ) ->
-                        if isFilledNewEmpty then
-                            Ok (fn Nothing)
-
-                        else
-                            Err err
-
-                    ( Err ( firstError, otherErrors ), Err ( secondFirstError, secondOtherErrors ) ) ->
-                        let
-                            listOfErrors =
-                                if isFilledNewEmpty then
-                                    otherErrors
-
-                                else
-                                    otherErrors ++ (secondFirstError :: secondOtherErrors)
-                        in
-                        Err
-                            ( firstError
-                            , listOfErrors
-                            )
-            }
-        )
-
-
-{-| Check the current values and append a form into another form. This is useful
-when building forms that can have "branching paths", and each path should display
-a different form.
--}
-withConditional : (values -> Form values a) -> Form values (a -> b) -> Form values b
-withConditional buildNew current =
-    Form
-        (\values ->
-            let
-                filledNew =
-                    fill (buildNew values) values
-
-                filledCurrent =
-                    fill current values
-            in
-            { fields = filledNew.fields ++ filledCurrent.fields
-            , result =
-                case filledCurrent.result of
-                    Ok fn ->
-                        Result.map fn filledNew.result
-
-                    Err ( firstError, otherErrors ) ->
-                        case filledNew.result of
-                            Ok _ ->
-                                Err ( firstError, otherErrors )
-
-                            Err ( secondFirstError, secondOtherErrors ) ->
-                                Err
-                                    ( firstError
-                                    , otherErrors ++ (secondFirstError :: secondOtherErrors)
-                                    )
-            }
-        )
-
-
-{-| Same thing as `withConditional`, but don't include the result in the output
--}
-withConditionalAndNoOutput : (values -> Form values x) -> Form values output -> Form values output
-withConditionalAndNoOutput buildNew current =
-    Form
-        (\values ->
-            let
-                filledNew =
-                    fill (buildNew values) values
 
                 filledCurrent =
                     fill current values
@@ -1021,6 +1044,7 @@ viewFields translators form (Model model) =
                     { showError = shouldShowFieldError || errorTracking.showAllErrors
                     , translators = translators
                     , disabled = model.disabled
+                    , values = model.values
                     }
                     field_
             )
@@ -1048,18 +1072,25 @@ parse form (Model model) { onError, onSuccess } =
             fill form model.values
     in
     case filledForm.result of
-        Err errors ->
+        OptErr errors ->
             onError (ClickedSubmitWithErrors errors)
 
-        Ok validForm ->
+        OptOk validForm ->
             onSuccess validForm
+
+        OptNothing ->
+            onError NoOp
 
 
 viewField :
-    { showError : Bool, translators : Shared.Translators, disabled : Bool }
+    { showError : Bool
+    , translators : Shared.Translators
+    , disabled : Bool
+    , values : values
+    }
     -> FilledField values
     -> Html (Msg values)
-viewField { showError, translators, disabled } { state, error, isRequired } =
+viewField { showError, translators, disabled, values } { state, error, isRequired } =
     let
         hasError =
             showError && Maybe.Extra.isJust error
@@ -1173,9 +1204,6 @@ viewField { showError, translators, disabled } { state, error, isRequired } =
                 viewConfig
                 (GotUserPickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
 
-        DecorativeField decoration ->
-            Html.map (\_ -> NoOp) decoration
-
         Group attrs fields ->
             Html.div
                 (List.map (Html.Attributes.map (\_ -> NoOp)) attrs)
@@ -1184,10 +1212,14 @@ viewField { showError, translators, disabled } { state, error, isRequired } =
                         { showError = showError
                         , translators = translators
                         , disabled = disabled
+                        , values = values
                         }
                     )
                     fields
                 )
+
+        Arbitrary html ->
+            Html.map (\fn -> ChangedValues (fn values)) html
 
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
@@ -1239,14 +1271,14 @@ getId state =
         UserPicker _ baseField ->
             UserPicker.getId baseField.value
 
-        DecorativeField _ ->
-            ""
-
         Group _ fields ->
             fields
                 |> List.head
                 |> Maybe.map (.state >> getId)
                 |> Maybe.withDefault ""
+
+        Arbitrary _ ->
+            ""
 
 
 isEmpty : Field values -> Bool
@@ -1284,13 +1316,13 @@ isEmpty field_ =
         UserPicker _ { value } ->
             UserPicker.isEmpty value
 
-        DecorativeField _ ->
-            False
-
         Group _ fields ->
             fields
                 |> List.map .state
                 |> List.any isEmpty
+
+        Arbitrary _ ->
+            False
 
 
 mapFieldConfig :
@@ -1338,8 +1370,7 @@ mapBaseFieldValues fn reverseFn baseField =
 
 {-| You can use this function to nest forms inside one another! Just give a way
 to get the child form from the parent form, and a way to update the child on the
-parent. If you only want to use nesting (and not check values with
-`withConditional`, for example), you can use the more pipeline-friendly
+parent. If you only want to use nesting, you can use the more pipeline-friendly
 `withNesting`.
 -}
 mapChild :
@@ -1407,11 +1438,11 @@ mapField fn reverseFn field_ =
         UserPicker options baseField ->
             baseMap UserPicker UserPicker.map options baseField
 
-        DecorativeField decoration ->
-            DecorativeField decoration
-
         Group attributes fields ->
             Group attributes (List.map (mapFilledField fn reverseFn) fields)
+
+        Arbitrary html ->
+            Arbitrary (Html.map (\htmlFn -> reverseFn >> htmlFn >> fn) html)
 
 
 mapMsg : (values -> mappedValues) -> (mappedValues -> values) -> Msg values -> Msg mappedValues

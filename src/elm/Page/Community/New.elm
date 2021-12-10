@@ -141,30 +141,32 @@ createForm ({ t } as translators) { isDisabled } =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withConditional
-            (\values ->
-                Form.Text.init
-                    { label = t "settings.community_info.url.title"
-                    , id = "subdomain-input"
-                    }
-                    |> (if String.isEmpty values.url then
-                            identity
-
-                        else
-                            Form.Text.withElements
-                                [ span
-                                    [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
-                                    , classList [ ( "bg-gray-500", isDisabled ) ]
-                                    ]
-                                    [ text ".cambiatus.io" ]
-                                ]
-                       )
-                    |> Form.textField
-                        { parser = Ok
-                        , value = .url
-                        , update = \url input -> { input | url = url }
-                        , externalError = always Nothing
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    Form.Text.init
+                        { label = t "settings.community_info.url.title"
+                        , id = "subdomain-input"
                         }
+                        |> (if String.isEmpty values.url then
+                                identity
+
+                            else
+                                Form.Text.withElements
+                                    [ span
+                                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
+                                        , classList [ ( "bg-gray-500", isDisabled ) ]
+                                        ]
+                                        [ text ".cambiatus.io" ]
+                                    ]
+                           )
+                        |> Form.textField
+                            { parser = Ok
+                            , value = .url
+                            , update = \url input -> { input | url = url }
+                            , externalError = always Nothing
+                            }
+                )
             )
         |> Form.withGroup
             [ class "grid grid-cols-2 gap-4" ]
@@ -232,7 +234,7 @@ createForm ({ t } as translators) { isDisabled } =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withOptional
+        |> Form.with
             (Form.Text.init
                 { label = t "settings.community_info.fields.website"
                 , id = "website-input"
@@ -244,8 +246,12 @@ createForm ({ t } as translators) { isDisabled } =
                     , update = \website input -> { input | website = website }
                     , externalError = always Nothing
                     }
+                |> Form.optional
             )
-        |> Form.withDecoration (View.Form.label [] "require-invitation-toggle" (t "settings.community_info.invitation.title"))
+        |> Form.withNoOutput
+            (View.Form.label [] "require-invitation-toggle" (t "settings.community_info.invitation.title")
+                |> Form.arbitrary
+            )
         |> Form.with
             (Form.Toggle.init
                 { label = text <| t "settings.community_info.fields.invitation"

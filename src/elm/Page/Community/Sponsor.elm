@@ -372,47 +372,49 @@ createForm ({ translators } as shared) contributionConfiguration model =
             defaultPaypalCurrency shared
     in
     Form.succeed FormOutput
-        |> Form.withConditional
-            (\{ selectedCurrency } ->
-                Form.Text.init
-                    { label = translators.t "sponsorship.enter_amount"
-                    , id = amountFieldId
-                    }
-                    |> Form.Text.withCurrency (PaypalButtons.currencyToSymbol selectedCurrency)
-                    |> Form.Text.withLabelAttrs [ class "text-purple-500 text-lg text-center normal-case" ]
-                    |> Form.textField
-                        { parser =
-                            Form.Validate.succeed
-                                >> Form.Validate.maskedFloat translators
-                                >> Form.Validate.custom
-                                    (\x ->
-                                        if x < PaypalButtons.minimumAmount then
-                                            Err
-                                                (\translators_ ->
-                                                    AmountTooSmall
-                                                        |> amountProblemToString translators_
-                                                            selectedCurrency
-                                                )
-
-                                        else if x > PaypalButtons.maximumAmount then
-                                            Err
-                                                (\translators_ ->
-                                                    AmountTooBig
-                                                        |> amountProblemToString translators_
-                                                            selectedCurrency
-                                                )
-
-                                        else
-                                            Ok x
-                                    )
-                                >> Form.Validate.validate translators
-                        , value = .amount
-                        , update = \amount input -> { input | amount = amount }
-                        , externalError =
-                            \_ ->
-                                model.externalAmountProblem
-                                    |> Maybe.map (amountProblemToString translators selectedCurrency)
+        |> Form.with
+            (Form.introspect
+                (\{ selectedCurrency } ->
+                    Form.Text.init
+                        { label = translators.t "sponsorship.enter_amount"
+                        , id = amountFieldId
                         }
+                        |> Form.Text.withCurrency (PaypalButtons.currencyToSymbol selectedCurrency)
+                        |> Form.Text.withLabelAttrs [ class "text-purple-500 text-lg text-center normal-case" ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.succeed
+                                    >> Form.Validate.maskedFloat translators
+                                    >> Form.Validate.custom
+                                        (\x ->
+                                            if x < PaypalButtons.minimumAmount then
+                                                Err
+                                                    (\translators_ ->
+                                                        AmountTooSmall
+                                                            |> amountProblemToString translators_
+                                                                selectedCurrency
+                                                    )
+
+                                            else if x > PaypalButtons.maximumAmount then
+                                                Err
+                                                    (\translators_ ->
+                                                        AmountTooBig
+                                                            |> amountProblemToString translators_
+                                                                selectedCurrency
+                                                    )
+
+                                            else
+                                                Ok x
+                                        )
+                                    >> Form.Validate.validate translators
+                            , value = .amount
+                            , update = \amount input -> { input | amount = amount }
+                            , externalError =
+                                \_ ->
+                                    model.externalAmountProblem
+                                        |> Maybe.map (amountProblemToString translators selectedCurrency)
+                            }
+                )
             )
         |> Form.with
             (case
