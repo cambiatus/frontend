@@ -44,6 +44,7 @@ import Html exposing (Html, div, p, span, text)
 import Html.Attributes exposing (class)
 import Iso8601
 import Kyc exposing (ProfileKyc)
+import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Select
@@ -57,7 +58,7 @@ type alias Basic a =
         , account : Eos.Name
         , avatar : Avatar
         , email : Maybe String
-        , bio : Maybe String
+        , bio : Maybe Markdown
         , contacts : List Contact.Normalized
     }
 
@@ -67,7 +68,7 @@ type alias Minimal =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Contact.Normalized
     }
 
@@ -77,7 +78,7 @@ type alias Model =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , localization : Maybe String
     , contacts : List Contact.Normalized
     , interests : List String
@@ -112,7 +113,7 @@ selectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with User.location
         |> with userContactSelectionSet
         |> with
@@ -135,7 +136,7 @@ minimalSelectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with userContactSelectionSet
 
 
@@ -182,7 +183,7 @@ mutation form =
         { input =
             { name = Present form.name
             , email = Present form.email
-            , bio = Present form.bio
+            , bio = Present (Markdown.toRawString form.bio)
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
             , interests = Present interestString
             , location = Present form.localization
@@ -317,7 +318,7 @@ deleteKycAndAddressMutation accountName =
 type alias ProfileForm =
     { name : String
     , email : String
-    , bio : String
+    , bio : Markdown
     , localization : String
     , avatar : Maybe String
     , contacts : List Contact.Normalized
@@ -331,7 +332,7 @@ profileToForm : Model -> ProfileForm
 profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     { name = Maybe.withDefault "" name
     , email = Maybe.withDefault "" email
-    , bio = Maybe.withDefault "" bio
+    , bio = Maybe.withDefault Markdown.empty bio
     , localization = Maybe.withDefault "" localization
     , avatar = Avatar.toMaybeString avatar
     , contacts = contacts

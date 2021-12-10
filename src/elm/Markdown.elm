@@ -1,8 +1,8 @@
 module Markdown exposing
-    ( view, toUnformattedString
+    ( view, toUnformattedString, toRawString
     , Markdown, empty
     , encode, decoder
-    , selectionSet
+    , selectionSet, maybeSelectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
     , generator, shrink
     )
@@ -14,7 +14,7 @@ model to regular markdown.
 
 # View markdown
 
-@docs view, toUnformattedString
+@docs view, toUnformattedString, toRawString
 
 
 # Produce markdown
@@ -29,7 +29,7 @@ model to regular markdown.
 
 ## Interop with GraphQL
 
-@docs selectionSet
+@docs selectionSet, maybeSelectionSet
 
 
 ## Interop with QuillJS
@@ -80,6 +80,14 @@ empty =
     Markdown ""
 
 
+{-| Extract the raw Markdown string. You should use this as a last resort. You
+can usually use other helpers, such as `encode` and `view`.
+-}
+toRawString : Markdown -> String
+toRawString (Markdown markdown) =
+    markdown
+
+
 
 -- PRODUCING MARKDOWN
 -- GRAPHQL
@@ -90,6 +98,13 @@ empty =
 selectionSet : SelectionSet String typeLock -> SelectionSet Markdown typeLock
 selectionSet =
     SelectionSet.map Markdown
+
+
+{-| Get some optional markdown from a Graphql endpoint
+-}
+maybeSelectionSet : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe Markdown) typeLock
+maybeSelectionSet =
+    SelectionSet.map (Maybe.map Markdown)
 
 
 

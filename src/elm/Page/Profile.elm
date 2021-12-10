@@ -39,6 +39,7 @@ import Json.Encode as Encode
 import Kyc
 import List.Extra as List
 import Log
+import Markdown
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
@@ -54,7 +55,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -815,8 +815,7 @@ viewProfile loggedIn profile =
                         text ""
 
                     Just bio ->
-                        View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
-                            bio
+                        Markdown.view [ class "text-sm text-gray-900" ] bio
                 ]
                 :: (if isProfileOwner then
                         [ blockExplorerButton ]

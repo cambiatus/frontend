@@ -64,7 +64,7 @@ type alias ShopProfile =
     , name : Maybe String
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Contact.Normalized
     }
 
@@ -163,7 +163,7 @@ shopProfileSelectionSet =
         |> with User.name
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with
             (User.contacts Contact.selectionSet
                 |> SelectionSet.map (List.filterMap identity)

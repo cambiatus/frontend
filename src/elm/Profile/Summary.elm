@@ -20,13 +20,13 @@ import Eos.Account as Eos
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, href)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
+import Markdown
 import Profile
 import Profile.Contact as Contact
 import Route
 import Session.Shared as Shared
 import Utils exposing (onClickNoBubble)
 import View.Components
-import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -213,7 +213,7 @@ viewUserInfo profile =
             profile.account |> Eos.nameToString
 
         bio =
-            profile.bio |> Maybe.withDefault ""
+            profile.bio |> Maybe.withDefault Markdown.empty
     in
     div [ class "flex flex-col w-full" ]
         [ div [ class "flex mb-4 items-center justify-center" ]
@@ -227,8 +227,7 @@ viewUserInfo profile =
                     ]
                 ]
             ]
-        , MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
-            bio
+        , Markdown.view [ class "text-sm text-gray-900" ] bio
         , div [ class "flex justify-evenly mt-6" ]
             (List.map (Contact.circularIcon "w-9 h-9 hover:opacity-75") profile.contacts)
         , a

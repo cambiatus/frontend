@@ -31,6 +31,7 @@ import Html.Attributes as Attrs exposing (class, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Icons
 import Log
+import Markdown exposing (Markdown)
 import Page
 import Profile
 import Profile.Contact
@@ -147,7 +148,7 @@ type alias ProfileBase =
     , account : Eos.Account.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Profile.Contact.Normalized
     }
 
@@ -157,7 +158,7 @@ type alias ProfileWithTransfers =
     , account : Eos.Account.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Profile.Contact.Normalized
     , transfers : Maybe ConnectionTransfer
     }
@@ -220,7 +221,7 @@ profileWithTransfersSelectionSet community model =
         |> SelectionSet.with (Eos.Account.nameSelectionSet User.account)
         |> SelectionSet.with (Avatar.selectionSet User.avatar)
         |> SelectionSet.with User.email
-        |> SelectionSet.with User.bio
+        |> SelectionSet.with (Markdown.maybeSelectionSet User.bio)
         |> SelectionSet.with Profile.userContactSelectionSet
         |> SelectionSet.with
             (User.transfers
@@ -254,7 +255,7 @@ fetchProfilesForAutocomplete shared model payerAccount authToken =
                 |> SelectionSet.with (Eos.Account.nameSelectionSet User.account)
                 |> SelectionSet.with (Avatar.selectionSet User.avatar)
                 |> SelectionSet.with User.email
-                |> SelectionSet.with User.bio
+                |> SelectionSet.with (Markdown.maybeSelectionSet User.bio)
                 |> SelectionSet.with Profile.userContactSelectionSet
 
         selectionSet : SelectionSet ProfileWithOnlyAutocomplete Cambiatus.Object.User
