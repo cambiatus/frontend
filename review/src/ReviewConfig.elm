@@ -70,7 +70,6 @@ config =
           , [ "View.Form.Input"
             , "View.Form.Toggle"
             , "View.Form.Radio"
-            , "View.Form.FileUploader"
             , "View.Form.Checkbox"
             , "Form.Text"
             , "Form.Checkbox"
@@ -82,7 +81,6 @@ config =
         , ( [ "Html.label" ]
           , [ "View.Form"
             , "View.Form.Toggle"
-            , "View.Form.FileUploader"
             , "View.Form.Checkbox"
             , "View.Form.Radio"
             , "Page.Community.New"
