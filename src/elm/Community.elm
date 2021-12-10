@@ -708,7 +708,7 @@ type alias UpdateCommunityData =
     { asset : Eos.Asset
     , logo : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -726,7 +726,7 @@ encodeUpdateData c =
         [ ( "logo", Encode.string c.logo )
         , ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
