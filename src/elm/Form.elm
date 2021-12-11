@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, with, withNoOutput, withDecoration, withNesting, withGroup
-    , optional, introspect, mapChild
+    , optional, introspect, mapValues, mapOutput
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
@@ -72,7 +72,7 @@ documentation if you're stuck.
 
 ## Modifiers
 
-@docs optional, introspect, mapChild
+@docs optional, introspect, mapValues, mapOutput
 
 
 ## Fields
@@ -536,7 +536,7 @@ withNesting :
     -> Form parent (a -> b)
     -> Form parent b
 withNesting mappings child parent =
-    with (mapChild mappings child) parent
+    with (mapValues mappings child) parent
 
 
 {-| Display two fields as a group. You can pass in arbitrary HTML attributes, as
@@ -1380,13 +1380,13 @@ to get the child form from the parent form, and a way to update the child on the
 parent. If you only want to use nesting, you can use the more pipeline-friendly
 `withNesting`.
 -}
-mapChild :
+mapValues :
     { value : parent -> child
     , update : child -> parent -> parent
     }
     -> Form child output
     -> Form parent output
-mapChild mappings child =
+mapValues mappings child =
     Form
         (\values ->
             let
@@ -1398,6 +1398,22 @@ mapChild mappings child =
                     (mapFilledField (\child_ -> mappings.update child_ values) mappings.value)
                     filledChild.fields
             , result = filledChild.result
+            }
+        )
+
+
+{-| Change the output of a form.
+-}
+mapOutput : (output -> mappedOutput) -> Form values output -> Form values mappedOutput
+mapOutput fn form =
+    Form
+        (\values ->
+            let
+                filledForm =
+                    fill form values
+            in
+            { fields = filledForm.fields
+            , result = OptionalResult.map fn filledForm.result
             }
         )
 

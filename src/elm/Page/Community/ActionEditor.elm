@@ -865,7 +865,7 @@ verificationForm loggedIn community =
                             Form.succeed NoFileValidation
 
                         VerificationType.Claimable ->
-                            Form.mapChild
+                            Form.mapValues
                                 { value = .fileValidation
                                 , update = \fileValidation input -> { input | fileValidation = fileValidation }
                                 }
