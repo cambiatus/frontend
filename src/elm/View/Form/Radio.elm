@@ -1,6 +1,6 @@
 module View.Form.Radio exposing
     ( init
-    , withOption, withAttrs, withVertical, withDisabled
+    , withOption, withVertical, withDisabled
     , toHtml
     )
 
@@ -30,7 +30,7 @@ module View.Form.Radio exposing
 
 # Helpers
 
-@docs withOption, withAttrs, withVertical, withDisabled
+@docs withOption, withVertical, withDisabled
 
 
 # Converting to HTML
@@ -57,7 +57,6 @@ type alias Options option msg =
     , onSelect : option -> msg
     , areOptionsEqual : option -> option -> Bool
     , options : List ( option, Bool -> Html msg )
-    , extraAttrs : List (Html.Attribute msg)
     , isVertical : Bool
     , isDisabled : Bool
     }
@@ -90,7 +89,6 @@ init initialOptions =
     , onSelect = initialOptions.onSelect
     , areOptionsEqual = initialOptions.areOptionsEqual
     , options = []
-    , extraAttrs = []
     , isVertical = False
     , isDisabled = False
     }
@@ -105,13 +103,6 @@ init initialOptions =
 withOption : option -> (Bool -> Html msg) -> Options option msg -> Options option msg
 withOption option viewOption_ options =
     { options | options = options.options ++ [ ( option, viewOption_ ) ] }
-
-
-{-| Adds attributes to the div that holds the label and the options
--}
-withAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withAttrs attrs options =
-    { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
 {-| Defines if the group should be displayed in a row or in a column
@@ -139,7 +130,7 @@ withDisabled isDisabled options =
 -}
 toHtml : Translators -> Options option msg -> Html msg
 toHtml { t } options =
-    div options.extraAttrs
+    div []
         [ span [ class "label" ] [ text (t options.label) ]
         , div
             [ class "flex mt-6"
