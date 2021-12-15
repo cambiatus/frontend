@@ -85,7 +85,7 @@ can usually use other helpers, such as `encode` and `view`.
 -}
 toRawString : Markdown -> String
 toRawString (Markdown markdown) =
-    markdown
+    String.trim markdown
 
 
 
@@ -479,7 +479,7 @@ formattingStrings formatting =
 
 encode : Markdown -> Json.Encode.Value
 encode (Markdown markdown) =
-    Json.Encode.string markdown
+    Json.Encode.string (String.trim markdown)
 
 
 decoder : Json.Decode.Decoder Markdown
