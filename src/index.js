@@ -34,19 +34,21 @@ const config = configuration[env]
 // App startup
 // =========================================
 
-// Init Sentry as soon as possible so it starts recording events and breadcrumbs
-// automatically
-Sentry.init({
-  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
-  environment: env,
-  beforeBreadcrumb (breadcrumb, hint) {
-    // We have a limited amount of breadcrumbs, and these aren't super useful
-    // to us, so we just don't include them
-    const unusedCategories = ['ui.click', 'ui.input']
+if (env !== 'development') {
+  // Init Sentry as soon as possible so it starts recording events and breadcrumbs
+  // automatically
+  Sentry.init({
+    dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
+    environment: env,
+    beforeBreadcrumb (breadcrumb, hint) {
+      // We have a limited amount of breadcrumbs, and these aren't super useful
+      // to us, so we just don't include them
+      const unusedCategories = ['ui.click', 'ui.input']
 
-    return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
-  }
-})
+      return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
+    }
+  })
+}
 
 /** On production, adds a breadcrumb to sentry. Needs an object like this:
   { type: 'default' | 'debug' | 'error' | 'info' | 'query',
@@ -286,7 +288,7 @@ function flags () {
   const user = JSON.parse(getItem(USER_KEY))
   const accountName = (user && user.accountName) || null
 
-  if (accountName !== null) {
+  if (env !== 'development' && accountName !== null) {
     Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
   }
 
@@ -490,7 +492,9 @@ function logout () {
     localData: {},
     level: 'info'
   })
-  Sentry.configureScope((scope) => { scope.setUser(null) })
+  if (env !== 'development') {
+    Sentry.configureScope((scope) => { scope.setUser(null) })
+  }
 }
 
 function downloadPdf (accountName, passphrase) {
@@ -676,7 +680,9 @@ async function handleJavascriptPort (arg) {
 
             // Save credentials to EOS
             eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-            Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+            if (env !== 'development') {
+              Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+            }
             addBreadcrumb({
               type: 'debug',
               category: 'login',
