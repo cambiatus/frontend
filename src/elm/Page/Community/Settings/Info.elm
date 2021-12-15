@@ -83,7 +83,7 @@ type alias FormOutput =
     , name : String
     , description : Markdown
     , website : Maybe Url
-    , coverPhoto : String
+    , coverPhoto : Maybe String
     , subdomain : Url
     , hasAutoInvite : Bool
     , inviterReward : Float
@@ -111,7 +111,7 @@ formOutputDecoder =
         |> DecodePipeline.required "name" Decode.string
         |> DecodePipeline.required "description" Markdown.decoder
         |> DecodePipeline.required "website" (Decode.maybe urlDecoder)
-        |> DecodePipeline.required "coverPhoto" Decode.string
+        |> DecodePipeline.required "coverPhoto" (Decode.maybe Decode.string)
         |> DecodePipeline.required "subdomain" urlDecoder
         |> DecodePipeline.required "hasAutoInvite" Decode.bool
         |> DecodePipeline.required "inviterReward" Decode.float
@@ -132,7 +132,14 @@ encodeFormOutput o =
                 Just website ->
                     Encode.string (Url.toString website)
           )
-        , ( "coverPhoto", Encode.string o.coverPhoto )
+        , ( "coverPhoto"
+          , case o.coverPhoto of
+                Nothing ->
+                    Encode.null
+
+                Just coverPhoto ->
+                    Encode.string coverPhoto
+          )
         , ( "subdomain", Encode.string (Url.toString o.subdomain) )
         , ( "hasAutoInvite", Encode.bool o.hasAutoInvite )
         , ( "inviterReward", Encode.float o.inviterReward )
@@ -266,11 +273,11 @@ update msg model ({ shared } as loggedIn) =
                             }
 
                         newUpload =
-                            if List.head communityUploads == Just formOutput.coverPhoto then
+                            if List.head communityUploads == formOutput.coverPhoto then
                                 Nothing
 
                             else
-                                Just formOutput.coverPhoto
+                                formOutput.coverPhoto
                     in
                     { model
                         | isLoading = True
@@ -290,7 +297,12 @@ update msg model ({ shared } as loggedIn) =
                                             , logo = formOutput.logo
                                             , name = formOutput.name
                                             , description = formOutput.description
-                                            , subdomain = Url.toString formOutput.subdomain
+                                            , subdomain =
+                                                formOutput.subdomain.host
+                                                    |> String.split "."
+                                                    |> List.head
+                                                    |> Maybe.map (Route.communityFullDomain shared)
+                                                    |> Maybe.withDefault community.subdomain
                                             , inviterReward = asset formOutput.inviterReward
                                             , invitedReward = asset formOutput.invitedReward
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
@@ -442,7 +454,12 @@ update msg model ({ shared } as loggedIn) =
                             newUploads =
                                 case community.uploads of
                                     RemoteData.Success uploads ->
-                                        RemoteData.Success (formOutput.coverPhoto :: uploads)
+                                        case formOutput.coverPhoto of
+                                            Nothing ->
+                                                RemoteData.Success uploads
+
+                                            Just coverPhoto ->
+                                                RemoteData.Success (coverPhoto :: uploads)
 
                                     _ ->
                                         community.uploads
@@ -619,6 +636,7 @@ createForm shared community { isLoading } =
                     , update = \coverPhoto input -> { input | coverPhoto = coverPhoto }
                     , externalError = always Nothing
                     }
+                |> Form.optional
             )
         |> Form.withDecoration
             (p [ class "mt-2 text-center text-gray-900 uppercase text-sm tracking-wide mb-10" ]
