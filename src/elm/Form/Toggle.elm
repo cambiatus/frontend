@@ -1,7 +1,8 @@
 module Form.Toggle exposing
     ( init, Options, map
-    , withTooltip, withTopLabel
-    , withDisabled, withToggleSide
+    , withTooltip, withTopLabel, withStatusText
+    , StatusText(..)
+    , withDisabled, withToggleSide, withContainerAttrs
     , Side(..)
     , getId
     , view
@@ -25,12 +26,14 @@ module Form.Toggle exposing
 
 ## Adding elements
 
-@docs withTooltip, withTopLabel
+@docs withTooltip, withTopLabel, withStatusText
+
+@docs StatusText
 
 
 ## Adding attributes
 
-@docs withDisabled, withToggleSide
+@docs withDisabled, withToggleSide, withContainerAttrs
 
 @docs Side
 
@@ -65,7 +68,9 @@ type Options msg
         , disabled : Bool
         , tooltip : Maybe { message : String, iconClass : String }
         , side : Side
+        , statusText : StatusText
         , topLabel : Maybe String
+        , containerAttrs : List (Html.Attribute msg)
         }
 
 
@@ -79,13 +84,20 @@ init { label, id } =
         , disabled = False
         , tooltip = Nothing
         , side = Right
+        , statusText = EnabledDisabled
         , topLabel = Nothing
+        , containerAttrs = []
         }
 
 
 type Side
     = Left
     | Right
+
+
+type StatusText
+    = EnabledDisabled
+    | YesNo
 
 
 {-| Change the kind of `msg` on an Options record
@@ -99,6 +111,8 @@ map fn (Options options) =
         , tooltip = options.tooltip
         , side = options.side
         , topLabel = options.topLabel
+        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        , statusText = options.statusText
         }
 
 
@@ -128,6 +142,13 @@ withTopLabel topLabel (Options options) =
     Options { options | topLabel = Just topLabel }
 
 
+{-| Selects the kind of status text to be displayed next to the toggle
+-}
+withStatusText : StatusText -> Options a -> Options a
+withStatusText statusText_ (Options options) =
+    Options { options | statusText = statusText_ }
+
+
 
 -- ADDING ATTRIBUTES
 
@@ -137,6 +158,13 @@ withTopLabel topLabel (Options options) =
 withDisabled : Bool -> Options msg -> Options msg
 withDisabled disabled (Options options) =
     Options { options | disabled = disabled }
+
+
+{-| Add attributes to the container element
+-}
+withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withContainerAttrs attrs (Options options) =
+    Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
 
@@ -181,7 +209,7 @@ viewStatusText (Options options) viewConfig =
             , ( "text-red", viewConfig.hasError )
             ]
         ]
-        [ Html.text <| statusText viewConfig ]
+        [ Html.text <| statusText (Options options) viewConfig ]
 
 
 viewToggle : Options msg -> ViewConfig msg -> Html msg
@@ -214,7 +242,7 @@ viewToggle (Options options) viewConfig =
 
 view : Options msg -> ViewConfig msg -> Html msg
 view (Options options) viewConfig =
-    div []
+    div options.containerAttrs
         [ case options.topLabel of
             Nothing ->
                 Html.text ""
@@ -243,13 +271,22 @@ view (Options options) viewConfig =
         ]
 
 
-statusText : ViewConfig msg -> String
-statusText viewConfig =
-    if viewConfig.value then
-        viewConfig.translators.t "settings.features.enabled"
+statusText : Options msg -> ViewConfig msg -> String
+statusText (Options options) viewConfig =
+    case options.statusText of
+        EnabledDisabled ->
+            if viewConfig.value then
+                viewConfig.translators.t "settings.features.enabled"
 
-    else
-        viewConfig.translators.t "settings.features.disabled"
+            else
+                viewConfig.translators.t "settings.features.disabled"
+
+        YesNo ->
+            if viewConfig.value then
+                viewConfig.translators.t "community.actions.form.yes"
+
+            else
+                viewConfig.translators.t "community.actions.form.no"
 
 
 
