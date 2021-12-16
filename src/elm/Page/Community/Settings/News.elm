@@ -14,6 +14,7 @@ import Html.Attributes exposing (class)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Log
+import Markdown
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -24,7 +25,6 @@ import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
 import View.Form.Toggle
-import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -323,7 +323,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                     ]
         , div [ class "mb-10 relative mt-4" ]
             [ p [ class "text-gray-900 max-h-11 overflow-hidden" ]
-                [ text (MarkdownEditor.removeFormatting news.description)
+                [ text (Markdown.toUnformattedString news.description)
                 ]
             , a
                 [ class "absolute right-0 bottom-0 bg-white pl-2 text-orange-300 hover:underline focus:underline outline-none"

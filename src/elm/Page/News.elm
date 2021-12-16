@@ -17,6 +17,7 @@ import Icons
 import Json.Encode
 import List.Extra
 import Log
+import Markdown
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -27,7 +28,6 @@ import Task
 import UpdateResult as UR
 import Utils exposing (onClickPreventAll)
 import View.Components
-import View.MarkdownEditor
 
 
 
@@ -390,7 +390,7 @@ viewMainNews ({ shared } as loggedIn) model news =
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
             [ h2 [ class "text-lg text-black font-bold" ] [ text news.title ]
-            , View.MarkdownEditor.viewReadOnly [ class "mt-6 text-black colored-links" ]
+            , Markdown.view [ class "mt-6 text-black colored-links" ]
                 news.description
             , div [ class "flex items-center mt-8" ]
                 (viewReactionPicker translators model news

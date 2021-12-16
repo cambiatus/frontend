@@ -50,6 +50,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Log
+import Markdown
 import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
@@ -66,7 +67,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -421,7 +421,7 @@ viewHighlightedNews { t } toPageMsg news =
                     , text news.title
                     ]
                 , p [ class "truncate" ]
-                    [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                    [ text <| Markdown.toUnformattedString news.description ]
                 ]
             , a
                 [ class "button button-primary w-auto px-4 ml-auto mr-6"
