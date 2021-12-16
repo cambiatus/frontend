@@ -7,7 +7,7 @@ module Form.Validate exposing
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
-    , floatGreaterThanOrEqualTo, map
+    , email, eosName, floatGreaterThanOrEqualTo, map
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
@@ -58,7 +58,9 @@ validations), so we get consistent error messages throughout the app.
 -}
 
 import Date exposing (Date)
+import Eos.Account
 import Markdown exposing (Markdown)
+import Regex
 import Session.Shared as Shared
 import Time
 import Url
@@ -269,6 +271,31 @@ markdownLongerThan minLength =
         )
 
 
+eosName : Validator String -> Validator Eos.Account.Name
+eosName =
+    custom
+        (\stringInput ->
+            case Eos.Account.fromString stringInput of
+                Ok account ->
+                    Ok account
+
+                Err error ->
+                    Err (\translators -> Eos.Account.errorToString translators error)
+        )
+
+
+email : Validator String -> Validator String
+email =
+    custom
+        (\stringInput ->
+            if isValidEmail stringInput then
+                Ok stringInput
+
+            else
+                Err (\{ t } -> t "error.email")
+        )
+
+
 
 -- LISTS
 
@@ -371,3 +398,14 @@ numberLowerThanOrEqualTo numberToString upperBound =
                         tr "error.validator.number.lower_than_or_equal" [ ( "base", numberToString upperBound ) ]
                     )
         )
+
+
+isValidEmail : String -> Bool
+isValidEmail =
+    let
+        validEmailRegex =
+            "^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+                |> Regex.fromStringWith { caseInsensitive = True, multiline = False }
+                |> Maybe.withDefault Regex.never
+    in
+    Regex.contains validEmailRegex
