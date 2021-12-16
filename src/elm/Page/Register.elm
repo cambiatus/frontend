@@ -8,6 +8,8 @@ import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
 import Form
+import Form.Checkbox
+import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
@@ -31,8 +33,6 @@ import Set exposing (Set)
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Form
-import View.Form.Checkbox as Checkbox
-import View.Form.Input as Input
 
 
 
@@ -413,19 +413,19 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                         -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
                         -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
                         -- hide it with `display: hidden`), so we hide it using position and opacity.
-                        , Input.init
-                            { label = ""
-                            , id = passphraseInputId
-                            , onInput = \_ -> NoOp
-                            , disabled = False
-                            , value = keys.words
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
-                            |> Input.withContainerAttrs [ class "mb-0" ]
-                            |> Input.toHtml
+                        , Form.Text.init { label = "", id = passphraseInputId }
+                            |> Form.Text.withContainerAttrs [ class "mb-0 absolute opacity-0 left-[-9999em]" ]
+                            |> (\options ->
+                                    Form.Text.view options
+                                        { onChange = \_ -> NoOp
+                                        , onBlur = \_ -> NoOp
+                                        , value = keys.words
+                                        , error = text ""
+                                        , hasError = False
+                                        , translators = translators
+                                        , isRequired = False
+                                        }
+                               )
                         ]
                     , button
                         [ class "button m-auto button-primary button-sm"
@@ -435,15 +435,21 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                     ]
                 ]
             , div []
-                [ Checkbox.init
-                    { description = text (t "register.account_created.i_saved_words" ++ " 💜")
-                    , id = "agreed_save_passphrase"
-                    , value = model.hasAgreedToSavePassphrase
-                    , disabled = False
-                    , onCheck = AgreedToSave12Words
+                [ Form.Checkbox.init
+                    { label = text (t "register.account_created.i_saved_words" ++ " 💜")
+                    , id = "agreed-save-passphrase"
                     }
-                    |> Checkbox.withContainerAttrs [ class "my-6 font-bold" ]
-                    |> Checkbox.toHtml
+                    |> Form.Checkbox.withContainerAttrs [ class "my-6 font-bold" ]
+                    |> (\options ->
+                            Form.Checkbox.view options
+                                { onCheck = AgreedToSave12Words
+                                , onBlur = \_ -> NoOp
+                                , value = model.hasAgreedToSavePassphrase
+                                , error = text ""
+                                , hasError = False
+                                , isRequired = True
+                                }
+                       )
                 , button
                     [ onClick <|
                         DownloadPdf
@@ -452,12 +458,6 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                             }
                     , class "button button-primary w-full mb-4"
                     , disabled (not model.hasAgreedToSavePassphrase)
-                    , class <|
-                        if model.hasAgreedToSavePassphrase then
-                            ""
-
-                        else
-                            "button-disabled text-gray-600"
                     ]
                     [ text (t "register.account_created.download") ]
                 ]
