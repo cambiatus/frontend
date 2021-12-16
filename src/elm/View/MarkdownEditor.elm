@@ -9,7 +9,6 @@ module View.MarkdownEditor exposing
     , msgToString
     , quillOpFromMarkdown
     , quillOpToMarkdown
-    , removeFormatting
     , setContents
     , update
     , view
@@ -29,7 +28,6 @@ import Markdown.Block
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
-import Maybe.Extra
 import Parser
 import Parser.Advanced
 import Ports
@@ -746,65 +744,6 @@ quillOpFromMarkdownInline inline =
 
 
 -- UTILS
-
-
-removeFormatting : String -> String
-removeFormatting markdownString =
-    case Markdown.Parser.parse markdownString of
-        Ok blocks ->
-            blocks
-                |> List.map removeFormattingFromBlock
-                |> Maybe.Extra.combine
-                |> Maybe.map (String.join "\n")
-                |> Maybe.withDefault markdownString
-                |> String.trim
-
-        Err _ ->
-            markdownString
-
-
-removeFormattingFromBlock : Markdown.Block.Block -> Maybe String
-removeFormattingFromBlock block =
-    let
-        removeFormattingFromList : (Int -> String) -> List (List Markdown.Block.Block) -> String
-        removeFormattingFromList lineStarter blocks =
-            blocks
-                |> List.indexedMap
-                    (\index blockChild ->
-                        List.map removeFormattingFromBlock blockChild
-                            |> List.filterMap identity
-                            |> List.map (\line -> lineStarter index ++ line)
-                            |> String.concat
-                    )
-                |> String.join "\n"
-    in
-    case block of
-        Markdown.Block.UnorderedList _ children ->
-            children
-                |> List.map (\(Markdown.Block.ListItem _ children_) -> children_)
-                |> removeFormattingFromList (\_ -> "- ")
-                |> Just
-
-        Markdown.Block.OrderedList _ _ children ->
-            children
-                |> removeFormattingFromList (\index -> String.fromInt (index + 1) ++ ". ")
-                |> Just
-
-        Markdown.Block.Heading _ inlines ->
-            Markdown.Block.extractInlineText inlines
-                |> Just
-
-        Markdown.Block.Paragraph inlines ->
-            Markdown.Block.extractInlineText inlines
-                |> Just
-
-        Markdown.Block.HtmlBlock (Markdown.Block.HtmlElement _ _ children) ->
-            List.map removeFormattingFromBlock children
-                |> Maybe.Extra.combine
-                |> Maybe.map (String.join " ")
-
-        _ ->
-            Nothing
 
 
 encodeQuillOp : QuillOp -> Json.Encode.Value
