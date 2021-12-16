@@ -174,10 +174,10 @@ viewLabel (Options options) =
 viewStatusText : Options msg -> ViewConfig msg -> Html msg
 viewStatusText (Options options) viewConfig =
     p
-        [ class "font-semibold lowercase"
+        [ class "font-semibold lowercase text-sm my-auto"
         , classList
             [ ( "text-indigo-500", viewConfig.value && not options.disabled && not viewConfig.hasError )
-            , ( "text-gray-700", (not viewConfig.value || options.disabled) && not viewConfig.hasError )
+            , ( "text-gray-600", (not viewConfig.value || options.disabled) && not viewConfig.hasError )
             , ( "text-red", viewConfig.hasError )
             ]
         ]
