@@ -1,6 +1,6 @@
 module Form exposing
     ( Form
-    , succeed, with, withNoOutput, withDecoration, withNesting, withGroup
+    , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapValues, mapOutput
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
@@ -67,7 +67,7 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, with, withNoOutput, withDecoration, withNesting, withGroup
+@docs succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
 
 
 ## Modifiers
@@ -451,6 +451,15 @@ function that transforms a dirty model into a clean one, and build the form
 succeed : output -> Form values output
 succeed output =
     Form (\_ -> { fields = [], result = OptOk output })
+
+
+{-| Builds a form that always fails. This is similar to Json.Decode.fail, and it
+can be used in conjunction with `introspect`: maybe you only want to show some
+fields if anothe field is filled out, otherwise, the form should fail.
+-}
+fail : Form values output
+fail =
+    Form (\_ -> { fields = [], result = OptNothing })
 
 
 {-| Appends a form into another form. Since every field is a form on itself, we
