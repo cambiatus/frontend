@@ -6,6 +6,7 @@ import Cambiatus.Object.Community
 import Community
 import Community.News
 import Eos
+import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument
 import Graphql.SelectionSet
@@ -24,7 +25,6 @@ import Time
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.Form.Toggle
 import View.Modal as Modal
 
 
@@ -54,7 +54,8 @@ type HighlightNewsConfirmationModal
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | ToggledHighlightNews Int Bool
     | CompletedSettingHighlightedNews Bool (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
     | ClosedHighlightNewsConfirmationModal
@@ -72,6 +73,9 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 UR.init model
@@ -332,16 +336,20 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                 ]
                 [ text <| translators.t "news.view_more_with_ellipsis" ]
             ]
-        , View.Form.Toggle.init
-            { label = text <| translators.t "news.highlight"
-            , id = "highlight-news-toggle-" ++ String.fromInt news.id
-            , onToggle = ToggledHighlightNews news.id
-            , disabled = False
-            , value = isHighlighted
-            }
-            |> View.Form.Toggle.withStatusText View.Form.Toggle.YesNo
-            |> View.Form.Toggle.withAttrs [ class "mt-auto text-base" ]
-            |> View.Form.Toggle.toHtml translators
+        , Form.Toggle.init { label = text <| translators.t "news.highlight", id = "highlight-news-toggle-" ++ String.fromInt news.id }
+            |> Form.Toggle.withContainerAttrs [ class "mt-auto" ]
+            |> Form.Toggle.withStatusText Form.Toggle.YesNo
+            |> (\options ->
+                    Form.Toggle.view options
+                        { onToggle = ToggledHighlightNews news.id
+                        , onBlur = \_ -> NoOp
+                        , value = isHighlighted
+                        , error = text ""
+                        , hasError = False
+                        , isRequired = False
+                        , translators = translators
+                        }
+               )
         , a
             [ class "button button-primary w-full mt-10 mb-4"
             , Route.href (Route.CommunitySettingsNewsEditor (Route.EditNews news.id))
@@ -372,6 +380,9 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 

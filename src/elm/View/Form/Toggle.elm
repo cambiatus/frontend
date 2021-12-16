@@ -2,7 +2,6 @@ module View.Form.Toggle exposing
     ( init
     , withAttrs, withTooltip
     , toHtml
-    , StatusText(..), withStatusText
     )
 
 {-| Creates a Cambiatus-style toggle input
@@ -62,13 +61,7 @@ type alias Options msg =
     , value : Bool
     , tooltip : Maybe { message : String, iconClass : String }
     , extraAttrs : List (Html.Attribute msg)
-    , statusText : StatusText
     }
-
-
-type StatusText
-    = EnabledDisabled
-    | YesNo
 
 
 {-| Initialize a Toggle with some required options
@@ -82,7 +75,6 @@ init requiredOptions =
     , value = requiredOptions.value
     , tooltip = Nothing
     , extraAttrs = []
-    , statusText = EnabledDisabled
     }
 
 
@@ -102,13 +94,6 @@ withTooltip tooltip options =
 withAttrs : List (Html.Attribute a) -> Options a -> Options a
 withAttrs attrs options =
     { options | extraAttrs = options.extraAttrs ++ attrs }
-
-
-{-| Selects the kind of status text to be displayed next to the toggle
--}
-withStatusText : StatusText -> Options a -> Options a
-withStatusText statusText_ options =
-    { options | statusText = statusText_ }
 
 
 
@@ -182,17 +167,8 @@ viewTooltip options =
 
 statusText : Options msg -> String
 statusText options =
-    case options.statusText of
-        EnabledDisabled ->
-            if options.value then
-                "settings.features.enabled"
+    if options.value then
+        "settings.features.enabled"
 
-            else
-                "settings.features.disabled"
-
-        YesNo ->
-            if options.value then
-                "community.actions.form.yes"
-
-            else
-                "community.actions.form.no"
+    else
+        "settings.features.disabled"
