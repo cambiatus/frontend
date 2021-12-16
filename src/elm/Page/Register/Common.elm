@@ -1,190 +1,93 @@
 module Page.Register.Common exposing
-    ( ProblemEvent(..)
-    , containsLetters
-    , fieldProblems
-    , findId
-    , getCities
-    , getDistricts
-    , ifEmptyTuple
-    , validateAccountName
-    , viewSelectField
+    ( accountNameField
+    , emailField
+    , personNameField
+    , phoneNumberField
     )
 
-import Address
 import Cambiatus.Scalar exposing (Id(..))
-import Html exposing (Html, div)
-import Html.Attributes exposing (classList)
-import Maybe.Extra as MaybeExtra
-import Regex
+import Eos.Account
+import Form
+import Form.Text
+import Form.Validate
+import Kyc.CostaRica.Phone
 import Session.Shared exposing (Translators)
-import Validate
-import View.Form.Select
+import Set exposing (Set)
 
 
-viewSelectField :
-    { id : String
-    , label : String
-    , onInput : a -> msg
-    , options : List (View.Form.Select.Option a)
-    , value : a
-    , valueToString : a -> String
-    , enabled : Bool
-    , problems : Maybe (List String)
-    }
-    -> Html msg
-viewSelectField options =
-    div [ classList [ ( "hidden", not options.enabled ) ] ]
-        (case List.reverse options.options of
-            [] ->
-                []
-
-            first :: rest ->
-                [ View.Form.Select.init
-                    { id = options.id
-                    , label = options.label
-                    , onInput = options.onInput
-                    , firstOption = first
-                    , value = options.value
-                    , valueToString = options.valueToString
-                    , disabled = not options.enabled
-                    , problems = options.problems
-                    }
-                    |> View.Form.Select.withOptions rest
-                    |> View.Form.Select.toHtml
-                ]
-        )
+emailField : Translators -> Form.Form { formInput | email : String } String
+emailField ({ t } as translators) =
+    Form.Text.init { label = t "register.form.email.label", id = "email-input" }
+        |> Form.Text.withPlaceholder (t "register.form.email.placeholder")
+        |> Form.textField
+            { parser =
+                Form.Validate.succeed
+                    >> Form.Validate.email
+                    >> Form.Validate.validate translators
+            , value = .email
+            , update = \email input -> { input | email = email }
+            , externalError = always Nothing
+            }
 
 
-type ProblemEvent
-    = OnInput
-    | OnSubmit
+personNameField : Translators -> Form.Form { formInput | name : String } String
+personNameField { t } =
+    Form.Text.init
+        { label = t "register.form.name.label"
+        , id = "name-input"
+        }
+        |> Form.Text.withPlaceholder (t "register.form.name.placeholder")
+        |> Form.textField
+            { parser = Ok
+            , value = .name
+            , update = \name input -> { input | name = name }
+            , externalError = always Nothing
+            }
 
 
-fieldProblems : a -> List ( a, String, ProblemEvent ) -> Maybe (List String)
-fieldProblems field problems =
-    let
-        list =
-            problems
-                |> List.filter (\( f, _, _ ) -> f == field)
-                |> List.map (\( _, msg, _ ) -> msg)
-    in
-    if List.length list > 0 then
-        Just list
+accountNameField : Translators -> { unavailableAccounts : Set String } -> Form.Form { formInput | account : String } Eos.Account.Name
+accountNameField ({ t } as translators) { unavailableAccounts } =
+    Form.Text.init
+        { label = t "register.form.account.label"
+        , id = "account-input"
+        }
+        |> Form.Text.withPlaceholder (t "register.form.account.placeholder")
+        |> Form.Text.withCounter (Form.Text.CountLetters 12)
+        |> Form.textField
+            { parser =
+                Form.Validate.succeed
+                    >> Form.Validate.eosName
+                    >> Form.Validate.validate translators
+            , value = .account
+            , update = \account input -> { input | account = account }
+            , externalError =
+                \{ account } ->
+                    if Set.member account unavailableAccounts then
+                        Just (t "error.alreadyTaken")
 
-    else
-        Nothing
-
-
-findId : String -> List { a | id : Id, name : String } -> ( String, String )
-findId str list =
-    let
-        getId (Id id) =
-            id
-    in
-    ( list
-        |> List.filter (\x -> x.name == str)
-        |> List.map (\x -> getId x.id)
-        |> List.head
-        |> Maybe.withDefault ""
-    , str
-    )
+                    else
+                        Nothing
+            }
 
 
-getCities : List Address.State -> String -> Translators -> List Address.City
-getCities states selectedState translators =
-    let
-        foundState =
-            List.head (List.filter (\state -> state.name == selectedState) states)
-    in
-    foundState
-        |> Maybe.map (\state -> state.cities)
-        |> Maybe.withDefault []
-        |> (::) (Address.City (Id "") (translators.t "register.form.select.city") [])
-        |> List.sortWith byId
+phoneNumberField : Translators -> Form.Form { formInput | phoneNumber : String } String
+phoneNumberField { t } =
+    Form.Text.init
+        { label = t "register.form.phone.label"
+        , id = "phone-input"
+        }
+        |> Form.Text.withPlaceholder (t "register.form.phone.placeholder")
+        |> Form.Text.withCounter (Form.Text.CountLetters 8)
+        |> Form.Text.withType Form.Text.Telephone
+        |> Form.textField
+            { parser =
+                \phoneNumber ->
+                    if Kyc.CostaRica.Phone.isValid phoneNumber then
+                        Ok phoneNumber
 
-
-getDistricts : List Address.City -> String -> Translators -> List Address.Neighborhood
-getDistricts cities selectedCity translators =
-    let
-        foundState =
-            List.head (List.filter (\city -> city.name == selectedCity) cities)
-    in
-    foundState
-        |> Maybe.map (\city -> city.neighborhoods)
-        |> Maybe.withDefault []
-        |> (::) (Address.Neighborhood (Id "") (translators.t "register.form.select.district"))
-        |> List.sortWith byId
-
-
-byId : { a | id : Id } -> { b | id : Id } -> Order
-byId a b =
-    let
-        getId (Id id) =
-            id
-    in
-    case compare (getId a.id) (getId b.id) of
-        LT ->
-            GT
-
-        GT ->
-            LT
-
-        EQ ->
-            EQ
-
-
-containsLetters : String -> Bool
-containsLetters str =
-    if String.length str == 0 then
-        False
-
-    else
-        str
-            |> String.toInt
-            |> MaybeExtra.isNothing
-
-
-ifEmptyTuple : (a -> ( String, b )) -> c -> Validate.Validator c a
-ifEmptyTuple data error =
-    Validate.ifFalse
-        (data
-            >> Tuple.first
-            >> String.isEmpty
-            >> not
-        )
-        error
-
-
-validateAccountName : Translators -> String -> String -> ( String, Maybe String )
-validateAccountName { tr } enteredAccountName currentAccountName =
-    let
-        preparedAccountName =
-            enteredAccountName
-                |> String.trim
-                |> String.toLower
-                |> String.left 12
-
-        validAccountName : Regex.Regex
-        validAccountName =
-            Maybe.withDefault Regex.never <|
-                Regex.fromString "^[a-z1-5]{0,12}$"
-
-        isAccountNameValid : Bool
-        isAccountNameValid =
-            preparedAccountName
-                |> Regex.contains validAccountName
-    in
-    if isAccountNameValid then
-        ( preparedAccountName
-        , Nothing
-        )
-
-    else
-        let
-            invalidSymbol =
-                String.right 1 preparedAccountName
-        in
-        -- Leave account name unchanged if there's an error:
-        ( currentAccountName
-        , Just <| tr "error.notAllowedChar" [ ( "char", invalidSymbol ) ]
-        )
+                    else
+                        Err <| t "error.phone"
+            , value = .phoneNumber
+            , update = \phoneNumber input -> { input | phoneNumber = phoneNumber }
+            , externalError = always Nothing
+            }
