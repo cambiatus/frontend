@@ -7,7 +7,7 @@ module Form.Validate exposing
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
-    , email, eosName, floatGreaterThanOrEqualTo, map
+    , email, eosName, floatGreaterThanOrEqualTo, map, time
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
@@ -333,6 +333,24 @@ futureDate timezone now =
 
             else
                 Ok selectedDate
+        )
+
+
+time : Validator String -> Validator { hour : Int, minute : Int }
+time =
+    custom
+        (\timeString ->
+            case String.split ":" timeString of
+                [ hourString, minuteString ] ->
+                    Maybe.map2 (\hour minute -> { hour = hour, minute = minute })
+                        (String.toInt hourString)
+                        (String.toInt minuteString)
+                        -- TODO
+                        |> Result.fromMaybe (\{ t } -> t "")
+
+                _ ->
+                    -- TODO
+                    Err (\{ t } -> t "")
         )
 
 

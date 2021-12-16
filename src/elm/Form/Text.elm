@@ -158,6 +158,7 @@ type InputType
     | Telephone
     | Number
     | Url
+    | Time
 
 
 {-| Determines which element to render the input as
@@ -428,6 +429,25 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
                 TextareaInput ->
                     ( Html.textarea, class "" )
 
+        paddedTimeValue =
+            case options.type_ of
+                Time ->
+                    case String.split ":" value of
+                        [ hour, minute ] ->
+                            -- We need to pad values with 0. From MDN:
+                            -- The value of the time input is always in 24-hour
+                            -- format that includes leading zeros: hh:mm
+                            [ String.repeat (2 - String.length hour) "0" ++ hour
+                            , String.repeat (2 - String.length minute) "0" ++ minute
+                            ]
+                                |> String.join ":"
+
+                        _ ->
+                            value
+
+                _ ->
+                    value
+
         ( beforeRenderingValue, beforeChangeEvent, maskHelper ) =
             case options.mask of
                 Just (NumberMask decimalDigits) ->
@@ -486,7 +506,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
                 :: class "w-full input"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
-                :: Html.Attributes.value (beforeRenderingValue value)
+                :: Html.Attributes.value (beforeRenderingValue paddedTimeValue)
                 :: placeholder (Maybe.withDefault "" options.placeholder)
                 :: typeAttr
                 :: required isRequired
@@ -530,6 +550,9 @@ typeToString type_ =
 
         Url ->
             "url"
+
+        Time ->
+            "time"
 
 
 viewCurrencyElement : Eos.Symbol -> Html a
