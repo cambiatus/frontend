@@ -453,9 +453,7 @@ succeed output =
     Form (\_ -> { fields = [], result = OptOk output })
 
 
-{-| Builds a form that always fails. This is similar to Json.Decode.fail, and it
-can be used in conjunction with `introspect`: maybe you only want to show some
-fields if anothe field is filled out, otherwise, the form should fail.
+{-| Builds a form that always fails. This is similar to Json.Decode.fail.
 -}
 fail : Form values output
 fail =
@@ -994,12 +992,12 @@ view :
         , onSubmit : output -> msg
         }
     -> Html msg
-view formAttrs translators footer form model { toMsg, onSubmit } =
+view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
     Html.form
         (novalidate True
             :: Events.onSubmit
                 (parse form
-                    model
+                    (Model model)
                     { onError = toMsg
                     , onSuccess = onSubmit
                     }
@@ -1007,11 +1005,12 @@ view formAttrs translators footer form model { toMsg, onSubmit } =
             :: formAttrs
         )
         (List.map (Html.map toMsg)
-            (viewFields translators form model)
+            (viewFields translators form (Model model))
             ++ footer
                 (\attrs ->
                     button
                         (type_ "submit"
+                            :: Html.Attributes.disabled model.disabled
                             :: List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs
                         )
                 )
