@@ -1,8 +1,8 @@
 module View.Form.Input exposing
     ( init
-    , withCounter, withElements, withCurrency
+    , withCounter, withElements
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
-    , withInputType, withType, withCounterType, asNumeric
+    , withInputType, withType, withCounterType
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -34,7 +34,7 @@ and character counters.
 
 ## Adding elements
 
-@docs withCounter, withElements, withCurrency
+@docs withCounter, withElements
 
 
 ## Adding attributes
@@ -44,7 +44,7 @@ and character counters.
 
 ## Changing types
 
-@docs withInputType, withType, withCounterType, asNumeric
+@docs withInputType, withType, withCounterType
 
 
 # Converting to HTML
@@ -53,13 +53,11 @@ and character counters.
 
 -}
 
-import Eos
-import Html exposing (Html, div, li, span, text, ul)
-import Html.Attributes exposing (attribute, class, classList, disabled, id, placeholder, type_, value)
+import Html exposing (Html, div, li, text, ul)
+import Html.Attributes exposing (class, classList, disabled, id, placeholder, type_, value)
 import Html.Events exposing (onInput)
 import I18Next
-import Mask
-import Session.Shared as Shared exposing (Translators)
+import Session.Shared exposing (Translators)
 import View.Form
 
 
@@ -99,7 +97,6 @@ init options =
     , inputType = Input
     , fieldType = Text
     , counterType = CountLetters
-    , mask = Nothing
     }
 
 
@@ -149,22 +146,11 @@ input options =
 
                 TextArea ->
                     ( Html.textarea, "form-input", class "" )
-
-        beforeInputFunction =
-            case options.mask of
-                Nothing ->
-                    identity
-
-                Just (NumberMask decimalDigits) ->
-                    \v ->
-                        Mask.updateFloatString decimalDigits
-                            (Shared.decimalSeparators options.translators)
-                            { previousValue = options.value, newValue = v }
     in
     div [ class "relative" ]
         (inputElement
             (id options.id
-                :: onInput (beforeInputFunction >> options.onInput)
+                :: onInput options.onInput
                 :: class ("w-full " ++ inputClass)
                 :: classList [ ( "with-error", hasErrors options ) ]
                 :: disabled options.disabled
@@ -235,21 +221,6 @@ withElements elements options =
     { options | extraElements = elements ++ options.extraElements }
 
 
-{-| Displays the currency symbol in the input field
-
-**Note**: this is purely visual, you should still validate to check if the number
-is valid and has the symbol's precision
-
--}
-withCurrency : Eos.Symbol -> InputOptions a -> InputOptions a
-withCurrency symbol options =
-    options
-        |> withElements (viewCurrencyElement symbol :: options.extraElements)
-        |> withAttrs [ class "pr-20" ]
-        |> asNumeric
-        |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
-
-
 {-| Determines the type of the input
 -}
 withInputType : InputType -> InputOptions a -> InputOptions a
@@ -269,67 +240,6 @@ withType fieldType options =
 withCounterType : CounterType -> InputOptions a -> InputOptions a
 withCounterType counterType options =
     { options | counterType = counterType }
-
-
-{-| Adds a number mask to the input
--}
-withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
-withNumberMask mask options =
-    let
-        decimalDigitsAmount =
-            case mask of
-                Mask.Precisely x ->
-                    x
-
-                Mask.AtMost x ->
-                    x
-
-        separators =
-            Shared.decimalSeparators options.translators
-
-        previousDecimalSeparator =
-            if decimalDigitsAmount == 0 then
-                separators.decimalSeparator
-
-            else
-                options.value
-                    |> String.dropRight decimalDigitsAmount
-                    |> String.right 1
-
-        valueWithoutSeparator =
-            options.value
-                |> String.filter (\char -> Char.isDigit char || String.fromList [ char ] == previousDecimalSeparator)
-                |> String.replace previousDecimalSeparator "."
-    in
-    { options
-        | mask = Just (NumberMask mask)
-        , value =
-            valueWithoutSeparator
-                |> Mask.floatString mask separators
-                |> Maybe.withDefault valueWithoutSeparator
-    }
-        |> withElements
-            (if decimalDigitsAmount == 0 then
-                options.extraElements
-
-             else
-                Html.node
-                    "masked-input-helper"
-                    [ attribute "target-id" options.id
-                    , attribute "mask-type" "number"
-                    , attribute "decimal-separator" separators.decimalSeparator
-                    ]
-                    []
-                    :: options.extraElements
-            )
-
-
-{-| Defines the input as a numeric input
--}
-asNumeric : InputOptions a -> InputOptions a
-asNumeric options =
-    options
-        |> withAttrs [ attribute "inputmode" "numeric" ]
 
 
 {-| Creates a Cambiatus-style input counter.
@@ -361,20 +271,6 @@ type CounterType
     | CountWords
 
 
-{-| A mask formats the input as the user writes in it. A common place to find
-them is on phone inputs. Here is an example for a BR phone number:
-
-    StringMask { mask = "(##) ####-####", replace = '#' }
-
-We can also use them to limit inputs that are meant to only receive numbers. In
-that case, we can limit the number of decimal digits. A NumberMask is already
-applied on symbol/currency inputs, based on that symbol's precision.
-
--}
-type Mask
-    = NumberMask Mask.DecimalDigits
-
-
 
 --- INTERNAL
 
@@ -392,20 +288,11 @@ viewFieldProblem attrs problem =
     li (class "form-error" :: attrs) [ text problem ]
 
 
-viewCurrencyElement : Eos.Symbol -> Html a
-viewCurrencyElement symbol =
-    span [ class "absolute right-0 rounded-r-sm border-transparent border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
-        [ text <| Eos.symbolToSymbolCodeString symbol ]
-
-
 fieldTypeToString : FieldType -> String
 fieldTypeToString fieldType =
     case fieldType of
         Text ->
             "text"
-
-        Number ->
-            "number"
 
         Url ->
             "url"
@@ -430,7 +317,6 @@ type alias InputOptions a =
     , inputType : InputType
     , fieldType : FieldType
     , counterType : CounterType
-    , mask : Maybe Mask
     }
 
 
@@ -445,5 +331,4 @@ type InputType
 -}
 type FieldType
     = Text
-    | Number
     | Url

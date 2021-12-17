@@ -4,7 +4,6 @@ module View.MarkdownEditor exposing
     , Model
     , Msg
     , QuillOp
-    , forceSetContents
     , init
     , msgToString
     , quillOpFromMarkdown
@@ -172,13 +171,6 @@ update msg model =
 setContents : String -> Model -> Model
 setContents contents model =
     { model | contents = contents }
-
-
-forceSetContents : String -> Model -> ( Model, Cmd Msg )
-forceSetContents contents model =
-    model
-        |> setContents contents
-        |> update RequestedSetContents
 
 
 
