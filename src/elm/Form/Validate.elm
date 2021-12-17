@@ -1,5 +1,5 @@
 module Form.Validate exposing
-    ( Validator, succeed, validate, custom, Error
+    ( Validator, succeed, validate, custom, Error, withCustomError
     , required
     , stringShorterThan, stringLongerThan, stringLengthExactly, url
     , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
@@ -27,7 +27,7 @@ validations), so we get consistent error messages throughout the app.
 
 ## Pipeline helpers
 
-@docs Validator, succeed, validate, custom, Error
+@docs Validator, succeed, validate, custom, Error, withCustomError
 
 
 ## Generic validations
@@ -144,6 +144,19 @@ custom validation (Validator validator) =
     validator
         |> Result.andThen validation
         |> Validator
+
+
+{-| Switch the current error. Useful when you want to provide a custom error
+message that is more context-aware.
+-}
+withCustomError : (Shared.Translators -> String) -> Validator a -> Validator a
+withCustomError newError (Validator validator) =
+    case validator of
+        Ok ok ->
+            Validator (Ok ok)
+
+        Err _ ->
+            Validator (Err newError)
 
 
 

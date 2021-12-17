@@ -92,7 +92,7 @@ type alias EosActionData =
     { from : Eos.Name
     , to : Eos.Name
     , value : Eos.Asset
-    , memo : String
+    , memo : Markdown
     }
 
 
@@ -102,7 +102,7 @@ encodeEosActionData data =
         [ ( "from", Eos.encodeName data.from )
         , ( "to", Eos.encodeName data.to )
         , ( "quantity", Eos.encodeAsset data.value )
-        , ( "memo", Encode.string data.memo )
+        , ( "memo", Markdown.encode data.memo )
         ]
 
 
