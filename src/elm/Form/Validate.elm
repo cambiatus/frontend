@@ -1,7 +1,7 @@
 module Form.Validate exposing
     ( Validator, succeed, validate, custom, Error
     , required
-    , stringShorterThan, stringLongerThan, url
+    , stringShorterThan, stringLongerThan, stringLengthExactly, url
     , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
     , maskedFloat, floatGreaterThan
     , markdownLongerThan
@@ -37,7 +37,7 @@ validations), so we get consistent error messages throughout the app.
 
 ## String inputs
 
-@docs stringShorterThan, stringLongerThan, url
+@docs stringShorterThan, stringLongerThan, stringLengthExactly, url
 
 @docs int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
 
@@ -228,6 +228,18 @@ stringLongerThan minLength =
 
             else
                 Ok stringInput
+        )
+
+
+stringLengthExactly : Int -> Validator String -> Validator String
+stringLengthExactly length =
+    custom
+        (\stringInput ->
+            if String.length stringInput == length then
+                Ok stringInput
+
+            else
+                Err (\{ tr } -> tr "error.validator.text.exactly" [ ( "base", String.fromInt length ) ])
         )
 
 
