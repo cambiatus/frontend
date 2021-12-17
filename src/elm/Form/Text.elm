@@ -159,6 +159,7 @@ type InputType
     | Number
     | Url
     | Time
+    | Password
 
 
 {-| Determines which element to render the input as
@@ -553,6 +554,9 @@ typeToString type_ =
 
         Time ->
             "time"
+
+        Password ->
+            "password"
 
 
 viewCurrencyElement : Eos.Symbol -> Html a

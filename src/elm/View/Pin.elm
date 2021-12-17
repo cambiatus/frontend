@@ -1,5 +1,6 @@
 module View.Pin exposing
-    ( Field(..)
+    ( Background(..)
+    , Field(..)
     , Model
     , Msg
     , RequiredOptions
@@ -9,10 +10,8 @@ module View.Pin exposing
     , postSubmitAction
     , update
     , view
-    , withAttrs
-    , withCounterAttrs
+    , withBackgroundColor
     , withDisabled
-    , withLabelAttrs
     , withProblem
     )
 
@@ -23,15 +22,17 @@ You can then use Pin.view in your view
 
 -}
 
+import Form
+import Form.Text
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, autocomplete, class, classList, disabled, maxlength, required, type_)
+import Html.Attributes exposing (attribute, autocomplete, class, disabled, maxlength, type_)
 import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
+import Maybe.Extra
 import Ports
 import Session.Shared exposing (Shared, Translators)
 import Task
 import Validate
-import View.Form.Input
 
 
 
@@ -57,9 +58,7 @@ type alias Model =
     , isSubmitting : Bool
     , submitLabel : String
     , submittingLabel : String
-    , labelAttrs : List (Html.Attribute Msg)
-    , extraAttrs : List (Html.Attribute Msg)
-    , counterAttrs : List (Html.Attribute Msg)
+    , background : Background
     }
 
 
@@ -100,9 +99,7 @@ init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility 
     , isSubmitting = False
     , submitLabel = submitLabel
     , submittingLabel = submittingLabel
-    , labelAttrs = []
-    , extraAttrs = []
-    , counterAttrs = []
+    , background = Light
     }
 
 
@@ -118,7 +115,7 @@ view ({ t } as translators) model =
         text_ =
             t >> text
     in
-    div (class "flex flex-col flex-grow" :: model.extraAttrs)
+    div [ class "flex flex-col flex-grow" ]
         [ viewField Pin model translators
         , case model.pinConfirmation of
             Nothing ->
@@ -145,33 +142,8 @@ viewField field model ({ t } as translators) =
     let
         enterKeyCode =
             13
-    in
-    View.Form.Input.init
-        { label = t model.label
-        , id =
-            case field of
-                Pin ->
-                    model.id
 
-                PinConfirmation ->
-                    model.id ++ "-confirmation"
-        , onInput =
-            case field of
-                Pin ->
-                    EnteredPin
-
-                PinConfirmation ->
-                    EnteredPinConfirmation
-        , disabled = model.disabled || model.isSubmitting
-        , value =
-            case field of
-                Pin ->
-                    model.pin
-
-                PinConfirmation ->
-                    Maybe.withDefault "" model.pinConfirmation
-        , placeholder = Just model.placeholder
-        , problems =
+        maybeError =
             List.filterMap
                 (\( errorField, error ) ->
                     if errorField == field then
@@ -181,31 +153,35 @@ viewField field model ({ t } as translators) =
                         Nothing
                 )
                 model.problems
-                |> Just
-        , translators = translators
-        }
-        |> View.Form.Input.withCounter pinLength
-        |> View.Form.Input.withCounterAttrs model.counterAttrs
-        |> View.Form.Input.withElements [ viewToggleVisibility field model translators ]
-        |> View.Form.Input.withAttrs
-            [ class "form-input text-body-black tracking-widest"
-            , classList
-                [ ( "field-with-error"
-                  , model.problems
-                        |> List.filter (\( errorField, _ ) -> errorField == field)
-                        |> List.isEmpty
-                        |> not
-                  )
-                ]
-            , maxlength pinLength
-            , attribute "inputmode" "numeric"
-            , if isVisible field model then
-                type_ "text"
+                |> List.head
 
-              else
-                type_ "password"
-            , required True
+        backgroundAttrs =
+            case model.background of
+                Dark ->
+                    Form.Text.withLabelAttrs [ class "text-white" ]
+                        >> Form.Text.withCounterAttrs [ class "!text-white" ]
+
+                Light ->
+                    identity
+    in
+    Form.Text.init
+        { label = t model.label
+        , id =
+            case field of
+                Pin ->
+                    model.id
+
+                PinConfirmation ->
+                    model.id ++ "-confirmation"
+        }
+        |> Form.Text.withPlaceholder model.placeholder
+        |> Form.Text.withDisabled (model.disabled || model.isSubmitting)
+        |> Form.Text.withCounter (Form.Text.CountLetters pinLength)
+        |> Form.Text.withElements [ viewToggleVisibility field model translators ]
+        |> Form.Text.withExtraAttrs
+            [ maxlength pinLength
             , autocomplete False
+            , class "text-body-black tracking-widest"
             , preventDefaultOn "keydown"
                 (keyCode
                     |> Decode.map
@@ -218,8 +194,38 @@ viewField field model ({ t } as translators) =
                         )
                 )
             ]
-        |> View.Form.Input.withLabelAttrs model.labelAttrs
-        |> View.Form.Input.toHtml
+        |> backgroundAttrs
+        |> Form.Text.withType
+            (if isVisible field model then
+                Form.Text.Text
+
+             else
+                Form.Text.Password
+            )
+        |> Form.Text.asNumeric
+        |> (\options ->
+                Form.Text.view options
+                    { onChange =
+                        case field of
+                            Pin ->
+                                EnteredPin
+
+                            PinConfirmation ->
+                                EnteredPinConfirmation
+                    , onBlur = \_ -> Ignored
+                    , value =
+                        case field of
+                            Pin ->
+                                model.pin
+
+                            PinConfirmation ->
+                                Maybe.withDefault "" model.pinConfirmation
+                    , error = Form.viewError [] True maybeError
+                    , hasError = Maybe.Extra.isJust maybeError
+                    , translators = translators
+                    , isRequired = True
+                    }
+           )
 
 
 viewToggleVisibility : Field -> Model -> Translators -> Html Msg
@@ -232,6 +238,7 @@ viewToggleVisibility field model { t } =
         [ class "absolute inset-y-0 uppercase text-sm font-bold right-0 mr-3 text-orange-300"
         , onClick (ToggledPinVisibility field)
         , attribute "tabindex" "-1"
+        , type_ "button"
         ]
         [ if isVisible field model then
             text_ "auth.pin.toggle.hide"
@@ -343,19 +350,14 @@ withProblem field problem model =
     { model | problems = ( field, problem ) :: model.problems }
 
 
-withAttrs : List (Html.Attribute Msg) -> Model -> Model
-withAttrs attrs model =
-    { model | extraAttrs = attrs }
+withBackgroundColor : Background -> Model -> Model
+withBackgroundColor background model =
+    { model | background = background }
 
 
-withLabelAttrs : List (Html.Attribute Msg) -> Model -> Model
-withLabelAttrs attrs model =
-    { model | labelAttrs = model.labelAttrs ++ attrs }
-
-
-withCounterAttrs : List (Html.Attribute Msg) -> Model -> Model
-withCounterAttrs attrs model =
-    { model | counterAttrs = model.counterAttrs ++ attrs }
+type Background
+    = Light
+    | Dark
 
 
 {-| The length of a PIN

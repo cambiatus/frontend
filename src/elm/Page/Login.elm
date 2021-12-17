@@ -263,9 +263,7 @@ viewPin { shared } model =
         , text <| t (trPrefix "eachLogin")
         ]
     , model.pinModel
-        |> Pin.withAttrs []
-        |> Pin.withLabelAttrs [ class "text-white" ]
-        |> Pin.withCounterAttrs [ class "!text-white" ]
+        |> Pin.withBackgroundColor Pin.Dark
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]

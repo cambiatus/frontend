@@ -3,7 +3,7 @@ module Form exposing
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapValues, mapOutput
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
-    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
+    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString, viewError
     , withDisabled
     , parse
     )
@@ -82,7 +82,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
+@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString, viewError
 
 
 ### Changing attributes and state
@@ -1237,6 +1237,9 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
             Html.map (\fn -> ChangedValues (fn values)) html
 
 
+{-| You should generally not need this, but it can be useful if you're using raw
+fields instead of using a proper Form
+-}
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
 viewError attributes showError maybeError =
     case maybeError of
