@@ -19,6 +19,7 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
+import Form.Select
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
@@ -38,7 +39,6 @@ import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form.Select as Select
 import View.Modal as Modal
 import View.TabSelector
 
@@ -268,22 +268,26 @@ viewFiltersModal shared model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ Select.init
-                { id = "status_filter_select"
-                , label = t "all_analysis.filter.status.label"
-                , onInput = SelectedStatusFilter
-                , firstOption = { value = All, label = t "all_analysis.all" }
-                , value = model.editingStatusFilter
-                , valueToString = statusFilterToString
-                , disabled = False
-                , problems = Nothing
+            [ Form.Select.init
+                { label = t "all_analysis.filter.status.label"
+                , id = "status-filter-select"
+                , optionToString = statusFilterToString
                 }
-                |> Select.withOptions
-                    [ { value = Approved, label = t "all_analysis.approved" }
-                    , { value = Disapproved, label = t "all_analysis.disapproved" }
-                    , { value = Completed, label = t "community.actions.completed" }
-                    ]
-                |> Select.toHtml
+                |> Form.Select.withOption All (t "all_analysis.all")
+                |> Form.Select.withOption Approved (t "all_analysis.approved")
+                |> Form.Select.withOption Disapproved (t "all_analysis.disapproved")
+                |> Form.Select.withOption Completed (t "community.actions.completed")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> (\options ->
+                        Form.Select.view options
+                            { onSelect = SelectedStatusFilter
+                            , onBlur = \_ -> NoOp
+                            , value = model.editingStatusFilter
+                            , error = text ""
+                            , hasError = False
+                            , isRequired = False
+                            }
+                   )
             , button
                 [ class "button button-primary w-full"
                 , onClick ClickedApplyFilters
@@ -411,7 +415,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    = NoOp
+    | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
@@ -428,6 +433,9 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
                 Just claims ->
@@ -690,6 +698,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         ClaimsLoaded r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 
