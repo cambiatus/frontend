@@ -3,7 +3,6 @@ module View.Form.Input exposing
     , withCounter, withElements, withCurrency
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
     , withInputType, withType, withCounterType, asNumeric
-    , withMask
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -46,11 +45,6 @@ and character counters.
 ## Changing types
 
 @docs withInputType, withType, withCounterType, asNumeric
-
-
-## Masks
-
-@docs withMask
 
 
 # Converting to HTML
@@ -160,9 +154,6 @@ input options =
             case options.mask of
                 Nothing ->
                     identity
-
-                Just (StringMask mask) ->
-                    Mask.string mask
 
                 Just (NumberMask decimalDigits) ->
                     \v ->
@@ -280,24 +271,6 @@ withCounterType counterType options =
     { options | counterType = counterType }
 
 
-{-| Adds a regular string mask to the input
--}
-withMask : { mask : String, replace : Char } -> InputOptions a -> InputOptions a
-withMask mask options =
-    { options
-        | mask = Just (StringMask mask)
-        , value = Mask.string mask options.value
-    }
-        |> withElements
-            (Html.node "masked-input-helper"
-                [ attribute "target-id" options.id
-                , attribute "mask-type" "string"
-                ]
-                []
-                :: options.extraElements
-            )
-
-
 {-| Adds a number mask to the input
 -}
 withNumberMask : Mask.DecimalDigits -> InputOptions a -> InputOptions a
@@ -400,7 +373,6 @@ applied on symbol/currency inputs, based on that symbol's precision.
 -}
 type Mask
     = NumberMask Mask.DecimalDigits
-    | StringMask { mask : String, replace : Char }
 
 
 
@@ -431,9 +403,6 @@ fieldTypeToString fieldType =
     case fieldType of
         Text ->
             "text"
-
-        Telephone ->
-            "tel"
 
         Number ->
             "number"
@@ -476,6 +445,5 @@ type InputType
 -}
 type FieldType
     = Text
-    | Telephone
     | Number
     | Url
