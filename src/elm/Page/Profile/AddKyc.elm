@@ -60,42 +60,33 @@ update msg model loggedIn =
     case msg of
         FormMsg kycFormMsg ->
             let
-                newModel =
+                formUpdateResult =
                     KycForm.update
-                        loggedIn.shared.translators
+                        loggedIn.shared
                         model
                         kycFormMsg
+                        |> UR.fromChild identity
+                            FormMsg
+                            LoggedIn.executeFeedback
+                            model
             in
             case kycFormMsg of
-                KycForm.Submitted _ ->
-                    let
-                        isFormValid =
-                            List.isEmpty newModel.validationErrors
-                    in
-                    if isFormValid then
-                        newModel
-                            |> UR.init
-                            |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-                            |> UR.addCmd
-                                (KycForm.saveKycData loggedIn
-                                    newModel
-                                    |> Cmd.map FormMsg
-                                )
+                KycForm.Submitted formOutput ->
+                    formUpdateResult
+                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+                        |> UR.addCmd
+                            (KycForm.saveKycData loggedIn formOutput
+                                |> Cmd.map FormMsg
+                            )
 
-                    else
-                        newModel
-                            |> UR.init
+                KycForm.Saved result ->
+                    case result of
+                        RemoteData.Failure _ ->
+                            formUpdateResult
+                                |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
 
-                KycForm.Saved _ ->
-                    case newModel.serverError of
-                        Just error ->
-                            newModel
-                                |> UR.init
-                                |> UR.addExt (ShowFeedback Feedback.Failure error)
-
-                        Nothing ->
-                            model
-                                |> UR.init
+                        _ ->
+                            formUpdateResult
                                 |> UR.addCmd
                                     (Route.Profile loggedIn.accountName
                                         |> Route.replaceUrl loggedIn.shared.navKey
@@ -104,7 +95,7 @@ update msg model loggedIn =
                                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.kyc.add.success"))
 
                 _ ->
-                    newModel |> UR.init
+                    formUpdateResult
 
 
 
