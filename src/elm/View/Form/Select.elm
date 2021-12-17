@@ -2,7 +2,6 @@ module View.Form.Select exposing
     ( Option
     , init
     , toHtml
-    , withContainerAttrs
     , withOptions
     )
 
@@ -49,11 +48,6 @@ init requiredOptions =
     , containerAttrs = []
     , problems = requiredOptions.problems
     }
-
-
-withContainerAttrs : List (Html.Attribute msg) -> Select a msg -> Select a msg
-withContainerAttrs attrs select =
-    { select | containerAttrs = select.containerAttrs ++ attrs }
 
 
 {-| Adds a new option field to a dropdown

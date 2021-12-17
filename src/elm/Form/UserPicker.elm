@@ -60,7 +60,7 @@ This is how you actually use this component!
 import Avatar
 import Eos.Account
 import Html exposing (Html, button, div, label, li, span, ul)
-import Html.Attributes exposing (class, classList, disabled)
+import Html.Attributes exposing (class, classList, disabled, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -342,6 +342,7 @@ viewSelectedProfile (Options options) viewConfig { profile, summary } =
         , button
             [ class "hover:opacity-80 focus-ring focus:ring-red focus:ring-opacity-30 rounded-sm mt-2"
             , onClick (ClickedRemoveProfile profile)
+            , type_ "button"
             , ariaLabel <|
                 viewConfig.translators.tr "community.actions.form.unselect_user"
                     [ ( "username"
