@@ -3,7 +3,6 @@ module View.Form.Select exposing
     , init
     , toHtml
     , withContainerAttrs
-    , withOption
     , withOptions
     )
 

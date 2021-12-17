@@ -1,6 +1,6 @@
 module Form.UserPicker exposing
     ( init, Options, map
-    , withDisabled, withContainerAttrs
+    , withDisabled, withContainerAttrs, withMenuClass, withModalSelectors
     , getId, isEmpty
     , view, ViewConfig, mapViewConfig
     , Model, update, Msg, msgToString
@@ -26,7 +26,7 @@ module Form.UserPicker exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs
+@docs withDisabled, withContainerAttrs, withMenuClass, withModalSelectors
 
 
 # Getters
@@ -60,7 +60,7 @@ This is how you actually use this component!
 import Avatar
 import Eos.Account
 import Html exposing (Html, button, div, label, li, span, ul)
-import Html.Attributes exposing (class, disabled)
+import Html.Attributes exposing (class, classList, disabled)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
@@ -85,6 +85,9 @@ type Options msg
         , currentUser : Eos.Account.Name
         , profiles : List Profile.Minimal
         , containerAttrs : List (Html.Attribute msg)
+        , menuClass : String
+        , profileSummarySelectors : { relative : Maybe String, scroll : Maybe String }
+        , areProfilesRelative : Bool
         }
 
 
@@ -103,6 +106,9 @@ init { label, currentUser, profiles } =
         , currentUser = currentUser
         , profiles = profiles
         , containerAttrs = []
+        , menuClass = ""
+        , profileSummarySelectors = { relative = Nothing, scroll = Nothing }
+        , areProfilesRelative = True
         }
 
 
@@ -116,6 +122,9 @@ map fn (Options options) =
         , currentUser = options.currentUser
         , profiles = options.profiles
         , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
+        , menuClass = options.menuClass
+        , profileSummarySelectors = { relative = Nothing, scroll = Nothing }
+        , areProfilesRelative = options.areProfilesRelative
         }
 
 
@@ -135,6 +144,31 @@ withDisabled disabled (Options options) =
 withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
+
+
+{-| Add some classes to the list that displays all users
+-}
+withMenuClass : String -> Options msg -> Options msg
+withMenuClass menuClass (Options options) =
+    Options { options | menuClass = options.menuClass ++ " " ++ menuClass }
+
+
+{-| Apply some JS/CSS magic to make the Profile.Summary work properly on modals.
+Use this whenever you're displaying this component inside a modal, otherwise the
+Profile.Summary may look broken.
+-}
+withModalSelectors : Bool -> Options msg -> Options msg
+withModalSelectors useModalSelectors (Options options) =
+    Options
+        { options
+            | profileSummarySelectors =
+                if useModalSelectors then
+                    { relative = Just ".modal-content", scroll = Just ".modal-body" }
+
+                else
+                    { relative = Nothing, scroll = Nothing }
+            , areProfilesRelative = not useModalSelectors
+        }
 
 
 
@@ -208,7 +242,7 @@ settings (Options options) viewConfig =
         |> Select.withItemHtml viewUserItem
         |> Select.withNotFound (t "community.actions.form.verifier_not_found")
         |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded !bg-white px-8 max-w-max"
-        |> Select.withMenuClass "flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto"
+        |> Select.withMenuClass ("flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto " ++ options.menuClass)
         |> Select.withEmptyMenuClass "bg-indigo-500 px-4 py-1"
         |> Select.withOnBlur BlurredPicker
 
@@ -277,12 +311,30 @@ viewSelectedProfile (Options options) viewConfig { profile, summary } =
     let
         (Model model) =
             viewConfig.value
+
+        addRelativeSelector =
+            case options.profileSummarySelectors.relative of
+                Nothing ->
+                    Profile.Summary.withRelativeSelector ("#" ++ model.id ++ " ~ ul")
+
+                Just selector ->
+                    Profile.Summary.withRelativeSelector selector
+
+        addScrollSelector =
+            case options.profileSummarySelectors.relative of
+                Nothing ->
+                    identity
+
+                Just selector ->
+                    Profile.Summary.withScrollSelector selector
     in
     li
-        [ class "flex flex-col items-center relative"
+        [ class "flex flex-col items-center"
+        , classList [ ( "relative", options.areProfilesRelative ) ]
         ]
         [ summary
-            |> Profile.Summary.withRelativeSelector ("#" ++ model.id ++ " ~ ul")
+            |> addRelativeSelector
+            |> addScrollSelector
             |> Profile.Summary.view { translators = viewConfig.translators }
                 options.currentUser
                 profile
