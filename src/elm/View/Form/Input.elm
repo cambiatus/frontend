@@ -2,7 +2,7 @@ module View.Form.Input exposing
     ( init
     , withCounter, withElements
     , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
-    , withInputType, withType, withCounterType
+    , withInputType, withCounterType
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -44,7 +44,7 @@ and character counters.
 
 ## Changing types
 
-@docs withInputType, withType, withCounterType
+@docs withInputType, withCounterType
 
 
 # Converting to HTML
@@ -142,7 +142,7 @@ input options =
         ( inputElement, inputClass, typeAttr ) =
             case options.inputType of
                 Input ->
-                    ( Html.input, "input", type_ (fieldTypeToString options.fieldType) )
+                    ( Html.input, "input", type_ "text" )
 
                 TextArea ->
                     ( Html.textarea, "form-input", class "" )
@@ -228,13 +228,6 @@ withInputType inputType options =
     { options | inputType = inputType }
 
 
-{-| Determines the `type_` of the input
--}
-withType : FieldType -> InputOptions a -> InputOptions a
-withType fieldType options =
-    { options | fieldType = fieldType }
-
-
 {-| Determines the counting strategy for the input
 -}
 withCounterType : CounterType -> InputOptions a -> InputOptions a
@@ -288,16 +281,6 @@ viewFieldProblem attrs problem =
     li (class "form-error" :: attrs) [ text problem ]
 
 
-fieldTypeToString : FieldType -> String
-fieldTypeToString fieldType =
-    case fieldType of
-        Text ->
-            "text"
-
-        Url ->
-            "url"
-
-
 type alias InputOptions a =
     { label : String
     , labelAttrs : List (Html.Attribute a)
@@ -331,4 +314,3 @@ type InputType
 -}
 type FieldType
     = Text
-    | Url
