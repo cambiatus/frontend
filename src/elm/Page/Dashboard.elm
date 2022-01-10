@@ -39,6 +39,7 @@ import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Ports
 import Profile
@@ -58,7 +59,6 @@ import Utils
 import View.Components
 import View.Feedback as Feedback
 import View.Form.Input as Input
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -787,7 +787,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 viewActionsForAnalysisCard : LoggedIn.Model -> Model -> Html Msg
 viewActionsForAnalysisCard loggedIn model =
     let
-        { t, tr } =
+        { t } =
             loggedIn.shared.translators
 
         text_ =
@@ -841,8 +841,11 @@ viewActionsForAnalysisCard loggedIn model =
                                     |> List.take 5
                                     |> List.map (\avatar -> Avatar.view avatar "w-7 h-7")
                                 )
-                            , View.MarkdownEditor.viewReadOnly [ class "mb-4 text-center" ]
-                                (tr "dashboard.analysis.count" [ ( "amount", String.fromInt analysis.count ) ])
+                            , Markdown.view [ class "mb-4 text-center" ]
+                                (Markdown.fromTranslationWithReplacements loggedIn.shared.translators
+                                    "dashboard.analysis.count"
+                                    [ ( "amount", String.fromInt analysis.count ) ]
+                                )
                             , a
                                 [ class "button button-primary w-full"
                                 , Route.href Route.Analysis

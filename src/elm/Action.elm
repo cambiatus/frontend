@@ -48,7 +48,6 @@ import Time
 import UpdateResult as UR
 import Utils
 import View.Feedback as Feedback
-import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -103,7 +102,7 @@ type alias Action =
     , isCompleted : Bool
     , hasProofPhoto : Bool
     , hasProofCode : Bool
-    , photoProofInstructions : Maybe String
+    , photoProofInstructions : Maybe Markdown
     , position : Maybe Int
     }
 
@@ -405,7 +404,7 @@ communitySelectionSet =
 
 type alias Objective =
     { id : Int
-    , description : String
+    , description : Markdown
     , community : Community
     , isCompleted : Bool
     }
@@ -415,7 +414,7 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Cambiatus.Object.Objective.id
-        |> with Cambiatus.Object.Objective.description
+        |> with (Markdown.selectionSet Cambiatus.Object.Objective.description)
         |> with (Cambiatus.Object.Objective.community communitySelectionSet)
         |> with Cambiatus.Object.Objective.isCompleted
 
@@ -448,7 +447,7 @@ selectionSet =
         |> with ActionObject.isCompleted
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
-        |> with ActionObject.photoProofInstructions
+        |> with (Markdown.maybeSelectionSet ActionObject.photoProofInstructions)
         |> with ActionObject.position
 
 
@@ -598,8 +597,9 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
     div [ class "bg-white border-t border-gray-300" ]
         [ div [ class "container p-4 mx-auto" ]
             [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
-            , MarkdownEditor.viewReadOnly [ class "mb-4" ]
-                (Maybe.withDefault "" action.photoProofInstructions)
+            , action.photoProofInstructions
+                |> Maybe.withDefault Markdown.empty
+                |> Markdown.view [ class "mb-4" ]
             , case proofCode of
                 Just { code_, secondsAfterClaim, availabilityPeriod } ->
                     case code_ of
@@ -721,7 +721,7 @@ encode action =
         , ( "creator", Eos.encodeName action.creator )
         , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
         , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
-        , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
+        , ( "photo_proof_instructions", Markdown.encode (Maybe.withDefault Markdown.empty action.photoProofInstructions) )
         ]
 
 

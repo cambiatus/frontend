@@ -1,6 +1,6 @@
 module Markdown exposing
     ( view, toUnformattedString, toRawString
-    , Markdown, empty, fromTranslation
+    , Markdown, empty, fromTranslation, fromTranslationWithReplacements
     , encode, decoder
     , selectionSet, maybeSelectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
@@ -22,7 +22,7 @@ model to regular markdown.
 We want Markdown to be an opaque type, so we can't have a `fromString` method.
 At the same time, we need some helper functions to work with Markdown
 
-@docs Markdown, empty, fromTranslation
+@docs Markdown, empty, fromTranslation, fromTranslationWithReplacements
 
 
 ## Interop with JSON
@@ -49,6 +49,7 @@ At the same time, we need some helper functions to work with Markdown
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
 import Html.Attributes
+import I18Next
 import Json.Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode
@@ -61,7 +62,6 @@ import Maybe.Extra
 import Random
 import Session.Shared as Shared
 import Shrink exposing (Shrinker)
-import View.MarkdownEditor exposing (QuillOp)
 
 
 {-| Markdown is just a string. It's an opaque type so we can ensure it's
@@ -89,6 +89,13 @@ empty =
 fromTranslation : Shared.Translators -> String -> Markdown
 fromTranslation { t } key =
     Markdown (t key)
+
+
+{-| Convert a translation with replacements into Markdown
+-}
+fromTranslationWithReplacements : Shared.Translators -> String -> I18Next.Replacements -> Markdown
+fromTranslationWithReplacements { tr } key replacements =
+    Markdown (tr key replacements)
 
 
 {-| Extract the raw Markdown string. You should use this as a last resort. You

@@ -10,6 +10,7 @@ import Graphql.Http
 import Html exposing (Html, a, div, h2, h5, img, p, span, text)
 import Html.Attributes exposing (class, href, src, target)
 import Icons
+import Markdown
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -19,7 +20,6 @@ import Transfer exposing (Transfer, transferQuery)
 import UpdateResult as UR
 import Utils
 import View.Components
-import View.MarkdownEditor
 
 
 
@@ -177,12 +177,12 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                     )
                 , case transfer.memo of
                     Just memo ->
-                        if String.length memo > 0 then
-                            View.MarkdownEditor.viewReadOnly [] memo
-                                |> viewDetail (t "transfer_result.message")
+                        if memo == Markdown.empty then
+                            text ""
 
                         else
-                            text ""
+                            Markdown.view [] memo
+                                |> viewDetail (t "transfer_result.message")
 
                     Nothing ->
                         text ""

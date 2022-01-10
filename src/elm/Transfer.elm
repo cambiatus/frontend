@@ -40,7 +40,6 @@ import Markdown exposing (Markdown)
 import Profile
 import Profile.Summary
 import Session.LoggedIn as LoggedIn
-import View.MarkdownEditor
 
 
 type alias Transfer =
@@ -48,7 +47,7 @@ type alias Transfer =
     , to : Profile.Model
     , from : Profile.Model
     , value : Float
-    , memo : Maybe String
+    , memo : Maybe Markdown
     , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
@@ -135,7 +134,7 @@ transferItemSelectionSet =
         |> with (Cambiatus.Object.Transfer.to Profile.selectionSet)
         |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
         |> with Cambiatus.Object.Transfer.amount
-        |> with Cambiatus.Object.Transfer.memo
+        |> with (Markdown.maybeSelectionSet Cambiatus.Object.Transfer.memo)
         |> with
             (Cambiatus.Object.Transfer.community
                 Cambiatus.Object.Community.name
@@ -339,7 +338,6 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     text ""
 
                 Just memo ->
-                    View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900 break-all" ]
-                        (t memo)
+                    Markdown.view [ class "text-sm text-gray-900 break-all" ] memo
             ]
         ]

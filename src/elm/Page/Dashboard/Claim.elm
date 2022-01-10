@@ -29,7 +29,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 
 
 
@@ -346,8 +345,7 @@ viewDetails { shared } model claim =
             ]
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.objective" ]
-            , View.MarkdownEditor.viewReadOnly []
-                claim.action.objective.description
+            , Markdown.view [] claim.action.objective.description
             ]
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.your_reward" ]
