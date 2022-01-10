@@ -1,6 +1,6 @@
 module Markdown exposing
     ( view, toUnformattedString, toRawString
-    , Markdown, empty
+    , Markdown, empty, fromTranslation
     , encode, decoder
     , selectionSet, maybeSelectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
@@ -19,7 +19,10 @@ model to regular markdown.
 
 # Produce markdown
 
-@docs Markdown, empty
+We want Markdown to be an opaque type, so we can't have a `fromString` method.
+At the same time, we need some helper functions to work with Markdown
+
+@docs Markdown, empty, fromTranslation
 
 
 ## Interop with JSON
@@ -56,6 +59,7 @@ import Markdown.Parser
 import Markdown.Renderer
 import Maybe.Extra
 import Random
+import Session.Shared as Shared
 import Shrink exposing (Shrinker)
 import View.MarkdownEditor exposing (QuillOp)
 
@@ -78,6 +82,13 @@ type Markdown
 empty : Markdown
 empty =
     Markdown ""
+
+
+{-| Convert a translation into Markdown
+-}
+fromTranslation : Shared.Translators -> String -> Markdown
+fromTranslation { t } key =
+    Markdown (t key)
 
 
 {-| Extract the raw Markdown string. You should use this as a last resort. You
