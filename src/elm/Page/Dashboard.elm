@@ -27,6 +27,7 @@ import Eos.Account as Eos
 import Form
 import Form.DatePicker
 import Form.Select
+import Form.Text
 import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
@@ -58,7 +59,6 @@ import Url
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.Form.Input as Input
 import View.Modal as Modal
 
 
@@ -354,22 +354,25 @@ viewInvitationModal { shared } model =
                         [ text_ "community.invite.label" ]
                     , p [ class "py-2 md:text-lg text-black" ]
                         [ text (url invitationId) ]
-                    , Input.init
-                        { label = ""
-                        , id = "invitation-id"
-                        , onInput = \_ -> NoOp
-                        , disabled = False
+                    , Form.Text.view
+                        (Form.Text.init
+                            { label = ""
+                            , id = "invitation-id"
+                            }
+                            |> Form.Text.withExtraAttrs
+                                [ class "absolute opacity-0 left-[-9999em]"
+                                , tabindex -1
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                        )
+                        { onChange = \_ -> NoOp
+                        , onBlur = \_ -> NoOp
                         , value = url invitationId
-                        , placeholder = Nothing
-                        , problems = Nothing
+                        , error = text ""
+                        , hasError = False
                         , translators = shared.translators
+                        , isRequired = False
                         }
-                        |> Input.withAttrs
-                            [ class "absolute opacity-0 left-[-9999em]"
-                            , tabindex -1
-                            ]
-                        |> Input.withContainerAttrs [ class "mb-0 overflow-hidden" ]
-                        |> Input.toHtml
                     ]
 
         footer =
