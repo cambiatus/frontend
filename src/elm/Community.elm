@@ -531,7 +531,7 @@ type alias Contribution =
 type alias ContributionConfiguration =
     { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
     , paypalAccount : Maybe String
-    , thankYouDescription : Maybe String
+    , thankYouDescription : Maybe Markdown
     , thankYouTitle : Maybe String
     }
 
@@ -558,7 +558,7 @@ contributionConfigurationSelectionSet =
     SelectionSet.succeed ContributionConfiguration
         |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
         |> with Cambiatus.Object.ContributionConfig.paypalAccount
-        |> with Cambiatus.Object.ContributionConfig.thankYouDescription
+        |> with (Markdown.maybeSelectionSet Cambiatus.Object.ContributionConfig.thankYouDescription)
         |> with Cambiatus.Object.ContributionConfig.thankYouTitle
 
 
