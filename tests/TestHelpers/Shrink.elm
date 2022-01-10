@@ -104,7 +104,7 @@ actionObjective : Shrinker Action.Objective
 actionObjective objective =
     noShrink Action.Objective
         |> andMap (int objective.id)
-        |> andMap (string objective.description)
+        |> andMap (Markdown.shrink objective.description)
         |> andMap (noShrink objective.community)
         |> andMap (bool objective.isCompleted)
 
@@ -127,7 +127,7 @@ action action_ =
         |> andMap (bool action_.isCompleted)
         |> andMap (bool action_.hasProofPhoto)
         |> andMap (bool action_.hasProofCode)
-        |> andMap (maybe string action_.photoProofInstructions)
+        |> andMap (maybe Markdown.shrink action_.photoProofInstructions)
         |> andMap (maybe int action_.position)
 
 
