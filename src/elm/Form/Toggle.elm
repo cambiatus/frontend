@@ -1,5 +1,5 @@
 module Form.Toggle exposing
-    ( init, Options, map
+    ( init, Options
     , withTooltip, withTopLabel, withStatusText
     , StatusText(..)
     , withDisabled, withToggleSide, withContainerAttrs
@@ -18,7 +18,7 @@ module Form.Toggle exposing
 
 # Initializing
 
-@docs init, Options, map
+@docs init, Options
 
 
 # Helpers
@@ -98,22 +98,6 @@ type Side
 type StatusText
     = EnabledDisabled
     | YesNo
-
-
-{-| Change the kind of `msg` on an Options record
--}
-map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
-map fn (Options options) =
-    Options
-        { label = Html.map fn options.label
-        , id = options.id
-        , disabled = options.disabled
-        , tooltip = options.tooltip
-        , side = options.side
-        , topLabel = options.topLabel
-        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
-        , statusText = options.statusText
-        }
 
 
 

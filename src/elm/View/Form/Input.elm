@@ -1,8 +1,7 @@
 module View.Form.Input exposing
     ( init
-    , withCounter, withElements
-    , withCounterAttrs, withErrorAttrs, withAttrs, withContainerAttrs, withLabelAttrs
-    , withInputType, withCounterType
+    , withElements
+    , withAttrs, withContainerAttrs
     , toHtml
     , CounterType(..), FieldType(..), InputType(..)
     )
@@ -140,12 +139,7 @@ input : InputOptions a -> Html a
 input options =
     let
         ( inputElement, inputClass, typeAttr ) =
-            case options.inputType of
-                Input ->
-                    ( Html.input, "input", type_ "text" )
-
-                TextArea ->
-                    ( Html.textarea, "form-input", class "" )
+            ( Html.input, "input", type_ "text" )
     in
     div [ class "relative" ]
         (inputElement
@@ -162,38 +156,6 @@ input options =
             []
             :: options.extraElements
         )
-
-
-{-| Adds a character counter to your input. This does not limit the amount of characters automatically.
-Validation must be done in your onInput handler.
-
-For more information, see the InputCounter module
-
--}
-withCounter : Int -> InputOptions a -> InputOptions a
-withCounter maximum options =
-    { options | maximumCounterValue = Just maximum }
-
-
-{-| Adds attributes to the label
--}
-withLabelAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
-withLabelAttrs attrs options =
-    { options | labelAttrs = options.labelAttrs ++ attrs }
-
-
-{-| Adds attributes to the counter
--}
-withCounterAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
-withCounterAttrs attrs options =
-    { options | counterAttrs = options.counterAttrs ++ attrs }
-
-
-{-| Adds attributes to the field error
--}
-withErrorAttrs : List (Html.Attribute a) -> InputOptions a -> InputOptions a
-withErrorAttrs attrs options =
-    { options | errorAttrs = options.errorAttrs ++ attrs }
 
 
 {-| Adds attributes to the input field
@@ -221,34 +183,13 @@ withElements elements options =
     { options | extraElements = elements ++ options.extraElements }
 
 
-{-| Determines the type of the input
--}
-withInputType : InputType -> InputOptions a -> InputOptions a
-withInputType inputType options =
-    { options | inputType = inputType }
-
-
-{-| Determines the counting strategy for the input
--}
-withCounterType : CounterType -> InputOptions a -> InputOptions a
-withCounterType counterType options =
-    { options | counterType = counterType }
-
-
 {-| Creates a Cambiatus-style input counter.
 -}
 inputCounterviewWithAttrs : (String -> I18Next.Replacements -> String) -> Int -> String -> List (Html.Attribute msg) -> CounterType -> Html msg
 inputCounterviewWithAttrs tr max str attrs counterType =
     let
         currentLength =
-            case counterType of
-                CountLetters ->
-                    String.length str
-
-                CountWords ->
-                    String.words str
-                        |> List.filter (not << String.isEmpty)
-                        |> List.length
+            String.length str
     in
     div (class "text-purple-100 mt-2 ml-2 uppercase font-bold text-sm flex-shrink-0" :: attrs)
         [ text <|
@@ -261,7 +202,6 @@ inputCounterviewWithAttrs tr max str attrs counterType =
 
 type CounterType
     = CountLetters
-    | CountWords
 
 
 
@@ -307,7 +247,6 @@ type alias InputOptions a =
 -}
 type InputType
     = Input
-    | TextArea
 
 
 {-| Different possible type\_s

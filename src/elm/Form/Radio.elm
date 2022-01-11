@@ -1,5 +1,5 @@
 module Form.Radio exposing
-    ( init, Options, mapMsg
+    ( init, Options
     , withOption, withOptions
     , withDisabled, withContainerAttrs, withGroupAttrs, withLabelAttrs, withHiddenRadioButton
     , Direction(..), withDirection
@@ -21,7 +21,7 @@ module Form.Radio exposing
 
 # Initializing
 
-@docs init, Options, mapMsg
+@docs init, Options
 
 
 # Helpers
@@ -97,24 +97,6 @@ init { label, id, optionToString } =
         , labelAttrs = []
         , direction = Horizontal
         , hideRadioButton = False
-        }
-
-
-{-| Change the kind of `msg` on an Options record
--}
-mapMsg : (msg -> mappedMsg) -> Options option msg -> Options option mappedMsg
-mapMsg fn (Options options) =
-    Options
-        { label = options.label
-        , id = options.id
-        , optionToString = options.optionToString
-        , options = List.map (\opt -> { option = opt.option, label = Html.map fn opt.label }) options.options
-        , disabled = options.disabled
-        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
-        , groupAttrs = List.map (Html.Attributes.map fn) options.groupAttrs
-        , labelAttrs = List.map (Html.Attributes.map fn) options.labelAttrs
-        , direction = options.direction
-        , hideRadioButton = options.hideRadioButton
         }
 
 

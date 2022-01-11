@@ -1,5 +1,5 @@
 module Form.File exposing
-    ( init, Options, map
+    ( init, Options
     , withDisabled, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
     , isEmpty, parser
@@ -17,7 +17,7 @@ module Form.File exposing
 
 # Initializing
 
-@docs init, Options, map
+@docs init, Options
 
 
 # Helpers
@@ -166,20 +166,6 @@ init { label, id } =
         , containerAttrs = []
         , fileTypes = [ Image ]
         , variant = LargeRectangle Purple
-        }
-
-
-{-| Change the kind of `msg` on an Options record
--}
-map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
-map fn (Options options) =
-    Options
-        { label = options.label
-        , id = options.id
-        , disabled = options.disabled
-        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
-        , fileTypes = options.fileTypes
-        , variant = options.variant
         }
 
 

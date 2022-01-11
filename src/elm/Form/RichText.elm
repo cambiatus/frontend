@@ -1,5 +1,5 @@
 module Form.RichText exposing
-    ( init, Options, map
+    ( init, Options
     , withDisabled, withPlaceholder, withContainerAttrs
     , getId, getMarkdownContent
     , view
@@ -13,7 +13,7 @@ module Form.RichText exposing
 
 # Initializing
 
-@docs init, Options, map
+@docs init, Options
 
 
 # Helpers
@@ -79,18 +79,6 @@ init { label } =
         , disabled = False
         , placeholder = Nothing
         , containerAttrs = []
-        }
-
-
-{-| Change the kind of `msg` on an Options record
--}
-map : (msg -> mappedMsg) -> Options msg -> Options mappedMsg
-map fn (Options options) =
-    Options
-        { label = options.label
-        , disabled = options.disabled
-        , placeholder = options.placeholder
-        , containerAttrs = List.map (Html.Attributes.map fn) options.containerAttrs
         }
 
 
