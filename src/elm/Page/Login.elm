@@ -21,16 +21,15 @@ the Private Key (PK), which can be used to sign EOS transactions.
 import Api.Graphql
 import Auth
 import Browser.Dom as Dom
-import Community
 import Dict
 import Eos.Account as Eos
 import Form
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, required, rows, src, type_)
-import Html.Events exposing (keyCode, onClick, preventDefaultOn)
+import Html exposing (Html, a, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, src, type_)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
@@ -42,10 +41,8 @@ import Session.Guest as Guest
 import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Validate exposing (Validator)
 import View.Feedback as Feedback
 import View.Form
-import View.Form.Input as Input
 import View.Pin as Pin
 
 
@@ -63,8 +60,6 @@ init _ =
 initPassphraseModel : PassphraseModel
 initPassphraseModel =
     { hasPasted = False
-    , passphrase = ""
-    , problems = []
     , form = Form.init { passphrase = "" }
     }
 
@@ -96,8 +91,6 @@ type Model
 
 type alias PassphraseModel =
     { hasPasted : Bool
-    , passphrase : String
-    , problems : List String
     , form : Form.Model PassphraseInput
     }
 
@@ -306,7 +299,6 @@ type PassphraseMsg
     = PassphraseIgnored
     | ClickedPaste
     | GotClipboardResponse ClipboardResponse
-    | EnteredPassphrase String
     | GotPassphraseFormMsg (Form.Msg PassphraseInput)
     | ClickedNextStep Passphrase
 
@@ -483,13 +475,7 @@ updateWithPassphrase msg model { shared } =
 
         GotClipboardResponse (WithContent content) ->
             { model
-                | passphrase =
-                    String.trim content
-                        |> String.words
-                        |> List.take 12
-                        |> String.join " "
-                , hasPasted = True
-                , problems = []
+                | hasPasted = True
                 , form =
                     Form.updateValues (\oldForm -> { oldForm | passphrase = content })
                         model.form
@@ -501,21 +487,6 @@ updateWithPassphrase msg model { shared } =
                         |> PassphraseGuestExternal
                     )
 
-        EnteredPassphrase passphrase ->
-            { model
-                | passphrase =
-                    if List.length (String.words passphrase) >= 12 then
-                        String.words passphrase
-                            |> List.take 12
-                            |> String.join " "
-
-                    else
-                        passphrase
-                , hasPasted = False
-                , problems = []
-            }
-                |> UR.init
-
         GotPassphraseFormMsg subMsg ->
             Form.update shared subMsg model.form
                 |> UR.fromChild
@@ -525,7 +496,7 @@ updateWithPassphrase msg model { shared } =
                     model
 
         ClickedNextStep passphrase ->
-            { model | problems = [] }
+            model
                 |> UR.init
                 |> UR.addExt (FinishedEnteringPassphrase passphrase)
 
@@ -728,9 +699,6 @@ passphraseMsgToString msg =
 
         GotClipboardResponse _ ->
             [ "GotClipboardResponse" ]
-
-        EnteredPassphrase _ ->
-            [ "EnteredPassphrase" ]
 
         GotPassphraseFormMsg subMsg ->
             "GotPassphraseFormMsg" :: Form.msgToString subMsg
