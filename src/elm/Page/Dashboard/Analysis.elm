@@ -323,7 +323,7 @@ type alias FiltersFormInput =
     }
 
 
-filtersForm : LoggedIn.Model -> List Profile.Minimal -> { showStatusSelect : Bool } -> Form.Form FiltersFormInput Filter
+filtersForm : LoggedIn.Model -> List Profile.Minimal -> { showStatusSelect : Bool } -> Form.Form msg FiltersFormInput Filter
 filtersForm loggedIn users { showStatusSelect } =
     let
         { t } =

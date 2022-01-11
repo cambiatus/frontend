@@ -492,7 +492,7 @@ type alias FileValidationInput =
     }
 
 
-form : LoggedIn.Model -> Community.Model -> Form.Form FormInput FormOutput
+form : LoggedIn.Model -> Community.Model -> Form.Form msg FormInput FormOutput
 form loggedIn community =
     let
         { t } =
@@ -706,7 +706,7 @@ form loggedIn community =
             (verificationForm loggedIn community)
 
 
-verificationForm : LoggedIn.Model -> Community.Model -> Form.Form VerificationInput Verification
+verificationForm : LoggedIn.Model -> Community.Model -> Form.Form msg VerificationInput Verification
 verificationForm loggedIn community =
     let
         { t, tr } =
@@ -874,7 +874,7 @@ verificationForm loggedIn community =
             )
 
 
-fileValidationForm : Shared.Translators -> Form.Form FileValidationInput FileValidation
+fileValidationForm : Shared.Translators -> Form.Form msg FileValidationInput FileValidation
 fileValidationForm { t } =
     Form.succeed (\_ fileValidation -> fileValidation)
         |> Form.with

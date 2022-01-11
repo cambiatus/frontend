@@ -110,6 +110,7 @@ import Form.UserPicker as UserPicker
 import Html exposing (Html, button)
 import Html.Attributes exposing (class, novalidate, type_)
 import Html.Events as Events
+import Json.Decode
 import Markdown exposing (Markdown)
 import Maybe.Extra
 import OptionalResult exposing (OptionalResult(..))
@@ -130,16 +131,16 @@ import View.Feedback as Feedback
 have to manipulate this type much, and it will be used mostly just to add type
 annotations
 -}
-type Form values output
-    = Form (values -> FilledForm values output)
+type Form msg values output
+    = Form (values -> FilledForm msg values output)
 
 
 {-| A `FilledForm` represents a form with some (dirty) values in it. It also
 tries to parse the form, and hols the result as either an error or the
 valid/clean model
 -}
-type alias FilledForm values output =
-    { fields : List (FilledField values)
+type alias FilledForm msg values output =
+    { fields : List (FilledField msg values)
     , result : OptionalResult ( String, List String ) output
     }
 
@@ -147,8 +148,8 @@ type alias FilledForm values output =
 {-| We need a way to hold a single field's information, and whether or not it
 has an error! This is what we use to do that
 -}
-type alias FilledField values =
-    { state : Field values
+type alias FilledField msg values =
+    { state : Field msg values
     , error : Maybe String
     , isRequired : Bool
     }
@@ -196,17 +197,17 @@ type alias FieldConfig input output values =
 the corresponding function (i.e. `textField` for `Text`, etc) to build fields
 with these types
 -}
-type Field values
-    = Text (Text.Options (Msg values)) (BaseField String values)
-    | RichText (RichText.Options (Msg values)) (BaseField RichText.Model values)
-    | Toggle (Toggle.Options (Msg values)) (BaseField Bool values)
-    | Checkbox (Checkbox.Options (Msg values)) (BaseField Bool values)
-    | Radio (Radio.Options String (Msg values)) (BaseField String values)
-    | File (Form.File.Options (Msg values)) (BaseField Form.File.Model values)
-    | Select (Select.Options String (Msg values)) (BaseField String values)
+type Field msg values
+    = Text (Text.Options msg) (BaseField String values)
+    | RichText (RichText.Options msg) (BaseField RichText.Model values)
+    | Toggle (Toggle.Options msg) (BaseField Bool values)
+    | Checkbox (Checkbox.Options msg) (BaseField Bool values)
+    | Radio (Radio.Options String msg) (BaseField String values)
+    | File (Form.File.Options msg) (BaseField Form.File.Model values)
+    | Select (Select.Options String msg) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
-    | Group (List (Html.Attribute Never)) (List (FilledField values))
+    | Group (List (Html.Attribute Never)) (List (FilledField msg values))
     | Arbitrary (Html (values -> values))
 
 
@@ -214,9 +215,9 @@ type Field values
 define more specific field constructors, such as `textField`
 -}
 field :
-    (BaseField input values -> Field values)
+    (BaseField input values -> Field msg values)
     -> FieldConfig input output values
-    -> Form values output
+    -> Form msg values output
 field build config =
     let
         parse_ values =
@@ -268,8 +269,8 @@ what you can do with this field.
 -}
 textField :
     FieldConfig String output values
-    -> Text.Options (Msg values)
-    -> Form values output
+    -> Text.Options msg
+    -> Form msg values output
 textField config options =
     field (Text options) config
 
@@ -284,8 +285,8 @@ richText :
     , update : RichText.Model -> values -> values
     , externalError : values -> Maybe String
     }
-    -> RichText.Options (Msg values)
-    -> Form values output
+    -> RichText.Options msg
+    -> Form msg values output
 richText config options =
     field (RichText options)
         { parser = RichText.getMarkdownContent >> config.parser
@@ -300,8 +301,8 @@ for more infromation on what you can do with this field.
 -}
 toggle :
     FieldConfig Bool output values
-    -> Toggle.Options (Msg values)
-    -> Form values output
+    -> Toggle.Options msg
+    -> Form msg values output
 toggle config options =
     field (Toggle options) config
 
@@ -311,8 +312,8 @@ for more information on what you can do with this field.
 -}
 checkbox :
     FieldConfig Bool output values
-    -> Checkbox.Options (Msg values)
-    -> Form values output
+    -> Checkbox.Options msg
+    -> Form msg values output
 checkbox config options =
     field (Checkbox options) config
 
@@ -323,8 +324,8 @@ checkbox config options =
 radio :
     (String -> input)
     -> FieldConfig input output values
-    -> Radio.Options input (Msg values)
-    -> Form values output
+    -> Radio.Options input msg
+    -> Form msg values output
 radio optionFromString config options =
     let
         optionToString =
@@ -345,8 +346,8 @@ file :
     , update : Form.File.Model -> values -> values
     , externalError : values -> Maybe String
     }
-    -> Form.File.Options (Msg values)
-    -> Form values String
+    -> Form.File.Options msg
+    -> Form msg values String
 file config options =
     field (File options)
         { parser = Form.File.parser config.translators
@@ -362,8 +363,8 @@ file config options =
 select :
     (String -> input)
     -> FieldConfig input output values
-    -> Select.Options input (Msg values)
-    -> Form values output
+    -> Select.Options input msg
+    -> Form msg values output
 select optionFromString config options =
     let
         optionToString =
@@ -383,7 +384,7 @@ datePicker :
     , externalError : values -> Maybe String
     }
     -> DatePicker.Options (Msg values)
-    -> Form values output
+    -> Form msg values output
 datePicker config options =
     field (DatePicker options)
         { parser = DatePicker.getDate >> config.parser
@@ -403,7 +404,7 @@ userPicker :
     , externalError : values -> Maybe String
     }
     -> UserPicker.Options (Msg values)
-    -> Form values output
+    -> Form msg values output
 userPicker config options =
     field
         (mapBaseField UserPicker.fromSinglePicker UserPicker.toSinglePicker
@@ -426,7 +427,7 @@ userPickerMultiple :
     , externalError : values -> Maybe String
     }
     -> UserPicker.Options (Msg values)
-    -> Form values output
+    -> Form msg values output
 userPickerMultiple config options =
     field
         (mapBaseField UserPicker.fromMultiplePicker UserPicker.toMultiplePicker
@@ -448,14 +449,14 @@ Graphql.SelectionSet, this is useful to start a pipeline chain. Give it a
 function that transforms a dirty model into a clean one, and build the form
 [`with`](#with) other fields.
 -}
-succeed : output -> Form values output
+succeed : output -> Form msg values output
 succeed output =
     Form (\_ -> { fields = [], result = OptOk output })
 
 
 {-| Builds a form that always fails. This is similar to Json.Decode.fail.
 -}
-fail : Form values output
+fail : Form msg values output
 fail =
     Form (\_ -> { fields = [], result = OptNothing })
 
@@ -465,9 +466,9 @@ can use this to add the fields we need on a form. This is supposed to be used in
 a pipeline, together with `succeed`.
 -}
 with :
-    Form values a
-    -> Form values (a -> b)
-    -> Form values b
+    Form msg values a
+    -> Form msg values (a -> b)
+    -> Form msg values b
 with new current =
     Form
         (\values ->
@@ -539,9 +540,9 @@ withNesting :
     { value : parent -> child
     , update : child -> parent -> parent
     }
-    -> Form child a
-    -> Form parent (a -> b)
-    -> Form parent b
+    -> Form msg child a
+    -> Form msg parent (a -> b)
+    -> Form msg parent b
 withNesting mappings child parent =
     with (mapValues mappings child) parent
 
@@ -551,10 +552,10 @@ long as they don't emit Msgs.
 -}
 withGroup :
     List (Html.Attribute Never)
-    -> Form values a
-    -> Form values b
-    -> Form values (a -> b -> c)
-    -> Form values c
+    -> Form msg values a
+    -> Form msg values b
+    -> Form msg values (a -> b -> c)
+    -> Form msg values c
 withGroup attributes leftSide rightSide current =
     Form
         (\values ->
@@ -630,7 +631,7 @@ manipulate the input, or something similar. This is usually used with
         )
 
 -}
-arbitrary : Html (values -> values) -> Form values output
+arbitrary : Html (values -> values) -> Form msg values output
 arbitrary html =
     Form
         (\_ ->
@@ -648,7 +649,7 @@ arbitrary html =
 {-| Look at the values of the form before building the next form. Useful when
 some form depends on other fields
 -}
-introspect : (values -> Form values output) -> Form values output
+introspect : (values -> Form msg values output) -> Form msg values output
 introspect buildForm =
     Form (\values -> fill (buildForm values) values)
 
@@ -690,7 +691,7 @@ reason we demand that their middle name is longer than 3 characters. If their
 actual middle name is less than 3 characters long, they're out of luck 🤷
 
 -}
-optional : Form values output -> Form values (Maybe output)
+optional : Form msg values output -> Form msg values (Maybe output)
 optional form =
     Form
         (\values ->
@@ -735,7 +736,7 @@ optional form =
 
 {-| Just like `with`, but don't consider the result in the final output.
 -}
-withNoOutput : Form values x -> Form values output -> Form values output
+withNoOutput : Form msg values x -> Form msg values output -> Form msg values output
 withNoOutput new current =
     Form
         (\values ->
@@ -754,7 +755,7 @@ withNoOutput new current =
 
 {-| Add some decoration to a form
 -}
-withDecoration : Html Never -> Form values output -> Form values output
+withDecoration : Html Never -> Form msg values output -> Form msg values output
 withDecoration decoration =
     withNoOutput (arbitrary (Html.map (\_ -> identity) decoration))
 
@@ -762,9 +763,9 @@ withDecoration decoration =
 {-| Given some values (a dirty model), fill a form with them.
 -}
 fill :
-    Form values output
+    Form msg values output
     -> values
-    -> FilledForm values output
+    -> FilledForm msg values output
 fill (Form fill_) =
     fill_
 
@@ -985,7 +986,7 @@ view :
     List (Html.Attribute msg)
     -> Shared.Translators
     -> ((List (Html.Attribute Never) -> (List (Html msg) -> Html msg)) -> List (Html msg))
-    -> Form values output
+    -> Form msg values output
     -> Model values
     ->
         { toMsg : Msg values -> msg
@@ -1004,8 +1005,7 @@ view formAttrs translators footer form (Model model) { toMsg, onSubmit } =
                 )
             :: formAttrs
         )
-        (List.map (Html.map toMsg)
-            (viewFields translators form (Model model))
+        (viewFields translators form (Model model) toMsg onSubmit
             ++ footer
                 (\attrs ->
                     button
@@ -1027,19 +1027,19 @@ viewWithoutSubmit :
     List (Html.Attribute msg)
     -> Shared.Translators
     -> (values -> List (Html msg))
-    -> Form values output
+    -> Form msg values output
     -> Model values
     -> { toMsg : Msg values -> msg }
     -> Html msg
 viewWithoutSubmit formAttrs translators footer form (Model model) { toMsg } =
     Html.form (novalidate True :: formAttrs)
-        (List.map (Html.map toMsg) (viewFields translators form (Model model))
+        (viewFields translators form (Model model) toMsg (\_ -> toMsg NoOp)
             ++ footer model.values
         )
 
 
-viewFields : Shared.Translators -> Form values output -> Model values -> List (Html (Msg values))
-viewFields translators form (Model model) =
+viewFields : Shared.Translators -> Form msg values output -> Model values -> (Msg values -> msg) -> (output -> msg) -> List (Html msg)
+viewFields translators form (Model model) toMsg onSuccess =
     let
         filledForm =
             fill form model.values
@@ -1060,9 +1060,46 @@ viewFields translators form (Model model) =
                     , translators = translators
                     , disabled = model.disabled
                     , values = model.values
+                    , model = Model model
+                    , form = form
+                    , toMsg = toMsg
+                    , onSuccess = onSuccess
                     }
                     field_
             )
+
+
+{-| Try to submit when a user presses enter on the focused field. Useful for
+fields where enter means something else, such as a textarea. This prevents the
+default behavior in favor of submitting the form
+-}
+submitOnEnter :
+    Form msg values output
+    -> Model values
+    -> { onError : Msg values -> msg, onSuccess : output -> msg }
+    -> Html.Attribute msg
+submitOnEnter form model msgs =
+    let
+        enterKeyCode =
+            13
+    in
+    Events.custom "keyup"
+        (Events.keyCode
+            |> Json.Decode.map
+                (\code ->
+                    if code == enterKeyCode then
+                        { message = parse form model msgs
+                        , stopPropagation = True
+                        , preventDefault = True
+                        }
+
+                    else
+                        { message = msgs.onError NoOp
+                        , stopPropagation = False
+                        , preventDefault = False
+                        }
+                )
+        )
 
 
 {-| Parse a form with some values. If there are errors, they are highlighted in
@@ -1074,7 +1111,7 @@ form, or if you want to do it programatically.
 
 -}
 parse :
-    Form values output
+    Form msg values output
     -> Model values
     ->
         { onError : Msg values -> msg
@@ -1102,10 +1139,14 @@ viewField :
     , translators : Shared.Translators
     , disabled : Bool
     , values : values
+    , model : Model values
+    , form : Form msg values output
+    , toMsg : Msg values -> msg
+    , onSuccess : output -> msg
     }
-    -> FilledField values
-    -> Html (Msg values)
-viewField { showError, translators, disabled, values } { state, error, isRequired } =
+    -> FilledField msg values
+    -> Html msg
+viewField { showError, translators, disabled, values, model, form, toMsg, onSuccess } { state, error, isRequired } =
     let
         hasError =
             showError && Maybe.Extra.isJust error
@@ -1120,9 +1161,27 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
     in
     case state of
         Text options baseField ->
-            Text.view (disableIfNotAlreadyDisabled options Text.withDisabled)
-                { onChange = baseField.update >> ChangedValues
-                , onBlur = BlurredField
+            let
+                addSubmitOnEnter =
+                    if Text.getSubmitOnEnter options then
+                        Text.withExtraAttrs
+                            [ submitOnEnter form
+                                model
+                                { onError = toMsg
+                                , onSuccess = onSuccess
+                                }
+                            ]
+
+                    else
+                        identity
+
+                transformedOptions =
+                    disableIfNotAlreadyDisabled options Text.withDisabled
+                        |> addSubmitOnEnter
+            in
+            Text.view transformedOptions
+                { onChange = baseField.update >> ChangedValues >> toMsg
+                , onBlur = BlurredField >> toMsg
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
                 , hasError = hasError
@@ -1132,19 +1191,21 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
 
         RichText options baseField ->
             RichText.view (disableIfNotAlreadyDisabled options RichText.withDisabled)
-                { onBlur = BlurredField
+                { onBlur = BlurredField >> toMsg
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
                 , isRequired = isRequired
                 , translators = translators
                 }
-                (GotRichTextMsg baseField.getValue baseField.updateWithValues)
+                (GotRichTextMsg baseField.getValue baseField.updateWithValues
+                    >> toMsg
+                )
 
         Toggle options baseField ->
             Toggle.view (disableIfNotAlreadyDisabled options Toggle.withDisabled)
-                { onToggle = baseField.update >> ChangedValues
-                , onBlur = BlurredField
+                { onToggle = baseField.update >> ChangedValues >> toMsg
+                , onBlur = BlurredField >> toMsg
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1155,8 +1216,8 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
         Checkbox options baseField ->
             Checkbox.view (disableIfNotAlreadyDisabled options Checkbox.withDisabled)
                 { value = baseField.value
-                , onCheck = baseField.update >> ChangedValues
-                , onBlur = BlurredField
+                , onCheck = baseField.update >> ChangedValues >> toMsg
+                , onBlur = BlurredField >> toMsg
                 , error = viewError [] showError error
                 , hasError = hasError
                 , isRequired = isRequired
@@ -1164,8 +1225,8 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
 
         Radio options baseField ->
             Radio.view (disableIfNotAlreadyDisabled options Radio.withDisabled)
-                { onSelect = baseField.update >> ChangedValues
-                , onBlur = BlurredField
+                { onSelect = baseField.update >> ChangedValues >> toMsg
+                , onBlur = BlurredField >> toMsg
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1179,12 +1240,14 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
                 , isRequired = isRequired
                 , translators = translators
                 }
-                (GotFileMsg baseField.getValue baseField.updateWithValues)
+                (GotFileMsg baseField.getValue baseField.updateWithValues
+                    >> toMsg
+                )
 
         Select options baseField ->
             Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
-                { onSelect = baseField.update >> ChangedValues
-                , onBlur = BlurredField
+                { onSelect = baseField.update >> ChangedValues >> toMsg
+                , onBlur = BlurredField >> toMsg
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1204,6 +1267,7 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
             DatePicker.view (disableIfNotAlreadyDisabled options DatePicker.withDisabled)
                 viewConfig
                 (GotDatePickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
+                |> Html.map toMsg
 
         UserPicker options baseField ->
             let
@@ -1218,23 +1282,28 @@ viewField { showError, translators, disabled, values } { state, error, isRequire
             UserPicker.view (disableIfNotAlreadyDisabled options UserPicker.withDisabled)
                 viewConfig
                 (GotUserPickerMsg options viewConfig baseField.getValue baseField.updateWithValues)
+                |> Html.map toMsg
 
         Group attrs fields ->
             Html.div
-                (List.map (Html.Attributes.map (\_ -> NoOp)) attrs)
+                (List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs)
                 (List.map
                     (viewField
                         { showError = showError
                         , translators = translators
                         , disabled = disabled
                         , values = values
+                        , model = model
+                        , form = form
+                        , toMsg = toMsg
+                        , onSuccess = onSuccess
                         }
                     )
                     fields
                 )
 
         Arbitrary html ->
-            Html.map (\fn -> ChangedValues (fn values)) html
+            Html.map (\fn -> ChangedValues (fn values) |> toMsg) html
 
 
 {-| You should generally not need this, but it can be useful if you're using raw
@@ -1259,7 +1328,7 @@ viewError attributes showError maybeError =
 -- INTERNAL HELPERS
 
 
-getId : Field values -> String
+getId : Field msg values -> String
 getId state =
     case state of
         Text options _ ->
@@ -1299,7 +1368,7 @@ getId state =
             ""
 
 
-isEmpty : Field values -> Bool
+isEmpty : Field msg values -> Bool
 isEmpty field_ =
     case field_ of
         Text _ { value } ->
@@ -1395,8 +1464,8 @@ mapValues :
     { value : parent -> child
     , update : child -> parent -> parent
     }
-    -> Form child output
-    -> Form parent output
+    -> Form msg child output
+    -> Form msg parent output
 mapValues mappings child =
     Form
         (\values ->
@@ -1415,7 +1484,7 @@ mapValues mappings child =
 
 {-| Change the output of a form.
 -}
-mapOutput : (output -> mappedOutput) -> Form values output -> Form values mappedOutput
+mapOutput : (output -> mappedOutput) -> Form msg values output -> Form msg values mappedOutput
 mapOutput fn form =
     Form
         (\values ->
@@ -1429,7 +1498,7 @@ mapOutput fn form =
         )
 
 
-mapFilledField : (values -> mappedValues) -> (mappedValues -> values) -> FilledField values -> FilledField mappedValues
+mapFilledField : (values -> mappedValues) -> (mappedValues -> values) -> FilledField msg values -> FilledField msg mappedValues
 mapFilledField fn reverseFn filledField =
     { state = mapField fn reverseFn filledField.state
     , error = filledField.error
@@ -1437,40 +1506,43 @@ mapFilledField fn reverseFn filledField =
     }
 
 
-mapField : (values -> mappedValues) -> (mappedValues -> values) -> Field values -> Field mappedValues
+mapField : (values -> mappedValues) -> (mappedValues -> values) -> Field msg values -> Field msg mappedValues
 mapField fn reverseFn field_ =
     let
-        baseMap fieldType specificMap options baseField =
+        baseMap fieldType options baseField =
+            fieldType options (mapBaseFieldValues fn reverseFn baseField)
+
+        mapWithMsg fieldType specificMap options baseField =
             fieldType (specificMap (mapMsg fn reverseFn) options)
                 (mapBaseFieldValues fn reverseFn baseField)
     in
     case field_ of
         Text options baseField ->
-            baseMap Text Text.map options baseField
+            baseMap Text options baseField
 
         RichText options baseField ->
-            baseMap RichText RichText.map options baseField
+            baseMap RichText options baseField
 
         Toggle options baseField ->
-            baseMap Toggle Toggle.map options baseField
+            baseMap Toggle options baseField
 
         Checkbox options baseField ->
-            baseMap Checkbox Checkbox.map options baseField
+            baseMap Checkbox options baseField
 
         Radio options baseField ->
-            baseMap Radio Radio.mapMsg options baseField
+            baseMap Radio options baseField
 
         File options baseField ->
-            baseMap File Form.File.map options baseField
+            baseMap File options baseField
 
         Select options baseField ->
-            baseMap Select Select.mapMsg options baseField
+            baseMap Select options baseField
 
         DatePicker options baseField ->
-            baseMap DatePicker DatePicker.map options baseField
+            mapWithMsg DatePicker DatePicker.map options baseField
 
         UserPicker options baseField ->
-            baseMap UserPicker UserPicker.map options baseField
+            mapWithMsg UserPicker UserPicker.map options baseField
 
         Group attributes fields ->
             Group attributes (List.map (mapFilledField fn reverseFn) fields)

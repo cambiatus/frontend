@@ -58,7 +58,7 @@ type alias FormOutput =
     }
 
 
-createForm : Translators -> Form.Form FormInput FormOutput
+createForm : Translators -> Form.Form msg FormInput FormOutput
 createForm ({ t } as translators) =
     Form.succeed FormOutput
         |> Form.with

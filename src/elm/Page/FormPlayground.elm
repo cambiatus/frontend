@@ -143,7 +143,7 @@ type Interest
     | Gaming
 
 
-userForm : Shared.Translators -> Form DirtyUser User
+userForm : Shared.Translators -> Form msg DirtyUser User
 userForm translators =
     let
         phoneMask =
@@ -212,7 +212,7 @@ userForm translators =
             )
         |> Form.with
             (Form.Text.init { label = "Bio", id = "bio-input" }
-                |> Form.Text.withInputElement Form.Text.TextareaInput
+                |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
                 |> Form.Text.withExtraAttrs
                     [ class "p-4"
                     , rows 2

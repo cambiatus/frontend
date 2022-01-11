@@ -15,7 +15,7 @@ import Session.Shared exposing (Translators)
 import Set exposing (Set)
 
 
-emailField : Translators -> Form.Form { formInput | email : String } String
+emailField : Translators -> Form.Form msg { formInput | email : String } String
 emailField ({ t } as translators) =
     Form.Text.init { label = t "register.form.email.label", id = "email-input" }
         |> Form.Text.withPlaceholder (t "register.form.email.placeholder")
@@ -30,7 +30,7 @@ emailField ({ t } as translators) =
             }
 
 
-personNameField : Translators -> Form.Form { formInput | name : String } String
+personNameField : Translators -> Form.Form msg { formInput | name : String } String
 personNameField { t } =
     Form.Text.init
         { label = t "register.form.name.label"
@@ -45,7 +45,7 @@ personNameField { t } =
             }
 
 
-accountNameField : Translators -> { unavailableAccounts : Set String } -> Form.Form { formInput | account : String } Eos.Account.Name
+accountNameField : Translators -> { unavailableAccounts : Set String } -> Form.Form msg { formInput | account : String } Eos.Account.Name
 accountNameField ({ t } as translators) { unavailableAccounts } =
     Form.Text.init
         { label = t "register.form.account.label"
@@ -70,7 +70,7 @@ accountNameField ({ t } as translators) { unavailableAccounts } =
             }
 
 
-phoneNumberField : Translators -> Form.Form { formInput | phoneNumber : String } String
+phoneNumberField : Translators -> Form.Form msg { formInput | phoneNumber : String } String
 phoneNumberField { t } =
     Form.Text.init
         { label = t "register.form.phone.label"

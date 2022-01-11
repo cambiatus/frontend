@@ -116,7 +116,7 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> { isDisabled : Bool } -> Form.Form FormInput FormOutput
+createForm : Shared.Translators -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
 createForm ({ t } as translators) { isDisabled } =
     Form.succeed FormOutput
         |> Form.with

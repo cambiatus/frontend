@@ -583,7 +583,7 @@ type alias TransferFiltersFormInput =
     }
 
 
-transferFiltersForm : LoggedIn.Model -> List Profile.Minimal -> Form.Form TransferFiltersFormInput TransfersFilters
+transferFiltersForm : LoggedIn.Model -> List Profile.Minimal -> Form.Form msg TransferFiltersFormInput TransfersFilters
 transferFiltersForm loggedIn users =
     let
         { t } =

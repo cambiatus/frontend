@@ -77,7 +77,7 @@ type alias FormOutput =
     }
 
 
-createForm : Translators -> { hasKyc : Bool } -> Form.Form FormInput FormOutput
+createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOutput
 createForm ({ t } as translators) { hasKyc } =
     Form.succeed FormOutput
         |> Form.with
@@ -135,7 +135,7 @@ createForm ({ t } as translators) { hasKyc } =
         |> Form.with (interestsForm translators)
 
 
-interestsForm : Translators -> Form.Form FormInput (List String)
+interestsForm : Translators -> Form.Form msg FormInput (List String)
 interestsForm { t } =
     let
         viewInterest interest =

@@ -79,7 +79,7 @@ decoder =
         |> Json.Decode.Pipeline.required "account" Eos.Account.nameDecoder
 
 
-form : Translators -> { unavailableAccounts : Set String } -> Form.Form FormInput FormOutput
+form : Translators -> { unavailableAccounts : Set String } -> Form.Form msg FormInput FormOutput
 form ({ t } as translators) unavailableAccounts =
     Form.succeed FormOutput
         |> Form.with

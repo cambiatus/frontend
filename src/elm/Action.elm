@@ -576,7 +576,7 @@ viewSearchActions ({ t } as translators) today actions =
         (List.map viewAction actions)
 
 
-claimWithProofsForm : Translators -> Form.Form Form.File.Model String
+claimWithProofsForm : Translators -> Form.Form msg Form.File.Model String
 claimWithProofsForm translators =
     Form.File.init
         { label = translators.t "community.actions.proof.upload"

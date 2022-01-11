@@ -365,7 +365,7 @@ type alias FormOutput =
     }
 
 
-createForm : Shared -> Community.ContributionConfiguration -> Model -> Form FormInput FormOutput
+createForm : Shared -> Community.ContributionConfiguration -> Model -> Form msg FormInput FormOutput
 createForm ({ translators } as shared) contributionConfiguration model =
     let
         defaultCurrency =

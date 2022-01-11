@@ -113,7 +113,7 @@ type UnitTracking
     | DontTrackUnits
 
 
-createForm : LoggedIn.Model -> Form.Form FormInput FormOutput
+createForm : LoggedIn.Model -> Form.Form msg FormInput FormOutput
 createForm loggedIn =
     let
         ({ t } as translators) =

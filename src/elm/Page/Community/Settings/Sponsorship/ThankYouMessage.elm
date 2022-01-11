@@ -31,7 +31,7 @@ init loggedIn =
     )
 
 
-createForm : Shared.Translators -> Community.Model -> Form.Form FormInput FormOutput
+createForm : Shared.Translators -> Community.Model -> Form.Form msg FormInput FormOutput
 createForm { t, tr } community =
     Form.succeed FormOutput
         |> Form.with

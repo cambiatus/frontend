@@ -92,7 +92,7 @@ type TransferStatus
     | SendingTransfer FormOutput
 
 
-createForm : LoggedIn.Model -> Community.Model -> Eos.Asset -> Float -> Form.Form FormInput FormOutput
+createForm : LoggedIn.Model -> Community.Model -> Eos.Asset -> Float -> Form.Form msg FormInput FormOutput
 createForm loggedIn community balance maxTransferAmount =
     let
         { translators } =

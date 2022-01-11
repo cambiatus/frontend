@@ -654,7 +654,7 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> Product -> Form.Form FormInput FormOutput
+createForm : Shared.Translators -> Product -> Form.Form msg FormInput FormOutput
 createForm ({ t } as translators) product =
     Form.succeed FormOutput
         |> Form.with

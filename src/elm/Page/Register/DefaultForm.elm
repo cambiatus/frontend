@@ -40,7 +40,7 @@ decoder =
         (Decode.field "email" Decode.string)
 
 
-form : Translators -> { unavailableAccounts : Set String } -> Form.Form FormInput FormOutput
+form : Translators -> { unavailableAccounts : Set String } -> Form.Form msg FormInput FormOutput
 form translators unavailableAccounts =
     Form.succeed FormOutput
         |> Form.with (Common.personNameField translators)

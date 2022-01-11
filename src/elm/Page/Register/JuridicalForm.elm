@@ -110,7 +110,7 @@ decoder =
         |> Json.Decode.Pipeline.required "zip" Decode.string
 
 
-form : Translators -> { unavailableAccounts : Set String } -> Form.Form FormInput FormOutput
+form : Translators -> { unavailableAccounts : Set String } -> Form.Form msg FormInput FormOutput
 form ({ t } as translators) unavailableAccounts =
     let
         unwrapId (Id id) =

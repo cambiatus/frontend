@@ -569,7 +569,7 @@ view ({ shared } as loggedIn) model =
     }
 
 
-createForm : Shared -> Community.Model -> { isLoading : Bool } -> Form.Form FormInput FormOutput
+createForm : Shared -> Community.Model -> { isLoading : Bool } -> Form.Form msg FormInput FormOutput
 createForm shared community { isLoading } =
     let
         ({ t } as translators) =

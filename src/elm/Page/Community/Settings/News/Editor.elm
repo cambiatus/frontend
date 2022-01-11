@@ -416,7 +416,7 @@ type alias FormOutput =
     }
 
 
-createForm : LoggedIn.Model -> Form.Form FormInput FormOutput
+createForm : LoggedIn.Model -> Form.Form msg FormInput FormOutput
 createForm loggedIn =
     let
         { t } =
@@ -516,7 +516,7 @@ createForm loggedIn =
         |> Form.with (publicationDateForm loggedIn.shared)
 
 
-publicationDateForm : Shared -> Form.Form FormInput (Maybe Time.Posix)
+publicationDateForm : Shared -> Form.Form msg FormInput (Maybe Time.Posix)
 publicationDateForm shared =
     let
         ({ t } as translators) =

@@ -44,7 +44,7 @@ type alias FormOutput =
     ()
 
 
-createForm : Shared.Translators -> Form.Form FormInput FormOutput
+createForm : Shared.Translators -> Form.Form msg FormInput FormOutput
 createForm { t } =
     let
         checkboxes =

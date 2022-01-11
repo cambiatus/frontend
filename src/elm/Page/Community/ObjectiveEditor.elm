@@ -213,7 +213,7 @@ view ({ shared } as loggedIn) model =
     }
 
 
-createForm : Shared.Translators -> Form Form.RichText.Model Markdown
+createForm : Shared.Translators -> Form msg Form.RichText.Model Markdown
 createForm { t } =
     Form.RichText.init { label = t "community.objectives.editor.description_label" }
         |> Form.RichText.withPlaceholder (t "community.objectives.editor.description_placeholder")

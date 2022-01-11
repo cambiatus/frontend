@@ -393,7 +393,7 @@ view ({ shared } as loggedIn) model =
     }
 
 
-createForm : Translators -> Community.Model -> Form.Form FormInput FormOutput
+createForm : Translators -> Community.Model -> Form.Form msg FormInput FormOutput
 createForm ({ t } as translators) community =
     Form.succeed FormOutput
         |> Form.withNoOutput (communityInfoForm translators community)
@@ -453,7 +453,7 @@ createForm ({ t } as translators) community =
             )
 
 
-communityInfoForm : Translators -> Community.Model -> Form.Form input ()
+communityInfoForm : Translators -> Community.Model -> Form.Form msg input ()
 communityInfoForm ({ t, tr } as translators) community =
     let
         symbolExample =
@@ -532,7 +532,7 @@ communityInfoForm ({ t, tr } as translators) community =
             )
 
 
-expiryOptsForm : Translators -> Community.Model -> Form.Form FormInput Token.ExpiryOptsData
+expiryOptsForm : Translators -> Community.Model -> Form.Form msg FormInput Token.ExpiryOptsData
 expiryOptsForm ({ t } as translators) community =
     let
         withSeconds input =

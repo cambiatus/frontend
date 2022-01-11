@@ -290,7 +290,6 @@ viewForm guest unavailableAccounts currentForm =
         { translators } =
             guest.shared
 
-        helper : Form.Model values -> Form.Form values output -> (Form.Msg values -> FormMsg) -> (output -> FormOutput) -> Html Msg
         helper formModel form toFormMsg toFormOutput =
             Form.view []
                 translators
