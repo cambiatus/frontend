@@ -49,6 +49,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Pin as Pin
 
 
@@ -184,6 +185,7 @@ type alias SignInResponse =
 type ExternalMsg
     = CompletedAuth SignInResponse Model
     | UpdatedShared Shared
+    | SetFeedback Feedback.Model
 
 
 update : Msg -> Shared -> Model -> UpdateResult
@@ -193,17 +195,27 @@ update msg shared model =
             UR.init model
 
         GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinModel
+            Pin.update shared subMsg model.pinModel
+                |> UR.fromChild2 (\pinModel -> { model | pinModel = pinModel })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (SetFeedback feedback) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction newPinModel submitStatus shared SubmittedPin
-            in
-            { model | pinModel = newPinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (UpdatedShared newShared)
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinModel
+                                            pin
+                                            shared
+                                            SubmittedPin
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (UpdatedShared newShared)
+                    )
+                    model
 
         CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
             let

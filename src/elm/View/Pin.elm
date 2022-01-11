@@ -1,5 +1,6 @@
 module View.Pin exposing
     ( Background(..)
+    , External(..)
     , Field(..)
     , Model
     , Msg
@@ -22,17 +23,21 @@ You can then use Pin.view in your view
 
 -}
 
+import Browser.Dom
 import Form
 import Form.Text
+import Form.Validate
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (attribute, autocomplete, class, disabled, maxlength, type_)
 import Html.Events exposing (keyCode, onClick, preventDefaultOn)
 import Json.Decode as Decode
 import Maybe.Extra
 import Ports
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared as Shared exposing (Shared, Translators)
 import Task
+import UpdateResult as UR
 import Validate
+import View.Feedback as Feedback
 
 
 
@@ -49,6 +54,8 @@ type alias Model =
     { label : String
     , disabled : Bool
     , id : String
+    , form : Form.Model FormInput
+    , needsConfirmation : Bool
     , pin : Pin
     , pinConfirmation : Maybe Pin
     , placeholder : String
@@ -85,6 +92,8 @@ init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility 
     { label = label
     , disabled = False
     , id = id
+    , form = Form.init { pin = "", confirmation = "" }
+    , needsConfirmation = withConfirmation
     , pin = ""
     , pinConfirmation =
         if withConfirmation then
@@ -103,6 +112,93 @@ init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility 
     }
 
 
+type alias FormInput =
+    { pin : String
+    , confirmation : String
+    }
+
+
+type alias FormOutput =
+    { pin : String
+    }
+
+
+createForm : Translators -> Model -> Form.Form Msg FormInput FormOutput
+createForm ({ t } as translators) model =
+    let
+        backgroundAttrs =
+            case model.background of
+                Dark ->
+                    Form.Text.withLabelAttrs [ class "text-white" ]
+                        >> Form.Text.withCounterAttrs [ class "!text-white" ]
+
+                Light ->
+                    identity
+
+        commonOptions field =
+            Form.Text.withPlaceholder (String.repeat pinLength "*")
+                >> Form.Text.withDisabled (model.disabled || model.isSubmitting)
+                >> Form.Text.withCounter (Form.Text.CountLetters pinLength)
+                >> Form.Text.withElements [ viewToggleVisibility field model translators ]
+                >> Form.Text.withExtraAttrs
+                    [ maxlength pinLength
+                    , autocomplete False
+                    , class "text-body-black tracking-widest"
+                    ]
+                >> backgroundAttrs
+                >> Form.Text.withType
+                    (if isVisible field model then
+                        Form.Text.Text
+
+                     else
+                        Form.Text.Password
+                    )
+                >> Form.Text.asNumeric
+
+        validatePin =
+            Form.Validate.succeed
+                >> Form.Validate.stringLengthExactly pinLength
+                >> Form.Validate.validate translators
+    in
+    Form.succeed (\pin _ -> { pin = pin })
+        |> Form.with
+            (Form.Text.init
+                { label = t model.label
+                , id = "pin-input"
+                }
+                |> commonOptions Pin
+                |> Form.textField
+                    { parser = validatePin
+                    , value = .pin
+                    , update = \pin input -> { input | pin = pin }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (if model.needsConfirmation then
+                Form.Text.init
+                    { label = t model.label
+                    , id = "pin-confirmation-input"
+                    }
+                    |> commonOptions PinConfirmation
+                    |> Form.textField
+                        { parser = validatePin
+                        , value = .confirmation
+                        , update = \confirmation input -> { input | confirmation = confirmation }
+                        , externalError =
+                            \{ pin, confirmation } ->
+                                if pin == confirmation then
+                                    Nothing
+
+                                else
+                                    Just (t "auth.pinConfirmation.differsFromPinError")
+                        }
+
+             else
+                Form.succeed ""
+            )
+
+
 
 -- VIEW
 
@@ -115,117 +211,26 @@ view ({ t } as translators) model =
         text_ =
             t >> text
     in
-    div [ class "flex flex-col flex-grow" ]
-        [ viewField Pin model translators
-        , case model.pinConfirmation of
-            Nothing ->
-                text ""
+    Form.view [ class "flex flex-col flex-grow" ]
+        translators
+        (\submitButton ->
+            [ submitButton
+                [ class "button button-primary min-w-full mt-auto"
+                , disabled (model.disabled || model.isSubmitting)
+                ]
+                [ if model.isSubmitting then
+                    text_ model.submittingLabel
 
-            Just _ ->
-                viewField PinConfirmation model translators
-        , button
-            [ class "button button-primary min-w-full mt-auto"
-            , disabled (model.disabled || model.isSubmitting)
-            , onClick ClickedSubmit
+                  else
+                    text_ model.submitLabel
+                ]
             ]
-            [ if model.isSubmitting then
-                text_ model.submittingLabel
-
-              else
-                text_ model.submitLabel
-            ]
-        ]
-
-
-viewField : Field -> Model -> Translators -> Html Msg
-viewField field model ({ t } as translators) =
-    let
-        enterKeyCode =
-            13
-
-        maybeError =
-            List.filterMap
-                (\( errorField, error ) ->
-                    if errorField == field then
-                        Just (t error)
-
-                    else
-                        Nothing
-                )
-                model.problems
-                |> List.head
-
-        backgroundAttrs =
-            case model.background of
-                Dark ->
-                    Form.Text.withLabelAttrs [ class "text-white" ]
-                        >> Form.Text.withCounterAttrs [ class "!text-white" ]
-
-                Light ->
-                    identity
-    in
-    Form.Text.init
-        { label = t model.label
-        , id =
-            case field of
-                Pin ->
-                    model.id
-
-                PinConfirmation ->
-                    model.id ++ "-confirmation"
+        )
+        (createForm translators model)
+        model.form
+        { toMsg = GotFormMsg
+        , onSubmit = SubmittedForm
         }
-        |> Form.Text.withPlaceholder model.placeholder
-        |> Form.Text.withDisabled (model.disabled || model.isSubmitting)
-        |> Form.Text.withCounter (Form.Text.CountLetters pinLength)
-        |> Form.Text.withElements [ viewToggleVisibility field model translators ]
-        |> Form.Text.withExtraAttrs
-            [ maxlength pinLength
-            , autocomplete False
-            , class "text-body-black tracking-widest"
-            , preventDefaultOn "keydown"
-                (keyCode
-                    |> Decode.map
-                        (\code ->
-                            if code == enterKeyCode then
-                                ( ClickedSubmit, True )
-
-                            else
-                                ( Ignored, False )
-                        )
-                )
-            ]
-        |> backgroundAttrs
-        |> Form.Text.withType
-            (if isVisible field model then
-                Form.Text.Text
-
-             else
-                Form.Text.Password
-            )
-        |> Form.Text.asNumeric
-        |> (\options ->
-                Form.Text.view options
-                    { onChange =
-                        case field of
-                            Pin ->
-                                EnteredPin
-
-                            PinConfirmation ->
-                                EnteredPinConfirmation
-                    , onBlur = \_ -> Ignored
-                    , value =
-                        case field of
-                            Pin ->
-                                model.pin
-
-                            PinConfirmation ->
-                                Maybe.withDefault "" model.pinConfirmation
-                    , error = Form.viewError [] True maybeError
-                    , hasError = Maybe.Extra.isJust maybeError
-                    , translators = translators
-                    , isRequired = True
-                    }
-           )
 
 
 viewToggleVisibility : Field -> Model -> Translators -> Html Msg
@@ -264,10 +269,9 @@ isVisible field model =
 
 type Msg
     = Ignored
-    | EnteredPin String
-    | EnteredPinConfirmation String
+    | GotFormMsg (Form.Msg FormInput)
+    | SubmittedForm FormOutput
     | ToggledPinVisibility Field
-    | ClickedSubmit
 
 
 type SubmitStatus
@@ -276,68 +280,65 @@ type SubmitStatus
     | WithError
 
 
-update : Msg -> Model -> ( Model, SubmitStatus )
-update msg model =
+type External
+    = SubmitPin Pin
+    | SendFeedback Feedback.Model
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg External
+
+
+update : Shared -> Msg -> Model -> UpdateResult
+update shared msg model =
     case msg of
         Ignored ->
-            ( model, NotAsked )
+            UR.init model
 
-        EnteredPin pin ->
-            ( { model
-                | pin = String.filter Char.isDigit pin
-                , problems = []
-              }
-            , NotAsked
-            )
+        GotFormMsg subMsg ->
+            Form.update shared subMsg model.form
+                |> UR.fromChild2 (\newForm -> { model | form = newForm })
+                    GotFormMsg
+                    (\feedback -> UR.addExt (SendFeedback feedback))
+                    model
 
-        EnteredPinConfirmation pinConfirmation ->
-            ( { model
-                | pinConfirmation = Maybe.map (\_ -> pinConfirmation) model.pinConfirmation
-                , problems = []
-              }
-            , NotAsked
-            )
+        SubmittedForm { pin } ->
+            { model | isSubmitting = True }
+                |> UR.init
+                |> UR.addExt (SubmitPin pin)
 
         ToggledPinVisibility field ->
             case field of
                 Pin ->
-                    ( { model | isPinVisible = not model.isPinVisible }, NotAsked )
+                    { model | isPinVisible = not model.isPinVisible }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Browser.Dom.focus "pin-input"
+                                |> Task.attempt (\_ -> Ignored)
+                            )
 
                 PinConfirmation ->
-                    ( { model | isPinConfirmationVisible = not model.isPinConfirmationVisible }
-                    , NotAsked
-                    )
-
-        ClickedSubmit ->
-            case Validate.validate validate model of
-                Ok _ ->
-                    ( { model | isSubmitting = True }, Success model.pin )
-
-                Err errors ->
-                    ( { model | problems = errors }, WithError )
+                    { model | isPinConfirmationVisible = not model.isPinConfirmationVisible }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Browser.Dom.focus "pin-confirmation-input"
+                                |> Task.attempt (\_ -> Ignored)
+                            )
 
 
 
 -- UTILS
 
 
-postSubmitAction : Model -> SubmitStatus -> Shared -> (String -> msg) -> ( Shared, Cmd msg )
-postSubmitAction model status shared toMsg =
-    case status of
-        NotAsked ->
-            ( shared, Cmd.none )
-
-        WithError ->
-            ( shared, Cmd.none )
-
-        Success pin ->
-            ( { shared | pinVisibility = model.isPinVisible }
-            , Cmd.batch
-                [ Task.succeed pin
-                    |> Task.perform toMsg
-                , Ports.storePinVisibility model.isPinVisible
-                ]
-            )
+postSubmitAction : Model -> Pin -> Shared -> (String -> msg) -> ( Shared, Cmd msg )
+postSubmitAction model pin shared toMsg =
+    ( { shared | pinVisibility = model.isPinVisible }
+    , Cmd.batch
+        [ Task.succeed pin
+            |> Task.perform toMsg
+        , Ports.storePinVisibility model.isPinVisible
+        ]
+    )
 
 
 withDisabled : Bool -> Model -> Model
@@ -418,14 +419,11 @@ msgToString msg =
         Ignored ->
             [ "Ignored" ]
 
-        EnteredPin _ ->
-            [ "EnteredPin" ]
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg
 
-        EnteredPinConfirmation _ ->
-            [ "EnteredPinConfirmation" ]
+        SubmittedForm _ ->
+            [ "SubmittedForm" ]
 
         ToggledPinVisibility _ ->
             [ "ToggledPinVisibility" ]
-
-        ClickedSubmit ->
-            [ "ClickedSubmit" ]

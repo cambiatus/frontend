@@ -523,17 +523,27 @@ update msg model loggedIn =
                 |> UR.init
 
         GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinInputModel
+            Pin.update loggedIn.shared subMsg model.pinInputModel
+                |> UR.fromChild2 (\pinModel -> { model | pinInputModel = pinModel })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (LoggedIn.executeFeedback feedback) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction newPinModel submitStatus loggedIn.shared SubmittedNewPin
-            in
-            { model | pinInputModel = newPinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinInputModel
+                                            pin
+                                            loggedIn.shared
+                                            SubmittedNewPin
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                    )
+                    model
 
         SubmittedNewPin newPin ->
             let

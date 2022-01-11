@@ -1589,6 +1589,10 @@ update msg model =
                             Auth.UpdatedShared newShared ->
                                 uResult
                                     |> UR.mapModel (\m -> { m | shared = newShared })
+
+                            Auth.SetFeedback feedbackModel ->
+                                uResult
+                                    |> UR.mapModel (\m -> { m | feedback = feedbackModel })
                     )
 
         CompletedLoadUnread payload ->

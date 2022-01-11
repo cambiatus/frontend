@@ -3,7 +3,7 @@ module UpdateResult exposing
     , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
     , fromChild
     , map, mapModel, setModel
-    , addBreadcrumb, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
+    , addBreadcrumb, fromChild2, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
     )
 
 {-| This library allows us to have an observable update function which allows us to transmit message from
@@ -104,6 +104,45 @@ fromChild addChildModel fromChildMsg fromChildExt parent childResult =
             (\child _ -> addChildModel child)
             fromChildMsg
             fromChildExt
+
+
+fromChild2 :
+    (childModel -> model)
+    -> (childMsg -> msg)
+    -> (childExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg)
+    -> model
+    -> UpdateResult childModel childMsg childExtMsg
+    -> UpdateResult model msg extMsg
+fromChild2 addChildModel fromChildMsg fromChildExt parent childResult =
+    init parent
+        |> addChild2 childResult
+            (\child _ -> addChildModel child)
+            fromChildMsg
+            fromChildExt
+
+
+addChild2 :
+    UpdateResult childModel childMsg childExtMsg
+    -> (childModel -> model -> model)
+    -> (childMsg -> msg)
+    -> (childExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg)
+    -> UpdateResult model msg extMsg
+    -> UpdateResult model msg extMsg
+addChild2 childResult addChildModel fromChildMsg fromChildExt parentResult =
+    let
+        applyChildExts parent =
+            List.foldl fromChildExt parent childResult.exts
+    in
+    { model = addChildModel childResult.model parentResult.model
+    , cmds =
+        List.map (Cmd.map fromChildMsg) childResult.cmds
+            ++ parentResult.cmds
+    , ports = List.map (Ports.mapAddress fromChildMsg) childResult.ports ++ parentResult.ports
+    , breadcrumbs = List.map (Log.mapBreadcrumb fromChildMsg) childResult.breadcrumbs ++ parentResult.breadcrumbs
+    , events = List.map (Log.map fromChildMsg) childResult.events ++ parentResult.events
+    , exts = parentResult.exts
+    }
+        |> applyChildExts
 
 
 {-| Similar to `fromChild`, but takes an already existant `UpdateResult` from

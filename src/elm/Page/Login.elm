@@ -481,6 +481,10 @@ updateWithPassphrase msg model { shared } =
                         model.form
             }
                 |> UR.init
+                |> UR.addCmd
+                    (Dom.focus "passphrase-input"
+                        |> Task.attempt (\_ -> PassphraseIgnored)
+                    )
                 |> UR.addExt
                     (Feedback.Hidden
                         |> Guest.SetFeedback
@@ -589,17 +593,27 @@ updateWithPin msg model ({ shared } as guest) =
             UR.init model
 
         GotPinComponentMsg subMsg ->
-            let
-                ( pinModel, submitStatus ) =
-                    Pin.update subMsg model.pinModel
+            Pin.update shared subMsg model.pinModel
+                |> UR.fromChild2 (\pinModel -> { model | pinModel = pinModel })
+                    GotPinComponentMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (PinGuestExternal (Guest.SetFeedback feedback)) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction pinModel submitStatus shared SubmittedPinWithSuccess
-            in
-            { model | pinModel = pinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinModel
+                                            pin
+                                            shared
+                                            SubmittedPinWithSuccess
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
+                    )
+                    model
 
 
 
