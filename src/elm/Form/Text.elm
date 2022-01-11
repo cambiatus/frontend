@@ -6,6 +6,7 @@ module Form.Text exposing
     , withMask
     , getId, getErrorAttrs
     , view
+    , getSubmitOnEnter
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting,
@@ -166,7 +167,7 @@ type InputType
 -}
 type InputElement
     = TextInput
-    | TextareaInput
+    | TextareaInput { submitOnEnter : Bool }
 
 
 {-| A mask formats the input as the user writes in it. A common place to find
@@ -427,7 +428,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
                 TextInput ->
                     ( Html.input, type_ (typeToString options.type_) )
 
-                TextareaInput ->
+                TextareaInput _ ->
                     ( Html.textarea, class "" )
 
         paddedTimeValue =
@@ -531,6 +532,16 @@ getId (Options options) =
 getErrorAttrs : Options msg -> List (Html.Attribute msg)
 getErrorAttrs (Options options) =
     options.errorAttrs
+
+
+getSubmitOnEnter : Options msg -> Bool
+getSubmitOnEnter (Options options) =
+    case options.inputElement of
+        TextareaInput { submitOnEnter } ->
+            submitOnEnter
+
+        _ ->
+            False
 
 
 
