@@ -1246,16 +1246,13 @@ update msg model =
         GotSearchMsg searchMsg ->
             case model.selectedCommunity of
                 RemoteData.Success community ->
-                    let
-                        ( searchModel, searchCmd ) =
-                            Search.update shared model.authToken community.symbol model.searchModel searchMsg
-                    in
-                    { model
-                        | searchModel = searchModel
-                        , hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg
-                    }
-                        |> UR.init
-                        |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
+                    Search.update shared model.authToken community.symbol model.searchModel searchMsg
+                        |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
+                            GotSearchMsg
+                            (\feedback -> UR.mapModel (\newModel -> { newModel | feedback = feedback }))
+                            { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
+                        |> UR.mapModel
+                            (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
 
                 _ ->
                     UR.init model
