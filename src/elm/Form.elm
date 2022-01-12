@@ -2,8 +2,8 @@ module Form exposing
     ( Form
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapValues, mapOutput
-    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
-    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
+    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, unsafeArbitrary
+    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
     , parse
     )
@@ -77,12 +77,12 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
+@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, unsafeArbitrary
 
 
 ## Viewing
 
-@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
+@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
 
 
 ### Changing attributes and state
@@ -209,6 +209,7 @@ type Field msg values
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
     | Group (List (Html.Attribute Never)) (List (FilledField msg values))
     | Arbitrary (Html (values -> values))
+    | UnsafeArbitrary (Html msg)
 
 
 {-| A generic function to build a generic `Field`. We can use this function to
@@ -646,6 +647,40 @@ arbitrary html =
         )
 
 
+{-| Arbitrary HTML that can do anything. You should almost never need this, but
+it can be useful for forms that need buttons to manipulate something outside of
+the form, or something similar.
+
+    Form.withNoOutput
+        (button
+            [ onClick
+                (\values ->
+                    { values
+                        | interests = form.interest :: form.interests
+                        , interest = ""
+                    }
+                )
+            ]
+            [ text "Add" ]
+            |> Form.unsafeArbitrary
+        )
+
+-}
+unsafeArbitrary : Html msg -> Form msg values output
+unsafeArbitrary html =
+    Form
+        (\_ ->
+            { fields =
+                [ { state = UnsafeArbitrary html
+                  , error = Nothing
+                  , isRequired = False
+                  }
+                ]
+            , result = OptNothing
+            }
+        )
+
+
 {-| Look at the values of the form before building the next form. Useful when
 some form depends on other fields
 -}
@@ -808,6 +843,14 @@ after initializing the form and need to change the state of the form.
 updateValues : (values -> values) -> Model values -> Model values
 updateValues updateFn (Model model) =
     Model { model | values = updateFn model.values }
+
+
+{-| Get a single value out of the Model. You should rarely need this, but it can
+be useful if you need to inspect some values of the form manually.
+-}
+getValue : (values -> value) -> Model values -> value
+getValue getter (Model model) =
+    getter model.values
 
 
 {-| Set the entire form as disabled or enabled at once (if specific fields are
@@ -1032,7 +1075,7 @@ viewWithoutSubmit :
     -> { toMsg : Msg values -> msg }
     -> Html msg
 viewWithoutSubmit formAttrs translators footer form (Model model) { toMsg } =
-    Html.form (novalidate True :: formAttrs)
+    Html.form (novalidate True :: Events.onSubmit (toMsg NoOp) :: formAttrs)
         (viewFields translators form (Model model) toMsg (\_ -> toMsg NoOp)
             ++ footer model.values
         )
@@ -1305,6 +1348,9 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         Arbitrary html ->
             Html.map (\fn -> ChangedValues (fn values) |> toMsg) html
 
+        UnsafeArbitrary html ->
+            html
+
 
 {-| You should generally not need this, but it can be useful if you're using raw
 fields instead of using a proper Form
@@ -1367,6 +1413,9 @@ getId state =
         Arbitrary _ ->
             ""
 
+        UnsafeArbitrary _ ->
+            ""
+
 
 isEmpty : Field msg values -> Bool
 isEmpty field_ =
@@ -1409,6 +1458,9 @@ isEmpty field_ =
                 |> List.any isEmpty
 
         Arbitrary _ ->
+            False
+
+        UnsafeArbitrary _ ->
             False
 
 
@@ -1549,6 +1601,9 @@ mapField fn reverseFn field_ =
 
         Arbitrary html ->
             Arbitrary (Html.map (\htmlFn -> reverseFn >> htmlFn >> fn) html)
+
+        UnsafeArbitrary html ->
+            UnsafeArbitrary html
 
 
 mapMsg : (values -> mappedValues) -> (mappedValues -> values) -> Msg values -> Msg mappedValues
