@@ -196,7 +196,7 @@ update msg shared model =
 
         GotPinMsg subMsg ->
             Pin.update shared subMsg model.pinModel
-                |> UR.fromChild2 (\pinModel -> { model | pinModel = pinModel })
+                |> UR.fromChild (\pinModel -> { model | pinModel = pinModel })
                     GotPinMsg
                     (\ext ur ->
                         case ext of

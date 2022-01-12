@@ -691,7 +691,7 @@ update msg model loggedIn =
             Form.update loggedIn.shared subMsg model.filtersForm
                 |> UR.fromChild (\newForm -> { model | filtersForm = newForm })
                     GotFilterFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
         SubmittedFilterForm filters ->

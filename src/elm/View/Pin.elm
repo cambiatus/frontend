@@ -301,7 +301,7 @@ update shared msg model =
 
         GotFormMsg subMsg ->
             Form.update shared subMsg model.form
-                |> UR.fromChild2 (\newForm -> { model | form = newForm })
+                |> UR.fromChild (\newForm -> { model | form = newForm })
                     GotFormMsg
                     (\feedback -> UR.addExt (SendFeedback feedback))
                     model

@@ -67,7 +67,7 @@ update msg model loggedIn =
                         kycFormMsg
                         |> UR.fromChild identity
                             FormMsg
-                            LoggedIn.executeFeedback
+                            LoggedIn.addFeedback
                             model
             in
             case kycFormMsg of

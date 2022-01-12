@@ -274,7 +274,7 @@ update msg model loggedIn =
                 |> UR.fromChild
                     (\newForm -> { model | form = newForm })
                     GotFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
 

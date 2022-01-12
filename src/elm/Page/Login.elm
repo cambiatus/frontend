@@ -496,7 +496,7 @@ updateWithPassphrase msg model { shared } =
                 |> UR.fromChild
                     (\newForm -> { model | form = newForm })
                     GotPassphraseFormMsg
-                    (Guest.SetFeedback >> PassphraseGuestExternal)
+                    (Guest.SetFeedback >> PassphraseGuestExternal >> UR.addExt)
                     model
 
         ClickedNextStep passphrase ->
@@ -594,7 +594,7 @@ updateWithPin msg model ({ shared } as guest) =
 
         GotPinComponentMsg subMsg ->
             Pin.update shared subMsg model.pinModel
-                |> UR.fromChild2 (\pinModel -> { model | pinModel = pinModel })
+                |> UR.fromChild (\pinModel -> { model | pinModel = pinModel })
                     GotPinComponentMsg
                     (\ext ur ->
                         case ext of

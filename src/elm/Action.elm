@@ -339,7 +339,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         }
                     )
                     GotFormMsg
-                    identity
+                    UR.addExt
                     model
 
         ( GotFormMsg subMsg, PhotoUploaderShowed action (Proof formModel proofCode) ) ->
@@ -349,7 +349,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         { model | status = PhotoUploaderShowed action (Proof newForm proofCode) }
                     )
                     GotFormMsg
-                    identity
+                    UR.addExt
                     model
 
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->

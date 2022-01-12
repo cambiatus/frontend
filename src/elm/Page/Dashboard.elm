@@ -1132,7 +1132,7 @@ update msg model ({ shared, accountName } as loggedIn) =
             Form.update shared subMsg model.transferFiltersForm
                 |> UR.fromChild (\newForm -> { model | transferFiltersForm = newForm })
                     GotTransfersFiltersFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
         SubmittedTransfersFiltersForm formOutput ->

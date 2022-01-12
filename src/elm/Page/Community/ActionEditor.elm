@@ -255,7 +255,7 @@ update msg model ({ shared } as loggedIn) =
                         |> UR.fromChild
                             (\form_ -> { model | status = Authorized form_ maybeAction })
                             GotFormMsg
-                            LoggedIn.executeFeedback
+                            LoggedIn.addFeedback
                             model
 
                 _ ->

@@ -82,7 +82,7 @@ update msg model loggedIn =
                 |> UR.fromChild
                     (\userFormModel -> { model | userFormModel = userFormModel })
                     GotUserFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
         SubmittedUser user ->

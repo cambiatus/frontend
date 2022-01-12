@@ -765,7 +765,7 @@ updateForm shared subMsg model =
                 form
                 |> UR.fromChild updateModel
                     GotFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
 

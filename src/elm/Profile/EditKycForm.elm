@@ -230,7 +230,7 @@ update shared model msg =
             Form.update shared subMsg model.form
                 |> UR.fromChild (\newForm -> { model | form = newForm })
                     GotFormMsg
-                    identity
+                    UR.addExt
                     model
 
         Submitted _ ->

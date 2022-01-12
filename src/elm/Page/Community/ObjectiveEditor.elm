@@ -842,7 +842,7 @@ update msg model loggedIn =
                     Form.update loggedIn.shared subMsg form
                         |> UR.fromChild (\newForm -> { model | status = Authorized newForm status })
                             GotFormMsg
-                            LoggedIn.executeFeedback
+                            LoggedIn.addFeedback
                             model
 
                 _ ->

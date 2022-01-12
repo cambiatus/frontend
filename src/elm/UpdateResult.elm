@@ -3,7 +3,7 @@ module UpdateResult exposing
     , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
     , fromChild
     , map, mapModel, setModel
-    , addBreadcrumb, fromChild2, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
+    , addBreadcrumb, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
     )
 
 {-| This library allows us to have an observable update function which allows us to transmit message from
@@ -94,7 +94,7 @@ the component's update result with the page's update result.
 fromChild :
     (childModel -> model)
     -> (childMsg -> msg)
-    -> (childExtMsg -> extMsg)
+    -> (childExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg)
     -> model
     -> UpdateResult childModel childMsg childExtMsg
     -> UpdateResult model msg extMsg
@@ -106,29 +106,17 @@ fromChild addChildModel fromChildMsg fromChildExt parent childResult =
             fromChildExt
 
 
-fromChild2 :
-    (childModel -> model)
-    -> (childMsg -> msg)
-    -> (childExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg)
-    -> model
-    -> UpdateResult childModel childMsg childExtMsg
-    -> UpdateResult model msg extMsg
-fromChild2 addChildModel fromChildMsg fromChildExt parent childResult =
-    init parent
-        |> addChild2 childResult
-            (\child _ -> addChildModel child)
-            fromChildMsg
-            fromChildExt
-
-
-addChild2 :
+{-| Similar to `fromChild`, but takes an already existant `UpdateResult` from
+the parent
+-}
+addChild :
     UpdateResult childModel childMsg childExtMsg
     -> (childModel -> model -> model)
     -> (childMsg -> msg)
     -> (childExtMsg -> UpdateResult model msg extMsg -> UpdateResult model msg extMsg)
     -> UpdateResult model msg extMsg
     -> UpdateResult model msg extMsg
-addChild2 childResult addChildModel fromChildMsg fromChildExt parentResult =
+addChild childResult addChildModel fromChildMsg fromChildExt parentResult =
     let
         applyChildExts parent =
             List.foldl fromChildExt parent childResult.exts
@@ -143,28 +131,6 @@ addChild2 childResult addChildModel fromChildMsg fromChildExt parentResult =
     , exts = parentResult.exts
     }
         |> applyChildExts
-
-
-{-| Similar to `fromChild`, but takes an already existant `UpdateResult` from
-the parent
--}
-addChild :
-    UpdateResult childModel childMsg childExtMsg
-    -> (childModel -> model -> model)
-    -> (childMsg -> msg)
-    -> (childExtMsg -> extMsg)
-    -> UpdateResult model msg extMsg
-    -> UpdateResult model msg extMsg
-addChild childResult addChildModel fromChildMsg fromChildExt parentResult =
-    { model = addChildModel childResult.model parentResult.model
-    , cmds =
-        List.map (Cmd.map fromChildMsg) childResult.cmds
-            ++ parentResult.cmds
-    , ports = List.map (Ports.mapAddress fromChildMsg) childResult.ports ++ parentResult.ports
-    , breadcrumbs = List.map (Log.mapBreadcrumb fromChildMsg) childResult.breadcrumbs ++ parentResult.breadcrumbs
-    , events = List.map (Log.map fromChildMsg) childResult.events ++ parentResult.events
-    , exts = List.map fromChildExt childResult.exts ++ parentResult.exts
-    }
 
 
 

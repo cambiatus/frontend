@@ -237,7 +237,7 @@ update msg model loggedIn =
                     Form.update loggedIn.shared subMsg form
                         |> UR.fromChild (Editing action)
                             GotFormMsg
-                            LoggedIn.executeFeedback
+                            LoggedIn.addFeedback
                             model
 
                 WaitingNewsToCopy ->

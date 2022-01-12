@@ -541,7 +541,7 @@ update msg model loggedIn =
             Form.update loggedIn.shared subMsg model.form
                 |> UR.fromChild (\newForm -> { model | form = newForm })
                     GotFormMsg
-                    LoggedIn.executeFeedback
+                    LoggedIn.addFeedback
                     model
 
 

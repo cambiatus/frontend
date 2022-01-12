@@ -342,7 +342,7 @@ update session msg model =
                             formUpdateResult
                                 |> UR.fromChild (\newForm -> { model | kycForm = Just newForm })
                                     FormMsg
-                                    LoggedIn.executeFeedback
+                                    LoggedIn.addFeedback
                                     model
                     in
                     case kycFormMsg of

@@ -896,7 +896,7 @@ update shared msg (Model model) =
             Form.File.update shared subMsg (getModel model.values)
                 |> UR.fromChild (\newFile -> Model { model | values = updateFn newFile model.values })
                     (GotFileMsg getModel updateFn)
-                    identity
+                    UR.addExt
                     (Model model)
 
         GotDatePickerMsg options viewConfig getModel updateFn subMsg ->

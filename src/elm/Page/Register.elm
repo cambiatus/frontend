@@ -790,7 +790,7 @@ update _ msg model ({ shared } as guest) =
                                 }
                             )
                             (NaturalFormMsg >> GotFormMsg)
-                            Guest.SetFeedback
+                            (Guest.SetFeedback >> UR.addExt)
                             model
 
                 ( FormShowed isAccountTaken (JuridicalForm formModel), JuridicalFormMsg formMsg ) ->
@@ -805,7 +805,7 @@ update _ msg model ({ shared } as guest) =
                                 }
                             )
                             (JuridicalFormMsg >> GotFormMsg)
-                            Guest.SetFeedback
+                            (Guest.SetFeedback >> UR.addExt)
                             model
 
                 ( FormShowed isAccountTaken (DefaultForm formModel), DefaultFormMsg formMsg ) ->
@@ -820,7 +820,7 @@ update _ msg model ({ shared } as guest) =
                                 }
                             )
                             (DefaultFormMsg >> GotFormMsg)
-                            Guest.SetFeedback
+                            (Guest.SetFeedback >> UR.addExt)
                             model
 
                 _ ->

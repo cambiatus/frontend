@@ -6,6 +6,7 @@ module Session.LoggedIn exposing
     , Msg(..)
     , Page(..)
     , Resource(..)
+    , addFeedback
     , executeFeedback
     , init
     , initLogin
@@ -900,6 +901,11 @@ type External msg
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
+
+
+addFeedback : Feedback.Model -> UR.UpdateResult model msg (External msg) -> UR.UpdateResult model msg (External msg)
+addFeedback feedback ur =
+    UR.addExt (executeFeedback feedback) ur
 
 
 executeFeedback : Feedback.Model -> External msg
