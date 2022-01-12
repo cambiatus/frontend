@@ -66,7 +66,7 @@ import Html.Events as Events exposing (onInput)
 import Mask
 import Maybe.Extra
 import Session.Shared as Shared
-import View.Form
+import View.Components
 
 
 
@@ -355,7 +355,8 @@ view (Options options) viewConfig =
             Html.text ""
 
           else
-            View.Form.label options.labelAttrs options.id options.label
+            View.Components.label options.labelAttrs
+                { targetId = options.id, labelText = options.label }
         , viewInput (Options options) viewConfig
         , if not viewConfig.hasError && Maybe.Extra.isNothing options.counter then
             Html.text ""

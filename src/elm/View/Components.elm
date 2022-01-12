@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
+    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack
+@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label
 
 
 # Helpers
@@ -36,7 +36,7 @@ state or configuration, such as loading indicators and containers
 -}
 
 import Html exposing (Html, div, img, node, p, span, text)
-import Html.Attributes exposing (attribute, class, src)
+import Html.Attributes exposing (attribute, class, for, src)
 import Html.Events exposing (on)
 import Icons
 import Json.Decode
@@ -253,6 +253,15 @@ infiniteList options attrs children =
             :: attrs
         )
         children
+
+
+{-| A label element that enforces the label has an id to point to
+-}
+label : List (Html.Attribute msg) -> { targetId : String, labelText : String } -> Html msg
+label attrs { targetId, labelText } =
+    Html.label (class "label" :: for targetId :: attrs)
+        [ text labelText
+        ]
 
 
 

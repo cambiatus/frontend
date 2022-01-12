@@ -54,7 +54,7 @@ import Html.Attributes exposing (class, classList, disabled, required, selected,
 import Html.Events exposing (onBlur)
 import Json.Decode
 import List.Extra
-import View.Form
+import View.Components
 
 
 
@@ -196,7 +196,8 @@ view (Options options) viewConfig =
                 options.options
     in
     div options.containerAttrs
-        [ View.Form.label options.labelAttrs options.id options.label
+        [ View.Components.label options.labelAttrs
+            { targetId = options.id, labelText = options.label }
         , Html.select
             (class "input pr-10 form-select-icon w-full"
                 :: classList [ ( "with-error", viewConfig.hasError ) ]

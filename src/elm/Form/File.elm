@@ -64,7 +64,6 @@ import Session.Shared as Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.Form
 
 
 type Model
@@ -376,7 +375,7 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
                     ( "bg-gray-100", "text-body-black", Icons.addPhoto "fill-current text-body-black" )
     in
     div options.containerAttrs
-        [ View.Form.label [] options.id options.label
+        [ View.Components.label [] { targetId = options.id, labelText = options.label }
         , label
             [ class "relative w-full h-56 rounded-sm flex justify-center items-center"
             , class backgroundColor
@@ -460,7 +459,7 @@ viewSmallCircle (Options options) viewConfig value toMsg =
                         ]
     in
     div options.containerAttrs
-        [ View.Form.label [] options.id options.label
+        [ View.Components.label [] { targetId = options.id, labelText = options.label }
         , div [ class "mt-2 m-auto w-20 h-20 relative" ]
             [ viewInput (Options options) viewConfig toMsg
             , label
@@ -527,9 +526,8 @@ viewHardcodedChoices (Options options) viewConfig choices toMsg =
                 |> Html.map toMsg
     in
     div options.containerAttrs
-        [ View.Form.label []
-            options.id
-            options.label
+        [ View.Components.label []
+            { targetId = options.id, labelText = options.label }
         , div
             [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
             (List.indexedMap viewItem choices.files

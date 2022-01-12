@@ -54,7 +54,6 @@ import Html.Attributes exposing (checked, class, classList, disabled, for, id, r
 import Html.Events exposing (onBlur, onCheck)
 import Session.Shared as Shared
 import View.Components
-import View.Form
 
 
 
@@ -232,7 +231,8 @@ view (Options options) viewConfig =
                 Html.text ""
 
             Just topLabel ->
-                View.Form.label [ class "mb-6" ] options.id topLabel
+                View.Components.label [ class "mb-6" ]
+                    { targetId = options.id, labelText = topLabel }
         , case options.side of
             Left ->
                 div [ class "flex space-x-2 text-sm" ]

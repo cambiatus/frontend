@@ -71,7 +71,7 @@ import Profile.Summary
 import Select
 import Session.Shared as Shared
 import Simple.Fuzzy
-import View.Form
+import View.Components
 
 
 
@@ -278,7 +278,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
                     [ profile ]
     in
     div (class "mb-10" :: options.containerAttrs)
-        [ View.Form.label [] model.id options.label
+        [ View.Components.label [] { targetId = model.id, labelText = options.label }
         , Select.view (settings wrappedOptions viewConfig)
             model.selectState
             (List.filter

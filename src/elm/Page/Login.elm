@@ -42,7 +42,6 @@ import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form
 import View.Pin as Pin
 
 
@@ -147,7 +146,6 @@ passphraseForm ({ translators } as shared) { hasPasted } =
                     [ class "min-w-full block p-4"
                     , classList [ ( "pb-18", shared.canReadClipboard ) ]
                     , rows 2
-                    , View.Form.noGrammarly
                     , autofocus True
                     , autocomplete False
                     ]

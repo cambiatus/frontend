@@ -57,7 +57,6 @@ import Maybe.Extra
 import Session.Shared as Shared
 import Task
 import View.Components exposing (Key(..))
-import View.Form
 
 
 
@@ -188,7 +187,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
             viewConfig.value
     in
     div options.containerAttrs
-        [ View.Form.label [] options.id options.label
+        [ View.Components.label [] { targetId = options.id, labelText = options.label }
         , span [ class "flex" ]
             [ span [ class "relative w-full" ]
                 [ DatePicker.view model.selectedDate

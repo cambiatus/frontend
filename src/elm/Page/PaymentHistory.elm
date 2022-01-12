@@ -47,7 +47,7 @@ import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
-import View.Form
+import View.Components
 
 
 
@@ -687,7 +687,10 @@ viewSplash p =
 viewUserAutocomplete : LoggedIn.Model -> Model -> Html Msg
 viewUserAutocomplete loggedIn model =
     div [ class "my-4" ]
-        [ View.Form.label [] "elm-select-input" (loggedIn.shared.translators.t "payment_history.user")
+        [ View.Components.label []
+            { targetId = "elm-select-input"
+            , labelText = loggedIn.shared.translators.t "payment_history.user"
+            }
         , viewPayerAutocomplete loggedIn model False
         ]
 
@@ -768,7 +771,10 @@ selectFilter minChars toLabel q items =
 viewDatePicker : Shared -> Model -> Html Msg
 viewDatePicker shared model =
     div [ class "my-4" ]
-        [ View.Form.label [] "date-picker" (shared.translators.t "payment_history.date")
+        [ View.Components.label []
+            { targetId = "date-picker"
+            , labelText = shared.translators.t "payment_history.date"
+            }
         , div [ class "relative" ]
             [ DatePicker.view
                 model.selectedDate

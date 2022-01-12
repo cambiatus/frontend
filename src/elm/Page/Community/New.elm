@@ -34,8 +34,8 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Token
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
-import View.Form
 
 
 
@@ -249,7 +249,10 @@ createForm ({ t } as translators) { isDisabled } =
                 |> Form.optional
             )
         |> Form.withNoOutput
-            (View.Form.label [] "require-invitation-toggle" (t "settings.community_info.invitation.title")
+            (View.Components.label []
+                { targetId = "require-invitation-toggle"
+                , labelText = t "settings.community_info.invitation.title"
+                }
                 |> Form.arbitrary
             )
         |> Form.with

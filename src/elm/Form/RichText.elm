@@ -53,7 +53,7 @@ import Markdown exposing (Markdown, QuillOp)
 import Ports
 import Session.Shared as Shared
 import Utils
-import View.Form
+import View.Components
 import View.Modal as Modal
 
 
@@ -146,7 +146,8 @@ view (Options options) viewConfig toMsg =
                 Html.text ""
 
               else
-                View.Form.label [] model.id options.label
+                View.Components.label []
+                    { targetId = model.id, labelText = options.label }
             , Html.node "richtext-editor"
                 [ Html.Attributes.attribute "elm-placeholder" (Maybe.withDefault "" options.placeholder)
                 , Html.Attributes.attribute "elm-has-error" (boolToString viewConfig.hasError)

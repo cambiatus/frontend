@@ -46,7 +46,6 @@ import Session.Shared exposing (Shared, Translators)
 import Task
 import Validate
 import View.Components
-import View.Form
 import View.Modal as Modal
 
 
@@ -934,7 +933,10 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label [] (flagSelectorId basic.contactType) (t "contact_form.country")
+        , View.Components.label []
+            { targetId = flagSelectorId basic.contactType
+            , labelText = t "contact_form.country"
+            }
         , button
             [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]

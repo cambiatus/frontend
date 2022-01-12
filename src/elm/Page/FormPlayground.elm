@@ -22,7 +22,6 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import UpdateResult as UR
 import View.Components
-import View.Form
 
 
 
@@ -216,7 +215,6 @@ userForm translators =
                 |> Form.Text.withExtraAttrs
                     [ class "p-4"
                     , rows 2
-                    , View.Form.noGrammarly
                     , autocomplete False
                     ]
                 |> Form.Text.withCounter (Form.Text.CountLetters 255)

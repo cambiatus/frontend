@@ -31,8 +31,8 @@ import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Set exposing (Set)
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
-import View.Form
 
 
 
@@ -316,7 +316,10 @@ viewAccountTypeSelector translators model =
     case model.country of
         Just country ->
             div []
-                [ View.Form.label [] "radio" (translators.t "register.form.register_tooltip")
+                [ View.Components.label []
+                    { targetId = "radio"
+                    , labelText = translators.t "register.form.register_tooltip"
+                    }
                 , div [ class "flex space-x-2 mb-4" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
