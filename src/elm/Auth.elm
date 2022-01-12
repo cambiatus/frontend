@@ -329,7 +329,7 @@ authFailed error model =
         | status = WithoutPrivateKey
         , error = Nothing
         , pinModel =
-            initPinModel model.pinModel.isPinVisible model.status
+            model.pinModel
                 |> Pin.withProblem Pin.Pin error
     }
         |> UR.init

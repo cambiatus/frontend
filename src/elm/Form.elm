@@ -3,7 +3,7 @@ module Form exposing
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapValues, mapOutput
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary
-    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString, viewError
+    , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
     , withDisabled
     , parse
     )
@@ -82,7 +82,7 @@ documentation if you're stuck.
 
 ## Viewing
 
-@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString, viewError
+@docs view, viewWithoutSubmit, Model, init, Msg, update, updateValues, msgToString
 
 
 ### Changing attributes and state

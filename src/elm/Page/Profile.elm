@@ -40,6 +40,7 @@ import Kyc
 import List.Extra as List
 import Log
 import Markdown
+import Maybe.Extra
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
@@ -200,7 +201,7 @@ type Msg
     | ClickedCloseNewPinModal
     | GotPinMsg Pin.Msg
     | SubmittedNewPin String
-    | PinChanged
+    | PinChanged String
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedTransferCard Int
     | RequestedMoreTransfers
@@ -472,7 +473,8 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse model.pinInputModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             { model | downloadingPdfStatus = Downloading }
                 |> UR.init
@@ -549,12 +551,13 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             model
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = PinChanged
+                    { responseAddress = PinChanged newPin
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -567,10 +570,10 @@ update msg model loggedIn =
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
-        PinChanged ->
+        PinChanged newPin ->
             { model
                 | isNewPinModalVisible = False
-                , currentPin = Just model.pinInputModel.pin
+                , currentPin = Just newPin
             }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
@@ -1427,8 +1430,8 @@ jsAddressToMsg addr val =
                 |> Result.map DownloadPdfProcessed
                 |> Result.toMaybe
 
-        "PinChanged" :: [] ->
-            Just PinChanged
+        "PinChanged" :: newPin :: [] ->
+            Just (PinChanged newPin)
 
         _ ->
             Nothing
@@ -1488,8 +1491,8 @@ msgToString msg =
         SubmittedNewPin _ ->
             [ "SubmittedNewPin" ]
 
-        PinChanged ->
-            [ "PinChanged" ]
+        PinChanged newPin ->
+            [ "PinChanged", newPin ]
 
         GotTransferCardProfileSummaryMsg _ subMsg ->
             "GotTransferCardProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

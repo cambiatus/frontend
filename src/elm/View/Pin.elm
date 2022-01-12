@@ -5,7 +5,6 @@ module View.Pin exposing
     , Model
     , Msg
     , RequiredOptions
-    , SubmitStatus(..)
     , init
     , msgToString
     , postSubmitAction
@@ -27,16 +26,15 @@ import Browser.Dom
 import Form
 import Form.Text
 import Form.Validate
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, text)
 import Html.Attributes exposing (attribute, autocomplete, class, disabled, maxlength, type_)
-import Html.Events exposing (keyCode, onClick, preventDefaultOn)
-import Json.Decode as Decode
+import Html.Events exposing (onClick)
+import List.Extra
 import Maybe.Extra
 import Ports
-import Session.Shared as Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared, Translators)
 import Task
 import UpdateResult as UR
-import Validate
 import View.Feedback as Feedback
 
 
@@ -55,11 +53,9 @@ type alias Model =
     , disabled : Bool
     , id : String
     , form : Form.Model FormInput
-    , needsConfirmation : Bool
-    , pin : Pin
-    , pinConfirmation : Maybe Pin
-    , placeholder : String
+    , lastKnownPin : Maybe String
     , problems : List ( Field, String )
+    , needsConfirmation : Bool
     , isPinVisible : Bool
     , isPinConfirmationVisible : Bool
     , isSubmitting : Bool
@@ -93,16 +89,9 @@ init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility 
     , disabled = False
     , id = id
     , form = Form.init { pin = "", confirmation = "" }
-    , needsConfirmation = withConfirmation
-    , pin = ""
-    , pinConfirmation =
-        if withConfirmation then
-            Just ""
-
-        else
-            Nothing
-    , placeholder = String.repeat pinLength "*"
+    , lastKnownPin = Nothing
     , problems = []
+    , needsConfirmation = withConfirmation
     , isPinVisible = pinVisibility
     , isPinConfirmationVisible = pinVisibility
     , isSubmitting = False
@@ -158,6 +147,14 @@ createForm ({ t } as translators) model =
         validatePin =
             Form.Validate.succeed
                 >> Form.Validate.stringLengthExactly pinLength
+                >> Form.Validate.custom
+                    (\pin ->
+                        if String.all Char.isDigit pin then
+                            Ok pin
+
+                        else
+                            Err (\translators_ -> translators_.t "auth.pin.shouldHaveSixDigitsError")
+                    )
                 >> Form.Validate.validate translators
     in
     Form.succeed (\pin _ -> { pin = pin })
@@ -171,7 +168,11 @@ createForm ({ t } as translators) model =
                     { parser = validatePin
                     , value = .pin
                     , update = \pin input -> { input | pin = pin }
-                    , externalError = always Nothing
+                    , externalError =
+                        \_ ->
+                            model.problems
+                                |> List.Extra.find (\( problemField, _ ) -> problemField == Pin)
+                                |> Maybe.map (Tuple.second >> t)
                     }
             )
         |> Form.with
@@ -187,11 +188,20 @@ createForm ({ t } as translators) model =
                         , update = \confirmation input -> { input | confirmation = confirmation }
                         , externalError =
                             \{ pin, confirmation } ->
-                                if pin == confirmation then
-                                    Nothing
+                                let
+                                    externalProblem =
+                                        model.problems
+                                            |> List.Extra.find (\( problemField, _ ) -> problemField == Pin)
+                                            |> Maybe.map (Tuple.second >> t)
 
-                                else
-                                    Just (t "auth.pinConfirmation.differsFromPinError")
+                                    confirmationProblem =
+                                        if pin == confirmation then
+                                            Nothing
+
+                                        else
+                                            Just (t "auth.pinConfirmation.differsFromPinError")
+                                in
+                                Maybe.Extra.or confirmationProblem externalProblem
                         }
 
              else
@@ -274,12 +284,6 @@ type Msg
     | ToggledPinVisibility Field
 
 
-type SubmitStatus
-    = NotAsked
-    | Success Pin
-    | WithError
-
-
 type External
     = SubmitPin Pin
     | SendFeedback Feedback.Model
@@ -303,7 +307,11 @@ update shared msg model =
                     model
 
         SubmittedForm { pin } ->
-            { model | isSubmitting = True }
+            { model
+                | isSubmitting = True
+                , lastKnownPin = Just pin
+                , problems = []
+            }
                 |> UR.init
                 |> UR.addExt (SubmitPin pin)
 
@@ -371,46 +379,6 @@ pinLength =
 type Field
     = Pin
     | PinConfirmation
-
-
-{-| Determines if a PIN is valid
--}
-isValid : String -> Bool
-isValid pin =
-    let
-        hasCorrectLength p =
-            String.length p == pinLength
-
-        hasOnlyDigits =
-            String.all Char.isDigit
-    in
-    hasCorrectLength pin && hasOnlyDigits pin
-
-
-{-| Used to validate a `Model`
--}
-validate : Validate.Validator ( Field, String ) Model
-validate =
-    Validate.fromErrors
-        (\model ->
-            if not (isValid model.pin) then
-                [ ( Pin, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-            else
-                case model.pinConfirmation of
-                    Nothing ->
-                        []
-
-                    Just confirmationValue ->
-                        if not (isValid confirmationValue) then
-                            [ ( PinConfirmation, "auth.pin.shouldHaveSixDigitsError" ) ]
-
-                        else if model.pin /= confirmationValue then
-                            [ ( PinConfirmation, "auth.pinConfirmation.differsFromPinError" ) ]
-
-                        else
-                            []
-        )
 
 
 msgToString : Msg -> List String
