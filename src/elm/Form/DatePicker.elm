@@ -48,7 +48,7 @@ This is how you actually use this component!
 import Browser.Dom
 import Date exposing (Date)
 import DatePicker exposing (DatePicker)
-import Html exposing (Html, button, div, label, span, text)
+import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class, disabled, tabindex, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)

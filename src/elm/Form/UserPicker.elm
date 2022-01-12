@@ -59,7 +59,7 @@ This is how you actually use this component!
 
 import Avatar
 import Eos.Account
-import Html exposing (Html, button, div, label, li, span, ul)
+import Html exposing (Html, button, div, li, span, ul)
 import Html.Attributes exposing (class, classList, disabled, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)

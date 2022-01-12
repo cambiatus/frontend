@@ -66,12 +66,9 @@ config =
     , NoInconsistentEventLocation.rule
     , NoRedundantCons.rule
     , NoFunctionOutsideOfModules.rule
-        [ ( [ "Html.input", "Html.textarea" ]
-          , [ "View.Form.Input"
-            , "View.Form.Toggle"
-            , "View.Form.Radio"
-            , "View.Form.Checkbox"
-            , "Form.Text"
+        [ ( [ "Html.textarea" ], [ "Form.Text" ] )
+        , ( [ "Html.input" ]
+          , [ "Form.Text"
             , "Form.Checkbox"
             , "Form.Radio"
             , "Form.File"
@@ -79,21 +76,14 @@ config =
             ]
           )
         , ( [ "Html.label" ]
-          , [ "View.Form"
-            , "View.Form.Toggle"
-            , "View.Form.Checkbox"
-            , "View.Form.Radio"
-            , "Page.Community.New"
-            , "Form.Checkbox"
+          , [ "Form.Checkbox"
             , "Form.Radio"
             , "Form.File"
             , "Form.Toggle"
-            , "Form.RichText"
-            , "Form.DatePicker"
-            , "Form.UserPicker"
+            , "View.Components"
             ]
           )
-        , ( [ "Html.select" ], [ "View.Form.Select", "Form.Select" ] )
+        , ( [ "Html.select" ], [ "Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
         ]
     ]

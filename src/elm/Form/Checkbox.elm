@@ -39,7 +39,7 @@ module Form.Checkbox exposing
 
 -}
 
-import Html exposing (Html, div, input, label)
+import Html exposing (Html, div, input)
 import Html.Attributes exposing (autocomplete, checked, class, classList, disabled, for, id, required, type_)
 import Html.Events exposing (onBlur, onCheck)
 
@@ -121,7 +121,7 @@ view (Options options) viewConfig =
             , autocomplete False
             ]
             []
-        , label
+        , Html.label
             [ for options.id
             , classList
                 [ ( "text-green", viewConfig.value )

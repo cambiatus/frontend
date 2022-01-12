@@ -51,7 +51,7 @@ module Form.File exposing
 
 import Api
 import File exposing (File)
-import Html exposing (Html, button, div, img, input, label, p, span)
+import Html exposing (Html, button, div, img, input, p, span)
 import Html.Attributes exposing (accept, alt, class, classList, disabled, for, id, multiple, required, src, type_)
 import Html.Attributes.Aria exposing (ariaLive)
 import Html.Events exposing (on, onClick)
@@ -376,7 +376,7 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
     in
     div options.containerAttrs
         [ View.Components.label [] { targetId = options.id, labelText = options.label }
-        , label
+        , Html.label
             [ class "relative w-full h-56 rounded-sm flex justify-center items-center"
             , class backgroundColor
             , class foregroundColor
@@ -462,7 +462,7 @@ viewSmallCircle (Options options) viewConfig value toMsg =
         [ View.Components.label [] { targetId = options.id, labelText = options.label }
         , div [ class "mt-2 m-auto w-20 h-20 relative" ]
             [ viewInput (Options options) viewConfig toMsg
-            , label
+            , Html.label
                 [ for options.id
                 , class "block"
                 , classList
@@ -532,7 +532,7 @@ viewHardcodedChoices (Options options) viewConfig choices toMsg =
             [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
             (List.indexedMap viewItem choices.files
                 ++ [ viewInput (Options options) viewConfig toMsg
-                   , label
+                   , Html.label
                         [ for options.id
                         , class ("flex-col text-center cursor-pointer " ++ itemClass)
 

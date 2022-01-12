@@ -49,7 +49,7 @@ module Form.Toggle exposing
 
 -}
 
-import Html exposing (Html, div, input, label, p, span)
+import Html exposing (Html, div, input, p, span)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, required, type_)
 import Html.Events exposing (onBlur, onCheck)
 import Session.Shared as Shared
@@ -168,7 +168,7 @@ type alias ViewConfig msg =
 viewLabel : Options msg -> Html msg
 viewLabel (Options options) =
     span [ class "flex items-center" ]
-        [ label
+        [ Html.label
             [ for options.id
             , class "cursor-pointer"
             ]
@@ -243,7 +243,7 @@ view (Options options) viewConfig =
             Right ->
                 div [ class "flex" ]
                     [ viewLabel (Options options)
-                    , label
+                    , Html.label
                         [ class "flex cursor-pointer ml-auto space-x-7"
                         , for options.id
                         ]

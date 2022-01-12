@@ -43,7 +43,7 @@ This is how you actually use this component!
 -}
 
 import Form.Text
-import Html exposing (Html, button, div, label)
+import Html exposing (Html, button, div)
 import Html.Attributes exposing (class, disabled)
 import Html.Events
 import Json.Decode
