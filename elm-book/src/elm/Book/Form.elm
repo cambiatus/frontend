@@ -4,6 +4,7 @@ import Book.Form.DatePicker
 import Book.Form.RichText
 import Book.Form.Toggle
 import Book.Form.UserPicker
+import Book.Form.Validation
 import ElmBook.Chapter as Chapter exposing (Chapter)
 
 
@@ -19,6 +20,7 @@ type alias SharedState x =
 chapters : List (Chapter (SharedState x))
 chapters =
     [ introduction
+    , Book.Form.Validation.chapter
     , Book.Form.RichText.chapter
     , Book.Form.Toggle.chapter
     , Book.Form.DatePicker.chapter
