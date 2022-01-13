@@ -2,6 +2,7 @@ module Book.Form exposing (chapters)
 
 import Book.Form.Checkbox
 import Book.Form.DatePicker
+import Book.Form.Radio
 import Book.Form.RichText
 import Book.Form.Select
 import Book.Form.Text
@@ -20,6 +21,7 @@ type alias SharedState x =
         , userpickerModel : Book.Form.UserPicker.Model
         , selectModel : Book.Form.Select.Model
         , checkboxModel : Book.Form.Checkbox.Model
+        , radioModel : Book.Form.Radio.Model
     }
 
 
@@ -34,6 +36,7 @@ chapters =
     , Book.Form.Select.chapter
     , Book.Form.Checkbox.chapter
     , Book.Form.Toggle.chapter
+    , Book.Form.Radio.chapter
     ]
 
 

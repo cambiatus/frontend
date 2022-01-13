@@ -3,6 +3,7 @@ module CambiatusBook exposing (main)
 import Book.Form
 import Book.Form.Checkbox
 import Book.Form.DatePicker
+import Book.Form.Radio
 import Book.Form.RichText
 import Book.Form.Select
 import Book.Form.Text
@@ -46,6 +47,7 @@ type alias SharedState =
     , userpickerModel : Book.Form.UserPicker.Model
     , selectModel : Book.Form.Select.Model
     , checkboxModel : Book.Form.Checkbox.Model
+    , radioModel : Book.Form.Radio.Model
     }
 
 
@@ -58,6 +60,7 @@ initialState =
     , userpickerModel = Book.Form.UserPicker.initModel
     , selectModel = Book.Form.Select.initModel
     , checkboxModel = Book.Form.Checkbox.initModel
+    , radioModel = Book.Form.Radio.initModel
     }
 
 

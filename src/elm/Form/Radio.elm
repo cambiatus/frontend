@@ -292,11 +292,11 @@ view (Options options) viewConfig =
         )
         [ Html.legend (class "label" :: options.labelAttrs) [ Html.text options.label ]
         , div
-            [ class "flex"
+            [ class "flex flex-wrap"
             , classList
                 [ ( "flex-col gap-4", options.direction == Vertical )
                 , ( "gap-4", options.direction == Horizontal && options.hideRadioButton )
-                , ( "gap-8", options.direction == Horizontal && not options.hideRadioButton )
+                , ( "gap-x-8 gap-y-4", options.direction == Horizontal && not options.hideRadioButton )
                 ]
             ]
             (options.options

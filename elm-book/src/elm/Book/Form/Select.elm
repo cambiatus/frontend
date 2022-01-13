@@ -1,12 +1,11 @@
 module Book.Form.Select exposing (Model, Msg, chapter, initModel)
 
-import Book.Helpers
+import Book.Helpers exposing (Fruit(..))
 import ElmBook
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
 import Form.Select
 import Html exposing (Html)
-import Html.Attributes
 
 
 
@@ -24,16 +23,6 @@ initModel =
     { selectedFruit = Banana
     , selectedFruitWithError = Banana
     }
-
-
-type Fruit
-    = Banana
-    | Apple
-    | Orange
-    | Grapes
-    | Lemon
-    | Mango
-    | DragonFruit
 
 
 
@@ -71,20 +60,17 @@ updateSharedState msg sharedState =
 baseOptions : { label : String, id : String } -> Form.Select.Options Fruit msg
 baseOptions { label, id } =
     let
-        allFruits =
-            [ Banana, Apple, Orange, Grapes, Lemon, Mango, DragonFruit ]
-
         allOptions =
-            allFruits
+            Book.Helpers.allFruits
                 |> List.map
                     (\fruit ->
-                        { option = fruit, label = fruitToString fruit }
+                        { option = fruit, label = Book.Helpers.fruitToString fruit }
                     )
     in
     Form.Select.init
         { label = label
         , id = id
-        , optionToString = fruitToString
+        , optionToString = Book.Helpers.fruitToString
         }
         |> Form.Select.withOptions allOptions
 
@@ -119,7 +105,7 @@ viewDisabled =
                 |> Form.Select.withDisabled True
     in
     Form.Select.view options
-        { onSelect = Actions.logActionWith fruitToString "Selected fruit"
+        { onSelect = Actions.logActionWith Book.Helpers.fruitToString "Selected fruit"
         , onBlur = \_ -> Actions.logAction "Blurred disabled input"
         , value = Banana
         , error = Html.text ""
@@ -141,7 +127,7 @@ viewWithError error model =
         { onSelect = SelectedFruitWithError
         , onBlur = BlurredField
         , value = model.selectedFruitWithError
-        , error = Book.Helpers.viewError [] True (Just "error")
+        , error = Book.Helpers.viewError [] True (Just error)
         , hasError = True
         , isRequired = True
         }
@@ -188,28 +174,3 @@ It can also be disabled, or display an error:
 
 <component with-label="With error" />
 """
-
-
-fruitToString : Fruit -> String
-fruitToString fruit =
-    case fruit of
-        Banana ->
-            "Banana"
-
-        Apple ->
-            "Apple"
-
-        Orange ->
-            "Orange"
-
-        Grapes ->
-            "Grapes"
-
-        Lemon ->
-            "Lemon"
-
-        Mango ->
-            "Mango"
-
-        DragonFruit ->
-            "DragonFruit"

@@ -1,4 +1,4 @@
-module Book.Helpers exposing (mockTranslators, mockUsers, viewError)
+module Book.Helpers exposing (Fruit(..), allFruits, fruitToString, mockTranslators, mockUsers, viewError)
 
 import Avatar
 import Eos.Account
@@ -7,20 +7,6 @@ import Html.Attributes
 import Markdown
 import Profile
 import Session.Shared as Shared
-
-
-mockTranslators : Shared.Translators
-mockTranslators =
-    { t =
-        \x ->
-            case x of
-                "thousands_separator" ->
-                    "."
-
-                _ ->
-                    x
-    , tr = \x _ -> x
-    }
 
 
 viewError : List (Html.Attribute msg) -> Bool -> Maybe String -> Html msg
@@ -36,6 +22,24 @@ viewError attributes showError maybeError =
 
             else
                 Html.text ""
+
+
+
+-- MOCKING
+
+
+mockTranslators : Shared.Translators
+mockTranslators =
+    { t =
+        \x ->
+            case x of
+                "thousands_separator" ->
+                    "."
+
+                _ ->
+                    x
+    , tr = \x _ -> x
+    }
 
 
 mockUsers : List Profile.Minimal
@@ -62,3 +66,43 @@ mockUsers =
       , contacts = []
       }
     ]
+
+
+type Fruit
+    = Banana
+    | Apple
+    | Orange
+    | Grapes
+    | Lemon
+    | Mango
+    | DragonFruit
+
+
+allFruits : List Fruit
+allFruits =
+    [ Banana, Apple, Orange, Grapes, Lemon, Mango, DragonFruit ]
+
+
+fruitToString : Fruit -> String
+fruitToString fruit =
+    case fruit of
+        Banana ->
+            "Banana"
+
+        Apple ->
+            "Apple"
+
+        Orange ->
+            "Orange"
+
+        Grapes ->
+            "Grapes"
+
+        Lemon ->
+            "Lemon"
+
+        Mango ->
+            "Mango"
+
+        DragonFruit ->
+            "DragonFruit"
