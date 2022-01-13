@@ -2,6 +2,7 @@ module Book.Form exposing (chapters)
 
 import Book.Form.DatePicker
 import Book.Form.RichText
+import Book.Form.Select
 import Book.Form.Text
 import Book.Form.Toggle
 import Book.Form.UserPicker
@@ -16,6 +17,7 @@ type alias SharedState x =
         , richTextModel : Book.Form.RichText.Model
         , datepickerModel : Book.Form.DatePicker.Model
         , userpickerModel : Book.Form.UserPicker.Model
+        , selectModel : Book.Form.Select.Model
     }
 
 
@@ -27,6 +29,7 @@ chapters =
     , Book.Form.RichText.chapter
     , Book.Form.UserPicker.chapter
     , Book.Form.DatePicker.chapter
+    , Book.Form.Select.chapter
     , Book.Form.Toggle.chapter
     ]
 

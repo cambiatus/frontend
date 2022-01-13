@@ -3,6 +3,7 @@ module CambiatusBook exposing (main)
 import Book.Form
 import Book.Form.DatePicker
 import Book.Form.RichText
+import Book.Form.Select
 import Book.Form.Text
 import Book.Form.Toggle
 import Book.Form.UserPicker
@@ -42,6 +43,7 @@ type alias SharedState =
     , richTextModel : Book.Form.RichText.Model
     , datepickerModel : Book.Form.DatePicker.Model
     , userpickerModel : Book.Form.UserPicker.Model
+    , selectModel : Book.Form.Select.Model
     }
 
 
@@ -52,6 +54,7 @@ initialState =
     , richTextModel = Book.Form.RichText.initModel
     , datepickerModel = Book.Form.DatePicker.initModel
     , userpickerModel = Book.Form.UserPicker.initModel
+    , selectModel = Book.Form.Select.initModel
     }
 
 
