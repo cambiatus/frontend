@@ -209,8 +209,8 @@ chapter =
               )
             ]
         |> Chapter.render """
-A toggle is very similar to a checkbox - it represents either `True` or `False`,
-`yes` or `no`, `enabled` or `disabled`, etc.
+A toggle is very similar to a [checkbox](/forms/checkbox) - it represents either
+`True` or `False`, `yes` or `no`, `enabled` or `disabled`, etc.
 
 With that said, they could be on:
 
