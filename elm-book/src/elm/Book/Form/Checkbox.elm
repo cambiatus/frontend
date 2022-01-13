@@ -1,5 +1,6 @@
 module Book.Form.Checkbox exposing (Model, Msg, chapter, initModel)
 
+import Book.Helpers
 import ElmBook
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
@@ -98,7 +99,7 @@ viewWithError model =
         { onCheck = ToggledErrorExample
         , onBlur = BlurredField
         , value = model.errorExample
-        , error = Html.p [ Html.Attributes.class "form-error" ] [ Html.text "Something went wrong" ]
+        , error = Book.Helpers.viewError [] True (Just "Something went wrong")
         , hasError = True
         , isRequired = True
         }

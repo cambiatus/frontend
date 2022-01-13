@@ -1,5 +1,6 @@
 module Book.Form.Select exposing (Model, Msg, chapter, initModel)
 
+import Book.Helpers
 import ElmBook
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
@@ -140,9 +141,7 @@ viewWithError error model =
         { onSelect = SelectedFruitWithError
         , onBlur = BlurredField
         , value = model.selectedFruitWithError
-        , error =
-            Html.p [ Html.Attributes.class "form-error" ]
-                [ Html.text error ]
+        , error = Book.Helpers.viewError [] True (Just "error")
         , hasError = True
         , isRequired = True
         }

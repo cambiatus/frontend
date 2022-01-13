@@ -181,9 +181,7 @@ viewSimpleWithError error options =
         { onChange = Actions.logActionWithString "Input"
         , onBlur = Actions.logActionWithString "Blurred field"
         , value = ""
-        , error =
-            Html.p [ Html.Attributes.class "form-error" ]
-                [ Html.text error ]
+        , error = Book.Helpers.viewError [] True (Just error)
         , hasError = True
         , translators = Book.Helpers.mockTranslators
         , isRequired = True
