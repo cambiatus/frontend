@@ -313,6 +313,8 @@
       "checkingAvailability": "Comprobando disponibilidad de la cuenta",
       "button": "Crear",
       "company_type": "Tipo de Compañía",
+      "company_name": "Nombre de la empresa",
+      "name_example": "Ejemplo: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",

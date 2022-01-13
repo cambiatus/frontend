@@ -275,6 +275,8 @@
       "checkingAvailability": "አካዉንቱ እንደሚገኝ የተጣራ ነዉ",
       "button": "Create",
       "company_type": "ኩባንያ አይነት",
+      "company_name": "የድርጅት ስም",
+      "name_example": "ምሳሌ፡ Cambiatus",
       "company": {
         "mipyme": {
           "name": "ጥአመኢ",

@@ -370,12 +370,10 @@ time =
                     Maybe.map2 (\hour minute -> { hour = hour, minute = minute })
                         (String.toInt hourString)
                         (String.toInt minuteString)
-                        -- TODO
-                        |> Result.fromMaybe (\{ t } -> t "")
+                        |> Result.fromMaybe (\{ t } -> t "news.editor.error.invalid_time")
 
                 _ ->
-                    -- TODO
-                    Err (\{ t } -> t "")
+                    Err (\{ t } -> t "news.editor.error.invalid_time")
         )
 
 

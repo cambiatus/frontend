@@ -309,6 +309,8 @@
       "checkingAvailability": "Checking availability of that account",
       "button": "Create",
       "company_type": "Company Type",
+      "company_name": "Company Name",
+      "name_example": "Ex.: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",

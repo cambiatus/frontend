@@ -341,7 +341,6 @@ update msg (Model model) =
                     ( Model model, Cmd.none )
 
         ChangedText quillOps ->
-            -- TODO - Use delta from JS side
             ( Model { model | contents = quillOps }, Cmd.none )
 
         ComponentLoaded ->

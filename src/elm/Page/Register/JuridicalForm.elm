@@ -151,10 +151,8 @@ form ({ t } as translators) unavailableAccounts =
                 |> Form.introspect
             )
         |> Form.with
-            -- TODO - I18N
-            (Form.Text.init { label = "Company Name", id = "company-name-input" }
-                -- TODO - I18N
-                |> Form.Text.withPlaceholder "Ex.: Cambiatus"
+            (Form.Text.init { label = t "register.form.company_name", id = "company-name-input" }
+                |> Form.Text.withPlaceholder (t "register.form.name_example")
                 |> Form.textField
                     { parser = Ok
                     , value = .name

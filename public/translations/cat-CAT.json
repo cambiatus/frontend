@@ -313,6 +313,8 @@
       "checkingAvailability": "Comprovant disponibilitat del compte",
       "button": "Crea",
       "company_type": "Tipus d’empresa",
+      "company_name": "Nom de la companyia",
+      "name_example": "Exemple: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
