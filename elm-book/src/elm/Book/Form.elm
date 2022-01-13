@@ -25,9 +25,9 @@ chapters =
     , Book.Form.Validation.chapter
     , Book.Form.Text.chapter
     , Book.Form.RichText.chapter
-    , Book.Form.Toggle.chapter
-    , Book.Form.DatePicker.chapter
     , Book.Form.UserPicker.chapter
+    , Book.Form.DatePicker.chapter
+    , Book.Form.Toggle.chapter
     ]
 
 
