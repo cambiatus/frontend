@@ -213,6 +213,14 @@ chapter =
                     }
                     |> viewSimpleWithError "Something wrong happened"
               )
+            , ( "Time input"
+              , Form.Text.init
+                    { id = "time-input-example"
+                    , label = "Enter a time"
+                    }
+                    |> Form.Text.withType Form.Text.Time
+                    |> viewSimple
+              )
             ]
         |> Chapter.withStatefulComponentList
             [ ( "Basic"
@@ -267,4 +275,11 @@ input.
 
 <component with-label="With currency" />
 <component with-label="With mask" />
+
+We can also wrap default browser implementations for different `input` elements.
+These will look different depending on the browser you're using, but will (hopefully)
+provide a nice and standard user experience to fill them out. Here's an example
+for a time input:
+
+<component with-label="Time input" />
 """
