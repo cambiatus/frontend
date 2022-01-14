@@ -33,7 +33,7 @@ decodeBalance =
 -- BACKEND
 
 
-backendUrl : Shared -> List String -> List QueryParameter -> String
+backendUrl : { shared | endpoints : { endpoints | api : String } } -> List String -> List QueryParameter -> String
 backendUrl { endpoints } paths queryParams =
     Url.Builder.crossOrigin endpoints.api
         ("api" :: paths)
@@ -78,7 +78,7 @@ getBalances shared accountName toMsg =
         }
 
 
-uploadImage : Shared -> File -> (Result Http.Error String -> msg) -> Cmd msg
+uploadImage : { shared | endpoints : { endpoints | api : String } } -> File -> (Result Http.Error String -> msg) -> Cmd msg
 uploadImage shared file toMsg =
     Http.post
         { url = backendUrl shared [ "upload" ] []

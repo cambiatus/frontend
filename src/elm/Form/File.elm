@@ -10,7 +10,7 @@ module Form.File exposing
 {-| Creates a Cambiatus-style File. Use it within a `Form.Form`:
 
     Form.File.init
-        { label = text "Photo"
+        { label = "Photo"
         , id = "photo-input"
         }
 
@@ -60,7 +60,7 @@ import Icons
 import Json.Decode
 import List.Extra
 import RemoteData exposing (RemoteData)
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
@@ -197,7 +197,17 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg Feedback.Model
 
 
-update : Shared -> Msg -> Model -> UpdateResult
+{-| We don't use Shared directly in order to be able to use the update function
+in elm-book more easily, but you can just use `Shared` directly
+-}
+update :
+    { shared
+        | endpoints : { endpoints | api : String }
+        , translators : Shared.Translators
+    }
+    -> Msg
+    -> Model
+    -> UpdateResult
 update shared msg model =
     case msg of
         RequestedUploadFile file ->

@@ -1,4 +1,4 @@
-module Book.Helpers exposing (Fruit(..), allFruits, fruitToString, mockTranslators, mockUsers, viewError)
+module Book.Helpers exposing (Fruit(..), allFruits, fruitToString, mockShared, mockTranslators, mockUsers, viewError)
 
 import Avatar
 import Eos.Account
@@ -39,6 +39,13 @@ mockTranslators =
                 _ ->
                     x
     , tr = \x _ -> x
+    }
+
+
+mockShared : { endpoints : { api : String }, translators : Shared.Translators }
+mockShared =
+    { endpoints = { api = "https://staging.cambiatus.io" }
+    , translators = mockTranslators
     }
 
 

@@ -1,0 +1,93 @@
+<svg id="ico" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" shape-rendering="geometricPrecision"
+    text-rendering="geometricPrecision">
+    <style>
+        @keyframes ico-path1_to__to {
+
+            0%,
+            14.5%,
+            46%,
+            62.5%,
+            to {
+                transform: translate(11.574939px, 12.259663px)
+            }
+
+            53.5%,
+            7.5% {
+                transform: translate(11.574939px, 7.009113px)
+            }
+        }
+
+        @keyframes ico-path2_to__to {
+
+            0%,
+            14%,
+            29.5% {
+                transform: translate(26.023451px, 12.259663px)
+            }
+
+            20.5% {
+                transform: translate(26.023451px, 5.25055px)
+            }
+
+            62%,
+            80%,
+            to {
+                transform: translate(26.000001px, 12.259663px)
+            }
+
+            70.5% {
+                transform: translate(26.000001px, 5.25055px)
+            }
+        }
+
+        @keyframes ico-path5_to__to {
+
+            0%,
+            29%,
+            46.5%,
+            79.5%,
+            99.5%,
+            to {
+                transform: translate(40.513748px, 12.259663px)
+            }
+
+            37%,
+            90% {
+                transform: translate(40.513748px, 7.009113px)
+            }
+        }
+    </style>
+    <g transform="translate(11.575 12.26)" style="animation:ico-path1_to__to 2000ms linear infinite normal forwards">
+        <path id="ico-path1"
+            d="M11.575 10.501c2.783 0 5.038-2.35 5.038-5.25S14.358 0 11.575 0C8.792 0 6.537 2.35 6.537 5.25s2.255 5.251 5.038 5.251z"
+            transform="translate(-11.575 -5.25)" fill="#F99D33" stroke="none" stroke-width="1" />
+    </g>
+    <g transform="translate(26.023 12.26)" style="animation:ico-path2_to__to 2000ms linear infinite normal forwards">
+        <path id="ico-path2"
+            d="M26.023 10.501c2.783 0 5.039-2.35 5.039-5.25S28.806 0 26.023 0c-2.782 0-5.038 2.35-5.038 5.25s2.256 5.251 5.038 5.251z"
+            transform="translate(-26.023 -5.25)" fill="#00BDCD" stroke="none" stroke-width="1" />
+    </g>
+    <path id="ico-path3"
+        d="M50.049 13.191a4.247 4.247 0 00-2.457-.78c-.291 0-.583.043-.916.086a4.492 4.492 0 00-2.831 1.996l-7.162 11.282c-.666 1.042-.875 2.257-.666 3.472.25 1.215.916 2.256 1.915 2.95 1 .695 2.165.912 3.331.695a4.492 4.492 0 002.831-1.996l7.162-11.282c.667-1.042.875-2.257.667-3.472a4.478 4.478 0 00-1.874-2.95z"
+        transform="translate(0 7.01)" fill="#9B4198" stroke="none" stroke-width="1" />
+    <path id="ico-path4"
+        d="M.749 19.614L7.91 30.896a4.492 4.492 0 002.831 1.996c1.166.26 2.332 0 3.331-.694 2.04-1.432 2.623-4.296 1.25-6.423L8.16 14.493a4.492 4.492 0 00-2.832-1.996c-.291-.043-.583-.087-.916-.087-.874 0-1.707.26-2.457.781C-.042 14.623-.625 17.487.75 19.614z"
+        transform="translate(0 7.01)" fill="#F2663B" stroke="none" stroke-width="1" />
+    <g transform="translate(40.514 12.26)" style="animation:ico-path5_to__to 2000ms linear infinite normal forwards">
+        <path id="ico-path5"
+            d="M40.514 10.501c2.782 0 5.038-2.35 5.038-5.25S43.296 0 40.514 0c-2.783 0-5.039 2.35-5.039 5.25s2.256 5.251 5.039 5.251z"
+            transform="translate(-40.514 -5.25)" fill="#9B4198" stroke="none" stroke-width="1" />
+    </g>
+    <path id="ico-path6"
+        d="M21.235 13.191a4.247 4.247 0 00-2.457-.78c-.291 0-.583.043-.916.086a4.492 4.492 0 00-2.831 1.996L7.869 25.775c-.666 1.042-.874 2.257-.666 3.472.25 1.215.916 2.256 1.915 2.95 1 .695 2.165.912 3.331.695a4.492 4.492 0 002.832-1.996l7.162-11.282c.666-1.042.874-2.257.666-3.472a4.478 4.478 0 00-1.874-2.95z"
+        transform="translate(0 7.01)" fill="#F99D33" stroke="none" stroke-width="1" />
+    <path id="ico-path7"
+        d="M14.49 16.142c-.25 1.215 0 2.43.666 3.472l7.162 11.282a4.493 4.493 0 002.831 1.996c1.166.26 2.373 0 3.331-.694 2.04-1.432 2.623-4.296 1.25-6.423l-7.162-11.282a4.492 4.492 0 00-2.832-1.996 5.99 5.99 0 00-.916-.087c-.874 0-1.707.26-2.457.781-.957.695-1.623 1.736-1.873 2.951z"
+        transform="translate(0 7.01)" fill="#8ACC9E" stroke="none" stroke-width="1" />
+    <path id="ico-path8"
+        d="M29.48 14.493l-7.162 11.282c-.667 1.042-.875 2.257-.667 3.472.25 1.215.916 2.256 1.916 2.95 1 .695 2.165.912 3.33.695a4.493 4.493 0 002.832-1.996l7.162-11.282c1.333-2.127.791-5.034-1.249-6.423a4.247 4.247 0 00-2.457-.78c-.291 0-.583.043-.916.086a4.306 4.306 0 00-2.79 1.996z"
+        transform="translate(0 7.01)" fill="#00BDCD" stroke="none" stroke-width="1" />
+    <path id="ico-path9"
+        d="M29.521 19.614l7.162 11.282a4.492 4.492 0 002.831 1.996c1.166.26 2.374 0 3.331-.694 2.04-1.432 2.624-4.296 1.25-6.423l-7.162-11.282a4.492 4.492 0 00-2.832-1.996c-.291-.043-.583-.087-.916-.087-.874 0-1.707.26-2.456.781-2 1.432-2.54 4.296-1.208 6.423z"
+        transform="translate(0 7.01)" fill="#45469B" stroke="none" stroke-width="1" />
+</svg>
