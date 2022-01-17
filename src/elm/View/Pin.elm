@@ -27,7 +27,7 @@ import Form
 import Form.Text
 import Form.Validate
 import Html exposing (Html, button, text)
-import Html.Attributes exposing (attribute, autocomplete, class, disabled, maxlength, type_)
+import Html.Attributes exposing (attribute, autocomplete, autofocus, class, disabled, maxlength, type_)
 import Html.Events exposing (onClick)
 import List.Extra
 import Maybe.Extra
@@ -164,6 +164,7 @@ createForm ({ t } as translators) model =
                 , id = "pin-input"
                 }
                 |> commonOptions Pin
+                |> Form.Text.withExtraAttrs [ autofocus True ]
                 |> Form.textField
                     { parser = validatePin
                     , value = .pin

@@ -30,6 +30,7 @@ import Graphql.Http
 import Html exposing (Html, a, button, div, img, p, span, strong, text)
 import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, src, type_)
 import Html.Events exposing (onClick)
+import Html.Keyed
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
@@ -107,7 +108,7 @@ passphraseForm ({ translators } as shared) { hasPasted } =
         viewPasteButton =
             if shared.canReadClipboard then
                 button
-                    [ class "absolute bottom-4 left-1/2 transform -translate-x-1/2 button"
+                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button"
                     , classList
                         [ ( "button-secondary", not hasPasted )
                         , ( "button-primary", hasPasted )
@@ -187,15 +188,18 @@ view guest model =
         guest.shared.translators.t "auth.login.loginTab"
     , content =
         div [ class "bg-purple-500 flex-grow flex flex-col justify-center md:block" ]
-            [ div [ class "flex flex-col flex-grow justify-between w-full p-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+            [ Html.Keyed.node "div"
+                [ class "flex flex-col flex-grow justify-between w-full p-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
                 (case model of
                     EnteringPassphrase passphraseModel ->
                         viewPassphrase guest passphraseModel
                             |> List.map (Html.map GotPassphraseMsg)
+                            |> List.indexedMap (\index node -> ( "passphrase-" ++ String.fromInt index, node ))
 
                     EnteringPin pinModel ->
                         viewPin guest pinModel
                             |> List.map (Html.map GotPinMsg)
+                            |> List.indexedMap (\index node -> ( "pin-" ++ String.fromInt index, node ))
                 )
             ]
     }
@@ -336,11 +340,7 @@ update msg model guest =
                     (\ext ur ->
                         case ext of
                             FinishedEnteringPassphrase validPassphrase ->
-                                ur
-                                    |> UR.addCmd
-                                        (Task.succeed validPassphrase
-                                            |> Task.perform WentToPin
-                                        )
+                                UR.addMsg (WentToPin validPassphrase) ur
 
                             PassphraseGuestExternal guestExternal ->
                                 UR.addExt guestExternal ur
@@ -350,10 +350,6 @@ update msg model guest =
             initPinModel guest.shared.pinVisibility passphrase
                 |> EnteringPin
                 |> UR.init
-                |> UR.addCmd
-                    (Dom.focus "pinInput"
-                        |> Task.attempt (\_ -> GotPinMsg PinIgnored)
-                    )
 
         ( GotPinMsg pinMsg, EnteringPin pinModel ) ->
             updateWithPin pinMsg pinModel guest
@@ -413,7 +409,7 @@ updateWithPassphrase msg model { shared } =
                     , data = Encode.object [ ( "name", Encode.string "readClipboard" ) ]
                     }
                 |> UR.addCmd
-                    (Dom.focus "passphrase"
+                    (Dom.focus "passphrase-input"
                         |> Task.attempt (\_ -> PassphraseIgnored)
                     )
                 |> UR.addExt
