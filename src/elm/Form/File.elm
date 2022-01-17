@@ -346,7 +346,6 @@ view : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 view (Options options) viewConfig toMsg =
     case viewConfig.value of
         SingleFile file ->
-            -- TODO - Focus styles
             case options.variant of
                 LargeRectangle background ->
                     viewLargeRectangle background (Options options) viewConfig file toMsg
@@ -362,7 +361,7 @@ viewInput : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewInput (Options options) viewConfig toMsg =
     input
         [ id options.id
-        , class "sr-only"
+        , class "sr-only form-file"
         , type_ "file"
         , onFileChange (RequestedUploadFile >> toMsg)
         , acceptFileTypes options.fileTypes
@@ -386,17 +385,18 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
     in
     div options.containerAttrs
         [ View.Components.label [] { targetId = options.id, labelText = options.label }
+        , viewInput (Options options) viewConfig toMsg
         , Html.label
-            [ class "relative w-full h-56 rounded-sm flex justify-center items-center"
+            [ class "relative w-full h-56 rounded-sm flex justify-center items-center file-decoration"
             , class backgroundColor
             , class foregroundColor
             , classList
                 [ ( "cursor-pointer", not options.disabled )
                 , ( "cursor-not-allowed", options.disabled )
                 ]
+            , for options.id
             ]
-            [ viewInput (Options options) viewConfig toMsg
-            , case value of
+            [ case value of
                 RemoteData.Loading ->
                     View.Components.loadingLogoAnimated viewConfig.translators ""
 
@@ -482,7 +482,7 @@ viewSmallCircle (Options options) viewConfig value toMsg =
                 ]
                 [ viewImg
                 , span
-                    [ class "absolute bottom-0 right-0 bg-orange-300 rounded-full transition-all"
+                    [ class "absolute bottom-0 right-0 bg-orange-300 rounded-full transition-all file-decoration"
                     , classList
                         [ ( "w-8 h-8 p-2", not (RemoteData.isNotAsked value) )
                         , ( "w-full h-full p-4", RemoteData.isNotAsked value )
@@ -545,8 +545,6 @@ viewHardcodedChoices (Options options) viewConfig choices toMsg =
                    , Html.label
                         [ for options.id
                         , class ("flex-col text-center cursor-pointer " ++ itemClass)
-
-                        -- TODO - Disable
                         ]
                         [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
                             [ Icons.imageMultiple "text-white fill-current w-8 h-8"

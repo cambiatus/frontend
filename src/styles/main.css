@@ -126,6 +126,11 @@ body > * {
     box-shadow: var(--default-tailwind-shadow), inset 0 0 0 var(--shadow-size) white !important; */
   }
 
+  .form-file:focus-visible + label .file-decoration,
+  .form-file:focus-visible + label.file-decoration {
+    @apply ring ring-green ring-opacity-50 active:ring-0;
+  }
+
   /* .form-radio:not(.with-error):checked {
     --shadow-size: 0.25rem;
   } */
