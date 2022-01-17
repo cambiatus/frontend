@@ -751,7 +751,7 @@ selectConfiguration shared isDisabled =
             , filter = selectFilter 2 (\p -> Eos.Account.nameToString p.account)
             , onFocusItem = NoOp
             }
-            |> Select.withInputClass "form-input"
+            |> Select.withInputClass "input"
         )
         shared
         isDisabled

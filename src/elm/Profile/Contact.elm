@@ -987,7 +987,7 @@ viewFlagsSelect { t } basic =
             [ flag False "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
+                    [ class "absolute input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
                     , tabindex -1
                     ]
                     (countryOptions basic.supportedCountry
