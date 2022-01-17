@@ -213,8 +213,9 @@ viewToggle (Options options) viewConfig =
             []
         , span
             [ class "relative block border-2 border-gray-100 rounded-full h-6 w-12 transition-colors ease-in duration-200 input form-switch-label2"
+            , class "before:block before:bg-gray-900 before:w-4 before:h-4 before:rounded-full before:absolute before:inset-y-0.5 before:mx-0.5 before:transition-all before:duration-200 before:ease-in before:right-6"
             , classList
-                [ ( "bg-indigo-500 checked", viewConfig.value )
+                [ ( "bg-indigo-500 before:bg-white before:right-0", viewConfig.value )
                 , ( "bg-white", not viewConfig.value )
                 , ( "border-red with-error", viewConfig.hasError )
                 ]
