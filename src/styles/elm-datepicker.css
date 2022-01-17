@@ -7,7 +7,7 @@
 }
 
 .elm-datepicker--picker {
-  @apply absolute w-full border-solid border border-purple-500 bg-white z-10 rounded-sm;
+  @apply absolute w-full border-solid border border-purple-500 bg-white z-20 rounded-sm;
 }
 
 .elm-datepicker--picker-header,
