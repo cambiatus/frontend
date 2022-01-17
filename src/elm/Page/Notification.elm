@@ -172,7 +172,7 @@ viewNotificationTransfer shared history notification =
                         [ class "w-10 h-10 object-scale-down" ]
                         []
             ]
-        , div [ class "flex-col flex-grow-1 pl-4" ]
+        , div [ class "flex-col grow-1 pl-4" ]
             [ p
                 [ class "text-black" ]
                 [ text description ]
@@ -220,7 +220,7 @@ viewNotificationMint shared history notification =
                         [ class "w-10 h-10 object-scale-down" ]
                         []
             ]
-        , div [ class "flex-col flex-grow-1 pl-4" ]
+        , div [ class "flex-col grow-1 pl-4" ]
             [ p
                 [ class "text-black" ]
                 [ text description ]
@@ -289,7 +289,7 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
                 ]
                     |> shared.translators.tr "notifications.saleHistory.sell"
     in
-    [ div [ class "flex-col flex-grow-1 pl-4" ]
+    [ div [ class "flex-col grow-1 pl-4" ]
         [ p
             [ class "text-black" ]
             [ text description ]

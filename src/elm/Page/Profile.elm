@@ -883,7 +883,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
     div
         [ class "bg-gray-100 w-full md:flex md:flex-col" ]
         [ div
-            [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
+            [ class "md:flex-basis-0 md:grow-1 md:overflow-y-auto"
             , id "transfer-scroll-container"
             , tabindex -1
             ]

@@ -7,6 +7,7 @@ module.exports = {
   theme: {
     // Colors used on the 'Design System'
     colors: {
+      current: 'currentColor',
       transparent: 'transparent',
       black: '#000000',
       white: '#FFFFFF',
@@ -205,23 +206,6 @@ module.exports = {
       }
     }
   },
-  variants: {
-    // If you're going to override one of:
-    // - backgroundColor
-    // - borderColor
-    // - boxShadow
-    // - fontWeight
-    // - opacity
-    // - outline
-    // - textColor
-    // - textDecoration
-    // Make sure to also include 'hover' and 'focus' (or check if none is used in the project)
-    // Not including them may break the current behaviour, because 'variants' key overwrites the current tailwind behaviour
-    // See an example below of how add a varian to 'last':
-    // backgroundColor: ['hover', 'focus', 'last']
-    borderRadius: ['responsive', 'first-hover', 'last-hover', 'last', 'first'],
-    borderWidth: ['last']
-  },
   plugins: [
     require('tailwindcss-transforms')({
       '3d': false // defaults to false
@@ -241,13 +225,12 @@ module.exports = {
       addUtilities(rotateUtilities)
     }
   ],
-  purge: [
+  content: [
     './src/**/*.elm',
     './src/customElements/*.js',
     './src/index.js',
     // We need these next ones for elm-book
     '../src/**/*.elm',
     '../src/customElements/*.js'
-  ],
-  mode: 'jit'
+  ]
 }

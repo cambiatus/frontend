@@ -233,7 +233,7 @@ viewSummary { t } hasRead news =
         , title news.title
         , Route.href (Route.News (Just news.id))
         ]
-        [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
+        [ Icons.speechBubble [ ariaHidden True ] "shrink-0 stroke-current"
         , div [ class "truncate ml-4 mr-16" ]
             [ h4 [ class "font-bold truncate" ] [ text news.title ]
             , p

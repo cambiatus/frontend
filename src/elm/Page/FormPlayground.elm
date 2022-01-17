@@ -188,7 +188,7 @@ userForm translators =
                 |> Form.Text.withMask phoneMask
                 |> Form.Text.withType Form.Text.Telephone
                 |> Form.Text.withElements
-                    [ Icons.phone "absolute right-4 top-1/2 transform -translate-y-1/2"
+                    [ Icons.phone "absolute right-4 top-1/2 -translate-y-1/2"
                     ]
                 |> Form.textField
                     { parser = Mask.remove phoneMask >> Ok

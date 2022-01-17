@@ -383,7 +383,7 @@ view (Options options) viewConfig =
                                         )
                         in
                         Html.p
-                            (class "text-purple-100 mt-2 ml-auto uppercase font-bold text-sm flex-shrink-0"
+                            (class "text-purple-100 mt-2 ml-auto uppercase font-bold text-sm shrink-0"
                                 :: options.counterAttrs
                             )
                             [ Html.text <|

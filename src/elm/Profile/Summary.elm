@@ -217,7 +217,7 @@ viewUserInfo profile =
     in
     div [ class "flex flex-col w-full" ]
         [ div [ class "flex mb-4 items-center justify-center" ]
-            [ Avatar.view profile.avatar "w-20 h-20 mr-6 flex-shrink-0"
+            [ Avatar.view profile.avatar "w-20 h-20 mr-6 shrink-0"
             , div [ class "flex items-center justify-between" ]
                 [ ul [ class "text-sm text-gray-900" ]
                     [ li [ class "font-semibold text-body-black text-2xl xs-max:text-xl" ]

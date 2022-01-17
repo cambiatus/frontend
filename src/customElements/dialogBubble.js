@@ -5,8 +5,8 @@ export default () => (
     constructor () {
       super()
 
-      this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
-      this._defaultPointClasses = 'absolute transform -z-10'
+      this._defaultClasses = 'absolute cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
+      this._defaultPointClasses = 'absolute -z-10'
 
       window.addEventListener('resize', this.setPosition, { passive: true })
     }
@@ -17,7 +17,7 @@ export default () => (
 
       const point = document.createElement('div')
       const pointElement = document.createElement('div')
-      pointElement.className = `w-8 h-8 ${bgClass} transform -rotate-45 rounded-sm`
+      pointElement.className = `w-8 h-8 ${bgClass} -rotate-45 rounded-sm`
 
       const relativeSelector = this.getAttribute('elm-relative-selector')
       this._relativeElement = relativeSelector ? document.querySelector(relativeSelector) : null

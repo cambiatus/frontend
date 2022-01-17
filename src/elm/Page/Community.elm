@@ -241,7 +241,7 @@ viewSponsorCard loggedIn community =
             ]
         , if not hasContributed then
             div [ class "flex items-center mb-4" ]
-                [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" ]
+                [ div [ class "uppercase bg-gray-400 text-white w-14 h-14 rounded-full flex items-center justify-center shrink-0" ]
                     [ text_ "community.index.you" ]
                 , p [ class "ml-4" ]
                     [ text <|
@@ -364,7 +364,7 @@ viewNewsContainer : Translators -> Bool -> List (Html msg) -> Html msg
 viewNewsContainer { t } isSponsorCardVisible children =
     div
         [ class "flex flex-col w-full bg-white rounded p-4 relative md:overflow-y-auto"
-        , classList [ ( "md:flex-basis-0 md:flex-grow-1", isSponsorCardVisible ) ]
+        , classList [ ( "md:flex-basis-0 md:grow-1", isSponsorCardVisible ) ]
         ]
         (h2 [ class "text-lg font-bold mb-6" ]
             [ span [ class "text-gray-900" ] [ text <| t "community.index.our_messages" ]
@@ -482,7 +482,7 @@ viewObjective loggedIn model metadata index objective =
         arrowStyle : String
         arrowStyle =
             if canEdit then
-                " sm:flex-grow-2"
+                " sm:grow-2"
 
             else
                 " "
@@ -521,7 +521,7 @@ viewObjective loggedIn model metadata index objective =
                   else
                     onClick (ClickedOpenObjective index)
                 ]
-                [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
+                [ div [ class "sm:grow-7 sm:w-5/12" ]
                     [ Markdown.view
                         [ class "text-white font-semibold"
                         , classList [ ( "truncate-children", not isOpen ) ]
@@ -836,11 +836,11 @@ viewAction shared canEdit date action isDisabled =
                         ]
                     ]
                 , div [ class "mt-5 flex flex-row items-baseline" ]
-                    [ div [ class ("text-green mt-5 flex-grow-1" ++ rewardStrike) ]
+                    [ div [ class ("text-green mt-5 grow-1" ++ rewardStrike) ]
                         [ span [] [ text (t "community.actions.reward" ++ ": ") ]
                         , span [ class "font-semibold" ] [ text rewardStr ]
                         ]
-                    , div [ class "hidden sm:flex sm:visible flex-row justify-end flex-grow-1" ]
+                    , div [ class "hidden sm:flex sm:visible flex-row justify-end grow-1" ]
                         (case action.verificationType of
                             VerificationType.Claimable ->
                                 [ viewClaimButton ]

@@ -304,7 +304,7 @@ viewFilterAndOrder { shared } model =
 
         viewButton label icon onClickMsg =
             button
-                [ class "button button-secondary flex-grow-1 justify-between pl-4"
+                [ class "button button-secondary grow-1 justify-between pl-4"
                 , onClick onClickMsg
                 ]
                 [ text (shared.translators.t label)

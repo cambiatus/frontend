@@ -921,7 +921,7 @@ viewFlagsSelect { t } basic =
         withPreventAll message =
             { message = message, preventDefault = True, stopPropagation = True }
     in
-    div [ class "mb-10 flex-shrink-0" ]
+    div [ class "mb-10 shrink-0" ]
         [ if basic.showFlags then
             button
                 [ class "fixed top-0 left-0 w-full h-full cursor-default z-40"
