@@ -71,11 +71,6 @@ body > * {
 /* Form */
 
 @layer components {
-  /* TODO - Clean up form-related CSS (move to Elm with Tailwind) */
-  .form-input {
-    @apply bg-white px-3 py-2 placeholder-gray-900 input-border text-base;
-  }
-
   .input-border {
     @apply border border-gray-500 rounded-md ring-0 duration-100 focus:ring focus-within:ring;
 
@@ -90,6 +85,32 @@ body > * {
     @apply border-red focus-within:ring-red focus-within:ring-opacity-30;
   }
 
+  .with-error {
+    @apply border-red text-red focus:border-red;
+  }
+
+  .label {
+    @apply text-black font-bold uppercase text-sm mb-2 block;
+  }
+
+  /* Input */
+
+  .input {
+    @apply px-3 py-2 h-12 bg-white placeholder-gray-900 outline-none text-black input-border text-base;
+  }
+
+  .input:disabled {
+    @apply bg-gray-500;
+  }
+
+  textarea.input {
+    @apply h-40;
+  }
+
+  /* End of Input */
+
+  /* Checkbox */
+
   .form-checkbox {
     @apply h-5 w-5 text-green rounded-sm input-border disabled:bg-gray-100;
   }
@@ -99,6 +120,22 @@ body > * {
 
     background-image: url('/icons/checkbox.svg');
   }
+
+  /* End of Checkbox */
+
+  /* Toggle */
+
+  [type='checkbox']:focus-visible + .form-switch-label2 {
+    @apply focus:outline-none ring ring-green ring-opacity-50 active:ring-0;
+  }
+
+  [type='checkbox']:focus-visible + .form-switch-label2.with-error {
+    @apply ring-red ring-opacity-30;
+  }
+
+  /* End of Toggle */
+
+  /* Select */
 
   .form-select {
     @apply input pr-10 bg-no-repeat focus:outline-none;
@@ -116,61 +153,24 @@ body > * {
     background-image: url('/icons/select-arrow.svg');
   }
 
+  /* End of Select */
+
+  /* Radio */
+
   .form-radio {
     @apply h-5 w-5 bg-none rounded-full border text-green input-border checked:bg-none disabled:text-gray-900 disabled:border-gray-900;
-
-    /* --default-tailwind-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000); */
-
-    /* --shadow-size: 1.25rem;
-
-    box-shadow: var(--default-tailwind-shadow), inset 0 0 0 var(--shadow-size) white !important; */
   }
+
+  /* End of Radio */
+
+  /* File */
 
   .form-file:focus-visible + label .file-decoration,
   .form-file:focus-visible + label.file-decoration {
     @apply ring ring-green ring-opacity-50 active:ring-0;
   }
 
-  /* .form-radio:not(.with-error):checked {
-    --shadow-size: 0.25rem;
-  } */
-
-  * + .sibling-focus {
-    @apply ring-0 transition-shadow;
-  }
-
-  *:focus + .sibling-focus {
-    @apply ring;
-  }
-
-  /* End of form */
-
-  /* Input */
-
-  .input {
-    @apply form-input h-12 outline-none text-black;
-  }
-
-  .input:disabled {
-    @apply bg-gray-500;
-  }
-
-  textarea.input {
-    @apply h-40;
-  }
-
-  .with-error {
-    @apply border-red text-red focus:border-red;
-  }
-
-  .field-with-error,
-  .field-with-error:focus {
-    @apply border-red text-red;
-  }
-
-  .label {
-    @apply text-black font-bold uppercase text-sm mb-2 block;
-  }
+  /* End of File */
 }
 
 /* End of form */
@@ -199,6 +199,7 @@ body > * {
 /* End of Tooltip */
 
 /* Icon Tooltip */
+
 .icon-tooltip {
   @apply relative flex;
 }
@@ -338,112 +339,8 @@ body > * {
 
 /* End of Tag */
 
-/* CHECKBOX TOGGLE SWITCH */
-.form-switch {
-  @apply relative select-none w-10 mr-2;
-}
-
-.form-switch-checkbox {
-  @apply hidden;
-}
-
-.form-switch-label {
-  @apply block overflow-hidden cursor-pointer bg-white border-2 border-gray-100 rounded-full h-6;
-
-  transition: background-color 0.2s ease-in;
-  min-width: 43px;
-}
-
-.form-switch-label::before {
-  @apply absolute block bg-gray-900 inset-y-0 w-4 h-4 rounded-full -ml-1 mt-1;
-
-  right: 50%;
-  content: '';
-  transition: all 0.2s ease-in;
-}
-
-.form-switch-checkbox:checked + .form-switch-label {
-  @apply bg-indigo-500 shadow-none;
-}
-
-.form-switch-checkbox:checked + .form-switch-label::before {
-  @apply right-0 bg-white;
-
-  margin-right: 0.05rem;
-}
-
-[type='checkbox']:focus-visible + .form-switch-label2 {
-  @apply focus:outline-none ring ring-green ring-opacity-50 active:ring-0;
-}
-
-[type='checkbox']:focus-visible + .form-switch-label2.with-error {
-  @apply ring-red ring-opacity-30;
-}
-
-.form-switch-label2::before {
-  @apply block bg-gray-900 w-4 h-4 rounded-full absolute inset-y-0.5 mx-0.5 transition-all duration-200 ease-in right-6;
-
-  content: '';
-}
-
-.form-switch-label2.checked::before {
-  @apply bg-white right-0;
-}
-
-@layer utilities {
-  .form-error {
-    /* validation message for the field */
-    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in-from-above;
-  }
-}
-
-.shake-invalid {
-  animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-@keyframes shake {
-  10%,
-  90% {
-    transform: translate3d(-1px, 0, 0);
-  }
-
-  20%,
-  80% {
-    transform: translate3d(2px, 0, 0);
-  }
-
-  30%,
-  50%,
-  70% {
-    transform: translate3d(-4px, 0, 0);
-  }
-
-  40%,
-  60% {
-    transform: translate3d(4px, 0, 0);
-  }
-}
-
-.form-error-on-dark-bg {
-  @apply form-error text-lightred;
-}
-
-.lang-menu-open .lang-flag {
-  @apply mr-2;
-}
-
-.min-h-stretch {
-  /* Fill all available vertical space. It works predictable for mobile,
-  because it doesn't take the address bar into account. */
-  @apply min-h-screen;
-
-  min-height: stretch;
-}
-
 /* Objectives */
+
 .action-verifier svg {
   fill: #eee;
 }
@@ -456,6 +353,7 @@ body > * {
 }
 
 /* Claims */
+
 .claim-photo-thumb {
   @apply cursor-pointer w-24 h-16 flex items-center justify-center rounded-sm;
 }
@@ -486,6 +384,23 @@ https://tailwindcss.com/docs/adding-new-utilities */
 
   .focus-ring {
     @apply focus:outline-none focus-visible:ring ring-green ring-opacity-50 active:ring-0;
+  }
+
+  * + .sibling-focus {
+    @apply ring-0 transition-shadow;
+  }
+
+  *:focus + .sibling-focus {
+    @apply ring;
+  }
+
+  .form-error {
+    /* validation message for the field */
+    @apply text-red text-sm uppercase tracking-wide block mt-2 animate-fade-in-from-above;
+  }
+
+  .form-error-on-dark-bg {
+    @apply form-error text-lightred;
   }
 
   .animation-delay-150 {
@@ -643,20 +558,6 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 /* End of QuillJS classes */
-
-/* Legacy CSS leftover */
-
-.hidden-img-input,
-.profile-img-input {
-  width: 0.1px;
-  height: 0.1px;
-  opacity: 0;
-  overflow: hidden;
-  position: absolute;
-  z-index: -1;
-}
-
-/* End of Legacy CSS leftover */
 
 /* https://tailwindcss.com/docs/extracting-components#extracting-css-components-with-apply */
 @tailwind utilities;
