@@ -348,7 +348,7 @@ langFlag language =
                     "/icons/flag-ethiopia.svg"
     in
     img
-        [ class "object-cover rounded-full w-6 h-6 lang-flag mr-2"
+        [ class "object-cover rounded-full w-6 h-6 mr-2"
         , src iconLink
         ]
         []
