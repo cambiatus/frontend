@@ -277,8 +277,8 @@ view (Options options) viewConfig =
                     , class "form-radio mr-2 shadow-form-control"
                     , classList
                         [ ( "with-error", isSelected && viewConfig.hasError )
-                        , ( "hover:border-green", not viewConfig.hasError )
-                        , ( "hover:border-red", viewConfig.hasError )
+                        , ( "hover:border-green", not viewConfig.hasError && not options.disabled )
+                        , ( "hover:border-red", viewConfig.hasError && not options.disabled )
                         , ( "sr-only", options.hideRadioButton )
                         ]
                     ]
