@@ -12,10 +12,10 @@
     "vite-plugin-elm": "^2.5.0"
   },
   "dependencies": {
-    "autoprefixer": "^10.4.0",
+    "autoprefixer": "^10.4.2",
     "focus-visible": "^5.2.0",
-    "postcss": "^8.3.11",
-    "postcss-focus-visible": "^6.0.1",
-    "tailwindcss": "^2.2.19"
+    "postcss": "^8.4.5",
+    "postcss-focus-visible": "^6.0.3",
+    "tailwindcss": "^3.0.15"
   }
 }
