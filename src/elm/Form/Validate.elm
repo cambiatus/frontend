@@ -1,13 +1,12 @@
 module Form.Validate exposing
-    ( Validator, succeed, validate, custom, Error, withCustomError
+    ( Validator, succeed, validate, custom, Error, withCustomError, map
     , required
-    , stringShorterThan, stringLongerThan, stringLengthExactly, url
+    , stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName, time
     , int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
-    , maskedFloat, floatGreaterThan
+    , maskedFloat, floatGreaterThan, floatGreaterThanOrEqualTo, floatLowerThanOrEqualTo
     , markdownLongerThan
     , lengthGreaterThanOrEqualTo
     , futureDate
-    , email, eosName, floatGreaterThanOrEqualTo, map, time
     )
 
 {-| This module offers a bunch of ready-made functions to use as the `parser`
@@ -27,7 +26,7 @@ validations), so we get consistent error messages throughout the app.
 
 ## Pipeline helpers
 
-@docs Validator, succeed, validate, custom, Error, withCustomError
+@docs Validator, succeed, validate, custom, Error, withCustomError, map
 
 
 ## Generic validations
@@ -37,11 +36,11 @@ validations), so we get consistent error messages throughout the app.
 
 ## String inputs
 
-@docs stringShorterThan, stringLongerThan, stringLengthExactly, url
+@docs stringShorterThan, stringLongerThan, stringLengthExactly, url, email, eosName, time
 
 @docs int, intGreaterThan, intGreaterThanOrEqualTo, intLowerThanOrEqualTo
 
-@docs maskedFloat, floatGreaterThan
+@docs maskedFloat, floatGreaterThan, floatGreaterThanOrEqualTo, floatLowerThanOrEqualTo
 
 @docs markdownLongerThan
 
@@ -205,6 +204,11 @@ floatGreaterThan =
 floatGreaterThanOrEqualTo : Float -> Validator Float -> Validator Float
 floatGreaterThanOrEqualTo =
     numberGreaterThanOrEqualTo String.fromFloat
+
+
+floatLowerThanOrEqualTo : Float -> Validator Float -> Validator Float
+floatLowerThanOrEqualTo =
+    numberLowerThanOrEqualTo String.fromFloat
 
 
 maskedFloat : Shared.Translators -> Validator String -> Validator Float

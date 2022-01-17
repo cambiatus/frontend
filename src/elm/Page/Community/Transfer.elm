@@ -19,6 +19,7 @@ import Form
 import Form.RichText
 import Form.Text
 import Form.UserPicker
+import Form.Validate
 import Graphql.Document
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class, value)
@@ -33,7 +34,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared exposing (Shared)
 import Token
 import Transfer
 import UpdateResult as UR
@@ -134,32 +135,23 @@ createForm loggedIn community balance maxTransferAmount =
                 |> Form.Text.withCurrency balance.symbol
                 |> Form.textField
                     { parser =
-                        \stringAmount ->
-                            case
-                                Shared.floatStringFromSeparatedString translators stringAmount
-                                    |> String.toFloat
-                            of
-                                Just amount ->
-                                    if amount > maxTransferAmount then
-                                        Err <|
-                                            translators.tr "transfer.too_much"
-                                                [ ( "token", Eos.symbolToSymbolCodeString balance.symbol )
-                                                , ( "max_asset"
-                                                  , Eos.assetToString translators
-                                                        { amount = maxTransferAmount
-                                                        , symbol = balance.symbol
-                                                        }
-                                                  )
-                                                ]
-
-                                    else
-                                        Ok
-                                            { amount = amount
-                                            , symbol = community.symbol
-                                            }
-
-                                Nothing ->
-                                    Err "transfer.no_amount"
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.floatLowerThanOrEqualTo maxTransferAmount
+                            >> Form.Validate.withCustomError
+                                (\translators_ ->
+                                    translators_.tr "transfer.too_much"
+                                        [ ( "token", Eos.symbolToSymbolCodeString balance.symbol )
+                                        , ( "max_asset"
+                                          , Eos.assetToString translators_
+                                                { amount = maxTransferAmount
+                                                , symbol = balance.symbol
+                                                }
+                                          )
+                                        ]
+                                )
+                            >> Form.Validate.map (\amount -> { amount = amount, symbol = community.symbol })
+                            >> Form.Validate.validate translators
                     , value = .amount
                     , update = \amount input -> { input | amount = amount }
                     , externalError = always Nothing
