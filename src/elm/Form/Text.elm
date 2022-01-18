@@ -83,7 +83,7 @@ type Options msg
         , extraAttrs : List (Html.Attribute msg)
         , containerAttrs : List (Html.Attribute msg)
         , inputContainerAttrs : List (Html.Attribute msg)
-        , extraElements : List (Html msg)
+        , extraElements : List (ViewConfig msg -> Html msg)
         , errorAttrs : List (Html.Attribute msg)
         , counterAttrs : List (Html.Attribute msg)
         , counter : Maybe Counter
@@ -237,6 +237,19 @@ withNumberMask decimalDigits (Options options) =
 -}
 withElements : List (Html msg) -> Options msg -> Options msg
 withElements elements (Options options) =
+    Options
+        { options
+            | extraElements =
+                options.extraElements
+                    ++ List.map always elements
+        }
+
+
+{-| Same as `withElements`, but peek into a `ViewConfig` before rendering the
+element
+-}
+withElementsWithConfig : List (ViewConfig msg -> Html msg) -> Options msg -> Options msg
+withElementsWithConfig elements (Options options) =
     Options { options | extraElements = options.extraElements ++ elements }
 
 
@@ -249,7 +262,7 @@ is valid and has the symbol's precision
 withCurrency : Eos.Symbol -> Options msg -> Options msg
 withCurrency symbol options =
     options
-        |> withElements [ viewCurrencyElement symbol ]
+        |> withElementsWithConfig [ viewCurrencyElement symbol ]
         |> withExtraAttrs [ class "pr-20" ]
         |> withNumberMask (Mask.Precisely (Eos.getSymbolPrecision symbol))
         |> asNumeric
@@ -397,7 +410,7 @@ view (Options options) viewConfig =
 
 
 viewInput : Options msg -> ViewConfig msg -> Html msg
-viewInput (Options options) { onChange, value, hasError, onBlur, translators, isRequired } =
+viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, isRequired } as viewConfig) =
     let
         ( inputElement, typeAttr ) =
             case options.inputElement of
@@ -481,7 +494,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
             (id options.id
                 :: onInput (beforeChangeEvent >> onChange)
                 :: Events.onBlur (onBlur options.id)
-                :: class "w-full input"
+                :: class "w-full input peer"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled
                 :: Html.Attributes.value (beforeRenderingValue paddedTimeValue)
@@ -492,7 +505,7 @@ viewInput (Options options) { onChange, value, hasError, onBlur, translators, is
             )
             []
             :: maskHelper
-            :: options.extraElements
+            :: List.map (\element -> element viewConfig) options.extraElements
         )
 
 
@@ -546,7 +559,20 @@ typeToString type_ =
             "password"
 
 
-viewCurrencyElement : Eos.Symbol -> Html a
-viewCurrencyElement symbol =
-    Html.span [ class "absolute right-0 rounded-r-sm border-transparent border bg-purple-500 uppercase inset-y-0 px-4 text-white flex items-center" ]
-        [ Html.text <| Eos.symbolToSymbolCodeString symbol ]
+viewCurrencyElement : Eos.Symbol -> ViewConfig msg -> Html msg
+viewCurrencyElement symbol { hasError } =
+    Html.span
+        [ class
+            """
+            absolute right-0 inset-y-0 ml-px
+            bg-purple-500 text-white uppercase
+            px-4 flex items-center rounded-r-md
+            border-r border-t border-b
+            """
+        , classList
+            [ ( "border-red", hasError )
+            , ( "border-gray-500 peer-focus:border-green", not hasError )
+            ]
+        ]
+        [ Html.text <| Eos.symbolToSymbolCodeString symbol
+        ]
