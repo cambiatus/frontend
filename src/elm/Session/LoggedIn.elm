@@ -79,11 +79,16 @@ import View.Modal as Modal
 -}
 init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
 init shared accountName authToken =
-    ( initModel shared Nothing accountName authToken
+    let
+        ( model, cmd ) =
+            initModel shared Nothing accountName authToken
+    in
+    ( model
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
+        , cmd
         ]
     )
 
@@ -121,12 +126,16 @@ initLogin shared maybePrivateKey_ profile_ authToken =
                 |> RemoteData.Success
                 |> Task.succeed
                 |> Task.perform CompletedLoadProfile
+
+        ( model, cmd ) =
+            initModel shared maybePrivateKey_ profile_.account authToken
     in
-    ( initModel shared maybePrivateKey_ profile_.account authToken
+    ( model
     , Cmd.batch
         [ loadedProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
+        , cmd
         ]
     )
 
@@ -185,31 +194,37 @@ type alias Model =
     }
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> ( Model, Cmd Msg )
 initModel shared maybePrivateKey_ accountName authToken =
-    { shared = shared
-    , routeHistory = []
-    , accountName = accountName
-    , profile = RemoteData.Loading
-    , selectedCommunity = RemoteData.Loading
-    , contributionCount = RemoteData.NotAsked
-    , showUserNav = False
-    , showLanguageItems = False
-    , showNotificationModal = False
-    , showMainNav = False
-    , showCommunitySelector = False
-    , showAuthModal = False
-    , auth = Auth.init shared.pinVisibility maybePrivateKey_
-    , notification = Notification.init
-    , unreadCount = 0
-    , feedback = Feedback.Hidden
-    , searchModel = Search.init
-    , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
-    , authToken = authToken
-    , hasSeenDashboard = False
-    , queuedCommunityFields = []
-    , maybeHighlightedNews = Nothing
-    }
+    let
+        ( authModel, authCmd ) =
+            Auth.init shared.pinVisibility maybePrivateKey_
+    in
+    ( { shared = shared
+      , routeHistory = []
+      , accountName = accountName
+      , profile = RemoteData.Loading
+      , selectedCommunity = RemoteData.Loading
+      , contributionCount = RemoteData.NotAsked
+      , showUserNav = False
+      , showLanguageItems = False
+      , showNotificationModal = False
+      , showMainNav = False
+      , showCommunitySelector = False
+      , showAuthModal = False
+      , auth = authModel
+      , notification = Notification.init
+      , unreadCount = 0
+      , feedback = Feedback.Hidden
+      , searchModel = Search.init
+      , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
+      , authToken = authToken
+      , hasSeenDashboard = False
+      , queuedCommunityFields = []
+      , maybeHighlightedNews = Nothing
+      }
+    , Cmd.map GotAuthMsg authCmd
+    )
 
 
 hasPrivateKey : Model -> Bool

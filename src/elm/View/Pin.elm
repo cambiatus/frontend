@@ -83,22 +83,25 @@ type alias RequiredOptions =
 
 {-| Initializes a `Model` with some initial `RequiredOptions`
 -}
-init : RequiredOptions -> Model
+init : RequiredOptions -> ( Model, Cmd Msg )
 init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility } =
-    { label = label
-    , disabled = False
-    , id = id
-    , form = Form.init { pin = "", confirmation = "" }
-    , lastKnownPin = Nothing
-    , problems = []
-    , needsConfirmation = withConfirmation
-    , isPinVisible = pinVisibility
-    , isPinConfirmationVisible = pinVisibility
-    , isSubmitting = False
-    , submitLabel = submitLabel
-    , submittingLabel = submittingLabel
-    , background = Light
-    }
+    ( { label = label
+      , disabled = False
+      , id = id
+      , form = Form.init { pin = "", confirmation = "" }
+      , lastKnownPin = Nothing
+      , problems = []
+      , needsConfirmation = withConfirmation
+      , isPinVisible = pinVisibility
+      , isPinConfirmationVisible = pinVisibility
+      , isSubmitting = False
+      , submitLabel = submitLabel
+      , submittingLabel = submittingLabel
+      , background = Light
+      }
+    , Browser.Dom.focus "pin-input"
+        |> Task.attempt (\_ -> Ignored)
+    )
 
 
 type alias FormInput =

@@ -98,6 +98,16 @@ init loggedIn profileName =
                     (Just loggedIn.authToken)
                     (Profile.query profileName)
                     CompletedLoadProfile
+
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "profile.newPin"
+                , id = "new-pin-input"
+                , withConfirmation = False
+                , submitLabel = "profile.pin.button"
+                , submittingLabel = "profile.pin.button"
+                , pinVisibility = loggedIn.shared.pinVisibility
+                }
     in
     { profileName = profileName
     , profile = RemoteData.Loading
@@ -108,19 +118,12 @@ init loggedIn profileName =
     , isDeleteKycModalVisible = False
     , downloadingPdfStatus = NotDownloading
     , isNewPinModalVisible = False
-    , pinInputModel =
-        Pin.init
-            { label = "profile.newPin"
-            , id = "new-pin-input"
-            , withConfirmation = False
-            , submitLabel = "profile.pin.button"
-            , submittingLabel = "profile.pin.button"
-            , pinVisibility = loggedIn.shared.pinVisibility
-            }
+    , pinInputModel = pinModel
     , currentPin = Nothing
     }
         |> UR.init
         |> UR.addCmd fetchProfile
+        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 

@@ -64,20 +64,25 @@ initPassphraseModel =
     }
 
 
-initPinModel : Bool -> String -> PinModel
+initPinModel : Bool -> String -> ( PinModel, Cmd PinMsg )
 initPinModel pinVisibility passphrase =
-    { isSigningIn = False
-    , passphrase = passphrase
-    , pinModel =
-        Pin.init
-            { label = "auth.pin.label"
-            , id = "pinInput"
-            , withConfirmation = True
-            , submitLabel = "auth.login.submit"
-            , submittingLabel = "auth.login.submitting"
-            , pinVisibility = pinVisibility
-            }
-    }
+    let
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "auth.pin.label"
+                , id = "pinInput"
+                , withConfirmation = True
+                , submitLabel = "auth.login.submit"
+                , submittingLabel = "auth.login.submitting"
+                , pinVisibility = pinVisibility
+                }
+    in
+    ( { isSigningIn = False
+      , passphrase = passphrase
+      , pinModel = pinModel
+      }
+    , Cmd.map GotPinComponentMsg pinCmd
+    )
 
 
 
@@ -347,9 +352,14 @@ update msg model guest =
                     )
 
         ( WentToPin (Passphrase passphrase), EnteringPassphrase _ ) ->
-            initPinModel guest.shared.pinVisibility passphrase
+            let
+                ( pinModel, pinCmd ) =
+                    initPinModel guest.shared.pinVisibility passphrase
+            in
+            pinModel
                 |> EnteringPin
                 |> UR.init
+                |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
 
         ( GotPinMsg pinMsg, EnteringPin pinModel ) ->
             updateWithPin pinMsg pinModel guest

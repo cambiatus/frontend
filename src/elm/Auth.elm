@@ -57,7 +57,7 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Bool -> Maybe Eos.PrivateKey -> Model
+init : Bool -> Maybe Eos.PrivateKey -> ( Model, Cmd Msg )
 init pinVisibility maybePrivateKey_ =
     let
         status =
@@ -67,11 +67,16 @@ init pinVisibility maybePrivateKey_ =
 
                 Just privateKey ->
                     WithPrivateKey privateKey
+
+        ( pinModel, pinCmd ) =
+            initPinModel pinVisibility status
     in
-    { status = status
-    , error = Nothing
-    , pinModel = initPinModel pinVisibility status
-    }
+    ( { status = status
+      , error = Nothing
+      , pinModel = pinModel
+      }
+    , pinCmd
+    )
 
 
 
@@ -85,16 +90,20 @@ type alias Model =
     }
 
 
-initPinModel : Bool -> Status -> Pin.Model
+initPinModel : Bool -> Status -> ( Pin.Model, Cmd Msg )
 initPinModel pinVisibility status =
-    Pin.init
-        { label = "auth.pinPopup.label"
-        , id = "pinPopup"
-        , withConfirmation = False
-        , submitLabel = "auth.login.continue"
-        , submittingLabel = "auth.login.continue"
-        , pinVisibility = pinVisibility
-        }
+    let
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "auth.pinPopup.label"
+                , id = "pinPopup"
+                , withConfirmation = False
+                , submitLabel = "auth.login.continue"
+                , submittingLabel = "auth.login.continue"
+                , pinVisibility = pinVisibility
+                }
+    in
+    ( pinModel
         |> Pin.withDisabled
             (case status of
                 WithoutPrivateKey ->
@@ -103,6 +112,8 @@ initPinModel pinVisibility status =
                 WithPrivateKey _ ->
                     True
             )
+    , Cmd.map GotPinMsg pinCmd
+    )
 
 
 {-| Represents the state of the user's authentication. A user can be:
