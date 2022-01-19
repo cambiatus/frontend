@@ -36,7 +36,6 @@ import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
 import List.Extra as LE
-import Mask
 import Maybe.Extra
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
@@ -550,24 +549,7 @@ submit translators kind =
 
 submitSingle : Translators -> Basic -> Result Basic Normalized
 submitSingle translators basic =
-    let
-        removeMask : Basic -> Basic
-        removeMask basic_ =
-            case basic_.contactType of
-                Phone ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Whatsapp ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Instagram ->
-                    basic_
-
-                Telegram ->
-                    basic_
-    in
     basic
-        |> removeMask
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
