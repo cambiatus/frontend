@@ -86,7 +86,7 @@ chapter =
                         [ Form.RichText.init { label = "Rich text" }
                             |> (\options ->
                                     Form.RichText.view options
-                                        { onBlur = \_ -> NoOp
+                                        { onBlur = NoOp
                                         , value = sharedState.richTextModel
                                         , error = Html.text ""
                                         , hasError = False
@@ -116,7 +116,7 @@ chapter =
                     |> Form.RichText.withDisabled True
                     |> (\options ->
                             Form.RichText.view options
-                                { onBlur = \_ -> NoOp
+                                { onBlur = NoOp
                                 , value = Form.RichText.initModel "disabled-rich-text" Nothing
                                 , error = Html.text ""
                                 , hasError = False
@@ -133,7 +133,7 @@ chapter =
                     |> Form.RichText.withPlaceholder "Lorem ipsum dolor sit amet"
                     |> (\options ->
                             Form.RichText.view options
-                                { onBlur = \_ -> NoOp
+                                { onBlur = NoOp
                                 , value = Form.RichText.initModel "error-rich-text" Nothing
                                 , error = Book.Helpers.viewError [] True (Just "Errors are displayed below the input")
                                 , hasError = True

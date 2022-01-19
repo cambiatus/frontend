@@ -156,7 +156,7 @@ withContainerAttrs attrs (Options options) =
 
 type alias ViewConfig msg =
     { onToggle : Bool -> msg
-    , onBlur : String -> msg
+    , onBlur : msg
     , value : Bool
     , error : Html msg
     , hasError : Bool
@@ -205,7 +205,7 @@ viewToggle (Options options) viewConfig =
             , id options.id
             , checked viewConfig.value
             , onCheck viewConfig.onToggle
-            , onBlur (viewConfig.onBlur options.id)
+            , onBlur viewConfig.onBlur
             , disabled options.disabled
             , required viewConfig.isRequired
             , class "sr-only"

@@ -851,7 +851,7 @@ viewContactTypeSelect ({ t } as translators) contactType =
         |> (\options ->
                 Form.Select.view options
                     { onSelect = EnteredContactOption
-                    , onBlur = \_ -> NoOp
+                    , onBlur = NoOp
                     , value = contactType
                     , error = text ""
                     , hasError = False
@@ -1016,7 +1016,7 @@ viewPhoneInput ({ t, tr } as translators) basic =
         |> (\options ->
                 Form.Text.view options
                     { onChange = EnteredContactText basic.contactType
-                    , onBlur = \_ -> NoOp
+                    , onBlur = NoOp
                     , value = basic.contact
                     , error =
                         case basic.errors of
@@ -1062,7 +1062,7 @@ viewProfileInput ({ t } as translators) basic =
         |> (\options ->
                 Form.Text.view options
                     { onChange = EnteredContactText basic.contactType
-                    , onBlur = \_ -> NoOp
+                    , onBlur = NoOp
                     , value = basic.contact
                     , error =
                         case basic.errors of

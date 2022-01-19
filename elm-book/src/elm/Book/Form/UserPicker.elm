@@ -78,7 +78,7 @@ chapter =
               , \sharedState ->
                     let
                         viewConfig =
-                            { onBlur = \_ -> NoOp
+                            { onBlur = NoOp
                             , value = sharedState.userpickerModel.single
                             , error = Html.text ""
                             , hasError = False
@@ -113,7 +113,7 @@ chapter =
               , \sharedState ->
                     let
                         viewConfig =
-                            { onBlur = \_ -> NoOp
+                            { onBlur = NoOp
                             , value = sharedState.userpickerModel.multiple
                             , error = Html.text ""
                             , hasError = False
@@ -148,7 +148,7 @@ chapter =
               , \sharedState ->
                     let
                         viewConfig =
-                            { onBlur = \_ -> NoOp
+                            { onBlur = NoOp
                             , value = sharedState.userpickerModel.disabledWithError
                             , error = Book.Helpers.viewError [] True (Just "Errors show up between the input and the selected users")
                             , hasError = True

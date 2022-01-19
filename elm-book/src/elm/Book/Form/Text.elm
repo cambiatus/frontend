@@ -7,7 +7,6 @@ import ElmBook.Chapter as Chapter exposing (Chapter)
 import Eos
 import Form.Text
 import Html exposing (Html)
-import Html.Attributes
 
 
 
@@ -87,7 +86,7 @@ viewBasic model =
     in
     Form.Text.view options
         { onChange = ChangedBasicExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "basic-example"
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -110,7 +109,7 @@ viewTextarea model =
     in
     Form.Text.view options
         { onChange = ChangedBasicExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "textarea-example"
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -131,7 +130,7 @@ viewWithCurrency model =
     in
     Form.Text.view options
         { onChange = ChangedCurrencyExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "currency-example"
         , value = model.currencyExample
         , error = Html.text ""
         , hasError = False
@@ -145,7 +144,7 @@ viewWithMask model =
     let
         options =
             Form.Text.init
-                { id = "currency-example"
+                { id = "phone-example"
                 , label = "Enter a brazilian phone number"
                 }
                 |> Form.Text.withMask { mask = "(##) ##### ####", replace = '#' }
@@ -153,7 +152,7 @@ viewWithMask model =
     in
     Form.Text.view options
         { onChange = ChangedMaskExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "phone-example"
         , value = model.maskExample
         , error = Html.text ""
         , hasError = False
@@ -166,7 +165,7 @@ viewSimple : Form.Text.Options (ElmBook.Msg state) -> Html (ElmBook.Msg state)
 viewSimple options =
     Form.Text.view options
         { onChange = Actions.logActionWithString "Input"
-        , onBlur = Actions.logActionWithString "Blurred field"
+        , onBlur = Actions.logAction "Blurred field"
         , value = ""
         , error = Html.text ""
         , hasError = False
@@ -179,7 +178,7 @@ viewSimpleWithError : String -> Form.Text.Options (ElmBook.Msg state) -> Html (E
 viewSimpleWithError error options =
     Form.Text.view options
         { onChange = Actions.logActionWithString "Input"
-        , onBlur = Actions.logActionWithString "Blurred field"
+        , onBlur = Actions.logAction "Blurred field"
         , value = ""
         , error = Book.Helpers.viewError [] True (Just error)
         , hasError = True

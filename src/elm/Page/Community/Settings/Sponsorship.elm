@@ -131,7 +131,7 @@ view_ { translators } community =
                         |> (\options ->
                                 Form.Toggle.view options
                                     { onToggle = \_ -> NoOp
-                                    , onBlur = \_ -> NoOp
+                                    , onBlur = NoOp
                                     , value =
                                         community.contributionConfiguration
                                             |> Maybe.andThen .paypalAccount
@@ -164,7 +164,7 @@ view_ { translators } community =
                     |> (\options ->
                             Form.Toggle.view options
                                 { onToggle = \_ -> NoOp
-                                , onBlur = \_ -> NoOp
+                                , onBlur = NoOp
                                 , value = False
                                 , error = text ""
                                 , hasError = False

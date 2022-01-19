@@ -164,7 +164,7 @@ withLabelAttrs attrs (Options options) =
 
 type alias ViewConfig option msg =
     { onSelect : option -> msg
-    , onBlur : String -> msg
+    , onBlur : msg
     , value : option
     , error : Html msg
     , hasError : Bool
@@ -203,7 +203,7 @@ view (Options options) viewConfig =
                 :: classList [ ( "with-error", viewConfig.hasError ) ]
                 :: required viewConfig.isRequired
                 :: disabled options.disabled
-                :: onBlur (viewConfig.onBlur options.id)
+                :: onBlur viewConfig.onBlur
                 -- We don't use `Html.Events.onInput` because `optionFromValue`
                 -- might return `Nothing`. In that case, the decoder just fails and
                 -- doesn't emit a msg

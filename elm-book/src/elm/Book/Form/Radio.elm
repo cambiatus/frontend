@@ -91,7 +91,7 @@ view model =
     in
     Form.Radio.view options
         { onSelect = SelectedFruit
-        , onBlur = BlurredField
+        , onBlur = BlurredField "fruit-picker-radio"
         , value = model.selectedFruit
         , error = Html.text ""
         , hasError = False
@@ -107,7 +107,7 @@ viewVertical model =
     in
     Form.Radio.view options
         { onSelect = SelectedVerticalFruit
-        , onBlur = BlurredField
+        , onBlur = BlurredField "fruit-picker-vertical-radio"
         , value = model.selectedVerticalFruit
         , error = Html.text ""
         , hasError = False
@@ -128,7 +128,7 @@ viewDisabled =
                     >> Maybe.withDefault "No fruit"
                 )
                 "Selected fruit"
-        , onBlur = \_ -> Actions.logAction "Blurred disabled select"
+        , onBlur = Actions.logAction "Blurred disabled select"
         , value = Just Grapes
         , error = Html.text ""
         , hasError = False
@@ -143,7 +143,7 @@ viewWithError model =
     in
     Form.Radio.view options
         { onSelect = SelectedErrorFruit
-        , onBlur = BlurredField
+        , onBlur = BlurredField "fruit-picker-error-radio"
         , value = model.selectedErrorFruit
         , error = Book.Helpers.viewError [] True (Just "Something went wrong")
         , hasError = True

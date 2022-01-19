@@ -116,7 +116,7 @@ view loggedIn model =
                                 |> (\options ->
                                         Form.Toggle.view options
                                             { onToggle = action
-                                            , onBlur = \_ -> NoOp
+                                            , onBlur = NoOp
                                             , value = value
                                             , error = text ""
                                             , hasError = False

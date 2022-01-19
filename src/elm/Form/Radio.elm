@@ -242,7 +242,7 @@ getOptionToString (Options options) =
 
 type alias ViewConfig option msg =
     { onSelect : option -> msg
-    , onBlur : String -> msg
+    , onBlur : msg
     , value : option
     , error : Html msg
     , hasError : Bool
@@ -273,7 +273,7 @@ view (Options options) viewConfig =
                     , Html.Attributes.value (options.optionToString option)
                     , checked isSelected
                     , onClick (viewConfig.onSelect option)
-                    , onBlur (viewConfig.onBlur options.id)
+                    , onBlur viewConfig.onBlur
                     , class "form-radio mr-2 shadow-form-control"
                     , classList
                         [ ( "with-error", isSelected && viewConfig.hasError )

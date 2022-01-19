@@ -342,7 +342,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
             |> (\options ->
                     Form.Toggle.view options
                         { onToggle = ToggledHighlightNews news.id
-                        , onBlur = \_ -> NoOp
+                        , onBlur = NoOp
                         , value = isHighlighted
                         , error = text ""
                         , hasError = False

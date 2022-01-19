@@ -113,7 +113,7 @@ withContainerAttrs attrs (Options options) =
 
 
 type alias ViewConfig msg =
-    { onBlur : String -> msg
+    { onBlur : msg
     , value : Model
     , error : Html msg
     , hasError : Bool
@@ -185,7 +185,7 @@ view (Options options) viewConfig toMsg =
                                 |> (\config ->
                                         Form.Text.view config
                                             { onChange = EnteredLinkLabel
-                                            , onBlur = \_ -> NoOp
+                                            , onBlur = NoOp
                                             , value = linkModal.label
                                             , error = Html.text ""
                                             , hasError = False
@@ -201,7 +201,7 @@ view (Options options) viewConfig toMsg =
                                 |> (\config ->
                                         Form.Text.view config
                                             { onChange = EnteredLinkUrl
-                                            , onBlur = \_ -> NoOp
+                                            , onBlur = NoOp
                                             , value = linkModal.url
                                             , error = Html.text ""
                                             , hasError = False

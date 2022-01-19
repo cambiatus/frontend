@@ -120,7 +120,7 @@ view model =
                 |> Form.Toggle.withDisabled model.disabled
             )
             { onToggle = ToggledValue
-            , onBlur = \_ -> BlurredField
+            , onBlur = BlurredField
             , value = model.value
             , error = Book.Helpers.viewError [] hasError (Just model.error)
             , hasError = hasError
@@ -145,7 +145,7 @@ chapter =
 
         baseViewOptions value =
             { onToggle = Actions.logActionWithBool "Toggled. New value"
-            , onBlur = \_ -> Actions.logAction "Blurred toggle"
+            , onBlur = Actions.logAction "Blurred toggle"
             , value = value
             , error = Html.text ""
             , hasError = False

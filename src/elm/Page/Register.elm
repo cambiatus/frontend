@@ -420,7 +420,7 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                             |> (\options ->
                                     Form.Text.view options
                                         { onChange = \_ -> NoOp
-                                        , onBlur = \_ -> NoOp
+                                        , onBlur = NoOp
                                         , value = keys.words
                                         , error = text ""
                                         , hasError = False
@@ -445,7 +445,7 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                     |> (\options ->
                             Form.Checkbox.view options
                                 { onCheck = AgreedToSave12Words
-                                , onBlur = \_ -> NoOp
+                                , onBlur = NoOp
                                 , value = model.hasAgreedToSavePassphrase
                                 , error = text ""
                                 , hasError = False

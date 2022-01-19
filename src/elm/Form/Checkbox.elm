@@ -94,7 +94,7 @@ withContainerAttrs attrs (Options options) =
 
 type alias ViewConfig msg =
     { onCheck : Bool -> msg
-    , onBlur : String -> msg
+    , onBlur : msg
     , value : Bool
     , error : Html msg
     , hasError : Bool
@@ -113,7 +113,7 @@ view (Options options) viewConfig =
             , onCheck viewConfig.onCheck
             , id options.id
             , disabled options.disabled
-            , onBlur (viewConfig.onBlur options.id)
+            , onBlur viewConfig.onBlur
             , required viewConfig.isRequired
 
             -- Firefox saves the value on page refresh

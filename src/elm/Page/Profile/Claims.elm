@@ -281,7 +281,7 @@ viewFiltersModal shared model =
                 |> (\options ->
                         Form.Select.view options
                             { onSelect = SelectedStatusFilter
-                            , onBlur = \_ -> NoOp
+                            , onBlur = NoOp
                             , value = model.editingStatusFilter
                             , error = text ""
                             , hasError = False

@@ -352,7 +352,7 @@ asNumeric =
 
 type alias ViewConfig msg =
     { onChange : String -> msg
-    , onBlur : String -> msg
+    , onBlur : msg
     , value : String
     , error : Html msg
     , hasError : Bool
@@ -493,7 +493,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
         (inputElement
             (id options.id
                 :: onInput (beforeChangeEvent >> onChange)
-                :: Events.onBlur (onBlur options.id)
+                :: Events.onBlur onBlur
                 :: class "w-full input peer"
                 :: classList [ ( "with-error", hasError ) ]
                 :: disabled options.disabled

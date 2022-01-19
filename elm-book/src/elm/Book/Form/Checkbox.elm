@@ -78,7 +78,7 @@ view model =
     in
     Form.Checkbox.view options
         { onCheck = ToggledBasicExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "basic-example-checkbox"
         , value = model.basicExample
         , error = Html.text ""
         , hasError = False
@@ -97,7 +97,7 @@ viewWithError model =
     in
     Form.Checkbox.view options
         { onCheck = ToggledErrorExample
-        , onBlur = BlurredField
+        , onBlur = BlurredField "example-with-error-checkbox"
         , value = model.errorExample
         , error = Book.Helpers.viewError [] True (Just "Something went wrong")
         , hasError = True
@@ -117,7 +117,7 @@ viewBase { id, value } =
     in
     Form.Checkbox.view options
         { onCheck = Actions.logActionWithBool "Toggled disabled checkbox"
-        , onBlur = \_ -> Actions.logAction "Blurred disabled checkbox"
+        , onBlur = Actions.logAction "Blurred disabled checkbox"
         , value = value
         , error = Html.text ""
         , hasError = False

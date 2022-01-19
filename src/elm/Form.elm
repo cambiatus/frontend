@@ -888,7 +888,7 @@ type Msg values
     | GotFileMsg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
-    | BlurredField String
+    | BlurredField { fieldId : String, isEmpty : Bool }
     | ClickedSubmitWithErrors ( String, List String )
 
 
@@ -969,14 +969,18 @@ update shared msg (Model model) =
                 |> UR.addCmd (Cmd.map (GotUserPickerMsg options viewConfig getModel updateFn) cmd)
                 |> maybeAddMsg maybeExternalMsg
 
-        BlurredField fieldId ->
+        BlurredField fieldInfo ->
             Model
                 { model
                     | errorTracking =
                         ErrorTracking
                             { errorTracking
                                 | showFieldError =
-                                    Set.insert fieldId errorTracking.showFieldError
+                                    if fieldInfo.isEmpty then
+                                        Set.remove fieldInfo.fieldId errorTracking.showFieldError
+
+                                    else
+                                        Set.insert fieldInfo.fieldId errorTracking.showFieldError
                             }
                 }
                 |> UR.init
@@ -1201,6 +1205,9 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
             else
                 options
+
+        onBlur =
+            toMsg (BlurredField { fieldId = getId state, isEmpty = isEmpty state })
     in
     case state of
         Text options baseField ->
@@ -1224,7 +1231,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
             in
             Text.view transformedOptions
                 { onChange = baseField.update >> ChangedValues >> toMsg
-                , onBlur = BlurredField >> toMsg
+                , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
                 , hasError = hasError
@@ -1234,7 +1241,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         RichText options baseField ->
             RichText.view (disableIfNotAlreadyDisabled options RichText.withDisabled)
-                { onBlur = BlurredField >> toMsg
+                { onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1248,7 +1255,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         Toggle options baseField ->
             Toggle.view (disableIfNotAlreadyDisabled options Toggle.withDisabled)
                 { onToggle = baseField.update >> ChangedValues >> toMsg
-                , onBlur = BlurredField >> toMsg
+                , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1260,7 +1267,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
             Checkbox.view (disableIfNotAlreadyDisabled options Checkbox.withDisabled)
                 { value = baseField.value
                 , onCheck = baseField.update >> ChangedValues >> toMsg
-                , onBlur = BlurredField >> toMsg
+                , onBlur = onBlur
                 , error = viewError [] showError error
                 , hasError = hasError
                 , isRequired = isRequired
@@ -1269,7 +1276,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         Radio options baseField ->
             Radio.view (disableIfNotAlreadyDisabled options Radio.withDisabled)
                 { onSelect = baseField.update >> ChangedValues >> toMsg
-                , onBlur = BlurredField >> toMsg
+                , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1290,7 +1297,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         Select options baseField ->
             Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
                 { onSelect = baseField.update >> ChangedValues >> toMsg
-                , onBlur = BlurredField >> toMsg
+                , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1315,7 +1322,7 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         UserPicker options baseField ->
             let
                 viewConfig =
-                    { onBlur = BlurredField
+                    { onBlur = BlurredField { fieldId = getId state, isEmpty = isEmpty state }
                     , value = baseField.value
                     , error = viewError [] showError error
                     , hasError = hasError

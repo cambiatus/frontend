@@ -176,7 +176,7 @@ withModalSelectors useModalSelectors (Options options) =
 
 
 type alias ViewConfig msg =
-    { onBlur : String -> msg
+    { onBlur : msg
     , value : Model
     , error : Html msg
     , hasError : Bool
@@ -188,7 +188,7 @@ type alias ViewConfig msg =
 -}
 mapViewConfig : (msg -> mappedMsg) -> ViewConfig msg -> ViewConfig mappedMsg
 mapViewConfig fn viewConfig =
-    { onBlur = viewConfig.onBlur >> fn
+    { onBlur = fn viewConfig.onBlur
     , value = viewConfig.value
     , error = Html.map fn viewConfig.error
     , hasError = viewConfig.hasError
@@ -553,7 +553,7 @@ update options viewConfig msg (Model model) =
             )
 
         BlurredPicker ->
-            ( Model model, Cmd.none, Just (viewConfig.onBlur model.id) )
+            ( Model model, Cmd.none, Just viewConfig.onBlur )
 
 
 msgToString : Msg -> List String

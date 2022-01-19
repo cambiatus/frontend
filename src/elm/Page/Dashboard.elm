@@ -366,7 +366,7 @@ viewInvitationModal { shared } model =
                             |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
                         )
                         { onChange = \_ -> NoOp
-                        , onBlur = \_ -> NoOp
+                        , onBlur = NoOp
                         , value = url invitationId
                         , error = text ""
                         , hasError = False

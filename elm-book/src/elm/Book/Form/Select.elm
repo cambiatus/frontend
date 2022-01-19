@@ -86,7 +86,7 @@ viewBasic model =
     in
     Form.Select.view options
         { onSelect = SelectedFruit
-        , onBlur = BlurredField
+        , onBlur = BlurredField "fruit-picker-example"
         , value = model.selectedFruit
         , error = Html.text ""
         , hasError = False
@@ -106,7 +106,7 @@ viewDisabled =
     in
     Form.Select.view options
         { onSelect = Actions.logActionWith Book.Helpers.fruitToString "Selected fruit"
-        , onBlur = \_ -> Actions.logAction "Blurred disabled input"
+        , onBlur = Actions.logAction "Blurred disabled input"
         , value = Banana
         , error = Html.text ""
         , hasError = False
@@ -125,7 +125,7 @@ viewWithError error model =
     in
     Form.Select.view options
         { onSelect = SelectedFruitWithError
-        , onBlur = BlurredField
+        , onBlur = BlurredField "fruit-error-example"
         , value = model.selectedFruitWithError
         , error = Book.Helpers.viewError [] True (Just error)
         , hasError = True
