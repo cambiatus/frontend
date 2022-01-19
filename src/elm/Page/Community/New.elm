@@ -249,29 +249,7 @@ createForm ({ t } as translators) { isDisabled } =
                     }
                 |> Form.optional
             )
-        |> Form.withNoOutput
-            (View.Components.label []
-                { targetId = "require-invitation-toggle"
-                , labelText = t "settings.community_info.invitation.title"
-                }
-                |> Form.arbitrary
-            )
-        |> Form.with
-            (Form.Toggle.init
-                { label = text <| t "settings.community_info.fields.invitation"
-                , id = "require-invitation-toggle"
-                }
-                |> Form.Toggle.withTooltip
-                    { message = t "settings.community_info.invitation.description"
-                    , iconClass = "text-orange-300"
-                    }
-                |> Form.toggle
-                    { parser = Ok
-                    , value = .requireInvitation
-                    , update = \requireInvitation input -> { input | requireInvitation = requireInvitation }
-                    , externalError = always Nothing
-                    }
-            )
+        |> Form.with (requireInvitationToggle translators)
         |> Form.with
             (Form.File.init
                 { label = ""
@@ -282,6 +260,34 @@ createForm ({ t } as translators) { isDisabled } =
                     { translators = translators
                     , value = .logo
                     , update = \logo input -> { input | logo = logo }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+requireInvitationToggle : Shared.Translators -> Form.Form msg { b | requireInvitation : Bool } Bool
+requireInvitationToggle { t } =
+    Form.succeed (\_ requiresInvitation -> requiresInvitation)
+        |> Form.withGroup [ class "border rounded-md px-3 py-2" ]
+            (View.Components.label []
+                { targetId = "require-invitation-toggle"
+                , labelText = t "settings.community_info.invitation.title"
+                }
+                |> Form.arbitrary
+            )
+            (Form.Toggle.init
+                { label = text <| t "settings.community_info.fields.invitation"
+                , id = "require-invitation-toggle"
+                }
+                |> Form.Toggle.withTooltip
+                    { message = t "settings.community_info.invitation.description"
+                    , iconClass = "text-orange-300"
+                    }
+                |> Form.Toggle.withContainerAttrs []
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .requireInvitation
+                    , update = \requireInvitation input -> { input | requireInvitation = requireInvitation }
                     , externalError = always Nothing
                     }
             )
