@@ -1,14 +1,14 @@
-module Select.Select.Item exposing (baseItemStyles, view, viewNotFound)
+module View.Select.Internal.Item exposing (view, viewNotFound)
 
 import Html exposing (Html, button, div, li, text)
 import Html.Attributes exposing (class, id, style, tabindex, type_)
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (onClick)
-import Select.Config exposing (Config)
-import Select.Messages exposing (Msg(..))
-import Select.Models exposing (State)
-import Select.Styles as Styles
-import Select.Utils exposing (menuItemId)
+import View.Select.Config exposing (Config)
+import View.Select.Messages exposing (Msg(..))
+import View.Select.Models exposing (State)
+import View.Select.Styles as Styles
+import View.Select.Utils exposing (menuItemId)
 
 
 view : Config msg item -> State -> Int -> Int -> item -> Html (Msg item)
@@ -54,13 +54,12 @@ view config state itemCount index item =
         , Aria.role "option"
         ]
         [ button
-            ([ class classes
-             , onClick (OnSelect item)
-             , tabindex -1
-             , type_ "button"
-             , id (menuItemId config index)
-             ]
-                ++ (styles |> List.map (\( f, s ) -> style f s))
+            (class classes
+                :: onClick (OnSelect item)
+                :: tabindex -1
+                :: type_ "button"
+                :: id (menuItemId config index)
+                :: (styles |> List.map (\( f, s ) -> style f s))
             )
             [ itemHtml
             ]

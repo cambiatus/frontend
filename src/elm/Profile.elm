@@ -47,9 +47,9 @@ import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Select
 import Session.Shared as Shared exposing (Shared)
 import Time
+import View.Select
 
 
 type alias Basic a =
@@ -380,19 +380,19 @@ viewEmpty shared =
 -- Autocomplete select
 
 
-selectConfig : Select.Config msg (Basic p) -> Shared -> Bool -> Select.Config msg (Basic p)
+selectConfig : View.Select.Config msg (Basic p) -> Shared -> Bool -> View.Select.Config msg (Basic p)
 selectConfig select shared isDisabled =
     select
-        |> Select.withInputClass "input h-12 w-full placeholder-gray-900"
-        |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
+        |> View.Select.withInputClass "input h-12 w-full placeholder-gray-900"
+        |> View.Select.withMultiInputItemContainerClass "hidden h-0"
+        |> View.Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
+        |> View.Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
+        |> View.Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
+        |> View.Select.withDisabled isDisabled
+        |> View.Select.withHighlightedItemClass "autocomplete-item-highlight"
+        |> View.Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
+        |> View.Select.withItemHtml (viewAutoCompleteItem shared)
+        |> View.Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
 
 
 viewAutoCompleteItem : Shared -> Basic p -> Html Never

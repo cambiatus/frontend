@@ -1,4 +1,4 @@
-module Select.Styles exposing (clearStyles, hiddenMenuStyles, inputClass, inputControlClass, inputControlStyles, inputId, inputStyles, inputWrapperClass, inputWrapperStyles, menuItemStyles, multiInputClass, multiInputItemClass, multiInputItemContainerClass, multiInputItemContainerStyles, multiInputItemStyles, multiInputItemText, multiInputRemoveItem, multiInputStyles, removeItemSvgStyles, underlineStyles, visibleMenuStyles)
+module View.Select.Styles exposing (hiddenMenuStyles, inputClass, inputControlClass, inputControlStyles, inputId, inputStyles, inputWrapperClass, inputWrapperStyles, menuItemStyles, multiInputItemClass, multiInputItemContainerClass, multiInputItemContainerStyles, multiInputItemStyles, multiInputItemText, multiInputRemoveItem, removeItemSvgStyles, underlineStyles, visibleMenuStyles)
 
 -- INPUT CONSTANTS
 
@@ -41,16 +41,6 @@ inputClass =
 
 inputStyles : List ( String, String )
 inputStyles =
-    []
-
-
-multiInputClass : String
-multiInputClass =
-    "elm-select-multi-input "
-
-
-multiInputStyles : List ( String, String )
-multiInputStyles =
     []
 
 
@@ -126,21 +116,6 @@ menuItemStyles =
 
 
 -- CLEAR CONSTANTS
-
-
-clearStyles : List ( String, String )
-clearStyles =
-    [ ( "cursor", "pointer" )
-    , ( "height", "1rem" )
-    , ( "line-height", "0rem" )
-    , ( "margin-top", "-0.5rem" )
-    , ( "position", "absolute" )
-    , ( "right", "0.25rem" )
-    , ( "top", "50%" )
-    ]
-
-
-
 -- MENU CONSTANTS
 
 

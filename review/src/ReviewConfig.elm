@@ -49,10 +49,8 @@ config =
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.CustomTypeConstructorArgs.rule
     , NoUnused.Exports.rule
-        |> Rule.ignoreErrorsForFiles [ "src/elm/Select.elm", "src/elm/DataValidator.elm" ]
     , NoBooleanCase.rule
     , NoExposingEverything.rule
-        |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , NoMissingTypeAnnotation.rule
     , Simplify.defaults
         |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
@@ -73,6 +71,7 @@ config =
             , "Form.Radio"
             , "Form.File"
             , "Form.Toggle"
+            , "View.Select.Internal.Input"
             ]
           )
         , ( [ "Html.label" ]

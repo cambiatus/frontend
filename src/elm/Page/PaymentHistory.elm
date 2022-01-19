@@ -37,7 +37,6 @@ import Profile
 import Profile.Contact
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Simple.Fuzzy
@@ -48,6 +47,7 @@ import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
 import View.Components
+import View.Select
 
 
 
@@ -60,7 +60,7 @@ type Msg
     | RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
     | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
     | OnSelect ProfileBase
-    | SelectMsg (Select.Msg ProfileBase)
+    | SelectMsg (View.Select.Msg ProfileBase)
     | ClearSelect
     | SetDatePicker DatePicker.Msg
     | ClickedCalendar
@@ -129,7 +129,7 @@ type alias Model =
     , incomingTransfers : Maybe (List Transfer)
     , incomingTransfersPageInfo : Maybe Api.Relay.PageInfo
     , autocompleteProfiles : List ProfileBase
-    , autocompleteState : Select.State
+    , autocompleteState : View.Select.State
     , autocompleteSelectedProfile : Maybe ProfileBase
     , datePicker : DatePicker.DatePicker
     , selectedDate : Maybe Date
@@ -314,7 +314,7 @@ init recipientAccountName loggedIn =
             , incomingTransfers = Nothing
             , incomingTransfersPageInfo = Nothing
             , autocompleteProfiles = []
-            , autocompleteState = Select.newState ""
+            , autocompleteState = View.Select.newState ""
             , autocompleteSelectedProfile = Nothing
             , datePicker = datePicker
             , selectedDate = Nothing
@@ -523,9 +523,9 @@ update msg model ({ shared, authToken } as loggedIn) =
         SelectMsg subMsg ->
             let
                 ( updated, cmd ) =
-                    Select.update (selectConfiguration shared False) subMsg model.autocompleteState
+                    View.Select.update (selectConfiguration shared False) subMsg model.autocompleteState
             in
-            case Select.queryFromState model.autocompleteState of
+            case View.Select.queryFromState model.autocompleteState of
                 Just payer ->
                     { model | autocompleteState = updated }
                         |> UR.init
@@ -704,7 +704,7 @@ viewPayerAutocomplete loggedIn model isDisabled =
     in
     div []
         [ Html.map SelectMsg
-            (Select.view
+            (View.Select.view
                 (selectConfiguration loggedIn.shared isDisabled)
                 model.autocompleteState
                 model.autocompleteProfiles
@@ -742,16 +742,16 @@ viewSelectedPayer loggedIn model profile =
         |> Html.map GotPayerProfileSummaryMsg
 
 
-selectConfiguration : Shared -> Bool -> Select.Config Msg ProfileBase
+selectConfiguration : Shared -> Bool -> View.Select.Config Msg ProfileBase
 selectConfiguration shared isDisabled =
     Profile.selectConfig
-        (Select.newConfig
+        (View.Select.newConfig
             { onSelect = OnSelect
             , toLabel = \p -> Eos.Account.nameToString p.account
             , filter = selectFilter 2 (\p -> Eos.Account.nameToString p.account)
             , onFocusItem = NoOp
             }
-            |> Select.withInputClass "input"
+            |> View.Select.withInputClass "input"
         )
         shared
         isDisabled

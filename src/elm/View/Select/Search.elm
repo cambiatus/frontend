@@ -1,7 +1,7 @@
-module Select.Search exposing (matchedItemsWithCutoff)
+module View.Select.Search exposing (matchedItemsWithCutoff)
 
-import Select.Config exposing (Config)
-import Select.Utils as Utils
+import View.Select.Config exposing (Config)
+import View.Select.Utils as Utils
 
 
 {-| If config.filter returns Nothing,

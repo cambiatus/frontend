@@ -1,4 +1,4 @@
-module Select.Messages exposing (Msg(..))
+module View.Select.Messages exposing (Msg(..))
 
 
 type Msg item

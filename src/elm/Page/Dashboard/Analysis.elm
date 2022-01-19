@@ -36,7 +36,6 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
@@ -60,12 +59,10 @@ init loggedIn =
 type alias Model =
     { status : RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) LoadedModel
     , claimModalStatus : Claim.ModalStatus
-    , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , selectedTab : Tab
     , showFilterModal : Bool
     , filters : Filter
-    , filtersBeingEdited : Filter
     , filterProfileSummary : Profile.Summary.Model
     , filtersForm : Form.Model FiltersFormInput
     , direction : FilterDirection
@@ -77,12 +74,10 @@ initModel : Model
 initModel =
     { status = RemoteData.Loading
     , claimModalStatus = Claim.Closed
-    , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , selectedTab = WaitingToVote
     , showFilterModal = False
     , filters = initFilter
-    , filtersBeingEdited = initFilter
     , filterProfileSummary =
         Profile.Summary.init False
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
@@ -727,7 +722,6 @@ update msg model loggedIn =
                     { model
                         | selectedTab = tab
                         , filters = initFilter
-                        , filtersBeingEdited = initFilter
                         , status = RemoteData.Loading
                         , reloadOnNextQuery = True
                     }
@@ -786,7 +780,6 @@ update msg model loggedIn =
                 newModel =
                     { model
                         | filters = initFilter
-                        , filtersBeingEdited = initFilter
                         , direction = DESC
                         , reloadOnNextQuery = True
                         , status = RemoteData.Loading

@@ -1,11 +1,11 @@
-module Select.Config exposing
+module View.Select.Config exposing
     ( Config
     , Style
     , newConfig
     )
 
 import Html exposing (Html)
-import Select.Styles as Styles
+import View.Select.Styles as Styles
 
 
 type alias Style =

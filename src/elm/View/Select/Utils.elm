@@ -1,4 +1,4 @@
-module Select.Utils exposing
+module View.Select.Utils exposing
     ( difference
     , menuItemId
     , stylesToAttrs
@@ -6,7 +6,7 @@ module Select.Utils exposing
 
 import Html
 import Html.Attributes exposing (style)
-import Select.Config exposing (Config)
+import View.Select.Config exposing (Config)
 
 
 menuItemId : Config msg item -> Int -> String

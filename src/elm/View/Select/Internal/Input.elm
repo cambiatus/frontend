@@ -1,4 +1,4 @@
-module Select.Select.Input exposing (onKeyPressAttribute, onKeyUpAttribute, view)
+module View.Select.Internal.Input exposing (view)
 
 import Array
 import Html exposing (Attribute, Html)
@@ -17,14 +17,14 @@ import Html.Attributes
 import Html.Attributes.Aria as Aria
 import Html.Events exposing (keyCode, on, onFocus, onInput, stopPropagationOn)
 import Json.Decode as Decode
-import Select.Config exposing (Config)
-import Select.Events exposing (onBlurAttribute)
-import Select.Messages as Msg exposing (Msg)
-import Select.Models exposing (State)
-import Select.Search as Search
-import Select.Select.RemoveItem as RemoveItem
-import Select.Styles as Styles
-import Select.Utils as Utils
+import View.Select.Config exposing (Config)
+import View.Select.Events exposing (onBlurAttribute)
+import View.Select.Internal.RemoveItem as RemoveItem
+import View.Select.Messages as Msg exposing (Msg)
+import View.Select.Models exposing (State)
+import View.Select.Search as Search
+import View.Select.Styles as Styles
+import View.Select.Utils as Utils
 
 
 onKeyPressAttribute : Maybe item -> Attribute (Msg item)
@@ -245,7 +245,7 @@ singleInput config model availableItems selectedItems maybeMatchedItems =
     ]
 
 
-inputAttributes : Config msg item -> State -> List item -> List item -> Maybe (List item) -> List (Html.Attribute (Msg item))
+inputAttributes : Config msg item -> State -> List item -> List item -> Maybe (List item) -> List (Attribute (Msg item))
 inputAttributes config model _ selectedItems maybeMatchedItems =
     let
         inputClasses : String
@@ -303,33 +303,32 @@ inputAttributes config model _ selectedItems maybeMatchedItems =
                     Aria.ariaActiveDescendant
                         (Utils.menuItemId config highlightedItem)
     in
-    [ autocomplete False
-    , attribute "autocorrect" "off" -- for mobile Safari
-    , attribute "autocomplete" "off" -- for mobile Safari
-    , attribute "autocapitalize" "off" -- for mobile Safari
-    , attribute "spellcheck" "false" -- for mobile Safari
-    , id config.inputId
-    , disabled config.disabled
-    , onBlurAttribute config model
-    , onKeyUpAttribute preselectedItem
-    , onKeyPressAttribute preselectedItem
-    , onInput Msg.OnQueryChange
-    , onFocus Msg.OnFocus
-    , class inputClasses
-    , classList config.inputClassList
-    , Aria.role "combobox"
-    , activeDescendant
-    , attribute "aria-owns" (model.id ++ "-items-list")
-    , Aria.ariaExpanded
-        (if model.showMenu then
-            "true"
+    autocomplete False
+        :: attribute "autocorrect" "off"
+        :: attribute "autocomplete" "off"
+        :: attribute "autocapitalize" "off"
+        :: attribute "spellcheck" "false"
+        :: id config.inputId
+        :: disabled config.disabled
+        :: onBlurAttribute config model
+        :: onKeyUpAttribute preselectedItem
+        :: onKeyPressAttribute preselectedItem
+        :: onInput Msg.OnQueryChange
+        :: onFocus Msg.OnFocus
+        :: class inputClasses
+        :: classList config.inputClassList
+        :: Aria.role "combobox"
+        :: activeDescendant
+        :: attribute "aria-owns" (model.id ++ "-items-list")
+        :: Aria.ariaExpanded
+            (if model.showMenu then
+                "true"
 
-         else
-            "false"
-        )
-    , attribute "aria-autocomplete" "list"
-    ]
-        ++ inputStylesAttrs
+             else
+                "false"
+            )
+        :: attribute "aria-autocomplete" "list"
+        :: inputStylesAttrs
 
 
 onClickWithoutPropagation : Msg item -> Attribute (Msg item)

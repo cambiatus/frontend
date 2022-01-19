@@ -1,15 +1,15 @@
-module Select.Select.Menu exposing (keyListener, menu, view, viewStyles)
+module View.Select.Internal.Menu exposing (view)
 
 import Html exposing (Html, text, ul)
 import Html.Attributes exposing (class, classList, id, style)
-import Select.Config exposing (Config)
-import Select.Events
-import Select.Messages as Msg exposing (Msg(..))
-import Select.Models exposing (State)
-import Select.Search as Search
-import Select.Select.Item as Item
-import Select.Styles as Styles
 import View.Components
+import View.Select.Config exposing (Config)
+import View.Select.Events
+import View.Select.Internal.Item as Item
+import View.Select.Messages as Msg exposing (Msg)
+import View.Select.Models exposing (State)
+import View.Select.Search as Search
+import View.Select.Styles as Styles
 
 
 view : Config msg item -> State -> List item -> List item -> Html (Msg item)
@@ -61,7 +61,7 @@ menu config model matchedItems =
         ul
             (class config.menuClass
                 :: classList [ ( config.emptyMenuClass, itemCount == 0 ) ]
-                :: Select.Events.onBlurAttribute config model
+                :: View.Select.Events.onBlurAttribute config model
                 :: id (model.id ++ "-items-list")
                 :: menuStyle
             )

@@ -1,11 +1,11 @@
-module Select.Events exposing (onBlurAttribute)
+module View.Select.Events exposing (onBlurAttribute)
 
 import Html exposing (Attribute)
 import Html.Events exposing (on)
 import Json.Decode as Decode
-import Select.Config exposing (Config)
-import Select.Messages exposing (Msg(..))
-import Select.Models exposing (State)
+import View.Select.Config exposing (Config)
+import View.Select.Messages exposing (Msg(..))
+import View.Select.Models exposing (State)
 
 
 onBlurAttribute : Config msg item -> State -> Attribute (Msg item)

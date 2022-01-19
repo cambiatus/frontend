@@ -68,10 +68,10 @@ import List.Extra
 import Maybe.Extra
 import Profile
 import Profile.Summary
-import Select
 import Session.Shared as Shared
 import Simple.Fuzzy
 import View.Components
+import View.Select
 
 
 
@@ -196,7 +196,7 @@ mapViewConfig fn viewConfig =
     }
 
 
-settings : Options msg -> ViewConfig msg -> Select.Config Msg Profile.Minimal
+settings : Options msg -> ViewConfig msg -> View.Select.Config Msg Profile.Minimal
 settings (Options options) viewConfig =
     let
         { t } =
@@ -209,7 +209,7 @@ settings (Options options) viewConfig =
         toLabel p =
             Eos.Account.nameToString p.account
     in
-    Select.newConfig
+    View.Select.newConfig
         { onSelect = SelectedUser
         , toLabel = toLabel
         , filter =
@@ -234,17 +234,17 @@ settings (Options options) viewConfig =
                         |> Just
         , onFocusItem = NoOp
         }
-        |> Select.withInputClass "w-full input"
-        |> Select.withInputClassList [ ( "with-error", viewConfig.hasError ) ]
-        |> Select.withDisabled options.disabled
-        |> Select.withItemClass "bg-indigo-500 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-90"
-        |> Select.withPrompt (t "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml viewUserItem
-        |> Select.withNotFound (t "community.actions.form.verifier_not_found")
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded !bg-white px-8 max-w-max"
-        |> Select.withMenuClass ("flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto " ++ options.menuClass)
-        |> Select.withEmptyMenuClass "bg-indigo-500 px-4 py-1"
-        |> Select.withOnBlur BlurredPicker
+        |> View.Select.withInputClass "w-full input"
+        |> View.Select.withInputClassList [ ( "with-error", viewConfig.hasError ) ]
+        |> View.Select.withDisabled options.disabled
+        |> View.Select.withItemClass "bg-indigo-500 hover:bg-opacity-80 focus:bg-opacity-80 active:bg-opacity-90"
+        |> View.Select.withPrompt (t "community.actions.form.verifier_placeholder")
+        |> View.Select.withItemHtml viewUserItem
+        |> View.Select.withNotFound (t "community.actions.form.verifier_not_found")
+        |> View.Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded !bg-white px-8 max-w-max"
+        |> View.Select.withMenuClass ("flex flex-col w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-white max-h-80 overflow-auto " ++ options.menuClass)
+        |> View.Select.withEmptyMenuClass "bg-indigo-500 px-4 py-1"
+        |> View.Select.withOnBlur BlurredPicker
 
 
 viewUserItem : Profile.Minimal -> Html Never
@@ -279,7 +279,7 @@ view ((Options options) as wrappedOptions) viewConfig toMsg =
     in
     div (class "mb-10" :: options.containerAttrs)
         [ View.Components.label [] { targetId = model.id, labelText = options.label }
-        , Select.view (settings wrappedOptions viewConfig)
+        , View.Select.view (settings wrappedOptions viewConfig)
             model.selectState
             (List.filter
                 (\profile ->
@@ -372,7 +372,7 @@ getId (Model model) =
 
 type Model
     = Model
-        { selectState : Select.State
+        { selectState : View.Select.State
         , id : String
         , selectedProfile : SelectedProfile
         }
@@ -380,7 +380,7 @@ type Model
 
 type SinglePickerModel
     = SinglePickerModel
-        { selectState : Select.State
+        { selectState : View.Select.State
         , id : String
         , selectedProfile : Maybe ProfileWithSummary
         }
@@ -388,7 +388,7 @@ type SinglePickerModel
 
 type MultiplePickerModel
     = MultiplePickerModel
-        { selectState : Select.State
+        { selectState : View.Select.State
         , id : String
         , selectedProfiles : List ProfileWithSummary
         }
@@ -411,7 +411,7 @@ once
 initMultiple : { id : String, selectedProfiles : List Profile.Minimal } -> MultiplePickerModel
 initMultiple { id, selectedProfiles } =
     MultiplePickerModel
-        { selectState = Select.newState id
+        { selectState = View.Select.newState id
         , id = id
         , selectedProfiles =
             List.map
@@ -430,7 +430,7 @@ Selecting a new profile will replace the previously selected one.
 initSingle : { id : String } -> SinglePickerModel
 initSingle { id } =
     SinglePickerModel
-        { selectState = Select.newState id
+        { selectState = View.Select.newState id
         , id = id
         , selectedProfile = Nothing
         }
@@ -460,7 +460,7 @@ setSingle maybeProfile (SinglePickerModel model) =
 
 type Msg
     = NoOp
-    | GotSelectMsg (Select.Msg Profile.Minimal)
+    | GotSelectMsg (View.Select.Msg Profile.Minimal)
     | SelectedUser Profile.Minimal
     | GotProfileSummaryMsg Profile.Minimal Profile.Summary.Msg
     | ClickedRemoveProfile Profile.Minimal
@@ -476,7 +476,7 @@ update options viewConfig msg (Model model) =
         GotSelectMsg subMsg ->
             let
                 ( newState, cmd ) =
-                    Select.update (settings options viewConfig)
+                    View.Select.update (settings options viewConfig)
                         subMsg
                         model.selectState
             in

@@ -1,10 +1,10 @@
-module Select.Update exposing (update)
+module View.Select.Update exposing (update)
 
 import Browser.Dom
-import Select.Config exposing (Config)
-import Select.Messages exposing (Msg(..))
-import Select.Models exposing (State)
 import Task
+import View.Select.Config exposing (Config)
+import View.Select.Messages exposing (Msg(..))
+import View.Select.Models exposing (State)
 
 
 update : Config msg item -> Msg item -> State -> ( State, Cmd msg )

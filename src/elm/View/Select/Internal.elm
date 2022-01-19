@@ -1,13 +1,13 @@
-module Select.Select exposing (view)
+module View.Select.Internal exposing (view)
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, id, style)
 import Html.Attributes.Aria exposing (ariaExpanded)
-import Select.Config exposing (Config)
-import Select.Messages exposing (Msg)
-import Select.Models exposing (State)
-import Select.Select.Input
-import Select.Select.Menu
+import View.Select.Config exposing (Config)
+import View.Select.Internal.Input
+import View.Select.Internal.Menu
+import View.Select.Messages exposing (Msg)
+import View.Select.Models exposing (State)
 
 
 view : Config msg item -> State -> List item -> List item -> Html (Msg item)
@@ -29,6 +29,6 @@ view config model availableItems selectedItems =
                 "false"
             )
         ]
-        [ Select.Select.Input.view config model availableItems selectedItems
-        , Select.Select.Menu.view config model availableItems selectedItems
+        [ View.Select.Internal.Input.view config model availableItems selectedItems
+        , View.Select.Internal.Menu.view config model availableItems selectedItems
         ]

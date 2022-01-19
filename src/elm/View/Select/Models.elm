@@ -1,4 +1,4 @@
-module Select.Models exposing (State, newState)
+module View.Select.Models exposing (State, newState)
 
 
 type alias State =

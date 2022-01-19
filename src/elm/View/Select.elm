@@ -1,15 +1,12 @@
-module Select exposing
+module View.Select exposing
     ( RequiredConfig, Config, State, Msg
-    , newConfig, withCutoff, withOnQuery, withEmptySearch, withTransformQuery
-    , withMultiSelection, withOnRemoveItem, withMultiInputItemContainerClass, withMultiInputItemContainerStyles, withMultiInputItemClass, withMultiInputItemStyles
-    , withInputControlClass, withInputControlStyles
-    , withInputWrapperClass, withInputWrapperStyles
-    , withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus, withOnBlur
-    , withUnderlineClass, withUnderlineStyles
-    , withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
-    , withMenuClass, withEmptyMenuClass, withMenuStyles
-    , withNotFound, withNotFoundClass, withNotFoundShown, withNotFoundStyles
-    , withPrompt, withPromptClass, withPromptStyles
+    , newConfig
+    , withMultiInputItemContainerClass
+    , withInputClass, withInputClassList, withOnBlur
+    , withItemClass, withItemHtml, withHighlightedItemClass
+    , withMenuClass, withEmptyMenuClass
+    , withNotFound, withNotFoundClass, withNotFoundStyles
+    , withPrompt
     , newState, queryFromState
     , view
     , update
@@ -104,11 +101,11 @@ This is the element that wraps the selected item(s) and the input
 -}
 
 import Html exposing (Html)
-import Select.Config as Config
-import Select.Messages as Messages
-import Select.Models as Models
-import Select.Select
-import Select.Update
+import View.Select.Config as Config
+import View.Select.Internal
+import View.Select.Messages as Messages
+import View.Select.Models as Models
+import View.Select.Update
 
 
 {-| Required initial configuration
@@ -152,103 +149,6 @@ newConfig requiredConfig =
         |> PrivateConfig
 
 
-{-| Show results if the input is focused, but the query is empty
-Default is False.
-Select.withEmptySearch True config
--}
-withEmptySearch : Bool -> Config msg item -> Config msg item
-withEmptySearch emptySearch config =
-    let
-        fn c =
-            { c | emptySearch = emptySearch }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the input control
-
-    Select.withInputControlClass "control-class" config
-
--}
-withInputControlClass : String -> Config msg item -> Config msg item
-withInputControlClass classes config =
-    let
-        fn c =
-            { c | inputControlClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to the input control
-
-    Select.withInputControlClass [ ( "background-color", "red" ) ] config
-
--}
-withInputControlStyles : List ( String, String ) -> Config msg item -> Config msg item
-withInputControlStyles styles config =
-    let
-        fn c =
-            { c | inputControlStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the underline div
-
-    Select.withUnderlineClass "underline" config
-
--}
-withUnderlineClass : String -> Config msg item -> Config msg item
-withUnderlineClass classes config =
-    let
-        fn c =
-            { c | underlineClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to the underline div
-
-    Select.withUnderlineStyles [ ( "width", "2rem" ) ] config
-
--}
-withUnderlineStyles : List ( String, String ) -> Config msg item -> Config msg item
-withUnderlineStyles styles config =
-    let
-        fn c =
-            { c | underlineStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Set the maxium number of items to show
-
-    Select.withCutoff 6 config
-
--}
-withCutoff : Int -> Config msg item -> Config msg item
-withCutoff n config =
-    let
-        fn c =
-            { c | cutoff = Just n }
-    in
-    mapConfig fn config
-
-
-{-| Set the ID of the input
-
-    Select.withInputId "input-id" config
-
--}
-withInputId : String -> Config msg item -> Config msg item
-withInputId id config =
-    let
-        fn c =
-            { c | inputId = id }
-    in
-    mapConfig fn config
-
-
 {-| Add classes to the input
 
     Select.withInputClass "col-12" config
@@ -277,48 +177,6 @@ withInputClassList classes config =
     mapConfig fn config
 
 
-{-| Add styles to the input
-
-    Select.withInputStyles [ ( "color", "red" ) ] config
-
--}
-withInputStyles : List ( String, String ) -> Config msg item -> Config msg item
-withInputStyles styles config =
-    let
-        fn c =
-            { c | inputStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the input wrapper (element that wraps the input and the clear button)
-
-    Select.withInputWrapperClass "col-12" config
-
--}
-withInputWrapperClass : String -> Config msg item -> Config msg item
-withInputWrapperClass classes config =
-    let
-        fn c =
-            { c | inputWrapperClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to the input wrapper
-
-    Select.withInputWrapperStyles [ ( "color", "red" ) ] config
-
--}
-withInputWrapperStyles : List ( String, String ) -> Config msg item -> Config msg item
-withInputWrapperStyles styles config =
-    let
-        fn c =
-            { c | inputWrapperStyles = styles }
-    in
-    mapConfig fn config
-
-
 {-| Add classes to the items
 
     Select.withItemClass "border-bottom" config
@@ -329,20 +187,6 @@ withItemClass classes config =
     let
         fn c =
             { c | itemClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to the items
-
-    Select.withItemStyles [ ( "color", "peru" ) ] config
-
--}
-withItemStyles : List ( String, String ) -> Config msg item -> Config msg item
-withItemStyles styles config =
-    let
-        fn c =
-            { c | itemStyles = styles }
     in
     mapConfig fn config
 
@@ -391,35 +235,6 @@ withEmptyMenuClass classes config =
     mapConfig fn config
 
 
-{-| Add styles to the menu
-
-    Select.withMenuStyles [ ( "padding", "1rem" ) ] config
-
--}
-withMenuStyles : List ( String, String ) -> Config msg item -> Config msg item
-withMenuStyles styles config =
-    let
-        fn c =
-            { c | menuStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Message to call when removing an individual item. Please note that without this option
-specified, you will not be able to remove an individual item from MultiSelect mode.
-
-    Select.withOnRemoveItem OnRemoveItem
-
--}
-withOnRemoveItem : (item -> msg) -> Config msg item -> Config msg item
-withOnRemoveItem onRemoveItemMsg config =
-    let
-        fn c =
-            { c | onRemoveItem = Just onRemoveItemMsg }
-    in
-    mapConfig fn config
-
-
 {-| Add classes to the container of selected items
 
     Select.withMultiInputItemContainerClass "bg-white" config
@@ -432,59 +247,6 @@ withMultiInputItemContainerClass classes config =
             { c | multiInputItemContainerClass = classes }
     in
     mapConfig fn config
-
-
-{-| Add styles to the container of selected items
-
-    Select.withMultiInputClass "bg-white" config
-
--}
-withMultiInputItemContainerStyles : List ( String, String ) -> Config msg item -> Config msg item
-withMultiInputItemContainerStyles styles config =
-    let
-        fn c =
-            { c | multiInputItemContainerStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to an individual selected item
-
-    Select.withMultiInputItemClass "bg-white" config
-
--}
-withMultiInputItemClass : String -> Config msg item -> Config msg item
-withMultiInputItemClass classes config =
-    let
-        fn c =
-            { c | multiInputItemClass = classes }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to an individual selected item
-
-    Select.withMultiInputItemStyles [ ( "padding", "1rem" ) ] config
-
--}
-withMultiInputItemStyles : List ( String, String ) -> Config msg item -> Config msg item
-withMultiInputItemStyles styles config =
-    let
-        fn c =
-            { c | multiInputItemStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Use a multi select instead of a single select
--}
-withMultiSelection : Bool -> Config msg item -> Config msg item
-withMultiSelection value config =
-    config
-        |> mapConfig
-            (\c ->
-                { c | isMultiSelect = value }
-            )
 
 
 {-| Text that will appear when no matches are found
@@ -511,20 +273,6 @@ withNotFoundClass class config =
     let
         fn c =
             { c | notFoundClass = class }
-    in
-    mapConfig fn config
-
-
-{-| Hide menu when no matches found
-
-    Select.withNotFoundShown False config
-
--}
-withNotFoundShown : Bool -> Config msg item -> Config msg item
-withNotFoundShown shown config =
-    let
-        fn c =
-            { c | notFoundShown = shown }
     in
     mapConfig fn config
 
@@ -557,48 +305,6 @@ withHighlightedItemClass class config =
     mapConfig fn config
 
 
-{-| Styles for the highlighted item
-
-    Select.withHighlightedItemStyles [ ( "padding", "1rem" ) ] config
-
--}
-withHighlightedItemStyles : List ( String, String ) -> Config msg item -> Config msg item
-withHighlightedItemStyles styles config =
-    let
-        fn c =
-            { c | highlightedItemStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Add a callback for when the query changes
-
-    Select.withOnQuery OnQuery
-
--}
-withOnQuery : (String -> msg) -> Config msg item -> Config msg item
-withOnQuery msg config =
-    let
-        fn c =
-            { c | onQueryChange = Just msg }
-    in
-    mapConfig fn config
-
-
-{-| Add a callback for when the input field receives focus
-
-    Select.withOnFocus OnFocus
-
--}
-withOnFocus : msg -> Config msg item -> Config msg item
-withOnFocus msg config =
-    let
-        fn c =
-            { c | onFocus = Just msg }
-    in
-    mapConfig fn config
-
-
 {-| Add a callback for when the input field loses focus
 
     Select.withOnBlur OnBlur
@@ -609,18 +315,6 @@ withOnBlur msg config =
     let
         fn c =
             { c | onBlur = Just msg }
-    in
-    mapConfig fn config
-
-
-{-| Add classes to the prompt text (When no item is selected)
-Select.withPromptClass "prompt" config
--}
-withPromptClass : String -> Config msg item -> Config msg item
-withPromptClass classes config =
-    let
-        fn c =
-            { c | promptClass = classes }
     in
     mapConfig fn config
 
@@ -649,42 +343,6 @@ withDisabled isDisabled config =
     let
         fn c =
             { c | disabled = isDisabled }
-    in
-    mapConfig fn config
-
-
-{-| Add styles to prompt text
-
-    Select.withPromptStyles [ ( "color", "red" ) ] config
-
--}
-withPromptStyles : List ( String, String ) -> Config msg item -> Config msg item
-withPromptStyles styles config =
-    let
-        fn c =
-            { c | promptStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Transform the input query before performing the search
-Return Nothing to prevent searching
-
-    transform : String -> Maybe String
-    transform query =
-        if String.length query < 4 then
-            Nothing
-        else
-            Just query
-
-    Select.withTransformQuery transform config
-
--}
-withTransformQuery : (String -> String) -> Config msg item -> Config msg item
-withTransformQuery transform config =
-    let
-        fn c =
-            { c | transformQuery = transform }
     in
     mapConfig fn config
 
@@ -741,7 +399,7 @@ view :
     -> List item
     -> Html (Msg item)
 view config model items selected =
-    Select.Select.view
+    View.Select.Internal.view
         (unwrapConfig config)
         (unwrapModel model)
         items
@@ -773,7 +431,7 @@ update config msg model =
     in
     let
         ( mdl, cmd ) =
-            Select.Update.update config_ msg_ model_
+            View.Select.Update.update config_ msg_ model_
     in
     ( PrivateState mdl, cmd )
 
