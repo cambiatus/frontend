@@ -1012,6 +1012,7 @@ viewPhoneInput ({ t, tr } as translators) basic =
             )
         |> Form.Text.withMask (phoneMask basic)
         |> Form.Text.withType Form.Text.Telephone
+        |> Form.Text.withAllowedChars Char.isDigit
         |> Form.Text.withContainerAttrs [ class "w-full" ]
         |> (\options ->
                 Form.Text.view options

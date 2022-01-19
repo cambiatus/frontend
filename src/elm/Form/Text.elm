@@ -3,7 +3,7 @@ module Form.Text exposing
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
     , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
-    , withMask
+    , withMask, withAllowedChars
     , getId, getErrorAttrs
     , view
     , getSubmitOnEnter
@@ -45,7 +45,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 ## Masks
 
-@docs withMask
+@docs withMask, withAllowedChars
 
 
 # Getters
@@ -218,6 +218,19 @@ withMask mask (Options options) =
                 ]
                 []
             ]
+
+
+{-| Restrict the input to only allow certain characters. Useful for e.g. phone
+fields, where the user is only allowed to enter numbers.
+
+Always think if this is going to provide good UX: users can be confused if what
+they type doesn't show up on the screen - they might think their keyboard is
+broken!
+
+-}
+withAllowedChars : (Char -> Bool) -> Options msg -> Options msg
+withAllowedChars isAllowed (Options options) =
+    Options { options | beforeChangeEvent = String.filter isAllowed >> options.beforeChangeEvent }
 
 
 {-| Adds a number mask to the input
