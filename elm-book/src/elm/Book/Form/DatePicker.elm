@@ -22,7 +22,6 @@ type alias Model =
 
 initModel : Model
 initModel =
-    -- TODO - Make this date dynamic
     { absolute = Form.DatePicker.initModel (Date.fromCalendarDate 2021 Time.Sep 19)
     , relative = Form.DatePicker.initModel (Date.fromCalendarDate 2021 Time.Sep 19)
     , withError = Form.DatePicker.initModel (Date.fromCalendarDate 2021 Time.Sep 19)
