@@ -72,6 +72,14 @@ defaultOptions { id } =
                     (\fruit ->
                         ( Just fruit, Html.text (Book.Helpers.fruitToString fruit) )
                     )
+
+        addOptions radio =
+            List.foldl
+                (\fruit ->
+                    Form.Radio.withOption (Just fruit) (Html.text (Book.Helpers.fruitToString fruit))
+                )
+                radio
+                Book.Helpers.allFruits
     in
     Form.Radio.init
         { label = "Pick a fruit"
@@ -80,7 +88,7 @@ defaultOptions { id } =
             Maybe.map Book.Helpers.fruitToString
                 >> Maybe.withDefault ""
         }
-        |> Form.Radio.withOptions allOptions
+        |> addOptions
 
 
 view : Model -> Html Msg
