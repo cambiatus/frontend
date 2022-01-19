@@ -33,7 +33,6 @@ import Page.Community.Transfer as Transfer
 import Page.Dashboard as Dashboard
 import Page.Dashboard.Analysis as Analysis
 import Page.Dashboard.Claim as Claim
-import Page.FormPlayground as FormPlayground
 import Page.Join as Join
 import Page.Login as Login
 import Page.News as News
@@ -177,7 +176,6 @@ type Status
     | ObjectiveEditor ObjectiveEditor.Model
     | ActionEditor ActionEditor.Model
     | Claim Int Int Claim.Model
-    | FormPlayground FormPlayground.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
     | Login (Maybe Route) Login.Model
@@ -227,7 +225,6 @@ type Msg
     | GotActionEditorMsg ActionEditor.Msg
     | GotObjectiveEditorMsg ObjectiveEditor.Msg
     | GotVerifyClaimMsg Claim.Msg
-    | GotFormPlaygroundMsg FormPlayground.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
     | GotNewsMsg News.Msg
@@ -547,11 +544,6 @@ update msg model =
         ( GotVerifyClaimMsg subMsg, Claim objectiveId actionId subModel ) ->
             Claim.update subMsg subModel
                 >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
-                |> withLoggedIn
-
-        ( GotFormPlaygroundMsg subMsg, FormPlayground subModel ) ->
-            FormPlayground.update subMsg subModel
-                >> updateLoggedInUResult FormPlayground GotFormPlaygroundMsg model
                 |> withLoggedIn
 
         ( GotViewTransferScreenMsg subMsg, ViewTransfer transferId subModel ) ->
@@ -1035,9 +1027,6 @@ statusToRoute status session =
         Claim objectiveId actionId subModel ->
             Just (Route.Claim objectiveId actionId subModel.claimId)
 
-        FormPlayground _ ->
-            Just Route.FormPlayground
-
         Notification _ ->
             Just Route.Notification
 
@@ -1467,11 +1456,6 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
-        Just Route.FormPlayground ->
-            FormPlayground.init
-                >> updateStatusWith FormPlayground GotFormPlaygroundMsg model
-                |> withLoggedIn Route.FormPlayground
-
         Just (Route.Shop maybeFilter) ->
             (\l -> Shop.init l maybeFilter)
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
@@ -1664,9 +1648,6 @@ msgToString msg =
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
-
-        GotFormPlaygroundMsg subMsg ->
-            "GotFormPlaygroundMsg" :: FormPlayground.msgToString subMsg
 
         GotNotificationMsg subMsg ->
             "GotNotificationMsg" :: Notification.msgToString subMsg
@@ -1900,9 +1881,6 @@ view model =
 
         Claim _ _ subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view
-
-        FormPlayground subModel ->
-            viewLoggedIn subModel LoggedIn.FormPlayground GotFormPlaygroundMsg FormPlayground.view
 
         Dashboard subModel ->
             viewLoggedIn subModel LoggedIn.Dashboard GotDashboardMsg Dashboard.view

@@ -1,7 +1,7 @@
 module Form.Radio exposing
     ( init, Options
-    , withOption, withOptions
-    , withDisabled, withContainerAttrs, withGroupAttrs, withLabelAttrs, withHiddenRadioButton
+    , withOption
+    , withDisabled, withContainerAttrs, withLabelAttrs, withHiddenRadioButton
     , Direction(..), withDirection
     , getId, getOptionToString
     , view
@@ -29,12 +29,12 @@ module Form.Radio exposing
 
 ## Adding options
 
-@docs withOption, withOptions
+@docs withOption
 
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withGroupAttrs, withLabelAttrs, withHiddenRadioButton
+@docs withDisabled, withContainerAttrs, withLabelAttrs, withHiddenRadioButton
 
 
 ## Controlling direction
@@ -75,7 +75,6 @@ type Options option msg
         , options : List { option : option, label : Html msg }
         , disabled : Bool
         , containerAttrs : List (Html.Attribute msg)
-        , groupAttrs : List (Html.Attribute msg)
         , labelAttrs : List (Html.Attribute msg)
         , direction : Direction
         , hideRadioButton : Bool
@@ -93,7 +92,6 @@ init { label, id, optionToString } =
         , options = []
         , disabled = False
         , containerAttrs = []
-        , groupAttrs = []
         , labelAttrs = []
         , direction = Horizontal
         , hideRadioButton = False
@@ -115,7 +113,6 @@ map fn reverseFn (Options options) =
                 options.options
         , disabled = options.disabled
         , containerAttrs = options.containerAttrs
-        , groupAttrs = options.groupAttrs
         , labelAttrs = options.labelAttrs
         , direction = options.direction
         , hideRadioButton = options.hideRadioButton
@@ -140,29 +137,6 @@ withOption optionValue optionLabel (Options options) =
         }
 
 
-{-| Similar to `withOption`, but you can throw in an entire list at a time
--}
-withOptions : List ( option, Html msg ) -> Options option msg -> Options option msg
-withOptions optionList (Options options) =
-    -- We reverse the list on view in order to display things on the correct
-    -- order (because on `withOption` we insert options in the beginning of the
-    -- list, for some performance), so we need to insert it reversed here
-    Options
-        { options
-            | options =
-                (optionList
-                    |> List.map
-                        (\( optionValue, optionLabel ) ->
-                            { option = optionValue
-                            , label = optionLabel
-                            }
-                        )
-                    |> List.reverse
-                )
-                    ++ options.options
-        }
-
-
 
 -- ADDING ATTRIBUTES
 
@@ -180,13 +154,6 @@ and the error message
 withContainerAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-{-| Adds attributes to the element that contains the radio group itself
--}
-withGroupAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withGroupAttrs attrs (Options options) =
-    Options { options | groupAttrs = options.groupAttrs ++ attrs }
 
 
 {-| Adds attributes to the label/legend element
@@ -259,14 +226,13 @@ view (Options options) viewConfig =
                     option == viewConfig.value
             in
             Html.label
-                (class "flex items-center transition-colors duration-100"
-                    :: classList
-                        [ ( "text-green", isSelected && not options.disabled )
-                        , ( "text-red", isSelected && viewConfig.hasError )
-                        , ( "text-gray-900", options.disabled )
-                        ]
-                    :: options.groupAttrs
-                )
+                [ class "flex items-center transition-colors duration-100"
+                , classList
+                    [ ( "text-green", isSelected && not options.disabled )
+                    , ( "text-red", isSelected && viewConfig.hasError )
+                    , ( "text-gray-900", options.disabled )
+                    ]
+                ]
                 [ input
                     [ type_ "radio"
                     , name options.id

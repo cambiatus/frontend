@@ -1,7 +1,7 @@
 module Form.Select exposing
     ( init, Options
     , withOption, withOptions
-    , withDisabled, withContainerAttrs, withAttrs, withLabelAttrs
+    , withDisabled, withContainerAttrs, withLabelAttrs
     , getId, getOptionToString
     , view
     , map
@@ -30,7 +30,7 @@ module Form.Select exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withAttrs, withLabelAttrs
+@docs withDisabled, withContainerAttrs, withLabelAttrs
 
 
 # Getters
@@ -69,7 +69,6 @@ type Options option msg
         , optionToString : option -> String
         , options : List { option : option, label : String }
         , containerAttrs : List (Html.Attribute msg)
-        , extraAttrs : List (Html.Attribute msg)
         , labelAttrs : List (Html.Attribute msg)
         }
 
@@ -85,7 +84,6 @@ init { label, id, optionToString } =
         , optionToString = optionToString
         , options = []
         , containerAttrs = []
-        , extraAttrs = []
         , labelAttrs = []
         }
 
@@ -101,7 +99,6 @@ map fn reverseFn (Options options) =
             List.map (\{ option, label } -> { option = fn option, label = label })
                 options.options
         , containerAttrs = options.containerAttrs
-        , extraAttrs = options.extraAttrs
         , labelAttrs = options.labelAttrs
         }
 
@@ -146,11 +143,6 @@ withDisabled disabled (Options options) =
 withContainerAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
-
-
-withAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
-withAttrs attrs (Options options) =
-    Options { options | extraAttrs = options.extraAttrs ++ attrs }
 
 
 withLabelAttrs : List (Html.Attribute msg) -> Options option msg -> Options option msg
@@ -199,17 +191,17 @@ view (Options options) viewConfig =
         [ View.Components.label options.labelAttrs
             { targetId = options.id, labelText = options.label }
         , Html.select
-            (class "input pr-10 form-select-icon w-full"
-                :: classList [ ( "with-error", viewConfig.hasError ) ]
-                :: required viewConfig.isRequired
-                :: disabled options.disabled
-                :: onBlur viewConfig.onBlur
-                -- We don't use `Html.Events.onInput` because `optionFromValue`
-                -- might return `Nothing`. In that case, the decoder just fails and
-                -- doesn't emit a msg
-                :: customOnInput optionFromValue viewConfig.onSelect
-                :: options.extraAttrs
-            )
+            [ class "input pr-10 form-select-icon w-full"
+            , classList [ ( "with-error", viewConfig.hasError ) ]
+            , required viewConfig.isRequired
+            , disabled options.disabled
+            , onBlur viewConfig.onBlur
+
+            -- We don't use `Html.Events.onInput` because `optionFromValue`
+            -- might return `Nothing`. In that case, the decoder just fails and
+            -- doesn't emit a msg
+            , customOnInput optionFromValue viewConfig.onSelect
+            ]
             (options.options
                 |> List.reverse
                 |> List.map viewOption

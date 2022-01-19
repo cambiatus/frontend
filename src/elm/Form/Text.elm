@@ -1,7 +1,7 @@
 module Form.Text exposing
     ( init, Options
     , withPlaceholder, withElements, withCurrency, withCounter, Counter(..)
-    , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+    , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
     , withMask, withAllowedChars
     , getId, getErrorAttrs
@@ -35,7 +35,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 ## Adding attributes
 
-@docs withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withInputContainerAttrs, withLabelAttrs
+@docs withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withLabelAttrs
 
 
 ## Changing types
@@ -82,7 +82,6 @@ type Options msg
         , labelAttrs : List (Html.Attribute msg)
         , extraAttrs : List (Html.Attribute msg)
         , containerAttrs : List (Html.Attribute msg)
-        , inputContainerAttrs : List (Html.Attribute msg)
         , extraElements : List (ViewConfig msg -> Html msg)
         , errorAttrs : List (Html.Attribute msg)
         , counterAttrs : List (Html.Attribute msg)
@@ -107,7 +106,6 @@ init { label, id } =
         , labelAttrs = []
         , extraAttrs = []
         , containerAttrs = []
-        , inputContainerAttrs = []
         , errorAttrs = []
         , counterAttrs = []
         , extraElements = []
@@ -313,13 +311,6 @@ withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
-{-| Adds attributes to the element that holds the input
--}
-withInputContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
-withInputContainerAttrs attrs (Options options) =
-    Options { options | inputContainerAttrs = options.inputContainerAttrs ++ attrs }
-
-
 {-| Adds attributes to the field error
 -}
 withErrorAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
@@ -502,7 +493,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                     , Html.text ""
                     )
     in
-    div (class "relative" :: options.inputContainerAttrs)
+    div [ class "relative" ]
         (inputElement
             (id options.id
                 :: onInput (beforeChangeEvent >> onChange)
