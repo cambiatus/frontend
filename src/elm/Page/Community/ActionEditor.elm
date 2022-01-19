@@ -830,6 +830,7 @@ verificationForm loggedIn community =
                                     , update = \verifiers input -> { input | verifiers = verifiers }
                                     , externalError = always Nothing
                                     }
+                                |> Form.withValidationStrategy Form.ValidateOnSubmit
                 )
             )
         |> Form.with

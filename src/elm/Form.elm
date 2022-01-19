@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
-    , optional, introspect, mapValues, mapOutput
+    , optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
@@ -72,7 +72,7 @@ documentation if you're stuck.
 
 ## Modifiers
 
-@docs optional, introspect, mapValues, mapOutput
+@docs optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
 
 
 ## Fields
@@ -135,6 +135,15 @@ type Form msg values output
     = Form (values -> FilledForm msg values output)
 
 
+{-| Some fields don't need to be validated as the user is filling in the form.
+If validating only on submit will lead to a better UX, you can use `withValidationStrategy`
+to set a field's validation strategy to `ValidateOnSubmit`
+-}
+type ValidationStrategy
+    = ValidateOnBlur
+    | ValidateOnSubmit
+
+
 {-| A `FilledForm` represents a form with some (dirty) values in it. It also
 tries to parse the form, and hols the result as either an error or the
 valid/clean model
@@ -151,6 +160,7 @@ has an error! This is what we use to do that
 type alias FilledField msg values =
     { state : Field msg values
     , error : Maybe String
+    , validationStrategy : ValidationStrategy
     , isRequired : Bool
     }
 
@@ -257,6 +267,7 @@ field build config =
 
                             OptNothing ->
                                 Nothing
+                  , validationStrategy = ValidateOnBlur
                   , isRequired = True
                   }
                 ]
@@ -573,6 +584,7 @@ withGroup attributes leftSide rightSide current =
             { fields =
                 { state = Group attributes (filledLeft.fields ++ filledRight.fields)
                 , error = Nothing
+                , validationStrategy = ValidateOnBlur
                 , isRequired = False
                 }
                     :: filledCurrent.fields
@@ -639,6 +651,7 @@ arbitrary html =
             { fields =
                 [ { state = Arbitrary html
                   , error = Nothing
+                  , validationStrategy = ValidateOnBlur
                   , isRequired = False
                   }
                 ]
@@ -673,6 +686,7 @@ unsafeArbitrary html =
             { fields =
                 [ { state = UnsafeArbitrary html
                   , error = Nothing
+                  , validationStrategy = ValidateOnBlur
                   , isRequired = False
                   }
                 ]
@@ -765,6 +779,30 @@ optional form =
 
                         OptNothing ->
                             OptNothing
+            }
+        )
+
+
+{-| Change a Form's `ValidationStrategy`. If validating only on submit will
+provide a better UX, do it! Note you can use this on a per field basis:
+
+    Form.succeed User
+        |> Form.with nameField
+        |> Form.with (ageField |> Form.withValidationStrategy Form.ValdiateOnSubmit)
+
+-}
+withValidationStrategy : ValidationStrategy -> Form msg values output -> Form msg values output
+withValidationStrategy validationStrategy form =
+    Form
+        (\values ->
+            let
+                filled =
+                    fill form values
+            in
+            { fields =
+                filled.fields
+                    |> List.map (\field_ -> { field_ | validationStrategy = validationStrategy })
+            , result = filled.result
             }
         )
 
@@ -1112,6 +1150,7 @@ viewFields translators form (Model model) toMsg onSuccess =
                 let
                     shouldShowFieldError =
                         Set.member (getId field_.state) errorTracking.showFieldError
+                            && (field_.validationStrategy == ValidateOnBlur)
                 in
                 viewField
                     { showError = shouldShowFieldError || errorTracking.showAllErrors
@@ -1596,6 +1635,7 @@ mapFilledField : (values -> mappedValues) -> (mappedValues -> values) -> FilledF
 mapFilledField fn reverseFn filledField =
     { state = mapField fn reverseFn filledField.state
     , error = filledField.error
+    , validationStrategy = filledField.validationStrategy
     , isRequired = filledField.isRequired
     }
 
