@@ -150,6 +150,7 @@ view (Options options) viewConfig toMsg =
                     { targetId = model.id, labelText = options.label }
             , Html.node "richtext-editor"
                 [ Html.Attributes.attribute "elm-placeholder" (Maybe.withDefault "" options.placeholder)
+                , Html.Attributes.attribute "elm-id" model.id
                 , Html.Attributes.attribute "elm-has-error" (boolToString viewConfig.hasError)
                 , Html.Attributes.attribute "elm-edit-text" (t "markdown.link_tooltip.edit")
                 , Html.Attributes.attribute "elm-remove-text" (t "markdown.link_tooltip.remove")
@@ -157,7 +158,6 @@ view (Options options) viewConfig toMsg =
                 , Html.Events.on "clicked-include-link" (Json.Decode.map ClickedIncludeLink linkDecoder)
                 , Html.Events.on "text-change" (Json.Decode.map ChangedText textChangeDecoder)
                 , Html.Events.on "component-loaded" (Json.Decode.succeed ComponentLoaded)
-                , Html.Attributes.id model.id
                 ]
                 []
                 |> Html.map toMsg

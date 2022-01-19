@@ -70,6 +70,8 @@ export default (app) => (
         this.linkHandler()
       })
 
+
+      this.setId()
       this.setTooltipTexts()
       this.setDisabled()
     }
@@ -91,9 +93,16 @@ export default (app) => (
         this.setDisabled()
       } else if (name === 'elm-has-error') {
         this.toggleHasError()
+      } else if (name === 'elm-id') {
+        this.setId()
       } else {
         this.setTooltipTexts()
       }
+    }
+
+    setId () {
+      const editorNode = this.querySelector('.ql-editor')
+      editorNode.id = this.getAttribute('elm-id')
     }
 
     setTooltipTexts () {
