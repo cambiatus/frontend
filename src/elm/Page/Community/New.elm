@@ -175,6 +175,7 @@ createForm ({ t } as translators) { isDisabled } =
                 , id = "community-symbol-input"
                 }
                 |> Form.Text.withPlaceholder ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
+                |> Form.Text.withMask { mask = "#," ++ String.concat (List.repeat Eos.maxSymbolLength "#"), replace = '#' }
                 |> Form.textField
                     { parser =
                         Eos.symbolFromString
