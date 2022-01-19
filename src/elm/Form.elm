@@ -883,7 +883,7 @@ type alias UpdateResult values =
 
 type Msg values
     = NoOp
-    | ChangedValues values
+    | ChangedValues { fieldId : String } values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
     | GotFileMsg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
@@ -917,13 +917,20 @@ update shared msg (Model model) =
     let
         (ErrorTracking errorTracking) =
             model.errorTracking
+
+        removeFieldError fieldId =
+            ErrorTracking { errorTracking | showFieldError = Set.remove fieldId errorTracking.showFieldError }
     in
     case msg of
         NoOp ->
             UR.init (Model model)
 
-        ChangedValues newValues ->
-            Model { model | values = newValues }
+        ChangedValues { fieldId } newValues ->
+            Model
+                { model
+                    | values = newValues
+                    , errorTracking = removeFieldError fieldId
+                }
                 |> UR.init
 
         GotRichTextMsg getModel updateFn subMsg ->
@@ -931,7 +938,11 @@ update shared msg (Model model) =
                 ( newModel, cmd ) =
                     RichText.update subMsg (getModel model.values)
             in
-            Model { model | values = updateFn newModel model.values }
+            Model
+                { model
+                    | values = updateFn newModel model.values
+                    , errorTracking = removeFieldError (RichText.getId newModel)
+                }
                 |> UR.init
                 |> UR.addCmd (Cmd.map (GotRichTextMsg getModel updateFn) cmd)
 
@@ -1013,7 +1024,7 @@ msgToString msg =
         GotUserPickerMsg _ _ _ _ subMsg ->
             "GotUserPickerMsg" :: UserPicker.msgToString subMsg
 
-        ChangedValues _ ->
+        ChangedValues _ _ ->
             [ "ChangedValues" ]
 
         BlurredField _ ->
@@ -1206,8 +1217,11 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
             else
                 options
 
+        fieldId =
+            getId state
+
         onBlur =
-            toMsg (BlurredField { fieldId = getId state, isEmpty = isEmpty state })
+            toMsg (BlurredField { fieldId = fieldId, isEmpty = isEmpty state })
     in
     case state of
         Text options baseField ->
@@ -1230,7 +1244,10 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                         |> addSubmitOnEnter
             in
             Text.view transformedOptions
-                { onChange = baseField.update >> ChangedValues >> toMsg
+                { onChange =
+                    baseField.update
+                        >> ChangedValues { fieldId = fieldId }
+                        >> toMsg
                 , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError (Text.getErrorAttrs options) showError error
@@ -1254,7 +1271,10 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         Toggle options baseField ->
             Toggle.view (disableIfNotAlreadyDisabled options Toggle.withDisabled)
-                { onToggle = baseField.update >> ChangedValues >> toMsg
+                { onToggle =
+                    baseField.update
+                        >> ChangedValues { fieldId = fieldId }
+                        >> toMsg
                 , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
@@ -1266,7 +1286,10 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
         Checkbox options baseField ->
             Checkbox.view (disableIfNotAlreadyDisabled options Checkbox.withDisabled)
                 { value = baseField.value
-                , onCheck = baseField.update >> ChangedValues >> toMsg
+                , onCheck =
+                    baseField.update
+                        >> ChangedValues { fieldId = fieldId }
+                        >> toMsg
                 , onBlur = onBlur
                 , error = viewError [] showError error
                 , hasError = hasError
@@ -1275,7 +1298,10 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         Radio options baseField ->
             Radio.view (disableIfNotAlreadyDisabled options Radio.withDisabled)
-                { onSelect = baseField.update >> ChangedValues >> toMsg
+                { onSelect =
+                    baseField.update
+                        >> ChangedValues { fieldId = fieldId }
+                        >> toMsg
                 , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
@@ -1296,7 +1322,10 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         Select options baseField ->
             Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
-                { onSelect = baseField.update >> ChangedValues >> toMsg
+                { onSelect =
+                    baseField.update
+                        >> ChangedValues { fieldId = fieldId }
+                        >> toMsg
                 , onBlur = onBlur
                 , value = baseField.value
                 , error = viewError [] showError error
@@ -1353,7 +1382,13 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                 )
 
         Arbitrary html ->
-            Html.map (\fn -> ChangedValues (fn values) |> toMsg) html
+            Html.map
+                (\fn ->
+                    fn values
+                        |> ChangedValues { fieldId = fieldId }
+                        |> toMsg
+                )
+                html
 
         UnsafeArbitrary html ->
             html
@@ -1619,8 +1654,8 @@ mapMsg fn reverseFn msg =
         NoOp ->
             NoOp
 
-        ChangedValues values ->
-            ChangedValues (fn values)
+        ChangedValues fieldId values ->
+            ChangedValues fieldId (fn values)
 
         GotRichTextMsg getModel updateFn subMsg ->
             GotRichTextMsg
@@ -1647,8 +1682,8 @@ mapMsg fn reverseFn msg =
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
 
-        BlurredField fieldId ->
-            BlurredField fieldId
+        BlurredField fieldInfo ->
+            BlurredField fieldInfo
 
         ClickedSubmitWithErrors errors ->
             ClickedSubmitWithErrors errors
