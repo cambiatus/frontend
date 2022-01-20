@@ -13,7 +13,6 @@ module Profile exposing
     , mutation
     , profileToForm
     , query
-    , selectConfig
     , selectionSet
     , upsertKycMutation
     , userContactSelectionSet
@@ -40,7 +39,7 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, span, text)
+import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
 import Iso8601
 import Kyc exposing (ProfileKyc)
@@ -49,7 +48,6 @@ import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Session.Shared as Shared exposing (Shared)
 import Time
-import View.Select
 
 
 type alias Basic a =
@@ -373,36 +371,4 @@ viewEmpty shared =
         [ p
             [ class "uppercase text-gray-900 text-sm" ]
             [ text (shared.translators.t "profile.no_one") ]
-        ]
-
-
-
--- Autocomplete select
-
-
-selectConfig : View.Select.Config msg (Basic p) -> Shared -> Bool -> View.Select.Config msg (Basic p)
-selectConfig select shared isDisabled =
-    select
-        |> View.Select.withInputClass "input h-12 w-full placeholder-gray-900"
-        |> View.Select.withMultiInputItemContainerClass "hidden h-0"
-        |> View.Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
-        |> View.Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> View.Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> View.Select.withDisabled isDisabled
-        |> View.Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> View.Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
-        |> View.Select.withItemHtml (viewAutoCompleteItem shared)
-        |> View.Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
-
-
-viewAutoCompleteItem : Shared -> Basic p -> Html Never
-viewAutoCompleteItem _ { avatar, name, account } =
-    div [ class "flex flex-row items-center z-30" ]
-        [ div [ class "pt-4 pr-4 pb-4 pl-4" ] [ Avatar.view avatar "h-10 w-10" ]
-        , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
-            [ span [ class "text-white font-bold" ]
-                [ text <| Maybe.withDefault "" name ]
-            , span [ class "font-light text-white" ]
-                [ text (Eos.nameToString account) ]
-            ]
         ]

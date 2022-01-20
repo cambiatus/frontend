@@ -6,6 +6,7 @@ module Form.UserPicker exposing
     , Model, update, Msg, msgToString
     , MultiplePickerModel, initMultiple, fromMultiplePicker, toMultiplePicker, getMultipleProfiles
     , SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
+    , getCurrentQuery
     )
 
 {-| Creates a Cambiatus-style UserPicker. Use it within a `Form.Form`:
@@ -54,6 +55,11 @@ This is how you actually use this component!
 ## Single user picker
 
 @docs SinglePickerModel, initSingle, fromSinglePicker, toSinglePicker, getSingleProfile, setSingle
+
+
+## General helpers
+
+@docs getCurrentQuery
 
 -}
 
@@ -600,6 +606,12 @@ getSingleProfile (SinglePickerModel model) =
 getMultipleProfiles : MultiplePickerModel -> List Profile.Minimal
 getMultipleProfiles (MultiplePickerModel model) =
     List.map .profile model.selectedProfiles
+
+
+getCurrentQuery : Model -> String
+getCurrentQuery (Model model) =
+    View.Select.queryFromState model.selectState
+        |> Maybe.withDefault ""
 
 
 fromSinglePicker : SinglePickerModel -> Model

@@ -11,7 +11,6 @@ module Page.PaymentHistory exposing
 import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
-import Browser.Dom
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
 import Cambiatus.Object
 import Cambiatus.Object.User as User
@@ -19,35 +18,29 @@ import Cambiatus.Query
 import Cambiatus.Scalar
 import Community
 import Date exposing (Date)
-import DatePicker exposing (DateEvent(..), defaultSettings, off)
 import Emoji
 import Eos
 import Eos.Account
+import Form.DatePicker
+import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, h1, h2, img, p, text, ul)
-import Html.Attributes as Attrs exposing (class, src, style, tabindex)
+import Html exposing (Html, a, button, div, h1, h2, p, text, ul)
+import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
-import Icons
 import Log
 import Markdown exposing (Markdown)
 import Page
 import Profile
 import Profile.Contact
-import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
-import Simple.Fuzzy
 import Strftime
-import Task
-import Time exposing (Weekday(..))
 import Transfer exposing (ConnectionTransfer, Transfer)
 import UpdateResult as UR
 import Utils
-import View.Components
-import View.Select
 
 
 
@@ -59,14 +52,9 @@ type Msg
     | CompletedLoadCommunity Community.Model
     | RecipientProfileWithTransfersLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithTransfers)) (Maybe ProfileWithTransfers))
     | AutocompleteProfilesLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileWithOnlyAutocomplete)) (Maybe ProfileWithOnlyAutocomplete))
-    | OnSelect ProfileBase
-    | SelectMsg (View.Select.Msg ProfileBase)
-    | ClearSelect
-    | SetDatePicker DatePicker.Msg
-    | ClickedCalendar
-    | ClearDatePicker
+    | GotUserPickerMsg Form.UserPicker.Msg
+    | GotDatePickerMsg Form.DatePicker.Msg
     | ShowMore
-    | GotPayerProfileSummaryMsg Profile.Summary.Msg
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -97,26 +85,11 @@ msgToString msg =
         AutocompleteProfilesLoaded r ->
             [ "AutocompleteProfilesLoaded", UR.remoteDataToString r ]
 
-        ClearSelect ->
-            [ "ClearSelect" ]
+        GotUserPickerMsg subMsg ->
+            "GotUserPickerMsg" :: Form.UserPicker.msgToString subMsg
 
-        OnSelect _ ->
-            [ "OnSelect" ]
-
-        SelectMsg _ ->
-            [ "SelectMsg" ]
-
-        SetDatePicker _ ->
-            [ "SetDatePicker" ]
-
-        ClickedCalendar ->
-            [ "ClickedCalendar" ]
-
-        ClearDatePicker ->
-            [ "ClearDatePicker" ]
-
-        GotPayerProfileSummaryMsg subMsg ->
-            "GotPayerProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
+        GotDatePickerMsg subMsg ->
+            "GotDatePickerMsg" :: Form.DatePicker.msgToString subMsg
 
 
 
@@ -125,15 +98,14 @@ msgToString msg =
 
 type alias Model =
     { queryStatus : QueryStatus (Maybe ProfileWithTransfers) ProfileWithTransfers
-    , recipientProfile : ProfileBase
+    , recipientProfile : Profile.Minimal
     , incomingTransfers : Maybe (List Transfer)
     , incomingTransfersPageInfo : Maybe Api.Relay.PageInfo
-    , autocompleteProfiles : List ProfileBase
-    , autocompleteState : View.Select.State
-    , autocompleteSelectedProfile : Maybe ProfileBase
-    , datePicker : DatePicker.DatePicker
+    , autocompleteProfiles : List Profile.Minimal
+    , autocompleteSelectedProfile : Maybe Profile.Minimal
+    , userPicker : Form.UserPicker.SinglePickerModel
+    , datePicker : Form.DatePicker.Model
     , selectedDate : Maybe Date
-    , payerProfileSummary : Profile.Summary.Model
     }
 
 
@@ -141,16 +113,6 @@ type QueryStatus err resp
     = Loading
     | Loaded resp
     | Failed (Graphql.Http.Error err)
-
-
-type alias ProfileBase =
-    { name : Maybe String
-    , account : Eos.Account.Name
-    , avatar : Avatar
-    , email : Maybe String
-    , bio : Maybe Markdown
-    , contacts : List Profile.Contact.Normalized
-    }
 
 
 type alias ProfileWithTransfers =
@@ -165,7 +127,7 @@ type alias ProfileWithTransfers =
 
 
 type alias ProfileWithOnlyAutocomplete =
-    { getPayersByAccount : Maybe (List (Maybe ProfileBase))
+    { getPayersByAccount : Maybe (List (Maybe Profile.Minimal))
     }
 
 
@@ -248,9 +210,9 @@ fetchProfileWithTransfers shared community model authToken =
 fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
 fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
-        autocompleteSelectionSet : SelectionSet ProfileBase Cambiatus.Object.User
+        autocompleteSelectionSet : SelectionSet Profile.Minimal Cambiatus.Object.User
         autocompleteSelectionSet =
-            SelectionSet.succeed ProfileBase
+            SelectionSet.succeed Profile.Minimal
                 |> SelectionSet.with User.name
                 |> SelectionSet.with (Eos.Account.nameSelectionSet User.account)
                 |> SelectionSet.with (Avatar.selectionSet User.avatar)
@@ -276,28 +238,9 @@ fetchProfilesForAutocomplete shared model payerAccount authToken =
         AutocompleteProfilesLoaded
 
 
-datePickerSettings : Shared -> DatePicker.Settings
-datePickerSettings shared =
-    { defaultSettings
-        | changeYear = off
-        , placeholder = shared.translators.t "payment_history.pick_date"
-        , dateFormatter = Date.format "E, d MMM y"
-        , firstDayOfWeek = Mon
-        , inputId = Just "date-picker-input"
-        , inputAttributes =
-            [ Attrs.required False
-            , Attrs.readonly True
-            , class "input w-full"
-            ]
-    }
-
-
 init : Eos.Account.Name -> LoggedIn.Model -> ( Model, Cmd Msg )
 init recipientAccountName loggedIn =
     let
-        ( datePicker, datePickerCmd ) =
-            DatePicker.init
-
         recipientProfile : Profile.Basic {}
         recipientProfile =
             { name = Nothing
@@ -314,18 +257,14 @@ init recipientAccountName loggedIn =
             , incomingTransfers = Nothing
             , incomingTransfersPageInfo = Nothing
             , autocompleteProfiles = []
-            , autocompleteState = View.Select.newState ""
             , autocompleteSelectedProfile = Nothing
-            , datePicker = datePicker
+            , userPicker = Form.UserPicker.initSingle { id = "user-picker" }
+            , datePicker = Form.DatePicker.initModel (Date.fromPosix loggedIn.shared.timezone loggedIn.shared.now)
             , selectedDate = Nothing
-            , payerProfileSummary = Profile.Summary.init False
             }
     in
     ( initModel
-    , Cmd.batch
-        [ Cmd.map SetDatePicker datePickerCmd
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -388,11 +327,11 @@ update msg model ({ shared, authToken } as loggedIn) =
             case maybeProfileWithPayers of
                 Just profileWithPayers ->
                     let
-                        payers : List (Maybe ProfileBase)
+                        payers : List (Maybe Profile.Minimal)
                         payers =
                             Maybe.withDefault [] profileWithPayers.getPayersByAccount
 
-                        toList : Maybe ProfileBase -> List ProfileBase
+                        toList : Maybe Profile.Minimal -> List Profile.Minimal
                         toList p =
                             case p of
                                 Just val ->
@@ -401,7 +340,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                                 Nothing ->
                                     []
 
-                        profiles : List ProfileBase
+                        profiles : List Profile.Minimal
                         profiles =
                             payers
                                 |> List.map toList
@@ -434,7 +373,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                         pageInfo =
                             Maybe.map .pageInfo profile.transfers
 
-                        recipientProfile : ProfileBase
+                        recipientProfile : Profile.Minimal
                         recipientProfile =
                             { name = profile.name
                             , account = profile.account
@@ -496,141 +435,117 @@ update msg model ({ shared, authToken } as loggedIn) =
                             { moduleName = "Page.PaymentHistory", function = "update" }
                             []
 
-        OnSelect profile ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        newModel =
-                            { model
-                                | incomingTransfers = Nothing
-                                , incomingTransfersPageInfo = Nothing
-                                , autocompleteSelectedProfile = Just profile
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Selected user, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.PaymentHistory", function = "update" }
-                            []
-
-        SelectMsg subMsg ->
+        GotUserPickerMsg subMsg ->
             let
-                ( updated, cmd ) =
-                    View.Select.update (selectConfiguration shared False) subMsg model.autocompleteState
+                ( newUserPicker, userPickerCmd, maybeMsg ) =
+                    Form.UserPicker.update
+                        (userPickerOptions loggedIn model.autocompleteProfiles)
+                        (userPickerViewConfig loggedIn.shared model)
+                        subMsg
+                        (Form.UserPicker.fromSinglePicker model.userPicker)
+                        |> (\( userPicker, cmd, maybeMsg_ ) ->
+                                ( Form.UserPicker.toSinglePicker userPicker, cmd, maybeMsg_ )
+                           )
+
+                modelWithUserPicker =
+                    { model
+                        | userPicker = newUserPicker
+                        , autocompleteSelectedProfile = Form.UserPicker.getSingleProfile newUserPicker
+                    }
+
+                ( newModel, fetchProfiles ) =
+                    if Form.UserPicker.getSingleProfile newUserPicker == Form.UserPicker.getSingleProfile model.userPicker then
+                        ( modelWithUserPicker, identity )
+
+                    else
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                let
+                                    newModel_ =
+                                        { modelWithUserPicker
+                                            | incomingTransfers = Nothing
+                                            , incomingTransfersPageInfo = Nothing
+                                        }
+                                in
+                                ( newModel_
+                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                )
+
+                            _ ->
+                                ( modelWithUserPicker
+                                , UR.logImpossible msg
+                                    "Picked a user, but community wasn't loaded"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.PaymentHistory", function = "update" }
+                                    []
+                                )
+
+                fetchProfileInfo =
+                    if Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker newUserPicker) == Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker model.userPicker) then
+                        identity
+
+                    else
+                        UR.addCmd
+                            (fetchProfilesForAutocomplete shared
+                                model
+                                (Form.UserPicker.getCurrentQuery
+                                    (Form.UserPicker.fromSinglePicker newUserPicker)
+                                )
+                                authToken
+                            )
             in
-            case View.Select.queryFromState model.autocompleteState of
-                Just payer ->
-                    { model | autocompleteState = updated }
-                        |> UR.init
-                        |> UR.addCmd (fetchProfilesForAutocomplete shared model payer authToken)
-                        |> UR.addCmd cmd
+            newModel
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotUserPickerMsg userPickerCmd)
+                |> UR.addMsg (Maybe.withDefault NoOp maybeMsg)
+                |> fetchProfiles
+                |> fetchProfileInfo
 
-                Nothing ->
-                    { model | autocompleteState = updated }
-                        |> UR.init
-                        |> UR.addCmd cmd
-
-        ClearSelect ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        newModel =
-                            { model
-                                | incomingTransfers = Nothing
-                                , incomingTransfersPageInfo = Nothing
-                                , autocompleteSelectedProfile = Nothing
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Cleared selected user, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.PaymentHistory", function = "update" }
-                            []
-
-        SetDatePicker subMsg ->
+        GotDatePickerMsg subMsg ->
             let
-                ( newDatePicker, dateEvent ) =
-                    DatePicker.update (datePickerSettings shared) subMsg model.datePicker
-            in
-            case dateEvent of
-                Picked newDate ->
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            let
-                                newModel =
-                                    { model
-                                        | selectedDate = Just newDate
-                                        , incomingTransfersPageInfo = Nothing
-                                        , datePicker = newDatePicker
-                                        , incomingTransfers = Nothing
-                                    }
-                            in
-                            newModel
-                                |> UR.init
-                                |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
+                ( newDatePicker, datePickerCmd ) =
+                    Form.DatePicker.update (datePickerOptions shared)
+                        (datePickerViewConfig shared model)
+                        subMsg
+                        model.datePicker
 
-                        _ ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
+                modelWithDatePicker =
+                    { model
+                        | datePicker = newDatePicker
+                        , selectedDate = Form.DatePicker.getDate newDatePicker
+                    }
+
+                ( newModel, fetchProfile ) =
+                    if modelWithDatePicker.selectedDate == model.selectedDate then
+                        ( modelWithDatePicker, identity )
+
+                    else
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                let
+                                    newModel_ =
+                                        { modelWithDatePicker
+                                            | incomingTransfers = Nothing
+                                            , incomingTransfersPageInfo = Nothing
+                                        }
+                                in
+                                ( newModel_
+                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                )
+
+                            _ ->
+                                ( modelWithDatePicker
+                                , UR.logImpossible msg
                                     "Picked a date, but community wasn't loaded"
                                     (Just loggedIn.accountName)
                                     { moduleName = "Page.PaymentHistory", function = "update" }
                                     []
-
-                _ ->
-                    { model | datePicker = newDatePicker }
-                        |> UR.init
-
-        ClickedCalendar ->
-            model
+                                )
+            in
+            newModel
                 |> UR.init
-                |> UR.addCmd
-                    (Browser.Dom.focus "date-picker-input"
-                        |> Task.attempt (\_ -> NoOp)
-                    )
-
-        ClearDatePicker ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        newModel =
-                            { model
-                                | incomingTransfers = Nothing
-                                , selectedDate = Nothing
-                                , incomingTransfersPageInfo = Nothing
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared community newModel authToken)
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Tried clearing date picker, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.PaymentHistory", function = "update" }
-                            []
-
-        GotPayerProfileSummaryMsg subMsg ->
-            { model | payerProfileSummary = Profile.Summary.update subMsg model.payerProfileSummary }
-                |> UR.init
+                |> UR.addCmd (Cmd.map GotDatePickerMsg datePickerCmd)
+                |> fetchProfile
 
 
 
@@ -686,120 +601,55 @@ viewSplash p =
 
 viewUserAutocomplete : LoggedIn.Model -> Model -> Html Msg
 viewUserAutocomplete loggedIn model =
-    div [ class "my-4" ]
-        [ View.Components.label []
-            { targetId = "elm-select-input"
-            , labelText = loggedIn.shared.translators.t "payment_history.user"
-            }
-        , viewPayerAutocomplete loggedIn model False
-        ]
+    Form.UserPicker.view (userPickerOptions loggedIn model.autocompleteProfiles)
+        (userPickerViewConfig loggedIn.shared model)
+        GotUserPickerMsg
 
 
-viewPayerAutocomplete : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewPayerAutocomplete loggedIn model isDisabled =
-    let
-        selectedPayers =
-            Maybe.map (\v -> [ v ]) model.autocompleteSelectedProfile
-                |> Maybe.withDefault []
-    in
-    div []
-        [ Html.map SelectMsg
-            (View.Select.view
-                (selectConfiguration loggedIn.shared isDisabled)
-                model.autocompleteState
-                model.autocompleteProfiles
-                selectedPayers
-            )
-        , viewSelectedPayers model loggedIn selectedPayers
-        ]
+userPickerOptions : LoggedIn.Model -> List Profile.Minimal -> Form.UserPicker.Options msg
+userPickerOptions loggedIn profiles =
+    Form.UserPicker.init
+        { label = loggedIn.shared.translators.t "payment_history.user"
+        , currentUser = loggedIn.accountName
+        , profiles = profiles
+        }
+        |> Form.UserPicker.withContainerAttrs [ class "my-4" ]
 
 
-viewSelectedPayers : Model -> LoggedIn.Model -> List ProfileBase -> Html Msg
-viewSelectedPayers model loggedIn selectedPayers =
-    div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
-        (selectedPayers
-            |> List.map
-                (\p ->
-                    div
-                        [ class "flex justify-between flex-col m-3 items-center" ]
-                        [ viewSelectedPayer loggedIn model p
-                        , div
-                            [ onClick ClearSelect
-                            , class "h-6 w-6 flex items-center mt-4"
-                            ]
-                            [ Icons.trash "" ]
-                        ]
-                )
-        )
-
-
-viewSelectedPayer : LoggedIn.Model -> Model -> ProfileBase -> Html Msg
-viewSelectedPayer loggedIn model profile =
-    Profile.Summary.view loggedIn.shared
-        loggedIn.accountName
-        profile
-        model.payerProfileSummary
-        |> Html.map GotPayerProfileSummaryMsg
-
-
-selectConfiguration : Shared -> Bool -> View.Select.Config Msg ProfileBase
-selectConfiguration shared isDisabled =
-    Profile.selectConfig
-        (View.Select.newConfig
-            { onSelect = OnSelect
-            , toLabel = \p -> Eos.Account.nameToString p.account
-            , filter = selectFilter 2 (\p -> Eos.Account.nameToString p.account)
-            , onFocusItem = NoOp
-            }
-            |> View.Select.withInputClass "input"
-        )
-        shared
-        isDisabled
-
-
-selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-selectFilter minChars toLabel q items =
-    if String.length q < minChars then
-        Nothing
-
-    else
-        items
-            |> Simple.Fuzzy.filter toLabel q
-            |> Just
+userPickerViewConfig : Shared -> Model -> Form.UserPicker.ViewConfig Msg
+userPickerViewConfig { translators } model =
+    { onBlur = NoOp
+    , value = Form.UserPicker.fromSinglePicker model.userPicker
+    , error = text ""
+    , hasError = False
+    , translators = translators
+    }
 
 
 viewDatePicker : Shared -> Model -> Html Msg
 viewDatePicker shared model =
-    div [ class "my-4" ]
-        [ View.Components.label []
-            { targetId = "date-picker"
-            , labelText = shared.translators.t "payment_history.date"
-            }
-        , div [ class "relative" ]
-            [ DatePicker.view
-                model.selectedDate
-                (datePickerSettings shared)
-                model.datePicker
-                |> Html.map SetDatePicker
-            , img
-                [ class "absolute right-0 top-0 h-full cursor-pointer"
-                , src "/icons/calendar.svg"
-                , tabindex -1
-                , onClick ClickedCalendar
-                ]
-                []
-            , case model.selectedDate of
-                Just _ ->
-                    button
-                        [ onClick ClearDatePicker
-                        , class "absolute right-0 mr-12 top-0 mt-3"
-                        ]
-                        [ Icons.trash "" ]
+    Form.DatePicker.view (datePickerOptions shared)
+        (datePickerViewConfig shared model)
+        GotDatePickerMsg
 
-                Nothing ->
-                    text ""
-            ]
-        ]
+
+datePickerOptions : Shared -> Form.DatePicker.Options msg
+datePickerOptions { translators } =
+    Form.DatePicker.init
+        { label = translators.t "payment_history.date"
+        , id = "date-picker"
+        }
+        |> Form.DatePicker.withContainerAttrs [ class "my-4" ]
+
+
+datePickerViewConfig : Shared -> Model -> Form.DatePicker.ViewConfig msg
+datePickerViewConfig { translators } model =
+    { value = model.datePicker
+    , error = text ""
+    , hasError = False
+    , isRequired = False
+    , translators = translators
+    }
 
 
 viewTransfer : Shared -> Transfer -> Html Msg

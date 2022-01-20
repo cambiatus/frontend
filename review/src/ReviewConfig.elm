@@ -84,6 +84,12 @@ config =
           )
         , ( [ "Html.select" ], [ "Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
+        , ( [ "DatePicker.view", "DatePicker.initFromDate", "DatePicker.init" ]
+          , [ "Form.DatePicker" ]
+          )
+        , ( [ "View.Select.newConfig", "View.Select.view", "View.Select.update" ]
+          , [ "Form.UserPicker" ]
+          )
         ]
     ]
         -- Ignore generated code

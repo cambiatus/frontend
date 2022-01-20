@@ -1,11 +1,10 @@
 module View.Select exposing
     ( RequiredConfig, Config, State, Msg
     , newConfig
-    , withMultiInputItemContainerClass
     , withInputClass, withInputClassList, withOnBlur
-    , withItemClass, withItemHtml, withHighlightedItemClass
+    , withItemClass, withItemHtml
     , withMenuClass, withEmptyMenuClass
-    , withNotFound, withNotFoundClass, withNotFoundStyles
+    , withNotFound, withNotFoundClass
     , withPrompt
     , newState, queryFromState
     , view
@@ -27,61 +26,32 @@ See a full example of the select input in multi mode [here](https://github.com/s
 
 # Configuration
 
-@docs newConfig, withCutoff, withOnQuery, withEmptySearch, withTransformQuery
-
-
-# Configure Multi Select mode
-
-@docs withMultiSelection, withOnRemoveItem, withMultiInputItemContainerClass, withMultiInputItemContainerStyles, withMultiInputItemClass, withMultiInputItemStyles
-
-
-# Configure the input control
-
-This is the container that wraps the entire select view
-
-@docs withInputControlClass, withInputControlStyles
-
-
-# Configure the input wapper
-
-This is the element that wraps the selected item(s) and the input
-
-@docs withInputWrapperClass, withInputWrapperStyles
+@docs newConfig
 
 
 # Configure the input
 
-@docs withInputId, withInputClass, withInputClassList, withInputStyles, withOnFocus, withOnBlur
-
-
-# Configure the clear button
-
-@docs withClear, withClearClass, withClearStyles, withClearSvgClass
-
-
-# Configure an underline element under the input
-
-@docs withUnderlineClass, withUnderlineStyles
+@docs withInputClass, withInputClassList, withOnBlur
 
 
 # Configure the items
 
-@docs withItemClass, withItemStyles, withItemHtml, withHighlightedItemClass, withHighlightedItemStyles
+@docs withItemClass, withItemHtml
 
 
 # Configure the menu
 
-@docs withMenuClass, withEmptyMenuClass, withMenuStyles
+@docs withMenuClass, withEmptyMenuClass
 
 
 # Configure the not found message
 
-@docs withNotFound, withNotFoundClass, withNotFoundShown, withNotFoundStyles
+@docs withNotFound, withNotFoundClass
 
 
 # Configure the prompt
 
-@docs withPrompt, withPromptClass, withPromptStyles
+@docs withPrompt
 
 
 # State
@@ -235,20 +205,6 @@ withEmptyMenuClass classes config =
     mapConfig fn config
 
 
-{-| Add classes to the container of selected items
-
-    Select.withMultiInputItemContainerClass "bg-white" config
-
--}
-withMultiInputItemContainerClass : String -> Config msg item -> Config msg item
-withMultiInputItemContainerClass classes config =
-    let
-        fn c =
-            { c | multiInputItemContainerClass = classes }
-    in
-    mapConfig fn config
-
-
 {-| Text that will appear when no matches are found
 
     Select.withNotFound "No matches" config
@@ -273,34 +229,6 @@ withNotFoundClass class config =
     let
         fn c =
             { c | notFoundClass = class }
-    in
-    mapConfig fn config
-
-
-{-| Styles for the not found message
-
-    Select.withNotFoundStyles [ ( "padding", "1rem" ) ] config
-
--}
-withNotFoundStyles : List ( String, String ) -> Config msg item -> Config msg item
-withNotFoundStyles styles config =
-    let
-        fn c =
-            { c | notFoundStyles = styles }
-    in
-    mapConfig fn config
-
-
-{-| Class for the hightlighted tem
-
-    Select.withHighlightedItemClass "red" config
-
--}
-withHighlightedItemClass : String -> Config msg item -> Config msg item
-withHighlightedItemClass class config =
-    let
-        fn c =
-            { c | highlightedItemClass = class }
     in
     mapConfig fn config
 
