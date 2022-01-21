@@ -511,7 +511,8 @@ type Msg
 
 
 type alias CreateActionAction =
-    { actionId : ActionId
+    { communityId : Eos.Symbol
+    , actionId : ActionId
     , objectiveId : ObjectiveId
     , description : String
     , reward : Eos.Asset
@@ -533,7 +534,8 @@ type alias CreateActionAction =
 encodeCreateActionAction : CreateActionAction -> Value
 encodeCreateActionAction c =
     Encode.object
-        [ ( "action_id", Encode.int c.actionId )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "action_id", Encode.int c.actionId )
         , ( "objective_id", Encode.int c.objectiveId )
         , ( "description", Encode.string c.description )
         , ( "reward", Eos.encodeAsset c.reward )
@@ -1206,7 +1208,8 @@ upsertAction loggedIn community model isoDate =
                             , permissionName = Eos.samplePermission
                             }
                       , data =
-                            { actionId = model.actionId |> Maybe.withDefault 0
+                            { communityId = community.symbol
+                            , actionId = model.actionId |> Maybe.withDefault 0
                             , objectiveId = model.objectiveId
                             , description = model.form.description.contents
                             , reward =

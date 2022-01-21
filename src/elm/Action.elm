@@ -692,7 +692,8 @@ encode action =
             { symbol = action.objective.community.symbol, amount = amount }
     in
     Encode.object
-        [ ( "action_id", Encode.int action.id )
+        [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
+        , ( "action_id", Encode.int action.id )
         , ( "objective_id", Encode.int action.objective.id )
         , ( "description", Encode.string action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
