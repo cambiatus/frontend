@@ -152,7 +152,8 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         (claimActionPort
                             msg
                             shared.contracts.community
-                            { actionId = actionId
+                            { communityId = selectedCommunity
+                            , actionId = actionId
                             , maker = accName
                             , proofPhoto = photoUrl
                             , proofCode = code
@@ -737,7 +738,7 @@ updateAction accountName shared action =
 
 
 claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
+claimActionPort msg contractsCommunity action =
     { responseAddress = msg
     , responseData = Encode.null
     , data =
@@ -745,24 +746,18 @@ claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode,
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = maker
+                    { actor = action.maker
                     , permissionName = Eos.samplePermission
                     }
-              , data =
-                    { actionId = actionId
-                    , maker = maker
-                    , proofPhoto = proofPhoto
-                    , proofCode = proofCode
-                    , proofTime = proofTime
-                    }
-                        |> encodeClaimAction
+              , data = encodeClaimAction action
               }
             ]
     }
 
 
 type alias ClaimedAction =
-    { actionId : Int
+    { communityId : Eos.Symbol
+    , actionId : Int
     , maker : Eos.Name
     , proofPhoto : String
     , proofCode : String
@@ -773,7 +768,8 @@ type alias ClaimedAction =
 encodeClaimAction : ClaimedAction -> Encode.Value
 encodeClaimAction c =
     Encode.object
-        [ ( "action_id", Encode.int c.actionId )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "action_id", Encode.int c.actionId )
         , ( "maker", Eos.encodeName c.maker )
         , ( "proof_photo", Encode.string c.proofPhoto )
         , ( "proof_code", Encode.string c.proofCode )
