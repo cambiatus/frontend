@@ -757,7 +757,7 @@ claimActionPort msg contractsCommunity action =
 
 
 type alias ClaimedAction =
-    { communityId : Eos.Symbol
+    { communityId : Symbol
     , actionId : Int
     , maker : Eos.Name
     , proofPhoto : String
