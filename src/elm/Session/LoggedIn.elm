@@ -5,6 +5,7 @@ module Session.LoggedIn exposing
     , Model
     , Msg(..)
     , Page(..)
+    , Permission(..)
     , Resource(..)
     , init
     , initLogin
@@ -163,6 +164,10 @@ type alias Model =
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
+    , permissions : List Permission
+
+    -- TODO - Do we need to know which permissions?
+    , showInsufficientPermissionsModal : Bool
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
     , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
     , showUserNav : Bool
@@ -184,12 +189,21 @@ type alias Model =
     }
 
 
+type Permission
+    = -- TODO - Use enum from GraphQL
+      Permission
+
+
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
 initModel shared maybePrivateKey_ accountName authToken =
     { shared = shared
     , routeHistory = []
     , accountName = accountName
     , profile = RemoteData.Loading
+
+    -- TODO - Use data from GraphQL
+    , permissions = []
+    , showInsufficientPermissionsModal = False
     , selectedCommunity = RemoteData.Loading
     , contributionCount = RemoteData.NotAsked
     , showUserNav = False
@@ -397,6 +411,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Modal.toHtml
                     |> Html.map pageMsg
                , communitySelectorModal model
+                    |> Html.map pageMsg
+               , insufficientPermissionsModal model
                     |> Html.map pageMsg
                ]
         )
@@ -780,6 +796,38 @@ communitySelectorModal model =
 
     else
         text ""
+
+
+insufficientPermissionsModal : Model -> Html Msg
+insufficientPermissionsModal model =
+    Modal.initWith
+        { closeMsg = ClosedInsufficientPermissionsModal
+        , isVisible = model.showInsufficientPermissionsModal
+        }
+        -- TODO - I18N
+        |> Modal.withHeader "Action not allowed"
+        |> Modal.withBody
+            [ img
+                [ src "/images/girl-with-ice-cube.svg"
+                , alt ""
+                , class "mx-auto mt-4 mb-6"
+                ]
+                []
+            , p [ class "md:max-w-md md:mx-auto md:text-center" ]
+                [ text "You don't have the permissions needed to perform this action. Reach out to the community admins to know how to get more permissions."
+                ]
+            , p [ class "mt-4 md:max-w-md md:mx-auto md:text-center" ]
+                [ text "Please try again once you have enough permissions!"
+                ]
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "button button-primary w-full mt-2"
+                , onClick ClosedInsufficientPermissionsModal
+                ]
+                [ text "Got it" ]
+            ]
+        |> Modal.toHtml
 
 
 viewMainMenu : Page -> Model -> Html Msg
@@ -1179,6 +1227,7 @@ type Msg
     | ToggleLanguageItems
     | ClickedLanguage Translation.Language
     | ClosedAuthModal
+    | ClosedInsufficientPermissionsModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
     | OpenCommunitySelector
@@ -1208,6 +1257,7 @@ update msg model =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , showInsufficientPermissionsModal = False
             }
     in
     case msg of
@@ -1535,6 +1585,10 @@ update msg model =
             UR.init closeAllModals
                 |> UR.addExt AuthenticationFailed
 
+        ClosedInsufficientPermissionsModal ->
+            { model | showInsufficientPermissionsModal = False }
+                |> UR.init
+
         GotAuthMsg authMsg ->
             Auth.update authMsg shared model.auth
                 |> UR.map
@@ -1779,17 +1833,28 @@ again
 -}
 withAuthentication :
     Model
+    -> List Permission
     -> subModel
     -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
-withAuthentication loggedIn subModel subMsg successfulUR =
-    if hasPrivateKey loggedIn then
-        successfulUR
+withAuthentication loggedIn neededPermissions subModel subMsg successfulUR =
+    let
+        hasPermissions =
+            List.all (\neededPermission -> List.member neededPermission loggedIn.permissions)
+                neededPermissions
+    in
+    if hasPermissions then
+        if hasPrivateKey loggedIn then
+            successfulUR
+
+        else
+            UR.init subModel
+                |> UR.addExt (RequiredAuthentication subMsg)
 
     else
         UR.init subModel
-            |> UR.addExt (RequiredAuthentication subMsg)
+            |> UR.addExt (UpdatedLoggedIn { loggedIn | showInsufficientPermissionsModal = True })
 
 
 isCommunityMember : Model -> Bool
@@ -1936,6 +2001,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , showInsufficientPermissionsModal = False
             }
     }
 
@@ -1947,6 +2013,7 @@ askedAuthentication model =
         , showUserNav = False
         , showMainNav = False
         , showAuthModal = True
+        , showInsufficientPermissionsModal = False
     }
 
 
@@ -2089,6 +2156,9 @@ msgToString msg =
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
+
+        ClosedInsufficientPermissionsModal ->
+            [ "ClosedInsufficientPermissionsModal" ]
 
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg

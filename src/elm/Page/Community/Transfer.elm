@@ -643,6 +643,7 @@ update msg model ({ shared } as loggedIn) =
                                     ]
                             }
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

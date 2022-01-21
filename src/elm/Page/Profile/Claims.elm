@@ -506,6 +506,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

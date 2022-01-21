@@ -195,6 +195,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
                 |> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -203,6 +204,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
                 |> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

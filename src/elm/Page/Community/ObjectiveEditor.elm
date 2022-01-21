@@ -758,6 +758,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -786,6 +787,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -888,6 +890,7 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                        )
                 )
                 >> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

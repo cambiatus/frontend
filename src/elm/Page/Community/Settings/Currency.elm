@@ -132,6 +132,7 @@ update msg model ({ shared } as loggedIn) =
                                 |> UR.init
                                 |> UR.addPort (savePort validUpdateTokenData validExpiryOptsData loggedIn)
                                 |> LoggedIn.withAuthentication loggedIn
+                                    []
                                     model
                                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

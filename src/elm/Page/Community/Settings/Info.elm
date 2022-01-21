@@ -444,6 +444,7 @@ update msg model ({ shared } as loggedIn) =
                                     Cmd.none
                             )
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
                         |> UR.addBreadcrumb

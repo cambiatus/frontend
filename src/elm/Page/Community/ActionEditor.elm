@@ -1008,6 +1008,7 @@ update msg model ({ shared } as loggedIn) =
                 RemoteData.Success community ->
                     upsertAction loggedIn community newModel isoDate
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

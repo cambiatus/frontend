@@ -762,6 +762,7 @@ update msg model loggedIn =
                             "createsale"
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
+                                []
                                 model
                                 { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -778,6 +779,7 @@ update msg model loggedIn =
                             "createsale"
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
+                                []
                                 model
                                 { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -794,6 +796,7 @@ update msg model loggedIn =
                             "createsale"
                             (encodeCreateForm loggedIn form)
                             |> LoggedIn.withAuthentication loggedIn
+                                []
                                 model
                                 { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -812,6 +815,7 @@ update msg model loggedIn =
                                     "updatesale"
                                     (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
+                                        []
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -833,6 +837,7 @@ update msg model loggedIn =
                                     "updatesale"
                                     (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
+                                        []
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -854,6 +859,7 @@ update msg model loggedIn =
                                     "updatesale"
                                     (encodeUpdateForm loggedIn.shared.translators sale form community.symbol)
                                     |> LoggedIn.withAuthentication loggedIn
+                                        []
                                         model
                                         { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -901,6 +907,7 @@ update msg model loggedIn =
                         "deletesale"
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -912,6 +919,7 @@ update msg model loggedIn =
                         "deletesale"
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -923,6 +931,7 @@ update msg model loggedIn =
                         "deletesale"
                         (encodeDeleteForm sale)
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

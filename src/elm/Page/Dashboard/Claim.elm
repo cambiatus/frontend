@@ -559,6 +559,7 @@ update msg model loggedIn =
                             , level = Log.Info
                             }
                         |> LoggedIn.withAuthentication loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

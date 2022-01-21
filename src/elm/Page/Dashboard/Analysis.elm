@@ -577,7 +577,8 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withAuthentication loggedIn
-                            model
+                            [ LoggedIn.Permission ]
+                            { model | claimModalStatus = Claim.Closed }
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
                 _ ->

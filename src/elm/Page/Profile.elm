@@ -486,6 +486,7 @@ update msg model loggedIn =
                             ]
                     }
                 |> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -515,6 +516,7 @@ update msg model loggedIn =
             }
                 |> UR.init
                 |> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -554,6 +556,7 @@ update msg model loggedIn =
                             ]
                     }
                 |> LoggedIn.withAuthentication loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
