@@ -743,13 +743,13 @@ update msg model loggedIn =
                             , data =
                                 Eos.encodeTransaction
                                     [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "newobjective"
+                                      , name = "upsertobjctv"
                                       , authorization =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
                                       , data =
-                                            { asset = Eos.Asset 0 community.symbol
+                                            { communityId = community.symbol
                                             , description = objForm.description.contents
                                             , creator = loggedIn.accountName
                                             }
@@ -761,7 +761,7 @@ update msg model loggedIn =
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                ( RemoteData.Success _, Authorized (EditingObjective objective objForm _) ) ->
+                ( RemoteData.Success community, Authorized (EditingObjective objective objForm _) ) ->
                     { model | status = Authorized (EditingObjective objective objForm SavingEdit) }
                         |> UR.init
                         |> UR.addPort
@@ -770,13 +770,14 @@ update msg model loggedIn =
                             , data =
                                 Eos.encodeTransaction
                                     [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "updobjective"
+                                      , name = "upsertobjctv"
                                       , authorization =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
                                       , data =
-                                            { objectiveId = objective.id
+                                            { communityId = community.symbol
+                                            , objectiveId = objective.id
                                             , description = objForm.description.contents
                                             , editor = loggedIn.accountName
                                             }

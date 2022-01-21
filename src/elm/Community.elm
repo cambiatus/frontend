@@ -509,7 +509,7 @@ objectiveSelectionSet =
 
 
 type alias CreateObjectiveAction =
-    { asset : Eos.Asset
+    { communityId : Eos.Symbol
     , description : String
     , creator : Eos.Name
     }
@@ -518,14 +518,16 @@ type alias CreateObjectiveAction =
 encodeCreateObjectiveAction : CreateObjectiveAction -> Value
 encodeCreateObjectiveAction c =
     Encode.object
-        [ ( "cmm_asset", Eos.encodeAsset c.asset )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "objective_id", Encode.int 0 )
         , ( "description", Encode.string c.description )
-        , ( "creator", Eos.encodeName c.creator )
+        , ( "editor", Eos.encodeName c.creator )
         ]
 
 
 type alias UpdateObjectiveAction =
-    { objectiveId : Int
+    { communityId : Eos.Symbol
+    , objectiveId : Int
     , description : String
     , editor : Eos.Name
     }
@@ -534,7 +536,8 @@ type alias UpdateObjectiveAction =
 encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
 encodeUpdateObjectiveAction c =
     Encode.object
-        [ ( "objective_id", Encode.int c.objectiveId )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "objective_id", Encode.int c.objectiveId )
         , ( "description", Encode.string c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
