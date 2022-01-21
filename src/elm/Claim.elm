@@ -145,8 +145,8 @@ pendingValidators claim =
         claim.action.validators
 
 
-encodeVerification : ClaimId -> Eos.Name -> Bool -> Encode.Value
-encodeVerification claimId validator vote =
+encodeVerification : ClaimId -> Eos.Name -> Bool -> Eos.Symbol -> Encode.Value
+encodeVerification claimId validator vote communityId =
     let
         encodedClaimId : Encode.Value
         encodedClaimId =
@@ -163,7 +163,8 @@ encodeVerification claimId validator vote =
                 |> Eos.encodeEosBool
     in
     Encode.object
-        [ ( "claim_id", encodedClaimId )
+        [ ( "community_id", Eos.encodeSymbol communityId )
+        , ( "claim_id", encodedClaimId )
         , ( "verifier", encodedVerifier )
         , ( "vote", encodedVote )
         ]

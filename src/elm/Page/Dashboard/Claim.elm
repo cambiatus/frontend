@@ -520,7 +520,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.statusClaim of
-                Loaded _ _ ->
+                Loaded claim _ ->
                     let
                         newModel =
                             { model
@@ -539,7 +539,11 @@ update msg model loggedIn =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
-                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      , data =
+                                            Claim.encodeVerification claimId
+                                                loggedIn.accountName
+                                                vote
+                                                claim.action.objective.community.symbol
                                       }
                                     ]
                             }

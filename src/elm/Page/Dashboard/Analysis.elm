@@ -552,8 +552,8 @@ update msg model loggedIn =
                 |> UR.init
 
         VoteClaim claimId vote ->
-            case model.status of
-                RemoteData.Success _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( RemoteData.Success _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -572,7 +572,7 @@ update msg model loggedIn =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
-                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote community.symbol
                                       }
                                     ]
                             }
