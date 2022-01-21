@@ -723,6 +723,7 @@ encode action =
         , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
         , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
         , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
+        , ( "image", Encode.string "" )
         ]
 
 
