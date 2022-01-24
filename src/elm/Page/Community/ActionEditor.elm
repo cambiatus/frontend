@@ -104,6 +104,14 @@ type alias FormInput =
 
 initFormInput : Shared -> Maybe Action -> Form.Model FormInput
 initFormInput shared maybeAction =
+    let
+        afterNow posix =
+            if Time.posixToMillis posix >= Time.posixToMillis shared.now then
+                posix
+
+            else
+                shared.now
+    in
     Form.init
         { description =
             maybeAction
@@ -119,7 +127,11 @@ initFormInput shared maybeAction =
                 |> Maybe.withDefault False
         , expirationDate =
             maybeAction
-                |> Maybe.map (.deadline >> Utils.fromMaybeDateTime)
+                |> Maybe.map
+                    (.deadline
+                        >> Utils.fromMaybeDateTime
+                        >> afterNow
+                    )
                 |> Maybe.withDefault shared.now
                 |> Date.fromPosix shared.timezone
                 |> Form.DatePicker.initModel
