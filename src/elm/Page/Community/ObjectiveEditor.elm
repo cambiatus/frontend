@@ -253,7 +253,7 @@ viewForm { shared } formModel formStatus =
                     [ text <| shared.translators.t "community.objectives.editor.submit" ]
                 , if isEdit && not isCompleted then
                     button
-                        [ class "button button-secondary w-full md:w-48"
+                        [ class "button button-secondary w-auto px-6 ml-auto"
                         , type_ "button"
                         , onClick ClickedCompleteObjective
                         , disabled isDisabled
