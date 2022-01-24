@@ -426,7 +426,7 @@ viewHighlightedNews { t } toPageMsg news =
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
                 [ alt "" ]
-                "stroke-current shrink-0"
+                "stroke-current flex-shrink-0"
             , div [ class "truncate ml-4 mr-8" ]
                 [ h2
                     [ class "font-bold truncate"
@@ -574,9 +574,9 @@ viewHeader page ({ shared } as model) profile_ =
     in
     div [ class "flex flex-wrap items-center justify-between p-4 md:flex-nowrap" ]
         [ div
-            [ class "shrink-0"
+            [ class "flex-shrink-0"
             , classList
-                [ ( "md:shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
+                [ ( "md:flex-shrink md:w-full lg:w-2/3 xl:w-full", not isSearchOpen )
                 , ( "lg:w-full", not isCommunityCreator && not isSearchOpen )
                 ]
             ]
@@ -595,7 +595,7 @@ viewHeader page ({ shared } as model) profile_ =
             Search.viewForm
                 [ class "order-last w-full md:order-none mt-4 md:mt-0 md:mx-4"
                 , classList
-                    [ ( "md:w-96 md:shrink-0", not isSearchOpen )
+                    [ ( "md:w-96 md:flex-shrink-0", not isSearchOpen )
                     , ( "w-full", isSearchOpen )
                     ]
                 ]
@@ -604,7 +604,7 @@ viewHeader page ({ shared } as model) profile_ =
                 |> Html.map GotSearchMsg
         , div
             [ class "flex items-center justify-end space-x-8 my-auto shrink-0"
-            , classList [ ( "md:shrink md:w-full", not isSearchOpen ) ]
+            , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
             ]
             [ a
                 [ class "relative rounded-sm group focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50"
@@ -806,8 +806,11 @@ viewMainMenu page model =
 
         menuItem title route =
             a
-                [ class "text-center text-gray-900 uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
-                , classList [ ( "text-orange-300 font-bold", isActive page route ) ]
+                [ class "text-center uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
+                , classList
+                    [ ( "text-orange-300 font-bold", isActive page route )
+                    , ( "text-gray-900", not (isActive page route) )
+                    ]
                 , Route.href route
                 , onClick closeClaimWithPhoto
                 ]
@@ -840,7 +843,7 @@ viewMainMenu page model =
         , div
             [ class "absolute bottom-0 h-3px"
             , classList
-                [ ( "w-1/2 transition-transform motion-reduce:transition-none", hasShop )
+                [ ( "w-1/2 transform transition-transform motion-reduce:transition-none", hasShop )
                 , ( "w-full", not hasShop )
                 , ( "translate-x-0", isInDashboard )
                 , ( "translate-x-full", isInShop )
