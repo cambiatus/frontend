@@ -168,6 +168,7 @@ createForm ({ t } as translators) model =
                 }
                 |> commonOptions Pin
                 |> Form.Text.withExtraAttrs [ autofocus True ]
+                |> Form.Text.withContainerAttrs [ class "mt-6" ]
                 |> Form.textField
                     { parser = validatePin
                     , value = .pin

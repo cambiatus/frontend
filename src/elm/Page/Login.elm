@@ -257,7 +257,7 @@ viewPin { shared } model =
             shared.translators
     in
     [ viewIllustration "login_pin.svg"
-    , p [ class "text-white mb-6" ]
+    , p [ class "text-white" ]
         [ text (t (trPrefix "nowCreate"))
         , text " "
         , strong [] [ text (t (trPrefix "sixDigitPin")) ]
