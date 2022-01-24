@@ -820,7 +820,10 @@ viewProfile loggedIn profile =
                             ]
                         ]
                     , if isProfileOwner then
-                        a [ class "ml-2", Route.href Route.ProfileEditor ]
+                        a
+                            [ class "ml-2 fill-current text-orange-300 hover:text-orange-100"
+                            , Route.href Route.ProfileEditor
+                            ]
                             [ Icons.edit "" ]
 
                       else
