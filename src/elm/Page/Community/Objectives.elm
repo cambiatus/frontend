@@ -221,9 +221,6 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             action.deadline
                 |> Utils.fromMaybeDateTime
 
-        pastDeadline =
-            Action.isPastDeadline action shared.now
-
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
@@ -259,7 +256,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     div [ class "mx-2 mb-2" ]
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
-                        , p [ class "uppercase next-white" ]
+                        , p [ class "uppercase text-white" ]
                             [ String.fromFloat action.verifierReward
                                 ++ " "
                                 ++ Eos.symbolToString symbol
@@ -278,20 +275,14 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             [ text_ "community.actions.available_until" ]
                         , p []
                             [ if action.usages > 0 then
-                                p [ classList [ ( "text-red", action.usagesLeft == 0 ), ( "text-white", action.usagesLeft /= 1 ) ] ]
+                                p [ class "text-white" ]
                                     [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
 
                               else
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    View.Components.dateViewer
-                                        [ class "capitalize"
-                                        , classList
-                                            [ ( "text-red", pastDeadline )
-                                            , ( "text-white", not pastDeadline )
-                                            ]
-                                        ]
+                                    View.Components.dateViewer [ class "capitalize text-white" ]
                                         identity
                                         shared
                                         posixDeadline
