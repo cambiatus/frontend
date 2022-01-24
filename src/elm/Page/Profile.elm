@@ -1038,7 +1038,7 @@ viewSettings loggedIn profile =
             span [ class "flex items-center" ]
                 [ text_ "community.kyc.dataTitle"
                 , span [ class "icon-tooltip ml-1" ]
-                    [ Icons.question "inline-block"
+                    [ Icons.question "inline-block text-orange-300"
                     , p [ class "icon-tooltip-content" ]
                         [ text_ "community.kyc.info" ]
                     ]
