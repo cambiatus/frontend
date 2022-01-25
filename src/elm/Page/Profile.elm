@@ -1035,7 +1035,7 @@ viewSettings loggedIn profile =
             text << loggedIn.shared.translators.t
 
         kycLabel =
-            span [ class "flex items-center" ]
+            span [ class "flex items-center mb-2" ]
                 [ text_ "community.kyc.dataTitle"
                 , span [ class "icon-tooltip ml-1" ]
                     [ Icons.question "inline-block text-orange-300"
