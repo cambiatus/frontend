@@ -129,6 +129,10 @@ type ReactionType
     = ReactionType
 
 
+type Request
+    = Request
+
+
 type SearchResult
     = SearchResult
 

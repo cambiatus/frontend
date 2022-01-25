@@ -1300,11 +1300,14 @@ mutation contacts =
         { input =
             { avatar = Absent
             , bio = Absent
+            , claimNotification = Absent
             , contacts = Present (List.map contactInput contacts)
+            , digest = Absent
             , email = Absent
             , interests = Absent
             , location = Absent
             , name = Absent
+            , transferNotification = Absent
             }
         }
         profileSelectionSet

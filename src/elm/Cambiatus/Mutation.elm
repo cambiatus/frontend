@@ -86,6 +86,18 @@ deleteKyc object_ =
     Object.selectionForCompositeField "deleteKyc" [] object_ (identity >> Decode.nullable)
 
 
+type alias GenAuthRequiredArguments =
+    { account : String }
+
+
+genAuth :
+    GenAuthRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Request
+    -> SelectionSet (Maybe decodesTo) RootMutation
+genAuth requiredArgs object_ =
+    Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)
+
+
 type alias HasNewsRequiredArguments =
     { communityId : String
     , hasNews : Bool
@@ -157,6 +169,30 @@ news fillInOptionals requiredArgs object_ =
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
+
+
+type alias PreferenceOptionalArguments =
+    { claimNotification : OptionalArgument Bool
+    , digest : OptionalArgument Bool
+    , language : OptionalArgument String
+    , transferNotification : OptionalArgument Bool
+    }
+
+
+preference :
+    (PreferenceOptionalArguments -> PreferenceOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe decodesTo) RootMutation
+preference fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent }
+
+        optionalArgs =
+            [ Argument.optional "claimNotification" filledInOptionals.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals.digest Encode.bool, Argument.optional "language" filledInOptionals.language Encode.string, Argument.optional "transferNotification" filledInOptionals.transferNotification Encode.bool ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "preference" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias ReactToNewsRequiredArguments =

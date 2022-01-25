@@ -184,11 +184,14 @@ mutation form =
         { input =
             { name = Present form.name
             , email = Present form.email
+            , claimNotification = Absent
             , bio = Present form.bio
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
+            , digest = Absent
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
+            , transferNotification = Absent
             }
         }
         selectionSet
