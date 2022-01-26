@@ -1046,7 +1046,7 @@ statusToRoute status session =
             Just (Route.Login maybeInvitation maybeRedirect)
 
         News subModel ->
-            Just (Route.News subModel.newsId)
+            Just (Route.News { selectedNews = subModel.newsId, showOthers = subModel.showOtherNews })
 
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
@@ -1296,10 +1296,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
                 |> withGuest maybeInvitation maybeRedirect
 
-        Just (Route.News maybeNewsId) ->
-            News.init maybeNewsId
+        Just (Route.News config) ->
+            News.init config
                 >> updateLoggedInUResult News GotNewsMsg model
-                |> withLoggedIn (Route.News maybeNewsId)
+                |> withLoggedIn (Route.News config)
 
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init accountName

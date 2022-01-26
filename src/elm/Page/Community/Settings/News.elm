@@ -343,7 +343,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                 ]
             , a
                 [ class "absolute right-0 bottom-0 bg-white pl-2 text-orange-300 hover:underline focus:underline outline-none"
-                , Route.href (Route.News (Just news.id))
+                , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
                 , ariaLabel <| translators.t "news.view_more"
                 ]
                 [ text <| translators.t "news.view_more_with_ellipsis" ]

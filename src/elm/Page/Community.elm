@@ -321,7 +321,7 @@ viewNewsCard loggedIn community isSponsorCardVisible =
                         , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
                             [ a
                                 [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
-                                , Route.href (Route.News Nothing)
+                                , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
                                 ]
                                 [ text_ "news.view_more" ]
                             ]

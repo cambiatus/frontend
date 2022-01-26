@@ -231,7 +231,7 @@ viewSummary { t } hasRead news =
             ]
         , style "grid-template-columns" "28px 1fr 80px"
         , title news.title
-        , Route.href (Route.News (Just news.id))
+        , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
         ]
         [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
         , div [ class "truncate ml-4 mr-16" ]

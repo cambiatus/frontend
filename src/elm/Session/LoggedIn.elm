@@ -440,7 +440,7 @@ viewHighlightedNews { t } toPageMsg news =
                 ]
             , a
                 [ class "button button-primary w-auto px-4 ml-auto mr-6"
-                , Route.href (Route.News (Just news.id))
+                , Route.href (Route.News { selectedNews = Just news.id, showOthers = True })
                 , onClick (toPageMsg ClickedReadHighlightedNews)
                 ]
                 [ text <| t "news.read" ]
