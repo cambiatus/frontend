@@ -24,6 +24,8 @@ import Cambiatus.Object
 import Cambiatus.Object.Contact
 import Cambiatus.Object.User as User
 import Eos.Account as Eos
+import Form.Select
+import Form.Text
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
@@ -34,7 +36,7 @@ import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
 import List.Extra as LE
-import Mask
+import Maybe.Extra
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
@@ -43,9 +45,6 @@ import Session.Shared exposing (Shared, Translators)
 import Task
 import Validate
 import View.Components
-import View.Form
-import View.Form.Input as Input
-import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -550,24 +549,7 @@ submit translators kind =
 
 submitSingle : Translators -> Basic -> Result Basic Normalized
 submitSingle translators basic =
-    let
-        removeMask : Basic -> Basic
-        removeMask basic_ =
-            case basic_.contactType of
-                Phone ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Whatsapp ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Instagram ->
-                    basic_
-
-                Telegram ->
-                    basic_
-    in
     basic
-        |> removeMask
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
@@ -834,30 +816,30 @@ viewInput translators basic =
 
 
 viewContactTypeSelect : Translators -> ContactType -> Html Msg
-viewContactTypeSelect translators contactType =
-    case ContactType.list of
-        [] ->
-            text ""
-
-        first :: rest ->
-            let
-                makeOption contactType_ =
-                    { value = contactType_
-                    , label = contactTypeToString translators contactType_
+viewContactTypeSelect ({ t } as translators) contactType =
+    let
+        makeOption contactType_ =
+            { option = contactType_
+            , label = contactTypeToString translators contactType_
+            }
+    in
+    Form.Select.init
+        { label = t "contact_form.contact_type"
+        , id = "contact-type"
+        , optionToString = ContactType.toString
+        }
+        |> Form.Select.withOptions (List.map makeOption ContactType.list)
+        |> Form.Select.withContainerAttrs [ class "mb-10" ]
+        |> (\options ->
+                Form.Select.view options
+                    { onSelect = EnteredContactOption
+                    , onBlur = NoOp
+                    , value = contactType
+                    , error = text ""
+                    , hasError = False
+                    , isRequired = False
                     }
-            in
-            Select.init
-                { id = "contact_type"
-                , label = translators.t "contact_form.contact_type"
-                , onInput = EnteredContactOption
-                , firstOption = makeOption first
-                , value = contactType
-                , valueToString = ContactType.toString
-                , disabled = False
-                , problems = Nothing
-                }
-                |> Select.withOptions (List.map makeOption rest)
-                |> Select.toHtml
+           )
 
 
 flagId : SupportedCountry -> ContactType -> String
@@ -933,7 +915,10 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label [] (flagSelectorId basic.contactType) (t "contact_form.country")
+        , View.Components.label []
+            { targetId = flagSelectorId basic.contactType
+            , labelText = t "contact_form.country"
+            }
         , button
             [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
@@ -984,7 +969,7 @@ viewFlagsSelect { t } basic =
             [ flag False "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
+                    [ class "absolute input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
                     , tabindex -1
                     ]
                     (countryOptions basic.supportedCountry
@@ -999,25 +984,38 @@ viewFlagsSelect { t } basic =
 
 viewPhoneInput : Translators -> Basic -> Html Msg
 viewPhoneInput ({ t, tr } as translators) basic =
-    div [ class "w-full" ]
-        [ Input.init
-            { label = t "contact_form.phone.label"
-            , id = ContactType.toString basic.contactType ++ "_input"
-            , onInput = EnteredContactText basic.contactType
-            , disabled = False
-            , value = basic.contact
-            , placeholder =
-                Just
-                    (tr "contact_form.phone.placeholder"
-                        [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
-                    )
-            , problems = basic.errors
-            , translators = translators
-            }
-            |> Input.withMask (phoneMask basic)
-            |> Input.withType Input.Telephone
-            |> Input.toHtml
-        ]
+    Form.Text.init
+        { label = t "contact_form.phone.label"
+        , id = ContactType.toString basic.contactType ++ "-input"
+        }
+        |> Form.Text.withPlaceholder
+            (tr "contact_form.phone.placeholder"
+                [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
+            )
+        |> Form.Text.withMask (phoneMask basic)
+        |> Form.Text.withType Form.Text.Telephone
+        |> Form.Text.withAllowedChars Char.isDigit
+        |> Form.Text.withContainerAttrs [ class "w-full" ]
+        |> (\options ->
+                Form.Text.view options
+                    { onChange = EnteredContactText basic.contactType
+                    , onBlur = NoOp
+                    , value = basic.contact
+                    , error =
+                        case basic.errors of
+                            Just (firstError :: _) ->
+                                p [ class "form-error" ] [ text firstError ]
+
+                            Just [] ->
+                                text ""
+
+                            Nothing ->
+                                text ""
+                    , hasError = Maybe.Extra.isJust basic.errors
+                    , translators = translators
+                    , isRequired = False
+                    }
+           )
 
 
 phoneMask : Basic -> { mask : String, replace : Char }
@@ -1038,19 +1036,32 @@ phoneMask basic =
 
 viewProfileInput : Translators -> Basic -> Html Msg
 viewProfileInput ({ t } as translators) basic =
-    div [ class "w-full" ]
-        [ Input.init
-            { label = t "contact_form.username.label"
-            , id = ContactType.toString basic.contactType ++ "_input"
-            , onInput = EnteredContactText basic.contactType
-            , disabled = False
-            , value = basic.contact
-            , placeholder = Just (t "contact_form.username.placeholder")
-            , problems = basic.errors
-            , translators = translators
-            }
-            |> Input.toHtml
-        ]
+    Form.Text.init
+        { label = t "contact_form.username.label"
+        , id = ContactType.toString basic.contactType ++ "-input"
+        }
+        |> Form.Text.withPlaceholder (t "contact_form.username.placeholder")
+        |> Form.Text.withContainerAttrs [ class "w-full" ]
+        |> (\options ->
+                Form.Text.view options
+                    { onChange = EnteredContactText basic.contactType
+                    , onBlur = NoOp
+                    , value = basic.contact
+                    , error =
+                        case basic.errors of
+                            Just (firstError :: _) ->
+                                p [ class "form-error" ] [ text firstError ]
+
+                            Just [] ->
+                                text ""
+
+                            Nothing ->
+                                text ""
+                    , hasError = Maybe.Extra.isJust basic.errors
+                    , translators = translators
+                    , isRequired = False
+                    }
+           )
 
 
 

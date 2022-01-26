@@ -5,22 +5,35 @@ module Api exposing
     , uploadImage
     )
 
-import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import File exposing (File)
 import Http
 import Json.Decode as Decode
+import Json.Decode.Pipeline
 import Json.Encode as Encode
 import Session.Shared exposing (Shared)
+import Time
 import Url.Builder exposing (QueryParameter)
+import Utils
+
+
+type alias Balance =
+    { asset : Eos.Asset, lastActivity : Time.Posix }
+
+
+decodeBalance : Decode.Decoder Balance
+decodeBalance =
+    Decode.succeed Balance
+        |> Json.Decode.Pipeline.required "balance" Eos.decodeAsset
+        |> Json.Decode.Pipeline.required "last_activity" Utils.decodeTimestamp
 
 
 
 -- BACKEND
 
 
-backendUrl : Shared -> List String -> List QueryParameter -> String
+backendUrl : { shared | endpoints : { endpoints | api : String } } -> List String -> List QueryParameter -> String
 backendUrl { endpoints } paths queryParams =
     Url.Builder.crossOrigin endpoints.api
         ("api" :: paths)
@@ -61,11 +74,11 @@ getBalances shared accountName toMsg =
     Http.post
         { url = blockchainUrl shared [ "chain", "get_table_rows" ] []
         , body = Eos.encodeTableQuery query |> Http.jsonBody
-        , expect = Decode.field "rows" (Decode.list Community.decodeBalance) |> Http.expectJson toMsg
+        , expect = Decode.field "rows" (Decode.list decodeBalance) |> Http.expectJson toMsg
         }
 
 
-uploadImage : Shared -> File -> (Result Http.Error String -> msg) -> Cmd msg
+uploadImage : { shared | endpoints : { endpoints | api : String } } -> File -> (Result Http.Error String -> msg) -> Cmd msg
 uploadImage shared file toMsg =
     Http.post
         { url = backendUrl shared [ "upload" ] []

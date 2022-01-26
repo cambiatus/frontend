@@ -1,16 +1,18 @@
 module Page.Community.Settings.Sponsorship.ThankYouMessage exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Community
+import Form
+import Form.RichText
+import Form.Text
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
+import Markdown exposing (Markdown)
 import Page
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import UpdateResult as UR
-import View.Form.Input
-import View.MarkdownEditor
 
 
 
@@ -18,15 +20,48 @@ import View.MarkdownEditor
 
 
 type alias Model =
-    { descriptionInput : View.MarkdownEditor.Model
+    { form : FormStatus
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { descriptionInput = View.MarkdownEditor.init "thank-you-message-description-input" }
+    ( { form = Loading }
     , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
+
+
+createForm : Shared.Translators -> Community.Model -> Form.Form msg FormInput FormOutput
+createForm { t, tr } community =
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Text.init
+                { label = t "sponsorship.thank_you_message.title"
+                , id = "title-input"
+                }
+                |> Form.Text.withPlaceholder
+                    (tr "sponsorship.thank_you_message.default_title"
+                        [ ( "community", community.name ) ]
+                    )
+                |> Form.textField
+                    { parser = Ok
+                    , value = .title
+                    , update = \title input -> { input | title = title }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.RichText.init
+                { label = t "sponsorship.thank_you_message.message"
+                }
+                |> Form.RichText.withPlaceholder (t "sponsorship.thank_you_message.default_message")
+                |> Form.richText
+                    { parser = Ok
+                    , value = .message
+                    , update = \message input -> { input | message = message }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 
@@ -36,11 +71,28 @@ init loggedIn =
 type Msg
     = NoOp
     | CompletedLoadCommunity Community.Model
-    | GotDescriptionEditorMsg View.MarkdownEditor.Msg
+    | GotFormMsg (Form.Msg FormInput)
 
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg (LoggedIn.External Msg)
+
+
+type FormStatus
+    = Loading
+    | Loaded (Form.Model FormInput)
+
+
+type alias FormInput =
+    { title : String
+    , message : Form.RichText.Model
+    }
+
+
+type alias FormOutput =
+    { title : String
+    , message : Markdown
+    }
 
 
 
@@ -61,25 +113,45 @@ update msg model loggedIn =
 
                     else
                         identity
+
+                defaultTitle =
+                    loggedIn.shared.translators.tr "sponsorship.thank_you_message.default_title"
+                        [ ( "community", community.name ) ]
+
+                defaultMessage =
+                    Markdown.fromTranslation loggedIn.shared.translators
+                        "sponsorship.thank_you_message.default_message"
             in
             { model
-                | descriptionInput =
-                    community.contributionConfiguration
-                        |> Maybe.andThen .thankYouDescription
-                        |> Maybe.withDefault (loggedIn.shared.translators.t "sponsorship.thank_you_message.default_message")
-                        |> (\contents -> View.MarkdownEditor.setContents contents model.descriptionInput)
+                | form =
+                    { title =
+                        community.contributionConfiguration
+                            |> Maybe.andThen .thankYouTitle
+                            |> Maybe.withDefault defaultTitle
+                    , message =
+                        community.contributionConfiguration
+                            |> Maybe.andThen .thankYouDescription
+                            |> Maybe.withDefault defaultMessage
+                            |> Just
+                            |> Form.RichText.initModel "message-input"
+                    }
+                        |> Form.init
+                        |> Loaded
             }
                 |> UR.init
                 |> maybeRedirect
 
-        GotDescriptionEditorMsg subMsg ->
-            let
-                ( descriptionInput, descriptionInputCmd ) =
-                    View.MarkdownEditor.update subMsg model.descriptionInput
-            in
-            { model | descriptionInput = descriptionInput }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionInputCmd)
+        GotFormMsg subMsg ->
+            case model.form of
+                Loading ->
+                    UR.init model
+
+                Loaded form ->
+                    Form.update loggedIn.shared subMsg form
+                        |> UR.fromChild (\newForm -> { model | form = Loaded newForm })
+                            GotFormMsg
+                            LoggedIn.addFeedback
+                            model
 
 
 
@@ -95,10 +167,15 @@ view loggedIn model =
         content =
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    div [ class "flex-grow flex flex-col" ]
-                        [ Page.viewHeader loggedIn title
-                        , view_ loggedIn.shared community model
-                        ]
+                    case model.form of
+                        Loading ->
+                            Page.fullPageLoading loggedIn.shared
+
+                        Loaded form ->
+                            div [ class "flex-grow flex flex-col" ]
+                                [ Page.viewHeader loggedIn title
+                                , view_ loggedIn.shared community form
+                                ]
 
                 RemoteData.Loading ->
                     Page.fullPageLoading loggedIn.shared
@@ -112,44 +189,17 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : Shared -> Community.Model -> Model -> Html Msg
-view_ { translators } community model =
+view_ : Shared -> Community.Model -> Form.Model FormInput -> Html Msg
+view_ { translators } community form =
     div [ class "bg-white flex-grow" ]
-        [ div [ class "container mx-auto p-4" ]
-            [ View.Form.Input.init
-                { label = translators.t "sponsorship.thank_you_message.title"
-                , id = "thank-you-title-input"
-                , onInput = \_ -> NoOp
-                , disabled = True
-                , value =
-                    community.contributionConfiguration
-                        |> Maybe.andThen .thankYouTitle
-                        |> Maybe.withDefault
-                            (translators.tr
-                                "sponsorship.thank_you_message.default_title"
-                                [ ( "community", community.name ) ]
-                            )
-                , placeholder =
-                    Just
-                        (translators.tr
-                            "sponsorship.thank_you_message.default_title"
-                            [ ( "community", community.name ) ]
-                        )
-                , problems = Nothing
-                , translators = translators
-                }
-                |> View.Form.Input.toHtml
-            , View.MarkdownEditor.view
-                { translators = translators
-                , placeholder = Just (translators.t "sponsorship.thank_you_message.default_message")
-                , label = translators.t "sponsorship.thank_you_message.message"
-                , problem = Nothing
-                , disabled = True
-                }
-                []
-                model.descriptionInput
-                |> Html.map GotDescriptionEditorMsg
-            ]
+        [ Form.view [ class "container mx-auto p-4" ]
+            translators
+            (\_ -> [])
+            (createForm translators community)
+            (Form.withDisabled True form)
+            { toMsg = GotFormMsg
+            , onSubmit = \_ -> NoOp
+            }
         ]
 
 
@@ -176,5 +226,5 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        GotDescriptionEditorMsg subMsg ->
-            "GotDescriptionEditorMsg" :: View.MarkdownEditor.msgToString subMsg
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg

@@ -13,8 +13,6 @@ module Profile exposing
     , mutation
     , profileToForm
     , query
-    , selectConfig
-    , selectFilter
     , selectionSet
     , upsertKycMutation
     , userContactSelectionSet
@@ -41,15 +39,14 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, span, text)
+import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
 import Iso8601
 import Kyc exposing (ProfileKyc)
+import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Select
-import Session.Shared exposing (Shared)
-import Simple.Fuzzy
+import Session.Shared as Shared exposing (Shared)
 import Time
 
 
@@ -59,7 +56,7 @@ type alias Basic a =
         , account : Eos.Name
         , avatar : Avatar
         , email : Maybe String
-        , bio : Maybe String
+        , bio : Maybe Markdown
         , contacts : List Contact.Normalized
     }
 
@@ -69,7 +66,7 @@ type alias Minimal =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Contact.Normalized
     }
 
@@ -79,7 +76,7 @@ type alias Model =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , localization : Maybe String
     , contacts : List Contact.Normalized
     , interests : List String
@@ -114,7 +111,7 @@ selectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with User.location
         |> with userContactSelectionSet
         |> with
@@ -137,7 +134,7 @@ minimalSelectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with userContactSelectionSet
 
 
@@ -184,7 +181,7 @@ mutation form =
         { input =
             { name = Present form.name
             , email = Present form.email
-            , bio = Present form.bio
+            , bio = Present (Markdown.toRawString form.bio)
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
             , interests = Present interestString
             , location = Present form.localization
@@ -319,7 +316,7 @@ deleteKycAndAddressMutation accountName =
 type alias ProfileForm =
     { name : String
     , email : String
-    , bio : String
+    , bio : Markdown
     , localization : String
     , avatar : Maybe String
     , contacts : List Contact.Normalized
@@ -333,7 +330,7 @@ profileToForm : Model -> ProfileForm
 profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     { name = Maybe.withDefault "" name
     , email = Maybe.withDefault "" email
-    , bio = Maybe.withDefault "" bio
+    , bio = Maybe.withDefault Markdown.empty bio
     , localization = Maybe.withDefault "" localization
     , avatar = Avatar.toMaybeString avatar
     , contacts = contacts
@@ -347,16 +344,16 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
 viewProfileNameTag shared loggedInAccount profile =
     p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
         [ viewProfileName shared loggedInAccount profile ]
 
 
-viewProfileName : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName shared loggedInAccount profile =
+viewProfileName : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName { translators } loggedInAccount profile =
     if profile.account == loggedInAccount then
-        text (shared.translators.t "transfer_result.you")
+        text (translators.t "transfer_result.you")
 
     else
         case profile.name of
@@ -374,46 +371,4 @@ viewEmpty shared =
         [ p
             [ class "uppercase text-gray-900 text-sm" ]
             [ text (shared.translators.t "profile.no_one") ]
-        ]
-
-
-
--- Autocomplete select
-
-
-selectConfig : Select.Config msg (Basic p) -> Shared -> Bool -> Select.Config msg (Basic p)
-selectConfig select shared isDisabled =
-    select
-        |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
-        |> Select.withClear False
-        |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
-
-
-selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-selectFilter minChars toLabel q items =
-    if String.length q > minChars then
-        Just <| Simple.Fuzzy.filter toLabel q items
-
-    else
-        Nothing
-
-
-viewAutoCompleteItem : Shared -> Basic p -> Html Never
-viewAutoCompleteItem _ { avatar, name, account } =
-    div [ class "flex flex-row items-center z-30" ]
-        [ div [ class "pt-4 pr-4 pb-4 pl-4" ] [ Avatar.view avatar "h-10 w-10" ]
-        , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
-            [ span [ class "text-white font-bold" ]
-                [ text <| Maybe.withDefault "" name ]
-            , span [ class "font-light text-white" ]
-                [ text (Eos.nameToString account) ]
-            ]
         ]

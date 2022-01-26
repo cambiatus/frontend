@@ -4,6 +4,8 @@ module Eos.Account exposing
     , PrivateKey
     , encodeName
     , encodePermissionName
+    , errorToString
+    , fromString
     , nameDecoder
     , nameQueryUrlParser
     , nameSelectionSet
@@ -29,9 +31,76 @@ type Name
     = Name String
 
 
+{-| DEPRECATED. Use fromString instead, or Form.Validate.eosAccount
+
+This function is deprecated because we shouldn't allow any string to be a name,
+otherwise we don't get the benefits of it being an opaque type.
+
+-}
 stringToName : String -> Name
 stringToName string =
     Name string
+
+
+type Error
+    = InvalidCharacters Char
+    | TooShort
+    | TooLong
+
+
+fromString : String -> Result Error Name
+fromString string =
+    let
+        sanitizedString =
+            string
+                |> String.trim
+                |> String.toLower
+
+        isCharacterAllowed : Char -> Bool
+        isCharacterAllowed char =
+            Char.isAlpha char || List.member char [ '1', '2', '3', '4', '5' ]
+    in
+    case String.filter (not << isCharacterAllowed) sanitizedString |> String.toList |> List.head of
+        Just firstInvalidCharacter ->
+            Err (InvalidCharacters firstInvalidCharacter)
+
+        Nothing ->
+            if String.length sanitizedString < minNameLength then
+                Err TooShort
+
+            else if String.length sanitizedString > maxNameLength then
+                Err TooLong
+
+            else
+                Ok (Name sanitizedString)
+
+
+maxNameLength : Int
+maxNameLength =
+    12
+
+
+minNameLength : Int
+minNameLength =
+    -- If changing this value, also fix `errorToString`'s validation message on
+    -- the TooShort and TooLong cases
+    12
+
+
+errorToString :
+    { translators | tr : String -> List ( String, String ) -> String }
+    -> Error
+    -> String
+errorToString { tr } error =
+    case error of
+        InvalidCharacters firstInvalidCharacter ->
+            tr "error.notAllowedChar" [ ( "char", String.fromChar firstInvalidCharacter ) ]
+
+        TooShort ->
+            tr "error.validator.text.exactly" [ ( "base", String.fromInt minNameLength ) ]
+
+        TooLong ->
+            tr "error.validator.text.exactly" [ ( "base", String.fromInt maxNameLength ) ]
 
 
 encodeName : Name -> Value

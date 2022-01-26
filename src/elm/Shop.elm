@@ -22,6 +22,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
+import Markdown exposing (Markdown)
 import Profile.Contact as Contact
 
 
@@ -32,7 +33,7 @@ import Profile.Contact as Contact
 type alias Product =
     { id : Int
     , title : String
-    , description : String
+    , description : Markdown
     , creatorId : Eos.Name
     , price : Float
     , symbol : Symbol
@@ -46,7 +47,7 @@ type alias Product =
 type alias ProductPreview =
     { symbol : Symbol
     , creator : ShopProfile
-    , description : String
+    , description : Markdown
     , id : Int
     , image : Maybe String
     , price : Float
@@ -63,7 +64,7 @@ type alias ShopProfile =
     , name : Maybe String
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Contact.Normalized
     }
 
@@ -106,7 +107,7 @@ productSelection =
     SelectionSet.succeed Product
         |> with Cambiatus.Object.Product.id
         |> with Cambiatus.Object.Product.title
-        |> with Cambiatus.Object.Product.description
+        |> with (Markdown.selectionSet Cambiatus.Object.Product.description)
         |> with (Eos.nameSelectionSet Cambiatus.Object.Product.creatorId)
         |> with Cambiatus.Object.Product.price
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
@@ -124,7 +125,7 @@ productPreviewSelectionSet =
             (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
                 |> SelectionSet.map productPreviewProfile
             )
-        |> with Cambiatus.Object.ProductPreview.description
+        |> with (Markdown.selectionSet Cambiatus.Object.ProductPreview.description)
         |> with Cambiatus.Object.ProductPreview.id
         |> with (detectEmptyString Cambiatus.Object.ProductPreview.image)
         |> with Cambiatus.Object.ProductPreview.price
@@ -162,7 +163,7 @@ shopProfileSelectionSet =
         |> with User.name
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with
             (User.contacts Contact.selectionSet
                 |> SelectionSet.map (List.filterMap identity)

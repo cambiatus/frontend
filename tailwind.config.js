@@ -97,7 +97,8 @@ module.exports = {
         'whatsapp': '#25d366'
       },
       boxShadow: {
-        outline: '0 0 0 3px rgb(250, 177, 92, 0.75)'
+        outline: '0 0 0 3px rgb(250, 177, 92, 0.75)',
+        'form-control': 'inset 0 0 0 var(--shadow-size) white'
       },
       flexGrow: {
         '1': 1,
@@ -148,11 +149,7 @@ module.exports = {
         super: '2.5rem'
       },
       inset: {
-        '1': '1rem',
-        '-1': '-0.25rem',
-        '1/2': '50%',
-        modal: '10rem',
-        'full': '100%'
+        modal: '10rem'
       },
       width: {
         form: '45.625rem',
@@ -230,24 +227,6 @@ module.exports = {
       '3d': false // defaults to false
     }),
     require('@tailwindcss/forms'),
-    // Pseudo-class to support hover on the parent's first child
-    function ({ addVariant, e }) {
-      addVariant('first-hover', ({ modifySelectors, separator }) => {
-        modifySelectors(({ className }) => {
-          return `.${e(
-            `first-hover${separator}${className}`
-          )}:first-child:hover`
-        })
-      })
-    },
-    // Pseudo-class to support hover on the parent's last child
-    function ({ addVariant, e }) {
-      addVariant('last-hover', ({ modifySelectors, separator }) => {
-        modifySelectors(({ className }) => {
-          return `.${e(`last-hover${separator}${className}`)}:last-child:hover`
-        })
-      })
-    },
     // class support for rotation
     function ({ addUtilities, config }) {
       const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {
@@ -264,7 +243,12 @@ module.exports = {
   ],
   purge: [
     './src/**/*.elm',
-    './src/index.js'
+    './src/customElements/*.js',
+    './src/index.js',
+    './src/styles/main.css',
+    // We need these next ones for elm-book
+    '../src/**/*.elm',
+    '../src/customElements/*.js'
   ],
   mode: 'jit'
 }

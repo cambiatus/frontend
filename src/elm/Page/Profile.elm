@@ -39,6 +39,8 @@ import Json.Encode as Encode
 import Kyc
 import List.Extra as List
 import Log
+import Markdown
+import Maybe.Extra
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
@@ -54,7 +56,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -97,6 +98,16 @@ init loggedIn profileName =
                     (Just loggedIn.authToken)
                     (Profile.query profileName)
                     CompletedLoadProfile
+
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "profile.newPin"
+                , id = "new-pin-input"
+                , withConfirmation = False
+                , submitLabel = "profile.pin.button"
+                , submittingLabel = "profile.pin.button"
+                , pinVisibility = loggedIn.shared.pinVisibility
+                }
     in
     { profileName = profileName
     , profile = RemoteData.Loading
@@ -107,19 +118,12 @@ init loggedIn profileName =
     , isDeleteKycModalVisible = False
     , downloadingPdfStatus = NotDownloading
     , isNewPinModalVisible = False
-    , pinInputModel =
-        Pin.init
-            { label = "profile.newPin"
-            , id = "new-pin-input"
-            , withConfirmation = False
-            , submitLabel = "profile.pin.button"
-            , submittingLabel = "profile.pin.button"
-            , pinVisibility = loggedIn.shared.pinVisibility
-            }
+    , pinInputModel = pinModel
     , currentPin = Nothing
     }
         |> UR.init
         |> UR.addCmd fetchProfile
+        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
@@ -200,7 +204,7 @@ type Msg
     | ClickedCloseNewPinModal
     | GotPinMsg Pin.Msg
     | SubmittedNewPin String
-    | PinChanged
+    | PinChanged String
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedTransferCard Int
     | RequestedMoreTransfers
@@ -472,7 +476,8 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse model.pinInputModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             { model | downloadingPdfStatus = Downloading }
                 |> UR.init
@@ -523,28 +528,39 @@ update msg model loggedIn =
                 |> UR.init
 
         GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinInputModel
+            Pin.update loggedIn.shared subMsg model.pinInputModel
+                |> UR.fromChild (\pinModel -> { model | pinInputModel = pinModel })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (LoggedIn.executeFeedback feedback) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction newPinModel submitStatus loggedIn.shared SubmittedNewPin
-            in
-            { model | pinInputModel = newPinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinInputModel
+                                            pin
+                                            loggedIn.shared
+                                            SubmittedNewPin
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                    )
+                    model
 
         SubmittedNewPin newPin ->
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             model
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = PinChanged
+                    { responseAddress = PinChanged newPin
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -557,10 +573,10 @@ update msg model loggedIn =
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
-        PinChanged ->
+        PinChanged newPin ->
             { model
                 | isNewPinModalVisible = False
-                , currentPin = Just model.pinInputModel.pin
+                , currentPin = Just newPin
             }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
@@ -804,7 +820,10 @@ viewProfile loggedIn profile =
                             ]
                         ]
                     , if isProfileOwner then
-                        a [ class "ml-2", Route.href Route.ProfileEditor ]
+                        a
+                            [ class "ml-2 fill-current text-orange-300 hover:text-orange-100"
+                            , Route.href Route.ProfileEditor
+                            ]
                             [ Icons.edit "" ]
 
                       else
@@ -815,8 +834,7 @@ viewProfile loggedIn profile =
                         text ""
 
                     Just bio ->
-                        View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
-                            bio
+                        Markdown.view [ class "text-sm text-gray-900" ] bio
                 ]
                 :: (if isProfileOwner then
                         [ blockExplorerButton ]
@@ -824,7 +842,7 @@ viewProfile loggedIn profile =
                     else
                         [ a
                             [ class "button button-primary w-full mt-4"
-                            , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
+                            , Route.href (Route.Transfer (Just profile.account))
                             ]
                             [ text_ "transfer.title" ]
                         , blockExplorerButton
@@ -1017,10 +1035,10 @@ viewSettings loggedIn profile =
             text << loggedIn.shared.translators.t
 
         kycLabel =
-            span [ class "flex items-center" ]
+            span [ class "flex items-center mb-2" ]
                 [ text_ "community.kyc.dataTitle"
                 , span [ class "icon-tooltip ml-1" ]
-                    [ Icons.question "inline-block"
+                    [ Icons.question "inline-block text-orange-300"
                     , p [ class "icon-tooltip-content" ]
                         [ text_ "community.kyc.info" ]
                     ]
@@ -1418,8 +1436,8 @@ jsAddressToMsg addr val =
                 |> Result.map DownloadPdfProcessed
                 |> Result.toMaybe
 
-        "PinChanged" :: [] ->
-            Just PinChanged
+        "PinChanged" :: newPin :: [] ->
+            Just (PinChanged newPin)
 
         _ ->
             Nothing
@@ -1479,8 +1497,8 @@ msgToString msg =
         SubmittedNewPin _ ->
             [ "SubmittedNewPin" ]
 
-        PinChanged ->
-            [ "PinChanged" ]
+        PinChanged newPin ->
+            [ "PinChanged", newPin ]
 
         GotTransferCardProfileSummaryMsg _ subMsg ->
             "GotTransferCardProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

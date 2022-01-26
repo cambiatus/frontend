@@ -349,7 +349,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     ]
                     []
                 , div
-                    [ class "absolute right-1 bottom-1"
+                    [ class "absolute right-4 bottom-4"
                     , id profileSummaryId
                     ]
                     [ card.profileSummary

@@ -1,43 +1,40 @@
 module Page.Community.Settings.News.Editor exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Api.Graphql
-import Browser.Dom
 import Cambiatus.Mutation
 import Cambiatus.Query
 import Cambiatus.Scalar
 import Community
 import Community.News
 import Date
-import DatePicker
 import Eos
 import Eos.Account
+import Form
+import Form.DatePicker
+import Form.Radio
+import Form.RichText
+import Form.Text
+import Form.Validate
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
-import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, hr, img, p, span, text)
-import Html.Attributes exposing (class, disabled, src, tabindex, type_)
-import Html.Events exposing (onSubmit)
+import Html exposing (Html, a, div, hr, p, text)
+import Html.Attributes exposing (class)
 import Iso8601
 import Log
-import Maybe.Extra
+import Markdown exposing (Markdown)
 import Page
+import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
-import Task
 import Time
 import Time.Extra
 import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.Form
-import View.Form.Input as Input
-import View.Form.Radio as Radio
-import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -47,7 +44,7 @@ import View.MarkdownEditor as MarkdownEditor
 type Model
     = WaitingNewsToCopy
     | WaitingNewsToEdit
-    | Editing Form
+    | Editing Action (Form.Model FormInput)
     | NewsNotFound
     | WithError (Graphql.Http.Error (Maybe Community.News.Model))
 
@@ -68,7 +65,7 @@ init kind loggedIn =
     in
     case kind of
         Route.CreateNews ->
-            ( Editing emptyForm, initWithCommunity )
+            ( Editing CreateNew (emptyForm loggedIn.shared), initWithCommunity )
 
         Route.EditNews newsId ->
             ( WaitingNewsToEdit
@@ -81,95 +78,55 @@ init kind loggedIn =
             )
 
 
-type alias Form =
-    { title : String
-    , titleError : Maybe String
-    , descriptionEditor : MarkdownEditor.Model
-    , descriptionError : Maybe String
-    , publicationMode : PublicationMode
-    , action : Action
-    , isSaving : Bool
-    }
+emptyForm : Shared -> Form.Model FormInput
+emptyForm shared =
+    Form.init
+        { title = ""
+        , description = Form.RichText.initModel "description-input" Nothing
+        , latestEditions = Nothing
+        , publicationMode = PublishImmediately
+        , publicationDate = Form.DatePicker.initModel (Date.fromPosix shared.timezone shared.now)
+        , publicationTime = "13:00"
+        }
 
 
-descriptionEditorId : String
-descriptionEditorId =
-    "description-editor"
+formFromExistingNews : Shared -> Community.News.Model -> Form.Model FormInput
+formFromExistingNews shared news =
+    Form.init
+        { title = news.title
+        , description = Form.RichText.initModel "description-input" (Just news.description)
+        , latestEditions =
+            if news.updatedAt == news.insertedAt then
+                Nothing
 
+            else
+                Just
+                    { creator = news.creator
+                    , profileSummary = Profile.Summary.init False
+                    , updatedAt = news.updatedAt
+                    }
+        , publicationMode =
+            case news.scheduling of
+                Nothing ->
+                    PublishImmediately
 
-emptyForm : Form
-emptyForm =
-    { title = ""
-    , titleError = Nothing
-    , descriptionEditor = MarkdownEditor.init descriptionEditorId
-    , descriptionError = Nothing
-    , publicationMode = PublishImmediately
-    , action = CreateNew
-    , isSaving = False
-    }
-
-
-emptySchedulingForm : Shared -> SchedulingForm
-emptySchedulingForm shared =
-    let
-        defaultDate =
-            shared.now
+                Just _ ->
+                    SchedulePublication
+        , publicationDate =
+            news.scheduling
+                |> Maybe.withDefault shared.now
                 |> Date.fromPosix shared.timezone
-                |> Date.add Date.Days 1
-    in
-    { datePicker = DatePicker.initFromDate defaultDate
-    , selectedDate = defaultDate
-    , selectedTime = "13:00"
-    , timeError = Nothing
-    , dateError = Nothing
-    }
-
-
-formFromExistingNews : Time.Zone -> Community.News.Model -> Action -> ( Form, Cmd Msg )
-formFromExistingNews timezone news action =
-    let
-        ( markdownEditor, cmd ) =
-            MarkdownEditor.init descriptionEditorId
-                |> MarkdownEditor.forceSetContents news.description
-    in
-    ( { title = news.title
-      , titleError = Nothing
-      , descriptionEditor = markdownEditor
-      , descriptionError = Nothing
-      , publicationMode = publicationModeFromMaybePosix timezone news.scheduling
-      , action = action
-      , isSaving = False
-      }
-    , Cmd.map GotInitialDescriptionEditorMsg cmd
-    )
-
-
-publicationModeFromMaybePosix : Time.Zone -> Maybe Time.Posix -> PublicationMode
-publicationModeFromMaybePosix timezone maybeTime =
-    case maybeTime of
-        Nothing ->
-            PublishImmediately
-
-        Just time ->
-            let
-                date =
-                    Date.fromPosix timezone time
-
-                hour =
-                    Time.toHour timezone time
-                        |> String.fromInt
-
-                minute =
-                    Time.toMinute timezone time
-                        |> String.fromInt
-            in
-            SchedulePublication
-                { datePicker = DatePicker.initFromDate date
-                , selectedDate = date
-                , selectedTime = String.join ":" [ hour, minute ]
-                , timeError = Nothing
-                , dateError = Nothing
-                }
+                |> Form.DatePicker.initModel
+        , publicationTime =
+            news.scheduling
+                |> Maybe.map
+                    (\posix ->
+                        String.fromInt (Time.toHour shared.timezone posix)
+                            ++ ":"
+                            ++ String.fromInt (Time.toMinute shared.timezone posix)
+                    )
+                |> Maybe.withDefault "13:00"
+        }
 
 
 
@@ -179,53 +136,23 @@ publicationModeFromMaybePosix timezone maybeTime =
 type Msg
     = CompletedLoadCommunity Community.Model
     | CompletedLoadNews (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
-    | GotInitialDescriptionEditorMsg MarkdownEditor.Msg
-    | GotFormMsg FormMsg
-
-
-type FormMsg
-    = NoOp
-    | EnteredTitle String
-    | GotDescriptionEditorMsg MarkdownEditor.Msg
-    | SelectedPublicationMode PublicationMode
-    | SetDatePicker DatePicker.Msg
-    | EnteredPublicationTime String
-    | ClickedSave
+    | GotFormMsg (Form.Msg FormInput)
+    | SubmittedForm FormOutput
     | CompletedSaving (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
-    | GotEditorSummaryMsg Profile.Summary.Msg
 
 
 type alias UpdateResult =
     UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
-type alias FormUpdateResult =
-    UR.UpdateResult Form FormMsg (LoggedIn.External Msg)
-
-
 type Action
     = CreateNew
-    | EditExisting Community.News.Model Profile.Summary.Model
+    | EditExisting Community.News.Model
 
 
 type PublicationMode
     = PublishImmediately
-    | SchedulePublication SchedulingForm
-
-
-type alias SchedulingForm =
-    { datePicker : DatePicker.DatePicker
-    , selectedDate : Date.Date
-    , selectedTime : String
-    , timeError : Maybe String
-    , dateError : Maybe String
-    }
-
-
-type ParsedDateTime
-    = NoTimeToParse
-    | InvalidTime
-    | ValidTime Cambiatus.Scalar.DateTime
+    | SchedulePublication
 
 
 
@@ -246,7 +173,7 @@ update msg model loggedIn =
 
         CompletedLoadNews (RemoteData.Success (Just news)) ->
             case model of
-                Editing _ ->
+                Editing _ _ ->
                     UR.init model
                         |> UR.logImpossible msg
                             "Loaded news, but was already editing"
@@ -271,24 +198,13 @@ update msg model loggedIn =
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
                 WaitingNewsToCopy ->
-                    let
-                        ( form, cmd ) =
-                            formFromExistingNews loggedIn.shared.timezone news CreateNew
-                    in
-                    Editing form
+                    Editing CreateNew (formFromExistingNews loggedIn.shared news)
                         |> UR.init
-                        |> UR.addCmd cmd
 
                 WaitingNewsToEdit ->
-                    let
-                        ( form, cmd ) =
-                            formFromExistingNews loggedIn.shared.timezone
-                                news
-                                (EditExisting news (Profile.Summary.init False))
-                    in
-                    Editing form
+                    formFromExistingNews loggedIn.shared news
+                        |> Editing (EditExisting news)
                         |> UR.init
-                        |> UR.addCmd cmd
 
         CompletedLoadNews (RemoteData.Success Nothing) ->
             NewsNotFound
@@ -315,26 +231,14 @@ update msg model loggedIn =
         CompletedLoadNews RemoteData.Loading ->
             UR.init model
 
-        GotInitialDescriptionEditorMsg subMsg ->
-            case model of
-                Editing form ->
-                    let
-                        ( descriptionEditor, cmd ) =
-                            MarkdownEditor.update subMsg form.descriptionEditor
-                    in
-                    { form | descriptionEditor = descriptionEditor }
-                        |> Editing
-                        |> UR.init
-                        |> UR.addCmd (Cmd.map GotInitialDescriptionEditorMsg cmd)
-
-                _ ->
-                    UR.init model
-
         GotFormMsg subMsg ->
             case model of
-                Editing form ->
-                    updateForm subMsg form loggedIn
-                        |> UR.map Editing GotFormMsg UR.addExt
+                Editing action form ->
+                    Form.update loggedIn.shared subMsg form
+                        |> UR.fromChild (Editing action)
+                            GotFormMsg
+                            LoggedIn.addFeedback
+                            model
 
                 WaitingNewsToCopy ->
                     UR.init model
@@ -364,242 +268,65 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             []
 
+        SubmittedForm formOutput ->
+            case model of
+                Editing action formInput ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            let
+                                schedulingTime =
+                                    formOutput.publicationDate
+                                        |> Maybe.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
 
-updateForm : FormMsg -> Form -> LoggedIn.Model -> FormUpdateResult
-updateForm msg form loggedIn =
-    case msg of
-        NoOp ->
-            UR.init form
+                                mutation =
+                                    case action of
+                                        CreateNew ->
+                                            Cambiatus.Mutation.news
+                                                (\optionals ->
+                                                    { optionals | scheduling = OptionalArgument.fromMaybe schedulingTime }
+                                                )
+                                                { communityId = Eos.symbolToString community.symbol
+                                                , description = Markdown.toRawString formOutput.description
+                                                , title = formOutput.title
+                                                }
+                                                Community.News.selectionSet
 
-        EnteredTitle title ->
-            { form
-                | title = title
-                , titleError =
-                    if String.isEmpty title then
-                        Just "news.editor.error.title"
+                                        EditExisting news ->
+                                            Cambiatus.Mutation.updateNews
+                                                (\optionals ->
+                                                    { optionals
+                                                        | description = OptionalArgument.Present <| Markdown.toRawString formOutput.description
+                                                        , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
+                                                        , title = OptionalArgument.Present formOutput.title
+                                                    }
+                                                )
+                                                { id = news.id }
+                                                Community.News.selectionSet
+                            in
+                            model
+                                |> setDisabled True
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Api.Graphql.mutation loggedIn.shared
+                                        (Just loggedIn.authToken)
+                                        mutation
+                                        CompletedSaving
+                                    )
 
-                    else
-                        Nothing
-            }
-                |> UR.init
-
-        GotDescriptionEditorMsg subMsg ->
-            let
-                ( descriptionEditor, cmd ) =
-                    MarkdownEditor.update subMsg form.descriptionEditor
-
-                previousContents =
-                    String.trim form.descriptionEditor.contents
-
-                newContents =
-                    String.trim descriptionEditor.contents
-
-                contentChanged =
-                    newContents /= previousContents
-
-                hasError =
-                    case form.descriptionError of
-                        Nothing ->
-                            False
-
-                        Just _ ->
-                            True
-            in
-            { form
-                | descriptionEditor = descriptionEditor
-                , descriptionError =
-                    if
-                        String.isEmpty newContents
-                            && (contentChanged || hasError)
-                    then
-                        Just "news.editor.error.description"
-
-                    else
-                        Nothing
-            }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg cmd)
-
-        SelectedPublicationMode publicationMode ->
-            { form | publicationMode = publicationMode }
-                |> UR.init
-
-        SetDatePicker subMsg ->
-            case form.publicationMode of
-                PublishImmediately ->
-                    form
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Tried to change communication publication date, but is set to publish immediately"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
-                            []
-
-                SchedulePublication scheduling ->
-                    let
-                        ( newDatePicker, dateEvent ) =
-                            DatePicker.update (datePickerSettings (Maybe.Extra.isJust scheduling.dateError))
-                                subMsg
-                                scheduling.datePicker
-
-                        newSelectedDate =
-                            case dateEvent of
-                                DatePicker.Picked newDate ->
-                                    newDate
-
-                                _ ->
-                                    scheduling.selectedDate
-
-                        schedulingWithDate =
-                            { scheduling
-                                | datePicker = newDatePicker
-                                , selectedDate = newSelectedDate
-                            }
-                    in
-                    { form
-                        | publicationMode =
-                            SchedulePublication
-                                { schedulingWithDate
-                                    | dateError =
-                                        if Maybe.Extra.isJust scheduling.timeError then
-                                            Nothing
-
-                                        else
-                                            case parseSchedulingForm loggedIn.shared.timezone schedulingWithDate of
-                                                Just time ->
-                                                    if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
-                                                        Just "news.editor.error.future_date"
-
-                                                    else
-                                                        Nothing
-
-                                                Nothing ->
-                                                    Just "news.editor.error.invalid_date"
-                                }
-                    }
-                        |> UR.init
-
-        EnteredPublicationTime publicationTime ->
-            case form.publicationMode of
-                PublishImmediately ->
-                    form
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Tried to change communication publication time, but is set to publish immediately"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
-                            []
-
-                SchedulePublication scheduling ->
-                    let
-                        schedulingWithTime =
-                            { scheduling | selectedTime = publicationTime }
-                    in
-                    { form
-                        | publicationMode =
-                            SchedulePublication
-                                { schedulingWithTime
-                                    | timeError =
-                                        case parseSchedulingForm loggedIn.shared.timezone schedulingWithTime of
-                                            Just time ->
-                                                if Time.posixToMillis loggedIn.shared.now >= Time.posixToMillis time then
-                                                    Just "news.editor.error.future_time"
-
-                                                else
-                                                    Nothing
-
-                                            Nothing ->
-                                                Just "news.editor.error.invalid_time"
-                                }
-                    }
-                        |> UR.init
-
-        ClickedSave ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    let
-                        mutation : Maybe Cambiatus.Scalar.DateTime -> SelectionSet (Maybe Community.News.Model) RootMutation
-                        mutation scheduling =
-                            case form.action of
-                                CreateNew ->
-                                    Cambiatus.Mutation.news
-                                        (\optionals ->
-                                            { optionals | scheduling = OptionalArgument.fromMaybe scheduling }
-                                        )
-                                        { communityId = Eos.symbolToString community.symbol
-                                        , description = String.trim form.descriptionEditor.contents
-                                        , title = form.title
-                                        }
-                                        Community.News.selectionSet
-
-                                EditExisting news _ ->
-                                    Cambiatus.Mutation.updateNews
-                                        (\optionals ->
-                                            { optionals
-                                                | description = OptionalArgument.Present (String.trim form.descriptionEditor.contents)
-                                                , scheduling = OptionalArgument.fromMaybeWithNull scheduling
-                                                , title = OptionalArgument.Present form.title
-                                            }
-                                        )
-                                        { id = news.id }
-                                        Community.News.selectionSet
-
-                        saveNews : Maybe Cambiatus.Scalar.DateTime -> Cmd FormMsg
-                        saveNews scheduling =
-                            Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (mutation scheduling)
-                                CompletedSaving
-
-                        isModelValid =
-                            Maybe.Extra.isNothing form.titleError
-                                && not (String.isEmpty form.title)
-                                && Maybe.Extra.isNothing form.descriptionError
-                                && not (String.isEmpty form.descriptionEditor.contents)
-                    in
-                    if not isModelValid then
-                        { form
-                            | titleError =
-                                if String.isEmpty form.title then
-                                    Just "news.editor.error.title"
-
-                                else
-                                    Nothing
-                            , descriptionError =
-                                if String.isEmpty form.descriptionEditor.contents then
-                                    Just "news.editor.error.description"
-
-                                else
-                                    Nothing
-                        }
-                            |> UR.init
-                            |> UR.addCmd
-                                (Browser.Dom.setViewport 0 0
-                                    |> Task.perform (\_ -> NoOp)
-                                )
-
-                    else
-                        case parseDateTime loggedIn.shared.timezone form.publicationMode of
-                            NoTimeToParse ->
-                                { form | isSaving = True }
-                                    |> UR.init
-                                    |> UR.addCmd (saveNews Nothing)
-
-                            ValidTime time ->
-                                { form | isSaving = True }
-                                    |> UR.init
-                                    |> UR.addCmd (saveNews (Just time))
-
-                            InvalidTime ->
-                                UR.init form
+                        _ ->
+                            UR.init model
+                                |> UR.logImpossible msg
+                                    "Tried saving communication, but community wasn't loaded"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
+                                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
                 _ ->
-                    form
-                        |> UR.init
+                    UR.init model
                         |> UR.logImpossible msg
-                            "Tried saving communication, but community wasn't loaded"
+                            "Tried saving communication, but wasn't editing"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.News.Editor", function = "updateForm" }
+                            { moduleName = "Page.Community.Settings.News.Editor", function = "update" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         CompletedSaving (RemoteData.Success maybeNews) ->
@@ -631,7 +358,8 @@ updateForm msg form loggedIn =
                             }
                         )
             in
-            { form | isSaving = False }
+            model
+                |> setDisabled False
                 |> UR.init
                 |> setAsHighlighted
                 |> UR.addExt
@@ -641,7 +369,8 @@ updateForm msg form loggedIn =
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunitySettingsNews)
 
         CompletedSaving (RemoteData.Failure _) ->
-            { form | isSaving = False }
+            model
+                |> setDisabled False
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.ShowFeedback Feedback.Failure
@@ -649,61 +378,275 @@ updateForm msg form loggedIn =
                     )
 
         CompletedSaving RemoteData.NotAsked ->
-            UR.init form
+            UR.init model
 
         CompletedSaving RemoteData.Loading ->
-            UR.init form
+            UR.init model
 
-        GotEditorSummaryMsg subMsg ->
-            case form.action of
-                CreateNew ->
-                    UR.init form
 
-                EditExisting news profileSummary ->
-                    { form
-                        | action =
-                            profileSummary
-                                |> Profile.Summary.update subMsg
-                                |> EditExisting news
+setDisabled : Bool -> Model -> Model
+setDisabled isDisabled model =
+    case model of
+        Editing action form ->
+            Editing action (Form.withDisabled isDisabled form)
+
+        _ ->
+            model
+
+
+type alias FormInput =
+    { title : String
+    , description : Form.RichText.Model
+    , publicationMode : PublicationMode
+    , latestEditions :
+        Maybe
+            { creator : Profile.Minimal
+            , profileSummary : Profile.Summary.Model
+            , updatedAt : Time.Posix
+            }
+    , publicationDate : Form.DatePicker.Model
+    , publicationTime : String
+    }
+
+
+type alias FormOutput =
+    { title : String
+    , description : Markdown
+    , publicationDate : Maybe Time.Posix
+    }
+
+
+createForm : LoggedIn.Model -> Form.Form msg FormInput FormOutput
+createForm loggedIn =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Text.init { label = t "news.editor.field.title", id = "title-input" }
+                |> Form.textField
+                    { parser =
+                        \title ->
+                            if String.isEmpty title then
+                                Err <| t "news.editor.error.title"
+
+                            else
+                                Ok title
+                    , value = .title
+                    , update = \title input -> { input | title = title }
+                    , externalError = always Nothing
                     }
-                        |> UR.init
+            )
+        |> Form.with
+            (Form.RichText.init { label = t "news.editor.field.description" }
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.richText
+                    { parser =
+                        \description ->
+                            if description == Markdown.empty then
+                                Err <| t "news.editor.error.description"
+
+                            else
+                                Ok description
+                    , value = .description
+                    , update = \description input -> { input | description = description }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNoOutput
+            ((\{ latestEditions } ->
+                case latestEditions of
+                    Nothing ->
+                        Form.succeed ()
+
+                    Just { profileSummary, creator, updatedAt } ->
+                        div []
+                            [ p [ class "label mb-6" ] [ text "Latest editions" ]
+                            , div [ class "flex items-center" ]
+                                [ profileSummary
+                                    |> Profile.Summary.withoutName
+                                    |> Profile.Summary.withImageSize "h-8 w-8"
+                                    |> Profile.Summary.view loggedIn.shared
+                                        loggedIn.accountName
+                                        creator
+                                    |> Html.map
+                                        (\summarySubMsg ->
+                                            \values ->
+                                                { values
+                                                    | latestEditions =
+                                                        values.latestEditions
+                                                            |> Maybe.map
+                                                                (\latestEdit ->
+                                                                    { latestEdit
+                                                                        | profileSummary =
+                                                                            Profile.Summary.update summarySubMsg latestEdit.profileSummary
+                                                                    }
+                                                                )
+                                                }
+                                        )
+                                , p [ class "text-gray-900 ml-2" ]
+                                    [ text <| t "news.edited_by"
+                                    , a
+                                        [ class "font-bold hover:underline"
+                                        , Route.href (Route.Profile creator.account)
+                                        ]
+                                        [ creator.name
+                                            |> Maybe.withDefault (Eos.Account.nameToString creator.account)
+                                            |> text
+                                        ]
+                                    , View.Components.dateViewer []
+                                        (\translations ->
+                                            { translations
+                                                | today = Nothing
+                                                , yesterday = Nothing
+                                                , other = t "news.edited_date"
+                                            }
+                                        )
+                                        loggedIn.shared
+                                        updatedAt
+                                    ]
+                                ]
+                            ]
+                            |> Form.arbitrary
+             )
+                |> Form.introspect
+            )
+        |> Form.withDecoration (hr [ class "mt-5 mb-10 text-gray-500" ] [])
+        |> Form.with (publicationDateForm loggedIn.shared)
 
 
-parseDateTime : Time.Zone -> PublicationMode -> ParsedDateTime
-parseDateTime timezone publicationMode =
+publicationDateForm : Shared -> Form.Form msg FormInput (Maybe Time.Posix)
+publicationDateForm shared =
+    let
+        ({ t } as translators) =
+            shared.translators
+    in
+    Form.succeed
+        (\publicationMode publicationDate { hour, minute } ->
+            case publicationMode of
+                PublishImmediately ->
+                    Nothing
+
+                SchedulePublication ->
+                    Just
+                        (Time.Extra.partsToPosix shared.timezone
+                            { year = Date.year publicationDate
+                            , month = Date.month publicationDate
+                            , day = Date.day publicationDate
+                            , hour = hour
+                            , minute = minute
+                            , second = 0
+                            , millisecond = 0
+                            }
+                        )
+        )
+        |> Form.with
+            (Form.Radio.init
+                { label = t "news.editor.field.publication_mode"
+                , id = "publication-mode-radio"
+                , optionToString = publicationModeToString
+                }
+                |> Form.Radio.withOption PublishImmediately (text <| t "news.editor.field.publish_immediately")
+                |> Form.Radio.withOption SchedulePublication (text <| t "news.editor.field.schedule")
+                |> Form.Radio.withDirection Form.Radio.Vertical
+                |> Form.Radio.withContainerAttrs [ class "mb-6" ]
+                |> Form.radio (publicationModeFromString >> Maybe.withDefault PublishImmediately)
+                    { parser = Ok
+                    , value = .publicationMode
+                    , update = \publicationMode input -> { input | publicationMode = publicationMode }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withGroup [ class "grid md:grid-cols-2 md:gap-8" ]
+            ((\values ->
+                case values.publicationMode of
+                    PublishImmediately ->
+                        Form.succeed (Date.fromPosix shared.timezone shared.now)
+
+                    SchedulePublication ->
+                        Form.DatePicker.init { label = t "news.editor.field.initial_date", id = "publication-date-input" }
+                            |> Form.DatePicker.withAbsolutePositioning False
+                            |> Form.DatePicker.withContainerAttrs [ class "mb-10" ]
+                            |> Form.datePicker
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.required
+                                        >> Form.Validate.futureDate shared.timezone shared.now
+                                        >> Form.Validate.validate translators
+                                , value = .publicationDate
+                                , update = \publicationDate input -> { input | publicationDate = publicationDate }
+                                , externalError = always Nothing
+                                }
+             )
+                |> Form.introspect
+            )
+            ((\values ->
+                case values.publicationMode of
+                    PublishImmediately ->
+                        Form.succeed { hour = 0, minute = 0 }
+
+                    SchedulePublication ->
+                        Form.Text.init { label = t "news.editor.field.time", id = "publication-time-input" }
+                            |> Form.Text.withType Form.Text.Time
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.time
+                                        >> Form.Validate.custom
+                                            (\time ->
+                                                case Form.DatePicker.getDate values.publicationDate of
+                                                    Nothing ->
+                                                        Ok time
+
+                                                    Just date ->
+                                                        let
+                                                            selectedTime =
+                                                                Time.Extra.partsToPosix shared.timezone
+                                                                    { year = Date.year date
+                                                                    , month = Date.month date
+                                                                    , day = Date.day date
+                                                                    , hour = time.hour
+                                                                    , minute = time.minute
+                                                                    , second = 0
+                                                                    , millisecond = 0
+                                                                    }
+                                                                    |> Time.posixToMillis
+                                                        in
+                                                        if selectedTime < Time.posixToMillis shared.now then
+                                                            Err (\translators_ -> translators_.t "news.editor.error.future_time")
+
+                                                        else
+                                                            Ok time
+                                            )
+                                        >> Form.Validate.validate translators
+                                , value = .publicationTime
+                                , update = \publicationTime input -> { input | publicationTime = publicationTime }
+                                , externalError = always Nothing
+                                }
+             )
+                |> Form.introspect
+            )
+
+
+publicationModeToString : PublicationMode -> String
+publicationModeToString publicationMode =
     case publicationMode of
         PublishImmediately ->
-            NoTimeToParse
+            "publish-immediately"
 
-        SchedulePublication schedulingForm ->
-            schedulingForm
-                |> parseSchedulingForm timezone
-                |> Maybe.map
-                    (Iso8601.fromTime
-                        >> Cambiatus.Scalar.DateTime
-                        >> ValidTime
-                    )
-                |> Maybe.withDefault InvalidTime
+        SchedulePublication ->
+            "schedule-publication"
 
 
-parseSchedulingForm : Time.Zone -> SchedulingForm -> Maybe Time.Posix
-parseSchedulingForm timezone { selectedDate, selectedTime } =
-    case String.split ":" selectedTime of
-        [ hourString, minuteString ] ->
-            Maybe.map2
-                (\hour minute ->
-                    Time.Extra.partsToPosix timezone
-                        { year = Date.year selectedDate
-                        , month = Date.month selectedDate
-                        , day = Date.day selectedDate
-                        , hour = hour
-                        , minute = minute
-                        , second = 0
-                        , millisecond = 0
-                        }
-                )
-                (String.toInt hourString)
-                (String.toInt minuteString)
+publicationModeFromString : String -> Maybe PublicationMode
+publicationModeFromString publicationMode =
+    case publicationMode of
+        "publish-immediately" ->
+            Just PublishImmediately
+
+        "schedule-publication" ->
+            Just SchedulePublication
 
         _ ->
             Nothing
@@ -727,10 +670,20 @@ view loggedIn model =
         div [ class "bg-white" ]
             [ Page.viewHeader loggedIn title
             , case model of
-                Editing form ->
+                Editing _ form ->
                     div [ class "container mx-auto pt-4 pb-10" ]
-                        [ viewForm loggedIn form
-                            |> Html.map GotFormMsg
+                        [ Form.view [ class "px-4" ]
+                            loggedIn.shared.translators
+                            (\submitButton ->
+                                [ submitButton [ class "button button-primary w-full" ]
+                                    [ text <| t "menu.save" ]
+                                ]
+                            )
+                            (createForm loggedIn)
+                            form
+                            { toMsg = GotFormMsg
+                            , onSubmit = SubmittedForm
+                            }
                         ]
 
                 NewsNotFound ->
@@ -748,188 +701,6 @@ view loggedIn model =
                 WaitingNewsToEdit ->
                     Page.fullPageLoading loggedIn.shared
             ]
-    }
-
-
-viewForm : LoggedIn.Model -> Form -> Html FormMsg
-viewForm ({ shared } as loggedIn) form =
-    let
-        { translators } =
-            shared
-    in
-    Html.form
-        [ class "px-4"
-        , onSubmit ClickedSave
-        ]
-        [ Input.init
-            { label = translators.t "news.editor.field.title"
-            , id = "title-input"
-            , onInput = EnteredTitle
-            , disabled = form.isSaving
-            , value = form.title
-            , placeholder = Just "Lorem ipsum dolor"
-            , problems = Maybe.map (translators.t >> List.singleton) form.titleError
-            , translators = translators
-            }
-            |> Input.toHtml
-        , MarkdownEditor.view
-            { translators = translators
-            , placeholder = Nothing
-            , label = translators.t "news.editor.field.description"
-            , problem = Maybe.map translators.t form.descriptionError
-            , disabled = form.isSaving
-            }
-            []
-            form.descriptionEditor
-            |> Html.map GotDescriptionEditorMsg
-        , case form.action of
-            CreateNew ->
-                text ""
-
-            EditExisting news profileSummary ->
-                viewLatestEditions loggedIn news profileSummary
-        , hr [ class "mt-5 mb-10 text-gray-500" ] []
-        , Radio.init
-            { label = translators.t "news.editor.field.publication_mode"
-            , name = "publish-mode-radio"
-            , optionToString =
-                \option ->
-                    case option of
-                        PublishImmediately ->
-                            "publish-immediately"
-
-                        SchedulePublication _ ->
-                            "schedule-publication"
-            , activeOption = form.publicationMode
-            , onSelect = SelectedPublicationMode
-            , areOptionsEqual =
-                \option1 option2 ->
-                    case ( option1, option2 ) of
-                        ( SchedulePublication _, SchedulePublication _ ) ->
-                            True
-
-                        ( PublishImmediately, PublishImmediately ) ->
-                            True
-
-                        _ ->
-                            False
-            }
-            |> Radio.withOption PublishImmediately
-                (\_ -> text <| translators.t "news.editor.field.publish_immediately")
-            |> Radio.withOption (SchedulePublication (emptySchedulingForm shared))
-                (\_ -> text <| translators.t "news.editor.field.schedule")
-            |> Radio.withVertical True
-            |> Radio.withDisabled form.isSaving
-            |> Radio.toHtml translators
-        , case form.publicationMode of
-            PublishImmediately ->
-                text ""
-
-            SchedulePublication scheduling ->
-                div [ class "flex space-x-4" ]
-                    [ div [ class "w-full mb-4" ]
-                        [ View.Form.label []
-                            "datepicker-input"
-                            (translators.t "news.editor.field.initial_date")
-                        , div [ class "relative" ]
-                            [ DatePicker.view (Just scheduling.selectedDate)
-                                (datePickerSettings (Maybe.Extra.isJust scheduling.dateError))
-                                scheduling.datePicker
-                                |> Html.map SetDatePicker
-                            , img
-                                [ src "/icons/calendar.svg"
-                                , tabindex -1
-                                , class "absolute right-0 top-0 h-full pointer-events-none"
-                                ]
-                                []
-                            ]
-                        , case scheduling.dateError of
-                            Nothing ->
-                                text ""
-
-                            Just error ->
-                                span [ class "form-error" ]
-                                    [ text <| translators.t error ]
-                        ]
-                    , Input.init
-                        { label = translators.t "news.editor.field.time"
-                        , id = "time-input"
-                        , onInput = EnteredPublicationTime
-                        , disabled = form.isSaving
-                        , value = scheduling.selectedTime
-                        , placeholder = Nothing
-                        , problems = Maybe.map (translators.t >> List.singleton) scheduling.timeError
-                        , translators = translators
-                        }
-                        |> Input.withContainerAttrs [ class "w-full" ]
-                        |> Input.withType Input.Time
-                        |> Input.toHtml
-                    ]
-        , button
-            [ type_ "submit"
-            , disabled form.isSaving
-            , class "button button-primary w-full"
-            ]
-            [ text <| translators.t "menu.save" ]
-        ]
-
-
-viewLatestEditions : LoggedIn.Model -> Community.News.Model -> Profile.Summary.Model -> Html FormMsg
-viewLatestEditions ({ shared } as loggedIn) news profileSummary =
-    if news.insertedAt == news.updatedAt then
-        text ""
-
-    else
-        div []
-            [ p [ class "label mb-6" ] [ text "Latest editions" ]
-            , div [ class "flex items-center" ]
-                [ profileSummary
-                    |> Profile.Summary.withoutName
-                    |> Profile.Summary.withImageSize "h-8 w-8"
-                    |> Profile.Summary.view shared
-                        loggedIn.accountName
-                        news.creator
-                    |> Html.map GotEditorSummaryMsg
-                , p [ class "text-gray-900 ml-2" ]
-                    [ text <| shared.translators.t "news.edited_by"
-                    , a
-                        [ class "font-bold hover:underline"
-                        , Route.href (Route.Profile news.creator.account)
-                        ]
-                        [ news.creator.name
-                            |> Maybe.withDefault (Eos.Account.nameToString news.creator.account)
-                            |> text
-                        ]
-                    , View.Components.dateViewer []
-                        (\translations ->
-                            { translations
-                                | today = Nothing
-                                , yesterday = Nothing
-                                , other = shared.translators.t "news.edited_date"
-                            }
-                        )
-                        shared
-                        news.updatedAt
-                    ]
-                ]
-            ]
-
-
-datePickerSettings : Bool -> DatePicker.Settings
-datePickerSettings hasError =
-    let
-        defaultSettings =
-            DatePicker.defaultSettings
-    in
-    { defaultSettings
-        | changeYear = DatePicker.off
-        , inputId = Just "datepicker-input"
-        , inputClassList =
-            [ ( "input w-full", True )
-            , ( "with-error", hasError )
-            ]
-        , containerClassList = [ ( "relative-table", True ) ]
-        , dateFormatter = Date.format "E, d MMM y"
     }
 
 
@@ -956,39 +727,11 @@ msgToString msg =
         CompletedLoadNews r ->
             [ "CompletedLoadNews", UR.remoteDataToString r ]
 
-        GotInitialDescriptionEditorMsg subMsg ->
-            "GotInitialDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
-
         GotFormMsg subMsg ->
-            "GotFormMsg" :: formMsgToString subMsg
+            "GotFormMsg" :: Form.msgToString subMsg
 
+        SubmittedForm _ ->
+            [ "SubmittedForm" ]
 
-formMsgToString : FormMsg -> List String
-formMsgToString formMsg =
-    case formMsg of
-        NoOp ->
-            [ "NoOp" ]
-
-        EnteredTitle _ ->
-            [ "EnteredTitle" ]
-
-        GotDescriptionEditorMsg subMsg ->
-            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
-
-        SelectedPublicationMode _ ->
-            [ "SelectedPublicationMode" ]
-
-        SetDatePicker _ ->
-            [ "SetDatePicker" ]
-
-        EnteredPublicationTime _ ->
-            [ "EnteredPublicationTime" ]
-
-        ClickedSave ->
-            [ "ClickedSave" ]
-
-        CompletedSaving _ ->
-            [ "CompletedSaving" ]
-
-        GotEditorSummaryMsg subMsg ->
-            "GotEditorSummaryMsg" :: Profile.Summary.msgToString subMsg
+        CompletedSaving r ->
+            [ "CompletedSaving", UR.remoteDataToString r ]

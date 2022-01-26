@@ -1,6 +1,5 @@
 module Utils exposing
     ( areSameDay
-    , decodeEnterKeyDown
     , decodeTimestamp
     , errorToString
     , escSubscription
@@ -96,16 +95,6 @@ decodeTimestamp : Decode.Decoder Posix
 decodeTimestamp =
     Decode.int
         |> Decode.map Time.millisToPosix
-
-
-decodeEnterKeyDown : Decode.Decoder Bool
-decodeEnterKeyDown =
-    let
-        isEnter code =
-            code == "Enter"
-    in
-    Decode.field "key" Decode.string
-        |> Decode.map isEnter
 
 
 {-| Click event listener that stops propagation, but doesn't prevent default

@@ -5,7 +5,9 @@
   "thousands_separator": ".",
   "dates": {
     "today": "Avui",
-    "yesterday": "Ahir"
+    "yesterday": "Ahir",
+    "select": "Selecciona una data",
+    "clear": "Esborra la data"
   },
   "loading": {
     "title": "Espera un moment",
@@ -128,6 +130,8 @@
     "unavailablePin": "El PIN no està disponible",
     "phone": "Utilitzeu un número de telèfon vàlid",
     "invalid_image_file": "S'ha produït un error en penjar la imatge",
+    "file_upload": "S'ha produït un error en carregar el fitxer",
+    "wait_file_upload": "Si us plau, espereu que es carregui el fitxer",
     "zipcode": "Codi postal no vàlid",
     "contracts": {
       "transfer": {
@@ -309,6 +313,8 @@
       "checkingAvailability": "Comprovant disponibilitat del compte",
       "button": "Crea",
       "company_type": "Tipus d’empresa",
+      "company_name": "Nom de la companyia",
+      "name_example": "Exemple: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
@@ -613,6 +619,7 @@
         "manual_detail": " recompensa l’usuari només després d’haver-lo revisat per altres",
         "verifier_placeholder": "Escriviu el nom d’usuari",
         "verifier_not_found": "No s'ha trobat cap usuari",
+        "unselect_user": "Desseleccioneu {{username}}",
         "usages_placeholder": "Escriviu un número",
         "date_label": "Tria la data",
         "quantity_label": "Tria la quantitat",
@@ -901,20 +908,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Aquesta reclamació està en",
-      "2": "fase de revisió",
+      "1": "Reclamació",
+      "2": "pendent",
       "3": ", els altres membres encara han de votar"
     },
     "title_cancelled": {
-      "1": "Aquesta solicitud es va",
-      "2": "cancel·lat"
+      "1": "Reclamació",
+      "2": "anul·lada"
     },
     "title_approved": {
-      "1": "Aquesta solicitud es va",
-      "2": "aprovar"
+      "1": "Reclamació",
+      "2": "aprovada"
     },
     "title_rejected": {
-      "1": "Aquesta solicitud es va",
+      "1": "Reclamació",
       "2": "rebutjat"
     },
     "cancelled_voting_bar": "vots pendents",
