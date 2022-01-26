@@ -282,7 +282,7 @@ view_ shared community =
                         (List.map
                             (\newsForCard ->
                                 viewNewsCard shared
-                                    (Just newsForCard == community.highlightedNews)
+                                    (Just newsForCard.id == Maybe.map .id community.highlightedNews)
                                     newsForCard
                             )
                             news
