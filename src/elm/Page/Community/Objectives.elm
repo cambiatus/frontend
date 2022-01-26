@@ -193,7 +193,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a
-                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
+                        [ class "button button-secondary button-sm w-full sm:w-48 mt-4 sm:mt-2 px-1 mb-4"
                         , Route.href (Route.NewAction objective.id)
                         , classList [ ( "button-disabled", objective.isCompleted ) ]
                         ]
@@ -241,25 +241,27 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
             [ Markdown.view [ class "text-white truncate" ] action.description
-            , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
-                [ div [ class "mx-2 mb-2 text-white" ]
+            , div [ class "flex flex-wrap gap-y-4 gap-x-6 my-6 items-center" ]
+                [ div [ class "text-white" ]
                     [ p [ class "label text-green" ]
                         [ text_ "community.actions.reward" ]
                     , p [ class "uppercase" ]
-                        [ String.fromFloat action.reward
-                            ++ " "
-                            ++ Eos.symbolToString symbol
+                        [ Eos.assetToString shared.translators
+                            { symbol = symbol
+                            , amount = action.reward
+                            }
                             |> text
                         ]
                     ]
                 , if validationType == "CLAIMABLE" then
-                    div [ class "mx-2 mb-2" ]
+                    div []
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
                         , p [ class "uppercase text-white" ]
-                            [ String.fromFloat action.verifierReward
-                                ++ " "
-                                ++ Eos.symbolToString symbol
+                            [ Eos.assetToString shared.translators
+                                { symbol = symbol
+                                , amount = action.verifierReward
+                                }
                                 |> text
                             ]
                         ]
@@ -270,7 +272,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     text ""
 
                   else
-                    div [ class "mx-2 mb-2" ]
+                    div []
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.available_until" ]
                         , p []
@@ -291,7 +293,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                     text ""
                             ]
                         ]
-                , div [ class "mx-4 mb-2 mt-auto" ]
+                , div [ class "mt-auto" ]
                     [ if action.isCompleted then
                         div [ class "tag bg-green" ]
                             [ text_ "community.actions.completed" ]
@@ -313,7 +315,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2 flex-wrap" ]
+                        div [ class "flex gap-4 flex-wrap" ]
                             (List.indexedMap
                                 (\validatorIndex u ->
                                     case
@@ -332,7 +334,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                                         |> String.join "-"
                                             in
                                             div
-                                                [ class "mr-4 action-verifier relative"
+                                                [ class "action-verifier relative"
                                                 , id validatorId
                                                 ]
                                                 [ validatorSummary
