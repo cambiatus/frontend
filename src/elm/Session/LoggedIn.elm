@@ -421,7 +421,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
 viewHighlightedNews { t } toPageMsg news =
     div
-        [ class "bg-purple-500 p-4 sticky top-0 z-10"
+        [ class "bg-purple-500 py-4 sticky top-0 z-10"
         ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
