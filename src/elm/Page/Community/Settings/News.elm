@@ -316,13 +316,25 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                 text ""
 
             Just scheduling ->
+                let
+                    padTime time =
+                        String.repeat (2 - String.length time) "0" ++ time
+                in
                 small [ class "uppercase text-gray-900 text-sm font-bold block mt-2" ]
                     [ text <| translators.t "news.scheduled_at"
-                    , View.Components.dateViewer [] identity shared news.insertedAt
+                    , View.Components.dateViewer [] identity shared scheduling
                     , text <|
                         translators.tr "news.scheduled_at_time"
-                            [ ( "hour", String.fromInt (Time.toHour shared.timezone scheduling) )
-                            , ( "minute", String.fromInt (Time.toMinute shared.timezone scheduling) )
+                            [ ( "hour"
+                              , Time.toHour shared.timezone scheduling
+                                    |> String.fromInt
+                                    |> padTime
+                              )
+                            , ( "minute"
+                              , Time.toMinute shared.timezone scheduling
+                                    |> String.fromInt
+                                    |> padTime
+                              )
                             ]
                     ]
         , div [ class "mb-10 relative mt-4" ]
