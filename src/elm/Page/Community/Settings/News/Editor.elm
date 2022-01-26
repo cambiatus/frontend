@@ -558,7 +558,7 @@ publicationDateForm shared =
                     , externalError = always Nothing
                     }
             )
-        |> Form.withGroup [ class "grid grid-cols-2 gap-8" ]
+        |> Form.withGroup [ class "grid md:grid-cols-2 md:gap-8" ]
             ((\values ->
                 case values.publicationMode of
                     PublishImmediately ->
