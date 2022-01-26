@@ -134,21 +134,21 @@ view loggedIn model =
                                , id = "actions-toggle"
                                , action = ToggleObjectives
                                , disabled = False
-                               , value = community.hasObjectives
+                               , value = model.hasObjectives
                                , tooltip = Nothing
                                }
                              , { label = "menu.shop"
                                , id = "shop-toggle"
                                , action = ToggleShop
                                , disabled = False
-                               , value = community.hasShop
+                               , value = model.hasShop
                                , tooltip = Nothing
                                }
                              , { label = "community.kyc.title"
                                , id = "kyc-toggle"
                                , action = \_ -> ToggleKyc
                                , disabled = True
-                               , value = community.hasKyc
+                               , value = model.hasKyc
                                , tooltip =
                                     Just
                                         { message = t "community.kyc.info"
