@@ -208,6 +208,7 @@ view_ { translators } community =
                         |> Maybe.map .acceptedCurrencies
                         |> Maybe.withDefault []
                 }
+                |> Form.withDisabled True
             )
             { toMsg = \_ -> NoOp }
         ]
