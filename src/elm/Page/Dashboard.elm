@@ -1293,8 +1293,8 @@ shouldShowContactModal loggedIn model =
         RemoteData.Success profile ->
             let
                 addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
+                    -- 28/01/2022
+                    1643374799000
 
                 showContactModalFromDate =
                     addContactLimitDate - Time.posixToMillis loggedIn.shared.now > 0
