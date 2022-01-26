@@ -7,7 +7,12 @@ export default () => (
     connectedCallback () {
       this.listenToScroll()
 
-      window.addEventListener('resize', () => { this.listenToScroll() })
+      window.addEventListener('resize', this.listenToScroll)
+    }
+
+    disconnectedCallback () {
+      window.removeEventListener('resize', this.listenToScroll)
+      clearInterval(this._scrollInterval)
     }
 
     attributeChangedCallback () {
@@ -48,7 +53,7 @@ export default () => (
       }
 
       elementToListen.addEventListener('scroll', () => { scrolling = true })
-      const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
+      const distanceToRequest = parseInt(this.getAttribute('elm-distance-to-request')) || 0
       this._scrollInterval = setInterval(() => {
         if (scrolling) {
           scrolling = false
