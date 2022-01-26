@@ -571,7 +571,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                             ]
                         ]
             ]
-        , div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
+        , div [ class "mt-2 w-full sm:w-40 mb-10" ]
             [ buttonView ]
         ]
     ]
