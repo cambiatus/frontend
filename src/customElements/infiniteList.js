@@ -25,7 +25,7 @@ export default () => (
       }
 
       let scrolling = false
-      const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
+      const isHidden = this.getBoundingClientRect && this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
       if (isHidden) {
         return
       }
