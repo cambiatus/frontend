@@ -38,7 +38,7 @@ export default (app) => (
       )
 
       this.setMarkdownListener = (data) => {
-        if (data.id === this.id) {
+        if (data.id === this.getId()) {
           this._quill.setContents(data.content)
         }
       }
@@ -105,6 +105,10 @@ export default (app) => (
       editorNode.id = this.getAttribute('elm-id')
     }
 
+    getId () {
+      return this.getAttribute('elm-id')
+    }
+
     setTooltipTexts () {
       const actionButton = this.querySelector('.ql-tooltip a.ql-action')
       if (actionButton) {
@@ -150,7 +154,7 @@ export default (app) => (
       const currentFormat = this._quill.getFormat(range)
 
       usePortAsPromise(app.ports.markdownLink, (link) => {
-        if (link.id === this.id) {
+        if (link.id === this.getId()) {
           this._quill.updateContents(new QuillDelta()
             .retain(range.index)
             .delete(range.length)
