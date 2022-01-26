@@ -21,6 +21,8 @@ the Private Key (PK), which can be used to sign EOS transactions.
 import Api.Graphql
 import Auth
 import Browser.Dom as Dom
+import Cambiatus.Mutation
+import Cambiatus.Object.Request
 import Dict
 import Eos.Account as Eos
 import Graphql.Http
@@ -321,6 +323,8 @@ type PassphraseExternalMsg
 type PinMsg
     = PinIgnored
     | SubmittedPinWithSuccess String
+    | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
+    | SignedAuthPhrase String
     | GotSubmitResult (Result String ( Eos.Name, Eos.PrivateKey ))
     | GotSignInResult Eos.PrivateKey (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotPinComponentMsg Pin.Msg
@@ -531,16 +535,52 @@ updateWithPin msg model ({ shared } as guest) =
         SubmittedPinWithSuccess pin ->
             { model | isSigningIn = True }
                 |> UR.init
-                |> UR.addPort
-                    { responseAddress = SubmittedPinWithSuccess pin
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "login" )
-                            , ( "passphrase", Encode.string model.passphrase )
-                            , ( "pin", Encode.string pin )
-                            ]
-                    }
+                -- |> UR.addPort
+                --     { responseAddress = SubmittedPinWithSuccess pin
+                --     , responseData = Encode.null
+                --     , data =
+                --         Encode.object
+                --             [ ( "name", Encode.string "login" )
+                --             , ( "passphrase", Encode.string model.passphrase )
+                --             , ( "pin", Encode.string pin )
+                --             ]
+                --     }
+                |> UR.addCmd
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (Cambiatus.Mutation.genAuth
+                            -- TODO - Use real account
+                            { account = "henriquebuss" }
+                            Cambiatus.Object.Request.phrase
+                        )
+                        GeneratedAuthPhrase
+                    )
+
+        GeneratedAuthPhrase (RemoteData.Success (Just phrase)) ->
+            let
+                _ =
+                    Debug.log "PHRASE" phrase
+            in
+            model
+                -- TODO - Sign phrase with port
+                |> UR.init
+
+        GeneratedAuthPhrase _ ->
+            -- TODO - Handle errors
+            model
+                |> UR.init
+
+        SignedAuthPhrase signedPhrase ->
+            model
+                -- TODO - Call `signIn` mutation calling `GotSignInResult`
+                -- |> UR.addCmd (
+                -- Api.Graphql.mutation shared Nothing (
+                -- Auth.signIn "henriquebuss"
+                -- shared
+                -- guest.maybeInvitation
+                -- )
+                -- )
+                |> UR.init
 
         GotSubmitResult (Ok ( accountName, privateKey )) ->
             UR.init model
@@ -736,6 +776,12 @@ pinMsgToString msg =
 
         SubmittedPinWithSuccess pin ->
             [ "SubmittedPinWithSuccess", pin ]
+
+        GeneratedAuthPhrase _ ->
+            [ "GeneratedAuthPhrase" ]
+
+        SignedAuthPhrase _ ->
+            [ "SignedAuthPhrase" ]
 
         GotSubmitResult r ->
             [ "GotSubmitResult", UR.resultToString r ]
