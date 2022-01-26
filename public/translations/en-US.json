@@ -906,20 +906,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "This claim is",
+      "1": "Claim",
       "2": "under review",
       "3": ", other members still need to vote"
     },
     "title_cancelled": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "cancelled"
     },
     "title_approved": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "approved"
     },
     "title_rejected": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "rejected"
     },
     "cancelled_voting_bar": "pending votes",

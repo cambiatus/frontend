@@ -909,20 +909,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Este reclamo está",
-      "2": "bajo revisión",
+      "1": "Reclamo",
+      "2": "pendiente",
       "3": ", otros miembros aún necesitan votar"
     },
     "title_cancelled": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "cancelado"
     },
     "title_approved": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "aprobado"
     },
     "title_rejected": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "rechazado"
     },
     "cancelled_voting_bar": "votos pendientes",

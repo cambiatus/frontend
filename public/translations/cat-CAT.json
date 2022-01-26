@@ -908,20 +908,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Aquesta reclamació està en",
-      "2": "fase de revisió",
+      "1": "Reclamació",
+      "2": "pendent",
       "3": ", els altres membres encara han de votar"
     },
     "title_cancelled": {
-      "1": "Aquesta solicitud es va",
-      "2": "cancel·lat"
+      "1": "Reclamació",
+      "2": "anul·lada"
     },
     "title_approved": {
-      "1": "Aquesta solicitud es va",
-      "2": "aprovar"
+      "1": "Reclamació",
+      "2": "aprovada"
     },
     "title_rejected": {
-      "1": "Aquesta solicitud es va",
+      "1": "Reclamació",
       "2": "rebutjat"
     },
     "cancelled_voting_bar": "vots pendents",

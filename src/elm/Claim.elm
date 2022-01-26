@@ -752,16 +752,16 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ( claimStatusPhrase, claimStatus, textColor ) =
                     case claim.status of
                         Approved ->
-                            ( t "claim.title_approved.1", t "claim.approved", "text-2xl font-bold lowercase text-green" )
+                            ( t "claim.title_approved.1", t "claim.title_approved.2", "text-lg font-bold lowercase text-green" )
 
                         Rejected ->
-                            ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
+                            ( t "claim.title_rejected.1", t "claim.title_rejected.2", "text-lg font-bold lowercase text-red" )
 
                         Pending ->
-                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+                            ( t "claim.title_under_review.1", t "claim.pending", "text-lg font-bold lowercase text-gray-600" )
 
                         Cancelled _ ->
-                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-gray-900" )
+                            ( t "claim.title_cancelled.1", t "claim.title_cancelled.2", "text-lg font-bold lowercase text-gray-900" )
             in
             div [ class "block" ]
                 [ View.Components.dateViewer [ class "text-xs uppercase block text-gray-900" ]
@@ -774,7 +774,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     )
                     shared
                     (Utils.fromDateTime claim.createdAt)
-                , p [ class "text-2xl font-bold" ]
+                , p [ class "text-lg font-bold" ]
                     [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
