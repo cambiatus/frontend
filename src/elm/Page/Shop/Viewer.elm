@@ -6,7 +6,6 @@ module Page.Shop.Viewer exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , receiveLoggedInBroadcast
     , update
     , view
     )
@@ -18,27 +17,30 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
+import Form
+import Form.RichText
+import Form.Text
+import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, p, text)
-import Html.Attributes exposing (autocomplete, class, disabled, required, src)
+import Html exposing (Html, a, button, div, img, text)
+import Html.Attributes exposing (autocomplete, class, disabled, src)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
+import Markdown exposing (Markdown)
 import Page exposing (Session(..))
 import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
+import Session.Shared as Shared exposing (Shared)
 import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form.Input as Input
-import View.MarkdownEditor
 
 
 
@@ -52,7 +54,11 @@ init session saleId =
             ( AsLoggedIn
                 { status = RemoteData.Loading
                 , viewing = ViewingCard
-                , form = initForm
+                , form2 =
+                    Form.init
+                        { units = "0"
+                        , memo = Form.RichText.initModel "memo-input" Nothing
+                        }
                 , hasChangedDefaultMemo = False
                 , balances = []
                 , isBuyButtonDisabled = False
@@ -94,18 +100,10 @@ type alias GuestModel =
 type alias LoggedInModel =
     { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
     , viewing : ViewState
-    , form : Form
+    , form2 : Form.Model FormInput
     , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
-    }
-
-
-type alias Form =
-    { price : String
-    , unitValidation : Validation
-    , units : String
-    , memo : View.MarkdownEditor.Model
     }
 
 
@@ -114,32 +112,9 @@ defaultMemoKey =
     "shop.transfer.default_memo"
 
 
-initForm : Form
-initForm =
-    { price = ""
-    , units = ""
-    , memo =
-        View.MarkdownEditor.init "memo-editor"
-            |> View.MarkdownEditor.setContents defaultMemoKey
-    , unitValidation = Valid
-    }
-
-
 type ViewState
     = ViewingCard
     | EditingTransfer
-
-
-type FormError
-    = UnitEmpty
-    | UnitTooLow
-    | UnitTooHigh
-    | UnitNotOnlyNumbers
-
-
-type Validation
-    = Valid
-    | Invalid FormError
 
 
 
@@ -156,17 +131,14 @@ type GuestMsg
 
 
 type LoggedInMsg
-    = Ignored
-    | ClosedAuthModal
+    = ClosedAuthModal
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedBuy
     | ClickedEdit Product
-    | ClickedTransfer Product
-    | EnteredUnit String
-    | GotMemoEditorMsg View.MarkdownEditor.Msg
+    | ClickedTransfer Product FormOutput
+    | GotFormMsg (Form.Msg FormInput)
     | GotTransferResult (Result (Maybe Value) String)
-    | CompletedLoadTranslations
 
 
 type alias UpdateResult =
@@ -236,9 +208,6 @@ updateAsLoggedIn msg model loggedIn =
             loggedIn.shared.translators
     in
     case msg of
-        Ignored ->
-            UR.init model
-
         ClosedAuthModal ->
             UR.init model
 
@@ -310,124 +279,65 @@ updateAsLoggedIn msg model loggedIn =
             { model | viewing = EditingTransfer }
                 |> UR.init
 
-        ClickedTransfer sale ->
+        ClickedTransfer sale formOutput ->
             let
-                validatedForm =
-                    validateForm sale model.form
+                authorization =
+                    { actor = loggedIn.accountName
+                    , permissionName = Eos.samplePermission
+                    }
+
+                value =
+                    { amount = sale.price * toFloat formOutput.units
+                    , symbol = sale.symbol
+                    }
+
+                unitPrice =
+                    { amount = sale.price
+                    , symbol = sale.symbol
+                    }
             in
-            if isFormValid validatedForm then
-                let
-                    authorization =
-                        { actor = loggedIn.accountName
-                        , permissionName = Eos.samplePermission
-                        }
-
-                    requiredUnits =
-                        case String.toInt model.form.units of
-                            Just rU ->
-                                rU
-
-                            Nothing ->
-                                1
-
-                    value =
-                        { amount = sale.price * toFloat requiredUnits
-                        , symbol = sale.symbol
-                        }
-
-                    unitPrice =
-                        { amount = sale.price
-                        , symbol = sale.symbol
-                        }
-                in
-                { model | isBuyButtonDisabled = True }
-                    |> UR.init
-                    |> UR.addPort
-                        { responseAddress = ClickedTransfer sale
-                        , responseData = Encode.null
-                        , data =
-                            Eos.encodeTransaction
-                                [ { accountName = loggedIn.shared.contracts.token
-                                  , name = "transfer"
-                                  , authorization = authorization
-                                  , data =
-                                        { from = loggedIn.accountName
-                                        , to = sale.creatorId
-                                        , value = value
-                                        , memo = model.form.memo.contents
-                                        }
-                                            |> Transfer.encodeEosActionData
-                                  }
-                                , { accountName = loggedIn.shared.contracts.community
-                                  , name = "transfersale"
-                                  , authorization = authorization
-                                  , data =
-                                        { id = sale.id
-                                        , from = loggedIn.accountName
-                                        , to = sale.creatorId
-                                        , quantity = unitPrice
-                                        , units = requiredUnits
-                                        }
-                                            |> Shop.encodeTransferSale
-                                  }
-                                ]
-                        }
-                    |> LoggedIn.withAuthentication loggedIn
-                        model
-                        { successMsg = msg, errorMsg = ClosedAuthModal }
-
-            else
-                { model | form = validatedForm }
-                    |> UR.init
-
-        EnteredUnit u ->
-            case model.status of
-                RemoteData.Success saleItem ->
-                    let
-                        newPrice =
-                            case String.toFloat u of
-                                Just uF ->
-                                    String.fromFloat (uF * saleItem.price)
-
-                                Nothing ->
-                                    "Invalid Units"
-
-                        currentForm =
-                            model.form
-
-                        newForm =
-                            { currentForm | units = u, price = newPrice }
-                    in
-                    { model | form = newForm }
-                        |> UR.init
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Entered available units, but sale is not loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
-                            []
-
-        GotMemoEditorMsg subMsg ->
-            let
-                oldForm =
-                    model.form
-
-                ( memo, memoCmd ) =
-                    View.MarkdownEditor.update subMsg oldForm.memo
-            in
-            { model
-                | form = { oldForm | memo = memo }
-                , hasChangedDefaultMemo =
-                    ((String.trim memo.contents == defaultMemoKey)
-                        || (String.trim memo.contents == t defaultMemoKey)
-                    )
-                        |> not
-            }
+            { model | isBuyButtonDisabled = True }
                 |> UR.init
-                |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
+                |> UR.addPort
+                    { responseAddress = ClickedTransfer sale formOutput
+                    , responseData = Encode.null
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = loggedIn.shared.contracts.token
+                              , name = "transfer"
+                              , authorization = authorization
+                              , data =
+                                    { from = loggedIn.accountName
+                                    , to = sale.creatorId
+                                    , value = value
+                                    , memo = formOutput.memo
+                                    }
+                                        |> Transfer.encodeEosActionData
+                              }
+                            , { accountName = loggedIn.shared.contracts.community
+                              , name = "transfersale"
+                              , authorization = authorization
+                              , data =
+                                    { id = sale.id
+                                    , from = loggedIn.accountName
+                                    , to = sale.creatorId
+                                    , quantity = unitPrice
+                                    , units = formOutput.units
+                                    }
+                                        |> Shop.encodeTransferSale
+                              }
+                            ]
+                    }
+                |> LoggedIn.withAuthentication loggedIn
+                    model
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
+
+        GotFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.form2
+                |> UR.fromChild (\newForm -> { model | form2 = newForm })
+                    GotFormMsg
+                    LoggedIn.addFeedback
+                    model
 
         CompletedLoadBalances res ->
             case res of
@@ -438,24 +348,6 @@ updateAsLoggedIn msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-        CompletedLoadTranslations ->
-            if not model.hasChangedDefaultMemo then
-                let
-                    oldForm =
-                        model.form
-
-                    ( memo, memoCmd ) =
-                        View.MarkdownEditor.forceSetContents (t defaultMemoKey)
-                            oldForm.memo
-                in
-                { model | form = { oldForm | memo = memo } }
-                    |> UR.init
-                    |> UR.addCmd (Cmd.map GotMemoEditorMsg memoCmd)
-
-            else
-                model
-                    |> UR.init
 
 
 
@@ -628,7 +520,7 @@ viewCard :
     ->
         { product
             | title : String
-            , description : String
+            , description : Markdown
             , symbol : Eos.Symbol
             , price : Float
             , creator : Shop.ShopProfile
@@ -646,8 +538,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                 |> Maybe.withDefault (Eos.stringToName "")
     in
     [ div [ class "font-semibold text-3xl w-full" ] [ text sale.title ]
-    , View.MarkdownEditor.viewReadOnly [ class "text-gray w-full md:text-sm" ]
-        sale.description
+    , Markdown.view [ class "text-gray w-full md:text-sm" ] sale.description
     , div [ class "w-full flex items-center text-sm mt-4" ]
         [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
         , text_ "shop.sold_by"
@@ -680,7 +571,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
                             ]
                         ]
             ]
-        , div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
+        , div [ class "mt-2 w-full sm:w-40 mb-10" ]
             [ buttonView ]
         ]
     ]
@@ -728,7 +619,13 @@ viewLoggedInButton loggedIn model sale =
             div [ class "flex md:justify-end" ]
                 [ button
                     [ class "button button-primary"
-                    , onClick (ClickedTransfer sale)
+                    , onClick
+                        (Form.parse (createForm loggedIn.shared.translators sale)
+                            model.form2
+                            { onError = GotFormMsg
+                            , onSuccess = ClickedTransfer sale
+                            }
+                        )
                     , disabled model.isBuyButtonDisabled
                     ]
                     [ text_ "shop.transfer.submit" ]
@@ -745,186 +642,97 @@ viewLoggedInButton loggedIn model sale =
         ]
 
 
-viewTransferForm : LoggedIn.Model -> Product -> LoggedInModel -> Html LoggedInMsg
-viewTransferForm { shared } sale model =
-    let
-        accountName =
-            Eos.nameToString sale.creator.account
+type alias FormInput =
+    { units : String
+    , memo : Form.RichText.Model
+    }
 
-        form =
-            model.form
 
-        t =
-            shared.translators.t
+type alias FormOutput =
+    { units : Int
+    , memo : Markdown
+    }
 
-        saleSymbol =
-            Eos.symbolToSymbolCodeString sale.symbol
 
-        maybeBal =
-            LE.find (\bal -> bal.asset.symbol == sale.symbol) model.balances
-
-        symbolBalance =
-            case maybeBal of
-                Just b ->
-                    b.asset.amount
-
-                Nothing ->
-                    0.0
-
-        balanceString =
-            let
-                currBalance =
-                    String.fromFloat symbolBalance ++ " " ++ saleSymbol
-            in
-            currBalance
-
-        tr rId replaces =
-            shared.translators.tr rId replaces
-    in
-    div []
-        [ div []
-            [ p [] [ text "User" ]
-            , p [] [ text accountName ]
-            ]
-        , div []
-            [ Input.init
+createForm : Shared.Translators -> Product -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) product =
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Text.init
                 { label = t "shop.transfer.units_label"
-                , id = fieldId.units
-                , onInput = EnteredUnit
-                , disabled = False
-                , value = form.units
-                , placeholder = Nothing
-                , problems = getError form.unitValidation
-                , translators = shared.translators
+                , id = "units-input"
                 }
-                |> Input.asNumeric
-                |> Input.withType Input.Number
-                |> Input.withAttrs
+                |> Form.Text.asNumeric
+                |> Form.Text.withType Form.Text.Number
+                |> Form.Text.withExtraAttrs
                     [ autocomplete False
-                    , required True
                     , Html.Attributes.min "0"
                     ]
-                |> Input.toHtml
-            , Input.init
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.int
+                            >> Form.Validate.intGreaterThanOrEqualTo 1
+                            >> Form.Validate.withCustomError (\translators_ -> translators_.t "shop.transfer.errors.unitTooLow")
+                            >> (if product.trackStock then
+                                    Form.Validate.intLowerThanOrEqualTo product.units
+                                        >> Form.Validate.withCustomError (\translators_ -> translators_.t "shop.transfer.errors.unitTooHigh")
+
+                                else
+                                    identity
+                               )
+                            >> Form.Validate.validate translators
+                    , value = .units
+                    , update = \units input -> { input | units = units }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNoOutput
+            (Form.Text.init
                 { label = t "shop.transfer.quantity_label"
-                , id = fieldId.price
-                , onInput = \_ -> Ignored
-                , disabled = True
-                , value = form.price
-                , placeholder = Nothing
-                , problems = Nothing
-                , translators = shared.translators
+                , id = "value-input"
                 }
-                |> Input.withAttrs [ required True, Html.Attributes.min "0" ]
-                |> Input.withCurrency sale.symbol
-                |> Input.toHtml
-            ]
-        , p []
-            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", balanceString ) ]) ]
-        , View.MarkdownEditor.view
-            { translators = shared.translators
-            , placeholder = Just (t defaultMemoKey)
-            , label = t "shop.transfer.memo_label"
-            , problem = Nothing
-            , disabled = False
-            }
-            []
-            form.memo
-            |> Html.map GotMemoEditorMsg
-        ]
+                |> Form.Text.withDisabled True
+                |> Form.Text.withCurrency product.symbol
+                |> Form.textField
+                    { parser = Ok
+                    , value =
+                        \{ units } ->
+                            case String.toInt units of
+                                Nothing ->
+                                    "0"
+
+                                Just unitsValue ->
+                                    String.fromFloat (toFloat unitsValue * product.price)
+                    , update = \_ input -> input
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.RichText.init { label = t "shop.transfer.memo_label" }
+                |> Form.RichText.withPlaceholder (t defaultMemoKey)
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.richText
+                    { parser = Ok
+                    , value = .memo
+                    , update = \memo input -> { input | memo = memo }
+                    , externalError = always Nothing
+                    }
+            )
 
 
-
--- VIEW HELPERS
-
-
-getError : Validation -> Maybe (List String)
-getError validation =
-    case validation of
-        Valid ->
-            Nothing
-
-        Invalid error ->
-            let
-                translationString =
-                    case error of
-                        UnitEmpty ->
-                            "shop.transfer.errors.unitEmpty"
-
-                        UnitTooLow ->
-                            "shop.transfer.errors.unitTooLow"
-
-                        UnitTooHigh ->
-                            "shop.transfer.errors.unitTooHigh"
-
-                        UnitNotOnlyNumbers ->
-                            "shop.transfer.errors.unitNotOnlyNumbers"
-            in
-            Just [ translationString ]
-
-
-fieldSuffix : String -> String
-fieldSuffix s =
-    "shop-editor-" ++ s
-
-
-fieldId :
-    { price : String
-    , units : String
-    , memo : String
-    }
-fieldId =
-    { price = fieldSuffix "price"
-    , memo = fieldSuffix "memo"
-    , units = fieldSuffix "units"
-    }
-
-
-validateForm : Product -> Form -> Form
-validateForm sale form =
-    let
-        unitValidation : Validation
-        unitValidation =
-            if form.units == "" then
-                Invalid UnitEmpty
-
-            else
-                case String.toInt form.units of
-                    Just units ->
-                        if units > sale.units && sale.trackStock then
-                            Invalid UnitTooHigh
-
-                        else if units <= 0 && sale.trackStock then
-                            Invalid UnitTooLow
-
-                        else
-                            Valid
-
-                    Nothing ->
-                        Invalid UnitNotOnlyNumbers
-    in
-    { form
-        | unitValidation = unitValidation
-    }
-
-
-isFormValid : Form -> Bool
-isFormValid form =
-    form.unitValidation == Valid
+viewTransferForm : LoggedIn.Model -> Product -> LoggedInModel -> Html LoggedInMsg
+viewTransferForm { shared } sale model =
+    Form.viewWithoutSubmit []
+        shared.translators
+        (\_ -> [])
+        (createForm shared.translators sale)
+        model.form2
+        { toMsg = GotFormMsg }
 
 
 
 -- UTILS
-
-
-receiveLoggedInBroadcast : LoggedIn.BroadcastMsg -> Maybe LoggedInMsg
-receiveLoggedInBroadcast broadcastMsg =
-    case broadcastMsg of
-        LoggedIn.TranslationsLoaded ->
-            Just CompletedLoadTranslations
-
-        _ ->
-            Nothing
 
 
 msgToString : Msg -> List String
@@ -947,9 +755,6 @@ guestMsgToString msg =
 loggedInMsgToString : LoggedInMsg -> List String
 loggedInMsgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
 
@@ -965,20 +770,14 @@ loggedInMsgToString msg =
         ClickedEdit _ ->
             [ "ClickedEdit" ]
 
-        ClickedTransfer _ ->
+        ClickedTransfer _ _ ->
             [ "ClickedTransfer" ]
 
-        EnteredUnit u ->
-            [ "EnteredUnit", u ]
-
-        GotMemoEditorMsg subMsg ->
-            "GotMemoEditorMsg" :: View.MarkdownEditor.msgToString subMsg
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
-
-        CompletedLoadTranslations ->
-            [ "CompletedLoadTranslations" ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

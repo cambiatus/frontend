@@ -44,6 +44,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
 import List.Extra as List
+import Markdown
 import Profile
 import Profile.Summary
 import Route
@@ -52,7 +53,6 @@ import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -494,7 +494,7 @@ viewClaimCard loggedIn profileSummaries claim =
               else
                 span [ class "text-purple-500 font-bold uppercase text-sm self-center" ]
                     [ text claimAgingText ]
-            , View.MarkdownEditor.viewReadOnly
+            , Markdown.view
                 [ class "truncate-children mb-2 mt-6"
                 , classList [ ( "text-gray-900", isCancelled ) ]
                 ]
@@ -752,16 +752,16 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 ( claimStatusPhrase, claimStatus, textColor ) =
                     case claim.status of
                         Approved ->
-                            ( t "claim.title_approved.1", t "claim.approved", "text-2xl font-bold lowercase text-green" )
+                            ( t "claim.title_approved.1", t "claim.title_approved.2", "text-lg font-bold lowercase text-green" )
 
                         Rejected ->
-                            ( t "claim.title_rejected.1", t "claim.disapproved", "text-2xl font-bold lowercase text-red" )
+                            ( t "claim.title_rejected.1", t "claim.title_rejected.2", "text-lg font-bold lowercase text-red" )
 
                         Pending ->
-                            ( t "claim.title_under_review.1", t "claim.pending", "text-2xl font-bold lowercase text-gray-600" )
+                            ( t "claim.title_under_review.1", t "claim.pending", "text-lg font-bold lowercase text-gray-600" )
 
                         Cancelled _ ->
-                            ( t "claim.title_cancelled.1", t "claim.cancelled", "text-2xl font-bold lowercase text-gray-900" )
+                            ( t "claim.title_cancelled.1", t "claim.title_cancelled.2", "text-lg font-bold lowercase text-gray-900" )
             in
             div [ class "block" ]
                 [ View.Components.dateViewer [ class "text-xs uppercase block text-gray-900" ]
@@ -774,7 +774,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                     )
                     shared
                     (Utils.fromDateTime claim.createdAt)
-                , p [ class "text-2xl font-bold" ]
+                , p [ class "text-lg font-bold" ]
                     [ text claimStatusPhrase ]
                 , div [ class textColor ] [ text claimStatus ]
                 ]
@@ -955,7 +955,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
             div
                 [ class "block mt-6" ]
                 [ p [ class "label" ] [ text (t "claim.action") ]
-                , View.MarkdownEditor.viewReadOnly [ class "text-left mt-2 mb-6 text-lg w-full" ]
+                , Markdown.view [ class "text-left mt-2 mb-6 text-lg w-full" ]
                     claim.action.description
                 , case claim.proofPhoto of
                     Just url ->
@@ -964,7 +964,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                             , Utils.onClickNoBubble (OpenPhotoModal claim)
                             ]
                             [ div
-                                [ class "z-10 absolute bottom-1 left-1 bg-black bg-opacity-60 p-4" ]
+                                [ class "z-10 absolute bottom-4 left-4 bg-black bg-opacity-60 p-4" ]
                                 [ p [ class "text-sm text-left w-full uppercase" ] [ text (t "community.actions.form.verification_code") ]
                                 , p [ class "font-bold font-normal text-left w-full" ] [ text proofCode ]
                                 ]

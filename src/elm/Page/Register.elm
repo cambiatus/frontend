@@ -7,17 +7,19 @@ import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
+import Form
+import Form.Checkbox
+import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
-import Html.Events exposing (onClick, onSubmit)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
 import Page
-import Page.Register.Common exposing (ProblemEvent(..))
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
@@ -27,12 +29,10 @@ import Result
 import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
+import Set exposing (Set)
 import UpdateResult as UR
-import Validate
+import View.Components
 import View.Feedback as Feedback
-import View.Form
-import View.Form.Checkbox as Checkbox
-import View.Form.Input as Input
 
 
 
@@ -91,7 +91,7 @@ type alias Model =
 type Status
     = Loading
     | AccountTypeSelectorShowed
-    | FormShowed FormModel
+    | FormShowed { unavailableAccounts : Set String } FormModel
     | AccountCreated AccountKeys
     | ErrorShowed
     | NotFound
@@ -103,15 +103,43 @@ type Step
 
 
 type FormModel
-    = NaturalForm NaturalForm.Model
-    | JuridicalForm JuridicalForm.Model
-    | DefaultForm DefaultForm.Model
+    = NaturalForm (Form.Model NaturalForm.FormInput)
+    | JuridicalForm (Form.Model JuridicalForm.FormInput)
+    | DefaultForm (Form.Model DefaultForm.FormInput)
+
+
+type FormOutput
+    = NaturalFormOutput NaturalForm.FormOutput
+    | JuridicalFormOutput JuridicalForm.FormOutput
+    | DefaultFormOutput DefaultForm.FormOutput
+
+
+encodeFormOutput : FormOutput -> Encode.Value
+encodeFormOutput output =
+    case output of
+        NaturalFormOutput natural ->
+            NaturalForm.encode natural
+
+        JuridicalFormOutput juridical ->
+            JuridicalForm.encode juridical
+
+        DefaultFormOutput default ->
+            DefaultForm.encode default
+
+
+formOutputDecoder : Decoder FormOutput
+formOutputDecoder =
+    Decode.oneOf
+        [ Decode.map NaturalFormOutput NaturalForm.decoder
+        , Decode.map JuridicalFormOutput JuridicalForm.decoder
+        , Decode.map DefaultFormOutput DefaultForm.decoder
+        ]
 
 
 type alias SignUpFields =
     { name : String
     , email : String
-    , account : String
+    , account : Eos.Name
     }
 
 
@@ -216,17 +244,13 @@ viewCreateAccount guest model =
             AccountTypeSelectorShowed ->
                 div [ class formClasses ]
                     [ viewAccountTypeSelector translators model
-                    , viewFooter translators False guest
+                    , viewFooter guest (\attrs -> button (disabled True :: attrs))
                     ]
 
-            FormShowed formModel ->
-                Html.form
-                    [ class formClasses
-                    , onSubmit (ValidateForm formModel)
-                    ]
+            FormShowed unavailableAccounts formModel ->
+                div [ class formClasses ]
                     [ viewAccountTypeSelector translators model
-                    , viewRegistrationForm translators formModel
-                    , viewFooter translators True guest
+                    , viewForm guest unavailableAccounts formModel
                     ]
 
             AccountCreated accountKeys ->
@@ -240,22 +264,11 @@ viewCreateAccount guest model =
         ]
 
 
-viewFooter : Translators -> Bool -> Guest.Model -> Html msg
-viewFooter { t } isSubmitEnabled guest =
+viewFooter : Guest.Model -> (List (Html.Attribute msg) -> List (Html a) -> Html b) -> Html b
+viewFooter guest submitButton =
     let
-        viewSubmitButton =
-            button
-                [ class "button w-full mb-4"
-                , class
-                    (if isSubmitEnabled then
-                        "button-primary"
-
-                     else
-                        "button-disabled"
-                    )
-                , disabled (not isSubmitEnabled)
-                ]
-                [ text (t "auth.login.continue") ]
+        { t } =
+            guest.shared.translators
     in
     div [ class "mt-auto flex flex-col items-center text-gray-333 md:mt-0" ]
         [ span [ class "mb-6" ]
@@ -264,29 +277,38 @@ viewFooter { t } isSubmitEnabled guest =
                 [ class "underline text-orange-300"
                 , Route.href (Route.Login guest.maybeInvitation guest.afterLoginRedirect)
                 ]
-                [ text (t "register.authLink") ]
+                [ text <| t "register.authLink" ]
             ]
-        , viewSubmitButton
+        , submitButton [ class "button button-primary w-full mb-4" ]
+            [ text <| t "auth.login.continue" ]
         ]
 
 
-viewRegistrationForm : Translators -> FormModel -> Html Msg
-viewRegistrationForm translators currentForm =
+viewForm : Guest.Model -> { unavailableAccounts : Set String } -> FormModel -> Html Msg
+viewForm guest unavailableAccounts currentForm =
+    let
+        { translators } =
+            guest.shared
+
+        helper formModel form toFormMsg toFormOutput =
+            Form.view []
+                translators
+                (viewFooter guest >> List.singleton)
+                form
+                formModel
+                { toMsg = toFormMsg >> GotFormMsg
+                , onSubmit = toFormOutput >> SubmittedForm
+                }
+    in
     case currentForm of
         NaturalForm form ->
-            NaturalForm.view translators form
-                |> Html.map NaturalFormMsg
-                |> Html.map FormMsg
+            helper form (NaturalForm.form translators unavailableAccounts) NaturalFormMsg NaturalFormOutput
 
         JuridicalForm form ->
-            JuridicalForm.view translators form
-                |> Html.map JuridicalFormMsg
-                |> Html.map FormMsg
+            helper form (JuridicalForm.form translators unavailableAccounts) JuridicalFormMsg JuridicalFormOutput
 
         DefaultForm form ->
-            DefaultForm.view translators form
-                |> Html.map DefaultFormMsg
-                |> Html.map FormMsg
+            helper form (DefaultForm.form translators unavailableAccounts) DefaultFormMsg DefaultFormOutput
 
 
 viewAccountTypeSelector : Translators -> Model -> Html Msg
@@ -294,7 +316,10 @@ viewAccountTypeSelector translators model =
     case model.country of
         Just country ->
             div []
-                [ View.Form.label [] "radio" (translators.t "register.form.register_tooltip")
+                [ View.Components.label []
+                    { targetId = "radio"
+                    , labelText = translators.t "register.form.register_tooltip"
+                    }
                 , div [ class "flex space-x-2 mb-4" ]
                     [ viewAccountTypeButton
                         (translators.t "register.form.types.natural")
@@ -316,10 +341,10 @@ viewAccountTypeButton title accountType status =
     let
         isSelected =
             case ( accountType, status ) of
-                ( NaturalAccount, FormShowed (NaturalForm _) ) ->
+                ( NaturalAccount, FormShowed _ (NaturalForm _) ) ->
                     True
 
-                ( JuridicalAccount _, FormShowed (JuridicalForm _) ) ->
+                ( JuridicalAccount _, FormShowed _ (JuridicalForm _) ) ->
                     True
 
                 _ ->
@@ -361,7 +386,7 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                 , p [ class "mb-6" ]
                     [ text (t "register.account_created.instructions")
                     ]
-                , div [ class "w-1/4 m-auto relative left-1" ]
+                , div [ class "w-1/4 m-auto relative left-4" ]
                     [ img [ src "/images/reg-passphrase-boy.svg" ]
                         []
                     , img
@@ -390,19 +415,19 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                         -- We use `HTMLInputElement.select()` method in port to select and copy the text. This method
                         -- works only with `input` and `textarea` elements which has to be presented in DOM (e.g. we can't
                         -- hide it with `display: hidden`), so we hide it using position and opacity.
-                        , Input.init
-                            { label = ""
-                            , id = passphraseInputId
-                            , onInput = \_ -> NoOp
-                            , disabled = False
-                            , value = keys.words
-                            , placeholder = Nothing
-                            , problems = Nothing
-                            , translators = translators
-                            }
-                            |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
-                            |> Input.withContainerAttrs [ class "mb-0" ]
-                            |> Input.toHtml
+                        , Form.Text.init { label = "", id = passphraseInputId }
+                            |> Form.Text.withContainerAttrs [ class "mb-0 absolute opacity-0 left-[-9999em]" ]
+                            |> (\options ->
+                                    Form.Text.view options
+                                        { onChange = \_ -> NoOp
+                                        , onBlur = NoOp
+                                        , value = keys.words
+                                        , error = text ""
+                                        , hasError = False
+                                        , translators = translators
+                                        , isRequired = False
+                                        }
+                               )
                         ]
                     , button
                         [ class "button m-auto button-primary button-sm"
@@ -412,15 +437,21 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                     ]
                 ]
             , div []
-                [ Checkbox.init
-                    { description = text (t "register.account_created.i_saved_words" ++ " 💜")
-                    , id = "agreed_save_passphrase"
-                    , value = model.hasAgreedToSavePassphrase
-                    , disabled = False
-                    , onCheck = AgreedToSave12Words
+                [ Form.Checkbox.init
+                    { label = text (t "register.account_created.i_saved_words" ++ " 💜")
+                    , id = "agreed-save-passphrase"
                     }
-                    |> Checkbox.withContainerAttrs [ class "my-6 font-bold" ]
-                    |> Checkbox.toHtml
+                    |> Form.Checkbox.withContainerAttrs [ class "my-6 font-bold" ]
+                    |> (\options ->
+                            Form.Checkbox.view options
+                                { onCheck = AgreedToSave12Words
+                                , onBlur = NoOp
+                                , value = model.hasAgreedToSavePassphrase
+                                , error = text ""
+                                , hasError = False
+                                , isRequired = True
+                                }
+                       )
                 , button
                     [ onClick <|
                         DownloadPdf
@@ -429,12 +460,6 @@ viewAccountCreated ({ t, tr } as translators) model keys =
                             }
                     , class "button button-primary w-full mb-4"
                     , disabled (not model.hasAgreedToSavePassphrase)
-                    , class <|
-                        if model.hasAgreedToSavePassphrase then
-                            ""
-
-                        else
-                            "button-disabled text-gray-600"
                     ]
                     [ text (t "register.account_created.download") ]
                 ]
@@ -485,9 +510,8 @@ type alias UpdateResult =
 type Msg
     = NoOp
     | CompletedLoadCommunity Community.CommunityPreview
-    | ValidateForm FormModel
-    | GotAccountAvailabilityResponse Bool
-    | AccountKeysGenerated (Result Decode.Error AccountKeys)
+    | GotAccountAvailabilityResponse FormOutput Bool
+    | AccountKeysGenerated FormOutput (Result Decode.Error AccountKeys)
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
@@ -496,20 +520,21 @@ type Msg
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
-    | FormMsg EitherFormMsg
     | CompletedSignUp (RemoteData (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | GotFormMsg FormMsg
+    | SubmittedForm FormOutput
 
 
-type EitherFormMsg
-    = JuridicalFormMsg JuridicalForm.Msg
-    | NaturalFormMsg NaturalForm.Msg
-    | DefaultFormMsg DefaultForm.Msg
+type FormMsg
+    = JuridicalFormMsg (Form.Msg JuridicalForm.FormInput)
+    | NaturalFormMsg (Form.Msg NaturalForm.FormInput)
+    | DefaultFormMsg (Form.Msg DefaultForm.FormInput)
 
 
-getSignUpFields : FormModel -> SignUpFields
+getSignUpFields : FormOutput -> SignUpFields
 getSignUpFields form =
     let
-        extract : { f | account : String, name : String, email : String } -> SignUpFields
+        extract : { f | account : Eos.Name, name : String, email : String } -> SignUpFields
         extract f =
             { account = f.account
             , name = f.name
@@ -517,13 +542,13 @@ getSignUpFields form =
             }
     in
     case form of
-        JuridicalForm f ->
+        JuridicalFormOutput f ->
             extract f
 
-        NaturalForm f ->
+        NaturalFormOutput f ->
             extract f
 
-        DefaultForm f ->
+        DefaultFormOutput f ->
             extract f
 
 
@@ -560,178 +585,49 @@ update _ msg model ({ shared } as guest) =
                 UR.init model
                     |> UR.addCmd (Route.pushUrl shared.navKey (Route.Join guest.afterLoginRedirect))
 
-        ValidateForm formType ->
-            let
-                validateForm validator form =
-                    case Validate.validate validator form of
-                        Ok _ ->
-                            []
-
-                        Err err ->
-                            err
-
-                account =
-                    getSignUpFields formType
-                        |> .account
-
-                translators =
-                    shared.translators
-
-                problemCount =
-                    case formType of
-                        JuridicalForm form ->
-                            List.length (validateForm (JuridicalForm.validator translators) form)
-
-                        NaturalForm form ->
-                            List.length (validateForm (NaturalForm.validator translators) form)
-
-                        DefaultForm form ->
-                            List.length (validateForm (DefaultForm.validator translators) form)
-
-                afterValidationAction =
-                    if problemCount > 0 then
-                        UR.addCmd Cmd.none
-
-                    else
-                        UR.addPort
-                            { responseAddress = ValidateForm formType
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "checkAccountAvailability" )
-                                    , ( "account", Encode.string account )
-                                    ]
-                            }
-            in
-            { model
-                | status =
-                    case formType of
-                        JuridicalForm form ->
-                            JuridicalForm
-                                { form
-                                    | problems = validateForm (JuridicalForm.validator translators) form
-                                }
-                                |> FormShowed
-
-                        NaturalForm form ->
-                            NaturalForm
-                                { form
-                                    | problems = validateForm (NaturalForm.validator translators) form
-                                }
-                                |> FormShowed
-
-                        DefaultForm form ->
-                            DefaultForm
-                                { form
-                                    | problems = validateForm (DefaultForm.validator translators) form
-                                }
-                                |> FormShowed
-            }
-                |> UR.init
-                |> afterValidationAction
-
-        FormMsg formMsg ->
-            case ( formMsg, model.status ) of
-                ( JuridicalFormMsg innerMsg, FormShowed (JuridicalForm form) ) ->
-                    { model
-                        | status =
-                            JuridicalForm.update shared.translators innerMsg form
-                                |> JuridicalForm
-                                |> FormShowed
-                    }
-                        |> UR.init
-
-                ( NaturalFormMsg innerMsg, FormShowed (NaturalForm form) ) ->
-                    { model
-                        | status =
-                            NaturalForm.update shared.translators innerMsg form
-                                |> NaturalForm
-                                |> FormShowed
-                    }
-                        |> UR.init
-
-                ( DefaultFormMsg innerMsg, FormShowed (DefaultForm form) ) ->
-                    { model
-                        | status =
-                            DefaultForm.update shared.translators innerMsg form
-                                |> DefaultForm
-                                |> FormShowed
-                    }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-
         AccountTypeSelected accountType ->
             let
                 selectedKycForm =
                     case accountType of
                         NaturalAccount ->
-                            NaturalForm
-                                (NaturalForm.init
-                                    { account = Nothing
-                                    , email = Nothing
-                                    , phone = Nothing
-                                    }
-                                )
+                            NaturalForm NaturalForm.init
 
                         JuridicalAccount country ->
-                            JuridicalForm
-                                (JuridicalForm.init
-                                    { account = Nothing
-                                    , email = Nothing
-                                    , phone = Nothing
-                                    , country = country
-                                    }
-                                    shared.translators
-                                )
+                            JuridicalForm (JuridicalForm.init country)
             in
-            { model | status = FormShowed selectedKycForm }
+            { model | status = FormShowed { unavailableAccounts = Set.empty } selectedKycForm }
                 |> UR.init
 
-        GotAccountAvailabilityResponse isAvailable ->
+        GotAccountAvailabilityResponse formOutput isAvailable ->
+            let
+                account =
+                    getSignUpFields formOutput
+                        |> .account
+            in
             if isAvailable then
-                let
-                    account =
-                        case model.status of
-                            FormShowed formType ->
-                                getSignUpFields formType
-                                    |> .account
-
-                            _ ->
-                                ""
-                in
                 model
                     |> UR.init
                     |> UR.addPort
-                        { responseAddress = GotAccountAvailabilityResponse isAvailable
-                        , responseData = Encode.null
+                        { responseAddress = GotAccountAvailabilityResponse formOutput isAvailable
+                        , responseData = encodeFormOutput formOutput
                         , data =
                             Encode.object
                                 [ ( "name", Encode.string "generateKeys" )
-                                , ( "account", Encode.string account )
+                                , ( "account", Eos.encodeName account )
                                 ]
                         }
 
             else
                 let
-                    composeProblem form formType formField =
-                        formType
-                            { form
-                                | problems = ( formField, t "error.alreadyTaken", OnSubmit ) :: form.problems
-                            }
-                            |> FormShowed
-
                     newStatus =
                         case model.status of
-                            FormShowed (JuridicalForm form) ->
-                                composeProblem form JuridicalForm JuridicalForm.Account
-
-                            FormShowed (NaturalForm form) ->
-                                composeProblem form NaturalForm NaturalForm.Account
-
-                            FormShowed (DefaultForm form) ->
-                                composeProblem form DefaultForm DefaultForm.Account
+                            FormShowed { unavailableAccounts } formModel ->
+                                FormShowed
+                                    { unavailableAccounts =
+                                        Set.insert (Eos.nameToString account)
+                                            unavailableAccounts
+                                    }
+                                    formModel
 
                             _ ->
                                 model.status
@@ -739,7 +635,7 @@ update _ msg model ({ shared } as guest) =
                 { model | status = newStatus }
                     |> UR.init
 
-        AccountKeysGenerated (Err v) ->
+        AccountKeysGenerated _ (Err v) ->
             UR.init
                 model
                 |> UR.logDecodingError msg
@@ -749,21 +645,15 @@ update _ msg model ({ shared } as guest) =
                     []
                     v
 
-        AccountKeysGenerated (Ok accountKeys) ->
-            case model.status of
-                FormShowed form ->
-                    { model | accountKeys = Just accountKeys }
-                        |> UR.init
-                        |> UR.addCmd
-                            (signUp shared
-                                accountKeys
-                                model.invitationId
-                                form
-                            )
-
-                _ ->
-                    model
-                        |> UR.init
+        AccountKeysGenerated formOutput (Ok accountKeys) ->
+            { model | accountKeys = Just accountKeys }
+                |> UR.init
+                |> UR.addCmd
+                    (signUp shared
+                        accountKeys
+                        model.invitationId
+                        formOutput
+                    )
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -889,6 +779,80 @@ update _ msg model ({ shared } as guest) =
         CompletedLoadCountry _ ->
             UR.init model
 
+        GotFormMsg subMsg ->
+            case ( model.status, subMsg ) of
+                ( FormShowed isAccountTaken (NaturalForm formModel), NaturalFormMsg formMsg ) ->
+                    Form.update shared formMsg formModel
+                        |> UR.fromChild
+                            (\newForm ->
+                                { model
+                                    | status =
+                                        newForm
+                                            |> NaturalForm
+                                            |> FormShowed isAccountTaken
+                                }
+                            )
+                            (NaturalFormMsg >> GotFormMsg)
+                            (Guest.SetFeedback >> UR.addExt)
+                            model
+
+                ( FormShowed isAccountTaken (JuridicalForm formModel), JuridicalFormMsg formMsg ) ->
+                    Form.update shared formMsg formModel
+                        |> UR.fromChild
+                            (\newForm ->
+                                { model
+                                    | status =
+                                        newForm
+                                            |> JuridicalForm
+                                            |> FormShowed isAccountTaken
+                                }
+                            )
+                            (JuridicalFormMsg >> GotFormMsg)
+                            (Guest.SetFeedback >> UR.addExt)
+                            model
+
+                ( FormShowed isAccountTaken (DefaultForm formModel), DefaultFormMsg formMsg ) ->
+                    Form.update shared formMsg formModel
+                        |> UR.fromChild
+                            (\newForm ->
+                                { model
+                                    | status =
+                                        newForm
+                                            |> DefaultForm
+                                            |> FormShowed isAccountTaken
+                                }
+                            )
+                            (DefaultFormMsg >> GotFormMsg)
+                            (Guest.SetFeedback >> UR.addExt)
+                            model
+
+                _ ->
+                    UR.init model
+
+        SubmittedForm formOutput ->
+            let
+                account =
+                    case formOutput of
+                        NaturalFormOutput output ->
+                            output.account
+
+                        JuridicalFormOutput output ->
+                            output.account
+
+                        DefaultFormOutput output ->
+                            output.account
+            in
+            UR.init model
+                |> UR.addPort
+                    { responseAddress = SubmittedForm formOutput
+                    , responseData = encodeFormOutput formOutput
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "checkAccountAvailability" )
+                            , ( "account", Eos.encodeName account )
+                            ]
+                    }
+
 
 loadedCommunity : Shared -> Model -> Community.CommunityPreview -> Maybe Invite -> UpdateResult
 loadedCommunity shared model community maybeInvite =
@@ -910,7 +874,7 @@ loadedCommunity shared model community maybeInvite =
 
     else
         { model
-            | status = FormShowed (DefaultForm DefaultForm.init)
+            | status = FormShowed { unavailableAccounts = Set.empty } (DefaultForm DefaultForm.init)
             , invitation = maybeInvite
         }
             |> UR.init
@@ -922,11 +886,11 @@ type alias SignUpResponse =
     }
 
 
-signUp : Shared -> AccountKeys -> InvitationId -> FormModel -> Cmd Msg
-signUp shared { accountName, ownerKey } invitationId form =
+signUp : Shared -> AccountKeys -> InvitationId -> FormOutput -> Cmd Msg
+signUp shared { accountName, ownerKey } invitationId formOutput =
     let
         { email, name } =
-            getSignUpFields form
+            getSignUpFields formOutput
 
         requiredArgs =
             { account = Eos.nameToString accountName
@@ -935,8 +899,8 @@ signUp shared { accountName, ownerKey } invitationId form =
             , password = shared.graphqlSecret
             , publicKey = ownerKey
             , userType =
-                case form of
-                    JuridicalForm _ ->
+                case formOutput of
+                    JuridicalFormOutput _ ->
                         "juridical"
 
                     _ ->
@@ -944,22 +908,22 @@ signUp shared { accountName, ownerKey } invitationId form =
             }
 
         ( kycOpts, addressOpts ) =
-            case form of
-                DefaultForm _ ->
+            case formOutput of
+                DefaultFormOutput _ ->
                     ( Absent, Absent )
 
-                NaturalForm f ->
+                NaturalFormOutput f ->
                     ( Present
                         { countryId = Id "1"
                         , document = f.document
                         , documentType = NaturalForm.documentTypeToString f.documentType
-                        , phone = f.phone
+                        , phone = f.phoneNumber
                         , userType = "natural"
                         }
                     , Absent
                     )
 
-                JuridicalForm f ->
+                JuridicalFormOutput f ->
                     ( Present
                         { countryId = Id "1"
                         , document = f.document
@@ -969,10 +933,10 @@ signUp shared { accountName, ownerKey } invitationId form =
                         }
                     , Present
                         { countryId = Id "1"
-                        , cityId = Tuple.first f.city |> Id
-                        , neighborhoodId = Tuple.first f.district |> Id
+                        , cityId = Id f.city.id
+                        , neighborhoodId = Id f.district.id
                         , number = Present f.number
-                        , stateId = Tuple.first f.state |> Id
+                        , stateId = Id f.state.id
                         , street = f.street
                         , zip = f.zip
                         }
@@ -1014,11 +978,13 @@ receiveBroadcast broadcastMsg =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ValidateForm" :: _ ->
+        "SubmittedForm" :: _ ->
             Decode.decodeValue
-                (Decode.field "isAvailable" Decode.bool)
+                (Decode.map2 GotAccountAvailabilityResponse
+                    (Decode.field "addressData" formOutputDecoder)
+                    (Decode.field "isAvailable" Decode.bool)
+                )
                 val
-                |> Result.map GotAccountAvailabilityResponse
                 |> Result.toMaybe
 
         "GotAccountAvailabilityResponse" :: _ ->
@@ -1031,10 +997,15 @@ jsAddressToMsg addr val =
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "words" Decode.string
                         |> DecodePipeline.required "privateKey" Decode.string
+
+                decodedAccount : Result Decode.Error AccountKeys
+                decodedAccount =
+                    Decode.decodeValue (Decode.field "data" decodeAccount) val
             in
-            Decode.decodeValue (Decode.field "data" decodeAccount) val
-                |> AccountKeysGenerated
-                |> Just
+            val
+                |> Decode.decodeValue (Decode.field "addressData" formOutputDecoder)
+                |> Result.toMaybe
+                |> Maybe.map (\formOutput -> AccountKeysGenerated formOutput decodedAccount)
 
         "PdfDownloaded" :: _ ->
             Just PdfDownloaded
@@ -1055,16 +1026,10 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        FormMsg _ ->
-            [ "FormMsg" ]
-
-        ValidateForm _ ->
-            [ "ValidateForm" ]
-
-        GotAccountAvailabilityResponse _ ->
+        GotAccountAvailabilityResponse _ _ ->
             [ "GotAccountAvailabilityResponse" ]
 
-        AccountKeysGenerated r ->
+        AccountKeysGenerated _ r ->
             [ "AccountKeysGenerated", UR.resultToString r ]
 
         AgreedToSave12Words _ ->
@@ -1093,3 +1058,21 @@ msgToString msg =
 
         CompletedLoadCountry _ ->
             [ "CompletedLoadCountry" ]
+
+        GotFormMsg subMsg ->
+            let
+                formMsgToString =
+                    case subMsg of
+                        JuridicalFormMsg innerMsg ->
+                            Form.msgToString innerMsg
+
+                        NaturalFormMsg innerMsg ->
+                            Form.msgToString innerMsg
+
+                        DefaultFormMsg innerMsg ->
+                            Form.msgToString innerMsg
+            in
+            "GotFormMsg" :: formMsgToString
+
+        SubmittedForm _ ->
+            [ "SubmittedForm" ]

@@ -324,52 +324,47 @@ update session msg model =
             case session of
                 LoggedIn ({ accountName, shared } as loggedIn) ->
                     let
-                        newForm =
+                        formUpdateResult =
                             case model.kycForm of
                                 Just f ->
                                     KycForm.update
-                                        shared.translators
+                                        shared
                                         f
                                         kycFormMsg
 
                                 Nothing ->
                                     KycForm.update
-                                        shared.translators
+                                        shared
                                         KycForm.init
                                         kycFormMsg
 
                         newModel =
-                            { model | kycForm = Just newForm }
+                            formUpdateResult
+                                |> UR.fromChild (\newForm -> { model | kycForm = Just newForm })
+                                    FormMsg
+                                    LoggedIn.addFeedback
+                                    model
                     in
                     case kycFormMsg of
-                        KycForm.Submitted _ ->
-                            let
-                                isFormValid =
-                                    List.isEmpty newForm.validationErrors
-                            in
-                            if isFormValid then
-                                newModel
-                                    |> UR.init
-                                    |> UR.addCmd
-                                        (KycForm.saveKycData loggedIn
-                                            newForm
-                                            |> Cmd.map FormMsg
-                                        )
+                        KycForm.Submitted formOutput ->
+                            newModel
+                                |> UR.addCmd
+                                    (KycForm.saveKycData loggedIn
+                                        formOutput
+                                        |> Cmd.map FormMsg
+                                    )
 
-                            else
-                                newModel
-                                    |> UR.init
-
-                        KycForm.Saved _ ->
-                            case newForm.serverError of
-                                Just error ->
+                        KycForm.Saved result ->
+                            case result of
+                                RemoteData.Failure _ ->
                                     newModel
-                                        |> UR.init
-                                        |> UR.addExt (ShowFeedback Feedback.Failure error)
+                                        |> UR.addExt
+                                            (ShowFeedback Feedback.Failure
+                                                (shared.translators.t "error.unknown")
+                                            )
 
-                                Nothing ->
-                                    model
-                                        |> UR.init
+                                _ ->
+                                    newModel
                                         |> UR.addCmd
                                             (Api.Graphql.mutation shared
                                                 Nothing
@@ -378,8 +373,7 @@ update session msg model =
                                             )
 
                         _ ->
-                            { model | kycForm = Just newForm }
-                                |> UR.init
+                            newModel
 
                 Guest _ ->
                     model

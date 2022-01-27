@@ -6,6 +6,7 @@ module Session.Shared exposing
     , communityDomain
     , decimalSeparators
     , environmentFromUrl
+    , floatStringFromSeparatedString
     , init
     , langFlag
     , loadTranslation
@@ -27,6 +28,7 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
+import Mask
 import Ports
 import Time exposing (Posix)
 import Translation
@@ -152,6 +154,14 @@ decimalSeparators { t } =
     { decimalSeparator = t "decimal_separator"
     , thousandsSeparator = t "thousands_separator"
     }
+
+
+{-| Normalize a masked float string into a string that can be parsed into a float
+by Elm
+-}
+floatStringFromSeparatedString : Translators -> String -> String
+floatStringFromSeparatedString translators =
+    Mask.removeFloat (decimalSeparators translators)
 
 
 
@@ -338,7 +348,7 @@ langFlag language =
                     "/icons/flag-ethiopia.svg"
     in
     img
-        [ class "object-cover rounded-full w-6 h-6 lang-flag mr-2"
+        [ class "object-cover rounded-full w-6 h-6 mr-2"
         , src iconLink
         ]
         []

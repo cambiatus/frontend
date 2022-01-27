@@ -5,7 +5,9 @@
   "thousands_separator": ".",
   "dates": {
     "today": "Hoje",
-    "yesterday": "Ontem"
+    "yesterday": "Ontem",
+    "select": "Selecionar uma data",
+    "clear": "Limpar data"
   },
   "loading": {
     "title": "Aguarde um instante",
@@ -128,6 +130,8 @@
     "unavailablePin": "PIN está indisponível",
     "phone": "Por favor insira um número de telefone válido",
     "invalid_image_file": "Erro ao fazer upload de imagem",
+    "file_upload": "Erro ao fazer upload do arquivo",
+    "wait_file_upload": "Por favor espere o upload do arquivo",
     "zipcode": "CEP inválido",
     "contracts": {
       "transfer": {
@@ -314,6 +318,8 @@
       "checkingAvailability": "Checando disponibilidade da conta",
       "button": "Criar",
       "company_type": "Tipo de Empresa",
+      "company_name": "Nome da Empresa",
+      "name_example": "Ex.: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
@@ -617,6 +623,7 @@
         "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
         "verifier_not_found": "Nenhum usuário encontrado",
+        "unselect_user": "Desselecionar {{username}}",
         "usages_placeholder": "Digite um número",
         "date_label": "Escolha a data",
         "quantity_label": "Escolha a quantidade de usos",
@@ -905,20 +912,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Esta reinvindicação está",
+      "1": "Reivindicação",
       "2": "em análise",
       "3": ", outros membros ainda precisam votar"
     },
     "title_cancelled": {
-      "1": "Esta reivindicação foi",
+      "1": "Reivindicação",
       "2": "cancelada"
     },
     "title_approved": {
-      "1": "Esta reinvindicação foi",
+      "1": "Reivindicação",
       "2": "aprovada"
     },
     "title_rejected": {
-      "1": "Esta reinvindicação foi",
+      "1": "Reivindicação",
       "2": "rejeitada"
     },
     "cancelled_voting_bar": "votos pendentes",

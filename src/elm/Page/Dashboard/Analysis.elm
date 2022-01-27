@@ -19,10 +19,13 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
+import Form
+import Form.Select
+import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, button, div, img, span, text)
-import Html.Attributes exposing (class, classList, src)
+import Html exposing (Html, button, div, img, text)
+import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode exposing (Value)
@@ -33,14 +36,11 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Select
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Simple.Fuzzy
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.Form.Select as Select
 import View.Modal as Modal
 import View.TabSelector
 
@@ -59,13 +59,12 @@ init loggedIn =
 type alias Model =
     { status : RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) LoadedModel
     , claimModalStatus : Claim.ModalStatus
-    , autoCompleteState : Select.State
     , reloadOnNextQuery : Bool
     , selectedTab : Tab
     , showFilterModal : Bool
     , filters : Filter
-    , filtersBeingEdited : Filter
     , filterProfileSummary : Profile.Summary.Model
+    , filtersForm : Form.Model FiltersFormInput
     , direction : FilterDirection
     , tabCounts : TabCounts
     }
@@ -75,15 +74,18 @@ initModel : Model
 initModel =
     { status = RemoteData.Loading
     , claimModalStatus = Claim.Closed
-    , autoCompleteState = Select.newState ""
     , reloadOnNextQuery = False
     , selectedTab = WaitingToVote
     , showFilterModal = False
     , filters = initFilter
-    , filtersBeingEdited = initFilter
     , filterProfileSummary =
         Profile.Summary.init False
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+    , filtersForm =
+        Form.init
+            { user = Form.UserPicker.initSingle { id = "filters-user-picker" }
+            , status = All
+            }
     , direction = DESC
     , tabCounts = { waitingToVote = Nothing, analyzed = Nothing }
     }
@@ -138,6 +140,22 @@ statusFilterToString filter =
 
         Rejected ->
             "rejected"
+
+
+statusFilterFromString : String -> Maybe StatusFilter
+statusFilterFromString filter =
+    case filter of
+        "all" ->
+            Just All
+
+        "approved" ->
+            Just Approved
+
+        "rejected" ->
+            Just Rejected
+
+        _ ->
+            Nothing
 
 
 
@@ -294,6 +312,57 @@ viewFilterAndOrder { shared } model =
         ]
 
 
+type alias FiltersFormInput =
+    { user : Form.UserPicker.SinglePickerModel
+    , status : StatusFilter
+    }
+
+
+filtersForm : LoggedIn.Model -> List Profile.Minimal -> { showStatusSelect : Bool } -> Form.Form msg FiltersFormInput Filter
+filtersForm loggedIn users { showStatusSelect } =
+    let
+        { t } =
+            loggedIn.shared.translators
+    in
+    Form.succeed Filter
+        |> Form.with
+            (Form.UserPicker.init
+                { label = t "all_analysis.filter.user"
+                , currentUser = loggedIn.accountName
+                , profiles = users
+                }
+                |> Form.UserPicker.withModalSelectors True
+                |> Form.UserPicker.withMenuClass "max-h-44 overflow-y-auto !relative"
+                |> Form.userPicker
+                    { parser = Ok
+                    , value = .user
+                    , update = \user input -> { input | user = user }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (if not showStatusSelect then
+                Form.succeed All
+
+             else
+                Form.Select.init
+                    { label = t "all_analysis.filter.status.label"
+                    , id = "status-select"
+                    , optionToString = statusFilterToString
+                    }
+                    |> Form.Select.withOption All (t "all_analysis.all")
+                    |> Form.Select.withOption Approved (t "all_analysis.approved")
+                    |> Form.Select.withOption Rejected (t "all_analysis.disapproved")
+                    |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                    |> Form.select (statusFilterFromString >> Maybe.withDefault All)
+                        { parser = Ok
+                        , value = .status
+                        , update = \status input -> { input | status = status }
+                        , externalError = always Nothing
+                        }
+            )
+
+
 viewFiltersModal : LoggedIn.Model -> Model -> Html Msg
 viewFiltersModal ({ shared } as loggedIn) model =
     let
@@ -307,6 +376,11 @@ viewFiltersModal ({ shared } as loggedIn) model =
 
                 Analyzed ->
                     True
+
+        profiles =
+            loggedIn.selectedCommunity
+                |> RemoteData.map .members
+                |> RemoteData.withDefault []
     in
     Modal.initWith
         { closeMsg = ClosedFilterModal
@@ -314,68 +388,18 @@ viewFiltersModal ({ shared } as loggedIn) model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ div []
-                (span [ class "label" ]
-                    [ text (t "all_analysis.filter.user") ]
-                    :: (case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                let
-                                    selectedUsers =
-                                        Maybe.map (\v -> [ v ]) model.filtersBeingEdited.profile
-                                            |> Maybe.withDefault []
-
-                                    addRelativeMenuClass =
-                                        if not showFilterSelect && List.isEmpty selectedUsers then
-                                            Select.withMenuClass "!relative"
-
-                                        else
-                                            identity
-                                in
-                                [ div [ classList [ ( "mb-10", not showFilterSelect && List.isEmpty selectedUsers ) ] ]
-                                    [ Html.map SelectMsg
-                                        (Select.view
-                                            (selectConfiguration shared False
-                                                |> addRelativeMenuClass
-                                            )
-                                            model.autoCompleteState
-                                            community.members
-                                            selectedUsers
-                                        )
-                                    , viewSelectedVerifiers loggedIn model.filterProfileSummary selectedUsers
-                                    ]
-                                ]
-
-                            _ ->
-                                []
-                       )
-                )
-            , if not showFilterSelect then
-                text ""
-
-              else
-                Select.init
-                    { id = "status_filter_select"
-                    , label = t "all_analysis.filter.status.label"
-                    , onInput = SelectStatusFilter
-                    , firstOption = { value = All, label = t "all_analysis.all" }
-                    , value = model.filters.statusFilter
-                    , valueToString = statusFilterToString
-                    , disabled = False
-                    , problems = Nothing
-                    }
-                    |> Select.withOptions
-                        [ { value = Approved, label = t "all_analysis.approved" }
-                        , { value = Rejected, label = t "all_analysis.disapproved" }
-                        ]
-                    |> Select.withContainerAttrs [ class "mt-6" ]
-                    |> Select.toHtml
-            , div []
-                [ button
-                    [ class "button button-primary w-full"
-                    , onClick ClickedApplyFilters
+            [ Form.view []
+                shared.translators
+                (\submitButton ->
+                    [ submitButton [ class "button button-primary w-full" ]
+                        [ text <| t "all_analysis.filter.apply" ]
                     ]
-                    [ text (t "all_analysis.filter.apply") ]
-                ]
+                )
+                (filtersForm loggedIn profiles { showStatusSelect = showFilterSelect })
+                model.filtersForm
+                { toMsg = GotFilterFormMsg
+                , onSubmit = SubmittedFilterForm
+                }
             ]
         |> Modal.toHtml
 
@@ -438,16 +462,12 @@ type Msg
     | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | OpenedFilterModal
     | ClosedFilterModal
-    | ClickedApplyFilters
-    | SelectMsg (Select.Msg Profile.Minimal)
+    | GotFilterFormMsg (Form.Msg FiltersFormInput)
+    | SubmittedFilterForm Filter
     | SelectedTab Tab
-    | OnSelectVerifier (Maybe Profile.Minimal)
     | ShowMore
-    | ClearSelectSelection
-    | SelectStatusFilter StatusFilter
     | ToggleSorting
     | ClearFilters
-    | GotProfileSummaryMsg Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -662,8 +682,15 @@ update msg model loggedIn =
             { model | showFilterModal = False }
                 |> UR.init
 
-        ClickedApplyFilters ->
-            if model.filtersBeingEdited == model.filters then
+        GotFilterFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.filtersForm
+                |> UR.fromChild (\newForm -> { model | filtersForm = newForm })
+                    GotFilterFormMsg
+                    LoggedIn.addFeedback
+                    model
+
+        SubmittedFilterForm filters ->
+            if filters == model.filters then
                 { model | showFilterModal = False }
                     |> UR.init
 
@@ -672,7 +699,7 @@ update msg model loggedIn =
                     newModel =
                         { model
                             | showFilterModal = False
-                            , filters = model.filtersBeingEdited
+                            , filters = filters
                             , reloadOnNextQuery = True
                             , status = RemoteData.Loading
                         }
@@ -689,21 +716,12 @@ update msg model loggedIn =
                     |> UR.init
                     |> addFetchCommand
 
-        SelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfiguration loggedIn.shared False) subMsg model.autoCompleteState
-            in
-            UR.init { model | autoCompleteState = updated }
-                |> UR.addCmd cmd
-
         SelectedTab tab ->
             let
                 newModel =
                     { model
                         | selectedTab = tab
                         , filters = initFilter
-                        , filtersBeingEdited = initFilter
                         , status = RemoteData.Loading
                         , reloadOnNextQuery = True
                     }
@@ -735,14 +753,6 @@ update msg model loggedIn =
                     , level = Log.Info
                     }
 
-        OnSelectVerifier maybeProfile ->
-            let
-                oldFilters =
-                    model.filtersBeingEdited
-            in
-            { model | filtersBeingEdited = { oldFilters | profile = maybeProfile } }
-                |> UR.init
-
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
                 ( RemoteData.Success { pageInfo }, RemoteData.Success community ) ->
@@ -765,28 +775,11 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        ClearSelectSelection ->
-            let
-                oldFilters =
-                    model.filtersBeingEdited
-            in
-            { model | filtersBeingEdited = { oldFilters | profile = Nothing } }
-                |> UR.init
-
-        SelectStatusFilter statusFilter ->
-            let
-                oldFilters =
-                    model.filtersBeingEdited
-            in
-            { model | filtersBeingEdited = { oldFilters | statusFilter = statusFilter } }
-                |> UR.init
-
         ClearFilters ->
             let
                 newModel =
                     { model
                         | filters = initFilter
-                        , filtersBeingEdited = initFilter
                         , direction = DESC
                         , reloadOnNextQuery = True
                         , status = RemoteData.Loading
@@ -830,10 +823,6 @@ update msg model loggedIn =
             newModel
                 |> UR.init
                 |> UR.addCmd fetchCmd
-
-        GotProfileSummaryMsg subMsg ->
-            { model | filterProfileSummary = Profile.Summary.update subMsg model.filterProfileSummary }
-                |> UR.init
 
 
 fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
@@ -907,64 +896,6 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
     Api.Graphql.query shared (Just authToken) query (ClaimsLoaded tab)
 
 
-
--- Configure Select
-
-
-selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-selectFilter minChars toLabel query items =
-    if String.length query < minChars then
-        Nothing
-
-    else
-        items
-            |> Simple.Fuzzy.filter toLabel query
-            |> Just
-
-
-selectConfiguration : Shared -> Bool -> Select.Config Msg Profile.Minimal
-selectConfiguration shared isDisabled =
-    Profile.selectConfig
-        (Select.newConfig
-            { onSelect = OnSelectVerifier
-            , toLabel = \p -> Eos.nameToString p.account
-            , filter = selectFilter 2 (\p -> Eos.nameToString p.account)
-            }
-            |> Select.withMultiSelection True
-            |> Select.withMenuClass "max-h-44 overflow-y-auto"
-        )
-        shared
-        isDisabled
-
-
-viewSelectedVerifiers : LoggedIn.Model -> Profile.Summary.Model -> List Profile.Minimal -> Html Msg
-viewSelectedVerifiers ({ shared } as loggedIn) profileSummary selectedVerifiers =
-    if List.isEmpty selectedVerifiers then
-        text ""
-
-    else
-        div [ class "flex flex-row mt-3 mb-10 flex-wrap" ]
-            (selectedVerifiers
-                |> List.map
-                    (\p ->
-                        div
-                            [ class "flex justify-between flex-col m-3 items-center" ]
-                            [ profileSummary
-                                |> Profile.Summary.withRelativeSelector ".modal-content"
-                                |> Profile.Summary.withScrollSelector ".modal-body"
-                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
-                                |> Profile.Summary.view shared loggedIn.accountName p
-                                |> Html.map GotProfileSummaryMsg
-                            , div
-                                [ onClick ClearSelectSelection
-                                , class "h-6 w-6 flex items-center mt-4"
-                                ]
-                                [ Icons.trash "" ]
-                            ]
-                    )
-            )
-
-
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
     case broadcastMsg of
@@ -1027,32 +958,20 @@ msgToString msg =
         ClosedFilterModal ->
             [ "ClosedFilterModal" ]
 
-        ClickedApplyFilters ->
-            [ "ClickedApplyFilters" ]
+        GotFilterFormMsg subMsg ->
+            "GotFilterFormMsg" :: Form.msgToString subMsg
 
-        SelectMsg _ ->
-            [ "SelectMsg", "sub" ]
+        SubmittedFilterForm _ ->
+            [ "SubmittedFilterForm" ]
 
         SelectedTab _ ->
             [ "SelectedTab" ]
 
-        OnSelectVerifier _ ->
-            [ "OnSelectVerifier" ]
-
         ShowMore ->
             [ "ShowMore" ]
-
-        ClearSelectSelection ->
-            [ "ClearSelectSelection" ]
-
-        SelectStatusFilter _ ->
-            [ "SelectStatusFilter" ]
 
         ClearFilters ->
             [ "ClearFilters" ]
 
         ToggleSorting ->
             [ "ToggleSorting" ]
-
-        GotProfileSummaryMsg subMsg ->
-            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

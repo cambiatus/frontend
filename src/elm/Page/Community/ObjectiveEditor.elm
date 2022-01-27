@@ -9,6 +9,8 @@ import Community
 import Dict
 import Eos
 import Eos.Account as Eos
+import Form exposing (Form)
+import Form.RichText
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -19,15 +21,15 @@ import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Log
+import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared as Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -65,14 +67,14 @@ type alias Model =
 
 type Status
     = Loading
-    | Authorized FormStatus
+    | Authorized (Form.Model Form.RichText.Model) FormStatus
     | Unauthorized
     | NotFound
 
 
 type FormStatus
-    = CreatingObjective ObjectiveForm CreatingStatus
-    | EditingObjective Community.Objective ObjectiveForm EditingStatus
+    = CreatingObjective CreatingStatus
+    | EditingObjective Community.Objective EditingStatus
 
 
 type CreatingStatus
@@ -93,12 +95,6 @@ type alias CompletionStatus =
     }
 
 
-type alias ObjectiveForm =
-    { description : MarkdownEditor.Model
-    , isCompleted : Bool
-    }
-
-
 type alias Objective =
     { id : Int
     , description : String
@@ -114,8 +110,8 @@ type Msg
     = CompletedLoadCommunity Community.Model
     | CompletedLoadObjectives (List Community.Objective)
     | ClosedAuthModal
-    | GotDescriptionEditorMsg MarkdownEditor.Msg
-    | ClickedSaveObjective
+    | GotFormMsg (Form.Msg Form.RichText.Model)
+    | ClickedSaveObjective Markdown
     | ClickedCompleteObjective
     | DeniedCompleteObjective
     | AcceptedCompleteObjective
@@ -124,11 +120,10 @@ type Msg
     | GotSaveObjectiveResponse (Result Value String)
 
 
-initObjectiveForm : ObjectiveForm
-initObjectiveForm =
-    { description = MarkdownEditor.init "objective-description"
-    , isCompleted = False
-    }
+initForm : Maybe Markdown -> Form.Model Form.RichText.Model
+initForm maybeMarkdown =
+    Form.RichText.initModel "description-input" maybeMarkdown
+        |> Form.init
 
 
 
@@ -143,14 +138,14 @@ view ({ shared } as loggedIn) model =
 
         title =
             case model.status of
-                Authorized editStatus ->
+                Authorized _ editStatus ->
                     let
                         action =
                             case editStatus of
-                                CreatingObjective _ _ ->
+                                CreatingObjective _ ->
                                     t "menu.create"
 
-                                EditingObjective _ _ _ ->
+                                EditingObjective _ _ ->
                                     t "menu.edit"
                     in
                     action
@@ -178,15 +173,18 @@ view ({ shared } as loggedIn) model =
                     Page.fullPageGraphQLError (t "community.objectives.editor.error") e
 
                 ( RemoteData.Success _, Unauthorized ) ->
-                    text "not allowed to edit"
+                    Page.fullPageNotFound (t "community.edit.unauthorized") ""
 
-                ( RemoteData.Success _, Authorized editStatus ) ->
+                ( RemoteData.Success _, Authorized formModel formStatus ) ->
                     div []
                         [ Page.viewHeader loggedIn (t "community.objectives.title")
-                        , viewForm loggedIn editStatus
+                        , div
+                            [ class "w-full bg-white py-10"
+                            ]
+                            [ viewForm loggedIn formModel formStatus ]
                         , viewMarkAsCompletedConfirmationModal shared.translators model
-                        , case editStatus of
-                            EditingObjective _ _ (CompletingActions completionStatus) ->
+                        , case formStatus of
+                            EditingObjective _ (CompletingActions completionStatus) ->
                                 viewCompletion shared completionStatus
 
                             _ ->
@@ -215,76 +213,71 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewForm : LoggedIn.Model -> FormStatus -> Html Msg
-viewForm { shared } formStatus =
+createForm : Shared.Translators -> Form msg Form.RichText.Model Markdown
+createForm { t } =
+    Form.RichText.init { label = t "community.objectives.editor.description_label" }
+        |> Form.RichText.withPlaceholder (t "community.objectives.editor.description_placeholder")
+        |> Form.richText
+            { parser = Ok
+            , value = identity
+            , update = \newModel _ -> newModel
+            , externalError = always Nothing
+            }
+
+
+viewForm : LoggedIn.Model -> Form.Model Form.RichText.Model -> FormStatus -> Html Msg
+viewForm { shared } formModel formStatus =
     let
-        t =
-            shared.translators.t
-
-        ( isDisabled, objForm, isEdit ) =
+        ( isDisabled, isEdit, isCompleted ) =
             case formStatus of
-                CreatingObjective form status ->
-                    case status of
-                        Creating ->
-                            ( False, form, False )
+                CreatingObjective creatingStatus ->
+                    ( creatingStatus == SavingCreation
+                    , False
+                    , False
+                    )
 
-                        SavingCreation ->
-                            ( True, form, False )
-
-                EditingObjective _ form status ->
-                    case status of
-                        Editing ->
-                            ( False, form, True )
-
-                        _ ->
-                            ( True, form, True )
+                EditingObjective objective editingStatus ->
+                    ( editingStatus /= Editing
+                    , True
+                    , objective.isCompleted
+                    )
     in
-    div [ class "bg-white w-full p-10" ]
-        [ div [ class "container mx-auto" ]
-            [ Html.form
-                [ class "mb-10"
-                ]
-                [ MarkdownEditor.view
-                    { translators = shared.translators
-                    , placeholder = Just (t "community.objectives.editor.description_placeholder")
-                    , label = t "community.objectives.editor.description_label"
-                    , problem = Nothing
-                    , disabled = False
-                    }
-                    []
-                    objForm.description
-                    |> Html.map GotDescriptionEditorMsg
-                ]
-            , div [ class "flex flex-col w-full space-y-4 md:space-y-0 md:flex-row md:justify-between" ]
-                [ button
+    Form.view [ class "container mx-auto px-4" ]
+        shared.translators
+        (\submitButton ->
+            [ div [ class "mt-10 flex flex-col w-full gap-4 md:flex-row md:justify-between" ]
+                [ submitButton
                     [ class "button button-primary w-full md:w-48"
-                    , type_ "button"
-                    , onClick ClickedSaveObjective
                     , disabled isDisabled
                     ]
-                    [ text (t "community.objectives.editor.submit") ]
-                , if isEdit && not objForm.isCompleted then
+                    [ text <| shared.translators.t "community.objectives.editor.submit" ]
+                , if isEdit && not isCompleted then
                     button
-                        [ class "button button-secondary w-full md:w-48"
+                        [ class "button button-secondary w-full md:w-auto md:px-6 md:ml-auto"
                         , type_ "button"
                         , onClick ClickedCompleteObjective
                         , disabled isDisabled
                         ]
-                        [ text (t "community.objectives.editor.mark_as_complete") ]
+                        [ text <| shared.translators.t "community.objectives.editor.mark_as_complete" ]
 
                   else
                     text ""
                 ]
             ]
-        ]
+        )
+        (createForm shared.translators)
+        formModel
+        { toMsg = GotFormMsg
+        , onSubmit = ClickedSaveObjective
+        }
 
 
-viewMarkAsCompletedConfirmationModal : Translators -> Model -> Html Msg
+viewMarkAsCompletedConfirmationModal : Shared.Translators -> Model -> Html Msg
 viewMarkAsCompletedConfirmationModal { t } model =
     let
         isVisible =
             case model.status of
-                Authorized (EditingObjective _ _ RequestingConfirmation) ->
+                Authorized _ (EditingObjective _ RequestingConfirmation) ->
                     True
 
                 _ ->
@@ -403,8 +396,8 @@ update msg model loggedIn =
                             { model
                                 | status =
                                     Creating
-                                        |> CreatingObjective initObjectiveForm
-                                        |> Authorized
+                                        |> CreatingObjective
+                                        |> Authorized (initForm Nothing)
                             }
                                 |> UR.init
 
@@ -421,8 +414,8 @@ update msg model loggedIn =
                     { model
                         | status =
                             Creating
-                                |> CreatingObjective initObjectiveForm
-                                |> Authorized
+                                |> CreatingObjective
+                                |> Authorized (initForm Nothing)
                     }
                         |> UR.init
 
@@ -437,23 +430,22 @@ update msg model loggedIn =
                                 | status =
                                     Editing
                                         |> EditingObjective objective
-                                            { description =
-                                                MarkdownEditor.init "objective-description"
-                                                    |> MarkdownEditor.setContents objective.description
-                                            , isCompleted = objective.isCompleted
-                                            }
-                                        |> Authorized
+                                        |> Authorized (initForm (Just objective.description))
                             }
                                 |> UR.init
 
         ClosedAuthModal ->
             case model.status of
-                Authorized (CreatingObjective form SavingCreation) ->
-                    { model | status = Authorized (CreatingObjective form Creating) }
+                Authorized form (CreatingObjective creatingStatus) ->
+                    { model | status = Authorized (Form.withDisabled False form) (CreatingObjective creatingStatus) }
                         |> UR.init
 
-                Authorized (EditingObjective objective form SavingEdit) ->
-                    { model | status = Authorized (EditingObjective objective form Editing) }
+                Authorized form (EditingObjective objective SavingEdit) ->
+                    { model | status = Authorized (Form.withDisabled False form) (EditingObjective objective Editing) }
+                        |> UR.init
+
+                Authorized form status ->
+                    { model | status = Authorized (Form.withDisabled False form) status }
                         |> UR.init
 
                 _ ->
@@ -465,51 +457,14 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
                             []
 
-        GotDescriptionEditorMsg subMsg ->
-            case model.status of
-                Authorized (CreatingObjective objForm Creating) ->
-                    let
-                        ( newDescription, descriptionCmd ) =
-                            MarkdownEditor.update subMsg objForm.description
-                    in
-                    UR.init
-                        { model
-                            | status =
-                                CreatingObjective
-                                    { objForm | description = newDescription }
-                                    Creating
-                                    |> Authorized
-                        }
-                        |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
-
-                Authorized (EditingObjective objective objForm Editing) ->
-                    let
-                        ( newDescription, descriptionCmd ) =
-                            MarkdownEditor.update subMsg objForm.description
-                    in
-                    UR.init
-                        { model
-                            | status =
-                                EditingObjective objective { objForm | description = newDescription } Editing
-                                    |> Authorized
-                        }
-                        |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg
-                            "Tried updating the objective form, but isn't authorized"
-                            Nothing
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
-                            []
-
         ClickedCompleteObjective ->
             case model.status of
-                Authorized (EditingObjective objective form Editing) ->
+                Authorized form (EditingObjective objective Editing) ->
                     { model
                         | status =
-                            Authorized
-                                (EditingObjective objective form RequestingConfirmation)
+                            RequestingConfirmation
+                                |> EditingObjective objective
+                                |> Authorized (Form.withDisabled True form)
                     }
                         |> UR.init
 
@@ -524,8 +479,8 @@ update msg model loggedIn =
 
         DeniedCompleteObjective ->
             case model.status of
-                Authorized (EditingObjective objective form RequestingConfirmation) ->
-                    { model | status = Authorized (EditingObjective objective form Editing) }
+                Authorized form (EditingObjective objective RequestingConfirmation) ->
+                    { model | status = Authorized form (EditingObjective objective Editing) }
                         |> UR.init
 
                 _ ->
@@ -539,21 +494,28 @@ update msg model loggedIn =
 
         AcceptedCompleteObjective ->
             case model.status of
-                Authorized (EditingObjective objective form RequestingConfirmation) ->
+                Authorized form (EditingObjective objective RequestingConfirmation) ->
                     let
                         completionStatus =
                             { completed = List.filter .isCompleted objective.actions
                             , left =
-                                List.filter (not << .isCompleted) objective.actions
-                                    |> List.map (\action -> { tries = 0, action = action })
+                                List.filterMap
+                                    (\action ->
+                                        if action.isCompleted then
+                                            Nothing
+
+                                        else
+                                            Just { tries = 0, action = action }
+                                    )
+                                    objective.actions
                             }
                     in
                     { model
                         | status =
                             completionStatus
                                 |> CompletingActions
-                                |> EditingObjective objective form
-                                |> Authorized
+                                |> EditingObjective objective
+                                |> Authorized form
                     }
                         |> UR.init
                         |> completeActionOrObjective loggedIn model msg completionStatus objective
@@ -568,7 +530,7 @@ update msg model loggedIn =
 
         GotCompleteActionResponse (Ok _) ->
             case model.status of
-                Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
+                Authorized form (EditingObjective objective (CompletingActions completionStatus)) ->
                     case completionStatus.left of
                         [] ->
                             model
@@ -591,8 +553,8 @@ update msg model loggedIn =
                                 | status =
                                     newCompletionStatus
                                         |> CompletingActions
-                                        |> EditingObjective objective form
-                                        |> Authorized
+                                        |> EditingObjective objective
+                                        |> Authorized form
                             }
                                 |> UR.init
                                 |> completeActionOrObjective loggedIn
@@ -612,7 +574,7 @@ update msg model loggedIn =
 
         GotCompleteActionResponse (Err _) ->
             case model.status of
-                Authorized (EditingObjective objective form (CompletingActions completionStatus)) ->
+                Authorized form (EditingObjective objective (CompletingActions completionStatus)) ->
                     case completionStatus.left of
                         [] ->
                             model
@@ -642,8 +604,8 @@ update msg model loggedIn =
                                     | status =
                                         newCompletionStatus
                                             |> CompletingActions
-                                            |> EditingObjective objective form
-                                            |> Authorized
+                                            |> EditingObjective objective
+                                            |> Authorized form
                                 }
                                     |> UR.init
                                     |> completeActionOrObjective loggedIn
@@ -684,8 +646,8 @@ update msg model loggedIn =
                                     | status =
                                         newCompletionStatus
                                             |> CompletingActions
-                                            |> EditingObjective objective form
-                                            |> Authorized
+                                            |> EditingObjective objective
+                                            |> Authorized form
                                 }
                                     |> UR.init
                                     |> completeActionOrObjective loggedIn
@@ -720,7 +682,18 @@ update msg model loggedIn =
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "community.objectives.editor.completed_success"))
 
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
-            UR.init model
+            { model
+                | status =
+                    case model.status of
+                        Authorized form (EditingObjective objective _) ->
+                            Editing
+                                |> EditingObjective objective
+                                |> Authorized (Form.withDisabled False form)
+
+                        _ ->
+                            model.status
+            }
+                |> UR.init
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "community.objectives.editor.error_marking_as_complete"))
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -732,13 +705,18 @@ update msg model loggedIn =
         GotCompleteObjectiveResponse _ ->
             UR.init model
 
-        ClickedSaveObjective ->
+        ClickedSaveObjective description ->
             case ( loggedIn.selectedCommunity, model.status ) of
-                ( RemoteData.Success community, Authorized (CreatingObjective objForm _) ) ->
-                    { model | status = Authorized (CreatingObjective objForm SavingCreation) }
+                ( RemoteData.Success community, Authorized form (CreatingObjective Creating) ) ->
+                    { model
+                        | status =
+                            SavingCreation
+                                |> CreatingObjective
+                                |> Authorized (Form.withDisabled True form)
+                    }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = ClickedSaveObjective
+                            { responseAddress = ClickedSaveObjective description
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
@@ -750,7 +728,7 @@ update msg model loggedIn =
                                             }
                                       , data =
                                             { asset = Eos.Asset 0 community.symbol
-                                            , description = objForm.description.contents
+                                            , description = description
                                             , creator = loggedIn.accountName
                                             }
                                                 |> Community.encodeCreateObjectiveAction
@@ -761,11 +739,16 @@ update msg model loggedIn =
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                ( RemoteData.Success _, Authorized (EditingObjective objective objForm _) ) ->
-                    { model | status = Authorized (EditingObjective objective objForm SavingEdit) }
+                ( RemoteData.Success _, Authorized form (EditingObjective objective _) ) ->
+                    { model
+                        | status =
+                            SavingEdit
+                                |> EditingObjective objective
+                                |> Authorized (Form.withDisabled True form)
+                    }
                         |> UR.init
                         |> UR.addPort
-                            { responseAddress = ClickedSaveObjective
+                            { responseAddress = ClickedSaveObjective description
                             , responseData = Encode.null
                             , data =
                                 Eos.encodeTransaction
@@ -777,7 +760,7 @@ update msg model loggedIn =
                                             }
                                       , data =
                                             { objectiveId = objective.id
-                                            , description = objForm.description.contents
+                                            , description = description
                                             , editor = loggedIn.accountName
                                             }
                                                 |> Community.encodeUpdateObjectiveAction
@@ -808,12 +791,12 @@ update msg model loggedIn =
             let
                 newModel =
                     case model.status of
-                        Authorized (CreatingObjective form SavingCreation) ->
+                        Authorized form (CreatingObjective SavingCreation) ->
                             { model
                                 | status =
                                     Creating
-                                        |> CreatingObjective form
-                                        |> Authorized
+                                        |> CreatingObjective
+                                        |> Authorized (Form.withDisabled False form)
                             }
                                 |> UR.init
                                 |> UR.logJsonValue msg
@@ -823,12 +806,12 @@ update msg model loggedIn =
                                     []
                                     v
 
-                        Authorized (EditingObjective objective form SavingEdit) ->
+                        Authorized form (EditingObjective objective SavingEdit) ->
                             { model
                                 | status =
-                                    Editing
-                                        |> EditingObjective objective form
-                                        |> Authorized
+                                    SavingEdit
+                                        |> EditingObjective objective
+                                        |> Authorized (Form.withDisabled False form)
                             }
                                 |> UR.init
                                 |> UR.logJsonValue msg
@@ -851,7 +834,25 @@ update msg model loggedIn =
                                     []
             in
             newModel
-                |> UR.addExt (ShowFeedback Feedback.Failure (t "errors.unknown"))
+                |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))
+
+        GotFormMsg subMsg ->
+            case model.status of
+                Authorized form status ->
+                    Form.update loggedIn.shared subMsg form
+                        |> UR.fromChild (\newForm -> { model | status = Authorized newForm status })
+                            GotFormMsg
+                            LoggedIn.addFeedback
+                            model
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Tried updating objective editor form, but wasn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
 
 
@@ -948,10 +949,7 @@ msgToString msg =
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
 
-        GotDescriptionEditorMsg subMsg ->
-            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
-
-        ClickedSaveObjective ->
+        ClickedSaveObjective _ ->
             [ "ClickedSaveObjective" ]
 
         ClickedCompleteObjective ->
@@ -971,3 +969,6 @@ msgToString msg =
 
         GotSaveObjectiveResponse r ->
             [ "GotSaveObjectiveResponse", UR.resultToString r ]
+
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg

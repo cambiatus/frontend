@@ -2,6 +2,7 @@ module Page.Community.ThankYou exposing (view)
 
 import Html exposing (Html, a, div, img, p, text)
 import Html.Attributes exposing (class, src)
+import Markdown
 import Page
 import RemoteData
 import Route
@@ -41,10 +42,11 @@ view loggedIn =
                                 [ community.contributionConfiguration
                                     |> Maybe.andThen .thankYouDescription
                                     |> Maybe.withDefault
-                                        (loggedIn.shared.translators.t
+                                        (Markdown.fromTranslation
+                                            loggedIn.shared.translators
                                             "sponsorship.thank_you_message.default_message"
                                         )
-                                    |> text
+                                    |> Markdown.view []
                                 ]
                             , a
                                 [ class "underline cursor-pointer"

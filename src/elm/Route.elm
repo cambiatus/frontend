@@ -46,7 +46,7 @@ type Route
     | Dashboard
     | Community
     | NewCommunity
-    | News (Maybe Int)
+    | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
@@ -73,7 +73,7 @@ type Route
     | ViewTransfer Int
     | Invite String
     | Join (Maybe Route)
-    | Transfer (Maybe String)
+    | Transfer (Maybe Eos.Account.Name)
     | Analysis
 
 
@@ -119,8 +119,13 @@ parser url =
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
-        , Url.map (News Nothing) (s "news")
-        , Url.map (Just >> News) (s "news" </> int)
+        , Url.map (News { selectedNews = Nothing, showOthers = True }) (s "news")
+        , Url.map (\newsId showOthers -> News { selectedNews = Just newsId, showOthers = showOthers })
+            (s "news"
+                </> int
+                <?> Query.map (\showOthers -> showOthers /= Just "false")
+                        (Query.string "showOthers")
+            )
         , Url.map Community (s "community")
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
@@ -172,7 +177,13 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
+        , Url.map Transfer
+            (s "community"
+                </> s "transfer"
+                <?> (Query.string "to"
+                        |> Query.map (Maybe.map Eos.Account.stringToName)
+                    )
+            )
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
@@ -342,6 +353,15 @@ shopFilterToString filter =
             "user"
 
 
+boolToString : Bool -> String
+boolToString bool =
+    if bool then
+        "true"
+
+    else
+        "false"
+
+
 queryBuilder : (a -> String) -> Maybe a -> String -> List QueryParameter
 queryBuilder fn maybeRedirect queryParam =
     Maybe.map fn maybeRedirect
@@ -464,11 +484,19 @@ routeToString route =
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
 
-                News Nothing ->
-                    ( [ "news" ], [] )
+                News { selectedNews, showOthers } ->
+                    case selectedNews of
+                        Nothing ->
+                            ( [ "news" ], [] )
 
-                News (Just newsId) ->
-                    ( [ "news", String.fromInt newsId ], [] )
+                        Just newsId ->
+                            ( [ "news", String.fromInt newsId ]
+                            , if showOthers then
+                                []
+
+                              else
+                                queryBuilder boolToString (Just showOthers) "showOthers"
+                            )
 
                 Objectives ->
                     ( [ "community", "objectives" ], [] )
@@ -529,7 +557,12 @@ routeToString route =
                     ( [ "community"
                       , "transfer"
                       ]
-                    , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
+                    , [ Url.Builder.string "to"
+                            (maybeTo
+                                |> Maybe.map Eos.Account.nameToString
+                                |> Maybe.withDefault ""
+                            )
+                      ]
                     )
 
                 Analysis ->

@@ -18,6 +18,7 @@ import Claim
 import Community
 import Eos
 import Iso8601
+import Markdown
 import Profile
 import Shrink exposing (Shrinker, andMap, bool, float, int, list, maybe, noShrink, string)
 import Time
@@ -91,7 +92,7 @@ minimalProfile profile =
         |> andMap (noShrink profile.account)
         |> andMap (avatar profile.avatar)
         |> andMap (noShrink profile.email)
-        |> andMap (maybe string profile.bio)
+        |> andMap (maybe Markdown.shrink profile.bio)
         |> andMap (noShrink profile.contacts)
 
 
@@ -103,7 +104,7 @@ actionObjective : Shrinker Action.Objective
 actionObjective objective =
     noShrink Action.Objective
         |> andMap (int objective.id)
-        |> andMap (string objective.description)
+        |> andMap (Markdown.shrink objective.description)
         |> andMap (noShrink objective.community)
         |> andMap (bool objective.isCompleted)
 
@@ -112,7 +113,7 @@ action : Shrinker Action.Action
 action action_ =
     noShrink Action.Action
         |> andMap (int action_.id)
-        |> andMap (string action_.description)
+        |> andMap (Markdown.shrink action_.description)
         |> andMap (actionObjective action_.objective)
         |> andMap (float action_.reward)
         |> andMap (float action_.verifierReward)
@@ -126,7 +127,7 @@ action action_ =
         |> andMap (bool action_.isCompleted)
         |> andMap (bool action_.hasProofPhoto)
         |> andMap (bool action_.hasProofCode)
-        |> andMap (maybe string action_.photoProofInstructions)
+        |> andMap (maybe Markdown.shrink action_.photoProofInstructions)
         |> andMap (maybe int action_.position)
 
 
@@ -165,7 +166,7 @@ createCommunityDataInput input =
         |> andMap (noShrink input.symbol)
         |> andMap (noShrink input.logoUrl)
         |> andMap (string input.name)
-        |> andMap (string input.description)
+        |> andMap (Markdown.shrink input.description)
         |> andMap (noShrink input.subdomain)
         |> andMap (float input.inviterReward)
         |> andMap (float input.invitedReward)

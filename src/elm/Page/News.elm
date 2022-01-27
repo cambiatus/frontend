@@ -17,6 +17,7 @@ import Icons
 import Json.Encode
 import List.Extra
 import Log
+import Markdown
 import Page
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -27,7 +28,6 @@ import Task
 import UpdateResult as UR
 import Utils exposing (onClickPreventAll)
 import View.Components
-import View.MarkdownEditor
 
 
 
@@ -37,14 +37,16 @@ import View.MarkdownEditor
 type alias Model =
     { newsId : Maybe Int
     , showReactionPicker : Bool
+    , showOtherNews : Bool
     , lastEditorSummary : Profile.Summary.Model
     }
 
 
-init : Maybe Int -> LoggedIn.Model -> UpdateResult
-init maybeNewsId _ =
-    { newsId = maybeNewsId
+init : { selectedNews : Maybe Int, showOthers : Bool } -> LoggedIn.Model -> UpdateResult
+init { selectedNews, showOthers } _ =
+    { newsId = selectedNews
     , showReactionPicker = False
+    , showOtherNews = showOthers
     , lastEditorSummary = Profile.Summary.init False
     }
         |> UR.init
@@ -358,7 +360,7 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
             [ case maybeSelectedNews of
                 Just selectedNews ->
                     [ viewMainNews loggedIn model selectedNews
-                    , if List.isEmpty news then
+                    , if List.isEmpty news || not model.showOtherNews then
                         text ""
 
                       else
@@ -371,11 +373,15 @@ view_ ({ shared } as loggedIn) model maybeSelectedNews news =
 
                 Nothing ->
                     []
-            , [ div [ class "bg-white pb-4" ]
-                    [ Community.News.viewList shared
-                        [ class "container mx-auto px-4 pt-6" ]
-                        news
-                    ]
+            , [ if model.showOtherNews then
+                    div [ class "bg-white pb-4" ]
+                        [ Community.News.viewList shared
+                            [ class "container mx-auto px-4 pt-6" ]
+                            news
+                        ]
+
+                else
+                    text ""
               ]
             ]
         )
@@ -390,7 +396,7 @@ viewMainNews ({ shared } as loggedIn) model news =
     div [ class "bg-white" ]
         [ div [ class "container mx-auto px-4 pt-10 pb-4" ]
             [ h2 [ class "text-lg text-black font-bold" ] [ text news.title ]
-            , View.MarkdownEditor.viewReadOnly [ class "mt-6 text-black colored-links" ]
+            , Markdown.view [ class "mt-6 text-black colored-links" ]
                 news.description
             , div [ class "flex items-center mt-8" ]
                 (viewReactionPicker translators model news
@@ -507,11 +513,10 @@ viewReactionPicker { t } model news =
                     ]
                     []
                 , View.Components.keyListener
-                    { onKeyDown =
-                        { acceptedKeys = [ View.Components.Escape ]
-                        , toMsg = \_ -> ClickedToggleReactions
-                        , stopPropagation = True
-                        }
+                    { acceptedKeys = [ View.Components.Escape ]
+                    , toMsg = \_ -> ClickedToggleReactions
+                    , stopPropagation = True
+                    , preventDefault = False
                     }
                 ]
 

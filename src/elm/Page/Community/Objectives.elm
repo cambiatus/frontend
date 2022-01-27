@@ -12,6 +12,7 @@ import Icons
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Profile.Summary
 import RemoteData
@@ -21,7 +22,6 @@ import Time exposing (Posix)
 import UpdateResult as UR
 import Utils
 import View.Components
-import View.MarkdownEditor
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -154,7 +154,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                 , onClick (OpenObjective index)
                 ]
                 [ div [ class "overflow-hidden" ]
-                    [ View.MarkdownEditor.viewReadOnly
+                    [ Markdown.view
                         [ class "text-sm"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
@@ -193,7 +193,7 @@ viewObjective ({ shared } as loggedIn) model index objective =
                         ]
                         [ text_ "community.objectives.edit" ]
                     , a
-                        [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 mb-4"
+                        [ class "button button-secondary button-sm w-full sm:w-48 mt-4 sm:mt-2 px-1 mb-4"
                         , Route.href (Route.NewAction objective.id)
                         , classList [ ( "button-disabled", objective.isCompleted ) ]
                         ]
@@ -221,9 +221,6 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
             action.deadline
                 |> Utils.fromMaybeDateTime
 
-        pastDeadline =
-            Action.isPastDeadline action shared.now
-
         ( usages, usagesLeft ) =
             ( String.fromInt action.usages, String.fromInt action.usagesLeft )
 
@@ -243,26 +240,28 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
     div [ class "flex flex-wrap sm:flex-nowrap mt-8 mb-4 relative bg-purple-500 rounded-lg px-4 py-5" ]
         [ div [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
         , div [ class "w-full" ]
-            [ View.MarkdownEditor.viewReadOnly [ class "text-white truncate" ] action.description
-            , div [ class "flex flex-wrap my-6 -mx-2 items-center" ]
-                [ div [ class "mx-2 mb-2 text-white" ]
+            [ Markdown.view [ class "text-white truncate" ] action.description
+            , div [ class "flex flex-wrap gap-y-4 gap-x-6 my-6 items-center" ]
+                [ div [ class "text-white" ]
                     [ p [ class "label text-green" ]
                         [ text_ "community.actions.reward" ]
                     , p [ class "uppercase" ]
-                        [ String.fromFloat action.reward
-                            ++ " "
-                            ++ Eos.symbolToString symbol
+                        [ Eos.assetToString shared.translators
+                            { symbol = symbol
+                            , amount = action.reward
+                            }
                             |> text
                         ]
                     ]
                 , if validationType == "CLAIMABLE" then
-                    div [ class "mx-2 mb-2" ]
+                    div []
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.validation_reward" ]
-                        , p [ class "uppercase next-white" ]
-                            [ String.fromFloat action.verifierReward
-                                ++ " "
-                                ++ Eos.symbolToString symbol
+                        , p [ class "uppercase text-white" ]
+                            [ Eos.assetToString shared.translators
+                                { symbol = symbol
+                                , amount = action.verifierReward
+                                }
                                 |> text
                             ]
                         ]
@@ -273,25 +272,19 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                     text ""
 
                   else
-                    div [ class "mx-2 mb-2" ]
+                    div []
                         [ p [ class "label text-green" ]
                             [ text_ "community.actions.available_until" ]
                         , p []
                             [ if action.usages > 0 then
-                                p [ classList [ ( "text-red", action.usagesLeft == 0 ), ( "text-white", action.usagesLeft /= 1 ) ] ]
+                                p [ class "text-white" ]
                                     [ text (tr "community.actions.usages" [ ( "usages", usages ), ( "usagesLeft", usagesLeft ) ]) ]
 
                               else
                                 text ""
                             , case action.deadline of
                                 Just _ ->
-                                    View.Components.dateViewer
-                                        [ class "capitalize"
-                                        , classList
-                                            [ ( "text-red", pastDeadline )
-                                            , ( "text-white", not pastDeadline )
-                                            ]
-                                        ]
+                                    View.Components.dateViewer [ class "capitalize text-white" ]
                                         identity
                                         shared
                                         posixDeadline
@@ -300,7 +293,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                     text ""
                             ]
                         ]
-                , div [ class "mx-4 mb-2 mt-auto" ]
+                , div [ class "mt-auto" ]
                     [ if action.isCompleted then
                         div [ class "tag bg-green" ]
                             [ text_ "community.actions.completed" ]
@@ -322,7 +315,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                             ]
 
                       else
-                        div [ class "flex mr-2 flex-wrap" ]
+                        div [ class "flex gap-4 flex-wrap" ]
                             (List.indexedMap
                                 (\validatorIndex u ->
                                     case
@@ -341,7 +334,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                                         |> String.join "-"
                                             in
                                             div
-                                                [ class "mr-4 action-verifier relative"
+                                                [ class "action-verifier relative"
                                                 , id validatorId
                                                 ]
                                                 [ validatorSummary

@@ -132,17 +132,9 @@ subscriptions model =
         [ Sub.map GotPageMsg (Page.subscriptions model.session)
         , Ports.javascriptInPort GotJavascriptData
         , case model.status of
-            CommunityEditor subModel ->
-                CommunityEditor.subscriptions subModel
-                    |> Sub.map GotCommunityEditorMsg
-
             CommunitySponsor subModel ->
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
-
-            ShopEditor _ subModel ->
-                ShopEditor.subscriptions subModel
-                    |> Sub.map GotShopEditorMsg
 
             _ ->
                 Sub.none
@@ -622,10 +614,6 @@ broadcast broadcastMessage status =
                     Shop.receiveBroadcast broadcastMessage
                         |> Maybe.map GotShopMsg
 
-                ShopViewer _ _ ->
-                    ShopViewer.receiveLoggedInBroadcast broadcastMessage
-                        |> Maybe.map (ShopViewer.AsLoggedInMsg >> GotShopViewerMsg)
-
                 Transfer _ ->
                     Transfer.receiveBroadcast broadcastMessage
                         |> Maybe.map GotTransferMsg
@@ -1058,7 +1046,7 @@ statusToRoute status session =
             Just (Route.Login maybeInvitation maybeRedirect)
 
         News subModel ->
-            Just (Route.News subModel.newsId)
+            Just (Route.News { selectedNews = subModel.newsId, showOthers = subModel.showOtherNews })
 
         Profile subModel ->
             Just (Route.Profile subModel.profileName)
@@ -1308,10 +1296,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Login maybeRedirect) GotLoginMsg model
                 |> withGuest maybeInvitation maybeRedirect
 
-        Just (Route.News maybeNewsId) ->
-            News.init maybeNewsId
+        Just (Route.News config) ->
+            News.init config
                 >> updateLoggedInUResult News GotNewsMsg model
-                |> withLoggedIn (Route.News maybeNewsId)
+                |> withLoggedIn (Route.News config)
 
         Just (Route.PaymentHistory accountName) ->
             PaymentHistory.init accountName

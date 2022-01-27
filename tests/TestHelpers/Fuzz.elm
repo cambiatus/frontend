@@ -8,7 +8,6 @@ module TestHelpers.Fuzz exposing
     , createTokenData
     , dimex
     , expiryOptsData
-    , markdownString
     , maybeDateTime
     , name
     , nite
@@ -129,12 +128,3 @@ dimex =
 cedulaDeIdentidad : Fuzzer String
 cedulaDeIdentidad =
     Fuzz.custom Random.cedulaDeIdentidad Shrink.noShrink
-
-
-
--- MARKDOWN EDITOR
-
-
-markdownString : Fuzzer String
-markdownString =
-    Fuzz.custom Random.markdownString Shrink.noShrink

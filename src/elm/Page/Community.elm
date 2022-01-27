@@ -21,6 +21,7 @@ import Http
 import Icons
 import List.Extra
 import Log
+import Markdown
 import Maybe.Extra
 import Page
 import RemoteData exposing (RemoteData)
@@ -32,7 +33,6 @@ import Token
 import UpdateResult as UR
 import Utils
 import View.Components
-import View.MarkdownEditor
 
 
 
@@ -129,8 +129,7 @@ view loggedIn model =
                                     [ p [ class "text-4xl font-bold" ]
                                         [ text community.name ]
                                     ]
-                                , View.MarkdownEditor.viewReadOnly [ class "text-sm" ]
-                                    community.description
+                                , Markdown.view [ class "text-sm" ] community.description
                                 ]
                             ]
                         , div [ class "container mx-auto" ]
@@ -322,7 +321,7 @@ viewNewsCard loggedIn community isSponsorCardVisible =
                         , span [ class "pt-4 mt-4 border-t border-gray-500 md:mb-32" ]
                             [ a
                                 [ class "text-orange-300 hover:underline focus:underline focus:outline-none"
-                                , Route.href (Route.News Nothing)
+                                , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
                                 ]
                                 [ text_ "news.view_more" ]
                             ]
@@ -523,7 +522,7 @@ viewObjective loggedIn model metadata index objective =
                     onClick (ClickedOpenObjective index)
                 ]
                 [ div [ class "sm:flex-grow-7 sm:w-5/12" ]
-                    [ View.MarkdownEditor.viewReadOnly
+                    [ Markdown.view
                         [ class "text-white font-semibold"
                         , classList [ ( "truncate-children", not isOpen ) ]
                         ]
@@ -791,7 +790,7 @@ viewAction shared canEdit date action isDisabled =
     else
         div [ class "py-6 px-2" ]
             [ div [ class "flex flex-col border-l-8 border-light-grey rounded-l-sm pl-2 sm:pl-6" ]
-                [ View.MarkdownEditor.viewReadOnly [ class "text-text-grey text-sm sm:text-base" ]
+                [ Markdown.view [ class "text-text-grey text-sm sm:text-base" ]
                     action.description
                 , div [ class "flex flex-col sm:flex-row sm:items-center sm:justify-between" ]
                     [ div [ class "text-sm mt-5 sm:w-1/3" ]

@@ -1,0 +1,11 @@
+.elm-book-serif {
+  font-family: var(--font-family) !important;
+}
+
+h1 {
+  @apply text-2xl;
+}
+
+h2 {
+  @apply text-xl;
+}

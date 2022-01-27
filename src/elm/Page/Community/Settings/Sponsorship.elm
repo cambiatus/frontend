@@ -1,6 +1,7 @@
 module Page.Community.Settings.Sponsorship exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Community
+import Form.Toggle
 import Html exposing (Html, a, button, div, h2, p, text)
 import Html.Attributes exposing (class, disabled)
 import Maybe.Extra
@@ -10,7 +11,6 @@ import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
-import View.Form.Toggle
 
 
 
@@ -126,17 +126,22 @@ view_ { translators } community =
             [ card "sponsorship.cards.fiat.title"
                 "sponsorship.cards.fiat.description"
                 (div []
-                    [ View.Form.Toggle.init
-                        { label = text_ "sponsorship.cards.fiat.toggle_label"
-                        , id = "fiat-money-toggle"
-                        , onToggle = \_ -> NoOp
-                        , disabled = True
-                        , value =
-                            community.contributionConfiguration
-                                |> Maybe.andThen .paypalAccount
-                                |> Maybe.Extra.isJust
-                        }
-                        |> View.Form.Toggle.toHtml translators
+                    [ Form.Toggle.init { label = text_ "sponsorship.cards.fiat.toggle_label", id = "fiat-money-toggle" }
+                        |> Form.Toggle.withDisabled True
+                        |> (\options ->
+                                Form.Toggle.view options
+                                    { onToggle = \_ -> NoOp
+                                    , onBlur = NoOp
+                                    , value =
+                                        community.contributionConfiguration
+                                            |> Maybe.andThen .paypalAccount
+                                            |> Maybe.Extra.isJust
+                                    , error = text ""
+                                    , hasError = False
+                                    , isRequired = False
+                                    , translators = translators
+                                    }
+                           )
                     , case community.contributionConfiguration of
                         Nothing ->
                             text ""
@@ -151,14 +156,22 @@ view_ { translators } community =
                 )
             , card "sponsorship.cards.crypto.title"
                 "sponsorship.cards.crypto.description"
-                (View.Form.Toggle.init
+                (Form.Toggle.init
                     { label = text_ "sponsorship.cards.crypto.toggle_label"
                     , id = "cryptocurrency-toggle"
-                    , onToggle = \_ -> NoOp
-                    , disabled = True
-                    , value = False
                     }
-                    |> View.Form.Toggle.toHtml translators
+                    |> Form.Toggle.withDisabled True
+                    |> (\options ->
+                            Form.Toggle.view options
+                                { onToggle = \_ -> NoOp
+                                , onBlur = NoOp
+                                , value = False
+                                , error = text ""
+                                , hasError = False
+                                , isRequired = False
+                                , translators = translators
+                                }
+                       )
                 )
             , card "sponsorship.cards.message.title"
                 "sponsorship.cards.message.description"

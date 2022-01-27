@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
+    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack
+@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label
 
 
 # Helpers
@@ -36,7 +36,7 @@ state or configuration, such as loading indicators and containers
 -}
 
 import Html exposing (Html, div, img, node, p, span, text)
-import Html.Attributes exposing (attribute, class, src)
+import Html.Attributes exposing (attribute, class, for, src)
 import Html.Events exposing (on)
 import Icons
 import Json.Decode
@@ -98,7 +98,7 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
 
 tooltip : { message : String, iconClass : String } -> Html msg
 tooltip { message, iconClass } =
-    span [ class "icon-tooltip ml-1" ]
+    span [ class "icon-tooltip ml-1 z-10" ]
         [ Icons.question ("inline-block " ++ iconClass)
         , p [ class "icon-tooltip-content" ]
             [ text message ]
@@ -255,6 +255,15 @@ infiniteList options attrs children =
         children
 
 
+{-| A label element that enforces the label has an id to point to
+-}
+label : List (Html.Attribute msg) -> { targetId : String, labelText : String } -> Html msg
+label attrs { targetId, labelText } =
+    Html.label (class "label" :: for targetId :: attrs)
+        [ text labelText
+        ]
+
+
 
 -- HELPERS
 
@@ -286,6 +295,12 @@ type PreventScroll
 
 type Key
     = Escape
+    | Enter
+    | Space
+    | ArrowUp
+    | ArrowDown
+    | ArrowLeft
+    | ArrowRight
 
 
 {-| A node that attaches an event listener on the document to listen for keys.
@@ -294,31 +309,77 @@ subscriptions (because it would add a lot of complexity). Can be useful in
 "stateless" components, such as modals.
 -}
 keyListener :
-    { onKeyDown : { acceptedKeys : List Key, toMsg : Key -> msg, stopPropagation : Bool } }
+    { acceptedKeys : List Key
+    , toMsg : Key -> msg
+    , stopPropagation : Bool
+    , preventDefault : Bool
+    }
     -> Html msg
-keyListener { onKeyDown } =
+keyListener { acceptedKeys, toMsg, stopPropagation, preventDefault } =
     let
         keyFromString : String -> Maybe Key
         keyFromString rawKey =
-            case rawKey of
-                "Esc" ->
+            case String.toLower rawKey of
+                "esc" ->
                     Just Escape
 
-                "Escape" ->
+                "escape" ->
                     Just Escape
+
+                " " ->
+                    Just Space
+
+                "enter" ->
+                    Just Enter
+
+                "arrowup" ->
+                    Just ArrowUp
+
+                "arrowdown" ->
+                    Just ArrowDown
+
+                "arrowleft" ->
+                    Just ArrowLeft
+
+                "arrowright" ->
+                    Just ArrowRight
 
                 _ ->
                     Nothing
 
+        keyToString : Key -> List String
+        keyToString key =
+            case key of
+                Escape ->
+                    [ "esc", "escape" ]
+
+                Space ->
+                    [ " " ]
+
+                Enter ->
+                    [ "enter" ]
+
+                ArrowUp ->
+                    [ "arrowup" ]
+
+                ArrowDown ->
+                    [ "arrowdown" ]
+
+                ArrowLeft ->
+                    [ "arrowleft" ]
+
+                ArrowRight ->
+                    [ "arrowright" ]
+
         keyDecoder : List Key -> (Key -> msg) -> Json.Decode.Decoder msg
-        keyDecoder acceptedKeys toMsg =
+        keyDecoder acceptedKeys_ toMsg_ =
             Json.Decode.at [ "detail", "key" ] Json.Decode.string
                 |> Json.Decode.andThen
                     (\rawKey ->
                         case keyFromString rawKey of
                             Just key ->
-                                if List.member key acceptedKeys then
-                                    Json.Decode.succeed (toMsg key)
+                                if List.member key acceptedKeys_ then
+                                    Json.Decode.succeed (toMsg_ key)
 
                                 else
                                     Json.Decode.fail "This key is not being listened to"
@@ -328,8 +389,14 @@ keyListener { onKeyDown } =
                     )
     in
     node "key-listener"
-        [ on "listener-keydown" (keyDecoder onKeyDown.acceptedKeys onKeyDown.toMsg)
-        , attribute "keydown-stop-propagation" (boolToString onKeyDown.stopPropagation)
+        [ on "listener-keydown" (keyDecoder acceptedKeys toMsg)
+        , attribute "keydown-stop-propagation" (boolToString stopPropagation)
+        , attribute "keydown-prevent-default" (boolToString preventDefault)
+        , attribute "accepted-keys"
+            (acceptedKeys
+                |> List.concatMap keyToString
+                |> String.join ","
+            )
         ]
         []
 

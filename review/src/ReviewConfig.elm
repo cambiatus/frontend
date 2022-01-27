@@ -49,10 +49,8 @@ config =
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.CustomTypeConstructorArgs.rule
     , NoUnused.Exports.rule
-        |> Rule.ignoreErrorsForFiles [ "src/elm/Select.elm", "src/elm/DataValidator.elm" ]
     , NoBooleanCase.rule
     , NoExposingEverything.rule
-        |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , NoMissingTypeAnnotation.rule
     , Simplify.defaults
         |> Simplify.ignoreCaseOfForTypes [ "View.Feedback.Msg", "I18Next.Delims", "Page.Profile.AddKyc.Msg" ]
@@ -66,14 +64,32 @@ config =
     , NoInconsistentEventLocation.rule
     , NoRedundantCons.rule
     , NoFunctionOutsideOfModules.rule
-        [ ( [ "Html.input", "Html.textarea" ]
-          , [ "View.Form.Input", "View.Form.Toggle", "View.Form.Radio", "View.Form.FileUploader", "View.Form.Checkbox" ]
+        [ ( [ "Html.textarea" ], [ "Form.Text" ] )
+        , ( [ "Html.input" ]
+          , [ "Form.Text"
+            , "Form.Checkbox"
+            , "Form.Radio"
+            , "Form.File"
+            , "Form.Toggle"
+            , "View.Select.Internal.Input"
+            ]
           )
         , ( [ "Html.label" ]
-          , [ "View.Form", "View.Form.Toggle", "View.Form.FileUploader", "View.Form.Checkbox", "View.Form.Radio", "Page.Community.New" ]
+          , [ "Form.Checkbox"
+            , "Form.Radio"
+            , "Form.File"
+            , "Form.Toggle"
+            , "View.Components"
+            ]
           )
-        , ( [ "Html.select" ], [ "View.Form.Select" ] )
+        , ( [ "Html.select" ], [ "Form.Select" ] )
         , ( [ "Time.utc" ], [ "Session.Shared", "UtilsTests" ] )
+        , ( [ "DatePicker.view", "DatePicker.initFromDate", "DatePicker.init" ]
+          , [ "Form.DatePicker" ]
+          )
+        , ( [ "View.Select.newConfig", "View.Select.view", "View.Select.update" ]
+          , [ "Form.UserPicker" ]
+          )
         ]
     ]
         -- Ignore generated code

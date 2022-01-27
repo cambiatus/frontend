@@ -8,19 +8,20 @@ module Page.Profile.Editor exposing
     , view
     )
 
-import Api
 import Api.Graphql
 import Avatar
 import Dict
-import File exposing (File)
+import Form
+import Form.File
+import Form.RichText
+import Form.Text
 import Graphql.Http
 import Html exposing (Html, button, div, form, span, text)
-import Html.Attributes exposing (class, disabled, id, style)
-import Html.Events
-import Http
+import Html.Attributes exposing (class, type_)
+import Html.Events exposing (onClick)
 import Icons
-import Json.Decode
 import Log
+import Markdown exposing (Markdown)
 import Page
 import Profile
 import RemoteData exposing (RemoteData)
@@ -29,9 +30,6 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form.FileUploader as FileUploader
-import View.Form.Input as Input
-import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -50,26 +48,158 @@ init loggedIn =
 
 
 type alias Model =
-    { fullName : String
+    { form : FormStatus }
+
+
+type FormStatus
+    = Loading
+    | Loaded (Form.Model FormInput)
+
+
+type alias FormInput =
+    { avatar : Form.File.Model
+    , fullName : String
     , email : String
-    , bio : MarkdownEditor.Model
+    , bio : Form.RichText.Model
+    , location : String
+    , interest : String
+    , interests : List String
+    }
+
+
+type alias FormOutput =
+    { avatar : Maybe String
+    , fullName : String
+    , email : String
+    , bio : Markdown
     , location : String
     , interests : List String
-    , interest : String
-    , avatar : RemoteData Http.Error String
     }
+
+
+createForm : Translators -> { hasKyc : Bool } -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) { hasKyc } =
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.File.init
+                { label = ""
+                , id = "avatar-input"
+                }
+                |> Form.File.withVariant Form.File.SmallCircle
+                |> Form.file
+                    { translators = translators
+                    , value = .avatar
+                    , update = \avatar input -> { input | avatar = avatar }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
+            )
+        |> Form.with
+            (Form.Text.init { label = t "profile.edit.labels.name", id = "name-input" }
+                |> Form.Text.withDisabled hasKyc
+                |> Form.textField
+                    { parser = Ok
+                    , value = .fullName
+                    , update = \name input -> { input | fullName = name }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = t "profile.edit.labels.email", id = "email-input" }
+                |> Form.textField
+                    { parser = Ok
+                    , value = .email
+                    , update = \email input -> { input | email = email }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.RichText.init { label = t "profile.edit.labels.bio" }
+                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.richText
+                    { parser = Ok
+                    , value = .bio
+                    , update = \bio input -> { input | bio = bio }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init { label = t "profile.edit.labels.localization", id = "location-input" }
+                |> Form.textField
+                    { parser = Ok
+                    , value = .location
+                    , update = \location input -> { input | location = location }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with (interestsForm translators)
+
+
+interestsForm : Translators -> Form.Form msg FormInput (List String)
+interestsForm { t } =
+    let
+        viewInterest interest =
+            div [ class "bg-green px-3 h-8 rounded-sm text-sm flex text-white" ]
+                [ span [ class "m-auto mr-3 uppercase" ] [ text interest ]
+                , button
+                    [ type_ "button"
+                    , onClick
+                        (\values ->
+                            { values | interests = List.filter (\x -> x /= interest) values.interests }
+                        )
+                    ]
+                    [ Icons.close "w-4 h-4 fill-current" ]
+                ]
+    in
+    Form.introspect (\values -> Form.succeed values.interests)
+        |> Form.withNoOutput
+            (Form.succeed always
+                |> Form.withGroup
+                    [ class "flex" ]
+                    (Form.Text.init { label = t "profile.edit.labels.interests", id = "interest-input" }
+                        |> Form.Text.withContainerAttrs [ class "w-full mb-4" ]
+                        |> Form.textField
+                            { parser = Ok
+                            , value = .interest
+                            , update = \interest input -> { input | interest = interest }
+                            , externalError = always Nothing
+                            }
+                    )
+                    (Form.arbitrary
+                        (button
+                            [ type_ "button"
+                            , class "button button-secondary px-4 h-12 ml-4 mb-4 mt-auto max-w-min"
+                            , onClick
+                                (\values ->
+                                    if String.isEmpty values.interest || List.member values.interest values.interests then
+                                        values
+
+                                    else
+                                        { values
+                                            | interest = ""
+                                            , interests = values.interest :: values.interests
+                                        }
+                                )
+                            ]
+                            [ text <| t "menu.add"
+                            ]
+                        )
+                    )
+            )
+        |> Form.withNoOutput
+            (Form.introspect
+                (\values ->
+                    Form.arbitrary
+                        (div [ class "flex flex-wrap mb-4 gap-x-4 gap-y-2" ]
+                            (List.map viewInterest values.interests)
+                        )
+                )
+            )
 
 
 initModel : Model
 initModel =
-    { fullName = ""
-    , email = ""
-    , bio = MarkdownEditor.init "bio-editor"
-    , location = ""
-    , interests = []
-    , interest = ""
-    , avatar = RemoteData.Loading
-    }
+    { form = Loading }
 
 
 
@@ -97,15 +227,20 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "profile.title") e
 
                 RemoteData.Success profile ->
-                    view_ loggedIn model profile
+                    case model.form of
+                        Loading ->
+                            Page.fullPageLoading loggedIn.shared
+
+                        Loaded form ->
+                            view_ loggedIn form profile
     in
     { title = title
     , content = content
     }
 
 
-view_ : LoggedIn.Model -> Model -> Profile.Model -> Html Msg
-view_ loggedIn model profile =
+view_ : LoggedIn.Model -> Form.Model FormInput -> Profile.Model -> Html Msg
+view_ loggedIn form profile =
     let
         { t } =
             loggedIn.shared.translators
@@ -115,131 +250,22 @@ view_ loggedIn model profile =
 
         title =
             t "menu.edit" ++ " " ++ ("menu.profile" |> t |> String.toLower)
-
-        pageHeader =
-            Page.viewHeader loggedIn title
-
-        isFullNameDisabled =
-            profile.communities |> List.any .hasKyc
     in
     div [ class "bg-white" ]
-        [ pageHeader
-        , form
-            [ class "pt-4 container mx-auto p-4" ]
-            [ viewAvatar translators model.avatar
-            , viewInput translators isFullNameDisabled FullName model.fullName
-            , viewInput translators False Email model.email
-            , MarkdownEditor.view
-                { translators = translators
-                , placeholder = Nothing
-                , label = t "profile.edit.labels.bio"
-                , problem = Nothing
-                , disabled = False
-                }
-                [ class "text-sm text-black" ]
-                model.bio
-                |> Html.map GotBioEditorMsg
-            , viewInput translators False Location model.location
-            , viewInput translators False Interest model.interest
-            , viewInterests model.interests
-            , viewButton (t "profile.edit.submit") ClickedSave "save" (RemoteData.isLoading loggedIn.profile)
-            ]
-        ]
-
-
-viewInput : Translators -> Bool -> Field -> String -> Html Msg
-viewInput translators isDisabled field currentValue =
-    let
-        ( label, id, modifications ) =
-            case field of
-                FullName ->
-                    ( "profile.edit.labels.name", "name_input", identity )
-
-                Email ->
-                    ( "profile.edit.labels.email", "email_input", identity )
-
-                Location ->
-                    ( "profile.edit.labels.localization", "location_input", identity )
-
-                Interest ->
-                    ( "profile.edit.labels.interests"
-                    , "interests_field"
-                    , Input.withInputContainerAttrs [ class "flex" ]
-                        >> Input.withElements
-                            [ button
-                                [ class "button-secondary px-4 h-12 align-bottom ml-4"
-                                , onClickPreventDefault AddInterest
-                                ]
-                                [ text <| String.toUpper (translators.t "menu.add") ]
-                            ]
-                    )
-    in
-    Input.init
-        { label = translators.t label
-        , id = id
-        , onInput = OnFieldInput field
-        , disabled = isDisabled
-        , value = currentValue
-        , placeholder = Nothing
-        , problems = Nothing
-        , translators = translators
-        }
-        |> Input.withContainerAttrs [ class "mb-4" ]
-        |> modifications
-        |> Input.toHtml
-
-
-viewInterests : List String -> Html Msg
-viewInterests interests =
-    let
-        viewInterest interest =
-            div [ class "bg-green px-3 h-8 rounded-sm text-sm mr-4 mb-1 flex" ]
-                [ span [ class "m-auto mr-3 text-white uppercase" ] [ text interest ]
-                , button
-                    [ class "m-auto"
-                    , onClickPreventDefault (RemoveInterest interest)
-                    ]
-                    [ Icons.close "w-4 h-4 text-white fill-current" ]
+        [ Page.viewHeader loggedIn title
+        , Form.view [ class "container mx-auto p-4" ]
+            translators
+            (\submitButton ->
+                [ submitButton [ class "button button-primary w-full" ]
+                    [ text <| t "profile.edit.submit" ]
                 ]
-    in
-    div [ class "flex flex-wrap mb-4" ]
-        (List.map viewInterest interests)
-
-
-onClickPreventDefault : msg -> Html.Attribute msg
-onClickPreventDefault message =
-    Html.Events.custom "click" (Json.Decode.succeed { message = message, stopPropagation = True, preventDefault = True })
-
-
-viewButton : String -> Msg -> String -> Bool -> Html Msg
-viewButton label msg area isDisabled =
-    button
-        [ class "button button-primary w-full"
-        , class
-            (if isDisabled then
-                "button-disabled"
-
-             else
-                ""
             )
-        , style "grid-area" area
-        , onClickPreventDefault msg
-        , disabled isDisabled
+            (createForm translators { hasKyc = List.any .hasKyc profile.communities })
+            form
+            { toMsg = GotFormMsg
+            , onSubmit = ClickedSave
+            }
         ]
-        [ text label
-        ]
-
-
-viewAvatar : Translators -> RemoteData Http.Error String -> Html Msg
-viewAvatar translators avatar =
-    FileUploader.init
-        { label = ""
-        , id = "profile-upload-avatar"
-        , onFileInput = EnteredAvatar
-        , status = avatar
-        }
-        |> FileUploader.withVariant FileUploader.Small
-        |> FileUploader.toHtml translators
 
 
 
@@ -248,21 +274,9 @@ viewAvatar translators avatar =
 
 type Msg
     = CompletedLoadProfile Profile.Model
-    | OnFieldInput Field String
-    | GotBioEditorMsg MarkdownEditor.Msg
-    | AddInterest
-    | RemoveInterest String
-    | ClickedSave
+    | ClickedSave FormOutput
     | GotSaveResult (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
-    | EnteredAvatar (List File)
-    | CompletedAvatarUpload (Result Http.Error String)
-
-
-type Field
-    = FullName
-    | Email
-    | Location
-    | Interest
+    | GotFormMsg (Form.Msg FormInput)
 
 
 type alias UpdateResult =
@@ -281,75 +295,37 @@ update msg model loggedIn =
                 nullable a =
                     Maybe.withDefault "" a
             in
-            UR.init
-                { model
-                    | fullName = nullable profile.name
+            { model
+                | form =
+                    { avatar = Form.File.initModel (Avatar.toMaybeString profile.avatar)
+                    , fullName = nullable profile.name
                     , email = nullable profile.email
-                    , bio = MarkdownEditor.setContents (nullable profile.bio) model.bio
+                    , bio = Form.RichText.initModel "bio-input" profile.bio
                     , location = nullable profile.localization
                     , interests = profile.interests
-                    , avatar =
-                        case profile.avatar |> Avatar.toMaybeString of
-                            Just url ->
-                                RemoteData.Success url
-
-                            Nothing ->
-                                RemoteData.NotAsked
-                }
-
-        OnFieldInput field data ->
-            let
-                newModel =
-                    case field of
-                        FullName ->
-                            { model | fullName = data }
-
-                        Email ->
-                            { model | email = data }
-
-                        Location ->
-                            { model | location = data }
-
-                        Interest ->
-                            { model | interest = data }
-            in
-            UR.init newModel
-
-        GotBioEditorMsg subMsg ->
-            let
-                ( bio, bioCmd ) =
-                    MarkdownEditor.update subMsg model.bio
-            in
-            { model | bio = bio }
+                    , interest = ""
+                    }
+                        |> Form.init
+                        |> Loaded
+            }
                 |> UR.init
-                |> UR.addCmd (Cmd.map GotBioEditorMsg bioCmd)
 
-        AddInterest ->
-            let
-                newModel =
-                    -- Prevent empty and duplicate interests
-                    if model.interest /= "" && not (List.any (\interest -> interest == model.interest) model.interests) then
-                        { model | interests = model.interest :: model.interests, interest = "" }
-
-                    else
-                        model
-            in
-            UR.init newModel
-
-        RemoveInterest interest ->
-            UR.init
-                { model
-                    | interests =
-                        model.interests
-                            |> List.filter (\x -> x /= interest)
-                }
-
-        ClickedSave ->
+        ClickedSave formOutput ->
             case loggedIn.profile of
                 RemoteData.Success profile ->
                     let
                         newProfile =
-                            modelToProfile model profile
+                            { profile
+                                | name = Just formOutput.fullName
+                                , email = Just formOutput.email
+                                , localization = Just formOutput.location
+                                , interests = formOutput.interests
+                                , bio = Just formOutput.bio
+                                , avatar =
+                                    formOutput.avatar
+                                        |> Maybe.map Avatar.fromString
+                                        |> Maybe.withDefault profile.avatar
+                            }
                     in
                     model
                         |> UR.init
@@ -401,55 +377,17 @@ update msg model loggedIn =
         GotSaveResult _ ->
             UR.init model
 
-        EnteredAvatar (file :: _) ->
-            let
-                uploadAvatar file_ =
-                    Api.uploadImage loggedIn.shared file_ CompletedAvatarUpload
-            in
-            case loggedIn.profile of
-                RemoteData.Success _ ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd (uploadAvatar file)
-
-                _ ->
+        GotFormMsg subMsg ->
+            case model.form of
+                Loading ->
                     UR.init model
-                        |> UR.logImpossible msg
-                            "Tried uploading avatar, but profile wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Profile.Editor", function = "update" }
-                            []
 
-        EnteredAvatar [] ->
-            UR.init model
-
-        CompletedAvatarUpload (Ok a) ->
-            UR.init { model | avatar = RemoteData.Success a }
-
-        CompletedAvatarUpload (Err err) ->
-            UR.init { model | avatar = RemoteData.Failure err }
-                |> UR.logHttpError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when uploading avatar"
-                    { moduleName = "Page.Profile.Editor", function = "update" }
-                    []
-                    err
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "error.invalid_image_file"))
-
-
-modelToProfile : Model -> Profile.Model -> Profile.Model
-modelToProfile model profile =
-    { profile
-        | name = Just model.fullName
-        , email = Just model.email
-        , localization = Just model.location
-        , interests = model.interests
-        , bio = Just model.bio.contents
-        , avatar =
-            model.avatar
-                |> RemoteData.map Avatar.fromString
-                |> RemoteData.withDefault profile.avatar
-    }
+                Loaded form ->
+                    Form.update loggedIn.shared subMsg form
+                        |> UR.fromChild (\newForm -> { model | form = Loaded newForm })
+                            GotFormMsg
+                            LoggedIn.addFeedback
+                            model
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -468,26 +406,11 @@ msgToString msg =
         CompletedLoadProfile _ ->
             [ "CompletedLoadProfile" ]
 
-        OnFieldInput _ _ ->
-            [ "OnFieldInput" ]
-
-        GotBioEditorMsg subMsg ->
-            "GotBioEditorMsg" :: MarkdownEditor.msgToString subMsg
-
-        AddInterest ->
-            [ "AddInterest" ]
-
-        RemoveInterest _ ->
-            [ "RemoveInterest" ]
-
-        ClickedSave ->
+        ClickedSave _ ->
             [ "ClickedSave" ]
 
         GotSaveResult r ->
             [ "GotSaveResult", UR.remoteDataToString r ]
 
-        CompletedAvatarUpload _ ->
-            [ "CompletedAvatarUpload" ]
-
-        EnteredAvatar _ ->
-            [ "EnteredAvatar" ]
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg

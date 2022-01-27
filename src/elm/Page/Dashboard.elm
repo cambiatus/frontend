@@ -22,9 +22,13 @@ import Cambiatus.Scalar
 import Claim
 import Community exposing (Balance)
 import Date
-import DatePicker
 import Eos
 import Eos.Account as Eos
+import Form
+import Form.DatePicker
+import Form.Select
+import Form.Text
+import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, hr, img, li, p, span, strong, text, ul)
@@ -36,6 +40,7 @@ import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Ports
 import Profile
@@ -43,11 +48,9 @@ import Profile.Contact as Contact
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
-import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
-import Simple.Fuzzy
 import Task
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
@@ -56,10 +59,6 @@ import Url
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.Form
-import View.Form.Input as Input
-import View.Form.Select as Select
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -88,14 +87,8 @@ type alias Model =
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Profile.Summary.Model ))
     , transfersFilters : TransfersFilters
-    , transfersFiltersBeingEdited :
-        { datePicker : DatePicker.DatePicker
-        , otherAccountInput : String
-        , otherAccountState : Select.State
-        , otherAccountProfileSummary : Profile.Summary.Model
-        , filters : TransfersFilters
-        }
     , showTransferFiltersModal : Bool
+    , transferFiltersForm : Form.Model TransferFiltersFormInput
     , contactModel : Contact.Model
     , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
@@ -138,14 +131,13 @@ initModel shared =
     , lastSocket = ""
     , transfers = LoadingGraphql Nothing
     , transfersFilters = initTransfersFilters
-    , transfersFiltersBeingEdited =
-        { datePicker = DatePicker.initFromDate (Date.fromPosix shared.timezone shared.now)
-        , otherAccountInput = ""
-        , otherAccountState = Select.newState "other-account-select"
-        , otherAccountProfileSummary = Profile.Summary.init False
-        , filters = initTransfersFilters
-        }
     , showTransferFiltersModal = False
+    , transferFiltersForm =
+        Form.init
+            { date = Form.DatePicker.initModel (Date.fromPosix shared.timezone shared.now)
+            , direction = Nothing
+            , user = Form.UserPicker.initSingle { id = "transfer-filters-user-picker" }
+            }
     , contactModel = Contact.initSingle
     , showContactModal = False
     , inviteModalStatus = InviteModalClosed
@@ -362,22 +354,25 @@ viewInvitationModal { shared } model =
                         [ text_ "community.invite.label" ]
                     , p [ class "py-2 md:text-lg text-black" ]
                         [ text (url invitationId) ]
-                    , Input.init
-                        { label = ""
-                        , id = "invitation-id"
-                        , onInput = \_ -> NoOp
-                        , disabled = False
+                    , Form.Text.view
+                        (Form.Text.init
+                            { label = ""
+                            , id = "invitation-id"
+                            }
+                            |> Form.Text.withExtraAttrs
+                                [ class "absolute opacity-0 left-[-9999em]"
+                                , tabindex -1
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                        )
+                        { onChange = \_ -> NoOp
+                        , onBlur = NoOp
                         , value = url invitationId
-                        , placeholder = Nothing
-                        , problems = Nothing
+                        , error = text ""
+                        , hasError = False
                         , translators = shared.translators
+                        , isRequired = False
                         }
-                        |> Input.withAttrs
-                            [ class "absolute opacity-0 left-[-9999em]"
-                            , tabindex -1
-                            ]
-                        |> Input.withContainerAttrs [ class "mb-0 overflow-hidden" ]
-                        |> Input.toHtml
                     ]
 
         footer =
@@ -581,47 +576,75 @@ viewTransfer loggedIn transfer profileSummary =
         ]
 
 
-datePickerSettings : Shared -> DatePicker.Settings
-datePickerSettings shared =
-    let
-        defaultSettings =
-            DatePicker.defaultSettings
-    in
-    { defaultSettings
-        | changeYear = DatePicker.off
-        , placeholder = shared.translators.t "payment_history.pick_date"
-        , inputClassList = [ ( "input w-full", True ) ]
-        , containerClassList = [ ( "relative-table w-full", True ) ]
-        , dateFormatter = Date.format "E, d MMM y"
-        , inputId = Just "transfers-filters-date-input"
+type alias TransferFiltersFormInput =
+    { date : Form.DatePicker.Model
+    , direction : Maybe TransferDirectionValue
+    , user : Form.UserPicker.SinglePickerModel
     }
 
 
-selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
-selectConfiguration shared =
+transferFiltersForm : LoggedIn.Model -> List Profile.Minimal -> Form.Form msg TransferFiltersFormInput TransfersFilters
+transferFiltersForm loggedIn users =
     let
-        toLabel =
-            .account >> Eos.nameToString
-
-        filter minChars query items =
-            if String.length query < minChars then
-                Nothing
-
-            else
-                items
-                    |> Simple.Fuzzy.filter toLabel query
-                    |> Just
+        { t } =
+            loggedIn.shared.translators
     in
-    Profile.selectConfig
-        (Select.newConfig
-            { onSelect = SelectedTransfersFiltersOtherAccount
-            , toLabel = toLabel
-            , filter = filter 2
-            }
-            |> Select.withMenuClass "max-h-44 overflow-y-auto !relative"
-        )
-        shared
-        False
+    Form.succeed TransfersFilters
+        |> Form.with
+            (Form.DatePicker.init { label = t "payment_history.pick_date", id = "transfer-filters-date-picker" }
+                |> Form.DatePicker.withContainerAttrs [ class "mb-10" ]
+                |> Form.DatePicker.withAbsolutePositioning False
+                |> Form.datePicker
+                    { parser = Ok
+                    , value = .date
+                    , update = \date input -> { input | date = date }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Select.init
+                { label = t "transfer.direction.title"
+                , id = "transfer-filters-direction-select"
+                , optionToString =
+                    Maybe.map TransferDirectionValue.toString >> Maybe.withDefault "BOTH"
+                }
+                |> Form.Select.withOption Nothing (t "transfer.direction.both")
+                |> Form.Select.withOption (Just TransferDirectionValue.Sending) (t "transfer.direction.sending")
+                |> Form.Select.withOption (Just TransferDirectionValue.Receiving) (t "transfer.direction.receiving")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.select TransferDirectionValue.fromString
+                    { parser = Ok
+                    , value = .direction
+                    , update = \direction input -> { input | direction = direction }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            ((\{ direction } ->
+                let
+                    directionText =
+                        case direction of
+                            Nothing ->
+                                "transfer.direction.other_user"
+
+                            Just TransferDirectionValue.Receiving ->
+                                "transfer.direction.user_who_sent"
+
+                            Just TransferDirectionValue.Sending ->
+                                "transfer.direction.user_who_received"
+                in
+                Form.UserPicker.init { label = t directionText, currentUser = loggedIn.accountName, profiles = users }
+                    |> Form.UserPicker.withMenuClass "max-h-44 overflow-y-auto !relative"
+                    |> Form.UserPicker.withModalSelectors True
+                    |> Form.userPicker
+                        { parser = Ok
+                        , value = .user
+                        , update = \user input -> { input | user = user }
+                        , externalError = always Nothing
+                        }
+             )
+                |> Form.introspect
+            )
 
 
 viewTransferFilters : LoggedIn.Model -> List Profile.Minimal -> Model -> Html Msg
@@ -629,17 +652,6 @@ viewTransferFilters ({ shared } as loggedIn) users model =
     let
         { t } =
             shared.translators
-
-        directionText =
-            case model.transfersFiltersBeingEdited.filters.direction of
-                Nothing ->
-                    "transfer.direction.other_user"
-
-                Just TransferDirectionValue.Receiving ->
-                    "transfer.direction.user_who_sent"
-
-                Just TransferDirectionValue.Sending ->
-                    "transfer.direction.user_who_received"
     in
     Modal.initWith
         { closeMsg = ClosedTransfersFilters
@@ -647,84 +659,18 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ span [ class "label" ] [ text (t "payment_history.pick_date") ]
-            , div [ class "flex space-x-4" ]
-                [ div [ class "relative w-full" ]
-                    [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
-                        (datePickerSettings shared)
-                        model.transfersFiltersBeingEdited.datePicker
-                        |> Html.map TransfersFiltersDatePickerMsg
-                    , img
-                        [ class "absolute right-0 top-0 h-12 cursor-pointer"
-                        , src "/icons/calendar.svg"
-                        , tabindex -1
-                        , onClick ClickedTransfersFiltersCalendar
-                        ]
-                        []
+            [ Form.view []
+                shared.translators
+                (\submitButton ->
+                    [ submitButton [ class "button button-primary w-full" ]
+                        [ text (t "all_analysis.filter.apply") ]
                     ]
-                , button
-                    [ class "h-12"
-                    , onClick ClickedClearTransfersFiltersDate
-                    ]
-                    [ Icons.trash "" ]
-                ]
-            , Select.init
-                { id = "direction-selector"
-                , label = t "transfer.direction.title"
-                , onInput = SelectedTransfersDirection
-                , firstOption = { value = Nothing, label = t "transfer.direction.both" }
-                , value = model.transfersFiltersBeingEdited.filters.direction
-                , valueToString =
-                    Maybe.map TransferDirectionValue.toString
-                        >> Maybe.withDefault "BOTH"
-                , disabled = False
-                , problems = Nothing
+                )
+                (transferFiltersForm loggedIn users)
+                model.transferFiltersForm
+                { toMsg = GotTransfersFiltersFormMsg
+                , onSubmit = SubmittedTransfersFiltersForm
                 }
-                |> Select.withOption
-                    { value = Just TransferDirectionValue.Sending
-                    , label = t "transfer.direction.sending"
-                    }
-                |> Select.withOption
-                    { value = Just TransferDirectionValue.Receiving
-                    , label = t "transfer.direction.receiving"
-                    }
-                |> Select.withContainerAttrs [ class "mt-10" ]
-                |> Select.toHtml
-            , View.Form.label [] "other-account-select" (t directionText)
-            , model.transfersFiltersBeingEdited.filters.otherAccount
-                |> Maybe.map List.singleton
-                |> Maybe.withDefault []
-                |> Select.view (selectConfiguration shared)
-                    model.transfersFiltersBeingEdited.otherAccountState
-                    users
-                |> Html.map TransfersFiltersOtherAccountSelectMsg
-            , case model.transfersFiltersBeingEdited.filters.otherAccount of
-                Nothing ->
-                    text ""
-
-                Just otherAccount ->
-                    div [ class "flex mt-4 items-start" ]
-                        [ div [ class "flex flex-col items-center" ]
-                            [ model.transfersFiltersBeingEdited.otherAccountProfileSummary
-                                |> Profile.Summary.withRelativeSelector ".modal-content"
-                                |> Profile.Summary.withScrollSelector ".modal-body"
-                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
-                                |> Profile.Summary.view shared
-                                    loggedIn.accountName
-                                    otherAccount
-                                |> Html.map GotTransfersFiltersProfileSummaryMsg
-                            , button
-                                [ class "mt-2"
-                                , onClick ClickedClearTransfersFiltersUser
-                                ]
-                                [ Icons.trash "" ]
-                            ]
-                        ]
-            , button
-                [ class "button button-primary w-full mt-10"
-                , onClick ClickedApplyTransfersFilters
-                ]
-                [ text (t "all_analysis.filter.apply") ]
             ]
         |> Modal.toHtml
 
@@ -844,7 +790,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 viewActionsForAnalysisCard : LoggedIn.Model -> Model -> Html Msg
 viewActionsForAnalysisCard loggedIn model =
     let
-        { t, tr } =
+        { t } =
             loggedIn.shared.translators
 
         text_ =
@@ -898,8 +844,11 @@ viewActionsForAnalysisCard loggedIn model =
                                     |> List.take 5
                                     |> List.map (\avatar -> Avatar.view avatar "w-7 h-7")
                                 )
-                            , View.MarkdownEditor.viewReadOnly [ class "mb-4 text-center" ]
-                                (tr "dashboard.analysis.count" [ ( "amount", String.fromInt analysis.count ) ])
+                            , Markdown.view [ class "mb-4 text-center" ]
+                                (Markdown.fromTranslationWithReplacements loggedIn.shared.translators
+                                    "dashboard.analysis.count"
+                                    [ ( "amount", String.fromInt analysis.count ) ]
+                                )
                             , a
                                 [ class "button button-primary w-full"
                                 , Route.href Route.Analysis
@@ -995,15 +944,8 @@ type Msg
     | RequestedMoreTransfers
     | ClickedOpenTransferFilters
     | ClosedTransfersFilters
-    | SelectedTransfersDirection (Maybe TransferDirectionValue)
-    | TransfersFiltersDatePickerMsg DatePicker.Msg
-    | ClickedTransfersFiltersCalendar
-    | ClickedClearTransfersFiltersDate
-    | GotTransfersFiltersProfileSummaryMsg Profile.Summary.Msg
-    | ClickedClearTransfersFiltersUser
-    | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
-    | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
-    | ClickedApplyTransfersFilters
+    | GotTransfersFiltersFormMsg (Form.Msg TransferFiltersFormInput)
+    | SubmittedTransfersFiltersForm TransfersFilters
     | ClickedTransferCard Int
     | ClickedSupportUsButton
     | CreateInvite
@@ -1183,168 +1125,23 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         ClosedTransfersFilters ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | showTransferFiltersModal = False
-                , transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | otherAccountInput =
-                            Maybe.map (.account >> Eos.nameToString) model.transfersFilters.otherAccount
-                                |> Maybe.withDefault ""
-                        , filters = model.transfersFilters
-                    }
-            }
+            { model | showTransferFiltersModal = False }
                 |> UR.init
 
-        SelectedTransfersDirection maybeDirection ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
+        GotTransfersFiltersFormMsg subMsg ->
+            Form.update shared subMsg model.transferFiltersForm
+                |> UR.fromChild (\newForm -> { model | transferFiltersForm = newForm })
+                    GotTransfersFiltersFormMsg
+                    LoggedIn.addFeedback
+                    model
 
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | direction = maybeDirection }
-                    }
-            }
-                |> UR.init
-
-        TransfersFiltersDatePickerMsg subMsg ->
-            let
-                ( newDatePicker, datePickerEvent ) =
-                    DatePicker.update (datePickerSettings shared)
-                        subMsg
-                        model.transfersFiltersBeingEdited.datePicker
-
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-
-                newDate =
-                    case datePickerEvent of
-                        DatePicker.Picked pickedDate ->
-                            Just pickedDate
-
-                        _ ->
-                            oldFilters.date
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | datePicker = newDatePicker
-                        , filters = { oldFilters | date = newDate }
-                    }
-            }
-                |> UR.init
-
-        ClickedTransfersFiltersCalendar ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Browser.Dom.focus "transfers-filters-date-input"
-                        |> Task.attempt (\_ -> NoOp)
-                    )
-
-        ClickedClearTransfersFiltersDate ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | date = Nothing }
-                    }
-            }
-                |> UR.init
-
-        GotTransfersFiltersProfileSummaryMsg subMsg ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | otherAccountProfileSummary =
-                            Profile.Summary.update subMsg oldFiltersBeingEdited.otherAccountProfileSummary
-                    }
-            }
-                |> UR.init
-
-        ClickedClearTransfersFiltersUser ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | otherAccount = Nothing }
-                        , otherAccountInput = ""
-                    }
-            }
-                |> UR.init
-
-        TransfersFiltersOtherAccountSelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfiguration loggedIn.shared)
-                        subMsg
-                        model.transfersFiltersBeingEdited.otherAccountState
-
-                oldTransfersFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldTransfersFiltersBeingEdited
-                        | otherAccountState = updated
-                    }
-            }
-                |> UR.init
-                |> UR.addCmd cmd
-
-        SelectedTransfersFiltersOtherAccount maybeMinimalProfile ->
-            let
-                oldTransfersFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldTransfersFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldTransfersFiltersBeingEdited
-                        | filters =
-                            { oldFilters
-                                | otherAccount = maybeMinimalProfile
-                            }
-                    }
-            }
-                |> UR.init
-
-        ClickedApplyTransfersFilters ->
+        SubmittedTransfersFiltersForm formOutput ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     let
                         newModel =
                             { model
-                                | transfersFilters = model.transfersFiltersBeingEdited.filters
+                                | transfersFilters = formOutput
                                 , showTransferFiltersModal = False
                                 , transfers = LoadingGraphql Nothing
                             }
@@ -1496,8 +1293,8 @@ shouldShowContactModal loggedIn model =
         RemoteData.Success profile ->
             let
                 addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
+                    -- 28/01/2022
+                    1643374799000
 
                 showContactModalFromDate =
                     addContactLimitDate - Time.posixToMillis loggedIn.shared.now > 0
@@ -1665,32 +1462,11 @@ msgToString msg =
         ClosedTransfersFilters ->
             [ "ClosedTransfersFilters" ]
 
-        SelectedTransfersDirection _ ->
-            [ "SelectedTransfersDirection" ]
+        GotTransfersFiltersFormMsg subMsg ->
+            "GotTransfersFiltersFormMsg" :: Form.msgToString subMsg
 
-        TransfersFiltersDatePickerMsg _ ->
-            [ "TransfersFiltersDatePickerMsg" ]
-
-        ClickedTransfersFiltersCalendar ->
-            [ "ClickedTransfersFiltersCalendar" ]
-
-        ClickedClearTransfersFiltersDate ->
-            [ "ClickedClearTransfersFiltersDate" ]
-
-        GotTransfersFiltersProfileSummaryMsg subMsg ->
-            "GotTransfersFiltersProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
-
-        ClickedClearTransfersFiltersUser ->
-            [ "ClickedClearTransfersFiltersUser" ]
-
-        TransfersFiltersOtherAccountSelectMsg _ ->
-            [ "TransfersFiltersOtherAccountSelectMsg" ]
-
-        SelectedTransfersFiltersOtherAccount _ ->
-            [ "SelectedTransfersFiltersOtherAccount" ]
-
-        ClickedApplyTransfersFilters ->
-            [ "ClickedApplyTransfersFilters" ]
+        SubmittedTransfersFiltersForm _ ->
+            [ "SubmittedTransfersFiltersForm" ]
 
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]

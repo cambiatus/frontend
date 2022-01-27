@@ -109,15 +109,15 @@ viewNotification loggedIn notification =
     in
     case notification.payload of
         Transfer data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationTransfer loggedIn.shared notification data ]
 
         Mint data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationMint loggedIn.shared notification data ]
 
         SaleHistory data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationSaleHistory loggedIn notification data ]
 
 

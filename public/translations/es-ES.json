@@ -5,7 +5,9 @@
   "thousands_separator": ".",
   "dates": {
     "today": "Hoy",
-    "yesterday": "Ayer"
+    "yesterday": "Ayer",
+    "select": "Seleccione una fecha",
+    "clear": "Borrar fecha"
   },
   "loading": {
     "title": "Espera un momento",
@@ -128,6 +130,8 @@
     "unavailablePin": "El PIN no está disponible",
     "phone": "Utilice un número de teléfono válido",
     "invalid_image_file": "Error subiendo imagen",
+    "file_upload": "Error subiendo archivo",
+    "wait_file_upload": "Espere a que se cargue el archivo",
     "zipcode": "Código postal no válido",
     "contracts": {
       "transfer": {
@@ -309,6 +313,8 @@
       "checkingAvailability": "Comprobando disponibilidad de la cuenta",
       "button": "Crear",
       "company_type": "Tipo de Compañía",
+      "company_name": "Nombre de la empresa",
+      "name_example": "Ejemplo: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
@@ -614,6 +620,7 @@
         "verifier_placeholder": "Escribe el nombre de usuario",
         "usages_placeholder": "Escribe un número",
         "verifier_not_found": "Ningún usuario encontrado",
+        "unselect_user": "Deseleccionar {{username}}",
         "date_label": "Elige fecha",
         "quantity_label": "Elige cantidad",
         "proof_validation": "Validación de foto o PDF",
@@ -902,20 +909,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Este reclamo está",
-      "2": "bajo revisión",
+      "1": "Reclamo",
+      "2": "pendiente",
       "3": ", otros miembros aún necesitan votar"
     },
     "title_cancelled": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "cancelado"
     },
     "title_approved": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "aprobado"
     },
     "title_rejected": {
-      "1": "Este reclamo fue",
+      "1": "Reclamo",
       "2": "rechazado"
     },
     "cancelled_voting_bar": "votos pendientes",
@@ -991,7 +998,7 @@
   "settings": {
     "success": "Configuraciones guardadas exitosamente",
     "community_info": {
-      "title": "Informações da Comunidade",
+      "title": "Informaciones de la Comunidad",
       "description": "Logo, nombre, descripción, url",
       "logo": {
         "title": "Logotipo de la comunidad",
