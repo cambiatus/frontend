@@ -643,6 +643,44 @@ async function handleJavascriptPort (arg) {
         }
       }
     }
+    case 'getAccountFrom12Words': {
+      const { passphrase } = arg.data
+      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
+
+      if (!ecc.isValidPrivate(privateKey)) {
+        return { error: 'error.invalidKey' }
+      } else {
+        try {
+          const publicKey = ecc.privateToPublic(privateKey)
+          const accounts = await eos.getKeyAccounts(publicKey)
+
+          if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
+            return { error: 'error.accountNotFound' }
+          } else {
+            const [ accountName ] = accounts.account_names
+            return { accountName, privateKey }
+          }
+        } catch (err) {
+            logEvent({
+              user: null,
+              message: 'Get account from key port error',
+              tags: { 'cambiatus.kind': 'auth' },
+              contexts: [{ name: 'Error details', extras: { error: err } }],
+              transaction: 'getAccountFromKey',
+              level: 'error'
+            })
+
+            return { error: 'error.unknown' }
+        }
+      }
+    }
+    case 'signString': {
+      const { input, privateKey } = arg.data
+
+      const signed = ecc.sign(input, privateKey)
+
+      return { signed }
+    }
     case 'login': {
       const passphrase = arg.data.passphrase
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))

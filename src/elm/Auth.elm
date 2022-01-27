@@ -9,6 +9,7 @@ module Auth exposing
     , maybePrivateKey
     , msgToString
     , signIn
+    , signIn2
     , update
     , view
     )
@@ -327,6 +328,18 @@ signIn accountName shared maybeInvitationId =
         (\opts -> { opts | invitationId = OptionalArgument.fromMaybe maybeInvitationId })
         { account = Eos.nameToString accountName
         , password = shared.graphqlSecret
+        }
+        (Graphql.SelectionSet.succeed SignInResponse
+            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
+            |> with Cambiatus.Object.Session.token
+        )
+
+
+signIn2 : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn2 { account, password, invitationId } =
+    Cambiatus.Mutation.signIn (\opts -> { opts | invitationId = OptionalArgument.fromMaybe invitationId })
+        { account = Eos.nameToString account
+        , password = password
         }
         (Graphql.SelectionSet.succeed SignInResponse
             |> with (Cambiatus.Object.Session.user Profile.selectionSet)

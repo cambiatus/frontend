@@ -8,13 +8,19 @@ The login process has two steps: `EnteringPassphrase` and `EnteringPin`.
 
 First, the user enters the passphrase that was generated during the registering
 process, and we check if that's valid. If so, we go on to the next step, and have
-the user create a PIN. We store all the data we're going to need in localStorage
-and in our application, and then perform a `signIn` mutation to get an auth token
-from the backend.
+the user create a PIN. We store all the data we're going to need in cookies
+and in our application.
 
 The passphrase is a sequence of 12 english words that uniquely identifies the user,
 and the PIN is a 6-digit sequence that we use to encrypt the passphrase, generating
 the Private Key (PK), which can be used to sign EOS transactions.
+
+In order to get an auth token from the backend, we use asymmetric cryptography:
+
+1.  We request a phrase from the backend
+2.  We sign the phrase with the user's private key
+3.  We call the `signIn` mutation on GraphQL, passing the signed phrase as password
+4.  The backend can use the user's public key to verify if the phrase was signed with the user's private key. If it is, we get back an auth token
 
 -}
 
@@ -79,7 +85,7 @@ initPinModel pinVisibility passphrase =
                 , pinVisibility = pinVisibility
                 }
     in
-    ( { isSigningIn = False
+    ( { status = InputtingPin
       , passphrase = passphrase
       , pinModel = pinModel
       }
@@ -179,10 +185,20 @@ type Passphrase
 
 
 type alias PinModel =
-    { isSigningIn : Bool
+    { status : PinStatus
     , passphrase : String
     , pinModel : Pin.Model
     }
+
+
+type PinStatus
+    = InputtingPin
+    | GettingAccountName { pin : String }
+    | LoggingIn
+        { accountName : Eos.Name
+        , pin : String
+        , privateKey : Eos.PrivateKey
+        }
 
 
 
@@ -257,6 +273,14 @@ viewPin { shared } model =
 
         { t } =
             shared.translators
+
+        isInputtingPin =
+            case model.status of
+                InputtingPin ->
+                    True
+
+                _ ->
+                    False
     in
     [ viewIllustration "login_pin.svg"
     , p [ class "text-white" ]
@@ -272,6 +296,7 @@ viewPin { shared } model =
         ]
     , model.pinModel
         |> Pin.withBackgroundColor Pin.Dark
+        |> Pin.withDisabled (not isInputtingPin)
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]
@@ -327,6 +352,7 @@ type PassphraseExternalMsg
 type PinMsg
     = PinIgnored
     | SubmittedPinWithSuccess String
+    | GotAccountName (Result String { accountName : Eos.Name, privateKey : Eos.PrivateKey, pin : String })
     | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
     | SignedAuthPhrase String
     | GotSubmitResult (Result String ( Eos.Name, Eos.PrivateKey ))
@@ -520,54 +546,92 @@ updateWithPin msg model ({ shared } as guest) =
             UR.init model
 
         SubmittedPinWithSuccess pin ->
-            { model | isSigningIn = True }
+            { model | status = GettingAccountName { pin = pin } }
                 |> UR.init
-                -- |> UR.addPort
-                --     { responseAddress = SubmittedPinWithSuccess pin
-                --     , responseData = Encode.null
-                --     , data =
-                --         Encode.object
-                --             [ ( "name", Encode.string "login" )
-                --             , ( "passphrase", Encode.string model.passphrase )
-                --             , ( "pin", Encode.string pin )
-                --             ]
-                --     }
+                |> UR.addPort
+                    { responseAddress = SubmittedPinWithSuccess pin
+                    , responseData = Encode.string pin
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "getAccountFrom12Words" )
+                            , ( "passphrase", Encode.string model.passphrase )
+                            ]
+                    }
+
+        GotAccountName (Ok userData) ->
+            { model | status = LoggingIn userData }
+                |> UR.init
                 |> UR.addCmd
                     (Api.Graphql.mutation shared
                         Nothing
                         (Cambiatus.Mutation.genAuth
-                            -- TODO - Use real account
-                            { account = "henriquebuss" }
+                            { account = Eos.nameToString userData.accountName }
                             Cambiatus.Object.Request.phrase
                         )
                         GeneratedAuthPhrase
                     )
 
-        GeneratedAuthPhrase (RemoteData.Success (Just phrase)) ->
-            let
-                _ =
-                    Debug.log "PHRASE" phrase
-            in
-            model
-                -- TODO - Sign phrase with port
+        GotAccountName (Err err) ->
+            { model | status = InputtingPin }
                 |> UR.init
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t err)
+                        |> Guest.SetFeedback
+                        |> PinGuestExternal
+                    )
 
+        GeneratedAuthPhrase (RemoteData.Success (Just phrase)) ->
+            case model.status of
+                LoggingIn { privateKey } ->
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = GeneratedAuthPhrase (RemoteData.Success (Just phrase))
+                            , responseData = Encode.null
+                            , data =
+                                Encode.object
+                                    [ ( "name", Encode.string "signString" )
+                                    , ( "input", Encode.string phrase )
+                                    , ( "privateKey", Eos.encodePrivateKey privateKey )
+                                    ]
+                            }
+
+                _ ->
+                    model
+                        |> UR.init
+
+        -- TODO - Show error
+        -- |> UR.addExt
+        --     (Feedback.Visible Feedback.Failure (shared.translators.t err)
+        --         |> Guest.SetFeedback
+        --         |> PinGuestExternal
+        --     )
         GeneratedAuthPhrase _ ->
             -- TODO - Handle errors
             model
                 |> UR.init
 
         SignedAuthPhrase signedPhrase ->
-            model
-                -- TODO - Call `signIn` mutation calling `GotSignInResult`
-                -- |> UR.addCmd (
-                -- Api.Graphql.mutation shared Nothing (
-                -- Auth.signIn "henriquebuss"
-                -- shared
-                -- guest.maybeInvitation
-                -- )
-                -- )
-                |> UR.init
+            case model.status of
+                LoggingIn userData ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation shared
+                                Nothing
+                                (Auth.signIn2
+                                    { account = userData.accountName
+                                    , password = signedPhrase
+                                    , invitationId = guest.maybeInvitation
+                                    }
+                                )
+                                (GotSignInResult userData.privateKey)
+                            )
+
+                _ ->
+                    -- TODO - Show error
+                    model
+                        |> UR.init
 
         GotSubmitResult (Ok ( accountName, privateKey )) ->
             UR.init model
@@ -712,16 +776,25 @@ jsAddressToMsg addr val =
                 val
                 |> Result.toMaybe
 
-        "GotPinMsg" :: "SubmittedPinWithSuccess" :: _ :: [] ->
+        "GotPinMsg" :: "SubmittedPinWithSuccess" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
-                    [ Decode.succeed Tuple.pair
+                    [ Decode.succeed (\pin account privateKey -> { pin = pin, accountName = account, privateKey = privateKey })
+                        |> DecodePipeline.required "addressData" Decode.string
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
-                        |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
+                        |> Decode.map (Ok >> GotAccountName >> GotPinMsg)
                     , Decode.field "error" Decode.string
-                        |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
+                        |> Decode.map (Err >> GotAccountName >> GotPinMsg)
                     ]
+                )
+                val
+                |> Result.toMaybe
+
+        "GotPinMsg" :: "GeneratedAuthPhrase" :: _ ->
+            Decode.decodeValue
+                (Decode.field "signed" Decode.string
+                    |> Decode.map (SignedAuthPhrase >> GotPinMsg)
                 )
                 val
                 |> Result.toMaybe
@@ -771,8 +844,11 @@ pinMsgToString msg =
         PinIgnored ->
             [ "PinIgnored" ]
 
-        SubmittedPinWithSuccess pin ->
-            [ "SubmittedPinWithSuccess", pin ]
+        SubmittedPinWithSuccess _ ->
+            [ "SubmittedPinWithSuccess" ]
+
+        GotAccountName r ->
+            [ "GotAccountName", UR.resultToString r ]
 
         GeneratedAuthPhrase _ ->
             [ "GeneratedAuthPhrase" ]
