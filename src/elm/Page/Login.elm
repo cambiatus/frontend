@@ -355,7 +355,7 @@ type PinMsg
     | GotAccountName (Result String { accountName : Eos.Name, privateKey : Eos.PrivateKey, pin : String })
     | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
     | SignedAuthPhrase String
-    | GotSignInResult Eos.PrivateKey (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | GotSignInResult Eos.PrivateKey String (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotPinComponentMsg Pin.Msg
 
 
@@ -629,7 +629,7 @@ updateWithPin msg model ({ shared } as guest) =
                                     , invitationId = guest.maybeInvitation
                                     }
                                 )
-                                (GotSignInResult userData.privateKey)
+                                (GotSignInResult userData.privateKey userData.pin)
                             )
 
                 _ ->
@@ -643,12 +643,24 @@ updateWithPin msg model ({ shared } as guest) =
                             }
                             []
 
-        GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
+        GotSignInResult privateKey pin (RemoteData.Success (Just signInResponse)) ->
             UR.init model
                 |> UR.addCmd (Ports.storeAuthToken signInResponse.token)
+                |> UR.addPort
+                    { responseAddress = PinIgnored
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "login" )
+                            , ( "privateKey", Eos.encodePrivateKey privateKey )
+                            , ( "passphrase", Encode.string model.passphrase )
+                            , ( "accountName", Eos.encodeName signInResponse.user.account )
+                            , ( "pin", Encode.string pin )
+                            ]
+                    }
                 |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
 
-        GotSignInResult _ (RemoteData.Success Nothing) ->
+        GotSignInResult _ _ (RemoteData.Success Nothing) ->
             UR.init model
                 |> UR.addExt
                     (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
@@ -666,7 +678,7 @@ updateWithPin msg model ({ shared } as guest) =
                     { moduleName = "Page.Login", function = "updateWithPin" }
                     []
 
-        GotSignInResult _ (RemoteData.Failure err) ->
+        GotSignInResult _ _ (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg
                     Nothing
@@ -686,10 +698,10 @@ updateWithPin msg model ({ shared } as guest) =
                     )
                 |> UR.addExt RevertProcess
 
-        GotSignInResult _ RemoteData.NotAsked ->
+        GotSignInResult _ _ RemoteData.NotAsked ->
             UR.init model
 
-        GotSignInResult _ RemoteData.Loading ->
+        GotSignInResult _ _ RemoteData.Loading ->
             UR.init model
 
         GotPinComponentMsg subMsg ->
@@ -848,7 +860,7 @@ pinMsgToString msg =
         SignedAuthPhrase _ ->
             [ "SignedAuthPhrase" ]
 
-        GotSignInResult _ r ->
+        GotSignInResult _ _ r ->
             [ "GotSignInResult", UR.remoteDataToString r ]
 
         GotPinComponentMsg subMsg ->

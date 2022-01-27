@@ -682,69 +682,28 @@ async function handleJavascriptPort (arg) {
       return { signed }
     }
     case 'login': {
-      const passphrase = arg.data.passphrase
-      const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
+      const { privateKey, passphrase, accountName, pin } = arg.data
 
-      if (!ecc.isValidPrivate(privateKey)) {
-        return { error: 'error.invalidKey' }
-      } else {
-        try {
-          const publicKey = ecc.privateToPublic(privateKey)
-          const accounts = await eos.getKeyAccounts(publicKey)
-          addBreadcrumb({
-            type: 'debug',
-            category: 'login',
-            message: 'Got accounts from public key',
-            data: { numberOfAccounts: accounts.account_names.length },
-            localData: { accounts },
-            level: 'debug'
-          })
+      logout()
 
-          if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
-            return { error: 'error.accountNotFound' }
-          } else {
-            const accountName = accounts.account_names[0]
+      storePin({ accountName, passphrase, privateKey }, pin)
 
-            logout()
-
-            storePin(
-              {
-                accountName,
-                privateKey,
-                passphrase
-              },
-              arg.data.pin
-            )
-
-            // Save credentials to EOS
-            eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-            if (env !== 'development') {
-              Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
-            }
-            addBreadcrumb({
-              type: 'debug',
-              category: 'login',
-              message: 'Saved credentials to EOS',
-              data: {},
-              localData: { accountName },
-              level: 'debug'
-            })
-
-            return { accountName, privateKey }
-          }
-        } catch (err) {
-          logEvent({
-            user: null,
-            message: 'Login port error',
-            tags: { 'cambiatus.kind': 'auth' },
-            contexts: [{ name: 'Error details', extras: { error: err } }],
-            transaction: 'login',
-            level: 'error'
-          })
-
-          return { error: 'error.unknown' }
-        }
+      // Save credentials to EOS
+      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+      if (env !== 'development') {
+        Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
       }
+
+      addBreadcrumb({
+        type: 'debug',
+        category: 'login',
+        message: 'Saved credentials to EOS',
+        data: {},
+        localData: { accountName },
+        level: 'debug'
+      })
+
+      return {}
     }
     case 'changePin': {
       const userStorage = JSON.parse(getItem(USER_KEY))
