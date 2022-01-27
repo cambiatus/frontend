@@ -8,12 +8,12 @@ module Flags exposing
 import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (required)
 
 
 type alias Flags =
     { language : String
-    , maybeAccount : Maybe ( Eos.Name, Bool )
+    , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -56,14 +56,7 @@ decode : Decoder Flags
 decode =
     Decode.succeed Flags
         |> required "language" Decode.string
-        |> DecodePipeline.custom
-            (Decode.succeed
-                (Maybe.map2 (\acc auth -> ( acc, auth )))
-                |> optional "accountName" (Decode.nullable Eos.nameDecoder) Nothing
-                |> optional "isPinAvailable"
-                    (Decode.nullable Decode.bool)
-                    Nothing
-            )
+        |> required "accountName" (Decode.nullable Eos.nameDecoder)
         |> required "endpoints" decodeEndpoints
         |> required "logo" Decode.string
         |> required "logoMobile" Decode.string

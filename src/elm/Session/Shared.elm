@@ -42,7 +42,7 @@ type alias Shared =
     , translators : Translators
     , translationsStatus : TranslationStatus
     , environment : Environment
-    , maybeAccount : Maybe ( Eos.Name, Bool )
+    , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String

@@ -297,7 +297,6 @@ function flags () {
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: accountName,
-    isPinAvailable: !!(user && user.encryptedKey),
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,

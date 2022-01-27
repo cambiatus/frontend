@@ -62,7 +62,7 @@ init flags navKey url =
             Shared.init flags navKey url
     in
     case ( shared.maybeAccount, flags.authToken ) of
-        ( Just ( accountName, _ ), Just authToken ) ->
+        ( Just accountName, Just authToken ) ->
             let
                 ( model, cmd ) =
                     LoggedIn.init shared accountName authToken
@@ -81,7 +81,7 @@ init flags navKey url =
                     , level = Log.DebugLevel
                     }
 
-        ( Just ( accountName, _ ), Nothing ) ->
+        ( Just accountName, Nothing ) ->
             let
                 ( model, cmd, signedInCmd ) =
                     Guest.initLoggingIn shared accountName SignedIn
