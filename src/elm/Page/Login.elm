@@ -193,7 +193,7 @@ type alias PinModel =
 
 type PinStatus
     = InputtingPin
-    | GettingAccountName { pin : String }
+    | GettingAccountName
     | LoggingIn
         { accountName : Eos.Name
         , pin : String
@@ -355,7 +355,6 @@ type PinMsg
     | GotAccountName (Result String { accountName : Eos.Name, privateKey : Eos.PrivateKey, pin : String })
     | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
     | SignedAuthPhrase String
-    | GotSubmitResult (Result String ( Eos.Name, Eos.PrivateKey ))
     | GotSignInResult Eos.PrivateKey (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotPinComponentMsg Pin.Msg
 
@@ -546,7 +545,7 @@ updateWithPin msg model ({ shared } as guest) =
             UR.init model
 
         SubmittedPinWithSuccess pin ->
-            { model | status = GettingAccountName { pin = pin } }
+            { model | status = GettingAccountName }
                 |> UR.init
                 |> UR.addPort
                     { responseAddress = SubmittedPinWithSuccess pin
@@ -599,17 +598,22 @@ updateWithPin msg model ({ shared } as guest) =
                 _ ->
                     model
                         |> UR.init
+                        |> UR.logImpossible msg
+                            "Generated auth phrase, but wasn't logging in"
+                            Nothing
+                            { moduleName = "Page.Login"
+                            , function = "updateWithPin"
+                            }
+                            []
 
-        -- TODO - Show error
-        -- |> UR.addExt
-        --     (Feedback.Visible Feedback.Failure (shared.translators.t err)
-        --         |> Guest.SetFeedback
-        --         |> PinGuestExternal
-        --     )
         GeneratedAuthPhrase _ ->
-            -- TODO - Handle errors
             model
                 |> UR.init
+                |> UR.addExt
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed_generating_phrase")
+                        |> Guest.SetFeedback
+                        |> PinGuestExternal
+                    )
 
         SignedAuthPhrase signedPhrase ->
             case model.status of
@@ -629,27 +633,15 @@ updateWithPin msg model ({ shared } as guest) =
                             )
 
                 _ ->
-                    -- TODO - Show error
                     model
                         |> UR.init
-
-        GotSubmitResult (Ok ( accountName, privateKey )) ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Auth.signIn accountName shared guest.maybeInvitation)
-                        (GotSignInResult privateKey)
-                    )
-
-        GotSubmitResult (Err err) ->
-            UR.init model
-                |> UR.addExt
-                    (Feedback.Visible Feedback.Failure (shared.translators.t err)
-                        |> Guest.SetFeedback
-                        |> PinGuestExternal
-                    )
-                |> UR.addExt RevertProcess
+                        |> UR.logImpossible msg
+                            "Signed auth phrase, but wasn't logging in"
+                            Nothing
+                            { moduleName = "Page.Login"
+                            , function = "updateWithPin"
+                            }
+                            []
 
         GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
             UR.init model
@@ -855,9 +847,6 @@ pinMsgToString msg =
 
         SignedAuthPhrase _ ->
             [ "SignedAuthPhrase" ]
-
-        GotSubmitResult r ->
-            [ "GotSubmitResult", UR.resultToString r ]
 
         GotSignInResult _ r ->
             [ "GotSignInResult", UR.remoteDataToString r ]
