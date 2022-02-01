@@ -553,7 +553,7 @@ update msg model loggedIn =
                         loggedIn
                         "createsale"
                         (encodeCreateForm loggedIn formOutput)
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -566,7 +566,7 @@ update msg model loggedIn =
                                 loggedIn
                                 "updatesale"
                                 (encodeUpdateForm sale formOutput community.symbol)
-                                |> LoggedIn.withAuthentication loggedIn
+                                |> LoggedIn.withPrivateKey loggedIn
                                     model
                                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -609,7 +609,7 @@ update msg model loggedIn =
                         loggedIn
                         "deletesale"
                         (encodeDeleteForm sale)
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

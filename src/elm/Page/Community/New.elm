@@ -418,7 +418,7 @@ update msg model loggedIn =
                             , ( "subscription", Encode.string subscriptionDoc )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
                 |> UR.addBreadcrumb

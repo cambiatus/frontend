@@ -332,7 +332,7 @@ update msg model ({ shared } as loggedIn) =
                                 Nothing ->
                                     Cmd.none
                             )
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
                         |> UR.addBreadcrumb

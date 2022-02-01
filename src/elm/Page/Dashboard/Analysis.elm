@@ -596,7 +596,7 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

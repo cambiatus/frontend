@@ -490,7 +490,7 @@ update msg model loggedIn =
                             , ( "pin", Encode.string currentPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -519,7 +519,7 @@ update msg model loggedIn =
                 , pinInputModel = { oldPinInputModel | isPinVisible = loggedIn.auth.pinModel.isPinVisible }
             }
                 |> UR.init
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -569,7 +569,7 @@ update msg model loggedIn =
                             , ( "newPin", Encode.string newPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 

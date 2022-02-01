@@ -552,7 +552,7 @@ update msg model loggedIn =
                                     ]
                             , level = Log.Info
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

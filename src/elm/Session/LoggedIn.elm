@@ -21,7 +21,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
-    , withAuthentication
+    , withPrivateKey
     )
 
 import Action
@@ -1809,15 +1809,15 @@ handleActionMsg ({ shared } as model) actionMsg =
 
 {-| Checks if we already have the user's private key loaded. If it does, returns
 `successfulUR`. If it doesn't, requires authentication and fires the `subMsg`
-again
+again. Necessary to perform EOS transactions
 -}
-withAuthentication :
+withPrivateKey :
     Model
     -> subModel
     -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
-withAuthentication loggedIn subModel subMsg successfulUR =
+withPrivateKey loggedIn subModel subMsg successfulUR =
     if hasPrivateKey loggedIn then
         successfulUR
 
