@@ -8,8 +8,8 @@ module Auth exposing
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
+    , removePrivateKey
     , signIn
-    , signIn2
     , update
     , view
     )
@@ -28,14 +28,17 @@ If we need to prove the user is authenticated (and haven't done so in this sessi
 we can request the user to type in the PIN they created when signing in the last time,
 so we can retrieve their Private Key from localStorage.
 
+This module concerns mostly with authenticating with Private Key. That means it
+handles authentication for EOS, not for our Graphql API. That is mainly dealt with
+in the `LoggedIn` module, but since that depends on the user's private key, this
+is also related to it.
+
 -}
 
-import Api.Graphql
 import Cambiatus.Mutation
 import Cambiatus.Object.Session
 import Dict
 import Eos.Account as Eos
-import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet, with)
@@ -45,9 +48,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Log
-import Ports
 import Profile
-import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -142,6 +143,11 @@ hasPrivateKey model =
             False
 
 
+removePrivateKey : Model -> Model
+removePrivateKey model =
+    { model | status = WithoutPrivateKey }
+
+
 maybePrivateKey : Model -> Maybe Eos.PrivateKey
 maybePrivateKey model =
     case model.status of
@@ -181,11 +187,9 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | GotPinMsg Pin.Msg
+    = GotPinMsg Pin.Msg
     | SubmittedPin String
-    | GotSubmittedPinResponse (Result String ( Eos.Name, Eos.PrivateKey ))
-    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | GotPrivateKey (Result String ( Eos.Name, Eos.PrivateKey ))
 
 
 type alias SignInResponse =
@@ -195,7 +199,7 @@ type alias SignInResponse =
 
 
 type ExternalMsg
-    = CompletedAuth SignInResponse Model
+    = CompletedAuth Eos.Name Model
     | UpdatedShared Shared
     | SetFeedback Feedback.Model
 
@@ -203,9 +207,6 @@ type ExternalMsg
 update : Msg -> Shared -> Model -> UpdateResult
 update msg shared model =
     case msg of
-        Ignored ->
-            UR.init model
-
         GotPinMsg subMsg ->
             Pin.update shared subMsg model.pinModel
                 |> UR.fromChild (\pinModel -> { model | pinModel = pinModel })
@@ -229,56 +230,6 @@ update msg shared model =
                     )
                     model
 
-        CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
-            let
-                newModel =
-                    { model
-                        | status = status
-                        , pinModel = Pin.withDisabled False model.pinModel
-                    }
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addExt (CompletedAuth signInResponse newModel)
-
-        CompletedSignIn _ (RemoteData.Success Nothing) ->
-            model
-                |> authFailed "error.unknown"
-                |> UR.logEvent
-                    { username = Nothing
-                    , message = "Could not sign in for unknown reason"
-                    , tags = [ Log.TypeTag Log.UnknownError ]
-                    , location =
-                        { moduleName = "Auth"
-                        , function = "update"
-                        }
-                    , contexts = []
-                    , transaction = msg
-                    , level = Log.Error
-                    }
-
-        CompletedSignIn _ (RemoteData.Failure err) ->
-            model
-                |> authFailed "auth.failed"
-                |> UR.logGraphqlError msg
-                    Nothing
-                    "Got an error when signing in"
-                    { moduleName = "Auth", function = "update" }
-                    []
-                    err
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
-                    }
-
-        CompletedSignIn _ RemoteData.NotAsked ->
-            UR.init model
-
-        CompletedSignIn _ RemoteData.Loading ->
-            UR.init model
-
         SubmittedPin pin ->
             { model | pinModel = Pin.withDisabled True model.pinModel }
                 |> UR.init
@@ -292,16 +243,19 @@ update msg shared model =
                             ]
                     }
 
-        GotSubmittedPinResponse (Ok ( accountName, privateKey )) ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (signIn accountName shared Nothing)
-                        (CompletedSignIn (WithPrivateKey privateKey))
-                    )
+        GotPrivateKey (Ok ( accountName, privateKey )) ->
+            let
+                newModel =
+                    { model
+                        | status = WithPrivateKey privateKey
+                        , pinModel = Pin.withDisabled False model.pinModel
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addExt (CompletedAuth accountName newModel)
 
-        GotSubmittedPinResponse (Err err) ->
+        GotPrivateKey (Err err) ->
             model
                 |> authFailed err
                 |> UR.logEvent
@@ -322,21 +276,8 @@ update msg shared model =
                     }
 
 
-signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
-signIn accountName shared maybeInvitationId =
-    Cambiatus.Mutation.signIn
-        (\opts -> { opts | invitationId = OptionalArgument.fromMaybe maybeInvitationId })
-        { account = Eos.nameToString accountName
-        , password = shared.graphqlSecret
-        }
-        (Graphql.SelectionSet.succeed SignInResponse
-            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
-            |> with Cambiatus.Object.Session.token
-        )
-
-
-signIn2 : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet (Maybe SignInResponse) RootMutation
-signIn2 { account, password, invitationId } =
+signIn : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn { account, password, invitationId } =
     Cambiatus.Mutation.signIn (\opts -> { opts | invitationId = OptionalArgument.fromMaybe invitationId })
         { account = Eos.nameToString account
         , password = password
@@ -368,9 +309,9 @@ jsAddressToMsg addr val =
                     [ Decode.succeed Tuple.pair
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
-                        |> Decode.map (Ok >> GotSubmittedPinResponse)
+                        |> Decode.map (Ok >> GotPrivateKey)
                     , Decode.field "error" Decode.string
-                        |> Decode.map (Err >> GotSubmittedPinResponse)
+                        |> Decode.map (Err >> GotPrivateKey)
                     ]
                 )
                 val
@@ -383,17 +324,11 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
-        CompletedSignIn _ _ ->
-            [ "CompletedSignIn" ]
-
         SubmittedPin _ ->
             [ "SubmittedPin" ]
 
-        GotSubmittedPinResponse r ->
-            [ "GotSubmittedPinResponse", UR.resultToString r ]
+        GotPrivateKey r ->
+            [ "GotPrivateKey", UR.resultToString r ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg

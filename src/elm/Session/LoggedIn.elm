@@ -28,7 +28,9 @@ import Action
 import Api.Graphql
 import Auth
 import Avatar
+import Cambiatus.Mutation
 import Cambiatus.Object
+import Cambiatus.Object.Request
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
@@ -191,6 +193,7 @@ type alias Model =
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
+    , internalAfterAuthMsg : Maybe Msg
     }
 
 
@@ -222,6 +225,7 @@ initModel shared maybePrivateKey_ accountName authToken =
       , hasSeenDashboard = False
       , queuedCommunityFields = []
       , maybeHighlightedNews = Nothing
+      , internalAfterAuthMsg = Nothing
       }
     , Cmd.map GotAuthMsg authCmd
     )
@@ -915,7 +919,8 @@ type External msg
     | RequestedReloadCommunityField Community.Field
     | RequestedCommunityField Community.Field
     | SetCommunityField Community.FieldValue
-    | RequiredAuthentication { successMsg : msg, errorMsg : msg }
+    | RequiredPrivateKey { successMsg : msg, errorMsg : msg }
+    | RequiredAuthToken
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
@@ -962,8 +967,11 @@ mapExternal mapFn msg =
         RequestedReloadCommunityField field ->
             RequestedReloadCommunityField field
 
-        RequiredAuthentication { successMsg, errorMsg } ->
-            RequiredAuthentication { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
+        RequiredPrivateKey { successMsg, errorMsg } ->
+            RequiredPrivateKey { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
+
+        RequiredAuthToken ->
+            RequiredAuthToken
 
         ShowFeedback status message ->
             ShowFeedback status message
@@ -1059,6 +1067,9 @@ updateExternal externalMsg ({ shared } as model) =
                     }
 
                 TranslationsLoaded ->
+                    { defaultResult | broadcastMsg = Just broadcastMsg }
+
+                CompletedSigningIn ->
                     { defaultResult | broadcastMsg = Just broadcastMsg }
 
         ReloadResource CommunityResource ->
@@ -1167,10 +1178,21 @@ updateExternal externalMsg ({ shared } as model) =
                                 |> Log.send externalMsgToString
                     }
 
-        RequiredAuthentication afterAuthMsg ->
+        RequiredPrivateKey afterAuthMsg ->
             { defaultResult
                 | model = askedAuthentication model
                 , afterAuthMsg = Just afterAuthMsg
+            }
+
+        RequiredAuthToken ->
+            { defaultResult
+                | cmd =
+                    Api.Graphql.mutation shared
+                        Nothing
+                        (Cambiatus.Mutation.genAuth { account = Eos.nameToString model.accountName }
+                            Cambiatus.Object.Request.phrase
+                        )
+                        GotAuthTokenPhrase
             }
 
         ShowFeedback status message ->
@@ -1198,10 +1220,12 @@ type BroadcastMsg
     | ProfileLoaded Profile.Model
     | GotTime Time.Posix
     | TranslationsLoaded
+    | CompletedSigningIn
 
 
 type Msg
-    = CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
+    = NoOp
+    | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity (RemoteData (Graphql.Http.Error (Maybe Community.Model)) (Maybe Community.Model))
@@ -1228,6 +1252,9 @@ type Msg
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
+    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
+    | SignedAuthTokenPhrase String
+    | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
 
 
 update : Msg -> Model -> UpdateResult
@@ -1245,6 +1272,9 @@ update msg model =
             }
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         GotTimeInternal time ->
             UR.init { model | shared = { shared | now = time } }
                 |> UR.addExt (GotTime time |> Broadcast)
@@ -1573,7 +1603,7 @@ update msg model =
                     GotAuthMsg
                     (\extMsg uResult ->
                         case extMsg of
-                            Auth.CompletedAuth { user, token } auth ->
+                            Auth.CompletedAuth accountName auth ->
                                 let
                                     cmd =
                                         case model.claimingAction.status of
@@ -1586,23 +1616,25 @@ update msg model =
 
                                             _ ->
                                                 Cmd.none
+
+                                    addInternalAfterAuthMsg =
+                                        case model.internalAfterAuthMsg of
+                                            Nothing ->
+                                                identity
+
+                                            Just internalAfterAuthMsg ->
+                                                UR.addMsg internalAfterAuthMsg
                                 in
                                 closeModal uResult
-                                    |> UR.mapModel
-                                        (\m ->
-                                            { m
-                                                | profile = RemoteData.Success user
-                                                , authToken = token
-                                                , auth = auth
-                                            }
-                                        )
+                                    |> UR.mapModel (\m -> { m | auth = auth })
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
+                                    |> addInternalAfterAuthMsg
                                     |> UR.addBreadcrumb
                                         { type_ = Log.DefaultBreadcrumb
                                         , category = msg
                                         , message = "Successfully authenticated user through PIN"
-                                        , data = Dict.fromList [ ( "username", Eos.encodeName user.account ) ]
+                                        , data = Dict.fromList [ ( "username", Eos.encodeName accountName ) ]
                                         , level = Log.Info
                                         }
 
@@ -1752,6 +1784,103 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             [ Log.contextFromCommunity model.selectedCommunity ]
 
+        GotAuthTokenPhrase (RemoteData.Success (Just phrase)) ->
+            let
+                encodedPrivateKey =
+                    case maybePrivateKey model of
+                        Just privateKey ->
+                            Eos.encodePrivateKey privateKey
+
+                        Nothing ->
+                            -- The call to withPrivateKeyInternal assures the
+                            -- private key is always there
+                            Encode.null
+            in
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotAuthTokenPhrase (RemoteData.Success (Just phrase))
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "signString" )
+                            , ( "input", Encode.string phrase )
+                            , ( "privateKey", encodedPrivateKey )
+                            ]
+                    }
+                |> withPrivateKeyInternal msg model
+
+        GotAuthTokenPhrase (RemoteData.Failure err) ->
+            { model
+                | auth = Auth.removePrivateKey model.auth
+                , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    }
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when fetching phrase to sign for auth token"
+                    { moduleName = "Session.LoggedIn"
+                    , function = "update"
+                    }
+                    []
+                    err
+
+        GotAuthTokenPhrase _ ->
+            UR.init model
+
+        SignedAuthTokenPhrase signedPhrase ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.mutation shared
+                        Nothing
+                        (Auth.signIn
+                            { account = model.accountName
+                            , password = signedPhrase
+                            , invitationId = getInvitation model
+                            }
+                        )
+                        CompletedGeneratingAuthToken
+                    )
+
+        CompletedGeneratingAuthToken (RemoteData.Success (Just { user, token })) ->
+            { model
+                | profile = RemoteData.Success user
+                , authToken = token
+            }
+                |> UR.init
+                |> UR.addCmd (Ports.storeAuthToken token)
+                |> UR.addExt (Broadcast CompletedSigningIn)
+
+        CompletedGeneratingAuthToken (RemoteData.Failure err) ->
+            { model
+                | auth = Auth.removePrivateKey model.auth
+                , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    }
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when signing in"
+                    { moduleName = "Session.LoggedIn"
+                    , function = "update"
+                    }
+                    []
+                    err
+
+        CompletedGeneratingAuthToken _ ->
+            model
+                |> UR.init
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult
 handleActionMsg ({ shared } as model) actionMsg =
@@ -1823,7 +1952,17 @@ withPrivateKey loggedIn subModel subMsg successfulUR =
 
     else
         UR.init subModel
-            |> UR.addExt (RequiredAuthentication subMsg)
+            |> UR.addExt (RequiredPrivateKey subMsg)
+
+
+withPrivateKeyInternal : Msg -> Model -> UpdateResult -> UpdateResult
+withPrivateKeyInternal msg loggedIn successfulUR =
+    if hasPrivateKey loggedIn then
+        successfulUR
+
+    else
+        askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
+            |> UR.init
 
 
 isCommunityMember : Model -> Bool
@@ -2066,6 +2205,11 @@ jsAddressToMsg addr val =
             Action.jsAddressToMsg remainAddress val
                 |> Maybe.map GotActionMsg
 
+        "GotAuthTokenPhrase" :: _ ->
+            Decode.decodeValue (Decode.field "signed" Decode.string) val
+                |> Result.toMaybe
+                |> Maybe.map SignedAuthTokenPhrase
+
         _ ->
             Nothing
 
@@ -2073,6 +2217,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
@@ -2154,6 +2301,15 @@ msgToString msg =
         ReceivedNewHighlightedNews _ ->
             [ "ReceivedNewHighlightedNews" ]
 
+        GotAuthTokenPhrase _ ->
+            [ "GotAuthTokenPhrase" ]
+
+        SignedAuthTokenPhrase _ ->
+            [ "SignedAuthTokenPhrase" ]
+
+        CompletedGeneratingAuthToken r ->
+            [ "CompletedGeneratingAuthToken", UR.remoteDataToString r ]
+
 
 externalMsgToString : External msg -> List String
 externalMsgToString externalMsg =
@@ -2182,8 +2338,11 @@ externalMsgToString externalMsg =
         SetCommunityField _ ->
             [ "SetCommunityField" ]
 
-        RequiredAuthentication _ ->
-            [ "RequiredAuthentication" ]
+        RequiredPrivateKey _ ->
+            [ "RequiredPrivateKey" ]
+
+        RequiredAuthToken ->
+            [ "RequiredAuthToken" ]
 
         ShowFeedback _ _ ->
             [ "ShowFeedback" ]
