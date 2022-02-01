@@ -308,7 +308,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
-                                            , hasAutoInvite = Eos.boolToEosBool formOutput.hasAutoInvite
+                                            , hasAutoInvite = Eos.boolToEosBool (not formOutput.hasAutoInvite)
                                             , website =
                                                 Maybe.map Url.toString formOutput.website
                                                     |> Maybe.withDefault ""
@@ -709,8 +709,8 @@ createForm shared community { isLoading } =
                 |> Form.Toggle.withTopLabel (t "settings.community_info.invitation.title")
                 |> Form.toggle
                     { parser = Ok
-                    , value = .hasAutoInvite
-                    , update = \hasAutoInvite input -> { input | hasAutoInvite = hasAutoInvite }
+                    , value = .hasAutoInvite >> not
+                    , update = \hasAutoInvite input -> { input | hasAutoInvite = not hasAutoInvite }
                     , externalError = always Nothing
                     }
             )
