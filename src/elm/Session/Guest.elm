@@ -61,10 +61,12 @@ initLoggingIn shared accountName signInMessage =
     in
     ( { model | isLoggingIn = True }
     , cmd
-    , Api.Graphql.mutation shared
-        Nothing
-        (Auth.signIn accountName shared Nothing)
-        signInMessage
+      -- , Api.Graphql.mutation shared
+      --     Nothing
+      --     (Auth.signIn accountName shared Nothing)
+      --     signInMessage
+      -- TODO
+    , Cmd.none
     )
 
 

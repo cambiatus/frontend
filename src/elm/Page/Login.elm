@@ -623,7 +623,7 @@ updateWithPin msg model ({ shared } as guest) =
                         |> UR.addCmd
                             (Api.Graphql.mutation shared
                                 Nothing
-                                (Auth.signIn2
+                                (Auth.signIn
                                     { account = userData.accountName
                                     , password = signedPhrase
                                     , invitationId = guest.maybeInvitation

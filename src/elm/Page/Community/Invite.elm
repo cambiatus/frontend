@@ -314,6 +314,7 @@ type Msg
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
     | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | SignedIn
     | FormMsg KycForm.Msg
 
 
@@ -322,7 +323,7 @@ update session msg model =
     case msg of
         FormMsg kycFormMsg ->
             case session of
-                LoggedIn ({ accountName, shared } as loggedIn) ->
+                LoggedIn ({ shared } as loggedIn) ->
                     let
                         formUpdateResult =
                             case model.kycForm of
@@ -365,12 +366,7 @@ update session msg model =
 
                                 _ ->
                                     newModel
-                                        |> UR.addCmd
-                                            (Api.Graphql.mutation shared
-                                                Nothing
-                                                (Auth.signIn accountName shared (Just model.invitationId))
-                                                (CompletedSignIn loggedIn)
-                                            )
+                                        |> UR.addExt LoggedIn.RequiredAuthToken
 
                         _ ->
                             newModel
@@ -515,16 +511,11 @@ update session msg model =
                         }
             in
             case session of
-                LoggedIn ({ shared, accountName } as loggedIn) ->
+                LoggedIn _ ->
                     if allowedToJoinCommunity then
                         model
                             |> UR.init
-                            |> UR.addCmd
-                                (Api.Graphql.mutation shared
-                                    Nothing
-                                    (Auth.signIn accountName shared (Just model.invitationId))
-                                    (CompletedSignIn loggedIn)
-                                )
+                            |> UR.addExt LoggedIn.RequiredAuthToken
                             |> addBreadcrumb
 
                     else
@@ -604,6 +595,10 @@ update session msg model =
         CompletedSignIn _ _ ->
             UR.init model
 
+        SignedIn ->
+            -- TODO - Do something here (same as `CompletedSignIn`)
+            UR.init model
+
 
 getInvite : Model -> Maybe Invite
 getInvite model =
@@ -630,6 +625,9 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.ProfileLoaded _ ->
             Just CompletedLoadProfile
+
+        LoggedIn.CompletedSigningIn ->
+            Just SignedIn
 
         _ ->
             Nothing
@@ -661,3 +659,6 @@ msgToString msg =
 
         CompletedSignIn _ r ->
             [ "CompletedSignIn", UR.remoteDataToString r ]
+
+        SignedIn ->
+            [ "SignedIn" ]
