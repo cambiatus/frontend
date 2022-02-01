@@ -656,20 +656,20 @@ async function handleJavascriptPort (arg) {
           if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
             return { error: 'error.accountNotFound' }
           } else {
-            const [ accountName ] = accounts.account_names
+            const [accountName] = accounts.account_names
             return { accountName, privateKey }
           }
         } catch (err) {
-            logEvent({
-              user: null,
-              message: 'Get account from key port error',
-              tags: { 'cambiatus.kind': 'auth' },
-              contexts: [{ name: 'Error details', extras: { error: err } }],
-              transaction: 'getAccountFromKey',
-              level: 'error'
-            })
+          logEvent({
+            user: null,
+            message: 'Get account from key port error',
+            tags: { 'cambiatus.kind': 'auth' },
+            contexts: [{ name: 'Error details', extras: { error: err } }],
+            transaction: 'getAccountFromKey',
+            level: 'error'
+          })
 
-            return { error: 'error.unknown' }
+          return { error: 'error.unknown' }
         }
       }
     }
