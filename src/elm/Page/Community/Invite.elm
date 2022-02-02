@@ -9,7 +9,6 @@ module Page.Community.Invite exposing
     )
 
 import Api.Graphql
-import Auth exposing (SignInResponse)
 import Community exposing (Invite)
 import Dict
 import Eos exposing (symbolToString)
@@ -18,7 +17,6 @@ import Graphql.Http
 import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import Http
 import Log
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
@@ -47,7 +45,6 @@ type PageStatus
     | JoinConfirmation Invite
     | AlreadyMemberNotice Invite
     | KycInfo Invite
-    | Error Http.Error
 
 
 type ModalStatus
@@ -179,9 +176,6 @@ view session model =
                         [ viewHeader
                         , viewContent shared.translators invite inner
                         ]
-
-                Error e ->
-                    Page.fullPageError (t "") e
     in
     { title = title
     , content = content
