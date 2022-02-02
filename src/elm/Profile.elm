@@ -28,7 +28,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Contribution
-import Cambiatus.Object.DeleteKycAddress
+import Cambiatus.Object.DeleteStatus
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -279,8 +279,8 @@ deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutatio
 deleteKycMutation _ =
     Cambiatus.Mutation.deleteKyc
         (SelectionSet.succeed DeleteKycResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 
@@ -294,8 +294,8 @@ deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) Roo
 deleteAddressMutation _ =
     Cambiatus.Mutation.deleteAddress
         (SelectionSet.succeed DeleteAddressResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 

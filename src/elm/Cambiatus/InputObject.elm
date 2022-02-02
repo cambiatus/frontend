@@ -173,31 +173,6 @@ encodeClaimsFilter input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
-buildCompleteObjectiveInput :
-    CompleteObjectiveInputRequiredFields
-    -> CompleteObjectiveInput
-buildCompleteObjectiveInput required =
-    { objectiveId = required.objectiveId }
-
-
-type alias CompleteObjectiveInputRequiredFields =
-    { objectiveId : Int }
-
-
-{-| Type for the CompleteObjectiveInput input object.
--}
-type alias CompleteObjectiveInput =
-    { objectiveId : Int }
-
-
-{-| Encode a CompleteObjectiveInput into a value that can be used as an argument.
--}
-encodeCompleteObjectiveInput : CompleteObjectiveInput -> Value
-encodeCompleteObjectiveInput input =
-    Encode.maybeObject
-        [ ( "objectiveId", Encode.int input.objectiveId |> Just ) ]
-
-
 buildContactInput :
     (ContactInputOptionalFields -> ContactInputOptionalFields)
     -> ContactInput

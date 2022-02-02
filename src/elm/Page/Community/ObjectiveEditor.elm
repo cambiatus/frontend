@@ -372,7 +372,7 @@ objectiveSelectionSet =
 
 completeObjectiveSelectionSet : Int -> SelectionSet (Maybe Objective) RootMutation
 completeObjectiveSelectionSet objectiveId =
-    Mutation.completeObjective { input = { objectiveId = objectiveId } }
+    Mutation.completeObjective { id = objectiveId }
         objectiveSelectionSet
 
 

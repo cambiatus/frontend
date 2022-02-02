@@ -5,6 +5,7 @@
 module Cambiatus.Mutation exposing (..)
 
 import Cambiatus.Enum.CurrencyType
+import Cambiatus.Enum.Language
 import Cambiatus.Enum.ReactionEnum
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -38,7 +39,7 @@ addCommunityPhotos requiredArgs object_ =
 
 
 type alias CompleteObjectiveRequiredArguments =
-    { input : Cambiatus.InputObject.CompleteObjectiveInput }
+    { id : Int }
 
 
 {-| [Auth required - Admin only] Complete an objective
@@ -48,7 +49,7 @@ completeObjective :
     -> SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet (Maybe decodesTo) RootMutation
 completeObjective requiredArgs object_ =
-    Object.selectionForCompositeField "completeObjective" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCompleteObjectiveInput ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "completeObjective" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias ContributionRequiredArguments =
@@ -71,7 +72,7 @@ contribution requiredArgs object_ =
 {-| [Auth required] A mutation to delete user's address data
 -}
 deleteAddress :
-    SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
+    SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
 deleteAddress object_ =
     Object.selectionForCompositeField "deleteAddress" [] object_ (identity >> Decode.nullable)
@@ -80,22 +81,38 @@ deleteAddress object_ =
 {-| [Auth required] A mutation to delete user's kyc data
 -}
 deleteKyc :
-    SelectionSet decodesTo Cambiatus.Object.DeleteKycAddress
+    SelectionSet decodesTo Cambiatus.Object.DeleteStatus
     -> SelectionSet (Maybe decodesTo) RootMutation
 deleteKyc object_ =
     Object.selectionForCompositeField "deleteKyc" [] object_ (identity >> Decode.nullable)
+
+
+type alias DeleteNewsRequiredArguments =
+    { newsId : Int }
+
+
+{-| [Auth required] Deletes News
+-}
+deleteNews :
+    DeleteNewsRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+deleteNews requiredArgs object_ =
+    Object.selectionForCompositeField "deleteNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
 
 
 type alias GenAuthRequiredArguments =
     { account : String }
 
 
+{-| Generates a new signIn request
+-}
 genAuth :
     GenAuthRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Request
-    -> SelectionSet (Maybe decodesTo) RootMutation
+    -> SelectionSet decodesTo RootMutation
 genAuth requiredArgs object_ =
-    Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs.account Encode.string ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs.account Encode.string ] object_ identity
 
 
 type alias HasNewsRequiredArguments =
@@ -142,12 +159,14 @@ highlightedNews fillInOptionals requiredArgs object_ =
 
 
 type alias NewsOptionalArguments =
-    { scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime }
+    { communityId : OptionalArgument String
+    , id : OptionalArgument Int
+    , scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime
+    }
 
 
 type alias NewsRequiredArguments =
-    { communityId : String
-    , description : String
+    { description : String
     , title : String
     }
 
@@ -162,23 +181,25 @@ news :
 news fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
-            fillInOptionals { scheduling = Absent }
+            fillInOptionals { communityId = Absent, id = Absent, scheduling = Absent }
 
         optionalArgs =
-            [ Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime) ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "news" (optionalArgs ++ [ Argument.required "description" requiredArgs.description Encode.string, Argument.required "title" requiredArgs.title Encode.string ]) object_ (identity >> Decode.nullable)
 
 
 type alias PreferenceOptionalArguments =
     { claimNotification : OptionalArgument Bool
     , digest : OptionalArgument Bool
-    , language : OptionalArgument String
+    , language : OptionalArgument Cambiatus.Enum.Language.Language
     , transferNotification : OptionalArgument Bool
     }
 
 
+{-| [Auth required] A mutation to only the preferences of the logged user
+-}
 preference :
     (PreferenceOptionalArguments -> PreferenceOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.User
@@ -189,7 +210,7 @@ preference fillInOptionals object_ =
             fillInOptionals { claimNotification = Absent, digest = Absent, language = Absent, transferNotification = Absent }
 
         optionalArgs =
-            [ Argument.optional "claimNotification" filledInOptionals.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals.digest Encode.bool, Argument.optional "language" filledInOptionals.language Encode.string, Argument.optional "transferNotification" filledInOptionals.transferNotification Encode.bool ]
+            [ Argument.optional "claimNotification" filledInOptionals.claimNotification Encode.bool, Argument.optional "digest" filledInOptionals.digest Encode.bool, Argument.optional "language" filledInOptionals.language (Encode.enum Cambiatus.Enum.Language.toString), Argument.optional "transferNotification" filledInOptionals.transferNotification Encode.bool ]
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "preference" optionalArgs object_ (identity >> Decode.nullable)
@@ -263,7 +284,7 @@ type alias SignInRequiredArguments =
     }
 
 
-{-|
+{-| Sign In on the platform, gives back an access token
 
   - invitationId - Optional, used to auto invite an user to a community
 
@@ -272,7 +293,7 @@ signIn :
     (SignInOptionalArguments -> SignInOptionalArguments)
     -> SignInRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Session
-    -> SelectionSet (Maybe decodesTo) RootMutation
+    -> SelectionSet decodesTo RootMutation
 signIn fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
@@ -282,7 +303,7 @@ signIn fillInOptionals requiredArgs object_ =
             [ Argument.optional "invitationId" filledInOptionals.invitationId Encode.string ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "signIn" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "signIn" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "password" requiredArgs.password Encode.string ]) object_ identity
 
 
 type alias SignUpOptionalArguments =
@@ -318,7 +339,7 @@ signUp :
     (SignUpOptionalArguments -> SignUpOptionalArguments)
     -> SignUpRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Session
-    -> SelectionSet (Maybe decodesTo) RootMutation
+    -> SelectionSet decodesTo RootMutation
 signUp fillInOptionals requiredArgs object_ =
     let
         filledInOptionals =
@@ -328,37 +349,7 @@ signUp fillInOptionals requiredArgs object_ =
             [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ (identity >> Decode.nullable)
-
-
-type alias UpdateNewsOptionalArguments =
-    { description : OptionalArgument String
-    , scheduling : OptionalArgument Cambiatus.ScalarCodecs.DateTime
-    , title : OptionalArgument String
-    }
-
-
-type alias UpdateNewsRequiredArguments =
-    { id : Int }
-
-
-{-| [Auth required - Admin only] Mutation to update news
--}
-updateNews :
-    (UpdateNewsOptionalArguments -> UpdateNewsOptionalArguments)
-    -> UpdateNewsRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.News
-    -> SelectionSet (Maybe decodesTo) RootMutation
-updateNews fillInOptionals requiredArgs object_ =
-    let
-        filledInOptionals =
-            fillInOptionals { description = Absent, scheduling = Absent, title = Absent }
-
-        optionalArgs =
-            [ Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "scheduling" filledInOptionals.scheduling (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapEncoder .codecDateTime), Argument.optional "title" filledInOptionals.title Encode.string ]
-                |> List.filterMap identity
-    in
-    Object.selectionForCompositeField "updateNews" (optionalArgs ++ [ Argument.required "id" requiredArgs.id Encode.int ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
 
 
 type alias UpdateUserRequiredArguments =

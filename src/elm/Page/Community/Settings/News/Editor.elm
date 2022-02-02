@@ -270,7 +270,7 @@ update msg model loggedIn =
 
         SubmittedForm formOutput ->
             case model of
-                Editing action formInput ->
+                Editing action _ ->
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             let
@@ -278,30 +278,28 @@ update msg model loggedIn =
                                     formOutput.publicationDate
                                         |> Maybe.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
 
-                                mutation =
+                                optionalArgs optionals =
                                     case action of
                                         CreateNew ->
-                                            Cambiatus.Mutation.news
-                                                (\optionals ->
-                                                    { optionals | scheduling = OptionalArgument.fromMaybe schedulingTime }
-                                                )
-                                                { communityId = Eos.symbolToString community.symbol
-                                                , description = Markdown.toRawString formOutput.description
-                                                , title = formOutput.title
-                                                }
-                                                Community.News.selectionSet
+                                            { optionals
+                                                | scheduling = OptionalArgument.fromMaybe schedulingTime
+                                                , communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
+                                            }
 
                                         EditExisting news ->
-                                            Cambiatus.Mutation.updateNews
-                                                (\optionals ->
-                                                    { optionals
-                                                        | description = OptionalArgument.Present <| Markdown.toRawString formOutput.description
-                                                        , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
-                                                        , title = OptionalArgument.Present formOutput.title
-                                                    }
-                                                )
-                                                { id = news.id }
-                                                Community.News.selectionSet
+                                            { optionals
+                                                | communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
+                                                , id = OptionalArgument.Present news.id
+                                                , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
+                                            }
+
+                                mutation =
+                                    Cambiatus.Mutation.news
+                                        optionalArgs
+                                        { description = Markdown.toRawString formOutput.description
+                                        , title = formOutput.title
+                                        }
+                                        Community.News.selectionSet
                             in
                             model
                                 |> setDisabled True

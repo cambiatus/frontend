@@ -520,7 +520,7 @@ type Msg
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
-    | CompletedSignUp (RemoteData (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | CompletedSignUp (RemoteData (Graphql.Http.Error SignUpResponse) SignUpResponse)
     | GotFormMsg FormMsg
     | SubmittedForm FormOutput
 
@@ -696,30 +696,23 @@ update _ msg model ({ shared } as guest) =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
 
-        CompletedSignUp (RemoteData.Success resp) ->
-            case resp of
-                Just _ ->
-                    case model.accountKeys of
-                        Nothing ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
-                                    "Completed signing up, but didn't have account keys"
-                                    Nothing
-                                    { moduleName = "Page.Register", function = "update" }
-                                    []
-
-                        Just accountKeys ->
-                            { model
-                                | status = AccountCreated accountKeys
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
-
+        CompletedSignUp (RemoteData.Success _) ->
+            case model.accountKeys of
                 Nothing ->
                     model
                         |> UR.init
-                        |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
+                        |> UR.logImpossible msg
+                            "Completed signing up, but didn't have account keys"
+                            Nothing
+                            { moduleName = "Page.Register", function = "update" }
+                            []
+
+                Just accountKeys ->
+                    { model
+                        | status = AccountCreated accountKeys
+                        , step = SavePassphrase
+                    }
+                        |> UR.init
 
         CompletedSignUp (RemoteData.Failure error) ->
             model

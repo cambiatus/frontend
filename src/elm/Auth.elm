@@ -276,7 +276,7 @@ update msg shared model =
                     }
 
 
-signIn : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet (Maybe SignInResponse) RootMutation
+signIn : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet SignInResponse RootMutation
 signIn { account, password, invitationId } =
     Cambiatus.Mutation.signIn (\opts -> { opts | invitationId = OptionalArgument.fromMaybe invitationId })
         { account = Eos.nameToString account

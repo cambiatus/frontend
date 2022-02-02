@@ -1252,9 +1252,9 @@ type Msg
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
-    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error (Maybe String)) (Maybe String))
+    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error String) String)
     | SignedAuthTokenPhrase String
-    | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Auth.SignInResponse) Auth.SignInResponse)
 
 
 update : Msg -> Model -> UpdateResult
@@ -1784,7 +1784,7 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             [ Log.contextFromCommunity model.selectedCommunity ]
 
-        GotAuthTokenPhrase (RemoteData.Success (Just phrase)) ->
+        GotAuthTokenPhrase (RemoteData.Success phrase) ->
             let
                 encodedPrivateKey =
                     case maybePrivateKey model of
@@ -1799,7 +1799,7 @@ update msg model =
             model
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = GotAuthTokenPhrase (RemoteData.Success (Just phrase))
+                    { responseAddress = GotAuthTokenPhrase (RemoteData.Success phrase)
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -1848,7 +1848,7 @@ update msg model =
                         CompletedGeneratingAuthToken
                     )
 
-        CompletedGeneratingAuthToken (RemoteData.Success (Just { user, token })) ->
+        CompletedGeneratingAuthToken (RemoteData.Success { user, token }) ->
             { model
                 | profile = RemoteData.Success user
                 , authToken = token

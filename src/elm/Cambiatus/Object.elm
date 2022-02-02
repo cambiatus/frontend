@@ -57,8 +57,8 @@ type Country
     = Country
 
 
-type DeleteKycAddress
-    = DeleteKycAddress
+type DeleteStatus
+    = DeleteStatus
 
 
 type Exists
@@ -131,6 +131,14 @@ type ReactionType
 
 type Request
     = Request
+
+
+type Reward
+    = Reward
+
+
+type Role
+    = Role
 
 
 type SearchResult
