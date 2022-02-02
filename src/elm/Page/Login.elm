@@ -578,6 +578,7 @@ updateWithPin msg model ({ shared } as guest) =
                         |> Guest.SetFeedback
                         |> PinGuestExternal
                     )
+                |> UR.addExt RevertProcess
 
         GeneratedAuthPhrase (RemoteData.Success phrase) ->
             case model.status of
@@ -606,7 +607,7 @@ updateWithPin msg model ({ shared } as guest) =
                             }
                             []
 
-        GeneratedAuthPhrase _ ->
+        GeneratedAuthPhrase (RemoteData.Failure err) ->
             model
                 |> UR.init
                 |> UR.addExt
@@ -614,6 +615,18 @@ updateWithPin msg model ({ shared } as guest) =
                         |> Guest.SetFeedback
                         |> PinGuestExternal
                     )
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when generating auth phrase for login"
+                    { moduleName = "Page.Login"
+                    , function = "updateWithPin"
+                    }
+                    []
+                    err
+                |> UR.addExt RevertProcess
+
+        GeneratedAuthPhrase _ ->
+            UR.init model
 
         SignedAuthPhrase signedPhrase ->
             case model.status of
