@@ -313,7 +313,6 @@ type Msg
     | CloseConfirmationModal
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
-    | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
     | SignedIn
     | FormMsg KycForm.Msg
 
@@ -532,8 +531,17 @@ update session msg model =
                             )
                         |> addBreadcrumb
 
-        CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
+        SignedIn ->
             case getInvite model of
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Completed signin in, but invite was unavailable"
+                            (Page.maybeAccountName session)
+                            { moduleName = "Page.Community.Invite", function = "update" }
+                            []
+
                 Just { community } ->
                     let
                         communityInfo =
@@ -561,7 +569,6 @@ update session msg model =
                     in
                     model
                         |> UR.init
-                        |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                         |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
                         |> UR.addCmd (Route.pushUrl navKey redirectRoute)
                         |> UR.addBreadcrumb
@@ -571,33 +578,6 @@ update session msg model =
                             , data = Dict.empty
                             , level = Log.Info
                             }
-
-                Nothing ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
-                        |> UR.logImpossible msg
-                            "Completed signin in, but invite was unavailable"
-                            (Page.maybeAccountName session)
-                            { moduleName = "Page.Community.Invite", function = "update" }
-                            []
-
-        CompletedSignIn _ (RemoteData.Failure error) ->
-            { model | pageStatus = Error Http.NetworkError }
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    (Page.maybeAccountName session)
-                    "Got an error when signing in"
-                    { moduleName = "Page.Community.Invite", function = "update" }
-                    []
-                    error
-
-        CompletedSignIn _ _ ->
-            UR.init model
-
-        SignedIn ->
-            -- TODO - Do something here (same as `CompletedSignIn`)
-            UR.init model
 
 
 getInvite : Model -> Maybe Invite
@@ -656,9 +636,6 @@ msgToString msg =
 
         FormMsg _ ->
             [ "FormMsg" ]
-
-        CompletedSignIn _ r ->
-            [ "CompletedSignIn", UR.remoteDataToString r ]
 
         SignedIn ->
             [ "SignedIn" ]
