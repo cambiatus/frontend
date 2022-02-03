@@ -2,8 +2,6 @@ module Session.Shared exposing
     ( Shared
     , TranslationStatus(..)
     , Translators
-    , decimalSeparators
-    , floatStringFromSeparatedString
     , init
     , langFlag
     , loadTranslation
@@ -26,7 +24,6 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
-import Mask
 import Ports
 import Time exposing (Posix)
 import Translation
@@ -121,9 +118,7 @@ type TranslationStatus
 {-| Contains functions with bounded dictionaries for translating plain strings and strings with placeholders.
 -}
 type alias Translators =
-    { t : String -> String
-    , tr : String -> I18Next.Replacements -> String
-    }
+    Translation.Translators
 
 
 makeTranslators : Translations -> Translators
@@ -145,21 +140,6 @@ makeTranslators translations =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
-
-
-decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
-decimalSeparators { t } =
-    { decimalSeparator = t "decimal_separator"
-    , thousandsSeparator = t "thousands_separator"
-    }
-
-
-{-| Normalize a masked float string into a string that can be parsed into a float
-by Elm
--}
-floatStringFromSeparatedString : Translators -> String -> String
-floatStringFromSeparatedString translators =
-    Mask.removeFloat (decimalSeparators translators)
 
 
 

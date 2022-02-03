@@ -25,8 +25,9 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Task
+import Translation exposing (Translators)
 import UpdateResult as UR
 import Utils
 import View.Feedback
@@ -510,7 +511,7 @@ view_ ({ translators } as shared) community contributionConfiguration model =
                             { id = "paypal-buttons-sponsorship"
                             , value =
                                 amount
-                                    |> Shared.floatStringFromSeparatedString translators
+                                    |> Translation.floatStringFromSeparatedString translators
                                     |> String.toFloat
                                     |> Maybe.andThen
                                         (\floatAmount ->
