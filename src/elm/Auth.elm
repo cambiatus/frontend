@@ -2,14 +2,12 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
-    , SignInResponse
     , hasPrivateKey
     , init
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
     , removePrivateKey
-    , signIn
     , update
     , view
     )
@@ -35,20 +33,14 @@ is also related to it.
 
 -}
 
-import Cambiatus.Mutation
-import Cambiatus.Object.Session
 import Dict
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootMutation)
-import Graphql.OptionalArgument as OptionalArgument
-import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, p, text)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Log
-import Profile
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Feedback as Feedback
@@ -192,12 +184,6 @@ type Msg
     | GotPrivateKey (Result String ( Eos.Name, Eos.PrivateKey ))
 
 
-type alias SignInResponse =
-    { user : Profile.Model
-    , token : String
-    }
-
-
 type ExternalMsg
     = CompletedAuth Eos.Name Model
     | UpdatedShared Shared
@@ -274,18 +260,6 @@ update msg shared model =
                     , transaction = msg
                     , level = Log.Error
                     }
-
-
-signIn : { account : Eos.Name, password : String, invitationId : Maybe String } -> SelectionSet SignInResponse RootMutation
-signIn { account, password, invitationId } =
-    Cambiatus.Mutation.signIn (\opts -> { opts | invitationId = OptionalArgument.fromMaybe invitationId })
-        { account = Eos.nameToString account
-        , password = password
-        }
-        (Graphql.SelectionSet.succeed SignInResponse
-            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
-            |> with Cambiatus.Object.Session.token
-        )
 
 
 authFailed : String -> Model -> UpdateResult
