@@ -1193,8 +1193,8 @@ update msg model ({ shared, accountName } as loggedIn) =
                         ( contactModel, cmd, contactResponse ) =
                             Contact.update subMsg
                                 model.contactModel
-                                loggedIn.shared
-                                loggedIn.authToken
+                                loggedIn.shared.translators
+                                (Api.Graphql.mutation shared (Just loggedIn.authToken))
                                 userProfile.contacts
 
                         addContactResponse model_ =

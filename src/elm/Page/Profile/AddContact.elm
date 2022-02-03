@@ -8,6 +8,7 @@ module Page.Profile.AddContact exposing
     , view
     )
 
+import Api.Graphql
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Http
@@ -57,8 +58,8 @@ update msg model ({ shared, authToken } as loggedIn) =
                         ( newModel, cmd, newContacts ) =
                             Contact.update subMsg
                                 contactModel
-                                shared
-                                authToken
+                                shared.translators
+                                (Api.Graphql.mutation shared (Just authToken))
                                 profile_.contacts
 
                         actOnNewContacts updateResult =

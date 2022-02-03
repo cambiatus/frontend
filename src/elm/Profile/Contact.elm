@@ -16,7 +16,6 @@ module Profile.Contact exposing
     , view
     )
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Mutation
@@ -41,7 +40,7 @@ import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Shared, Translators)
+import Session.Shared exposing (Translators)
 import Task
 import Validate
 import View.Components
@@ -229,8 +228,18 @@ type Msg
     | PressedDownArrowOnFlagSelect ContactType
 
 
-update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) authToken profileContacts =
+type alias MutationFunction =
+    SelectionSet (Maybe Profile) RootMutation -> (UpdatedData -> Msg) -> Cmd Msg
+
+
+update :
+    Msg
+    -> Model
+    -> Translators
+    -> MutationFunction
+    -> List Normalized
+    -> ( Model, Cmd Msg, ContactResponse )
+update msg model translators mutationFunction profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact
@@ -358,8 +367,7 @@ update msg model ({ translators } as shared) authToken profileContacts =
                 | contactTypeToDelete = Nothing
                 , state = RemoteData.Loading
               }
-            , Api.Graphql.mutation shared
-                (Just authToken)
+            , mutationFunction
                 (mutation newContacts)
                 CompletedDeleteContact
             , NotAsked
@@ -400,8 +408,7 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         | state = RemoteData.Loading
                         , kind = removeErrors model.kind
                       }
-                    , Api.Graphql.mutation shared
-                        (Just authToken)
+                    , mutationFunction
                         (mutation normalized)
                         CompletedUpdateContact
                     , NotAsked
