@@ -37,7 +37,6 @@ import Icons
 import Json.Encode exposing (Value)
 import Log
 import Ports
-import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn

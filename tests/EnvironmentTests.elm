@@ -2,7 +2,6 @@ module EnvironmentTests exposing (all)
 
 import Environment
 import Expect
-import Session.Shared as Shared
 import Test exposing (..)
 import TestHelpers.Fuzz as Fuzz
 import Url

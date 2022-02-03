@@ -25,10 +25,7 @@ In order to get an auth token from the backend, we use asymmetric cryptography:
 -}
 
 import Api.Graphql
-import Auth
 import Browser.Dom as Dom
-import Cambiatus.Mutation
-import Cambiatus.Object.Request
 import Dict
 import Eos.Account as Eos
 import Form
@@ -43,7 +40,6 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Log
-import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
