@@ -60,6 +60,13 @@ init flags navKey url =
     let
         ( shared, sharedCmd ) =
             Shared.init flags navKey url
+
+        initialCmds =
+            Cmd.batch
+                [ fetchTranslations shared.language
+                , fetchTimezone
+                , sharedCmd
+                ]
     in
     case ( shared.maybeAccount, flags.authToken ) of
         ( Just accountName, Just authToken ) ->
@@ -69,10 +76,8 @@ init flags navKey url =
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
                 |> UR.addCmd (Ports.createAbsintheSocket authToken)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd sharedCmd
+                |> UR.addCmd initialCmds
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -81,40 +86,20 @@ init flags navKey url =
                     , level = Log.DebugLevel
                     }
 
-        ( Just accountName, Nothing ) ->
-            let
-                ( model, cmd, signedInCmd ) =
-                    Guest.initLoggingIn shared accountName SignedIn
-            in
-            Guest model
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd signedInCmd
-                |> UR.addCmd sharedCmd
-                |> UR.addBreadcrumb
-                    { type_ = Log.DebugBreadcrumb
-                    , category = Ignored
-                    , message = "Started Elm app with guest logging in"
-                    , data = Dict.empty
-                    , level = Log.DebugLevel
-                    }
-
-        ( Nothing, _ ) ->
+        _ ->
             let
                 ( model, cmd ) =
                     Guest.init shared
             in
-            UR.init (Guest model)
-                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd sharedCmd
+            Guest model
+                |> UR.init
+                |> UR.addCmd initialCmds
+                |> UR.addCmd
+                    (Cmd.map GotGuestMsg cmd)
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
-                    , message = "Started Elm app with regular guest user"
+                    , message = "Started Elm app with guest user"
                     , data = Dict.empty
                     , level = Log.DebugLevel
                     }

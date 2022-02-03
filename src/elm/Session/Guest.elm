@@ -6,7 +6,6 @@ module Session.Guest exposing
     , Page(..)
     , addAfterLoginRedirect
     , init
-    , initLoggingIn
     , invalidCommunityRedirectUrl
     , maybeInitWith
     , msgToString
@@ -53,23 +52,6 @@ init shared =
     ( initModel shared, fetchCommunity shared )
 
 
-initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
-initLoggingIn shared accountName signInMessage =
-    let
-        ( model, cmd ) =
-            init shared
-    in
-    ( { model | isLoggingIn = True }
-    , cmd
-      -- , Api.Graphql.mutation shared
-      --     Nothing
-      --     (Auth.signIn accountName shared Nothing)
-      --     signInMessage
-      -- TODO
-    , Cmd.none
-    )
-
-
 fetchCommunity : Shared -> Cmd Msg
 fetchCommunity shared =
     if shared.useSubdomain then
@@ -106,7 +88,6 @@ type alias Model =
     , afterLoginRedirect : Maybe Route
     , maybeInvitation : Maybe String
     , community : RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) Community.CommunityPreview
-    , isLoggingIn : Bool
     , feedback : Feedback.Model
     }
 
@@ -118,7 +99,6 @@ initModel shared =
     , afterLoginRedirect = Nothing
     , maybeInvitation = Nothing
     , community = RemoteData.Loading
-    , isLoggingIn = False
     , feedback = Feedback.Hidden
     }
 
