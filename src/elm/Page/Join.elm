@@ -61,7 +61,7 @@ update session msg model =
 
                 Page.LoggedIn _ ->
                     UR.init model
-                        |> UR.addExt LoggedIn.RequiredAuthToken
+                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
 
         CompletedLoadCommunity community ->
             case session of
@@ -320,9 +320,6 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
-
-        LoggedIn.CompletedSigningIn ->
-            Just SignedIn
 
         _ ->
             Nothing

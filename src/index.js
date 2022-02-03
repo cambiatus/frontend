@@ -25,6 +25,7 @@ const RECENT_SEARCHES = 'bespiral.recent_search'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
+const HAS_USED_PK_AUTH_KEY = 'bespiral.has_used_pk_auth'
 const env = process.env.NODE_ENV || 'development'
 const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
@@ -298,6 +299,7 @@ function flags () {
     language: getUserLanguage(),
     accountName: accountName,
     authToken: getItem(AUTH_TOKEN),
+    hasUsedPKAuth: JSON.parse(getItem(HAS_USED_PK_AUTH_KEY)) || false,
     logo: config.logo,
     logoMobile: config.logoMobile,
     now: Date.now(),

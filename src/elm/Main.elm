@@ -112,6 +112,7 @@ init flagsValue url navKey =
             changeRouteTo (Route.fromUrl url)
                 { session = session
                 , afterAuthMsg = Nothing
+                , afterAuthTokenMsg = Nothing
                 , status = Redirect
                 }
     in
@@ -149,6 +150,7 @@ subscriptions model =
 type alias Model =
     { session : Session
     , afterAuthMsg : Maybe { successMsg : Msg, errorMsg : Msg }
+    , afterAuthTokenMsg : Maybe Msg
     , status : Status
     }
 
@@ -368,6 +370,18 @@ update msg model =
 
                                     Just aMsg ->
                                         update aMsg.errorMsg { m | afterAuthMsg = Nothing }
+
+                            Page.LoggedInExternalMsg LoggedIn.AuthTokenSucceeded ->
+                                let
+                                    _ =
+                                        Debug.log "AUTH TOKEN SUCCEEDED" m
+                                in
+                                case m.afterAuthTokenMsg of
+                                    Nothing ->
+                                        ( m, Cmd.none )
+
+                                    Just callbackMsg ->
+                                        update callbackMsg { m | afterAuthTokenMsg = Nothing }
 
                             Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
                                 ( m, broadcast broadcastMsg m.status )

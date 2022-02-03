@@ -10,6 +10,7 @@ module Session.LoggedIn exposing
     , executeFeedback
     , init
     , initLogin
+    , initRequestingAuthToken
     , isAccount
     , jsAddressToMsg
     , mapExternal
@@ -82,7 +83,7 @@ init : Shared -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd Msg )
 init shared accountName authToken =
     let
         ( model, cmd ) =
-            initModel shared Nothing accountName authToken
+            initModel shared Nothing accountName (Just authToken)
     in
     ( model
     , Cmd.batch
@@ -90,6 +91,24 @@ init shared accountName authToken =
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
         , cmd
+        ]
+    )
+
+
+{-| Initialize already logged in user when the page is [re]loaded, but their auth
+token is no longer valid (needed after PR #680)
+-}
+initRequestingAuthToken : Shared -> Eos.Name -> ( Model, Cmd Msg )
+initRequestingAuthToken shared accountName =
+    let
+        ( model, cmd ) =
+            initModel shared Nothing accountName Nothing
+    in
+    ( model
+    , Cmd.batch
+        [ Task.perform GotTimeInternal Time.now
+        , cmd
+        , generateAuthTokenInternal { callbackMsg = Debug.todo "" }
         ]
     )
 
@@ -129,7 +148,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
                 |> Task.perform CompletedLoadProfile
 
         ( model, cmd ) =
-            initModel shared maybePrivateKey_ profile_.account authToken
+            initModel shared maybePrivateKey_ profile_.account (Just authToken)
     in
     ( model
     , Cmd.batch
@@ -188,7 +207,7 @@ type alias Model =
     , feedback : Feedback.Model
     , searchModel : Search.Model
     , claimingAction : Action.Model
-    , authToken : Api.Graphql.Token
+    , authToken : Maybe Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
@@ -196,7 +215,7 @@ type alias Model =
     }
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd Msg )
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd Msg )
 initModel shared maybePrivateKey_ accountName authToken =
     let
         ( authModel, authCmd ) =
@@ -919,7 +938,7 @@ type External msg
     | RequestedCommunityField Community.Field
     | SetCommunityField Community.FieldValue
     | RequiredPrivateKey { successMsg : msg, errorMsg : msg }
-    | RequiredAuthToken
+    | RequiredAuthToken { callbackMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
@@ -969,8 +988,8 @@ mapExternal mapFn msg =
         RequiredPrivateKey { successMsg, errorMsg } ->
             RequiredPrivateKey { successMsg = mapFn successMsg, errorMsg = mapFn errorMsg }
 
-        RequiredAuthToken ->
-            RequiredAuthToken
+        RequiredAuthToken { callbackMsg } ->
+            RequiredAuthToken { callbackMsg = mapFn callbackMsg }
 
         ShowFeedback status message ->
             ShowFeedback status message
@@ -993,6 +1012,7 @@ updateExternal :
         , cmd : Cmd Msg
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
+        , afterAuthTokenMsg : Maybe { callbackMsg : msg }
         }
 updateExternal externalMsg ({ shared } as model) =
     let
@@ -1001,6 +1021,7 @@ updateExternal externalMsg ({ shared } as model) =
             , cmd = Cmd.none
             , broadcastMsg = Nothing
             , afterAuthMsg = Nothing
+            , afterAuthTokenMsg = Nothing
             }
     in
     case externalMsg of
@@ -1008,30 +1029,40 @@ updateExternal externalMsg ({ shared } as model) =
             { defaultResult | model = newModel }
 
         AddedCommunity communityInfo ->
-            let
-                ( newModel, cmd ) =
-                    signUpForCommunity model communityInfo
+            case model.authToken of
+                Nothing ->
+                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "" } }
 
-                profileWithCommunity =
-                    case profile newModel of
-                        Nothing ->
-                            newModel.profile
+                Just authToken ->
+                    let
+                        ( newModel, cmd ) =
+                            signUpForCommunity model authToken communityInfo
 
-                        Just profile_ ->
-                            RemoteData.Success
-                                { profile_ | communities = communityInfo :: profile_.communities }
-            in
-            { defaultResult
-                | model = { newModel | profile = profileWithCommunity }
-                , cmd = cmd
-            }
+                        profileWithCommunity =
+                            case profile newModel of
+                                Nothing ->
+                                    newModel.profile
+
+                                Just profile_ ->
+                                    RemoteData.Success
+                                        { profile_ | communities = communityInfo :: profile_.communities }
+                    in
+                    { defaultResult
+                        | model = { newModel | profile = profileWithCommunity }
+                        , cmd = cmd
+                    }
 
         CreatedCommunity symbol subdomain ->
-            let
-                ( newModel, cmd ) =
-                    selectCommunity model { symbol = symbol, subdomain = subdomain } Route.Dashboard
-            in
-            { defaultResult | model = newModel, cmd = cmd }
+            case model.authToken of
+                Nothing ->
+                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "" } }
+
+                Just authToken ->
+                    let
+                        ( newModel, cmd ) =
+                            selectCommunity model authToken { symbol = symbol, subdomain = subdomain } Route.Dashboard
+                    in
+                    { defaultResult | model = newModel, cmd = cmd }
 
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
@@ -1068,26 +1099,35 @@ updateExternal externalMsg ({ shared } as model) =
                 TranslationsLoaded ->
                     { defaultResult | broadcastMsg = Just broadcastMsg }
 
-                CompletedSigningIn ->
-                    { defaultResult | broadcastMsg = Just broadcastMsg }
-
         ReloadResource CommunityResource ->
-            let
-                ( _, cmd ) =
-                    model.selectedCommunity
-                        |> RemoteData.map .symbol
-                        |> RemoteData.toMaybe
-                        |> loadCommunity model
-            in
-            { defaultResult | cmd = cmd }
+            case model.authToken of
+                Nothing ->
+                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "Create a msg for this" } }
+
+                Just authToken ->
+                    let
+                        ( _, cmd ) =
+                            model.selectedCommunity
+                                |> RemoteData.map .symbol
+                                |> RemoteData.toMaybe
+                                |> loadCommunity model authToken
+                    in
+                    { defaultResult | cmd = cmd }
 
         ReloadResource ProfileResource ->
             { defaultResult
                 | cmd =
-                    Api.Graphql.query model.shared
-                        (Just model.authToken)
-                        (Profile.query model.accountName)
-                        CompletedLoadProfile
+                    case model.authToken of
+                        Nothing ->
+                            generateAuthTokenInternal
+                                { callbackMsg = Debug.todo "Create a Msg that will query profile"
+                                }
+
+                        Just authToken ->
+                            Api.Graphql.query model.shared
+                                (Just authToken)
+                                (Profile.query model.accountName)
+                                CompletedLoadProfile
             }
 
         ReloadResource TimeResource ->
@@ -1101,28 +1141,38 @@ updateExternal externalMsg ({ shared } as model) =
 
                     else
                         case Community.maybeFieldValue field community of
-                            Nothing ->
-                                { defaultResult
-                                    | cmd =
-                                        Community.queryForField community.symbol
-                                            shared
-                                            model.authToken
-                                            field
-                                            (CompletedLoadCommunityField community)
-                                    , model =
-                                        { model
-                                            | selectedCommunity =
-                                                Community.setFieldAsLoading field community
-                                                    |> RemoteData.Success
-                                        }
-                                }
-
                             Just fieldValue ->
                                 { defaultResult
                                     | broadcastMsg =
                                         Just
                                             (CommunityFieldLoaded community fieldValue)
                                 }
+
+                            Nothing ->
+                                case model.authToken of
+                                    Nothing ->
+                                        { defaultResult
+                                            | cmd =
+                                                generateAuthTokenInternal
+                                                    { callbackMsg = Debug.todo "Create a Msg that will query a community field"
+                                                    }
+                                        }
+
+                                    Just authToken ->
+                                        { defaultResult
+                                            | cmd =
+                                                Community.queryForField community.symbol
+                                                    shared
+                                                    authToken
+                                                    field
+                                                    (CompletedLoadCommunityField community)
+                                            , model =
+                                                { model
+                                                    | selectedCommunity =
+                                                        Community.setFieldAsLoading field community
+                                                            |> RemoteData.Success
+                                                }
+                                        }
 
                 _ ->
                     { defaultResult
@@ -1138,11 +1188,18 @@ updateExternal externalMsg ({ shared } as model) =
                 RemoteData.Success community ->
                     { defaultResult
                         | cmd =
-                            Community.queryForField community.symbol
-                                shared
-                                model.authToken
-                                field
-                                (CompletedLoadCommunityField community)
+                            case model.authToken of
+                                Just authToken ->
+                                    Community.queryForField community.symbol
+                                        shared
+                                        authToken
+                                        field
+                                        (CompletedLoadCommunityField community)
+
+                                Nothing ->
+                                    generateAuthTokenInternal
+                                        { callbackMsg = Debug.todo "Create a Msg that will query a community field"
+                                        }
                     }
 
                 _ ->
@@ -1183,12 +1240,13 @@ updateExternal externalMsg ({ shared } as model) =
                 , afterAuthMsg = Just afterAuthMsg
             }
 
-        RequiredAuthToken ->
+        RequiredAuthToken afterAuthTokenMsg ->
             { defaultResult
                 | cmd =
                     Api.Graphql.askForPhrase shared
                         model.accountName
                         GotAuthTokenPhrase
+                , afterAuthTokenMsg = Just afterAuthTokenMsg
             }
 
         ShowFeedback status message ->
@@ -1207,6 +1265,9 @@ type alias UpdateResult =
 type ExternalMsg
     = AuthenticationSucceed
     | AuthenticationFailed
+    | AuthTokenSucceeded
+      -- TODO
+      -- | AuthTokenFailed
     | Broadcast BroadcastMsg
 
 
@@ -1216,7 +1277,6 @@ type BroadcastMsg
     | ProfileLoaded Profile.Model
     | GotTime Time.Posix
     | TranslationsLoaded
-    | CompletedSigningIn
 
 
 type Msg
@@ -1289,13 +1349,16 @@ update msg model =
         GotSearchMsg searchMsg ->
             case model.selectedCommunity of
                 RemoteData.Success community ->
-                    Search.update shared model.authToken community.symbol model.searchModel searchMsg
-                        |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
-                            GotSearchMsg
-                            (\feedback -> UR.mapModel (\newModel -> { newModel | feedback = feedback }))
-                            { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
-                        |> UR.mapModel
-                            (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
+                    (\authToken ->
+                        Search.update shared authToken community.symbol model.searchModel searchMsg
+                            |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
+                                GotSearchMsg
+                                (\feedback -> UR.mapModel (\newModel -> { newModel | feedback = feedback }))
+                                { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
+                            |> UR.mapModel
+                                (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
+                    )
+                        |> withAuthTokenInternal model { callbackMsg = msg }
 
                 _ ->
                     UR.init model
@@ -1387,66 +1450,69 @@ update msg model =
             UR.init model
 
         CompletedLoadCommunity (RemoteData.Success (Just community)) ->
-            let
-                ( newModel, cmd ) =
-                    setCommunity
-                        (Community.mergeFields model.selectedCommunity community)
-                        model
+            (\authToken ->
+                let
+                    ( newModel, cmd ) =
+                        setCommunity
+                            (Community.mergeFields model.selectedCommunity community)
+                            model
 
-                newCommunity =
-                    Community.mergeFields newModel.selectedCommunity community
-                        |> (\comm ->
-                                List.foldl Community.setFieldAsLoading
-                                    comm
-                                    newModel.queuedCommunityFields
-                           )
+                    newCommunity =
+                        Community.mergeFields newModel.selectedCommunity community
+                            |> (\comm ->
+                                    List.foldl Community.setFieldAsLoading
+                                        comm
+                                        newModel.queuedCommunityFields
+                               )
 
-                queryForContributionCount =
-                    Api.Graphql.query newModel.shared
-                        (Just newModel.authToken)
-                        (Profile.contributionCountQuery community.symbol model.accountName)
-                        CompletedLoadContributionCount
-            in
-            { newModel
-                | selectedCommunity = RemoteData.Success newCommunity
-                , maybeHighlightedNews = community.highlightedNews
-            }
-                |> UR.init
-                |> UR.addCmd cmd
-                |> UR.addCmd (Ports.getRecentSearches ())
-                |> UR.addPort
-                    { responseAddress = ReceivedNewHighlightedNews Encode.null
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "subscribeToHighlightedNewsChanged" )
-                            , ( "subscription"
-                              , highlightedNewsSubscription newCommunity.symbol
-                                    |> Graphql.Document.serializeSubscription
-                                    |> Encode.string
-                              )
-                            ]
-                    }
-                |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
-                |> UR.addCmd
-                    (Community.queryForFields community.symbol
-                        newModel.shared
-                        newModel.authToken
-                        newModel.queuedCommunityFields
-                        (CompletedLoadCommunityFields newCommunity)
-                    )
-                |> UR.addCmd queryForContributionCount
-                |> UR.addBreadcrumb
-                    { type_ = Log.DefaultBreadcrumb
-                    , category = msg
-                    , message = "Community successfully loaded"
-                    , data =
-                        Dict.fromList
-                            [ ( "symbol", Eos.encodeSymbol community.symbol )
-                            , ( "name", Encode.string community.name )
-                            ]
-                    , level = Log.Info
-                    }
+                    queryForContributionCount =
+                        Api.Graphql.query newModel.shared
+                            (Just authToken)
+                            (Profile.contributionCountQuery community.symbol model.accountName)
+                            CompletedLoadContributionCount
+                in
+                { newModel
+                    | selectedCommunity = RemoteData.Success newCommunity
+                    , maybeHighlightedNews = community.highlightedNews
+                }
+                    |> UR.init
+                    |> UR.addCmd cmd
+                    |> UR.addCmd (Ports.getRecentSearches ())
+                    |> UR.addPort
+                        { responseAddress = ReceivedNewHighlightedNews Encode.null
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "subscribeToHighlightedNewsChanged" )
+                                , ( "subscription"
+                                  , highlightedNewsSubscription newCommunity.symbol
+                                        |> Graphql.Document.serializeSubscription
+                                        |> Encode.string
+                                  )
+                                ]
+                        }
+                    |> UR.addExt (CommunityLoaded newCommunity |> Broadcast)
+                    |> UR.addCmd
+                        (Community.queryForFields community.symbol
+                            newModel.shared
+                            authToken
+                            newModel.queuedCommunityFields
+                            (CompletedLoadCommunityFields newCommunity)
+                        )
+                    |> UR.addCmd queryForContributionCount
+                    |> UR.addBreadcrumb
+                        { type_ = Log.DefaultBreadcrumb
+                        , category = msg
+                        , message = "Community successfully loaded"
+                        , data =
+                            Dict.fromList
+                                [ ( "symbol", Eos.encodeSymbol community.symbol )
+                                , ( "name", Encode.string community.name )
+                                ]
+                        , level = Log.Info
+                        }
+            )
+                |> withAuthTokenInternal model { callbackMsg = msg }
 
         CompletedLoadCommunity (RemoteData.Success Nothing) ->
             UR.init model
@@ -1554,13 +1620,16 @@ update msg model =
             UR.init model
 
         ClickedTryAgainProfile accountName ->
-            UR.init { model | profile = RemoteData.Loading }
-                |> UR.addCmd
-                    (Api.Graphql.query shared
-                        (Just model.authToken)
-                        (Profile.query accountName)
-                        CompletedLoadProfile
-                    )
+            (\authToken ->
+                UR.init { model | profile = RemoteData.Loading }
+                    |> UR.addCmd
+                        (Api.Graphql.query shared
+                            (Just authToken)
+                            (Profile.query accountName)
+                            CompletedLoadProfile
+                        )
+            )
+                |> withAuthTokenInternal model { callbackMsg = msg }
 
         ClickedLogout ->
             UR.init model
@@ -1672,37 +1741,41 @@ update msg model =
                 |> UR.init
 
         SelectedCommunity ({ symbol } as newCommunity) ->
-            let
-                ( loadCommunityModel, loadCommunityCmd ) =
-                    loadCommunity model (Just symbol)
-            in
-            case model.selectedCommunity of
-                RemoteData.Success selectedCommunity ->
-                    if symbol == selectedCommunity.symbol then
-                        UR.init { model | showCommunitySelector = False }
+            (\authToken ->
+                let
+                    ( loadCommunityModel, loadCommunityCmd ) =
+                        loadCommunity model authToken (Just symbol)
+                in
+                case model.selectedCommunity of
+                    RemoteData.Success selectedCommunity ->
+                        if symbol == selectedCommunity.symbol then
+                            UR.init { model | showCommunitySelector = False }
 
-                    else
-                        let
-                            ( newModel, cmd ) =
-                                selectCommunity model
-                                    newCommunity
-                                    (List.head model.routeHistory
-                                        |> Maybe.withDefault Route.Dashboard
-                                    )
-                        in
-                        UR.init { newModel | showCommunitySelector = False }
-                            |> UR.addCmd cmd
+                        else
+                            let
+                                ( newModel, cmd ) =
+                                    selectCommunity model
+                                        authToken
+                                        newCommunity
+                                        (List.head model.routeHistory
+                                            |> Maybe.withDefault Route.Dashboard
+                                        )
+                            in
+                            UR.init { newModel | showCommunitySelector = False }
+                                |> UR.addCmd cmd
 
-                RemoteData.NotAsked ->
-                    UR.init loadCommunityModel
-                        |> UR.addCmd loadCommunityCmd
+                    RemoteData.NotAsked ->
+                        UR.init loadCommunityModel
+                            |> UR.addCmd loadCommunityCmd
 
-                RemoteData.Failure _ ->
-                    UR.init loadCommunityModel
-                        |> UR.addCmd loadCommunityCmd
+                    RemoteData.Failure _ ->
+                        UR.init loadCommunityModel
+                            |> UR.addCmd loadCommunityCmd
 
-                RemoteData.Loading ->
-                    UR.init model
+                    RemoteData.Loading ->
+                        UR.init model
+            )
+                |> withAuthTokenInternal model { callbackMsg = msg }
 
         CompletedLoadContributionCount (RemoteData.Success (Just contributionCount)) ->
             { model | contributionCount = RemoteData.Success contributionCount }
@@ -1826,11 +1899,11 @@ update msg model =
         CompletedGeneratingAuthToken (RemoteData.Success signInResponse) ->
             { model
                 | profile = RemoteData.Success signInResponse.profile
-                , authToken = signInResponse.token
+                , authToken = Just signInResponse.token
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
-                |> UR.addExt (Broadcast CompletedSigningIn)
+                |> UR.addExt AuthTokenSucceeded
 
         CompletedGeneratingAuthToken (RemoteData.Failure err) ->
             { model
@@ -1941,6 +2014,42 @@ withPrivateKeyInternal msg loggedIn successfulUR =
                 |> UR.init
 
 
+withAuthToken :
+    Model
+    -> subModel
+    -> { callbackMsg : subMsg }
+    -> (Api.Graphql.Token -> UR.UpdateResult subModel subMsg (External subMsg))
+    -> UR.UpdateResult subModel subMsg (External subMsg)
+withAuthToken loggedIn subModel subMsg successfulUR =
+    case loggedIn.authToken of
+        Just authToken ->
+            successfulUR authToken
+
+        Nothing ->
+            UR.init subModel
+                |> UR.addExt (RequiredAuthToken subMsg)
+
+
+withAuthTokenInternal :
+    Model
+    -> { callbackMsg : Msg }
+    -> (Api.Graphql.Token -> UpdateResult)
+    -> UpdateResult
+withAuthTokenInternal model callbackMsg successfulUR =
+    case model.authToken of
+        Just authToken ->
+            successfulUR authToken
+
+        Nothing ->
+            UR.init model
+                |> UR.addCmd (generateAuthTokenInternal callbackMsg)
+
+
+generateAuthTokenInternal : { callbackMsg : Msg } -> Cmd Msg
+generateAuthTokenInternal { callbackMsg } =
+    Debug.todo "Go through the auth process, and call `callbackMsg` at the end of it"
+
+
 isCommunityMember : Model -> Bool
 isCommunityMember model =
     case ( profile model, model.selectedCommunity ) of
@@ -1955,13 +2064,13 @@ isCommunityMember model =
             False
 
 
-loadCommunity : Model -> Maybe Eos.Symbol -> ( Model, Cmd Msg )
-loadCommunity ({ shared } as model) maybeSymbol =
+loadCommunity : Model -> Api.Graphql.Token -> Maybe Eos.Symbol -> ( Model, Cmd Msg )
+loadCommunity ({ shared } as model) authToken maybeSymbol =
     ( { model
         | showCommunitySelector = False
         , selectedCommunity = RemoteData.Loading
       }
-    , fetchCommunity shared model.authToken maybeSymbol
+    , fetchCommunity shared authToken maybeSymbol
     )
 
 
@@ -2050,8 +2159,8 @@ setCommunity community ({ shared } as model) =
                 )
 
 
-signUpForCommunity : Model -> Profile.CommunityInfo -> ( Model, Cmd Msg )
-signUpForCommunity ({ shared, authToken } as model) communityInfo =
+signUpForCommunity : Model -> Api.Graphql.Token -> Profile.CommunityInfo -> ( Model, Cmd Msg )
+signUpForCommunity ({ shared } as model) authToken communityInfo =
     ( { model | selectedCommunity = RemoteData.Loading }
     , Api.Graphql.query shared
         (Just authToken)
@@ -2063,8 +2172,8 @@ signUpForCommunity ({ shared, authToken } as model) communityInfo =
 {-| Given minimal information, selects a community. This means querying for the
 entire `Community.Model`, and then setting it in the `Model`
 -}
-selectCommunity : Model -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> ( Model, Cmd Msg )
-selectCommunity ({ shared, authToken } as model) community route =
+selectCommunity : Model -> Api.Graphql.Token -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> ( Model, Cmd Msg )
+selectCommunity ({ shared } as model) authToken community route =
     if shared.useSubdomain then
         ( model
         , Route.loadExternalCommunity shared community route
@@ -2315,7 +2424,7 @@ externalMsgToString externalMsg =
         RequiredPrivateKey _ ->
             [ "RequiredPrivateKey" ]
 
-        RequiredAuthToken ->
+        RequiredAuthToken _ ->
             [ "RequiredAuthToken" ]
 
         ShowFeedback _ _ ->

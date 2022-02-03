@@ -359,7 +359,7 @@ update session msg model =
 
                                 _ ->
                                     newModel
-                                        |> UR.addExt LoggedIn.RequiredAuthToken
+                                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
 
                         _ ->
                             newModel
@@ -508,7 +508,7 @@ update session msg model =
                     if allowedToJoinCommunity then
                         model
                             |> UR.init
-                            |> UR.addExt LoggedIn.RequiredAuthToken
+                            |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
                             |> addBreadcrumb
 
                     else
@@ -599,9 +599,6 @@ receiveBroadcast broadcastMsg =
     case broadcastMsg of
         LoggedIn.ProfileLoaded _ ->
             Just CompletedLoadProfile
-
-        LoggedIn.CompletedSigningIn ->
-            Just SignedIn
 
         _ ->
             Nothing
