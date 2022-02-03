@@ -545,7 +545,7 @@ viewTransfer loggedIn transfer profileSummary =
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
             |> addRelativeSelector
             |> Profile.Summary.withScrollSelector "#transfer-list-container"
-            |> Profile.Summary.view loggedIn.shared
+            |> Profile.Summary.view loggedIn.shared.translators
                 loggedIn.accountName
                 otherProfile
             |> Html.map (GotTransferCardProfileSummaryMsg transfer.id)

@@ -15,10 +15,10 @@ module Session.Guest exposing
     )
 
 import Api.Graphql
-import Auth
 import Browser.Navigation
 import Community
 import Dict
+import Environment
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -57,7 +57,7 @@ fetchCommunity shared =
     if shared.useSubdomain then
         Api.Graphql.query shared
             Nothing
-            (Community.communityPreviewQuery (Shared.communityDomain shared))
+            (Community.communityPreviewQuery (Environment.communityDomain shared.url))
             CompletedLoadCommunityPreview
 
     else
@@ -285,7 +285,7 @@ viewPageHeader model shared =
 
 
 type External
-    = LoggedIn Eos.PrivateKey Auth.SignInResponse
+    = LoggedIn Eos.PrivateKey Api.Graphql.SignInResponse
     | SetFeedback Feedback.Model
     | UpdatedShared Shared
 

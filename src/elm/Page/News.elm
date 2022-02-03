@@ -407,7 +407,7 @@ viewMainNews ({ shared } as loggedIn) model news =
                     [ model.lastEditorSummary
                         |> Profile.Summary.withoutName
                         |> Profile.Summary.withImageSize "h-8 w-8"
-                        |> Profile.Summary.view shared
+                        |> Profile.Summary.view shared.translators
                             loggedIn.accountName
                             news.creator
                         |> Html.map GotLastEditorSummaryMsg

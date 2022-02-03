@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Api.Graphql
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Dict
@@ -791,18 +792,18 @@ updateGuestUResult toStatus toMsg model uResult =
 
                 Page.Guest guest ->
                     case commExtMsg of
-                        Guest.LoggedIn privateKey { user, token } ->
+                        Guest.LoggedIn privateKey { profile, token } ->
                             let
                                 shared =
                                     guest.shared
 
                                 userWithCommunity =
-                                    { user
+                                    { profile
                                         | communities =
                                             case guest.community of
                                                 RemoteData.Success community ->
-                                                    if List.any (\c -> c.symbol == community.symbol) user.communities then
-                                                        user.communities
+                                                    if List.any (\c -> c.symbol == community.symbol) profile.communities then
+                                                        profile.communities
 
                                                     else
                                                         { symbol = community.symbol
@@ -813,10 +814,10 @@ updateGuestUResult toStatus toMsg model uResult =
                                                         , hasActions = community.hasObjectives
                                                         , hasKyc = community.hasKyc
                                                         }
-                                                            :: user.communities
+                                                            :: profile.communities
 
                                                 _ ->
-                                                    user.communities
+                                                    profile.communities
                                     }
 
                                 ( session, cmd ) =
@@ -838,13 +839,13 @@ updateGuestUResult toStatus toMsg model uResult =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
-                                :: Ports.createAbsintheSocket token
+                                :: Api.Graphql.createAbsintheSocket token
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: Log.addBreadcrumb msgToString
                                     { type_ = Log.InfoBreadcrumb
                                     , category = Ignored
                                     , message = "Guest logged in"
-                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName profile.account ) ]
                                     , level = Log.Info
                                     }
                                 :: cmds_

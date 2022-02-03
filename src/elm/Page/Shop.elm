@@ -316,7 +316,7 @@ viewCard model ({ shared } as loggedIn) index card =
                 ]
             , div [ class "px-4 pb-2 flex flex-wrap" ]
                 [ p [ class "font-semibold pt-2 w-full" ] [ text card.product.title ]
-                , viewProfileNameTag shared loggedIn.accountName card.product.creator
+                , viewProfileNameTag shared.translators loggedIn.accountName card.product.creator
                 , div [ class "h-16 w-full flex flex-wrap items-end" ]
                     [ if card.product.units == 0 && card.product.trackStock then
                         div [ class "w-full" ]
@@ -354,7 +354,7 @@ viewCard model ({ shared } as loggedIn) index card =
                     ]
                     [ card.profileSummary
                         |> Profile.Summary.withRelativeSelector ("#" ++ profileSummaryId)
-                        |> Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator
+                        |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName card.product.creator
                         |> Html.map (GotProfileSummaryMsg index card.isAvailable)
                     ]
                 ]

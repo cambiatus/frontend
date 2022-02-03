@@ -546,7 +546,7 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
             [ class "font-bold ml-1"
             , Route.href (Route.Profile sale.creator.account)
             ]
-            [ Profile.viewProfileName shared currentName sale.creator ]
+            [ Profile.viewProfileName shared.translators currentName sale.creator ]
         ]
     , div [ class "flex flex-wrap w-full justify-between items-center" ]
         [ div []

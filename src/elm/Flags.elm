@@ -5,6 +5,7 @@ module Flags exposing
     , default
     )
 
+import Api.Graphql
 import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder)
@@ -22,7 +23,7 @@ type alias Flags =
     , tokenContract : String
     , communityContract : String
     , graphqlSecret : String
-    , authToken : Maybe String
+    , authToken : Maybe Api.Graphql.Token
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
@@ -65,7 +66,7 @@ decode =
         |> required "tokenContract" Decode.string
         |> required "communityContract" Decode.string
         |> required "graphqlSecret" Decode.string
-        |> required "authToken" (Decode.nullable Decode.string)
+        |> required "authToken" (Decode.nullable Api.Graphql.tokenDecoder)
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)

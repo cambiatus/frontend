@@ -1,5 +1,6 @@
-module Session.SharedTests exposing (all)
+module EnvironmentTests exposing (all)
 
+import Environment
 import Expect
 import Session.Shared as Shared
 import Test exposing (..)
@@ -39,9 +40,6 @@ communityDomainOnProduction =
             , query = Nothing
             , fragment = Nothing
             }
-
-        makeInput url =
-            { url = url, environment = Shared.Production }
     in
     describe "when environment is production"
         [ describe "when on production"
@@ -49,14 +47,12 @@ communityDomainOnProduction =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    Environment.communityDomain urlFuzz
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.cambiatus.io"
             ]
         , describe "when on demo"
@@ -64,14 +60,13 @@ communityDomainOnProduction =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.demo.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.demo.cambiatus.io"
             ]
         , describe "when on staging"
@@ -79,14 +74,13 @@ communityDomainOnProduction =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.staging.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         ]
@@ -104,9 +98,6 @@ communityDomainOnDevelopment =
             , query = Nothing
             , fragment = Nothing
             }
-
-        makeInput url =
-            { url = url, environment = Shared.Staging }
     in
     describe "when environment is development"
         [ describe "when on production"
@@ -114,14 +105,13 @@ communityDomainOnDevelopment =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.cambiatus.io"
             ]
         , describe "when on demo"
@@ -129,14 +119,13 @@ communityDomainOnDevelopment =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.demo.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.demo.cambiatus.io"
             ]
         , describe "when on staging"
@@ -144,14 +133,13 @@ communityDomainOnDevelopment =
                 "returns url.host"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal urlFuzz.host
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.staging.cambiatus.io"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         , describe "when on localhost"
@@ -159,14 +147,13 @@ communityDomainOnDevelopment =
                 "replaces localhost for staging"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal (urlFuzz.host |> String.replace ".localhost" ".staging.cambiatus.io")
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.localhost"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         , describe "when on staging.localhost"
@@ -174,14 +161,13 @@ communityDomainOnDevelopment =
                 "replaces staging.localhost for staging"
               <|
                 \urlFuzz ->
-                    makeInput urlFuzz
-                        |> Shared.communityDomain
+                    urlFuzz
+                        |> Environment.communityDomain
                         |> Expect.equal (urlFuzz.host |> String.replace ".localhost" ".cambiatus.io")
             , test "returns correct community domain" <|
                 \() ->
                     makeUrl "somecommunity.staging.localhost"
-                        |> makeInput
-                        |> Shared.communityDomain
+                        |> Environment.communityDomain
                         |> Expect.equal "somecommunity.staging.cambiatus.io"
             ]
         ]
@@ -209,63 +195,63 @@ deploymentEnvironment =
             [ test "correctly identifies muda" <|
                 \() ->
                     makeUrl "muda.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Production
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Production
             , test "correctly identifies verdes" <|
                 \() ->
                     makeUrl "verdes.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Production
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Production
             , fuzz (Fuzz.cambiatusUrl (Just ".cambiatus.io")) "correctly identifies prod communities" <|
                 \urlFuzz ->
-                    Shared.environmentFromUrl urlFuzz
-                        |> Expect.equal Shared.Production
+                    Environment.fromUrl urlFuzz
+                        |> Expect.equal Environment.Production
             ]
         , describe "when on demo"
             [ test "correctly identifies cmbx" <|
                 \() ->
                     makeUrl "cmbx.demo.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Demo
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Demo
             , test "correctly identifies cmbgo" <|
                 \() ->
                     makeUrl "cmbgo.demo.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Demo
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Demo
             , fuzz (Fuzz.cambiatusUrl (Just ".demo.cambiatus.io")) "correctly identifies demo communities" <|
                 \urlFuzz ->
-                    Shared.environmentFromUrl urlFuzz
-                        |> Expect.equal Shared.Demo
+                    Environment.fromUrl urlFuzz
+                        |> Expect.equal Environment.Demo
             ]
         , describe "when on staging"
             [ test "correctly identifies buss" <|
                 \() ->
                     makeUrl "buss.staging.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Staging
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Staging
             , test "correctly identifies mizu" <|
                 \() ->
                     makeUrl "mizu.staging.cambiatus.io"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Staging
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Staging
             , fuzz (Fuzz.cambiatusUrl (Just ".staging.cambiatus.io")) "correctly identifies staging communities" <|
                 \urlFuzz ->
-                    Shared.environmentFromUrl urlFuzz
-                        |> Expect.equal Shared.Staging
+                    Environment.fromUrl urlFuzz
+                        |> Expect.equal Environment.Staging
             ]
         , fuzz (Fuzz.cambiatusUrl (Just ".netlify.app")) "correctly identifies netlify links as staging" <|
             \urlFuzz ->
-                Shared.environmentFromUrl urlFuzz
-                    |> Expect.equal Shared.Staging
+                Environment.fromUrl urlFuzz
+                    |> Expect.equal Environment.Staging
         , describe "when on localhost"
             [ test "correctly identifies buss" <|
                 \() ->
                     makeUrl "buss.staging.localhost"
-                        |> Shared.environmentFromUrl
-                        |> Expect.equal Shared.Development
+                        |> Environment.fromUrl
+                        |> Expect.equal Environment.Development
             , fuzz (Fuzz.cambiatusUrl (Just ".staging.localhost")) "correctly identifies localhost communities" <|
                 \urlFuzz ->
-                    Shared.environmentFromUrl urlFuzz
-                        |> Expect.equal Shared.Development
+                    Environment.fromUrl urlFuzz
+                        |> Expect.equal Environment.Development
             ]
         ]

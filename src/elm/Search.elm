@@ -109,7 +109,7 @@ type alias FoundData =
     RemoteData (Graphql.Http.Error SearchResults) SearchResults
 
 
-sendSearchQuery : Symbol -> Shared -> String -> String -> Cmd Msg
+sendSearchQuery : Symbol -> Shared -> String -> Api.Graphql.Token -> Cmd Msg
 sendSearchQuery selectedCommunity shared queryString authToken =
     let
         req =
@@ -178,7 +178,7 @@ type alias UpdateResult =
     UR.UpdateResult Model Msg Feedback.Model
 
 
-update : Shared -> String -> Symbol -> Model -> Msg -> UpdateResult
+update : Shared -> Api.Graphql.Token -> Symbol -> Model -> Msg -> UpdateResult
 update shared authToken symbol model msg =
     case msg of
         NoOp ->

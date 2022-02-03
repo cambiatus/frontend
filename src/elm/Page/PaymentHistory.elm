@@ -192,7 +192,7 @@ profileWithTransfersSelectionSet community model =
             )
 
 
-fetchProfileWithTransfers : Shared -> Community.Model -> Model -> String -> Cmd Msg
+fetchProfileWithTransfers : Shared -> Community.Model -> Model -> Api.Graphql.Token -> Cmd Msg
 fetchProfileWithTransfers shared community model authToken =
     let
         accountName =
@@ -207,7 +207,7 @@ fetchProfileWithTransfers shared community model authToken =
         RecipientProfileWithTransfersLoaded
 
 
-fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
+fetchProfilesForAutocomplete : Shared -> Model -> String -> Api.Graphql.Token -> Cmd Msg
 fetchProfilesForAutocomplete shared model payerAccount authToken =
     let
         autocompleteSelectionSet : SelectionSet Profile.Minimal Cambiatus.Object.User

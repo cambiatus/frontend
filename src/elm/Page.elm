@@ -22,7 +22,7 @@ module Page exposing
     , viewTitle
     )
 
-import Auth
+import Api.Graphql
 import Browser.Navigation as Nav
 import Dict
 import Eos.Account
@@ -76,7 +76,7 @@ init flags navKey url =
             in
             UR.init (LoggedIn model)
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (Ports.createAbsintheSocket authToken)
+                |> UR.addCmd (Api.Graphql.createAbsintheSocket authToken)
                 |> UR.addCmd initialCmds
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
@@ -269,7 +269,8 @@ type Msg
     = Ignored
     | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | GotTimezone (Result () Time.Zone)
-    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+      -- TODO
+      -- | SignedIn (RemoteData (Graphql.Http.Error (Maybe Api.Graphql.SignInResponse)) (Maybe Api.Graphql.SignInResponse))
     | GotGuestMsg Guest.Msg
     | GotLoggedInMsg LoggedIn.Msg
 
@@ -327,42 +328,39 @@ update msg session =
                         UR.addExt (LoggedInExternalMsg extMsg) uR
                     )
 
-        ( SignedIn (RemoteData.Success (Just { user, token })), Guest guest ) ->
-            let
-                shared =
-                    guest.shared
-
-                ( loggedIn, cmd ) =
-                    LoggedIn.initLogin shared Nothing user token
-            in
-            LoggedIn loggedIn
-                |> UR.init
-                |> UR.addCmd (Ports.createAbsintheSocket token)
-                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addCmd
-                    (guest.afterLoginRedirect
-                        |> Maybe.withDefault Route.Dashboard
-                        |> Route.replaceUrl shared.navKey
-                    )
-                |> UR.addBreadcrumb
-                    { type_ = Log.InfoBreadcrumb
-                    , category = msg
-                    , message = "User logged in"
-                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
-                    , level = Log.Info
-                    }
-
-        ( SignedIn (RemoteData.Failure error), Guest guest ) ->
-            UR.init session
-                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
-                |> UR.logGraphqlError msg
-                    (maybeAccountName session)
-                    "Got an error when trying to sign in"
-                    { moduleName = "Page", function = "update" }
-                    []
-                    error
-
+        -- ( SignedIn (RemoteData.Success (Just { user, token })), Guest guest ) ->
+        --     let
+        --         shared =
+        --             guest.shared
+        --         ( loggedIn, cmd ) =
+        --             LoggedIn.initLogin shared Nothing user token
+        --     in
+        --     LoggedIn loggedIn
+        --         |> UR.init
+        --         |> UR.addCmd (Ports.createAbsintheSocket token)
+        --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+        --         |> UR.addCmd (Ports.storeAuthToken token)
+        --         |> UR.addCmd
+        --             (guest.afterLoginRedirect
+        --                 |> Maybe.withDefault Route.Dashboard
+        --                 |> Route.replaceUrl shared.navKey
+        --             )
+        --         |> UR.addBreadcrumb
+        --             { type_ = Log.InfoBreadcrumb
+        --             , category = msg
+        --             , message = "User logged in"
+        --             , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+        --             , level = Log.Info
+        --             }
+        -- ( SignedIn (RemoteData.Failure error), Guest guest ) ->
+        --     UR.init session
+        --         |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
+        --         |> UR.logGraphqlError msg
+        --             (maybeAccountName session)
+        --             "Got an error when trying to sign in"
+        --             { moduleName = "Page", function = "update" }
+        --             []
+        --             error
         ( _, _ ) ->
             UR.init session
                 |> UR.logIncompatibleMsg msg
@@ -448,9 +446,8 @@ msgToString msg =
         GotTimezone r ->
             [ "GotTimezone", UR.resultToString r ]
 
-        SignedIn r ->
-            [ "SignedIn", UR.remoteDataToString r ]
-
+        -- SignedIn r ->
+        --     [ "SignedIn", UR.remoteDataToString r ]
         GotGuestMsg subMsg ->
             "GotGuestMsg" :: Guest.msgToString subMsg
 

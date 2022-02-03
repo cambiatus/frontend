@@ -8,6 +8,7 @@ import Cambiatus.Object.Community
 import Cambiatus.Object.Contribution
 import Community
 import Dict
+import Environment
 import Eos
 import Form exposing (Form)
 import Form.Select
@@ -286,16 +287,16 @@ amountFieldId =
 defaultPaypalCurrency : Shared -> PaypalButtons.Currency
 defaultPaypalCurrency shared =
     case shared.environment of
-        Shared.Development ->
+        Environment.Development ->
             PaypalButtons.BRL
 
-        Shared.Staging ->
+        Environment.Staging ->
             PaypalButtons.BRL
 
-        Shared.Demo ->
+        Environment.Demo ->
             PaypalButtons.USD
 
-        Shared.Production ->
+        Environment.Production ->
             PaypalButtons.USD
 
 

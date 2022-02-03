@@ -1,6 +1,8 @@
 module Translation exposing
     ( Language(..)
+    , Translators
     , allLanguages
+    , decimalSeparators
     , defaultLanguage
     , get
     , languageFromLanguageCode
@@ -20,6 +22,12 @@ type Language
     | Spanish
     | Catalan
     | Amharic
+
+
+type alias Translators =
+    { t : String -> String
+    , tr : String -> I18Next.Replacements -> String
+    }
 
 
 languageFromLanguageCode : String -> Maybe Language
@@ -102,6 +110,13 @@ languageFromLocale locale =
 
         _ ->
             Nothing
+
+
+decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
+decimalSeparators translators =
+    { decimalSeparator = translators.t "decimal_separator"
+    , thousandsSeparator = translators.t "thousands_separator"
+    }
 
 
 allLanguages : List Language

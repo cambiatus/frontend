@@ -1,11 +1,8 @@
 module Session.Shared exposing
-    ( Environment(..)
-    , Shared
+    ( Shared
     , TranslationStatus(..)
     , Translators
-    , communityDomain
     , decimalSeparators
-    , environmentFromUrl
     , floatStringFromSeparatedString
     , init
     , langFlag
@@ -19,6 +16,7 @@ module Session.Shared exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Flags exposing (Endpoints, Flags)
@@ -64,7 +62,7 @@ init : Flags -> Nav.Key -> Url -> ( Shared, Cmd msg )
 init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
     let
         environment =
-            environmentFromUrl url
+            Environment.fromUrl url
     in
     ( { navKey = navKey
       , language =
@@ -100,7 +98,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , hasSeenSponsorModal = flags.hasSeenSponsorModal
       }
     , case environment of
-        Production ->
+        Environment.Production ->
             Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
 
         _ ->
@@ -162,102 +160,6 @@ by Elm
 floatStringFromSeparatedString : Translators -> String -> String
 floatStringFromSeparatedString translators =
     Mask.removeFloat (decimalSeparators translators)
-
-
-
--- ENVIRONMENT
-
-
-type Environment
-    = Development
-    | Staging
-    | Demo
-    | Production
-
-
-environmentFromUrl : Url -> Environment
-environmentFromUrl url =
-    if String.endsWith ".localhost" url.host then
-        Development
-
-    else if String.endsWith ".staging.cambiatus.io" url.host then
-        Staging
-
-    else if String.endsWith ".demo.cambiatus.io" url.host then
-        Demo
-
-    else if String.endsWith ".cambiatus.io" url.host then
-        Production
-
-    else
-        Staging
-
-
-{-| Get the community subdomain and the current environment, based on current
-url. Example possible outputs:
-
-    [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
-
-    [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
-
-    [ "cambiatus" ] -- Cambiatus community in the prod environment
-
--}
-communitySubdomainParts : Url -> Environment -> List String
-communitySubdomainParts url environment =
-    let
-        allParts =
-            url.host |> String.split "."
-
-        isStaging =
-            case environmentFromUrl url of
-                Development ->
-                    True
-
-                Staging ->
-                    True
-
-                _ ->
-                    False
-
-        addStaging parts =
-            if isStaging then
-                parts ++ [ "staging" ]
-
-            else
-                parts
-    in
-    case allParts of
-        [] ->
-            addStaging [ "cambiatus" ]
-
-        [ subdomain ] ->
-            addStaging [ subdomain ]
-
-        subdomain :: "localhost" :: _ ->
-            [ subdomain, "staging" ]
-
-        subdomain :: "cambiatus" :: _ ->
-            [ subdomain ]
-
-        subdomain :: env :: _ ->
-            [ subdomain, env ]
-
-
-{-| Returns the full `subdomain` of a community based on the current url
-
-Note: it takes an extensible record just so we can test it. The reason we can't
-pass in the entire `Shared` is because we can't create one without a `Nav.Key`
-(as stated in an [issue](https://github.com/elm-explorations/test/issues/24) on
-the `elm-explorations/test` repo)
-
--}
-communityDomain : { shared | url : Url, environment : Environment } -> String
-communityDomain shared =
-    String.join "."
-        (communitySubdomainParts shared.url shared.environment
-            ++ [ "cambiatus", "io" ]
-        )
 
 
 

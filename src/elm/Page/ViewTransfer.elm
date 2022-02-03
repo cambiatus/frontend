@@ -226,7 +226,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
             "fill-current text-green " ++ rotateClass
 
         viewSummary profile summary =
-            Profile.Summary.view loggedIn.shared loggedIn.accountName profile summary
+            Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile summary
                 |> Html.map (profileSummaryToMsg (profile == leftProfile))
     in
     div

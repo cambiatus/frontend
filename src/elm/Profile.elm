@@ -46,8 +46,8 @@ import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Session.Shared as Shared exposing (Shared)
 import Time
+import Translation
 
 
 type alias Basic a =
@@ -347,14 +347,14 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileNameTag shared loggedInAccount profile =
+viewProfileNameTag : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileNameTag translators loggedInAccount profile =
     p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
-        [ viewProfileName shared loggedInAccount profile ]
+        [ viewProfileName translators loggedInAccount profile ]
 
 
-viewProfileName : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName { translators } loggedInAccount profile =
+viewProfileName : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName translators loggedInAccount profile =
     if profile.account == loggedInAccount then
         text (translators.t "transfer_result.you")
 
@@ -367,11 +367,11 @@ viewProfileName { translators } loggedInAccount profile =
                 Eos.viewName profile.account
 
 
-viewEmpty : Shared -> Html msg
-viewEmpty shared =
+viewEmpty : Translation.Translators -> Html msg
+viewEmpty translators =
     div
         []
         [ p
             [ class "uppercase text-gray-900 text-sm" ]
-            [ text (shared.translators.t "profile.no_one") ]
+            [ text (translators.t "profile.no_one") ]
         ]

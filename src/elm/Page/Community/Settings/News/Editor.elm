@@ -465,7 +465,7 @@ createForm loggedIn =
                                 [ profileSummary
                                     |> Profile.Summary.withoutName
                                     |> Profile.Summary.withImageSize "h-8 w-8"
-                                    |> Profile.Summary.view loggedIn.shared
+                                    |> Profile.Summary.view loggedIn.shared.translators
                                         loggedIn.accountName
                                         creator
                                     |> Html.map

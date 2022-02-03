@@ -40,8 +40,8 @@ import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Translators)
 import Task
+import Translation exposing (Translators)
 import Validate
 import View.Components
 import View.Modal as Modal

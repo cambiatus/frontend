@@ -408,7 +408,7 @@ selectionSetForField field =
 queryForField :
     Eos.Symbol
     -> Shared
-    -> String
+    -> Api.Graphql.Token
     -> Field
     -> (RemoteData (Graphql.Http.Error (Maybe FieldValue)) (Maybe FieldValue) -> msg)
     -> Cmd msg
@@ -425,7 +425,7 @@ queryForField symbol shared authToken field toMsg =
 queryForFields :
     Eos.Symbol
     -> Shared
-    -> String
+    -> Api.Graphql.Token
     -> List Field
     -> (RemoteData (Graphql.Http.Error (List FieldValue)) (List FieldValue) -> msg)
     -> Cmd msg

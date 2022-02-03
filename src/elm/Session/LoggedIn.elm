@@ -28,14 +28,13 @@ import Action
 import Api.Graphql
 import Auth
 import Avatar
-import Cambiatus.Mutation
 import Cambiatus.Object
-import Cambiatus.Object.Request
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
 import Community.News
 import Dict
+import Environment
 import Eos
 import Eos.Account as Eos
 import Graphql.Document
@@ -79,7 +78,7 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
+init : Shared -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd Msg )
 init shared accountName authToken =
     let
         ( model, cmd ) =
@@ -95,12 +94,12 @@ init shared accountName authToken =
     )
 
 
-fetchCommunity : Shared -> String -> Maybe Eos.Symbol -> Cmd Msg
+fetchCommunity : Shared -> Api.Graphql.Token -> Maybe Eos.Symbol -> Cmd Msg
 fetchCommunity shared authToken maybeToken =
     if shared.useSubdomain then
         Api.Graphql.query shared
             (Just authToken)
-            (Community.subdomainQuery (Shared.communityDomain shared))
+            (Community.subdomainQuery (Environment.communityDomain shared.url))
             CompletedLoadCommunity
 
     else
@@ -120,7 +119,7 @@ fetchTranslations language =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> String -> ( Model, Cmd Msg )
+initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd Msg )
 initLogin shared maybePrivateKey_ profile_ authToken =
     let
         loadedProfile =
@@ -189,7 +188,7 @@ type alias Model =
     , feedback : Feedback.Model
     , searchModel : Search.Model
     , claimingAction : Action.Model
-    , authToken : String
+    , authToken : Api.Graphql.Token
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
@@ -197,7 +196,7 @@ type alias Model =
     }
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> ( Model, Cmd Msg )
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd Msg )
 initModel shared maybePrivateKey_ accountName authToken =
     let
         ( authModel, authCmd ) =
@@ -1187,11 +1186,8 @@ updateExternal externalMsg ({ shared } as model) =
         RequiredAuthToken ->
             { defaultResult
                 | cmd =
-                    Api.Graphql.mutation shared
-                        Nothing
-                        (Cambiatus.Mutation.genAuth { account = Eos.nameToString model.accountName }
-                            Cambiatus.Object.Request.phrase
-                        )
+                    Api.Graphql.askForPhrase shared
+                        model.accountName
                         GotAuthTokenPhrase
             }
 
@@ -1252,9 +1248,9 @@ type Msg
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
-    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error String) String)
-    | SignedAuthTokenPhrase String
-    | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Auth.SignInResponse) Auth.SignInResponse)
+    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | SignedAuthTokenPhrase Api.Graphql.Password
+    | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
 
 
 update : Msg -> Model -> UpdateResult
@@ -1785,29 +1781,11 @@ update msg model =
                             [ Log.contextFromCommunity model.selectedCommunity ]
 
         GotAuthTokenPhrase (RemoteData.Success phrase) ->
-            let
-                encodedPrivateKey =
-                    case maybePrivateKey model of
-                        Just privateKey ->
-                            Eos.encodePrivateKey privateKey
-
-                        Nothing ->
-                            -- The call to withPrivateKeyInternal assures the
-                            -- private key is always there
-                            Encode.null
-            in
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = GotAuthTokenPhrase (RemoteData.Success phrase)
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "signString" )
-                            , ( "input", Encode.string phrase )
-                            , ( "privateKey", encodedPrivateKey )
-                            ]
-                    }
+            (\privateKey ->
+                model
+                    |> UR.init
+                    |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
+            )
                 |> withPrivateKeyInternal msg model
 
         GotAuthTokenPhrase (RemoteData.Failure err) ->
@@ -1837,24 +1815,21 @@ update msg model =
             model
                 |> UR.init
                 |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Auth.signIn
-                            { account = model.accountName
-                            , password = signedPhrase
-                            , invitationId = getInvitation model
-                            }
-                        )
+                    (Api.Graphql.signIn shared
+                        { account = model.accountName
+                        , password = signedPhrase
+                        , invitationId = getInvitation model
+                        }
                         CompletedGeneratingAuthToken
                     )
 
-        CompletedGeneratingAuthToken (RemoteData.Success { user, token }) ->
+        CompletedGeneratingAuthToken (RemoteData.Success signInResponse) ->
             { model
-                | profile = RemoteData.Success user
-                , authToken = token
+                | profile = RemoteData.Success signInResponse.profile
+                , authToken = signInResponse.token
             }
                 |> UR.init
-                |> UR.addCmd (Ports.storeAuthToken token)
+                |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
                 |> UR.addExt (Broadcast CompletedSigningIn)
 
         CompletedGeneratingAuthToken (RemoteData.Failure err) ->
@@ -1955,14 +1930,15 @@ withPrivateKey loggedIn subModel subMsg successfulUR =
             |> UR.addExt (RequiredPrivateKey subMsg)
 
 
-withPrivateKeyInternal : Msg -> Model -> UpdateResult -> UpdateResult
+withPrivateKeyInternal : Msg -> Model -> (Eos.PrivateKey -> UpdateResult) -> UpdateResult
 withPrivateKeyInternal msg loggedIn successfulUR =
-    if hasPrivateKey loggedIn then
-        successfulUR
+    case maybePrivateKey loggedIn of
+        Just privateKey ->
+            successfulUR privateKey
 
-    else
-        askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
-            |> UR.init
+        Nothing ->
+            askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
+                |> UR.init
 
 
 isCommunityMember : Model -> Bool
@@ -2206,9 +2182,7 @@ jsAddressToMsg addr val =
                 |> Maybe.map GotActionMsg
 
         "GotAuthTokenPhrase" :: _ ->
-            Decode.decodeValue (Decode.field "signed" Decode.string) val
-                |> Result.toMaybe
-                |> Maybe.map SignedAuthTokenPhrase
+            Api.Graphql.decodeSignedPhrasePort SignedAuthTokenPhrase val
 
         _ ->
             Nothing

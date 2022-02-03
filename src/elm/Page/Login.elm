@@ -353,9 +353,9 @@ type PinMsg
     = PinIgnored
     | SubmittedPinWithSuccess String
     | GotAccountName (Result String { accountName : Eos.Name, privateKey : Eos.PrivateKey, pin : String })
-    | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error String) String)
-    | SignedAuthPhrase String
-    | GotSignInResult Eos.PrivateKey String (RemoteData (Graphql.Http.Error Auth.SignInResponse) Auth.SignInResponse)
+    | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | SignedAuthPhrase Api.Graphql.Password
+    | GotSignInResult Eos.PrivateKey String (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
     | GotPinComponentMsg Pin.Msg
 
 
@@ -560,15 +560,7 @@ updateWithPin msg model ({ shared } as guest) =
         GotAccountName (Ok userData) ->
             { model | status = LoggingIn userData }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Cambiatus.Mutation.genAuth
-                            { account = Eos.nameToString userData.accountName }
-                            Cambiatus.Object.Request.phrase
-                        )
-                        GeneratedAuthPhrase
-                    )
+                |> UR.addCmd (Api.Graphql.askForPhrase shared userData.accountName GeneratedAuthPhrase)
 
         GotAccountName (Err err) ->
             { model | status = InputtingPin }
@@ -585,16 +577,7 @@ updateWithPin msg model ({ shared } as guest) =
                 LoggingIn { privateKey } ->
                     model
                         |> UR.init
-                        |> UR.addPort
-                            { responseAddress = GeneratedAuthPhrase (RemoteData.Success phrase)
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "signString" )
-                                    , ( "input", Encode.string phrase )
-                                    , ( "privateKey", Eos.encodePrivateKey privateKey )
-                                    ]
-                            }
+                        |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
 
                 _ ->
                     model
@@ -634,14 +617,11 @@ updateWithPin msg model ({ shared } as guest) =
                     model
                         |> UR.init
                         |> UR.addCmd
-                            (Api.Graphql.mutation shared
-                                Nothing
-                                (Auth.signIn
-                                    { account = userData.accountName
-                                    , password = signedPhrase
-                                    , invitationId = guest.maybeInvitation
-                                    }
-                                )
+                            (Api.Graphql.signIn shared
+                                { account = userData.accountName
+                                , password = signedPhrase
+                                , invitationId = guest.maybeInvitation
+                                }
                                 (GotSignInResult userData.privateKey userData.pin)
                             )
 
@@ -658,7 +638,7 @@ updateWithPin msg model ({ shared } as guest) =
 
         GotSignInResult privateKey pin (RemoteData.Success signInResponse) ->
             UR.init model
-                |> UR.addCmd (Ports.storeAuthToken signInResponse.token)
+                |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null
@@ -667,7 +647,7 @@ updateWithPin msg model ({ shared } as guest) =
                             [ ( "name", Encode.string "login" )
                             , ( "privateKey", Eos.encodePrivateKey privateKey )
                             , ( "passphrase", Encode.string model.passphrase )
-                            , ( "accountName", Eos.encodeName signInResponse.user.account )
+                            , ( "accountName", Eos.encodeName signInResponse.profile.account )
                             , ( "pin", Encode.string pin )
                             ]
                     }
@@ -791,12 +771,8 @@ jsAddressToMsg addr val =
                 |> Result.toMaybe
 
         "GotPinMsg" :: "GeneratedAuthPhrase" :: _ ->
-            Decode.decodeValue
-                (Decode.field "signed" Decode.string
-                    |> Decode.map (SignedAuthPhrase >> GotPinMsg)
-                )
+            Api.Graphql.decodeSignedPhrasePort (SignedAuthPhrase >> GotPinMsg)
                 val
-                |> Result.toMaybe
 
         "GotPinMsg" :: "PinIgnored" :: [] ->
             Just (GotPinMsg PinIgnored)
