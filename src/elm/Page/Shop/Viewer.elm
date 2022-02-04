@@ -47,39 +47,48 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : Session -> Int -> ( Model, Cmd Msg )
+init : Session -> Int -> UpdateResult
 init session saleId =
     case session of
-        Page.LoggedIn { shared, authToken, accountName } ->
-            ( AsLoggedIn
-                { status = RemoteData.Loading
-                , viewing = ViewingCard
-                , form2 =
-                    Form.init
-                        { units = "0"
-                        , memo = Form.RichText.initModel "memo-input" Nothing
+        Page.LoggedIn ({ shared, accountName } as loggedIn) ->
+            let
+                model =
+                    AsLoggedIn
+                        { status = RemoteData.Loading
+                        , viewing = ViewingCard
+                        , form2 =
+                            Form.init
+                                { units = "0"
+                                , memo = Form.RichText.initModel "memo-input" Nothing
+                                }
+                        , hasChangedDefaultMemo = False
+                        , balances = []
+                        , isBuyButtonDisabled = False
                         }
-                , hasChangedDefaultMemo = False
-                , balances = []
-                , isBuyButtonDisabled = False
-                }
-            , Cmd.batch
-                [ Api.Graphql.query shared
-                    (Just authToken)
-                    (Shop.productQuery saleId)
-                    CompletedSaleLoad
-                , Api.getBalances shared accountName CompletedLoadBalances
-                ]
-                |> Cmd.map AsLoggedInMsg
+            in
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> UR.addCmd
+                        (Api.Graphql.query shared
+                            (Just authToken)
+                            (Shop.productQuery saleId)
+                            (CompletedSaleLoad >> AsLoggedInMsg)
+                        )
+                    |> UR.addCmd (Api.getBalances shared accountName (CompletedLoadBalances >> AsLoggedInMsg))
             )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+                |> UR.map identity identity (Page.LoggedInExternal >> UR.addExt)
 
         Page.Guest guest ->
-            ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
-            , Api.Graphql.query guest.shared
-                Nothing
-                (Shop.productPreviewQuery saleId)
-                (CompletedSalePreviewLoad >> AsGuestMsg)
-            )
+            AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.query guest.shared
+                        Nothing
+                        (Shop.productPreviewQuery saleId)
+                        (CompletedSalePreviewLoad >> AsGuestMsg)
+                    )
 
 
 

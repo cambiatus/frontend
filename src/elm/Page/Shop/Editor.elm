@@ -480,21 +480,24 @@ update msg model loggedIn =
                         |> UR.init
 
                 LoadingBalancesUpdate saleId ->
-                    let
-                        saleFetch =
-                            case String.toInt saleId of
-                                Nothing ->
-                                    Cmd.none
+                    (\authToken ->
+                        let
+                            saleFetch =
+                                case String.toInt saleId of
+                                    Nothing ->
+                                        Cmd.none
 
-                                Just id ->
-                                    Api.Graphql.query loggedIn.shared
-                                        (Just loggedIn.authToken)
-                                        (Shop.productQuery id)
-                                        CompletedSaleLoad
-                    in
-                    LoadingSaleUpdate balances
-                        |> UR.init
-                        |> UR.addCmd saleFetch
+                                    Just id ->
+                                        Api.Graphql.query loggedIn.shared
+                                            (Just authToken)
+                                            (Shop.productQuery id)
+                                            CompletedSaleLoad
+                        in
+                        LoadingSaleUpdate balances
+                            |> UR.init
+                            |> UR.addCmd saleFetch
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model

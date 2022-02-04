@@ -462,8 +462,16 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadCommunity community ->
-            UR.init model
-                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community.symbol)
+            (\authToken ->
+                UR.init model
+                    |> UR.addCmd
+                        (profileClaimQuery loggedIn.shared
+                            authToken
+                            model.accountString
+                            community.symbol
+                        )
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         ClaimMsg claimIndex m ->
             let
@@ -541,13 +549,21 @@ update msg model loggedIn =
                                         , symbol = symbol
                                         }
                             in
-                            { model
-                                | status = Loading
-                                , claimModalStatus = Claim.Closed
-                            }
-                                |> UR.init
-                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (profileClaimQuery loggedIn model.accountString symbol)
+                            (\authToken ->
+                                { model
+                                    | status = Loading
+                                    , claimModalStatus = Claim.Closed
+                                }
+                                    |> UR.init
+                                    |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
+                                    |> UR.addCmd
+                                        (profileClaimQuery loggedIn.shared
+                                            authToken
+                                            model.accountString
+                                            symbol
+                                        )
+                            )
+                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                         Nothing ->
                             model
@@ -645,8 +661,8 @@ update msg model loggedIn =
                 |> UR.init
 
 
-profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> Cmd Msg
-profileClaimQuery { shared, authToken } accountName symbol =
+profileClaimQuery : Shared -> Api.Graphql.Token -> String -> Eos.Symbol -> Cmd Msg
+profileClaimQuery shared authToken accountName symbol =
     Api.Graphql.query shared
         (Just authToken)
         (Cambiatus.Query.user { account = accountName } (selectionSet shared.now symbol))

@@ -26,17 +26,19 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
-init { shared, authToken } transferId =
+init : LoggedIn.Model -> Int -> UpdateResult
+init ({ shared } as loggedIn) transferId =
     let
         model =
             { status = Loading
             , transferId = transferId
             }
     in
-    ( model
-    , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
+    (\authToken ->
+        UR.init model
+            |> UR.addCmd (Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad)
     )
+        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = RequestedTransferQuery transferId }
 
 
 
@@ -279,7 +281,8 @@ viewDetail title content =
 
 
 type Msg
-    = CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
+    = RequestedTransferQuery Int
+    | CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
     | GotProfileSummaryMsg Bool Profile.Summary.Msg
 
 
@@ -304,6 +307,13 @@ findDirection maybeTransfer { accountName } =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model user =
     case msg of
+        RequestedTransferQuery transferId ->
+            (\authToken ->
+                UR.init model
+                    |> UR.addCmd (Api.Graphql.query user.shared (Just authToken) (transferQuery transferId) CompletedTransferLoad)
+            )
+                |> LoggedIn.withAuthToken user model { callbackMsg = msg }
+
         CompletedTransferLoad (RemoteData.Success transfer) ->
             let
                 direction =
@@ -361,6 +371,9 @@ updateStatus status model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        RequestedTransferQuery _ ->
+            [ "RequestedTransferQuery" ]
+
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.remoteDataToString r ]
 

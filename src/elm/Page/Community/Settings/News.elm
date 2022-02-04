@@ -89,13 +89,19 @@ update msg model loggedIn =
                 RemoteData.Success community ->
                     case community.highlightedNews of
                         Nothing ->
-                            UR.init model
-                                |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+                            (\authToken ->
+                                UR.init model
+                                    |> UR.addCmd (setHighlightNews loggedIn.shared authToken community newsId isHighlighted)
+                            )
+                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                         Just highlightedNews ->
                             if highlightedNews.id == newsId then
-                                UR.init model
-                                    |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+                                (\authToken ->
+                                    UR.init model
+                                        |> UR.addCmd (setHighlightNews loggedIn.shared authToken community newsId isHighlighted)
+                                )
+                                    |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                             else
                                 { model
@@ -161,9 +167,12 @@ update msg model loggedIn =
         ConfirmedHighlightNews newsId ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd (setHighlightNews loggedIn community newsId True)
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd (setHighlightNews loggedIn.shared authToken community newsId True)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model
@@ -175,10 +184,10 @@ update msg model loggedIn =
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
 
-setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> Cmd Msg
-setHighlightNews loggedIn community newsId isHighlighted =
-    Api.Graphql.mutation loggedIn.shared
-        (Just loggedIn.authToken)
+setHighlightNews : Shared -> Api.Graphql.Token -> Community.Model -> Int -> Bool -> Cmd Msg
+setHighlightNews shared authToken community newsId isHighlighted =
+    Api.Graphql.mutation shared
+        (Just authToken)
         (Cambiatus.Mutation.highlightedNews
             (\optionals ->
                 { optionals

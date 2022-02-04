@@ -417,13 +417,16 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLoadCommunity community ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
-                        CompletedSalesLoad
-                    )
+            (\authToken ->
+                UR.init model
+                    |> UR.addCmd
+                        (Api.Graphql.query loggedIn.shared
+                            (Just authToken)
+                            (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
+                            CompletedSalesLoad
+                        )
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         TransferSuccess index ->
             updateCard msg index (\card -> ( card, [] )) (UR.init model)

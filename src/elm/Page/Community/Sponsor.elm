@@ -142,19 +142,22 @@ update msg model loggedIn =
         StartedCreatingContribution id formOutput ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    { model | isCreatingOrder = True }
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (createContributionSelectionSet
-                                    { amount = formOutput.amount
-                                    , communityId = community.symbol
-                                    , currency = toCurrencyType formOutput.currency
-                                    }
+                    (\authToken ->
+                        { model | isCreatingOrder = True }
+                            |> UR.init
+                            |> UR.addCmd
+                                (Api.Graphql.mutation loggedIn.shared
+                                    (Just authToken)
+                                    (createContributionSelectionSet
+                                        { amount = formOutput.amount
+                                        , communityId = community.symbol
+                                        , currency = toCurrencyType formOutput.currency
+                                        }
+                                    )
+                                    (CreatedContribution id)
                                 )
-                                (CreatedContribution id)
-                            )
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model

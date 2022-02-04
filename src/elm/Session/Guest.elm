@@ -398,7 +398,9 @@ update msg ({ shared } as model) =
                             Cmd.none
 
                         Just redirectUrl ->
-                            Browser.Navigation.load redirectUrl
+                            -- TODO
+                            -- Browser.Navigation.load redirectUrl
+                            Cmd.none
                     )
 
         CompletedLoadCommunityPreview RemoteData.NotAsked ->

@@ -49,12 +49,12 @@ type Model
     | WithError (Graphql.Http.Error (Maybe Community.News.Model))
 
 
-init : Route.NewsEditorKind -> LoggedIn.Model -> ( Model, Cmd Msg )
+init : Route.NewsEditorKind -> LoggedIn.Model -> UpdateResult
 init kind loggedIn =
     let
-        queryForNews newsId =
+        queryForNews authToken newsId =
             Api.Graphql.query loggedIn.shared
-                (Just loggedIn.authToken)
+                (Just authToken)
                 (Cambiatus.Query.news { newsId = newsId }
                     Community.News.selectionSet
                 )
@@ -65,17 +65,35 @@ init kind loggedIn =
     in
     case kind of
         Route.CreateNews ->
-            ( Editing CreateNew (emptyForm loggedIn.shared), initWithCommunity )
+            Editing CreateNew (emptyForm loggedIn.shared)
+                |> UR.init
+                |> UR.addCmd initWithCommunity
 
         Route.EditNews newsId ->
-            ( WaitingNewsToEdit
-            , Cmd.batch [ queryForNews newsId, initWithCommunity ]
+            let
+                model =
+                    WaitingNewsToEdit
+            in
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> UR.addCmd initWithCommunity
+                    |> UR.addCmd (queryForNews authToken newsId)
             )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
 
         Route.CopyNews newsId ->
-            ( WaitingNewsToCopy
-            , Cmd.batch [ queryForNews newsId, initWithCommunity ]
+            let
+                model =
+                    WaitingNewsToCopy
+            in
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> UR.addCmd initWithCommunity
+                    |> UR.addCmd (queryForNews authToken newsId)
             )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
 
 
 emptyForm : Shared -> Form.Model FormInput
@@ -301,15 +319,18 @@ update msg model loggedIn =
                                         }
                                         Community.News.selectionSet
                             in
-                            model
-                                |> setDisabled True
-                                |> UR.init
-                                |> UR.addCmd
-                                    (Api.Graphql.mutation loggedIn.shared
-                                        (Just loggedIn.authToken)
-                                        mutation
-                                        CompletedSaving
-                                    )
+                            (\authToken ->
+                                model
+                                    |> setDisabled True
+                                    |> UR.init
+                                    |> UR.addCmd
+                                        (Api.Graphql.mutation loggedIn.shared
+                                            (Just authToken)
+                                            mutation
+                                            CompletedSaving
+                                        )
+                            )
+                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                         _ ->
                             UR.init model

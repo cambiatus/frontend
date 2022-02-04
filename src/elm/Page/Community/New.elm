@@ -349,19 +349,22 @@ update msg model loggedIn =
     in
     case msg of
         SubmittedForm formOutput ->
-            { model | isDisabled = True }
-                |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Community.domainAvailableQuery
-                            (Route.communityFullDomain
-                                loggedIn.shared
-                                formOutput.url
+            (\authToken ->
+                { model | isDisabled = True }
+                    |> UR.init
+                    |> UR.addCmd
+                        (Api.Graphql.query loggedIn.shared
+                            (Just authToken)
+                            (Community.domainAvailableQuery
+                                (Route.communityFullDomain
+                                    loggedIn.shared
+                                    formOutput.url
+                                )
                             )
+                            (GotDomainAvailableResponse formOutput)
                         )
-                        (GotDomainAvailableResponse formOutput)
-                    )
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         GotDomainAvailableResponse formOutput (RemoteData.Success True) ->
             let

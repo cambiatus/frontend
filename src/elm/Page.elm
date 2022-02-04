@@ -69,39 +69,39 @@ init flags navKey url =
     in
     case ( shared.maybeAccount, flags.authToken ) of
         ( Just accountName, Just authToken ) ->
-            if flags.hasUsedPKAuth then
-                let
-                    ( model, cmd ) =
-                        LoggedIn.init shared accountName authToken
-                in
-                UR.init (LoggedIn model)
-                    |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                    |> UR.addCmd (Api.Graphql.createAbsintheSocket authToken)
-                    |> UR.addCmd initialCmds
-                    |> UR.addBreadcrumb
-                        { type_ = Log.DebugBreadcrumb
-                        , category = Ignored
-                        , message = "Started Elm app with loggedIn user"
-                        , data = Dict.empty
-                        , level = Log.DebugLevel
-                        }
-
-            else
-                let
-                    ( model, cmd ) =
-                        LoggedIn.initRequestingAuthToken shared accountName
-                in
-                UR.init (LoggedIn model)
-                    |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                    -- TODO - call `Api.Graphql.createAbsintheSocket`
-                    |> UR.addCmd initialCmds
-                    |> UR.addBreadcrumb
-                        { type_ = Log.DebugBreadcrumb
-                        , category = Ignored
-                        , message = "Started Elm app with loggedIn user with invalid token"
-                        , data = Dict.empty
-                        , level = Log.DebugLevel
-                        }
+            -- if flags.hasUsedPKAuth then
+            --     let
+            --         ( model, cmd ) =
+            --             LoggedIn.init shared accountName authToken
+            --     in
+            --     UR.init (LoggedIn model)
+            --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+            --         |> UR.addCmd (Api.Graphql.createAbsintheSocket authToken)
+            --         |> UR.addCmd initialCmds
+            --         |> UR.addBreadcrumb
+            --             { type_ = Log.DebugBreadcrumb
+            --             , category = Ignored
+            --             , message = "Started Elm app with loggedIn user"
+            --             , data = Dict.empty
+            --             , level = Log.DebugLevel
+            --             }
+            -- else
+            --     let
+            --         ( model, cmd ) =
+            --             LoggedIn.initRequestingAuthToken shared accountName
+            --     in
+            --     UR.init (LoggedIn model)
+            --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+            --         -- TODO - call `Api.Graphql.createAbsintheSocket`
+            --         |> UR.addCmd initialCmds
+            --         |> UR.addBreadcrumb
+            --             { type_ = Log.DebugBreadcrumb
+            --             , category = Ignored
+            --             , message = "Started Elm app with loggedIn user with invalid token"
+            --             , data = Dict.empty
+            --             , level = Log.DebugLevel
+            --             }
+            Debug.todo ""
 
         _ ->
             let
@@ -111,8 +111,7 @@ init flags navKey url =
             Guest model
                 |> UR.init
                 |> UR.addCmd initialCmds
-                |> UR.addCmd
-                    (Cmd.map GotGuestMsg cmd)
+                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored

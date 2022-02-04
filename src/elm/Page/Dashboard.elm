@@ -985,17 +985,20 @@ update msg model ({ shared, accountName } as loggedIn) =
                 showModalRequestingSponsor =
                     hasContributionConfiguration && not shared.hasSeenSponsorModal
             in
-            UR.init
-                { model
-                    | balance = RemoteData.Loading
-                    , analysis = LoadingGraphql Nothing
-                    , showModalRequestingSponsor = showModalRequestingSponsor
-                    , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
-                }
-                |> UR.addCmd (fetchBalance shared accountName community)
-                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing community)
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
-                |> markSponsorModalAsSeen
+            (\authToken ->
+                UR.init
+                    { model
+                        | balance = RemoteData.Loading
+                        , analysis = LoadingGraphql Nothing
+                        , showModalRequestingSponsor = showModalRequestingSponsor
+                        , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
+                    }
+                    |> UR.addCmd (fetchBalance shared accountName community)
+                    |> UR.addCmd (fetchAvailableAnalysis loggedIn.shared authToken Nothing community)
+                    |> UR.addCmd (fetchTransfers loggedIn authToken community Nothing model)
+                    |> markSponsorModalAsSeen
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -1112,9 +1115,12 @@ update msg model ({ shared, accountName } as loggedIn) =
                         maybeCursor =
                             Maybe.andThen .endCursor maybePageInfo
                     in
-                    { model | transfers = LoadingGraphql (Just transfers) }
-                        |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor model)
+                    (\authToken ->
+                        { model | transfers = LoadingGraphql (Just transfers) }
+                            |> UR.init
+                            |> UR.addCmd (fetchTransfers loggedIn authToken community maybeCursor model)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model
@@ -1138,17 +1144,26 @@ update msg model ({ shared, accountName } as loggedIn) =
         SubmittedTransfersFiltersForm formOutput ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    let
-                        newModel =
-                            { model
-                                | transfersFilters = formOutput
-                                , showTransferFiltersModal = False
-                                , transfers = LoadingGraphql Nothing
-                            }
-                    in
-                    newModel
-                        |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community Nothing newModel)
+                    (\authToken ->
+                        let
+                            newModel =
+                                { model
+                                    | transfersFilters = formOutput
+                                    , showTransferFiltersModal = False
+                                    , transfers = LoadingGraphql Nothing
+                                }
+                        in
+                        newModel
+                            |> UR.init
+                            |> UR.addCmd
+                                (fetchTransfers loggedIn
+                                    authToken
+                                    community
+                                    Nothing
+                                    newModel
+                                )
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model
@@ -1189,41 +1204,44 @@ update msg model ({ shared, accountName } as loggedIn) =
         GotContactMsg subMsg ->
             case LoggedIn.profile loggedIn of
                 Just userProfile ->
-                    let
-                        ( contactModel, cmd, contactResponse ) =
-                            Contact.update subMsg
-                                model.contactModel
-                                loggedIn.shared.translators
-                                (Api.Graphql.mutation shared (Just loggedIn.authToken))
-                                userProfile.contacts
+                    (\authToken ->
+                        let
+                            ( contactModel, cmd, contactResponse ) =
+                                Contact.update subMsg
+                                    model.contactModel
+                                    loggedIn.shared.translators
+                                    (Api.Graphql.mutation shared (Just authToken))
+                                    userProfile.contacts
 
-                        addContactResponse model_ =
-                            case contactResponse of
-                                Contact.NotAsked ->
-                                    model_
-                                        |> UR.init
+                            addContactResponse model_ =
+                                case contactResponse of
+                                    Contact.NotAsked ->
+                                        model_
+                                            |> UR.init
 
-                                Contact.WithError errorMessage ->
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+                                    Contact.WithError errorMessage ->
+                                        { model_ | showContactModal = False }
+                                            |> UR.init
+                                            |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
-                                Contact.WithContacts successMessage contacts _ ->
-                                    let
-                                        newProfile =
-                                            { userProfile | contacts = contacts }
-                                    in
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                        |> UR.addExt
-                                            (LoggedIn.ProfileLoaded newProfile
-                                                |> LoggedIn.ExternalBroadcast
-                                            )
-                    in
-                    { model | contactModel = contactModel }
-                        |> addContactResponse
-                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+                                    Contact.WithContacts successMessage contacts _ ->
+                                        let
+                                            newProfile =
+                                                { userProfile | contacts = contacts }
+                                        in
+                                        { model_ | showContactModal = False }
+                                            |> UR.init
+                                            |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                            |> UR.addExt
+                                                (LoggedIn.ProfileLoaded newProfile
+                                                    |> LoggedIn.ExternalBroadcast
+                                                )
+                        in
+                        { model | contactModel = contactModel }
+                            |> addContactResponse
+                            |> UR.addCmd (Cmd.map GotContactMsg cmd)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 Nothing ->
                     model |> UR.init
@@ -1328,10 +1346,10 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> Cmd Msg
-fetchTransfers loggedIn community maybeCursor model =
+fetchTransfers : LoggedIn.Model -> Api.Graphql.Token -> Community.Model -> Maybe String -> Model -> Cmd Msg
+fetchTransfers loggedIn authToken community maybeCursor model =
     Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+        (Just authToken)
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->
@@ -1365,8 +1383,8 @@ fetchTransfers loggedIn community maybeCursor model =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> Cmd Msg
-fetchAvailableAnalysis { shared, authToken } maybeCursor community =
+fetchAvailableAnalysis : Shared -> Api.Graphql.Token -> Maybe String -> Community.Model -> Cmd Msg
+fetchAvailableAnalysis shared authToken maybeCursor community =
     let
         arg =
             { communityId = Eos.symbolToString community.symbol

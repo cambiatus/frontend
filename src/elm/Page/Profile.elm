@@ -86,7 +86,7 @@ type alias Model =
 init : LoggedIn.Model -> Eos.Name -> UpdateResult
 init loggedIn profileName =
     let
-        fetchProfile =
+        fetchProfile authToken =
             if loggedIn.accountName == profileName then
                 LoggedIn.maybeInitWith
                     (Just >> RemoteData.Success >> CompletedLoadProfile)
@@ -95,7 +95,7 @@ init loggedIn profileName =
 
             else
                 Api.Graphql.query loggedIn.shared
-                    (Just loggedIn.authToken)
+                    (Just authToken)
                     (Profile.query profileName)
                     CompletedLoadProfile
 
@@ -108,24 +108,30 @@ init loggedIn profileName =
                 , submittingLabel = "profile.pin.button"
                 , pinVisibility = loggedIn.shared.pinVisibility
                 }
+
+        model =
+            { profileName = profileName
+            , profile = RemoteData.Loading
+            , balance = RemoteData.Loading
+            , graphqlInfo = RemoteData.Loading
+            , contributionInfo = Nothing
+            , transfersStatus = Loading []
+            , isDeleteKycModalVisible = False
+            , downloadingPdfStatus = NotDownloading
+            , isNewPinModalVisible = False
+            , pinInputModel = pinModel
+            , currentPin = Nothing
+            }
     in
-    { profileName = profileName
-    , profile = RemoteData.Loading
-    , balance = RemoteData.Loading
-    , graphqlInfo = RemoteData.Loading
-    , contributionInfo = Nothing
-    , transfersStatus = Loading []
-    , isDeleteKycModalVisible = False
-    , downloadingPdfStatus = NotDownloading
-    , isNewPinModalVisible = False
-    , pinInputModel = pinModel
-    , currentPin = Nothing
-    }
-        |> UR.init
-        |> UR.addCmd fetchProfile
-        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
-        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
-        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+    (\authToken ->
+        model
+            |> UR.init
+            |> UR.addCmd (fetchProfile authToken)
+            |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
+            |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+            |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+    )
+        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
 
 
 
@@ -274,16 +280,19 @@ update msg model loggedIn =
                                     CompletedLoadBalance (Err (ResultWithError error))
                         )
             in
-            model
-                |> UR.init
-                |> UR.addCmd fetchBalance
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (graphqlInfoQuery model.profileName community.symbol)
-                        CompletedLoadGraphqlInfo
-                    )
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing)
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> UR.addCmd fetchBalance
+                    |> UR.addCmd
+                        (Api.Graphql.query loggedIn.shared
+                            (Just authToken)
+                            (graphqlInfoQuery model.profileName community.symbol)
+                            CompletedLoadGraphqlInfo
+                        )
+                    |> UR.addCmd (fetchTransfers loggedIn authToken community Nothing)
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         CompletedLoadContributions contributions ->
             let
@@ -437,15 +446,18 @@ update msg model loggedIn =
                 |> UR.init
 
         DeleteKycAccepted ->
-            { model | isDeleteKycModalVisible = False }
-                |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
-                        DeleteKycAndAddressCompleted
-                    )
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+            (\authToken ->
+                { model | isDeleteKycModalVisible = False }
+                    |> UR.init
+                    |> UR.addCmd
+                        (Api.Graphql.mutation loggedIn.shared
+                            (Just authToken)
+                            (Profile.deleteKycAndAddressMutation loggedIn.accountName)
+                            DeleteKycAndAddressCompleted
+                        )
+                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         DeleteKycAndAddressCompleted (RemoteData.Success _) ->
             model
@@ -615,9 +627,12 @@ update msg model loggedIn =
                         maybeCursor =
                             Maybe.andThen .endCursor maybePageInfo
                     in
-                    { model | transfersStatus = Loading transfers }
-                        |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor)
+                    (\authToken ->
+                        { model | transfersStatus = Loading transfers }
+                            |> UR.init
+                            |> UR.addCmd (fetchTransfers loggedIn authToken community maybeCursor)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model
@@ -1383,10 +1398,10 @@ networkSelectionSet =
             )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Cmd Msg
-fetchTransfers loggedIn community maybeCursor =
+fetchTransfers : LoggedIn.Model -> Api.Graphql.Token -> Community.Model -> Maybe String -> Cmd Msg
+fetchTransfers loggedIn authToken community maybeCursor =
     Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+        (Just authToken)
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->

@@ -1324,7 +1324,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.Notification ->
             Notification.init
-                >> updateStatusWith Notification GotNotificationMsg model
+                >> updateLoggedInUResult Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
         Just (Route.Profile profileName) ->
@@ -1389,7 +1389,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.CommunitySettingsNewsEditor editorKind) ->
             CommunitySettingsNewsEditor.init editorKind
-                >> updateStatusWith CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
+                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
 
         Just Route.CommunitySettingsCurrency ->
@@ -1464,7 +1464,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
-                >> updateStatusWith (Claim objectiveId actionId) GotVerifyClaimMsg model
+                >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
         Just (Route.Shop maybeFilter) ->
@@ -1484,11 +1484,11 @@ changeRouteTo maybeRoute model =
 
         Just (Route.ViewSale saleId) ->
             ShopViewer.init session saleId
-                |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+                |> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
-                >> updateStatusWith (ViewTransfer transferId) GotViewTransferScreenMsg model
+                >> updateLoggedInUResult (ViewTransfer transferId) GotViewTransferScreenMsg model
                 |> withLoggedIn (Route.ViewTransfer transferId)
 
         Just (Route.Invite invitationId) ->

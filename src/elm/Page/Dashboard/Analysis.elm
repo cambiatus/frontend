@@ -545,10 +545,13 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadCommunity community ->
-            UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community.symbol)
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community.symbol)
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
+            (\authToken ->
+                UR.init model
+                    |> UR.addCmd (fetchAnalysis loggedIn.shared authToken model Nothing WaitingToVote community.symbol)
+                    |> UR.addCmd (fetchAnalysis loggedIn.shared authToken model Nothing Analyzed community.symbol)
+                    |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         ClaimMsg claimIndex m ->
             let
@@ -704,17 +707,27 @@ update msg model loggedIn =
                             , status = RemoteData.Loading
                         }
 
-                    addFetchCommand =
+                    addFetchCommand authToken =
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
-                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol)
+                                UR.addCmd
+                                    (fetchAnalysis loggedIn.shared
+                                        authToken
+                                        newModel
+                                        Nothing
+                                        model.selectedTab
+                                        community.symbol
+                                    )
 
                             _ ->
                                 identity
                 in
-                newModel
-                    |> UR.init
-                    |> addFetchCommand
+                (\authToken ->
+                    newModel
+                        |> UR.init
+                        |> addFetchCommand authToken
+                )
+                    |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         SelectedTab tab ->
             let
@@ -726,10 +739,17 @@ update msg model loggedIn =
                         , reloadOnNextQuery = True
                     }
 
-                addFetchCommand =
+                addFetchCommand authToken =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community.symbol)
+                            UR.addCmd
+                                (fetchAnalysis loggedIn.shared
+                                    authToken
+                                    newModel
+                                    Nothing
+                                    tab
+                                    community.symbol
+                                )
 
                         _ ->
                             identity
@@ -742,16 +762,19 @@ update msg model loggedIn =
                         Analyzed ->
                             "analyzed"
             in
-            newModel
-                |> UR.init
-                |> addFetchCommand
-                |> UR.addBreadcrumb
-                    { type_ = Log.InfoBreadcrumb
-                    , category = msg
-                    , message = "Selected tab"
-                    , data = Dict.fromList [ ( "tab", tabToString tab |> Encode.string ) ]
-                    , level = Log.Info
-                    }
+            (\authToken ->
+                newModel
+                    |> UR.init
+                    |> addFetchCommand authToken
+                    |> UR.addBreadcrumb
+                        { type_ = Log.InfoBreadcrumb
+                        , category = msg
+                        , message = "Selected tab"
+                        , data = Dict.fromList [ ( "tab", tabToString tab |> Encode.string ) ]
+                        , level = Log.Info
+                        }
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         ShowMore ->
             case ( model.status, loggedIn.selectedCommunity ) of
@@ -761,16 +784,26 @@ update msg model loggedIn =
                         cursor =
                             Maybe.andThen .endCursor pageInfo
                     in
-                    model
-                        |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community.symbol)
-                        |> UR.addBreadcrumb
-                            { type_ = Log.QueryBreadcrumb
-                            , category = msg
-                            , message = "Requested to show more items"
-                            , data = Dict.empty
-                            , level = Log.Info
-                            }
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd
+                                (fetchAnalysis loggedIn.shared
+                                    authToken
+                                    model
+                                    cursor
+                                    model.selectedTab
+                                    community.symbol
+                                )
+                            |> UR.addBreadcrumb
+                                { type_ = Log.QueryBreadcrumb
+                                , category = msg
+                                , message = "Requested to show more items"
+                                , data = Dict.empty
+                                , level = Log.Info
+                                }
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     UR.init model
@@ -785,16 +818,24 @@ update msg model loggedIn =
                         , status = RemoteData.Loading
                     }
             in
-            newModel
-                |> UR.init
-                |> UR.addCmd
-                    (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
+            (\authToken ->
+                newModel
+                    |> UR.init
+                    |> UR.addCmd
+                        (case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                fetchAnalysis loggedIn.shared
+                                    authToken
+                                    newModel
+                                    Nothing
+                                    model.selectedTab
+                                    community.symbol
 
-                        _ ->
-                            Cmd.none
-                    )
+                            _ ->
+                                Cmd.none
+                        )
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         ToggleSorting ->
             let
@@ -812,21 +853,29 @@ update msg model loggedIn =
                         , status = RemoteData.Loading
                     }
 
-                fetchCmd =
+                fetchCmd authToken =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
+                            fetchAnalysis loggedIn.shared
+                                authToken
+                                newModel
+                                Nothing
+                                model.selectedTab
+                                community.symbol
 
                         _ ->
                             Cmd.none
             in
-            newModel
-                |> UR.init
-                |> UR.addCmd fetchCmd
+            (\authToken ->
+                newModel
+                    |> UR.init
+                    |> UR.addCmd (fetchCmd authToken)
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
 
-fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
-fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
+fetchAnalysis : Shared -> Api.Graphql.Token -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
+fetchAnalysis shared authToken model maybeCursorAfter tab symbol =
     let
         cursorAfter =
             case maybeCursorAfter of

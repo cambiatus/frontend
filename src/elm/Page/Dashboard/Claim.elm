@@ -35,11 +35,18 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared, authToken } claimId =
-    ( initModel claimId
-    , fetchClaim claimId shared authToken
+init : LoggedIn.Model -> Claim.ClaimId -> UpdateResult
+init ({ shared } as loggedIn) claimId =
+    let
+        model =
+            initModel claimId
+    in
+    (\authToken ->
+        model
+            |> UR.init
+            |> UR.addCmd (fetchClaim claimId shared authToken)
     )
+        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
 
 
 

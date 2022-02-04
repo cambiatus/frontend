@@ -60,14 +60,17 @@ update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
-            { model | contributions = RemoteData.Loading }
-                |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Profile.contributionsQuery community.symbol model.profileName)
-                        CompletedLoadContributions
-                    )
+            (\authToken ->
+                { model | contributions = RemoteData.Loading }
+                    |> UR.init
+                    |> UR.addCmd
+                        (Api.Graphql.query loggedIn.shared
+                            (Just authToken)
+                            (Profile.contributionsQuery community.symbol model.profileName)
+                            CompletedLoadContributions
+                        )
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         CompletedLoadContributions (RemoteData.Success contributions) ->
             { model | contributions = RemoteData.Success (Maybe.withDefault [] contributions) }

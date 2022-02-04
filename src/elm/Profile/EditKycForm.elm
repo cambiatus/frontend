@@ -22,7 +22,7 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import View.Feedback
@@ -240,8 +240,8 @@ update shared model msg =
             model |> UR.init
 
 
-saveKycData : LoggedIn.Model -> FormOutput -> Cmd Msg
-saveKycData { shared, authToken } formOutput =
+saveKycData : Shared -> Api.Graphql.Token -> FormOutput -> Cmd Msg
+saveKycData shared authToken formOutput =
     let
         data =
             { documentType =

@@ -27,15 +27,19 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, authToken } as loggedIn) =
-    ( initModel
-    , Api.Graphql.query
-        shared
-        (Just authToken)
-        (Notification.notificationHistoryQuery loggedIn.accountName)
-        CompletedLoadNotificationHistory
+init : LoggedIn.Model -> UpdateResult
+init ({ shared } as loggedIn) =
+    (\authToken ->
+        UR.init initModel
+            |> UR.addCmd
+                (Api.Graphql.query
+                    shared
+                    (Just authToken)
+                    (Notification.notificationHistoryQuery loggedIn.accountName)
+                    CompletedLoadNotificationHistory
+                )
     )
+        |> LoggedIn.withAuthToken loggedIn initModel { callbackMsg = RequestedQueryForNotificationHistory }
 
 
 
@@ -344,7 +348,8 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedLoadNotificationHistory (RemoteData (Graphql.Http.Error (List History)) (List History))
+    = RequestedQueryForNotificationHistory
+    | CompletedLoadNotificationHistory (RemoteData (Graphql.Http.Error (List History)) (List History))
     | MarkAsRead Int Payload
     | CompletedReading (RemoteData (Graphql.Http.Error History) History)
 
@@ -352,6 +357,19 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        RequestedQueryForNotificationHistory ->
+            (\authToken ->
+                UR.init initModel
+                    |> UR.addCmd
+                        (Api.Graphql.query
+                            loggedIn.shared
+                            (Just authToken)
+                            (Notification.notificationHistoryQuery loggedIn.accountName)
+                            CompletedLoadNotificationHistory
+                        )
+            )
+                |> LoggedIn.withAuthToken loggedIn initModel { callbackMsg = msg }
+
         CompletedLoadNotificationHistory (RemoteData.Success notifications) ->
             Loaded notifications
                 |> UR.init
@@ -370,9 +388,9 @@ update msg model loggedIn =
 
         MarkAsRead notificationId data ->
             let
-                cmd =
+                cmd authToken =
                     Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
+                        (Just authToken)
                         (Notification.markAsReadMutation notificationId)
                         CompletedReading
 
@@ -390,27 +408,36 @@ update msg model loggedIn =
             in
             case data of
                 T transfer ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd cmd
-                        |> UR.addCmd
-                            (Route.ViewTransfer transfer.id
-                                |> redirectCmd transfer.community
-                            )
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd (cmd authToken)
+                            |> UR.addCmd
+                                (Route.ViewTransfer transfer.id
+                                    |> redirectCmd transfer.community
+                                )
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 M ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd cmd
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd (cmd authToken)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 S sale ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd cmd
-                        |> UR.addCmd
-                            (Route.ViewSale sale.product.id
-                                |> redirectCmd sale.product.community
-                            )
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd (cmd authToken)
+                            |> UR.addCmd
+                                (Route.ViewSale sale.product.id
+                                    |> redirectCmd sale.product.community
+                                )
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         CompletedReading (RemoteData.Success hist) ->
             case model of
@@ -456,6 +483,9 @@ update msg model loggedIn =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        RequestedQueryForNotificationHistory ->
+            [ "RequestedQueryForNotificationHistory" ]
+
         CompletedLoadNotificationHistory r ->
             [ "CompletedLoadNotificationHistory", UR.remoteDataToString r ]
 

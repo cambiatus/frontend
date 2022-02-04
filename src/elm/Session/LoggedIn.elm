@@ -22,6 +22,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
+    , withAuthToken
     , withPrivateKey
     )
 
@@ -103,12 +104,15 @@ initRequestingAuthToken shared accountName =
     let
         ( model, cmd ) =
             initModel shared Nothing accountName Nothing
+
+        _ =
+            Debug.log "INIT REQUESTING AUTH TOKEN" True
     in
     ( model
     , Cmd.batch
         [ Task.perform GotTimeInternal Time.now
         , cmd
-        , generateAuthTokenInternal { callbackMsg = Debug.todo "" }
+        , generateAuthToken model { callbackMsg = GeneratedInitialAuthToken }
         ]
     )
 
@@ -212,6 +216,7 @@ type alias Model =
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
     , internalAfterAuthMsg : Maybe Msg
+    , internalAfterAuthTokenMsg : Maybe Msg
     }
 
 
@@ -244,6 +249,7 @@ initModel shared maybePrivateKey_ accountName authToken =
       , queuedCommunityFields = []
       , maybeHighlightedNews = Nothing
       , internalAfterAuthMsg = Nothing
+      , internalAfterAuthTokenMsg = Nothing
       }
     , Cmd.map GotAuthMsg authCmd
     )
@@ -1031,7 +1037,7 @@ updateExternal externalMsg ({ shared } as model) =
         AddedCommunity communityInfo ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "" } }
+                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "" } }
 
                 Just authToken ->
                     let
@@ -1055,7 +1061,7 @@ updateExternal externalMsg ({ shared } as model) =
         CreatedCommunity symbol subdomain ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "" } }
+                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "" } }
 
                 Just authToken ->
                     let
@@ -1102,7 +1108,7 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource CommunityResource ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthTokenInternal { callbackMsg = Debug.todo "Create a msg for this" } }
+                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "Create a msg for this" } }
 
                 Just authToken ->
                     let
@@ -1119,7 +1125,7 @@ updateExternal externalMsg ({ shared } as model) =
                 | cmd =
                     case model.authToken of
                         Nothing ->
-                            generateAuthTokenInternal
+                            generateAuthToken model
                                 { callbackMsg = Debug.todo "Create a Msg that will query profile"
                                 }
 
@@ -1153,7 +1159,7 @@ updateExternal externalMsg ({ shared } as model) =
                                     Nothing ->
                                         { defaultResult
                                             | cmd =
-                                                generateAuthTokenInternal
+                                                generateAuthToken model
                                                     { callbackMsg = Debug.todo "Create a Msg that will query a community field"
                                                     }
                                         }
@@ -1197,7 +1203,7 @@ updateExternal externalMsg ({ shared } as model) =
                                         (CompletedLoadCommunityField community)
 
                                 Nothing ->
-                                    generateAuthTokenInternal
+                                    generateAuthToken model
                                         { callbackMsg = Debug.todo "Create a Msg that will query a community field"
                                         }
                     }
@@ -1245,7 +1251,7 @@ updateExternal externalMsg ({ shared } as model) =
                 | cmd =
                     Api.Graphql.askForPhrase shared
                         model.accountName
-                        GotAuthTokenPhrase
+                        (GotAuthTokenPhrase Nothing)
                 , afterAuthTokenMsg = Just afterAuthTokenMsg
             }
 
@@ -1281,6 +1287,7 @@ type BroadcastMsg
 
 type Msg
     = NoOp
+    | GeneratedInitialAuthToken
     | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
@@ -1308,7 +1315,7 @@ type Msg
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
-    | GotAuthTokenPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | GotAuthTokenPhrase (Maybe { callbackMsg : Msg }) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
     | SignedAuthTokenPhrase Api.Graphql.Password
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
 
@@ -1330,6 +1337,23 @@ update msg model =
     case msg of
         NoOp ->
             UR.init model
+
+        GeneratedInitialAuthToken ->
+            (\authToken ->
+                let
+                    _ =
+                        Debug.log "GENERATED INITIAL AUTH TOKEN" authToken
+                in
+                UR.init model
+                    |> UR.addCmd (fetchCommunity model.shared authToken Nothing)
+                    |> UR.addCmd
+                        (Api.Graphql.query model.shared
+                            (Just authToken)
+                            (Profile.query model.accountName)
+                            CompletedLoadProfile
+                        )
+            )
+                |> withAuthTokenInternal model { callbackMsg = msg }
 
         GotTimeInternal time ->
             UR.init { model | shared = { shared | now = time } }
@@ -1853,18 +1877,24 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             [ Log.contextFromCommunity model.selectedCommunity ]
 
-        GotAuthTokenPhrase (RemoteData.Success phrase) ->
-            (\privateKey ->
-                model
-                    |> UR.init
-                    |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
-            )
-                |> withPrivateKeyInternal msg model
+        GotAuthTokenPhrase maybeCallbackMsg (RemoteData.Success phrase) ->
+            -- (\privateKey ->
+            --     { model | internalAfterAuthTokenMsg = Maybe.map .callbackMsg maybeCallbackMsg }
+            --         |> UR.init
+            --         |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
+            -- )
+            --     |> withPrivateKeyInternal msg model
+            let
+                _ =
+                    Debug.log "GOT AUTH TOKEN PHRASE" phrase
+            in
+            UR.init model
 
-        GotAuthTokenPhrase (RemoteData.Failure err) ->
+        GotAuthTokenPhrase _ (RemoteData.Failure err) ->
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
+                , internalAfterAuthTokenMsg = Nothing
             }
                 |> UR.init
                 |> UR.addPort
@@ -1881,7 +1911,7 @@ update msg model =
                     []
                     err
 
-        GotAuthTokenPhrase _ ->
+        GotAuthTokenPhrase _ _ ->
             UR.init model
 
         SignedAuthTokenPhrase signedPhrase ->
@@ -1897,13 +1927,24 @@ update msg model =
                     )
 
         CompletedGeneratingAuthToken (RemoteData.Success signInResponse) ->
+            let
+                addInternalAfterAuthTokenMsg =
+                    case model.internalAfterAuthTokenMsg of
+                        Nothing ->
+                            identity
+
+                        Just callbackMsg ->
+                            UR.addMsg callbackMsg
+            in
             { model
                 | profile = RemoteData.Success signInResponse.profile
                 , authToken = Just signInResponse.token
+                , internalAfterAuthTokenMsg = Nothing
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
                 |> UR.addExt AuthTokenSucceeded
+                |> addInternalAfterAuthTokenMsg
 
         CompletedGeneratingAuthToken (RemoteData.Failure err) ->
             { model
@@ -2036,18 +2077,24 @@ withAuthTokenInternal :
     -> (Api.Graphql.Token -> UpdateResult)
     -> UpdateResult
 withAuthTokenInternal model callbackMsg successfulUR =
+    let
+        _ =
+            Debug.log "WITH AUTH TOKEN INTERNAL CALLED" True
+    in
     case model.authToken of
         Just authToken ->
             successfulUR authToken
 
         Nothing ->
             UR.init model
-                |> UR.addCmd (generateAuthTokenInternal callbackMsg)
+                |> UR.addCmd (generateAuthToken model callbackMsg)
 
 
-generateAuthTokenInternal : { callbackMsg : Msg } -> Cmd Msg
-generateAuthTokenInternal { callbackMsg } =
-    Debug.todo "Go through the auth process, and call `callbackMsg` at the end of it"
+generateAuthToken : Model -> { callbackMsg : Msg } -> Cmd Msg
+generateAuthToken model callbackMsg =
+    Api.Graphql.askForPhrase model.shared
+        model.accountName
+        (GotAuthTokenPhrase (Just callbackMsg))
 
 
 isCommunityMember : Model -> Bool
@@ -2303,6 +2350,9 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
+        GeneratedInitialAuthToken ->
+            [ "GeneratedInitialAuthToken" ]
+
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
 
@@ -2384,7 +2434,7 @@ msgToString msg =
         ReceivedNewHighlightedNews _ ->
             [ "ReceivedNewHighlightedNews" ]
 
-        GotAuthTokenPhrase _ ->
+        GotAuthTokenPhrase _ _ ->
             [ "GotAuthTokenPhrase" ]
 
         SignedAuthTokenPhrase _ ->

@@ -312,16 +312,19 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
-update msg model ({ shared, authToken } as loggedIn) =
+update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
+update msg model ({ shared } as loggedIn) =
     case msg of
         NoOp ->
             UR.init model
 
         CompletedLoadCommunity community ->
-            model
-                |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
@@ -422,9 +425,12 @@ update msg model ({ shared, authToken } as loggedIn) =
         ShowMore ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 _ ->
                     model
@@ -436,116 +442,122 @@ update msg model ({ shared, authToken } as loggedIn) =
                             []
 
         GotUserPickerMsg subMsg ->
-            let
-                ( newUserPicker, userPickerCmd, maybeMsg ) =
-                    Form.UserPicker.update
-                        (userPickerOptions loggedIn model.autocompleteProfiles)
-                        (userPickerViewConfig loggedIn.shared model)
-                        subMsg
-                        (Form.UserPicker.fromSinglePicker model.userPicker)
-                        |> (\( userPicker, cmd, maybeMsg_ ) ->
-                                ( Form.UserPicker.toSinglePicker userPicker, cmd, maybeMsg_ )
-                           )
+            (\authToken ->
+                let
+                    ( newUserPicker, userPickerCmd, maybeMsg ) =
+                        Form.UserPicker.update
+                            (userPickerOptions loggedIn model.autocompleteProfiles)
+                            (userPickerViewConfig loggedIn.shared model)
+                            subMsg
+                            (Form.UserPicker.fromSinglePicker model.userPicker)
+                            |> (\( userPicker, cmd, maybeMsg_ ) ->
+                                    ( Form.UserPicker.toSinglePicker userPicker, cmd, maybeMsg_ )
+                               )
 
-                modelWithUserPicker =
-                    { model
-                        | userPicker = newUserPicker
-                        , autocompleteSelectedProfile = Form.UserPicker.getSingleProfile newUserPicker
-                    }
+                    modelWithUserPicker =
+                        { model
+                            | userPicker = newUserPicker
+                            , autocompleteSelectedProfile = Form.UserPicker.getSingleProfile newUserPicker
+                        }
 
-                ( newModel, fetchProfiles ) =
-                    if Form.UserPicker.getSingleProfile newUserPicker == Form.UserPicker.getSingleProfile model.userPicker then
-                        ( modelWithUserPicker, identity )
+                    ( newModel, fetchProfiles ) =
+                        if Form.UserPicker.getSingleProfile newUserPicker == Form.UserPicker.getSingleProfile model.userPicker then
+                            ( modelWithUserPicker, identity )
 
-                    else
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                let
-                                    newModel_ =
-                                        { modelWithUserPicker
-                                            | incomingTransfers = Nothing
-                                            , incomingTransfersPageInfo = Nothing
-                                        }
-                                in
-                                ( newModel_
-                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                        else
+                            case loggedIn.selectedCommunity of
+                                RemoteData.Success community ->
+                                    let
+                                        newModel_ =
+                                            { modelWithUserPicker
+                                                | incomingTransfers = Nothing
+                                                , incomingTransfersPageInfo = Nothing
+                                            }
+                                    in
+                                    ( newModel_
+                                    , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                    )
+
+                                _ ->
+                                    ( modelWithUserPicker
+                                    , UR.logImpossible msg
+                                        "Picked a user, but community wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.PaymentHistory", function = "update" }
+                                        []
+                                    )
+
+                    fetchProfileInfo =
+                        if Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker newUserPicker) == Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker model.userPicker) then
+                            identity
+
+                        else
+                            UR.addCmd
+                                (fetchProfilesForAutocomplete shared
+                                    model
+                                    (Form.UserPicker.getCurrentQuery
+                                        (Form.UserPicker.fromSinglePicker newUserPicker)
+                                    )
+                                    authToken
                                 )
-
-                            _ ->
-                                ( modelWithUserPicker
-                                , UR.logImpossible msg
-                                    "Picked a user, but community wasn't loaded"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.PaymentHistory", function = "update" }
-                                    []
-                                )
-
-                fetchProfileInfo =
-                    if Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker newUserPicker) == Form.UserPicker.getCurrentQuery (Form.UserPicker.fromSinglePicker model.userPicker) then
-                        identity
-
-                    else
-                        UR.addCmd
-                            (fetchProfilesForAutocomplete shared
-                                model
-                                (Form.UserPicker.getCurrentQuery
-                                    (Form.UserPicker.fromSinglePicker newUserPicker)
-                                )
-                                authToken
-                            )
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotUserPickerMsg userPickerCmd)
-                |> UR.addMsg (Maybe.withDefault NoOp maybeMsg)
-                |> fetchProfiles
-                |> fetchProfileInfo
+                in
+                newModel
+                    |> UR.init
+                    |> UR.addCmd (Cmd.map GotUserPickerMsg userPickerCmd)
+                    |> UR.addMsg (Maybe.withDefault NoOp maybeMsg)
+                    |> fetchProfiles
+                    |> fetchProfileInfo
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         GotDatePickerMsg subMsg ->
-            let
-                ( newDatePicker, datePickerCmd ) =
-                    Form.DatePicker.update (datePickerOptions shared)
-                        (datePickerViewConfig shared model)
-                        subMsg
-                        model.datePicker
+            (\authToken ->
+                let
+                    ( newDatePicker, datePickerCmd ) =
+                        Form.DatePicker.update (datePickerOptions shared)
+                            (datePickerViewConfig shared model)
+                            subMsg
+                            model.datePicker
 
-                modelWithDatePicker =
-                    { model
-                        | datePicker = newDatePicker
-                        , selectedDate = Form.DatePicker.getDate newDatePicker
-                    }
+                    modelWithDatePicker =
+                        { model
+                            | datePicker = newDatePicker
+                            , selectedDate = Form.DatePicker.getDate newDatePicker
+                        }
 
-                ( newModel, fetchProfile ) =
-                    if modelWithDatePicker.selectedDate == model.selectedDate then
-                        ( modelWithDatePicker, identity )
+                    ( newModel, fetchProfile ) =
+                        if modelWithDatePicker.selectedDate == model.selectedDate then
+                            ( modelWithDatePicker, identity )
 
-                    else
-                        case loggedIn.selectedCommunity of
-                            RemoteData.Success community ->
-                                let
-                                    newModel_ =
-                                        { modelWithDatePicker
-                                            | incomingTransfers = Nothing
-                                            , incomingTransfersPageInfo = Nothing
-                                        }
-                                in
-                                ( newModel_
-                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
-                                )
+                        else
+                            case loggedIn.selectedCommunity of
+                                RemoteData.Success community ->
+                                    let
+                                        newModel_ =
+                                            { modelWithDatePicker
+                                                | incomingTransfers = Nothing
+                                                , incomingTransfersPageInfo = Nothing
+                                            }
+                                    in
+                                    ( newModel_
+                                    , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                    )
 
-                            _ ->
-                                ( modelWithDatePicker
-                                , UR.logImpossible msg
-                                    "Picked a date, but community wasn't loaded"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.PaymentHistory", function = "update" }
-                                    []
-                                )
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotDatePickerMsg datePickerCmd)
-                |> fetchProfile
+                                _ ->
+                                    ( modelWithDatePicker
+                                    , UR.logImpossible msg
+                                        "Picked a date, but community wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.PaymentHistory", function = "update" }
+                                        []
+                                    )
+                in
+                newModel
+                    |> UR.init
+                    |> UR.addCmd (Cmd.map GotDatePickerMsg datePickerCmd)
+                    |> fetchProfile
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
 
 

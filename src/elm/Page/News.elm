@@ -87,7 +87,7 @@ update msg model loggedIn =
 
         CompletedLoadNews news ->
             let
-                markNewsAsRead =
+                markNewsAsRead authToken =
                     case
                         model.newsId
                             |> Maybe.andThen
@@ -107,7 +107,7 @@ update msg model loggedIn =
                                     -- Only mark as read if the user hasn't read it yet
                                     UR.addCmd
                                         (Api.Graphql.mutation loggedIn.shared
-                                            (Just loggedIn.authToken)
+                                            (Just authToken)
                                             (Cambiatus.Mutation.read
                                                 { newsId = selectedNews.id }
                                                 Community.News.receiptSelectionSet
@@ -115,9 +115,12 @@ update msg model loggedIn =
                                             CompletedMarkingNewsAsRead
                                         )
             in
-            model
-                |> UR.init
-                |> markNewsAsRead
+            (\authToken ->
+                model
+                    |> UR.init
+                    |> markNewsAsRead authToken
+            )
+                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
         CompletedMarkingNewsAsRead (RemoteData.Success maybeReceipt) ->
             UR.init model
@@ -191,18 +194,21 @@ update msg model loggedIn =
             in
             case maybeSelectedNews of
                 Just selectedNews ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (Community.News.reactToNews selectedNews
-                                    { newsId = selectedNews.id
-                                    , reaction = reaction
-                                    }
+                    (\authToken ->
+                        model
+                            |> UR.init
+                            |> UR.addCmd
+                                (Api.Graphql.mutation loggedIn.shared
+                                    (Just authToken)
+                                    (Community.News.reactToNews selectedNews
+                                        { newsId = selectedNews.id
+                                        , reaction = reaction
+                                        }
+                                    )
+                                    (CompletedTogglingReaction reaction selectedNews)
                                 )
-                                (CompletedTogglingReaction reaction selectedNews)
-                            )
+                    )
+                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
 
                 Nothing ->
                     model
