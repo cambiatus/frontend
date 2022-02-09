@@ -1180,11 +1180,30 @@ mapMsg mapFn msg =
         GotAuthTokenPhrase callback result ->
             GotAuthTokenPhrase (callback >> Cmd.map (mapMsg mapFn)) result
 
+        GotAuthTokenPhraseExternal callback result ->
+            GotAuthTokenPhraseExternal (callback >> Cmd.map mapFn) result
+
         SignedAuthTokenPhrase password ->
             SignedAuthTokenPhrase password
 
         CompletedGeneratingAuthToken result ->
             CompletedGeneratingAuthToken result
+
+        RequestedQuery result ->
+            (case result of
+                Err { callbackCmd } ->
+                    { callbackCmd =
+                        \shared authToken ->
+                            callbackCmd shared authToken
+                                |> Cmd.map mapFn
+                    }
+                        |> Err
+
+                Ok extMsg ->
+                    mapFn extMsg
+                        |> Ok
+            )
+                |> RequestedQuery
 
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
@@ -1472,7 +1491,7 @@ updateExternal externalMsg ({ shared } as model) =
             }
 
         RequiredAuthToken afterAuthTokenMsg ->
-            -- TODO - We onl need this in `query`, so we can change it's signature if needed
+            -- TODO - We only need this in `query`, so we can change it's signature if needed
             { defaultResult
                 | cmd = Debug.todo ""
 
@@ -1485,7 +1504,7 @@ updateExternal externalMsg ({ shared } as model) =
             }
 
         RequestQuery queryCmd ->
-            Debug.todo ""
+            { defaultResult | cmd = Cmd.map RequestedQuery queryCmd }
 
         ShowFeedback status message ->
             { defaultResult | model = { model | feedback = Feedback.Visible status message } }
@@ -1552,8 +1571,10 @@ type Msg externalMsg
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
     | GotAuthTokenPhrase (Api.Graphql.Token -> Cmd (Msg externalMsg)) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | GotAuthTokenPhraseExternal (Api.Graphql.Token -> Cmd externalMsg) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
     | SignedAuthTokenPhrase Api.Graphql.Password
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
+    | RequestedQuery (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd externalMsg } externalMsg)
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -2121,6 +2142,39 @@ update msg model =
         GotAuthTokenPhrase _ _ ->
             UR.init model
 
+        GotAuthTokenPhraseExternal callback (RemoteData.Success phrase) ->
+            (\privateKey ->
+                model
+                    |> UR.init
+                    |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
+                    |> UR.addExt (AddAfterAuthTokenCallback callback)
+            )
+                |> withPrivateKeyInternal msg model
+
+        GotAuthTokenPhraseExternal _ (RemoteData.Failure err) ->
+            -- TODO - Maybe we should let the pages know there was an error?
+            { model
+                | auth = Auth.removePrivateKey model.auth
+                , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
+            }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    }
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when fetching phrase to sign for auth token (using an external msg)"
+                    { moduleName = "Session.LoggedIn"
+                    , function = "update"
+                    }
+                    []
+                    err
+
+        GotAuthTokenPhraseExternal _ _ ->
+            UR.init model
+
         SignedAuthTokenPhrase signedPhrase ->
             model
                 |> UR.init
@@ -2166,6 +2220,20 @@ update msg model =
         CompletedGeneratingAuthToken _ ->
             model
                 |> UR.init
+
+        RequestedQuery (Ok externalMsg) ->
+            model
+                |> UR.init
+                |> UR.addExt (RunExternalMsg externalMsg)
+
+        RequestedQuery (Err { callbackCmd }) ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Api.Graphql.askForPhrase model.shared
+                        model.accountName
+                        (GotAuthTokenPhraseExternal (callbackCmd model.shared))
+                    )
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
@@ -2541,6 +2609,9 @@ jsAddressToMsg addr val =
         "GotAuthTokenPhrase" :: _ ->
             Api.Graphql.decodeSignedPhrasePort SignedAuthTokenPhrase val
 
+        "GotAuthTokenPhraseExternal" :: _ ->
+            Api.Graphql.decodeSignedPhrasePort SignedAuthTokenPhrase val
+
         _ ->
             Nothing
 
@@ -2632,14 +2703,20 @@ msgToString msg =
         ReceivedNewHighlightedNews _ ->
             [ "ReceivedNewHighlightedNews" ]
 
-        GotAuthTokenPhrase _ _ ->
-            [ "GotAuthTokenPhrase" ]
+        GotAuthTokenPhrase _ r ->
+            [ "GotAuthTokenPhrase", UR.remoteDataToString r ]
+
+        GotAuthTokenPhraseExternal _ r ->
+            [ "GotAuthTokenPhraseExternal", UR.remoteDataToString r ]
 
         SignedAuthTokenPhrase _ ->
             [ "SignedAuthTokenPhrase" ]
 
         CompletedGeneratingAuthToken r ->
             [ "CompletedGeneratingAuthToken", UR.remoteDataToString r ]
+
+        RequestedQuery r ->
+            [ "RequestedQuery", UR.resultToString r ]
 
 
 externalMsgToString : External msg -> List String
