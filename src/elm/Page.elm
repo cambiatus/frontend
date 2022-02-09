@@ -241,7 +241,7 @@ fullPageGraphQLError title_ e =
     div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
-            , p [ class "text-center" ] [ text (Utils.errorToString e) ]
+            , p [ class "text-center" ] [ text (Api.Graphql.errorToString e) ]
             ]
         , img [ class "w-full", src "/images/error.svg" ] []
         ]

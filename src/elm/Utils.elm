@@ -1,7 +1,6 @@
 module Utils exposing
     ( areSameDay
     , decodeTimestamp
-    , errorToString
     , escSubscription
     , formatFloat
     , fromDateTime
@@ -16,8 +15,6 @@ module Utils exposing
 import Browser.Events
 import Cambiatus.Scalar exposing (DateTime(..))
 import Date
-import Graphql.Http
-import Graphql.Http.GraphqlError
 import Html
 import Html.Events
 import Iso8601
@@ -141,20 +138,3 @@ spawnMessage : msg -> Cmd msg
 spawnMessage msg =
     Task.succeed msg
         |> Task.perform identity
-
-
-errorToString : Graphql.Http.Error parsedData -> String
-errorToString errorData =
-    case errorData of
-        Graphql.Http.GraphqlError _ graphqlErrors ->
-            graphqlErrors
-                |> List.map graphqlErrorToString
-                |> String.join "\n"
-
-        Graphql.Http.HttpError _ ->
-            "Http Error"
-
-
-graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
-graphqlErrorToString error =
-    error.message

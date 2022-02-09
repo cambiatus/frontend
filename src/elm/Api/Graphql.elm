@@ -2,9 +2,9 @@ module Api.Graphql exposing
     ( Phrase, askForPhrase
     , signPhrasePort, decodeSignedPhrasePort, Password
     , signIn, Token, SignInResponse
-    , storeToken, createAbsintheSocket
+    , storeToken, createAbsintheSocket, tokenDecoder
     , mutation, query
-    , tokenDecoder
+    , errorToString, isNonExistingCommunityError, isNewsNotFoundError, isAuthError
     )
 
 {-| Some operations on our GraphQL API require authentication of a user with an
@@ -38,12 +38,17 @@ give back an auth token so we can perform further requests
 
 ### Token Helpers
 
-@docs storeToken, createAbsintheSocket, withAuthTokenHeader
+@docs storeToken, createAbsintheSocket, withAuthTokenHeader, tokenDecoder
 
 
 # Operations
 
 @docs mutation, query
+
+
+# Error helpers
+
+@docs errorToString, isNonExistingCommunityError, isNewsNotFoundError, isAuthError
 
 ---
 
@@ -203,6 +208,44 @@ mutation ({ endpoints } as shared) maybeAuthToken mutation_ toMsg =
         |> withCommunityDomain shared
         |> withAuthToken maybeAuthToken
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+
+-- ERROR UTILS
+
+
+errorToString : Graphql.Http.Error parsedData -> String
+errorToString errorData =
+    case errorData of
+        Graphql.Http.GraphqlError _ graphqlErrors ->
+            graphqlErrors
+                |> List.map .message
+                |> String.join "\n"
+
+        Graphql.Http.HttpError _ ->
+            "Http Error"
+
+
+isNonExistingCommunityError : Graphql.Http.Error community -> Bool
+isNonExistingCommunityError =
+    isCertainError "no community found using the domain"
+
+
+isNewsNotFoundError : Graphql.Http.Error news -> Bool
+isNewsNotFoundError =
+    isCertainError "news not found"
+
+
+isAuthError : Graphql.Http.Error auth -> Bool
+isAuthError =
+    isCertainError "Please sign in first"
+
+
+isCertainError : String -> Graphql.Http.Error news -> Bool
+isCertainError errorString error =
+    errorToString error
+        |> String.toLower
+        |> String.contains (String.toLower errorString)
 
 
 

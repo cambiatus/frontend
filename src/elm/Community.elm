@@ -27,7 +27,6 @@ module Community exposing
     , getField
     , inviteQuery
     , isFieldLoading
-    , isNonExistingCommunityError
     , maybeFieldValue
     , mergeFields
     , newCommunitySubscription
@@ -866,10 +865,3 @@ communityPreviewImage isLeftSide { translators } community =
                 ]
             ]
         ]
-
-
-isNonExistingCommunityError : Graphql.Http.Error community -> Bool
-isNonExistingCommunityError error =
-    Utils.errorToString error
-        |> String.toLower
-        |> String.contains "no community found using the domain"

@@ -223,7 +223,7 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadNews (RemoteData.Failure err) ->
-            if Utils.errorToString err == "News not found" then
+            if Api.Graphql.isNewsNotFoundError err then
                 NewsNotFound
                     |> UR.init
 

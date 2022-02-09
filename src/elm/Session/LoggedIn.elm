@@ -1044,11 +1044,8 @@ graphqlOperation operation model selectionSet toMsg =
                     Ok (toMsg (RemoteData.Success success))
 
                 RemoteData.Failure err ->
-                    if Debug.todo "Is auth error err" then
-                        -- TODO - queryCmd would cause a recursive type
-                        -- TODO - We should probably create a regular queryCmd and just use Cmd.map
+                    if Api.Graphql.isAuthError err then
                         -- We need to run stuff inside LoggedIn
-                        -- Debug.todo "Generate new auth token"
                         Err
                             { callbackCmd =
                                 \newShared ->
@@ -1767,7 +1764,7 @@ update msg model =
         CompletedLoadCommunity (RemoteData.Failure e) ->
             let
                 communityExists =
-                    not (Community.isNonExistingCommunityError e)
+                    not (Api.Graphql.isNonExistingCommunityError e)
             in
             UR.init { model | selectedCommunity = RemoteData.Failure e }
                 |> UR.logGraphqlError msg
