@@ -46,7 +46,6 @@ import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
-import Utils
 import View.Components
 
 
@@ -69,8 +68,6 @@ init flags navKey url =
     in
     case ( shared.maybeAccount, flags.authToken ) of
         ( Just accountName, Just authToken ) ->
-            -- TODO - We shouldn't need this. We should get an auth error, and automatically generate a new auth token and rerun the query/mutation
-            -- if flags.hasUsedPKAuth then
             let
                 ( model, cmd ) =
                     LoggedIn.init shared accountName authToken
@@ -87,22 +84,6 @@ init flags navKey url =
                     , level = Log.DebugLevel
                     }
 
-        -- else
-        --     let
-        --         ( model, cmd ) =
-        --             LoggedIn.initRequestingAuthToken shared accountName
-        --     in
-        --     UR.init (LoggedIn model)
-        --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-        --         -- TODO - call `Api.Graphql.createAbsintheSocket`
-        --         |> UR.addCmd initialCmds
-        --         |> UR.addBreadcrumb
-        --             { type_ = Log.DebugBreadcrumb
-        --             , category = Ignored
-        --             , message = "Started Elm app with loggedIn user with invalid token"
-        --             , data = Dict.empty
-        --             , level = Log.DebugLevel
-        --             }
         _ ->
             let
                 ( model, cmd ) =
