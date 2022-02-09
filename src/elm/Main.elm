@@ -112,7 +112,8 @@ init flagsValue url navKey =
             changeRouteTo (Route.fromUrl url)
                 { session = session
                 , afterAuthMsg = Nothing
-                , afterAuthTokenMsg = Nothing
+                , afterAuthTokenCallbacks = []
+                , afterPrivateKeyCallbacks = []
                 , status = Redirect
                 }
     in
@@ -150,7 +151,8 @@ subscriptions model =
 type alias Model =
     { session : Session
     , afterAuthMsg : Maybe { successMsg : Msg, errorMsg : Msg }
-    , afterAuthTokenMsg : Maybe Msg
+    , afterAuthTokenCallbacks : List (Api.Graphql.Token -> Cmd Msg)
+    , afterPrivateKeyCallbacks : List Msg
     , status : Status
     }
 
@@ -209,7 +211,7 @@ type Msg
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
-    | GotPageMsg Page.Msg
+    | GotPageMsg (Page.Msg Msg)
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg CommunityPage.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
@@ -352,44 +354,7 @@ update msg model =
                     (\s -> { model | session = s })
                     GotPageMsg
                     (\extMsg uR -> UR.addExt extMsg uR)
-                |> UR.toModelCmd
-                    (\extMsg m ->
-                        case extMsg of
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationSucceed ->
-                                case m.afterAuthMsg of
-                                    Nothing ->
-                                        ( m, Cmd.none )
-
-                                    Just aMsg ->
-                                        update aMsg.successMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
-                                case m.afterAuthMsg of
-                                    Nothing ->
-                                        ( m, Cmd.none )
-
-                                    Just aMsg ->
-                                        update aMsg.errorMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg LoggedIn.AuthTokenSucceeded ->
-                                let
-                                    _ =
-                                        Debug.log "AUTH TOKEN SUCCEEDED" m
-                                in
-                                case m.afterAuthTokenMsg of
-                                    Nothing ->
-                                        ( m, Cmd.none )
-
-                                    Just callbackMsg ->
-                                        update callbackMsg { m | afterAuthTokenMsg = Nothing }
-
-                            Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
-                                ( m, broadcast broadcastMsg m.status )
-
-                            Page.GuestBroadcastMsg broadcastMsg ->
-                                ( m, broadcastGuest broadcastMsg m.status )
-                    )
-                    msgToString
+                |> UR.toModelCmd updateExternal msgToString
 
         ( GotRegisterMsg subMsg, Register maybeInvitation maybeRedirect subModel ) ->
             -- Will return  a function expecting a Guest Model
@@ -891,6 +856,76 @@ updateGuestUResult toStatus toMsg model uResult =
            )
 
 
+updateExternal : Page.ExternalMsg Msg -> Model -> ( Model, Cmd Msg )
+updateExternal extMsg model =
+    case extMsg of
+        Page.LoggedInExternalMsg LoggedIn.AuthenticationSucceed ->
+            case model.afterAuthMsg of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just aMsg ->
+                    update aMsg.successMsg { model | afterAuthMsg = Nothing }
+
+        Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
+            case model.afterAuthMsg of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just aMsg ->
+                    update aMsg.errorMsg { model | afterAuthMsg = Nothing }
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterAuthTokenCallback callback) ->
+            ( { model | afterAuthTokenCallbacks = callback :: model.afterAuthTokenCallbacks }, Cmd.none )
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterAuthTokenCallbackInternal callback) ->
+            ( { model
+                | afterAuthTokenCallbacks =
+                    (\token ->
+                        callback token
+                            |> Cmd.map (Page.GotLoggedInMsg >> GotPageMsg)
+                    )
+                        :: model.afterAuthTokenCallbacks
+              }
+            , Cmd.none
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.RunAfterAuthTokenCallbacks authToken) ->
+            ( { model | afterAuthTokenCallbacks = [] }
+            , model.afterAuthTokenCallbacks
+                |> List.map (\callback -> callback authToken)
+                |> Cmd.batch
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterPrivateKeyCallback callbackMsg) ->
+            ( { model
+                | afterPrivateKeyCallbacks =
+                    (callbackMsg
+                        |> Page.GotLoggedInMsg
+                        |> GotPageMsg
+                    )
+                        :: model.afterPrivateKeyCallbacks
+              }
+            , Cmd.none
+            )
+
+        Page.LoggedInExternalMsg LoggedIn.RunAfterPrivateKeyCallbacks ->
+            ( { model | afterPrivateKeyCallbacks = [] }
+            , model.afterPrivateKeyCallbacks
+                |> List.map spawnMessage
+                |> Cmd.batch
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
+            ( model, broadcast broadcastMsg model.status )
+
+        Page.LoggedInExternalMsg (LoggedIn.RunExternalMsg subExternalMsg) ->
+            ( model, spawnMessage subExternalMsg )
+
+        Page.GuestBroadcastMsg broadcastMsg ->
+            ( model, broadcastGuest broadcastMsg model.status )
+
+
 updateLoggedInUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateResult subModel subMsg (LoggedIn.External subMsg) -> ( Model, Cmd Msg )
 updateLoggedInUResult toStatus toMsg model uResult =
     List.foldl
@@ -921,7 +956,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                                 )
                                 updateResult.afterAuthMsg
                       }
-                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
+                    , Cmd.map (LoggedIn.mapMsg toMsg >> Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
                         :: broadcastCmd
                         :: cmds_
                     )

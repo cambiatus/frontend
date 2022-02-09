@@ -54,7 +54,7 @@ import View.Components
 -- INIT
 
 
-init : Flags -> Nav.Key -> Url -> UpdateResult
+init : Flags -> Nav.Key -> Url -> UpdateResult externalMsg
 init flags navKey url =
     let
         ( shared, sharedCmd ) =
@@ -69,40 +69,40 @@ init flags navKey url =
     in
     case ( shared.maybeAccount, flags.authToken ) of
         ( Just accountName, Just authToken ) ->
+            -- TODO - We shouldn't need this. We should get an auth error, and automatically generate a new auth token and rerun the query/mutation
             -- if flags.hasUsedPKAuth then
-            --     let
-            --         ( model, cmd ) =
-            --             LoggedIn.init shared accountName authToken
-            --     in
-            --     UR.init (LoggedIn model)
-            --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-            --         |> UR.addCmd (Api.Graphql.createAbsintheSocket authToken)
-            --         |> UR.addCmd initialCmds
-            --         |> UR.addBreadcrumb
-            --             { type_ = Log.DebugBreadcrumb
-            --             , category = Ignored
-            --             , message = "Started Elm app with loggedIn user"
-            --             , data = Dict.empty
-            --             , level = Log.DebugLevel
-            --             }
-            -- else
-            --     let
-            --         ( model, cmd ) =
-            --             LoggedIn.initRequestingAuthToken shared accountName
-            --     in
-            --     UR.init (LoggedIn model)
-            --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-            --         -- TODO - call `Api.Graphql.createAbsintheSocket`
-            --         |> UR.addCmd initialCmds
-            --         |> UR.addBreadcrumb
-            --             { type_ = Log.DebugBreadcrumb
-            --             , category = Ignored
-            --             , message = "Started Elm app with loggedIn user with invalid token"
-            --             , data = Dict.empty
-            --             , level = Log.DebugLevel
-            --             }
-            Debug.todo ""
+            let
+                ( model, cmd ) =
+                    LoggedIn.init shared accountName authToken
+            in
+            UR.init (LoggedIn model)
+                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+                |> UR.addCmd (Api.Graphql.createAbsintheSocket authToken)
+                |> UR.addCmd initialCmds
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = Ignored
+                    , message = "Started Elm app with loggedIn user"
+                    , data = Dict.empty
+                    , level = Log.DebugLevel
+                    }
 
+        -- else
+        --     let
+        --         ( model, cmd ) =
+        --             LoggedIn.initRequestingAuthToken shared accountName
+        --     in
+        --     UR.init (LoggedIn model)
+        --         |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
+        --         -- TODO - call `Api.Graphql.createAbsintheSocket`
+        --         |> UR.addCmd initialCmds
+        --         |> UR.addBreadcrumb
+        --             { type_ = Log.DebugBreadcrumb
+        --             , category = Ignored
+        --             , message = "Started Elm app with loggedIn user with invalid token"
+        --             , data = Dict.empty
+        --             , level = Log.DebugLevel
+        --             }
         _ ->
             let
                 ( model, cmd ) =
@@ -121,13 +121,13 @@ init flags navKey url =
                     }
 
 
-fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
 fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
 
 
-fetchTimezone : Cmd Msg
+fetchTimezone : Cmd (Msg externalMsg)
 fetchTimezone =
     Time.here
         |> Task.attempt GotTimezone
@@ -137,7 +137,7 @@ fetchTimezone =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Session -> Sub Msg
+subscriptions : Session -> Sub (Msg externalMsg)
 subscriptions session =
     case session of
         Guest guest ->
@@ -162,12 +162,12 @@ type Session
 -- VIEW
 
 
-viewGuest : (Msg -> msg) -> Guest.Page -> Guest.Model -> Html msg -> Html msg
+viewGuest : (Msg msg -> msg) -> Guest.Page -> Guest.Model -> Html msg -> Html msg
 viewGuest thisMsg page model content =
     Guest.view (thisMsg << GotGuestMsg) page model content
 
 
-viewLoggedIn : (Msg -> msg) -> LoggedIn.Page -> LoggedIn.Model -> Html msg -> Html msg
+viewLoggedIn : (Msg msg -> msg) -> LoggedIn.Page -> LoggedIn.Model -> Html msg -> Html msg
 viewLoggedIn thisMsg page model content =
     LoggedIn.view (thisMsg << GotLoggedInMsg) page model content
 
@@ -262,14 +262,14 @@ fullPageNotFound title subTitle =
 -- UPDATE
 
 
-type alias UpdateResult =
-    UR.UpdateResult Session Msg ExternalMsg
+type alias UpdateResult msg =
+    UR.UpdateResult Session (Msg msg) (ExternalMsg msg)
 
 
 {-| External msg for the `UpdateResult` produced by `Page.update`
 -}
-type ExternalMsg
-    = LoggedInExternalMsg LoggedIn.ExternalMsg
+type ExternalMsg msg
+    = LoggedInExternalMsg (LoggedIn.ExternalMsg msg)
     | GuestBroadcastMsg Guest.BroadcastMsg
 
 
@@ -281,17 +281,17 @@ type External msg
     | GuestExternal Guest.External
 
 
-type Msg
+type Msg msg
     = Ignored
     | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | GotTimezone (Result () Time.Zone)
       -- TODO
       -- | SignedIn (RemoteData (Graphql.Http.Error (Maybe Api.Graphql.SignInResponse)) (Maybe Api.Graphql.SignInResponse))
     | GotGuestMsg Guest.Msg
-    | GotLoggedInMsg LoggedIn.Msg
+    | GotLoggedInMsg (LoggedIn.Msg msg)
 
 
-update : Msg -> Session -> UpdateResult
+update : Msg externalMsg -> Session -> UpdateResult externalMsg
 update msg session =
     case ( msg, session ) of
         ( Ignored, _ ) ->
@@ -401,7 +401,7 @@ updateShared session transform =
 -- TRANSFORM
 
 
-logout : LoggedIn.Model -> ( Session, Cmd Msg )
+logout : LoggedIn.Model -> ( Session, Cmd (Msg externalMsg) )
 logout { shared } =
     let
         ( guest, guestCmd ) =
@@ -439,7 +439,7 @@ maybeAccountName session =
             Nothing
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg : List String -> Value -> Maybe (Msg externalMsg)
 jsAddressToMsg addr val =
     case addr of
         "GotLoggedInMsg" :: remainAddress ->
@@ -450,7 +450,7 @@ jsAddressToMsg addr val =
             Nothing
 
 
-msgToString : Msg -> List String
+msgToString : Msg externalMsg -> List String
 msgToString msg =
     case msg of
         Ignored ->

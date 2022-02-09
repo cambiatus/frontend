@@ -86,18 +86,21 @@ type alias Model =
 init : LoggedIn.Model -> Eos.Name -> UpdateResult
 init loggedIn profileName =
     let
-        fetchProfile authToken =
+        fetchProfile =
             if loggedIn.accountName == profileName then
-                LoggedIn.maybeInitWith
-                    (Just >> RemoteData.Success >> CompletedLoadProfile)
-                    .profile
-                    loggedIn
+                UR.addCmd
+                    (LoggedIn.maybeInitWith
+                        (Just >> RemoteData.Success >> CompletedLoadProfile)
+                        .profile
+                        loggedIn
+                    )
 
             else
-                Api.Graphql.query loggedIn.shared
-                    (Just authToken)
-                    (Profile.query profileName)
-                    CompletedLoadProfile
+                UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Profile.query profileName)
+                        CompletedLoadProfile
+                    )
 
         ( pinModel, pinCmd ) =
             Pin.init
@@ -123,15 +126,12 @@ init loggedIn profileName =
             , currentPin = Nothing
             }
     in
-    (\authToken ->
-        model
-            |> UR.init
-            |> UR.addCmd (fetchProfile authToken)
-            |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
-            |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
-            |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
-    )
-        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+    model
+        |> UR.init
+        |> fetchProfile
+        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 

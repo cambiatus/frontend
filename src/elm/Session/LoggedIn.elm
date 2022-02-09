@@ -14,10 +14,13 @@ module Session.LoggedIn exposing
     , isAccount
     , jsAddressToMsg
     , mapExternal
+    , mapExternalMsg
+    , mapMsg
     , maybeInitWith
     , maybePrivateKey
     , msgToString
     , profile
+    , query
     , subscriptions
     , update
     , updateExternal
@@ -41,7 +44,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation exposing (RootSubscription)
+import Graphql.Operation exposing (RootQuery, RootSubscription)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
@@ -62,6 +65,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route exposing (Route)
 import Search exposing (State(..))
+import Session.Guest exposing (Msg(..))
 import Session.Shared as Shared exposing (Shared, Translators)
 import Shop
 import Task
@@ -80,13 +84,14 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd Msg )
+init : Shared -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 init shared accountName authToken =
     let
         ( model, cmd ) =
             initModel shared Nothing accountName (Just authToken)
     in
     ( model
+      -- TODO - We need to check if auth token is valid
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
@@ -99,25 +104,47 @@ init shared accountName authToken =
 {-| Initialize already logged in user when the page is [re]loaded, but their auth
 token is no longer valid (needed after PR #680)
 -}
-initRequestingAuthToken : Shared -> Eos.Name -> ( Model, Cmd Msg )
+initRequestingAuthToken : Shared -> Eos.Name -> ( Model, Cmd (Msg externalMsg) )
 initRequestingAuthToken shared accountName =
     let
         ( model, cmd ) =
             initModel shared Nothing accountName Nothing
-
-        _ =
-            Debug.log "INIT REQUESTING AUTH TOKEN" True
     in
     ( model
     , Cmd.batch
         [ Task.perform GotTimeInternal Time.now
         , cmd
-        , generateAuthToken model { callbackMsg = GeneratedInitialAuthToken }
+        , generateAuthToken model
+            { callback =
+                \authToken ->
+                    Cmd.batch
+                        [ fetchCommunity model.shared authToken Nothing
+                        , Api.Graphql.query model.shared
+                            (Just authToken)
+                            (Profile.query model.accountName)
+                            CompletedLoadProfile
+                        ]
+            }
+
+        -- , generateAuthToken model
+        --     { callback =
+        --         \authToken ->
+        --             CmdCallback
+        --                 (Cmd.batch
+        --                     [ fetchCommunity model.shared authToken Nothing
+        --                     -- TODO - use new `query` function on logged in
+        --                     , Api.Graphql.query model.shared
+        --                         (Just authToken)
+        --                         (Profile.query model.accountName)
+        --                         CompletedLoadProfile
+        --                     ]
+        --                 )
+        --     }
         ]
     )
 
 
-fetchCommunity : Shared -> Api.Graphql.Token -> Maybe Eos.Symbol -> Cmd Msg
+fetchCommunity : Shared -> Api.Graphql.Token -> Maybe Eos.Symbol -> Cmd (Msg externalMsg)
 fetchCommunity shared authToken maybeToken =
     if shared.useSubdomain then
         Api.Graphql.query shared
@@ -134,7 +161,7 @@ fetchCommunity shared authToken maybeToken =
         Api.Graphql.query shared (Just authToken) (Community.symbolQuery symbol) CompletedLoadCommunity
 
 
-fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
 fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
@@ -142,7 +169,7 @@ fetchTranslations language =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd Msg )
+initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 initLogin shared maybePrivateKey_ profile_ authToken =
     let
         loadedProfile =
@@ -168,7 +195,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
+subscriptions : Model -> Sub (Msg externalMsg)
 subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
@@ -215,12 +242,10 @@ type alias Model =
     , hasSeenDashboard : Bool
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
-    , internalAfterAuthMsg : Maybe Msg
-    , internalAfterAuthTokenMsg : Maybe Msg
     }
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd Msg )
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 initModel shared maybePrivateKey_ accountName authToken =
     let
         ( authModel, authCmd ) =
@@ -248,8 +273,6 @@ initModel shared maybePrivateKey_ accountName authToken =
       , hasSeenDashboard = False
       , queuedCommunityFields = []
       , maybeHighlightedNews = Nothing
-      , internalAfterAuthMsg = Nothing
-      , internalAfterAuthTokenMsg = Nothing
       }
     , Cmd.map GotAuthMsg authCmd
     )
@@ -313,7 +336,7 @@ type Page
     | Join
 
 
-view : (Msg -> msg) -> Page -> Model -> Html msg -> Html msg
+view : (Msg msg -> msg) -> Page -> Model -> Html msg -> Html msg
 view thisMsg page ({ shared } as model) content =
     case ( Shared.translationStatus shared, model.profile ) of
         ( Shared.LoadingTranslation, _ ) ->
@@ -327,17 +350,26 @@ view thisMsg page ({ shared } as model) content =
                 |> Html.map thisMsg
 
         ( _, RemoteData.Loading ) ->
-            View.Components.loadingLogoAnimated shared.translators ""
+            div []
+                [ View.Components.loadingLogoAnimated shared.translators ""
+                , viewAuthModal thisMsg model
+                ]
 
         ( _, RemoteData.NotAsked ) ->
-            View.Components.loadingLogoAnimated shared.translators ""
+            div []
+                [ View.Components.loadingLogoAnimated shared.translators ""
+                , viewAuthModal thisMsg model
+                ]
 
         ( _, RemoteData.Failure err ) ->
-            Shared.viewFullGraphqlError shared
-                err
-                (ClickedTryAgainProfile model.accountName)
-                "An error occurred while loading profile."
-                |> Html.map thisMsg
+            div []
+                [ Shared.viewFullGraphqlError shared
+                    err
+                    (ClickedTryAgainProfile model.accountName)
+                    "An error occurred while loading profile."
+                    |> Html.map thisMsg
+                , viewAuthModal thisMsg model
+                ]
 
         ( _, RemoteData.Success profile_ ) ->
             viewHelper thisMsg page profile_ model content
@@ -352,7 +384,7 @@ hideCommunityAndSearch currentPage model =
     List.member currentPage hiddenPages || not (isCommunityMember model)
 
 
-viewHelper : (Msg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
+viewHelper : (Msg pageMsg -> pageMsg) -> Page -> Profile.Model -> Model -> Html pageMsg -> Html pageMsg
 viewHelper pageMsg page profile_ ({ shared } as model) content =
     let
         viewClaimWithProofs action proof isLoading =
@@ -429,24 +461,29 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
             ++ [ viewFooter shared
                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
-               , Modal.initWith
-                    { closeMsg = ClosedAuthModal
-                    , isVisible = model.showAuthModal
-                    }
-                    |> Modal.withHeader (shared.translators.t "auth.login.modalFormTitle")
-                    |> Modal.withBody
-                        (Auth.view shared model.auth
-                            |> List.map (Html.map GotAuthMsg)
-                        )
-                    |> Modal.toHtml
-                    |> Html.map pageMsg
+               , viewAuthModal pageMsg model
                , communitySelectorModal model
                     |> Html.map pageMsg
                ]
         )
 
 
-viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
+viewAuthModal : (Msg pageMsg -> pageMsg) -> Model -> Html pageMsg
+viewAuthModal pageMsg ({ shared } as model) =
+    Modal.initWith
+        { closeMsg = ClosedAuthModal
+        , isVisible = model.showAuthModal
+        }
+        |> Modal.withHeader (shared.translators.t "auth.login.modalFormTitle")
+        |> Modal.withBody
+            (Auth.view shared model.auth
+                |> List.map (Html.map GotAuthMsg)
+            )
+        |> Modal.toHtml
+        |> Html.map pageMsg
+
+
+viewHighlightedNews : Translators -> (Msg pageMsg -> pageMsg) -> Community.News.Model -> Html pageMsg
 viewHighlightedNews { t } toPageMsg news =
     div
         [ class "bg-purple-500 py-4 sticky top-0 z-10"
@@ -569,7 +606,7 @@ viewPageBody ({ shared } as model) profile_ page content =
     ]
 
 
-viewHeader : Page -> Model -> Profile.Model -> Html Msg
+viewHeader : Page -> Model -> Profile.Model -> Html (Msg externalMsg)
 viewHeader page ({ shared } as model) profile_ =
     let
         text_ str =
@@ -747,7 +784,7 @@ viewHeader page ({ shared } as model) profile_ =
         ]
 
 
-viewCommunitySelector : Model -> Html Msg
+viewCommunitySelector : Model -> Html (Msg externalMsg)
 viewCommunitySelector model =
     let
         hasMultipleCommunities : Bool
@@ -777,7 +814,7 @@ viewCommunitySelector model =
             text ""
 
 
-communitySelectorModal : Model -> Html Msg
+communitySelectorModal : Model -> Html (Msg externalMsg)
 communitySelectorModal model =
     let
         t s =
@@ -786,7 +823,7 @@ communitySelectorModal model =
         text_ s =
             text (t s)
 
-        viewCommunityItem : Profile.CommunityInfo -> Html Msg
+        viewCommunityItem : Profile.CommunityInfo -> Html (Msg externalMsg)
         viewCommunityItem c =
             li [ class "flex" ]
                 [ button
@@ -826,7 +863,7 @@ communitySelectorModal model =
         text ""
 
 
-viewMainMenu : Page -> Model -> Html Msg
+viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
         closeClaimWithPhoto =
@@ -945,11 +982,80 @@ type External msg
     | SetCommunityField Community.FieldValue
     | RequiredPrivateKey { successMsg : msg, errorMsg : msg }
     | RequiredAuthToken { callbackMsg : msg }
+    | RequestQuery (Cmd (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd msg } msg))
     | ShowFeedback Feedback.Status String
     | HideFeedback
 
 
-addFeedback : Feedback.Model -> UR.UpdateResult model msg (External msg) -> UR.UpdateResult model msg (External msg)
+{-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
+for logged in users because it automatically detects if the user's auth token is
+valid. If it's not valid, it automatically generates a new one (might need to ask
+for user's pin), and runs the original query again.
+
+It only retries once though, so if there are multiple authentication errors for
+the same query, we stop trying, and send the error to the page that requested
+the query. If the error is not related to authentication, we don't retry, we
+just send the error the page that requested the query.
+
+-}
+query :
+    Model
+    -> SelectionSet result RootQuery
+    -> (RemoteData (Graphql.Http.Error result) result -> msg)
+    -> External msg
+query model selectionSet toMsg =
+    -- TODO - If this works, we don't need `initRequestingAuthToken`, we just need to use this instead
+    -- TODO - We also won't need `withAuthToken`
+    let
+        queryCmd : Shared -> Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
+        queryCmd shared authToken =
+            Api.Graphql.query shared
+                (Just authToken)
+                selectionSet
+                identity
+    in
+    case model.authToken of
+        Nothing ->
+            -- We need to run stuff inside LoggedIn
+            RequiredAuthToken { callbackMsg = Debug.todo "This needs to be a Cmd Msg" }
+
+        Just authToken ->
+            queryCmd model.shared authToken
+                |> Cmd.map
+                    (\result ->
+                        case result of
+                            RemoteData.Success success ->
+                                -- We can return the result as a page msg
+                                Ok (toMsg (RemoteData.Success success))
+
+                            RemoteData.Failure err ->
+                                if Debug.todo "Is auth error err" then
+                                    -- TODO - queryCmd would cause a recursive type
+                                    -- TODO - We should probably create a regular queryCmd and just use Cmd.map
+                                    -- We need to run stuff inside LoggedIn
+                                    -- Debug.todo "Generate new auth token"
+                                    Err
+                                        { callbackCmd =
+                                            \newShared ->
+                                                queryCmd newShared
+                                                    >> Cmd.map toMsg
+                                        }
+
+                                else
+                                    -- We can return the result as a page msg
+                                    Ok (toMsg (RemoteData.Failure err))
+
+                            _ ->
+                                -- We can return the result as a page msg
+                                Ok (toMsg result)
+                    )
+                |> RequestQuery
+
+
+addFeedback :
+    Feedback.Model
+    -> UR.UpdateResult model msg (External msg)
+    -> UR.UpdateResult model msg (External msg)
 addFeedback feedback ur =
     UR.addExt (executeFeedback feedback) ur
 
@@ -962,6 +1068,137 @@ executeFeedback feedback =
 
         Feedback.Hidden ->
             HideFeedback
+
+
+mapExternalMsg : (msg -> otherMsg) -> ExternalMsg msg -> ExternalMsg otherMsg
+mapExternalMsg mapFn msg =
+    case msg of
+        AuthenticationSucceed ->
+            AuthenticationSucceed
+
+        AuthenticationFailed ->
+            AuthenticationFailed
+
+        AddAfterAuthTokenCallback _ ->
+            Debug.todo ""
+
+        AddAfterAuthTokenCallbackInternal _ ->
+            Debug.todo ""
+
+        RunAfterAuthTokenCallbacks _ ->
+            Debug.todo ""
+
+        AddAfterPrivateKeyCallback _ ->
+            Debug.todo ""
+
+        RunAfterPrivateKeyCallbacks ->
+            Debug.todo ""
+
+        Broadcast broadcastMsg ->
+            Broadcast broadcastMsg
+
+        RunExternalMsg externalMsg ->
+            RunExternalMsg (mapFn externalMsg)
+
+
+mapMsg : (msg -> otherMsg) -> Msg msg -> Msg otherMsg
+mapMsg mapFn msg =
+    case msg of
+        NoOp ->
+            NoOp
+
+        CompletedLoadTranslation language result ->
+            CompletedLoadTranslation language result
+
+        ClickedTryAgainTranslation ->
+            ClickedTryAgainTranslation
+
+        CompletedLoadProfile result ->
+            CompletedLoadProfile result
+
+        CompletedLoadCommunity result ->
+            CompletedLoadCommunity result
+
+        CompletedLoadCommunityField community result ->
+            CompletedLoadCommunityField community result
+
+        CompletedLoadCommunityFields community result ->
+            CompletedLoadCommunityFields community result
+
+        ClickedTryAgainProfile account ->
+            ClickedTryAgainProfile account
+
+        ClickedLogout ->
+            ClickedLogout
+
+        ShowUserNav showUserNav ->
+            ShowUserNav showUserNav
+
+        ToggleLanguageItems ->
+            ToggleLanguageItems
+
+        ClickedLanguage language ->
+            ClickedLanguage language
+
+        ClosedAuthModal ->
+            ClosedAuthModal
+
+        GotAuthMsg subMsg ->
+            GotAuthMsg subMsg
+
+        CompletedLoadUnread jsonValue ->
+            CompletedLoadUnread jsonValue
+
+        OpenCommunitySelector ->
+            OpenCommunitySelector
+
+        CloseCommunitySelector ->
+            CloseCommunitySelector
+
+        SelectedCommunity communityInfo ->
+            SelectedCommunity communityInfo
+
+        GotFeedbackMsg subMsg ->
+            GotFeedbackMsg subMsg
+
+        GotSearchMsg subMsg ->
+            GotSearchMsg subMsg
+
+        GotActionMsg subMsg ->
+            GotActionMsg subMsg
+
+        SearchClosed ->
+            SearchClosed
+
+        ClickedProfileIcon ->
+            ClickedProfileIcon
+
+        GotTimeInternal time ->
+            GotTimeInternal time
+
+        CompletedLoadContributionCount result ->
+            CompletedLoadContributionCount result
+
+        ClickedReadHighlightedNews ->
+            ClickedReadHighlightedNews
+
+        ClosedHighlightedNews ->
+            ClosedHighlightedNews
+
+        ReceivedNewHighlightedNews jsonValue ->
+            ReceivedNewHighlightedNews jsonValue
+
+        GotAuthTokenPhrase maybeCallback result ->
+            -- GotAuthTokenPhrase
+            --     (Maybe.map (\{ callback } -> { callback = callback >> mapCallback mapFn }) maybeCallback)
+            --     result
+            Debug.todo ""
+
+        SignedAuthTokenPhrase password ->
+            SignedAuthTokenPhrase password
+
+        CompletedGeneratingAuthToken result ->
+            CompletedGeneratingAuthToken result
 
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
@@ -997,6 +1234,10 @@ mapExternal mapFn msg =
         RequiredAuthToken { callbackMsg } ->
             RequiredAuthToken { callbackMsg = mapFn callbackMsg }
 
+        RequestQuery externalCmdResult ->
+            -- RequestQuery (Cmd.map (mapExternalCmdResult mapFn) externalCmdResult)
+            Debug.todo ""
+
         ShowFeedback status message ->
             ShowFeedback status message
 
@@ -1015,7 +1256,7 @@ updateExternal :
     -> Model
     ->
         { model : Model
-        , cmd : Cmd Msg
+        , cmd : Cmd (Msg msg)
         , broadcastMsg : Maybe BroadcastMsg
         , afterAuthMsg : Maybe { successMsg : msg, errorMsg : msg }
         , afterAuthTokenMsg : Maybe { callbackMsg : msg }
@@ -1037,7 +1278,7 @@ updateExternal externalMsg ({ shared } as model) =
         AddedCommunity communityInfo ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "" } }
+                    { defaultResult | cmd = generateAuthToken model { callback = Debug.todo "" } }
 
                 Just authToken ->
                     let
@@ -1061,7 +1302,7 @@ updateExternal externalMsg ({ shared } as model) =
         CreatedCommunity symbol subdomain ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "" } }
+                    { defaultResult | cmd = generateAuthToken model { callback = Debug.todo "" } }
 
                 Just authToken ->
                     let
@@ -1108,7 +1349,7 @@ updateExternal externalMsg ({ shared } as model) =
         ReloadResource CommunityResource ->
             case model.authToken of
                 Nothing ->
-                    { defaultResult | cmd = generateAuthToken model { callbackMsg = Debug.todo "Create a msg for this" } }
+                    { defaultResult | cmd = generateAuthToken model { callback = Debug.todo "Create a msg for this" } }
 
                 Just authToken ->
                     let
@@ -1126,7 +1367,7 @@ updateExternal externalMsg ({ shared } as model) =
                     case model.authToken of
                         Nothing ->
                             generateAuthToken model
-                                { callbackMsg = Debug.todo "Create a Msg that will query profile"
+                                { callback = Debug.todo "Create a (Msg externalMsg) that will query profile"
                                 }
 
                         Just authToken ->
@@ -1155,30 +1396,23 @@ updateExternal externalMsg ({ shared } as model) =
                                 }
 
                             Nothing ->
-                                case model.authToken of
-                                    Nothing ->
-                                        { defaultResult
-                                            | cmd =
-                                                generateAuthToken model
-                                                    { callbackMsg = Debug.todo "Create a Msg that will query a community field"
-                                                    }
-                                        }
-
-                                    Just authToken ->
-                                        { defaultResult
-                                            | cmd =
+                                { defaultResult
+                                    | cmd =
+                                        withAuthTokenCmd model
+                                            (\authToken ->
                                                 Community.queryForField community.symbol
                                                     shared
                                                     authToken
                                                     field
                                                     (CompletedLoadCommunityField community)
-                                            , model =
-                                                { model
-                                                    | selectedCommunity =
-                                                        Community.setFieldAsLoading field community
-                                                            |> RemoteData.Success
-                                                }
+                                            )
+                                    , model =
+                                        { model
+                                            | selectedCommunity =
+                                                Community.setFieldAsLoading field community
+                                                    |> RemoteData.Success
                                         }
+                                }
 
                 _ ->
                     { defaultResult
@@ -1204,7 +1438,7 @@ updateExternal externalMsg ({ shared } as model) =
 
                                 Nothing ->
                                     generateAuthToken model
-                                        { callbackMsg = Debug.todo "Create a Msg that will query a community field"
+                                        { callback = Debug.todo "Create a (Msg externalMsg) that will query a community field"
                                         }
                     }
 
@@ -1248,12 +1482,18 @@ updateExternal externalMsg ({ shared } as model) =
 
         RequiredAuthToken afterAuthTokenMsg ->
             { defaultResult
-                | cmd =
-                    Api.Graphql.askForPhrase shared
-                        model.accountName
-                        (GotAuthTokenPhrase Nothing)
-                , afterAuthTokenMsg = Just afterAuthTokenMsg
+                | cmd = Debug.todo ""
+
+                -- TODO
+                -- | cmd =
+                --     Api.Graphql.askForPhrase shared
+                --         model.accountName
+                --         GotAuthTokenPhraseWithCmd
+                -- , afterAuthTokenMsg = Just afterAuthTokenMsg
             }
+
+        RequestQuery queryCmd ->
+            Debug.todo ""
 
         ShowFeedback status message ->
             { defaultResult | model = { model | feedback = Feedback.Visible status message } }
@@ -1262,19 +1502,24 @@ updateExternal externalMsg ({ shared } as model) =
             { defaultResult | model = { model | feedback = Feedback.Hidden } }
 
 
-type alias UpdateResult =
-    UR.UpdateResult Model Msg ExternalMsg
+type alias UpdateResult msg =
+    UR.UpdateResult Model (Msg msg) (ExternalMsg msg)
 
 
 {-| Messages that LoggedIn can fire, and pages/Main will react to
 -}
-type ExternalMsg
+type ExternalMsg msg
     = AuthenticationSucceed
     | AuthenticationFailed
-    | AuthTokenSucceeded
+    | AddAfterAuthTokenCallback (Api.Graphql.Token -> Cmd msg)
+    | AddAfterAuthTokenCallbackInternal (Api.Graphql.Token -> Cmd (Msg msg))
+    | RunAfterAuthTokenCallbacks Api.Graphql.Token
+    | AddAfterPrivateKeyCallback (Msg msg)
+    | RunAfterPrivateKeyCallbacks
       -- TODO
       -- | AuthTokenFailed
     | Broadcast BroadcastMsg
+    | RunExternalMsg msg
 
 
 type BroadcastMsg
@@ -1285,9 +1530,8 @@ type BroadcastMsg
     | TranslationsLoaded
 
 
-type Msg
+type Msg externalMsg
     = NoOp
-    | GeneratedInitialAuthToken
     | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | ClickedTryAgainTranslation
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
@@ -1315,12 +1559,12 @@ type Msg
     | ClickedReadHighlightedNews
     | ClosedHighlightedNews
     | ReceivedNewHighlightedNews Value
-    | GotAuthTokenPhrase (Maybe { callbackMsg : Msg }) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | GotAuthTokenPhrase (Api.Graphql.Token -> Cmd (Msg externalMsg)) (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
     | SignedAuthTokenPhrase Api.Graphql.Password
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
 
 
-update : Msg -> Model -> UpdateResult
+update : Msg msg -> Model -> UpdateResult msg
 update msg model =
     let
         shared =
@@ -1337,23 +1581,6 @@ update msg model =
     case msg of
         NoOp ->
             UR.init model
-
-        GeneratedInitialAuthToken ->
-            (\authToken ->
-                let
-                    _ =
-                        Debug.log "GENERATED INITIAL AUTH TOKEN" authToken
-                in
-                UR.init model
-                    |> UR.addCmd (fetchCommunity model.shared authToken Nothing)
-                    |> UR.addCmd
-                        (Api.Graphql.query model.shared
-                            (Just authToken)
-                            (Profile.query model.accountName)
-                            CompletedLoadProfile
-                        )
-            )
-                |> withAuthTokenInternal model { callbackMsg = msg }
 
         GotTimeInternal time ->
             UR.init { model | shared = { shared | now = time } }
@@ -1705,20 +1932,12 @@ update msg model =
 
                                             _ ->
                                                 Cmd.none
-
-                                    addInternalAfterAuthMsg =
-                                        case model.internalAfterAuthMsg of
-                                            Nothing ->
-                                                identity
-
-                                            Just internalAfterAuthMsg ->
-                                                UR.addMsg internalAfterAuthMsg
                                 in
                                 closeModal uResult
                                     |> UR.mapModel (\m -> { m | auth = auth })
                                     |> UR.addExt AuthenticationSucceed
                                     |> UR.addCmd cmd
-                                    |> addInternalAfterAuthMsg
+                                    |> UR.addExt RunAfterPrivateKeyCallbacks
                                     |> UR.addBreadcrumb
                                         { type_ = Log.DefaultBreadcrumb
                                         , category = msg
@@ -1877,24 +2096,20 @@ update msg model =
                             { moduleName = "Session.LoggedIn", function = "update" }
                             [ Log.contextFromCommunity model.selectedCommunity ]
 
-        GotAuthTokenPhrase maybeCallbackMsg (RemoteData.Success phrase) ->
-            -- (\privateKey ->
-            --     { model | internalAfterAuthTokenMsg = Maybe.map .callbackMsg maybeCallbackMsg }
-            --         |> UR.init
-            --         |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
-            -- )
-            --     |> withPrivateKeyInternal msg model
-            let
-                _ =
-                    Debug.log "GOT AUTH TOKEN PHRASE" phrase
-            in
-            UR.init model
+        GotAuthTokenPhrase callback (RemoteData.Success phrase) ->
+            (\privateKey ->
+                model
+                    |> UR.init
+                    |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
+                    |> UR.addExt (AddAfterAuthTokenCallbackInternal callback)
+            )
+                |> withPrivateKeyInternal msg model
 
         GotAuthTokenPhrase _ (RemoteData.Failure err) ->
+            -- TODO - Maybe we should let the pages know there was an error?
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
-                , internalAfterAuthTokenMsg = Nothing
             }
                 |> UR.init
                 |> UR.addPort
@@ -1927,26 +2142,16 @@ update msg model =
                     )
 
         CompletedGeneratingAuthToken (RemoteData.Success signInResponse) ->
-            let
-                addInternalAfterAuthTokenMsg =
-                    case model.internalAfterAuthTokenMsg of
-                        Nothing ->
-                            identity
-
-                        Just callbackMsg ->
-                            UR.addMsg callbackMsg
-            in
             { model
                 | profile = RemoteData.Success signInResponse.profile
                 , authToken = Just signInResponse.token
-                , internalAfterAuthTokenMsg = Nothing
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
-                |> UR.addExt AuthTokenSucceeded
-                |> addInternalAfterAuthTokenMsg
+                |> UR.addExt (RunAfterAuthTokenCallbacks signInResponse.token)
 
         CompletedGeneratingAuthToken (RemoteData.Failure err) ->
+            -- TODO - Maybe we should let the pages know there was an error?
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
@@ -1971,7 +2176,7 @@ update msg model =
                 |> UR.init
 
 
-handleActionMsg : Model -> Action.Msg -> UpdateResult
+handleActionMsg : Model -> Action.Msg -> UpdateResult msg
 handleActionMsg ({ shared } as model) actionMsg =
     case model.selectedCommunity of
         RemoteData.Success community ->
@@ -2044,15 +2249,17 @@ withPrivateKey loggedIn subModel subMsg successfulUR =
             |> UR.addExt (RequiredPrivateKey subMsg)
 
 
-withPrivateKeyInternal : Msg -> Model -> (Eos.PrivateKey -> UpdateResult) -> UpdateResult
+withPrivateKeyInternal : Msg msg -> Model -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
 withPrivateKeyInternal msg loggedIn successfulUR =
     case maybePrivateKey loggedIn of
         Just privateKey ->
             successfulUR privateKey
 
         Nothing ->
-            askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
+            -- askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
+            askedAuthentication loggedIn
                 |> UR.init
+                |> UR.addExt (AddAfterPrivateKeyCallback msg)
 
 
 withAuthToken :
@@ -2062,6 +2269,7 @@ withAuthToken :
     -> (Api.Graphql.Token -> UR.UpdateResult subModel subMsg (External subMsg))
     -> UR.UpdateResult subModel subMsg (External subMsg)
 withAuthToken loggedIn subModel subMsg successfulUR =
+    -- TODO - Remove this function in favor of query
     case loggedIn.authToken of
         Just authToken ->
             successfulUR authToken
@@ -2073,10 +2281,10 @@ withAuthToken loggedIn subModel subMsg successfulUR =
 
 withAuthTokenInternal :
     Model
-    -> { callbackMsg : Msg }
-    -> (Api.Graphql.Token -> UpdateResult)
-    -> UpdateResult
-withAuthTokenInternal model callbackMsg successfulUR =
+    -> { callbackMsg : Msg externalMsg }
+    -> (Api.Graphql.Token -> UpdateResult msg)
+    -> UpdateResult msg
+withAuthTokenInternal model { callbackMsg } successfulUR =
     let
         _ =
             Debug.log "WITH AUTH TOKEN INTERNAL CALLED" True
@@ -2086,15 +2294,33 @@ withAuthTokenInternal model callbackMsg successfulUR =
             successfulUR authToken
 
         Nothing ->
-            UR.init model
-                |> UR.addCmd (generateAuthToken model callbackMsg)
+            -- UR.init model
+            --     |> UR.addCmd (generateAuthToken model { callback = \_ -> MsgCallback callbackMsg })
+            Debug.todo ""
 
 
-generateAuthToken : Model -> { callbackMsg : Msg } -> Cmd Msg
-generateAuthToken model callbackMsg =
+{-| Check if model has auth token. If it does, just calls the callback cmd.
+Otherwise, it generates a new auth token, and, in the end, calls the callback cmd.
+-}
+withAuthTokenCmd : Model -> (Api.Graphql.Token -> Cmd (Msg externalMsg)) -> Cmd (Msg externalMsg)
+withAuthTokenCmd model callback =
+    case model.authToken of
+        Just authToken ->
+            -- TODO - We should check the result to see if it's an auth error
+            -- TODO - If it is an auth error, we should re-generate the token
+            callback authToken
+
+        Nothing ->
+            Api.Graphql.askForPhrase model.shared
+                model.accountName
+                (GotAuthTokenPhrase callback)
+
+
+generateAuthToken : Model -> { callback : Api.Graphql.Token -> Cmd (Msg externalMsg) } -> Cmd (Msg externalMsg)
+generateAuthToken model { callback } =
     Api.Graphql.askForPhrase model.shared
         model.accountName
-        (GotAuthTokenPhrase (Just callbackMsg))
+        (GotAuthTokenPhrase callback)
 
 
 isCommunityMember : Model -> Bool
@@ -2111,7 +2337,7 @@ isCommunityMember model =
             False
 
 
-loadCommunity : Model -> Api.Graphql.Token -> Maybe Eos.Symbol -> ( Model, Cmd Msg )
+loadCommunity : Model -> Api.Graphql.Token -> Maybe Eos.Symbol -> ( Model, Cmd (Msg externalMsg) )
 loadCommunity ({ shared } as model) authToken maybeSymbol =
     ( { model
         | showCommunitySelector = False
@@ -2140,7 +2366,7 @@ getInvitation model =
 {-| Given a `Community.Model`, check if the user is part of it (or if it has
 auto invites), and set it as default or redirect the user
 -}
-setCommunity : Community.Model -> Model -> ( Model, Cmd Msg )
+setCommunity : Community.Model -> Model -> ( Model, Cmd (Msg externalMsg) )
 setCommunity community ({ shared } as model) =
     let
         isMember =
@@ -2206,7 +2432,7 @@ setCommunity community ({ shared } as model) =
                 )
 
 
-signUpForCommunity : Model -> Api.Graphql.Token -> Profile.CommunityInfo -> ( Model, Cmd Msg )
+signUpForCommunity : Model -> Api.Graphql.Token -> Profile.CommunityInfo -> ( Model, Cmd (Msg externalMsg) )
 signUpForCommunity ({ shared } as model) authToken communityInfo =
     ( { model | selectedCommunity = RemoteData.Loading }
     , Api.Graphql.query shared
@@ -2219,7 +2445,7 @@ signUpForCommunity ({ shared } as model) authToken communityInfo =
 {-| Given minimal information, selects a community. This means querying for the
 entire `Community.Model`, and then setting it in the `Model`
 -}
-selectCommunity : Model -> Api.Graphql.Token -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> ( Model, Cmd Msg )
+selectCommunity : Model -> Api.Graphql.Token -> { community | symbol : Eos.Symbol, subdomain : String } -> Route -> ( Model, Cmd (Msg externalMsg) )
 selectCommunity ({ shared } as model) authToken community route =
     if shared.useSubdomain then
         ( model
@@ -2232,7 +2458,7 @@ selectCommunity ({ shared } as model) authToken community route =
         )
 
 
-closeModal : UpdateResult -> UpdateResult
+closeModal : UpdateResult msg -> UpdateResult msg
 closeModal ({ model } as uResult) =
     { uResult
         | model =
@@ -2316,7 +2542,7 @@ maybeInitWith toMsg attribute model =
             Cmd.none
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg : List String -> Value -> Maybe (Msg externalMsg)
 jsAddressToMsg addr val =
     case addr of
         "GotAuthMsg" :: remainAddress ->
@@ -2344,14 +2570,11 @@ jsAddressToMsg addr val =
             Nothing
 
 
-msgToString : Msg -> List String
+msgToString : Msg externalMsg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
-
-        GeneratedInitialAuthToken ->
-            [ "GeneratedInitialAuthToken" ]
 
         GotTimeInternal _ ->
             [ "GotTimeInternal" ]
@@ -2476,6 +2699,9 @@ externalMsgToString externalMsg =
 
         RequiredAuthToken _ ->
             [ "RequiredAuthToken" ]
+
+        RequestQuery _ ->
+            [ "RequestQuery" ]
 
         ShowFeedback _ _ ->
             [ "ShowFeedback" ]
