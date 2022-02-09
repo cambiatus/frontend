@@ -26,6 +26,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import Utils
 import View.Feedback as Feedback
 import View.Modal as Modal
 
@@ -363,7 +364,7 @@ update session msg model =
 
                                 _ ->
                                     newModel
-                                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
+                                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
 
                         _ ->
                             newModel
@@ -512,7 +513,7 @@ update session msg model =
                     if allowedToJoinCommunity then
                         model
                             |> UR.init
-                            |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
+                            |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
                             |> addBreadcrumb
 
                     else

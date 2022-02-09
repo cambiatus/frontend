@@ -61,6 +61,7 @@ import Task
 import Time
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
+import Utils
 import View.Feedback as Feedback
 
 
@@ -575,7 +576,7 @@ broadcastGuest broadcastMessage status =
     in
     case maybeMsg of
         Just msg ->
-            spawnMessage msg
+            Utils.spawnMessage msg
 
         Nothing ->
             Cmd.none
@@ -703,16 +704,10 @@ broadcast broadcastMessage status =
     in
     case maybeMsg of
         Just msg ->
-            spawnMessage msg
+            Utils.spawnMessage msg
 
         Nothing ->
             Cmd.none
-
-
-spawnMessage : Msg -> Cmd Msg
-spawnMessage msg =
-    Task.succeed ()
-        |> Task.perform (\_ -> msg)
 
 
 updateStatusWith : (subModel -> Status) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
@@ -912,7 +907,7 @@ updateExternal extMsg model =
         Page.LoggedInExternalMsg LoggedIn.RunAfterPrivateKeyCallbacks ->
             ( { model | afterPrivateKeyCallbacks = [] }
             , model.afterPrivateKeyCallbacks
-                |> List.map spawnMessage
+                |> List.map Utils.spawnMessage
                 |> Cmd.batch
             )
 
@@ -920,7 +915,7 @@ updateExternal extMsg model =
             ( model, broadcast broadcastMsg model.status )
 
         Page.LoggedInExternalMsg (LoggedIn.RunExternalMsg subExternalMsg) ->
-            ( model, spawnMessage subExternalMsg )
+            ( model, Utils.spawnMessage subExternalMsg )
 
         Page.GuestBroadcastMsg broadcastMsg ->
             ( model, broadcastGuest broadcastMsg model.status )

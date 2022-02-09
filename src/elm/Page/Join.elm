@@ -12,6 +12,7 @@ import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import Utils
 import View.Components
 
 
@@ -61,7 +62,7 @@ update session msg model =
 
                 Page.LoggedIn _ ->
                     UR.init model
-                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackMsg = SignedIn })
+                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
 
         CompletedLoadCommunity community ->
             case session of

@@ -10,6 +10,7 @@ module Utils exposing
     , onClickPreventAll
     , onSubmitPreventAll
     , previousDay
+    , spawnMessage
     )
 
 import Browser.Events
@@ -22,6 +23,7 @@ import Html.Events
 import Iso8601
 import Json.Decode as Decode
 import Mask
+import Task
 import Time exposing (Posix)
 
 
@@ -133,6 +135,12 @@ preventAll eventName message =
             , preventDefault = True
             }
         )
+
+
+spawnMessage : msg -> Cmd msg
+spawnMessage msg =
+    Task.succeed msg
+        |> Task.perform identity
 
 
 errorToString : Graphql.Http.Error parsedData -> String
