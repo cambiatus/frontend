@@ -327,18 +327,14 @@ update msg model loggedIn =
                                         |> Maybe.withDefault profile.avatar
                             }
                     in
-                    (\authToken ->
-                        model
-                            |> UR.init
-                            |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-                            |> UR.addCmd
-                                (Api.Graphql.mutation loggedIn.shared
-                                    (Just authToken)
-                                    (Profile.mutation (Profile.profileToForm newProfile))
-                                    GotSaveResult
-                                )
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                    model
+                        |> UR.init
+                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Profile.mutation (Profile.profileToForm newProfile))
+                                GotSaveResult
+                            )
 
                 _ ->
                     UR.init model

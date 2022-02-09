@@ -249,17 +249,13 @@ update msg model ({ shared } as loggedIn) =
                     loggedIn
 
             else
-                (\authToken ->
-                    { model | isLoading = True }
-                        |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.query shared
-                                (Just authToken)
-                                (Community.domainAvailableQuery (Url.toString formOutput.subdomain))
-                                (GotDomainAvailableResponse formOutput)
-                            )
-                )
-                    |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                { model | isLoading = True }
+                    |> UR.init
+                    |> UR.addExt
+                        (LoggedIn.query loggedIn
+                            (Community.domainAvailableQuery (Url.toString formOutput.subdomain))
+                            (GotDomainAvailableResponse formOutput)
+                        )
 
         GotDomainAvailableResponse formOutput (RemoteData.Success True) ->
             case Community.getField loggedIn.selectedCommunity .uploads of
@@ -275,6 +271,20 @@ update msg model ({ shared } as loggedIn) =
                             , symbol = community.symbol
                             }
 
+                        addCoverPhoto =
+                            case newUpload of
+                                Nothing ->
+                                    identity
+
+                                Just url ->
+                                    LoggedIn.mutation loggedIn
+                                        (Community.addPhotosMutation
+                                            community.symbol
+                                            (url :: communityUploads)
+                                        )
+                                        (CompletedAddingCoverPhoto formOutput)
+                                        |> UR.addExt
+
                         newUpload =
                             if List.head communityUploads == formOutput.coverPhoto then
                                 Nothing
@@ -282,79 +292,62 @@ update msg model ({ shared } as loggedIn) =
                             else
                                 formOutput.coverPhoto
                     in
-                    (\authToken ->
-                        { model
-                            | isLoading = True
-                            , hasSavedCoverPhoto = Maybe.Extra.isNothing newUpload
-                        }
-                            |> UR.init
-                            |> UR.addPort
-                                { responseAddress = GotDomainAvailableResponse formOutput (RemoteData.Success True)
-                                , responseData = encodeFormOutput formOutput
-                                , data =
-                                    Eos.encodeTransaction
-                                        [ { accountName = loggedIn.shared.contracts.community
-                                          , name = "update"
-                                          , authorization = authorization
-                                          , data =
-                                                { asset = asset 0
-                                                , logo = formOutput.logo
-                                                , name = formOutput.name
-                                                , description = formOutput.description
-                                                , subdomain =
-                                                    formOutput.subdomain.host
-                                                        |> String.split "."
-                                                        |> List.head
-                                                        |> Maybe.map (Route.communityFullDomain shared)
-                                                        |> Maybe.withDefault community.subdomain
-                                                , inviterReward = asset formOutput.inviterReward
-                                                , invitedReward = asset formOutput.invitedReward
-                                                , hasObjectives = Eos.boolToEosBool community.hasObjectives
-                                                , hasShop = Eos.boolToEosBool community.hasShop
-                                                , hasKyc = Eos.boolToEosBool community.hasKyc
-                                                , hasAutoInvite = Eos.boolToEosBool (not formOutput.hasAutoInvite)
-                                                , website =
-                                                    Maybe.map Url.toString formOutput.website
-                                                        |> Maybe.withDefault ""
-                                                }
-                                                    |> Community.encodeUpdateData
-                                          }
-                                        ]
-                                }
-                            |> UR.addCmd
-                                (case newUpload of
-                                    Just url ->
-                                        Api.Graphql.mutation
-                                            shared
-                                            (Just authToken)
-                                            (Community.addPhotosMutation
-                                                community.symbol
-                                                (url :: communityUploads)
-                                            )
-                                            (CompletedAddingCoverPhoto formOutput)
-
-                                    Nothing ->
-                                        Cmd.none
-                                )
-                            |> LoggedIn.withPrivateKey loggedIn
-                                model
-                                { successMsg = msg, errorMsg = ClosedAuthModal }
-                            |> UR.addBreadcrumb
-                                { type_ = Log.DebugBreadcrumb
-                                , category = msg
-                                , message = "Checked that domain is available"
-                                , data =
-                                    Dict.fromList
-                                        [ ( "domain"
-                                          , formOutput.subdomain
-                                                |> Url.toString
-                                                |> Encode.string
-                                          )
-                                        ]
-                                , level = Log.DebugLevel
-                                }
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                    { model
+                        | isLoading = True
+                        , hasSavedCoverPhoto = Maybe.Extra.isNothing newUpload
+                    }
+                        |> UR.init
+                        |> UR.addPort
+                            { responseAddress = GotDomainAvailableResponse formOutput (RemoteData.Success True)
+                            , responseData = encodeFormOutput formOutput
+                            , data =
+                                Eos.encodeTransaction
+                                    [ { accountName = loggedIn.shared.contracts.community
+                                      , name = "update"
+                                      , authorization = authorization
+                                      , data =
+                                            { asset = asset 0
+                                            , logo = formOutput.logo
+                                            , name = formOutput.name
+                                            , description = formOutput.description
+                                            , subdomain =
+                                                formOutput.subdomain.host
+                                                    |> String.split "."
+                                                    |> List.head
+                                                    |> Maybe.map (Route.communityFullDomain shared)
+                                                    |> Maybe.withDefault community.subdomain
+                                            , inviterReward = asset formOutput.inviterReward
+                                            , invitedReward = asset formOutput.invitedReward
+                                            , hasObjectives = Eos.boolToEosBool community.hasObjectives
+                                            , hasShop = Eos.boolToEosBool community.hasShop
+                                            , hasKyc = Eos.boolToEosBool community.hasKyc
+                                            , hasAutoInvite = Eos.boolToEosBool (not formOutput.hasAutoInvite)
+                                            , website =
+                                                Maybe.map Url.toString formOutput.website
+                                                    |> Maybe.withDefault ""
+                                            }
+                                                |> Community.encodeUpdateData
+                                      }
+                                    ]
+                            }
+                        |> addCoverPhoto
+                        |> LoggedIn.withPrivateKey loggedIn
+                            model
+                            { successMsg = msg, errorMsg = ClosedAuthModal }
+                        |> UR.addBreadcrumb
+                            { type_ = Log.DebugBreadcrumb
+                            , category = msg
+                            , message = "Checked that domain is available"
+                            , data =
+                                Dict.fromList
+                                    [ ( "domain"
+                                      , formOutput.subdomain
+                                            |> Url.toString
+                                            |> Encode.string
+                                      )
+                                    ]
+                            , level = Log.DebugLevel
+                            }
 
                 _ ->
                     UR.init model

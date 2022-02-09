@@ -7,7 +7,6 @@ module Profile.EditKycForm exposing
     , view
     )
 
-import Api.Graphql
 import Form
 import Form.Select
 import Form.Text
@@ -22,7 +21,7 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import View.Feedback
@@ -240,8 +239,8 @@ update shared model msg =
             model |> UR.init
 
 
-saveKycData : Shared -> Api.Graphql.Token -> FormOutput -> Cmd Msg
-saveKycData shared authToken formOutput =
+saveKycData : LoggedIn.Model -> FormOutput -> LoggedIn.External Msg
+saveKycData loggedIn formOutput =
     let
         data =
             { documentType =
@@ -254,7 +253,6 @@ saveKycData shared authToken formOutput =
             , isVerified = False
             }
     in
-    Api.Graphql.mutation shared
-        (Just authToken)
+    LoggedIn.mutation loggedIn
         (Profile.upsertKycMutation data)
         Saved

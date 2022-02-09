@@ -510,18 +510,19 @@ update msg model loggedIn =
                                     objective.actions
                             }
                     in
-                    (\authToken ->
-                        { model
-                            | status =
-                                completionStatus
-                                    |> CompletingActions
-                                    |> EditingObjective objective
-                                    |> Authorized form
-                        }
-                            |> UR.init
-                            |> completeActionOrObjective loggedIn authToken model msg completionStatus objective
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                    { model
+                        | status =
+                            completionStatus
+                                |> CompletingActions
+                                |> EditingObjective objective
+                                |> Authorized form
+                    }
+                        |> UR.init
+                        |> completeActionOrObjective loggedIn
+                            model
+                            msg
+                            completionStatus
+                            objective
 
                 _ ->
                     UR.init model
@@ -552,23 +553,19 @@ update msg model loggedIn =
                                         , left = left
                                     }
                             in
-                            (\authToken ->
-                                { model
-                                    | status =
-                                        newCompletionStatus
-                                            |> CompletingActions
-                                            |> EditingObjective objective
-                                            |> Authorized form
-                                }
-                                    |> UR.init
-                                    |> completeActionOrObjective loggedIn
-                                        authToken
-                                        model
-                                        msg
-                                        newCompletionStatus
-                                        objective
-                            )
-                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                            { model
+                                | status =
+                                    newCompletionStatus
+                                        |> CompletingActions
+                                        |> EditingObjective objective
+                                        |> Authorized form
+                            }
+                                |> UR.init
+                                |> completeActionOrObjective loggedIn
+                                    model
+                                    msg
+                                    newCompletionStatus
+                                    objective
 
                 _ ->
                     model
@@ -607,42 +604,38 @@ update msg model loggedIn =
                                 in
                                 -- If we can't do it in `maxRetries` tries,
                                 -- consider it completed and log it
-                                (\authToken ->
-                                    { model
-                                        | status =
-                                            newCompletionStatus
-                                                |> CompletingActions
-                                                |> EditingObjective objective
-                                                |> Authorized form
-                                    }
-                                        |> UR.init
-                                        |> completeActionOrObjective loggedIn
-                                            authToken
-                                            model
-                                            msg
-                                            newCompletionStatus
-                                            objective
-                                        |> UR.logEvent
-                                            { username = Just loggedIn.accountName
-                                            , message = "Error when trying to complete action with objective"
-                                            , tags = []
-                                            , location = { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
-                                            , contexts =
-                                                [ { name = "Details"
-                                                  , extras =
-                                                        Dict.fromList
-                                                            [ ( "actionId", Encode.int action.id )
-                                                            , ( "objectiveId", Encode.int objective.id )
-                                                            , ( "tries", Encode.int tries )
-                                                            , ( "maximumRetries", Encode.int maxRetries )
-                                                            ]
-                                                  }
-                                                ]
-                                            , transaction = msg
-                                            , level = Log.Warning
-                                            }
-                                )
-                                    |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                                { model
+                                    | status =
+                                        newCompletionStatus
+                                            |> CompletingActions
+                                            |> EditingObjective objective
+                                            |> Authorized form
+                                }
+                                    |> UR.init
+                                    |> completeActionOrObjective loggedIn
+                                        model
+                                        msg
+                                        newCompletionStatus
+                                        objective
+                                    |> UR.logEvent
+                                        { username = Just loggedIn.accountName
+                                        , message = "Error when trying to complete action with objective"
+                                        , tags = []
+                                        , location = { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                        , contexts =
+                                            [ { name = "Details"
+                                              , extras =
+                                                    Dict.fromList
+                                                        [ ( "actionId", Encode.int action.id )
+                                                        , ( "objectiveId", Encode.int objective.id )
+                                                        , ( "tries", Encode.int tries )
+                                                        , ( "maximumRetries", Encode.int maxRetries )
+                                                        ]
+                                              }
+                                            ]
+                                        , transaction = msg
+                                        , level = Log.Warning
+                                        }
 
                             else
                                 let
@@ -653,34 +646,30 @@ update msg model loggedIn =
                                                     :: left
                                         }
                                 in
-                                (\authToken ->
-                                    { model
-                                        | status =
-                                            newCompletionStatus
-                                                |> CompletingActions
-                                                |> EditingObjective objective
-                                                |> Authorized form
-                                    }
-                                        |> UR.init
-                                        |> completeActionOrObjective loggedIn
-                                            authToken
-                                            model
-                                            msg
-                                            newCompletionStatus
-                                            objective
-                                        |> UR.addBreadcrumb
-                                            { type_ = Log.ErrorBreadcrumb
-                                            , category = msg
-                                            , message = "Failed to complete action"
-                                            , data =
-                                                Dict.fromList
-                                                    [ ( "tries", Encode.int tries )
-                                                    , ( "actionId", Encode.int action.id )
-                                                    ]
-                                            , level = Log.Warning
-                                            }
-                                )
-                                    |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                                { model
+                                    | status =
+                                        newCompletionStatus
+                                            |> CompletingActions
+                                            |> EditingObjective objective
+                                            |> Authorized form
+                                }
+                                    |> UR.init
+                                    |> completeActionOrObjective loggedIn
+                                        model
+                                        msg
+                                        newCompletionStatus
+                                        objective
+                                    |> UR.addBreadcrumb
+                                        { type_ = Log.ErrorBreadcrumb
+                                        , category = msg
+                                        , message = "Failed to complete action"
+                                        , data =
+                                            Dict.fromList
+                                                [ ( "tries", Encode.int tries )
+                                                , ( "actionId", Encode.int action.id )
+                                                ]
+                                        , level = Log.Warning
+                                        }
 
                 _ ->
                     model
@@ -876,21 +865,18 @@ update msg model loggedIn =
 
 completeActionOrObjective :
     LoggedIn.Model
-    -> Api.Graphql.Token
     -> Model
     -> Msg
     -> CompletionStatus
     -> Community.Objective
     -> (UpdateResult -> UpdateResult)
-completeActionOrObjective loggedIn authToken model msg completionStatus objective =
+completeActionOrObjective loggedIn model msg completionStatus objective =
     case List.head completionStatus.left of
         Nothing ->
-            Api.Graphql.mutation
-                loggedIn.shared
-                (Just authToken)
+            LoggedIn.mutation loggedIn
                 (completeObjectiveSelectionSet objective.id)
                 GotCompleteObjectiveResponse
-                |> UR.addCmd
+                |> UR.addExt
 
         Just { action } ->
             UR.addPort

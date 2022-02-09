@@ -280,19 +280,15 @@ update msg model loggedIn =
                                     CompletedLoadBalance (Err (ResultWithError error))
                         )
             in
-            (\authToken ->
-                model
-                    |> UR.init
-                    |> UR.addCmd fetchBalance
-                    |> UR.addCmd
-                        (Api.Graphql.query loggedIn.shared
-                            (Just authToken)
-                            (graphqlInfoQuery model.profileName community.symbol)
-                            CompletedLoadGraphqlInfo
-                        )
-                    |> UR.addCmd (fetchTransfers loggedIn authToken community Nothing)
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+            model
+                |> UR.init
+                |> UR.addCmd fetchBalance
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (graphqlInfoQuery model.profileName community.symbol)
+                        CompletedLoadGraphqlInfo
+                    )
+                |> UR.addExt (fetchTransfers loggedIn community Nothing)
 
         CompletedLoadContributions contributions ->
             let
@@ -446,18 +442,14 @@ update msg model loggedIn =
                 |> UR.init
 
         DeleteKycAccepted ->
-            (\authToken ->
-                { model | isDeleteKycModalVisible = False }
-                    |> UR.init
-                    |> UR.addCmd
-                        (Api.Graphql.mutation loggedIn.shared
-                            (Just authToken)
-                            (Profile.deleteKycAndAddressMutation loggedIn.accountName)
-                            DeleteKycAndAddressCompleted
-                        )
-                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+            { model | isDeleteKycModalVisible = False }
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
+                        (Profile.deleteKycAndAddressMutation loggedIn.accountName)
+                        DeleteKycAndAddressCompleted
+                    )
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
 
         DeleteKycAndAddressCompleted (RemoteData.Success _) ->
             model
@@ -627,12 +619,9 @@ update msg model loggedIn =
                         maybeCursor =
                             Maybe.andThen .endCursor maybePageInfo
                     in
-                    (\authToken ->
-                        { model | transfersStatus = Loading transfers }
-                            |> UR.init
-                            |> UR.addCmd (fetchTransfers loggedIn authToken community maybeCursor)
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                    { model | transfersStatus = Loading transfers }
+                        |> UR.init
+                        |> UR.addExt (fetchTransfers loggedIn community maybeCursor)
 
                 _ ->
                     model
@@ -1398,10 +1387,9 @@ networkSelectionSet =
             )
 
 
-fetchTransfers : LoggedIn.Model -> Api.Graphql.Token -> Community.Model -> Maybe String -> Cmd Msg
-fetchTransfers loggedIn authToken community maybeCursor =
-    Api.Graphql.query loggedIn.shared
-        (Just authToken)
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> LoggedIn.External Msg
+fetchTransfers loggedIn community maybeCursor =
+    LoggedIn.query loggedIn
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->

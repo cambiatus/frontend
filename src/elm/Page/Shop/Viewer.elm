@@ -66,18 +66,14 @@ init session saleId =
                         , isBuyButtonDisabled = False
                         }
             in
-            (\authToken ->
-                model
-                    |> UR.init
-                    |> UR.addCmd
-                        (Api.Graphql.query shared
-                            (Just authToken)
-                            (Shop.productQuery saleId)
-                            (CompletedSaleLoad >> AsLoggedInMsg)
-                        )
-                    |> UR.addCmd (Api.getBalances shared accountName (CompletedLoadBalances >> AsLoggedInMsg))
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+            model
+                |> UR.init
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Shop.productQuery saleId)
+                        (CompletedSaleLoad >> AsLoggedInMsg)
+                    )
+                |> UR.addCmd (Api.getBalances shared accountName (CompletedLoadBalances >> AsLoggedInMsg))
                 |> UR.map identity identity (Page.LoggedInExternal >> UR.addExt)
 
         Page.Guest guest ->

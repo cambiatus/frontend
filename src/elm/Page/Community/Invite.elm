@@ -342,16 +342,11 @@ update session msg model =
                     in
                     case kycFormMsg of
                         KycForm.Submitted formOutput ->
-                            (\authToken ->
-                                newModel
-                                    |> UR.addCmd
-                                        (KycForm.saveKycData loggedIn.shared
-                                            authToken
-                                            formOutput
-                                            |> Cmd.map FormMsg
-                                        )
-                            )
-                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                            newModel
+                                |> UR.addExt
+                                    (KycForm.saveKycData loggedIn formOutput
+                                        |> LoggedIn.mapExternal FormMsg
+                                    )
 
                         KycForm.Saved result ->
                             case result of

@@ -87,7 +87,7 @@ update msg model loggedIn =
 
         CompletedLoadNews news ->
             let
-                markNewsAsRead authToken =
+                markNewsAsRead =
                     case
                         model.newsId
                             |> Maybe.andThen
@@ -105,9 +105,8 @@ update msg model loggedIn =
 
                                 Nothing ->
                                     -- Only mark as read if the user hasn't read it yet
-                                    UR.addCmd
-                                        (Api.Graphql.mutation loggedIn.shared
-                                            (Just authToken)
+                                    UR.addExt
+                                        (LoggedIn.mutation loggedIn
                                             (Cambiatus.Mutation.read
                                                 { newsId = selectedNews.id }
                                                 Community.News.receiptSelectionSet
@@ -115,12 +114,9 @@ update msg model loggedIn =
                                             CompletedMarkingNewsAsRead
                                         )
             in
-            (\authToken ->
-                model
-                    |> UR.init
-                    |> markNewsAsRead authToken
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+            model
+                |> UR.init
+                |> markNewsAsRead
 
         CompletedMarkingNewsAsRead (RemoteData.Success maybeReceipt) ->
             UR.init model
@@ -194,21 +190,17 @@ update msg model loggedIn =
             in
             case maybeSelectedNews of
                 Just selectedNews ->
-                    (\authToken ->
-                        model
-                            |> UR.init
-                            |> UR.addCmd
-                                (Api.Graphql.mutation loggedIn.shared
-                                    (Just authToken)
-                                    (Community.News.reactToNews selectedNews
-                                        { newsId = selectedNews.id
-                                        , reaction = reaction
-                                        }
-                                    )
-                                    (CompletedTogglingReaction reaction selectedNews)
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Community.News.reactToNews selectedNews
+                                    { newsId = selectedNews.id
+                                    , reaction = reaction
+                                    }
                                 )
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                                (CompletedTogglingReaction reaction selectedNews)
+                            )
 
                 Nothing ->
                     model

@@ -36,17 +36,14 @@ import View.Feedback as Feedback
 
 
 init : LoggedIn.Model -> Claim.ClaimId -> UpdateResult
-init ({ shared } as loggedIn) claimId =
+init loggedIn claimId =
     let
         model =
             initModel claimId
     in
-    (\authToken ->
-        model
-            |> UR.init
-            |> UR.addCmd (fetchClaim claimId shared authToken)
-    )
-        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+    model
+        |> UR.init
+        |> UR.addExt (fetchClaim claimId loggedIn)
 
 
 
@@ -659,12 +656,11 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchClaim : Claim.ClaimId -> Shared -> Api.Graphql.Token -> Cmd Msg
-fetchClaim claimId shared authToken =
-    Api.Graphql.query
-        shared
-        (Just authToken)
-        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet shared.now))
+fetchClaim : Claim.ClaimId -> LoggedIn.Model -> LoggedIn.External Msg
+fetchClaim claimId loggedIn =
+    LoggedIn.query
+        loggedIn
+        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet loggedIn.shared.now))
         ClaimLoaded
 
 

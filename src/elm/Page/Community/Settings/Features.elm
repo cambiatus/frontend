@@ -244,22 +244,18 @@ update msg model loggedIn =
         ToggleNews newsValue ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
-                    (\authToken ->
-                        { model | hasNews = newsValue }
-                            |> UR.init
-                            |> UR.addCmd
-                                (Api.Graphql.mutation loggedIn.shared
-                                    (Just authToken)
-                                    (Cambiatus.Mutation.hasNews
-                                        { communityId = Eos.symbolToString community.symbol
-                                        , hasNews = newsValue
-                                        }
-                                        Graphql.SelectionSet.empty
-                                    )
-                                    (\_ -> SaveSuccess)
+                    { model | hasNews = newsValue }
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Cambiatus.Mutation.hasNews
+                                    { communityId = Eos.symbolToString community.symbol
+                                    , hasNews = newsValue
+                                    }
+                                    Graphql.SelectionSet.empty
                                 )
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                                (\_ -> SaveSuccess)
+                            )
 
                 _ ->
                     model

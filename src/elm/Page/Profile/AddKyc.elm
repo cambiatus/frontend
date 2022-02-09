@@ -72,15 +72,12 @@ update msg model loggedIn =
             in
             case kycFormMsg of
                 KycForm.Submitted formOutput ->
-                    (\authToken ->
-                        formUpdateResult
-                            |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-                            |> UR.addCmd
-                                (KycForm.saveKycData loggedIn.shared authToken formOutput
-                                    |> Cmd.map FormMsg
-                                )
-                    )
-                        |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                    formUpdateResult
+                        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
+                        |> UR.addExt
+                            (KycForm.saveKycData loggedIn formOutput
+                                |> LoggedIn.mapExternal FormMsg
+                            )
 
                 KycForm.Saved result ->
                     case result of

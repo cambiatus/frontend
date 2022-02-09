@@ -52,13 +52,13 @@ type Model
 init : Route.NewsEditorKind -> LoggedIn.Model -> UpdateResult
 init kind loggedIn =
     let
-        queryForNews authToken newsId =
-            Api.Graphql.query loggedIn.shared
-                (Just authToken)
+        queryForNews newsId =
+            LoggedIn.query loggedIn
                 (Cambiatus.Query.news { newsId = newsId }
                     Community.News.selectionSet
                 )
                 CompletedLoadNews
+                |> UR.addExt
 
         initWithCommunity =
             LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
@@ -74,26 +74,20 @@ init kind loggedIn =
                 model =
                     WaitingNewsToEdit
             in
-            (\authToken ->
-                model
-                    |> UR.init
-                    |> UR.addCmd initWithCommunity
-                    |> UR.addCmd (queryForNews authToken newsId)
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+            model
+                |> UR.init
+                |> UR.addCmd initWithCommunity
+                |> queryForNews newsId
 
         Route.CopyNews newsId ->
             let
                 model =
                     WaitingNewsToCopy
             in
-            (\authToken ->
-                model
-                    |> UR.init
-                    |> UR.addCmd initWithCommunity
-                    |> UR.addCmd (queryForNews authToken newsId)
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = Debug.todo "" }
+            model
+                |> UR.init
+                |> UR.addCmd initWithCommunity
+                |> queryForNews newsId
 
 
 emptyForm : Shared -> Form.Model FormInput
@@ -319,18 +313,10 @@ update msg model loggedIn =
                                         }
                                         Community.News.selectionSet
                             in
-                            (\authToken ->
-                                model
-                                    |> setDisabled True
-                                    |> UR.init
-                                    |> UR.addCmd
-                                        (Api.Graphql.mutation loggedIn.shared
-                                            (Just authToken)
-                                            mutation
-                                            CompletedSaving
-                                        )
-                            )
-                                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+                            model
+                                |> setDisabled True
+                                |> UR.init
+                                |> UR.addExt (LoggedIn.mutation loggedIn mutation CompletedSaving)
 
                         _ ->
                             UR.init model

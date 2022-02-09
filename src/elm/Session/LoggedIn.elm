@@ -18,13 +18,13 @@ module Session.LoggedIn exposing
     , maybeInitWith
     , maybePrivateKey
     , msgToString
+    , mutation
     , profile
     , query
     , subscriptions
     , update
     , updateExternal
     , view
-    , withAuthToken
     , withPrivateKey
     )
 
@@ -1028,7 +1028,6 @@ graphqlOperation :
     -> External msg
 graphqlOperation operation model selectionSet toMsg =
     -- TODO - If this works, we don't need `initRequestingAuthToken`, we just need to use this instead
-    -- TODO - We also won't need `withAuthToken`
     let
         operationCmd : Shared -> Api.Graphql.Token -> Cmd (RemoteData (Graphql.Http.Error result) result)
         operationCmd shared authToken =
@@ -2256,24 +2255,6 @@ withPrivateKeyInternal msg loggedIn successfulUR =
             askedAuthentication loggedIn
                 |> UR.init
                 |> UR.addExt (AddAfterPrivateKeyCallback msg)
-
-
-withAuthToken :
-    Model
-    -> subModel
-    -> { callbackMsg : subMsg }
-    -> (Api.Graphql.Token -> UR.UpdateResult subModel subMsg (External subMsg))
-    -> UR.UpdateResult subModel subMsg (External subMsg)
-withAuthToken loggedIn subModel subMsg successfulUR =
-    -- TODO - Remove this function in favor of `query`
-    case loggedIn.authToken of
-        Just authToken ->
-            successfulUR authToken
-
-        Nothing ->
-            UR.init subModel
-                -- |> UR.addExt (RequiredAuthToken subMsg)
-                |> Debug.todo "Use `LoggedIn.query` instead of `LoggedIn.withAuthToken`"
 
 
 withAuthTokenInternal :

@@ -10,7 +10,6 @@ module Page.Shop exposing
     )
 
 import Api
-import Api.Graphql
 import Community exposing (Balance)
 import Dict
 import Eos
@@ -417,16 +416,12 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLoadCommunity community ->
-            (\authToken ->
-                UR.init model
-                    |> UR.addCmd
-                        (Api.Graphql.query loggedIn.shared
-                            (Just authToken)
-                            (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
-                            CompletedSalesLoad
-                        )
-            )
-                |> LoggedIn.withAuthToken loggedIn model { callbackMsg = msg }
+            UR.init model
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
+                        CompletedSalesLoad
+                    )
 
         TransferSuccess index ->
             updateCard msg index (\card -> ( card, [] )) (UR.init model)
