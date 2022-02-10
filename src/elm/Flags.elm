@@ -22,7 +22,6 @@ type alias Flags =
     , allowCommunityCreation : Bool
     , tokenContract : String
     , communityContract : String
-    , graphqlSecret : String
     , authToken : Maybe Api.Graphql.Token
     , canReadClipboard : Bool
     , useSubdomain : Bool
@@ -43,7 +42,6 @@ default =
     , allowCommunityCreation = True
     , tokenContract = "bes.token"
     , communityContract = "bes.cmm"
-    , graphqlSecret = ""
     , authToken = Nothing
     , canReadClipboard = False
     , useSubdomain = True
@@ -65,7 +63,6 @@ decode =
         |> required "allowCommunityCreation" Decode.bool
         |> required "tokenContract" Decode.string
         |> required "communityContract" Decode.string
-        |> required "graphqlSecret" Decode.string
         |> required "authToken" (Decode.nullable Api.Graphql.tokenDecoder)
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool

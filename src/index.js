@@ -26,7 +26,6 @@ const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
 const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
@@ -293,7 +292,6 @@ function flags () {
   }
 
   return {
-    graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: accountName,

@@ -46,7 +46,6 @@ type alias Shared =
     , allowCommunityCreation : Bool
     , url : Url
     , contracts : { token : String, community : String }
-    , graphqlSecret : String
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
@@ -87,7 +86,6 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , allowCommunityCreation = allowCommunityCreation
       , url = url
       , contracts = { token = tokenContract, community = communityContract }
-      , graphqlSecret = flags.graphqlSecret
       , canReadClipboard = flags.canReadClipboard
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
