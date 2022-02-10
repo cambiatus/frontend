@@ -82,11 +82,11 @@ import View.Modal as Modal
 
 {-| Initialize already logged in user when the page is [re]loaded.
 -}
-init : Shared -> Eos.Name -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
+init : Shared -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 init shared accountName authToken =
     let
         ( model, cmd ) =
-            initModel shared Nothing accountName (Just authToken)
+            initModel shared Nothing accountName authToken
     in
     ( model
     , Cmd.batch
@@ -94,6 +94,13 @@ init shared accountName authToken =
         , fetchCommunity model Nothing
         , Task.perform GotTimeInternal Time.now
         , cmd
+        , case authToken of
+            Nothing ->
+                -- Socket is created automatically when we generate an auth token
+                Cmd.none
+
+            Just token ->
+                Api.Graphql.createAbsintheSocket token
         ]
     )
 
@@ -140,6 +147,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
         , fetchCommunity model Nothing
         , Task.perform GotTimeInternal Time.now
         , cmd
+        , Api.Graphql.createAbsintheSocket authToken
         ]
     )
 
@@ -196,6 +204,7 @@ type alias Model =
     , queuedCommunityFields : List Community.Field
     , maybeHighlightedNews : Maybe Community.News.Model
     , isGeneratingAuthToken : Bool
+    , needsToCreateAbsintheSocket : Bool
     }
 
 
@@ -228,6 +237,7 @@ initModel shared maybePrivateKey_ accountName authToken =
       , queuedCommunityFields = []
       , maybeHighlightedNews = Nothing
       , isGeneratingAuthToken = False
+      , needsToCreateAbsintheSocket = Maybe.Extra.isNothing authToken
       }
     , Cmd.map GotAuthMsg authCmd
     )
@@ -1540,8 +1550,6 @@ type ExternalMsg msg
     | RunAfterAuthTokenCallbacks Api.Graphql.Token
     | AddAfterPrivateKeyCallback (Msg msg)
     | RunAfterPrivateKeyCallbacks
-      -- TODO
-      -- | AuthTokenFailed
     | Broadcast BroadcastMsg
     | RunExternalMsg msg
 
@@ -2161,7 +2169,6 @@ update msg model =
                 |> withPrivateKeyInternal msg model
 
         GotAuthTokenPhrase _ (RemoteData.Failure err) ->
-            -- TODO - Maybe we should let the pages know there was an error?
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
@@ -2194,7 +2201,6 @@ update msg model =
                 |> withPrivateKeyInternal msg model
 
         GotAuthTokenPhraseExternal _ (RemoteData.Failure err) ->
-            -- TODO - Maybe we should let the pages know there was an error?
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
@@ -2230,17 +2236,26 @@ update msg model =
                     )
 
         CompletedGeneratingAuthToken (RemoteData.Success signInResponse) ->
+            let
+                createAbsintheSocket =
+                    if model.needsToCreateAbsintheSocket then
+                        Api.Graphql.createAbsintheSocket signInResponse.token
+
+                    else
+                        Cmd.none
+            in
             { model
                 | profile = RemoteData.Success signInResponse.profile
                 , authToken = Just signInResponse.token
                 , isGeneratingAuthToken = False
+                , needsToCreateAbsintheSocket = False
             }
                 |> UR.init
                 |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
+                |> UR.addCmd createAbsintheSocket
                 |> UR.addExt (RunAfterAuthTokenCallbacks signInResponse.token)
 
         CompletedGeneratingAuthToken (RemoteData.Failure err) ->
-            -- TODO - Maybe we should let the pages know there was an error?
             { model
                 | auth = Auth.removePrivateKey model.auth
                 , feedback = Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed")
@@ -2366,7 +2381,6 @@ withPrivateKeyInternal msg loggedIn successfulUR =
             successfulUR privateKey
 
         Nothing ->
-            -- askedAuthentication { loggedIn | internalAfterAuthMsg = Just msg }
             askedAuthentication loggedIn
                 |> UR.init
                 |> UR.addExt (AddAfterPrivateKeyCallback msg)

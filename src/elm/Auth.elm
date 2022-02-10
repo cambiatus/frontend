@@ -28,7 +28,7 @@ so we can retrieve their Private Key from localStorage.
 
 This module concerns mostly with authenticating with Private Key. That means it
 handles authentication for EOS, not for our Graphql API. That is mainly dealt with
-in the `LoggedIn` module, but since that depends on the user's private key, this
+in the `LoggedIn` and `Api.Graphql` modules, but since that depends on the user's private key, this
 is also related to it.
 
 -}

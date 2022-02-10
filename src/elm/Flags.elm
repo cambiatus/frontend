@@ -24,7 +24,6 @@ type alias Flags =
     , communityContract : String
     , graphqlSecret : String
     , authToken : Maybe Api.Graphql.Token
-    , hasUsedPKAuth : Bool
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
@@ -46,7 +45,6 @@ default =
     , communityContract = "bes.cmm"
     , graphqlSecret = ""
     , authToken = Nothing
-    , hasUsedPKAuth = False
     , canReadClipboard = False
     , useSubdomain = True
     , selectedCommunity = Nothing
@@ -69,7 +67,6 @@ decode =
         |> required "communityContract" Decode.string
         |> required "graphqlSecret" Decode.string
         |> required "authToken" (Decode.nullable Api.Graphql.tokenDecoder)
-        |> required "hasUsedPKAuth" Decode.bool
         |> required "canReadClipboard" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
