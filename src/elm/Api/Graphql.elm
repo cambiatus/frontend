@@ -1,7 +1,7 @@
 module Api.Graphql exposing
     ( Phrase, askForPhrase
     , signPhrasePort, decodeSignedPhrasePort, Password
-    , signIn, Token, SignInResponse
+    , signIn, Token, SignInResponse, signUp, SignUpResponse
     , storeToken, createAbsintheSocket, tokenDecoder
     , mutation, query
     , errorToString, isNonExistingCommunityError, isNewsNotFoundError, isAuthError
@@ -33,7 +33,7 @@ the user who signed the phrase, by using the user's public key
 The backend will verify if it was the user who really signed the phrase, and
 give back an auth token so we can perform further requests
 
-@docs signIn, Token, SignInResponse
+@docs signIn, Token, SignInResponse, signUp, SignUpResponse
 
 
 ### Token Helpers
@@ -107,6 +107,12 @@ type alias SignInResponse =
     }
 
 
+type alias SignUpResponse =
+    { profile : Profile.Minimal
+    , token : Token
+    }
+
+
 askForPhrase : Shared shared endpoints -> Eos.Account.Name -> (RemoteData (Graphql.Http.Error Phrase) Phrase -> msg) -> Cmd msg
 askForPhrase shared account toMsg =
     mutation shared
@@ -163,6 +169,43 @@ signIn shared { account, password, invitationId } toMsg =
             }
             (SelectionSet.succeed SignInResponse
                 |> with (Cambiatus.Object.Session.user Profile.selectionSet)
+                |> with (SelectionSet.map Token Cambiatus.Object.Session.token)
+            )
+        )
+        toMsg
+
+
+signUp :
+    Shared shared endpoints
+    ->
+        { accountName : Eos.Account.Name
+        , email : String
+        , name : String
+        , password : Password
+        , publicKey : String
+        , userType : String
+        }
+    -> (Cambiatus.Mutation.SignUpOptionalArguments -> Cambiatus.Mutation.SignUpOptionalArguments)
+    -> (RemoteData (Graphql.Http.Error SignUpResponse) SignUpResponse -> msg)
+    -> Cmd msg
+signUp shared requiredArgs fillOptionals toMsg =
+    let
+        (Password unwrappedPassword) =
+            requiredArgs.password
+    in
+    mutation shared
+        Nothing
+        (Cambiatus.Mutation.signUp
+            fillOptionals
+            { account = Eos.Account.nameToString requiredArgs.accountName
+            , email = requiredArgs.email
+            , name = requiredArgs.name
+            , password = unwrappedPassword
+            , publicKey = requiredArgs.publicKey
+            , userType = requiredArgs.userType
+            }
+            (SelectionSet.succeed SignUpResponse
+                |> with (Cambiatus.Object.Session.user Profile.minimalSelectionSet)
                 |> with (SelectionSet.map Token Cambiatus.Object.Session.token)
             )
         )

@@ -2,8 +2,6 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, re
 
 import Address
 import Api.Graphql
-import Cambiatus.Mutation as Mutation
-import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -12,7 +10,6 @@ import Form.Checkbox
 import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
@@ -23,7 +20,6 @@ import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
-import Profile
 import RemoteData exposing (RemoteData)
 import Result
 import Route
@@ -43,8 +39,8 @@ init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init invitationId ({ shared } as guest) =
     let
         initialModel =
-            { accountKeys = Nothing
-            , hasAgreedToSavePassphrase = False
+            { hasAgreedToSavePassphrase = False
+            , accountCreationData = Nothing
             , isPassphraseCopiedToClipboard = False
             , status = Loading
             , invitationId = invitationId
@@ -77,8 +73,8 @@ init invitationId ({ shared } as guest) =
 
 
 type alias Model =
-    { accountKeys : Maybe AccountKeys
-    , hasAgreedToSavePassphrase : Bool
+    { hasAgreedToSavePassphrase : Bool
+    , accountCreationData : Maybe { accountKeys : AccountKeys, formOutput : FormOutput }
     , isPassphraseCopiedToClipboard : Bool
     , status : Status
     , invitationId : InvitationId
@@ -167,7 +163,7 @@ type alias AccountKeys =
     , activeKey : String
     , accountName : Eos.Name
     , words : String
-    , privateKey : String
+    , privateKey : Eos.PrivateKey
     }
 
 
@@ -512,6 +508,8 @@ type Msg
     | CompletedLoadCommunity Community.CommunityPreview
     | GotAccountAvailabilityResponse FormOutput Bool
     | AccountKeysGenerated FormOutput (Result Decode.Error AccountKeys)
+    | GotPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | SignedPhrase Api.Graphql.Password
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
@@ -520,7 +518,7 @@ type Msg
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
-    | CompletedSignUp (RemoteData (Graphql.Http.Error SignUpResponse) SignUpResponse)
+    | CompletedSignUp (RemoteData (Graphql.Http.Error Api.Graphql.SignUpResponse) Api.Graphql.SignUpResponse)
     | GotFormMsg FormMsg
     | SubmittedForm FormOutput
 
@@ -646,14 +644,65 @@ update _ msg model ({ shared } as guest) =
                     v
 
         AccountKeysGenerated formOutput (Ok accountKeys) ->
-            { model | accountKeys = Just accountKeys }
+            { model | accountCreationData = Just { formOutput = formOutput, accountKeys = accountKeys } }
                 |> UR.init
-                |> UR.addCmd
-                    (signUp shared
-                        accountKeys
-                        model.invitationId
-                        formOutput
-                    )
+                |> UR.addCmd (Api.Graphql.askForPhrase shared accountKeys.accountName GotPhrase)
+
+        GotPhrase (RemoteData.Success phrase) ->
+            case model.accountCreationData of
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Got phrase to sign, but had no account creation data"
+                            Nothing
+                            { moduleName = "Page.Register", function = "update" }
+                            []
+
+                Just { accountKeys } ->
+                    model
+                        |> UR.init
+                        |> UR.addPort
+                            (Api.Graphql.signPhrasePort
+                                msg
+                                accountKeys.privateKey
+                                phrase
+                            )
+
+        GotPhrase (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got a graphql error when generating phrase to sign to sign up"
+                    { moduleName = "Page.Register", function = "update" }
+                    []
+                    err
+
+        GotPhrase _ ->
+            UR.init model
+
+        SignedPhrase password ->
+            case model.accountCreationData of
+                Just { formOutput, accountKeys } ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (signUp shared
+                                accountKeys
+                                password
+                                model.invitationId
+                                formOutput
+                            )
+
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Signed phrase, but had no account creation data"
+                            Nothing
+                            { moduleName = "Page.Register", function = "update" }
+                            []
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -697,7 +746,7 @@ update _ msg model ({ shared } as guest) =
                     (Route.replaceUrl shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
 
         CompletedSignUp (RemoteData.Success _) ->
-            case model.accountKeys of
+            case model.accountCreationData of
                 Nothing ->
                     model
                         |> UR.init
@@ -707,7 +756,7 @@ update _ msg model ({ shared } as guest) =
                             { moduleName = "Page.Register", function = "update" }
                             []
 
-                Just accountKeys ->
+                Just { accountKeys } ->
                     { model
                         | status = AccountCreated accountKeys
                         , step = SavePassphrase
@@ -873,32 +922,11 @@ loadedCommunity shared model community maybeInvite =
             |> UR.init
 
 
-type alias SignUpResponse =
-    { user : Profile.Minimal
-    , token : String
-    }
-
-
-signUp : Shared -> AccountKeys -> InvitationId -> FormOutput -> Cmd Msg
-signUp shared { accountName, ownerKey } invitationId formOutput =
+signUp : Shared -> AccountKeys -> Api.Graphql.Password -> InvitationId -> FormOutput -> Cmd Msg
+signUp shared { accountName, ownerKey } password invitationId formOutput =
     let
         { email, name } =
             getSignUpFields formOutput
-
-        requiredArgs =
-            { account = Eos.nameToString accountName
-            , email = email
-            , name = name
-            , password = shared.graphqlSecret
-            , publicKey = ownerKey
-            , userType =
-                case formOutput of
-                    JuridicalFormOutput _ ->
-                        "juridical"
-
-                    _ ->
-                        "natural"
-            }
 
         ( kycOpts, addressOpts ) =
             case formOutput of
@@ -944,16 +972,21 @@ signUp shared { accountName, ownerKey } invitationId formOutput =
                 , address = addressOpts
             }
     in
-    Api.Graphql.mutation shared
-        Nothing
-        (Mutation.signUp
-            fillOptionals
-            requiredArgs
-            (Graphql.SelectionSet.succeed SignUpResponse
-                |> with (Cambiatus.Object.Session.user Profile.minimalSelectionSet)
-                |> with Cambiatus.Object.Session.token
-            )
-        )
+    Api.Graphql.signUp shared
+        { accountName = accountName
+        , email = email
+        , name = name
+        , password = password
+        , publicKey = ownerKey
+        , userType =
+            case formOutput of
+                JuridicalFormOutput _ ->
+                    "juridical"
+
+                _ ->
+                    "natural"
+        }
+        fillOptionals
         CompletedSignUp
 
 
@@ -989,7 +1022,7 @@ jsAddressToMsg addr val =
                         |> DecodePipeline.required "activeKey" Decode.string
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "words" Decode.string
-                        |> DecodePipeline.required "privateKey" Decode.string
+                        |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
 
                 decodedAccount : Result Decode.Error AccountKeys
                 decodedAccount =
@@ -1005,6 +1038,9 @@ jsAddressToMsg addr val =
 
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
+
+        "GotPhrase" :: _ ->
+            Api.Graphql.decodeSignedPhrasePort SignedPhrase val
 
         _ ->
             Nothing
@@ -1024,6 +1060,12 @@ msgToString msg =
 
         AccountKeysGenerated _ r ->
             [ "AccountKeysGenerated", UR.resultToString r ]
+
+        GotPhrase r ->
+            [ "GotPhrase", UR.remoteDataToString r ]
+
+        SignedPhrase _ ->
+            [ "SignedPhrase" ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]
