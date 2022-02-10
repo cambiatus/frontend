@@ -1,6 +1,5 @@
 module Page.Profile.Contributions exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Enum.ContributionStatusType
 import Community
 import Dict

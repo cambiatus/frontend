@@ -1,6 +1,5 @@
 module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, receiveBroadcast, subscriptions, update, view)
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation

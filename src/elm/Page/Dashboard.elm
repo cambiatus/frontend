@@ -10,7 +10,6 @@ module Page.Dashboard exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
 import Avatar
 import Browser.Dom

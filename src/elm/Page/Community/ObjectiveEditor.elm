@@ -1,7 +1,6 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action
-import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective

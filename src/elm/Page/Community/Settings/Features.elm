@@ -1,6 +1,5 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Mutation
 import Community
 import Dict

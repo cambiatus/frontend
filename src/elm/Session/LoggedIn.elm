@@ -2712,7 +2712,7 @@ msgToString msg =
             [ "RequestedNewAuthTokenPhrase" ]
 
         RequestedNewAuthTokenPhraseExternal _ ->
-            [ "RequestedNewAuthTokenExternal" ]
+            [ "RequestedNewAuthTokenPhraseExternal" ]
 
         GotAuthTokenPhrase _ r ->
             [ "GotAuthTokenPhrase", UR.remoteDataToString r ]

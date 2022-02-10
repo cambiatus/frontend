@@ -1,6 +1,5 @@
 module Page.Community.Settings.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Mutation
 import Cambiatus.Object.Community
 import Community

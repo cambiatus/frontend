@@ -1,6 +1,5 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
-import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account as Eos
@@ -343,8 +342,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = RequestedQueryForNotificationHistory
-    | CompletedLoadNotificationHistory (RemoteData (Graphql.Http.Error (List History)) (List History))
+    = CompletedLoadNotificationHistory (RemoteData (Graphql.Http.Error (List History)) (List History))
     | MarkAsRead Int Payload
     | CompletedReading (RemoteData (Graphql.Http.Error History) History)
 
@@ -352,15 +350,6 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        RequestedQueryForNotificationHistory ->
-            UR.init initModel
-                |> UR.addExt
-                    (LoggedIn.query
-                        loggedIn
-                        (Notification.notificationHistoryQuery loggedIn.accountName)
-                        CompletedLoadNotificationHistory
-                    )
-
         CompletedLoadNotificationHistory (RemoteData.Success notifications) ->
             Loaded notifications
                 |> UR.init
@@ -464,9 +453,6 @@ update msg model loggedIn =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        RequestedQueryForNotificationHistory ->
-            [ "RequestedQueryForNotificationHistory" ]
-
         CompletedLoadNotificationHistory r ->
             [ "CompletedLoadNotificationHistory", UR.remoteDataToString r ]
 

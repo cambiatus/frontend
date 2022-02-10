@@ -8,7 +8,6 @@ module Page.Profile.Editor exposing
     , view
     )
 
-import Api.Graphql
 import Avatar
 import Dict
 import Form

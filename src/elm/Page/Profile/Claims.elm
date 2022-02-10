@@ -9,7 +9,6 @@ module Page.Profile.Claims exposing
     , view
     )
 
-import Api.Graphql
 import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
@@ -34,7 +33,7 @@ import List.Extra as List
 import Log
 import Page
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
@@ -411,7 +410,7 @@ type alias ProfileClaims =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -580,7 +579,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init

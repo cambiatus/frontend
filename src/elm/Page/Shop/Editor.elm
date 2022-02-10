@@ -10,7 +10,6 @@ module Page.Shop.Editor exposing
     )
 
 import Api
-import Api.Graphql
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos

@@ -1,6 +1,5 @@
 module Profile.Contact exposing
-    ( ContactResponse(..)
-    , External(..)
+    ( External(..)
     , Model
     , Msg
     , Normalized
@@ -202,12 +201,6 @@ type Normalized
 
 type alias UpdatedData =
     RemoteData (Graphql.Http.Error (Maybe Profile)) (Maybe Profile)
-
-
-type ContactResponse
-    = NotAsked
-    | WithContacts String (List Normalized) Bool
-    | WithError String
 
 
 

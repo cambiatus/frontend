@@ -9,7 +9,6 @@ module Page.Dashboard.Analysis exposing
     , view
     )
 
-import Api.Graphql
 import Api.Relay
 import Cambiatus.Enum.Direction
 import Cambiatus.Query
@@ -36,7 +35,7 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
@@ -450,7 +449,7 @@ viewPagination { shared } maybePageInfo =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -669,7 +668,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init

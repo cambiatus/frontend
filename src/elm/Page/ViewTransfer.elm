@@ -1,6 +1,5 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
-import Api.Graphql
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
@@ -282,8 +281,7 @@ viewDetail title content =
 
 
 type Msg
-    = RequestedTransferQuery Int
-    | CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
+    = CompletedTransferLoad (RemoteData (Graphql.Http.Error (Maybe Transfer)) (Maybe Transfer))
     | GotProfileSummaryMsg Bool Profile.Summary.Msg
 
 
@@ -308,14 +306,6 @@ findDirection maybeTransfer { accountName } =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model user =
     case msg of
-        RequestedTransferQuery transferId ->
-            UR.init model
-                |> UR.addExt
-                    (LoggedIn.query user
-                        (transferQuery transferId)
-                        CompletedTransferLoad
-                    )
-
         CompletedTransferLoad (RemoteData.Success transfer) ->
             let
                 direction =
@@ -373,9 +363,6 @@ updateStatus status model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        RequestedTransferQuery _ ->
-            [ "RequestedTransferQuery" ]
-
         CompletedTransferLoad r ->
             [ "CompletedTransferLoad", UR.remoteDataToString r ]
 

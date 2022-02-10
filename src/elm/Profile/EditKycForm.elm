@@ -21,7 +21,7 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import UpdateResult as UR
 import View.Feedback

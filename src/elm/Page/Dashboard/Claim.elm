@@ -1,7 +1,6 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Action
-import Api.Graphql
 import Cambiatus.Query
 import Claim
 import Dict
@@ -21,7 +20,7 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External)
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
 import String.Extra
@@ -448,7 +447,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg

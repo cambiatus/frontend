@@ -1,6 +1,5 @@
 module Page.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Mutation
 import Community

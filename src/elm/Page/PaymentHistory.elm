@@ -8,7 +8,6 @@ module Page.PaymentHistory exposing
     , view
     )
 
-import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue

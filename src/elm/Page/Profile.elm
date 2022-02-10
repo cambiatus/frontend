@@ -10,7 +10,6 @@ module Page.Profile exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
 import Avatar
 import Cambiatus.Enum.CurrencyType

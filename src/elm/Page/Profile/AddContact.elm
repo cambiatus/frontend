@@ -8,7 +8,6 @@ module Page.Profile.AddContact exposing
     , view
     )
 
-import Api.Graphql
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Http

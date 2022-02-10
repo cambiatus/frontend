@@ -32,7 +32,6 @@ import Session.Shared exposing (Shared)
 import Time
 import Time.Extra
 import UpdateResult as UR
-import Utils
 import View.Components
 import View.Feedback as Feedback
 

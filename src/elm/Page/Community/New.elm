@@ -8,7 +8,6 @@ module Page.Community.New exposing
     , view
     )
 
-import Api.Graphql
 import Community
 import Dict
 import Eos
