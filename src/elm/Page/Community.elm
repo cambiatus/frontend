@@ -43,6 +43,7 @@ init : LoggedIn.Model -> UpdateResult
 init loggedIn =
     initModel loggedIn
         |> UR.init
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
