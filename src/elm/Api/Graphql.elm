@@ -181,7 +181,6 @@ signUp :
         { accountName : Eos.Account.Name
         , email : String
         , name : String
-        , password : Password
         , publicKey : String
         , userType : String
         }
@@ -189,10 +188,6 @@ signUp :
     -> (RemoteData (Graphql.Http.Error SignUpResponse) SignUpResponse -> msg)
     -> Cmd msg
 signUp shared requiredArgs fillOptionals toMsg =
-    let
-        (Password unwrappedPassword) =
-            requiredArgs.password
-    in
     mutation shared
         Nothing
         (Cambiatus.Mutation.signUp
@@ -200,7 +195,6 @@ signUp shared requiredArgs fillOptionals toMsg =
             { account = Eos.Account.nameToString requiredArgs.accountName
             , email = requiredArgs.email
             , name = requiredArgs.name
-            , password = unwrappedPassword
             , publicKey = requiredArgs.publicKey
             , userType = requiredArgs.userType
             }

@@ -39,8 +39,8 @@ init : InvitationId -> Guest.Model -> ( Model, Cmd Msg )
 init invitationId ({ shared } as guest) =
     let
         initialModel =
-            { hasAgreedToSavePassphrase = False
-            , accountCreationData = Nothing
+            { accountKeys = Nothing
+            , hasAgreedToSavePassphrase = False
             , isPassphraseCopiedToClipboard = False
             , status = Loading
             , invitationId = invitationId
@@ -73,8 +73,8 @@ init invitationId ({ shared } as guest) =
 
 
 type alias Model =
-    { hasAgreedToSavePassphrase : Bool
-    , accountCreationData : Maybe { accountKeys : AccountKeys, formOutput : FormOutput }
+    { accountKeys : Maybe AccountKeys
+    , hasAgreedToSavePassphrase : Bool
     , isPassphraseCopiedToClipboard : Bool
     , status : Status
     , invitationId : InvitationId
@@ -508,8 +508,6 @@ type Msg
     | CompletedLoadCommunity Community.CommunityPreview
     | GotAccountAvailabilityResponse FormOutput Bool
     | AccountKeysGenerated FormOutput (Result Decode.Error AccountKeys)
-    | GotPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
-    | SignedPhrase Api.Graphql.Password
     | AgreedToSave12Words Bool
     | DownloadPdf PdfData
     | PdfDownloaded
@@ -644,65 +642,9 @@ update _ msg model ({ shared } as guest) =
                     v
 
         AccountKeysGenerated formOutput (Ok accountKeys) ->
-            { model | accountCreationData = Just { formOutput = formOutput, accountKeys = accountKeys } }
+            { model | accountKeys = Just accountKeys }
                 |> UR.init
-                |> UR.addCmd (Api.Graphql.askForPhrase shared accountKeys.accountName GotPhrase)
-
-        GotPhrase (RemoteData.Success phrase) ->
-            case model.accountCreationData of
-                Nothing ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Got phrase to sign, but had no account creation data"
-                            Nothing
-                            { moduleName = "Page.Register", function = "update" }
-                            []
-
-                Just { accountKeys } ->
-                    model
-                        |> UR.init
-                        |> UR.addPort
-                            (Api.Graphql.signPhrasePort
-                                msg
-                                accountKeys.privateKey
-                                phrase
-                            )
-
-        GotPhrase (RemoteData.Failure err) ->
-            model
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    Nothing
-                    "Got a graphql error when generating phrase to sign to sign up"
-                    { moduleName = "Page.Register", function = "update" }
-                    []
-                    err
-
-        GotPhrase _ ->
-            UR.init model
-
-        SignedPhrase password ->
-            case model.accountCreationData of
-                Just { formOutput, accountKeys } ->
-                    model
-                        |> UR.init
-                        |> UR.addCmd
-                            (signUp shared
-                                accountKeys
-                                password
-                                model.invitationId
-                                formOutput
-                            )
-
-                Nothing ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Signed phrase, but had no account creation data"
-                            Nothing
-                            { moduleName = "Page.Register", function = "update" }
-                            []
+                |> UR.addCmd (signUp shared accountKeys model.invitationId formOutput)
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -746,7 +688,7 @@ update _ msg model ({ shared } as guest) =
                     (Route.replaceUrl shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
 
         CompletedSignUp (RemoteData.Success _) ->
-            case model.accountCreationData of
+            case model.accountKeys of
                 Nothing ->
                     model
                         |> UR.init
@@ -756,7 +698,7 @@ update _ msg model ({ shared } as guest) =
                             { moduleName = "Page.Register", function = "update" }
                             []
 
-                Just { accountKeys } ->
+                Just accountKeys ->
                     { model
                         | status = AccountCreated accountKeys
                         , step = SavePassphrase
@@ -922,8 +864,8 @@ loadedCommunity shared model community maybeInvite =
             |> UR.init
 
 
-signUp : Shared -> AccountKeys -> Api.Graphql.Password -> InvitationId -> FormOutput -> Cmd Msg
-signUp shared { accountName, ownerKey } password invitationId formOutput =
+signUp : Shared -> AccountKeys -> InvitationId -> FormOutput -> Cmd Msg
+signUp shared { accountName, ownerKey } invitationId formOutput =
     let
         { email, name } =
             getSignUpFields formOutput
@@ -976,7 +918,6 @@ signUp shared { accountName, ownerKey } password invitationId formOutput =
         { accountName = accountName
         , email = email
         , name = name
-        , password = password
         , publicKey = ownerKey
         , userType =
             case formOutput of
@@ -1039,9 +980,6 @@ jsAddressToMsg addr val =
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
 
-        "GotPhrase" :: _ ->
-            Api.Graphql.decodeSignedPhrasePort SignedPhrase val
-
         _ ->
             Nothing
 
@@ -1060,12 +998,6 @@ msgToString msg =
 
         AccountKeysGenerated _ r ->
             [ "AccountKeysGenerated", UR.resultToString r ]
-
-        GotPhrase r ->
-            [ "GotPhrase", UR.remoteDataToString r ]
-
-        SignedPhrase _ ->
-            [ "SignedPhrase" ]
 
         AgreedToSave12Words _ ->
             [ "AgreedToSave12Words" ]

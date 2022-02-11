@@ -317,7 +317,6 @@ type alias SignUpRequiredArguments =
     { account : String
     , email : String
     , name : String
-    , password : String
     , publicKey : String
     , userType : String
     }
@@ -349,7 +348,7 @@ signUp fillInOptionals requiredArgs object_ =
             [ Argument.optional "address" filledInOptionals.address Cambiatus.InputObject.encodeAddressUpdateInput, Argument.optional "invitationId" filledInOptionals.invitationId Encode.string, Argument.optional "kyc" filledInOptionals.kyc Cambiatus.InputObject.encodeKycDataUpdateInput ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "password" requiredArgs.password Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
+    Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
 
 
 type alias UpdateUserRequiredArguments =
