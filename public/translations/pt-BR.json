@@ -542,7 +542,6 @@
         "error_marking_as_complete": "Algo de errado aconteceu ao completar seu objetivo",
         "completed_progress": "{{progress}} de {{total}} ações completadas",
         "completion_text": "Todas as ações relacionadas a esse objetivo serão completadas",
-        "completed_success": "Objetivo completado com sucesso",
         "modal": {
           "title": "Marcar objetivo como completo",
           "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo também serão marcadas como completas, e não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
