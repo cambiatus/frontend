@@ -543,6 +543,13 @@
           "body": "Marcar el objetivo como completo no se puede deshacer. Las acciones de este objetivo también se marcarán como completadas y ya no estarán disponibles para su análisis. ¿De verdad quieres marcar este objetivo como completo?",
           "confirm": "Sí",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Felicitaciones",
+          "completed": "¡Esta comunidad completó un objetivo!",
+          "special_moment": "Estamos felices de ser parte de este momento especial.",
+          "cheers": "¡Saludos al futuro!",
+          "return": "Volver a los objetivos"
         }
       },
       "disabled": {

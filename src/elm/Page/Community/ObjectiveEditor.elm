@@ -191,7 +191,7 @@ view ({ shared } as loggedIn) model =
 
                             _ ->
                                 text ""
-                        , viewCompletionCelebrationModal model
+                        , viewCompletionCelebrationModal shared.translators model
                         ]
     in
     { title = title
@@ -216,8 +216,8 @@ view ({ shared } as loggedIn) model =
     }
 
 
-viewCompletionCelebrationModal : Model -> Html Msg
-viewCompletionCelebrationModal model =
+viewCompletionCelebrationModal : Shared.Translators -> Model -> Html Msg
+viewCompletionCelebrationModal { t } model =
     Modal.initWith
         { closeMsg = ClosedCelebrateObjectiveModal
         , isVisible = hasCompletedObjective model
@@ -231,28 +231,21 @@ viewCompletionCelebrationModal model =
                     ]
                     []
                 , h2 [ class "font-bold text-xl mt-7" ]
-                    [ -- TODO - I18N
-                      text "Congratulations"
+                    [ text <| t "community.objectives.editor.celebration.title"
                     ]
                 , p [ class "mt-3 flex-grow" ]
-                    -- TODO - I18N
-                    [ text "This community has completed an objective!"
+                    [ text <| t "community.objectives.editor.celebration.completed"
                     , br [] []
                     , br [] []
-
-                    -- TODO - I18N
-                    , text "We are happy to be part of this special moment."
+                    , text <| t "community.objectives.editor.celebration.special_moment"
                     , br [] []
-
-                    -- TODO - I18N
-                    , text "Cheers to the future!"
+                    , text <| t "community.objectives.editor.celebration.cheers"
                     ]
                 , a
                     [ class "button button-primary w-full mt-8 flex-shrink-0"
                     , Route.href Route.Objectives
                     ]
-                    -- TODO - I18N
-                    [ text "Return to objectives" ]
+                    [ text <| t "community.objectives.editor.celebration.return" ]
                 ]
             ]
         |> Modal.withAttrs [ class "bg-purple-500" ]

@@ -543,6 +543,13 @@
           "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu també es marcaran com a completes i ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
           "confirm": "Sí",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Felicitacions",
+          "completed": "Aquesta comunitat ha complert un objectiu!",
+          "special_moment": "Estem contents de formar part d'aquest moment especial.",
+          "cheers": "Salutacions pel futur!",
+          "return": "Tornar als objectius"
         }
       },
       "disabled": {

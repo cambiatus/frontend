@@ -539,6 +539,13 @@
           "body": "Marking the objective as complete cannot be undone. Actions from this objective will also be marked as complete, and will no longer be available for analysis. Do you really want to mark this objective as complete?",
           "confirm": "Yes",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Congratulations",
+          "completed": "This community has completed an objective!",
+          "special_moment": "We are happy to be part of this special moment.",
+          "cheers": "Cheers to the future!",
+          "return": "Return to objectives"
         }
       },
       "disabled": {

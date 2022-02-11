@@ -547,6 +547,13 @@
           "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo também serão marcadas como completas, e não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
           "confirm": "Sim",
           "cancel": "Não"
+        },
+        "celebration": {
+          "title": "Parabéns",
+          "completed": "Essa comunidade completou um objetivo!",
+          "special_moment": "Estamos felizes por sermos parte deste momento especial.",
+          "cheers": "Um brinde ao futuro!",
+          "return": "Retornar aos objetivos"
         }
       },
       "disabled": {
