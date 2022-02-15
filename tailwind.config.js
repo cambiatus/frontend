@@ -227,6 +227,7 @@ module.exports = {
       '3d': false // defaults to false
     }),
     require('@tailwindcss/forms'),
+    require('@tailwindcss/line-clamp'),
     // class support for rotation
     function ({ addUtilities, config }) {
       const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {
