@@ -151,7 +151,7 @@ view loggedIn model =
                 Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
                         [ viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn model
+                        , viewShopFilter loggedIn.shared.translators model
                         , viewGrid loggedIn cards
                         ]
     in
@@ -180,13 +180,12 @@ view loggedIn model =
 viewHeader : Shared.Translators -> Html Msg
 viewHeader { t } =
     h1 [ class "font-bold text-lg" ]
-        -- TODO - I18N
-        [ text "Ofertas criadas com 💚"
+        [ text <| t "shop.headline"
         ]
 
 
-viewShopFilter : LoggedIn.Model -> Model -> Html Msg
-viewShopFilter loggedIn model =
+viewShopFilter : Shared.Translators -> Model -> Html Msg
+viewShopFilter { t } model =
     let
         newFilter =
             case model.filter of
@@ -197,22 +196,21 @@ viewShopFilter loggedIn model =
                     Shop.All
     in
     div [ class "flex mt-4 gap-4 flex-wrap" ]
-        -- TODO - I18N
         [ a
             [ class "button button-primary"
             , Route.href Route.NewSale
             ]
-            [ text "Criar nova" ]
+            [ text <| t "shop.create_new_offer" ]
         , a
             [ class "button button-secondary"
             , Route.href (Route.Shop newFilter)
             ]
             [ case model.filter of
                 Shop.UserSales ->
-                    text "Ver todas"
+                    text <| t "shop.see_all"
 
                 Shop.All ->
-                    text "Ver as minhas"
+                    text <| t "shop.see_mine"
             ]
         ]
 
@@ -242,7 +240,7 @@ viewGrid loggedIn cards =
 
 
 viewCard : Shared.Translators -> Int -> Card -> Html Msg
-viewCard ({ tr } as translators) index card =
+viewCard ({ t, tr } as translators) index card =
     let
         image =
             Maybe.withDefault
@@ -268,9 +266,8 @@ viewCard ({ tr } as translators) index card =
             [ h2 [ class "line-clamp-3" ] [ text card.product.title ]
             , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
                 [ text <|
-                    -- TODO - I18N
-                    tr "By Juan Mendez"
-                        [ ( "seller"
+                    tr "shop.by_user"
+                        [ ( "user"
                           , card.product.creator.name
                                 |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
                           )
@@ -282,11 +279,11 @@ viewCard ({ tr } as translators) index card =
                     , classList
                         [ ( "text-green", card.isAvailable )
                         , ( "text-gray-900", not card.isAvailable )
+                        , ( "lowercase", isFree )
                         ]
                     ]
                     [ if isFree then
-                        -- TODO - I18N
-                        text "for free"
+                        text <| t "shop.free"
 
                       else
                         text <|
@@ -301,12 +298,10 @@ viewCard ({ tr } as translators) index card =
                         ]
                     ]
                     [ if not card.isAvailable then
-                        -- TODO - I18N
-                        text "Sold out"
+                        text <| t "shop.sold_out"
 
                       else if isFree then
-                        -- TODO - I18N
-                        text "Enjoy"
+                        text <| t "shop.enjoy"
 
                       else
                         text <| Eos.symbolToSymbolCodeString card.product.symbol
