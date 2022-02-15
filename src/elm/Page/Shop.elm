@@ -14,22 +14,21 @@ import Api.Graphql
 import Community exposing (Balance)
 import Dict
 import Eos
+import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, p, text)
-import Html.Attributes exposing (class, classList, id, src, value)
-import Html.Events exposing (onClick)
-import Html.Lazy as Lazy
+import Html exposing (Html, a, div, h1, h2, img, p, span, text)
+import Html.Attributes exposing (alt, class, classList, src)
 import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Page exposing (Session(..))
-import Profile exposing (viewProfileNameTag)
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.Shared as Shared
 import Shop exposing (Filter, Product)
 import UpdateResult as UR
 
@@ -141,22 +140,19 @@ view loggedIn model =
         content =
             case model.cards of
                 Loading ->
-                    div []
-                        [ Lazy.lazy viewHeader loggedIn
-                        , div [ class "container mx-auto px-4" ]
-                            [ Page.fullPageLoading loggedIn.shared ]
+                    div [ class "container mx-auto px-4 mt-6 mb-10" ]
+                        [ viewHeader loggedIn.shared.translators
+                        , Page.fullPageLoading loggedIn.shared
                         ]
 
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "shop.title") e
 
                 Loaded cards ->
-                    div []
-                        [ Lazy.lazy viewHeader loggedIn
-                        , div [ class "container mx-auto justify-center px-4" ]
-                            [ viewShopFilter loggedIn model.filter
-                            , Lazy.lazy3 viewGrid loggedIn cards model
-                            ]
+                    div [ class "container mx-auto px-4 mt-6" ]
+                        [ viewHeader loggedIn.shared.translators
+                        , viewShopFilter loggedIn model
+                        , viewGrid loggedIn cards
                         ]
     in
     { title = title
@@ -181,58 +177,43 @@ view loggedIn model =
     }
 
 
-viewHeader : LoggedIn.Model -> Html Msg
-viewHeader loggedIn =
-    let
-        t =
-            loggedIn.shared.translators.t
-    in
-    div [ class "w-full flex flex-wrap relative bg-indigo-500 p-4 lg:mx-auto lg:py-12" ]
-        [ div [ class "flex w-full container mx-auto" ]
-            [ div [ class "w-1/2" ]
-                [ p [ class "text-white w-full text-xl font-semibold mx-8 font-light mb-2 uppercase" ]
-                    [ text (t "shop.title") ]
-                , p [ class "hidden lg:visible lg:flex text-white text-3xl mx-8 mb-4 font-semibold" ]
-                    [ text (t "shop.subtitle") ]
-                , p [ class "hidden lg:visible lg:flex text-white mx-8 font-light text-sm" ]
-                    [ text (t "shop.description") ]
-                , a
-                    [ Route.href Route.NewSale
-                    , class "button button-primary button-sm w-full lg:w-64 lg:mx-8 lg:mt-6 lg:button-medium font-semibold focus-visible:ring-offset-indigo-500"
-                    ]
-                    [ text (t "shop.create_offer") ]
-                ]
-            , div [ class "hidden lg:visible lg:flex w-1/2 justify-center absolute right-0 bottom-0" ]
-                [ img [ src "/images/shop.svg" ] []
-                ]
-            ]
+viewHeader : Shared.Translators -> Html Msg
+viewHeader { t } =
+    h1 [ class "font-bold text-lg" ]
+        -- TODO - I18N
+        [ text "Ofertas criadas com 💚"
         ]
 
 
-viewShopFilter : LoggedIn.Model -> Filter -> Html Msg
-viewShopFilter loggedIn filter =
+viewShopFilter : LoggedIn.Model -> Model -> Html Msg
+viewShopFilter loggedIn model =
     let
-        t =
-            loggedIn.shared.translators.t
+        newFilter =
+            case model.filter of
+                Shop.All ->
+                    Shop.UserSales
 
-        buttonClass =
-            "w-1/2 lg:w-56 border border-purple-500 first:rounded-l last:rounded-r px-12 py-2 font-light text-gray"
+                Shop.UserSales ->
+                    Shop.All
     in
-    div [ class "flex my-8 lg:my-16 lg:mx-auto lg:w-1/2 justify-center" ]
-        [ button
-            [ class buttonClass
-            , classList [ ( "bg-purple-500 text-white", filter == Shop.All ) ]
-            , value (t "shop.all_offers")
-            , onClick (ClickedFilter Shop.All)
+    div [ class "flex mt-4 gap-4 flex-wrap" ]
+        -- TODO - I18N
+        [ a
+            [ class "button button-primary"
+            , Route.href Route.NewSale
             ]
-            [ text (t "shop.all_offers") ]
-        , button
-            [ class buttonClass
-            , classList [ ( "bg-purple-500 text-white", filter == Shop.UserSales ) ]
-            , value (t "shop.my_offers")
-            , onClick (ClickedFilter Shop.UserSales)
+            [ text "Criar nova" ]
+        , a
+            [ class "button button-secondary"
+            , Route.href (Route.Shop newFilter)
             ]
-            [ text (t "shop.my_offers") ]
+            [ case model.filter of
+                Shop.UserSales ->
+                    text "Ver todas"
+
+                Shop.All ->
+                    text "Ver as minhas"
+            ]
         ]
 
 
@@ -240,8 +221,8 @@ viewShopFilter loggedIn filter =
 -- VIEW GRID
 
 
-viewGrid : LoggedIn.Model -> List Card -> Model -> Html Msg
-viewGrid loggedIn cards model =
+viewGrid : LoggedIn.Model -> List Card -> Html Msg
+viewGrid loggedIn cards =
     let
         outOfStockCards =
             cards
@@ -251,24 +232,17 @@ viewGrid loggedIn cards model =
             cards
                 |> List.filter .isAvailable
     in
-    div []
-        [ div [ class "flex flex-wrap -mx-2" ]
-            (List.indexedMap (viewCard model loggedIn) availableCards)
-        , if List.length outOfStockCards > 0 then
-            div []
-                [ p [ class "ml-2 w-full border-b-2 pb-2 border-gray-300 mb-4 text-2xl capitalize" ]
-                    [ text <| loggedIn.shared.translators.t "shop.out_of_stock" ]
-                , div [ class "flex flex-wrap -mx-2" ]
-                    (List.indexedMap (viewCard model loggedIn) outOfStockCards)
-                ]
-
-          else
-            text ""
+    div [ class "mt-6 mb-10" ]
+        [ div [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ]
+            (List.indexedMap
+                (viewCard loggedIn.shared.translators)
+                (availableCards ++ outOfStockCards)
+            )
         ]
 
 
-viewCard : Model -> LoggedIn.Model -> Int -> Card -> Html Msg
-viewCard model ({ shared } as loggedIn) index card =
+viewCard : Shared.Translators -> Int -> Card -> Html Msg
+viewCard ({ tr } as translators) index card =
     let
         image =
             Maybe.withDefault
@@ -281,101 +255,62 @@ viewCard model ({ shared } as loggedIn) index card =
                 )
                 card.product.image
 
-        maybeBal =
-            LE.find (\bal -> bal.asset.symbol == card.product.symbol) model.balances
-
-        symbolBalance =
-            case maybeBal of
-                Just b ->
-                    b.asset.amount
-
-                Nothing ->
-                    0.0
-
-        currBalance =
-            String.fromFloat symbolBalance ++ " " ++ Eos.symbolToSymbolCodeString card.product.symbol
-
-        tr rId replaces =
-            shared.translators.tr rId replaces
-
-        profileSummaryId =
-            "shop-item-card-" ++ String.fromInt card.product.id
+        isFree =
+            card.product.price == 0
     in
     a
-        [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-6"
+        [ class "rounded bg-white flex flex-col hover:shadow-md transition-shadow duration-300"
         , Html.Attributes.title card.product.title
         , Route.href (Route.ViewSale card.product.id)
         ]
-        [ div [ class "md:hidden rounded-lg bg-white h-32 flex" ]
-            [ div [ class "w-1/4" ]
-                [ img
-                    [ class "rounded-l-lg object-cover h-32 w-full"
-                    , src image
-                    ]
-                    []
+        [ img [ src image, alt "", class "rounded-t h-32 object-cover" ] []
+        , div [ class "p-4 flex flex-col flex-grow" ]
+            [ h2 [ class "line-clamp-3" ] [ text card.product.title ]
+            , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
+                [ text <|
+                    -- TODO - I18N
+                    tr "By Juan Mendez"
+                        [ ( "seller"
+                          , card.product.creator.name
+                                |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
+                          )
+                        ]
                 ]
-            , div [ class "px-4 pb-2 flex flex-wrap" ]
-                [ p [ class "font-semibold pt-2 w-full" ] [ text card.product.title ]
-                , viewProfileNameTag shared loggedIn.accountName card.product.creator
-                , div [ class "h-16 w-full flex flex-wrap items-end" ]
-                    [ if card.product.units == 0 && card.product.trackStock then
-                        div [ class "w-full" ]
-                            [ p [ class "text-3xl text-red" ]
-                                [ text (shared.translators.t "shop.out_of_stock")
-                                ]
-                            ]
+            , div [ class "font-bold flex flex-col mt-4" ]
+                [ span
+                    [ class "text-lg"
+                    , classList
+                        [ ( "text-green", card.isAvailable )
+                        , ( "text-gray-900", not card.isAvailable )
+                        ]
+                    ]
+                    [ if isFree then
+                        -- TODO - I18N
+                        text "for free"
 
                       else
-                        div [ class "flex flex-none w-full items-center" ]
-                            [ p [ class "text-green text-2xl font-semibold" ] [ text (String.fromFloat card.product.price) ]
-                            , div [ class "uppercase text-sm ml-2 font-extralight font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
-                            ]
-                    , div [ class "w-full h-4" ]
-                        [ div [ class "bg-gray-100 absolute uppercase text-sm px-2" ]
-                            [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
+                        text <|
+                            Eos.formatSymbolAmount translators
+                                card.product.symbol
+                                card.product.price
+                    ]
+                , span
+                    [ classList
+                        [ ( "text-sm text-gray-333 uppercase", card.isAvailable )
+                        , ( "text-red font-normal lowercase", not card.isAvailable )
                         ]
                     ]
-                ]
-            ]
-        , div
-            [ class "hidden md:visible md:flex md:flex-wrap rounded-lg hover:shadow-lg bg-white"
-            ]
-            [ div
-                [ class "w-full relative bg-gray-500 rounded-t-lg"
-                ]
-                [ img
-                    [ class "w-full h-48 object-cover rounded-t-lg"
-                    , src image
-                    ]
-                    []
-                , div
-                    [ class "absolute right-4 bottom-4"
-                    , id profileSummaryId
-                    ]
-                    [ card.profileSummary
-                        |> Profile.Summary.withRelativeSelector ("#" ++ profileSummaryId)
-                        |> Profile.Summary.view loggedIn.shared loggedIn.accountName card.product.creator
-                        |> Html.map (GotProfileSummaryMsg index card.isAvailable)
-                    ]
-                ]
-            , div [ class "w-full px-6 pt-4" ]
-                [ p [ class "text-xl truncate" ] [ text card.product.title ]
-                ]
-            , if card.product.units == 0 && card.product.trackStock then
-                div [ class "flex flex-none w-full px-6 pb-2" ]
-                    [ p [ class "text-3xl text-red" ]
-                        [ text (loggedIn.shared.translators.t "shop.out_of_stock")
-                        ]
-                    ]
+                    [ if not card.isAvailable then
+                        -- TODO - I18N
+                        text "Sold out"
 
-              else
-                div [ class "flex flex-none w-full px-6 pb-2" ]
-                    [ p [ class "text-green text-3xl" ] [ text (String.fromFloat card.product.price) ]
-                    , div [ class "uppercase text-sm font-extralight mt-3 ml-2 font-sans text-green" ] [ text (Eos.symbolToSymbolCodeString card.product.symbol) ]
+                      else if isFree then
+                        -- TODO - I18N
+                        text "Enjoy"
+
+                      else
+                        text <| Eos.symbolToSymbolCodeString card.product.symbol
                     ]
-            , div [ class "px-6 pb-6" ]
-                [ div [ class "bg-gray-200 flex items-center justify-left text-sm px-4" ]
-                    [ text (tr "account.my_wallet.your_current_balance" [ ( "balance", currBalance ) ]) ]
                 ]
             ]
         ]
@@ -392,7 +327,6 @@ type alias UpdateResult =
 type Msg
     = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
-    | ClickedFilter Filter
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
@@ -427,17 +361,6 @@ update msg model loggedIn =
 
         TransferSuccess index ->
             updateCard msg index (\card -> ( card, [] )) (UR.init model)
-
-        ClickedFilter filter ->
-            let
-                navKey =
-                    loggedIn.shared.navKey
-
-                route =
-                    Route.Shop filter
-            in
-            UR.init model
-                |> UR.addCmd (Route.pushUrl navKey route)
 
         CompletedLoadBalances res ->
             case res of
@@ -556,9 +479,6 @@ msgToString msg =
 
         TransferSuccess index ->
             [ "TransferSuccess", String.fromInt index ]
-
-        ClickedFilter _ ->
-            [ "ClickedFilter" ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
