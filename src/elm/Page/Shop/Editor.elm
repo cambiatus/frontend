@@ -137,8 +137,7 @@ createForm loggedIn =
         |> Form.with
             (Form.introspect
                 (\values ->
-                    -- TODO - I18N
-                    Form.File.init { label = "Imagem do produto", id = "image-uploader" }
+                    Form.File.init { label = t "shop.photo_label", id = "image-uploader" }
                         |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
                         |> Form.File.withContainerAttrs
                             [ class "mb-10 lg:place-self-center lg:w-2/3"
@@ -418,7 +417,7 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
             [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
-            , Form.view [ class "container mx-auto p-4 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+            , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
                 shared.translators
                 (\submitButton ->
                     [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
