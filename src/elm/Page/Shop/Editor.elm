@@ -22,7 +22,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, disabled, id, maxlength, type_)
+import Html.Attributes exposing (class, classList, disabled, id, maxlength, type_)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode
@@ -134,20 +134,32 @@ createForm loggedIn =
             }
         )
         |> Form.with
-            (Form.File.init { label = "", id = "image-uploader" }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                |> Form.File.withContainerAttrs [ class "mb-10" ]
-                |> Form.file
-                    { translators = translators
-                    , value = .image
-                    , update = \image input -> { input | image = image }
-                    , externalError = always Nothing
-                    }
-                |> Form.optional
+            (Form.introspect
+                (\values ->
+                    -- TODO - I18N
+                    Form.File.init { label = "Imagem do produto", id = "image-uploader" }
+                        |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+                        |> Form.File.withContainerAttrs
+                            [ class "mb-10 lg:place-self-center lg:w-2/3"
+                            , classList
+                                [ ( "lg:row-span-5", not values.trackUnits )
+                                , ( "lg:row-span-6", values.trackUnits )
+                                ]
+                            ]
+                        |> Form.File.withAttrs [ class "border border-dashed border-gray-900 rounded" ]
+                        |> Form.file
+                            { translators = translators
+                            , value = .image
+                            , update = \image input -> { input | image = image }
+                            , externalError = always Nothing
+                            }
+                        |> Form.optional
+                )
             )
         |> Form.with
             (Form.Text.init { label = t "shop.what_label", id = "title-input" }
                 |> Form.Text.withExtraAttrs [ maxlength 255 ]
+                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -161,7 +173,7 @@ createForm loggedIn =
             )
         |> Form.with
             (Form.RichText.init { label = t "shop.description_label" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -180,7 +192,7 @@ createForm loggedIn =
                 }
                 |> Form.Select.withOption False (t "shop.track_stock_no")
                 |> Form.Select.withOption True (t "shop.track_stock_yes")
-                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
                 |> Form.select (boolFromString >> Maybe.withDefault False)
                     { parser = Ok
                     , value = .trackUnits
@@ -196,6 +208,7 @@ createForm loggedIn =
                             |> Form.Text.asNumeric
                             |> Form.Text.withType Form.Text.Number
                             |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
                             |> Form.textField
                                 { parser =
                                     Form.Validate.succeed
@@ -222,6 +235,7 @@ createForm loggedIn =
                             identity
                    )
                 |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -382,41 +396,46 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div [ class "bg-white" ]
+    div []
         [ Page.viewHeader loggedIn pageTitle
-        , Form.view [ class "container mx-auto px-4" ]
-            shared.translators
-            (\submitButton ->
-                [ div [ class "flex flex-col-reverse sm:flex-row align-center justify-center mb-10" ]
-                    [ if isEdit then
-                        button
-                            [ class "button button-danger w-full mt-4 sm:w-40 sm:mt-0 sm:mr-4"
+
+        -- TODO - Check on large screen
+        , div [ class "relative bg-white lg:bg-transparent" ]
+            [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
+            , Form.view [ class "container mx-auto p-4 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+                shared.translators
+                (\submitButton ->
+                    [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
+                        [ if isEdit then
+                            button
+                                [ class "button button-danger w-full"
+                                , disabled isDisabled
+                                , onClick ClickedDelete
+                                , type_ "button"
+                                ]
+                                [ text (t "shop.delete") ]
+
+                          else
+                            text ""
+                        , submitButton
+                            [ class "button button-primary w-full"
                             , disabled isDisabled
-                            , onClick ClickedDelete
-                            , type_ "button"
                             ]
-                            [ text (t "shop.delete") ]
+                            [ text actionText ]
+                        ]
+                    , if isEdit && deleteModal == Open then
+                        viewConfirmDeleteModal t
 
                       else
                         text ""
-                    , submitButton
-                        [ class "button button-primary w-full sm:w-40"
-                        , disabled isDisabled
-                        ]
-                        [ text actionText ]
                     ]
-                , if isEdit && deleteModal == Open then
-                    viewConfirmDeleteModal t
-
-                  else
-                    text ""
-                ]
-            )
-            (createForm loggedIn)
-            (Form.withDisabled isDisabled form)
-            { toMsg = GotFormMsg
-            , onSubmit = ClickedSave
-            }
+                )
+                (createForm loggedIn)
+                (Form.withDisabled isDisabled form)
+                { toMsg = GotFormMsg
+                , onSubmit = ClickedSave
+                }
+            ]
         ]
 
 
