@@ -413,7 +413,7 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div [ class "flex flex-col flex-grow" ]
+    div [ class "flex flex-col flex-grow mb-10 lg:mb-0" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
             [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
