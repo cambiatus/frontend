@@ -25,6 +25,7 @@ import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, classList, disabled, id, maxlength, type_)
 import Html.Events exposing (onClick)
 import Http
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
@@ -113,14 +114,14 @@ type UnitTracking
     | DontTrackUnits
 
 
-createForm : LoggedIn.Model -> Form.Form msg FormInput FormOutput
+createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
 createForm loggedIn =
     let
         ({ t } as translators) =
             loggedIn.shared.translators
     in
     Form.succeed
-        (\maybeImage title description trackUnits unitsInStock price ->
+        (\maybeImage title description price trackUnits unitsInStock ->
             { image = maybeImage
             , title = title
             , description = description
@@ -185,47 +186,6 @@ createForm loggedIn =
                     }
             )
         |> Form.with
-            (Form.Select.init
-                { label = t "shop.track_stock_label"
-                , id = "track-stock-select"
-                , optionToString = boolToString
-                }
-                |> Form.Select.withOption False (t "shop.track_stock_no")
-                |> Form.Select.withOption True (t "shop.track_stock_yes")
-                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
-                |> Form.select (boolFromString >> Maybe.withDefault False)
-                    { parser = Ok
-                    , value = .trackUnits
-                    , update = \trackUnits input -> { input | trackUnits = trackUnits }
-                    , externalError = always Nothing
-                    }
-            )
-        |> Form.with
-            (Form.introspect
-                (\values ->
-                    if values.trackUnits then
-                        Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
-                            |> Form.Text.asNumeric
-                            |> Form.Text.withType Form.Text.Number
-                            |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
-                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
-                            |> Form.textField
-                                { parser =
-                                    Form.Validate.succeed
-                                        >> Form.Validate.int
-                                        >> Form.Validate.intGreaterThanOrEqualTo 0
-                                        >> Form.Validate.intLowerThanOrEqualTo 2000
-                                        >> Form.Validate.validate translators
-                                , value = .unitsInStock
-                                , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
-                                , externalError = always Nothing
-                                }
-
-                    else
-                        Form.succeed 0
-                )
-            )
-        |> Form.with
             (Form.Text.init { label = t "shop.price_label", id = "price-input" }
                 |> (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
@@ -246,6 +206,64 @@ createForm loggedIn =
                     , update = \price input -> { input | price = price }
                     , externalError = always Nothing
                     }
+            )
+        |> Form.with
+            (Form.Select.init
+                { label = t "shop.track_stock_label"
+                , id = "track-stock-select"
+                , optionToString = boolToString
+                }
+                |> Form.Select.withOption False (t "shop.track_stock_no")
+                |> Form.Select.withOption True (t "shop.track_stock_yes")
+                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
+                |> Form.select (boolFromString >> Maybe.withDefault False)
+                    { parser = Ok
+                    , value = .trackUnits
+                    , update = \trackUnits input -> { input | trackUnits = trackUnits }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.introspect
+                (\values ->
+                    if values.trackUnits then
+                        Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
+                            |> Form.Text.withPlaceholder "0"
+                            |> Form.Text.asNumeric
+                            |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.withExtraAttrs
+                                [ Html.Attributes.min "0"
+                                , class "text-center"
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                            |> Form.Text.withElements
+                                [ button
+                                    [ class "absolute top-1 bottom-1 left-1 pl-4 bg-white"
+                                    , type_ "button"
+                                    , onClick ClickedDecrementStockUnits
+                                    ]
+                                    [ Icons.minus "" ]
+                                , button
+                                    [ class "absolute top-1 bottom-1 right-1 pr-4 bg-white"
+                                    , type_ "button"
+                                    , onClick ClickedIncrementStockUnits
+                                    ]
+                                    [ Icons.plus "" ]
+                                ]
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.int
+                                        >> Form.Validate.intGreaterThanOrEqualTo 0
+                                        >> Form.Validate.validate translators
+                                , value = .unitsInStock
+                                , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
+                                , externalError = always Nothing
+                                }
+
+                    else
+                        Form.succeed 0
+                )
             )
 
 
@@ -482,6 +500,8 @@ type Msg
     | GotSaveResponse (Result Value String)
     | GotDeleteResponse (Result Value String)
     | ClosedAuthModal
+    | ClickedDecrementStockUnits
+    | ClickedIncrementStockUnits
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -729,6 +749,12 @@ update msg model loggedIn =
         GotFormMsg subMsg ->
             updateForm loggedIn.shared subMsg model
 
+        ClickedDecrementStockUnits ->
+            updateFormStockUnits (\price -> price - 1) model
+
+        ClickedIncrementStockUnits ->
+            updateFormStockUnits (\price -> price + 1) model
+
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
 performRequest msg status { shared, accountName } action data =
@@ -749,6 +775,53 @@ performRequest msg status { shared, accountName } action data =
                       }
                     ]
             }
+
+
+updateFormStockUnits : (Int -> Int) -> Model -> UpdateResult
+updateFormStockUnits updateFn model =
+    let
+        maybeFormInfo =
+            case model of
+                EditingCreate balances form ->
+                    Just ( form, EditingCreate balances )
+
+                Creating balances form ->
+                    Just ( form, Creating balances )
+
+                EditingUpdate balances product deleteModalStatus form ->
+                    Just ( form, EditingUpdate balances product deleteModalStatus )
+
+                Saving balances product form ->
+                    Just ( form, Saving balances product )
+
+                Deleting balances product form ->
+                    Just ( form, Deleting balances product )
+
+                _ ->
+                    Nothing
+    in
+    case maybeFormInfo of
+        Nothing ->
+            UR.init model
+
+        Just ( form, updateModel ) ->
+            Form.updateValues
+                (\values ->
+                    case String.toInt values.unitsInStock of
+                        Just unitsInStock ->
+                            { values
+                                | unitsInStock =
+                                    updateFn unitsInStock
+                                        |> max 0
+                                        |> String.fromInt
+                            }
+
+                        Nothing ->
+                            values
+                )
+                form
+                |> updateModel
+                |> UR.init
 
 
 updateForm : Shared -> Form.Msg FormInput -> Model -> UpdateResult
@@ -979,3 +1052,9 @@ msgToString msg =
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: Form.msgToString subMsg
+
+        ClickedDecrementStockUnits ->
+            [ "ClickedDecrementStockUnits" ]
+
+        ClickedIncrementStockUnits ->
+            [ "ClickedIncrementStockUnits" ]
