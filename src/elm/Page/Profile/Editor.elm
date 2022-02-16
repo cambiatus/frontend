@@ -115,7 +115,7 @@ createForm ({ t } as translators) { hasKyc } =
             )
         |> Form.with
             (Form.RichText.init { label = t "profile.edit.labels.bio" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser = Ok
                     , value = .bio

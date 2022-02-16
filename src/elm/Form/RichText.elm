@@ -1,6 +1,6 @@
 module Form.RichText exposing
     ( init, Options
-    , withDisabled, withPlaceholder, withContainerAttrs
+    , withDisabled, withPlaceholder, withContainerAttrs, withEditorContainerAttrs
     , getId, getMarkdownContent
     , view
     , Model, initModel, update, Msg, msgToString
@@ -21,7 +21,7 @@ module Form.RichText exposing
 
 ## Adding attributes
 
-@docs withDisabled, withPlaceholder, withContainerAttrs
+@docs withDisabled, withPlaceholder, withContainerAttrs, withEditorContainerAttrs
 
 
 # Getters
@@ -67,6 +67,7 @@ type Options msg
         , disabled : Bool
         , placeholder : Maybe String
         , containerAttrs : List (Html.Attribute msg)
+        , editorContainerAttrs : List (Html.Attribute msg)
         }
 
 
@@ -79,6 +80,7 @@ init { label } =
         , disabled = False
         , placeholder = Nothing
         , containerAttrs = []
+        , editorContainerAttrs = []
         }
 
 
@@ -100,12 +102,19 @@ withPlaceholder placeholder (Options options) =
     Options { options | placeholder = Just placeholder }
 
 
-{-| Adds attributes to the element that container the label, the editor itself,
-and the error message
+{-| Adds attributes to the element that contains the editor and the link modal
 -}
 withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
+
+
+{-| Adds attributes to the element that contains the label, the editor itself,
+and the error message
+-}
+withEditorContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withEditorContainerAttrs attrs (Options options) =
+    Options { options | editorContainerAttrs = options.editorContainerAttrs ++ attrs }
 
 
 
@@ -140,8 +149,8 @@ view (Options options) viewConfig toMsg =
         { t } =
             viewConfig.translators
     in
-    div []
-        [ div options.containerAttrs
+    div options.containerAttrs
+        [ div options.editorContainerAttrs
             [ if String.isEmpty options.label then
                 Html.text ""
 

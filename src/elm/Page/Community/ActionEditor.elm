@@ -537,7 +537,7 @@ form loggedIn community =
         )
         |> Form.with
             (Form.RichText.init { label = t "community.actions.form.description_label" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -937,7 +937,7 @@ fileValidationForm { t } =
                                 )
                             |> Form.with
                                 (Form.RichText.init { label = t "community.actions.form.verification_instructions" }
-                                    |> Form.RichText.withContainerAttrs [ class "ml-8 sm:w-2/5" ]
+                                    |> Form.RichText.withEditorContainerAttrs [ class "ml-8 sm:w-2/5" ]
                                     |> Form.richText
                                         { parser = Ok
                                         , value = .instructions

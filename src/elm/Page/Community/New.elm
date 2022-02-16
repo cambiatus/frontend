@@ -121,7 +121,7 @@ createForm ({ t } as translators) { isDisabled } =
     Form.succeed FormOutput
         |> Form.with
             (Form.RichText.init { label = t "community.create.labels.description" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser = Ok
                     , value = .description

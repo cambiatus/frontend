@@ -711,7 +711,7 @@ createForm ({ t } as translators) product =
         |> Form.with
             (Form.RichText.init { label = t "shop.transfer.memo_label" }
                 |> Form.RichText.withPlaceholder (t defaultMemoKey)
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
                 |> Form.richText
                     { parser = Ok
                     , value = .memo
