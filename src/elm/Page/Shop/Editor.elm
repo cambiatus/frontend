@@ -414,11 +414,9 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div []
+    div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
-
-        -- TODO - Check on large screen
-        , div [ class "relative bg-white lg:bg-transparent" ]
+        , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
             [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
             , Form.view [ class "container mx-auto p-4 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
                 shared.translators
