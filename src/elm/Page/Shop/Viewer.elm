@@ -22,16 +22,18 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, img, text)
-import Html.Attributes exposing (autocomplete, class, disabled, src)
+import Html exposing (Html, a, button, div, h2, img, text)
+import Html.Attributes exposing (autocomplete, class, disabled, href, src)
 import Html.Events exposing (onClick)
 import Http
+import Icons
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as LE
 import Markdown exposing (Markdown)
 import Page exposing (Session(..))
 import Profile
+import Profile.Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
@@ -390,21 +392,35 @@ view session model =
         cardContainer =
             div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
 
+        viewContent sale =
+            div [ class "flex-grow grid items-center relative bg-white md:bg-transparent" ]
+                [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
+                , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2 place-items-center" ]
+                    [ div [ class "md:w-2/3 md:mx-auto" ]
+                        [ viewProductImg sale.image
+                        , h2 [ class "font-bold text-lg text-black mt-4" ] [ text sale.title ]
+                        , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
+                        , viewContactTheSeller sale.creator
+                        ]
+                    ]
+                ]
+
         content =
             case ( model, session ) of
                 ( AsGuest model_, Page.Guest guest ) ->
                     case model_.productPreview of
                         RemoteData.Success sale ->
-                            contentContainer
-                                [ viewProductImg sale.image
-                                , cardContainer
-                                    (viewCard guest.shared
-                                        Nothing
-                                        sale
-                                        (viewGuestButton guest.shared sale)
-                                        Nothing
-                                    )
-                                ]
+                            -- contentContainer
+                            --     [ viewProductImg sale.image
+                            --     , cardContainer
+                            --         (viewCard guest.shared
+                            --             Nothing
+                            --             sale
+                            --             (viewGuestButton guest.shared sale)
+                            --             Nothing
+                            --         )
+                            --     ]
+                            viewContent sale
 
                         RemoteData.Failure err ->
                             Page.fullPageGraphQLError (t "shop.title") err
@@ -469,17 +485,19 @@ view session model =
                                             else
                                                 [ viewTransferForm loggedIn sale model_ ]
                                     in
-                                    div []
+                                    div [ class "flex-grow flex flex-col" ]
                                         [ Page.viewHeader loggedIn sale.title
-                                        , contentContainer
-                                            [ viewProductImg sale.image
-                                            , cardContainer
-                                                ([ card
-                                                 , transferForm
-                                                 ]
-                                                    |> List.concat
-                                                )
-                                            ]
+
+                                        -- , contentContainer
+                                        --     [ viewProductImg sale.image
+                                        --     , cardContainer
+                                        --         ([ card
+                                        --          , transferForm
+                                        --          ]
+                                        --             |> List.concat
+                                        --         )
+                                        --     ]
+                                        , viewContent sale
                                         ]
                                         |> Html.map AsLoggedInMsg
 
@@ -505,12 +523,45 @@ viewProductImg maybeImgUrl =
                 Just imgUrl ->
                     imgUrl
     in
-    div [ class "w-full md:w-1/2 p-4 flex justify-center" ]
-        [ img
-            [ src imageUrl
-            , class "object-contain w-full h-64"
+    img [ src imageUrl, class "object-cover w-full rounded" ] []
+
+
+viewContactTheSeller : Profile.Minimal -> Html msg
+viewContactTheSeller profile =
+    div []
+        [ div [ class "flex items-center" ]
+            [ a [ Route.href (Route.Profile profile.account) ]
+                [ Avatar.view profile.avatar "w-14 h-14" ]
+            , div [ class "ml-4 flex flex-col text-gray-333" ]
+                [ h2 [ class "font-bold lowercase" ] [ text "Contact the seller" ]
+                , a
+                    [ Route.href (Route.Profile profile.account)
+                    , class "hover:underline"
+                    ]
+                    [ profile.name
+                        |> Maybe.withDefault (Eos.nameToString profile.account)
+                        |> text
+                    ]
+                ]
             ]
-            []
+        , div [ class "ml-18 mt-2 flex flex-wrap gap-4" ]
+            (profile.contacts
+                |> List.map (Profile.Contact.circularIconWithGrayBg "")
+                |> (\contacts ->
+                        case profile.email of
+                            Nothing ->
+                                contacts
+
+                            Just email ->
+                                contacts
+                                    ++ [ a
+                                            [ href ("mailto:" ++ email)
+                                            , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+                                            ]
+                                            [ Icons.mail "" ]
+                                       ]
+                   )
+            )
         ]
 
 
@@ -523,7 +574,7 @@ viewCard :
             , description : Markdown
             , symbol : Eos.Symbol
             , price : Float
-            , creator : Shop.ShopProfile
+            , creator : Profile.Minimal
         }
     -> Html msg
     -> Maybe Eos.Asset
