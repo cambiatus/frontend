@@ -23,7 +23,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, span, text)
-import Html.Attributes exposing (autocomplete, class, href, src, type_)
+import Html.Attributes exposing (alt, autocomplete, class, href, src, type_)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -76,7 +76,15 @@ init session saleId =
             )
 
         Page.Guest guest ->
-            ( AsGuest { saleId = saleId, productPreview = RemoteData.Loading }
+            ( AsGuest
+                { saleId = saleId
+                , productPreview = RemoteData.Loading
+                , form =
+                    Form.init
+                        { units = "1"
+                        , memo = Form.RichText.initModel "memo-input" Nothing
+                        }
+                }
             , Api.Graphql.query guest.shared
                 Nothing
                 (Shop.productPreviewQuery saleId)
@@ -96,6 +104,7 @@ type Model
 type alias GuestModel =
     { saleId : Int
     , productPreview : RemoteData (Graphql.Http.Error ProductPreview) ProductPreview
+    , form : Form.Model FormInput
     }
 
 
@@ -130,6 +139,8 @@ type Msg
 
 type GuestMsg
     = CompletedSalePreviewLoad (RemoteData (Graphql.Http.Error ProductPreview) ProductPreview)
+    | GotFormInteractionMsgAsGuest FormInteractionMsg
+    | GotFormMsgAsGuest (Form.Msg FormInput)
 
 
 type LoggedInMsg
@@ -184,7 +195,7 @@ update msg model session =
 
 
 updateAsGuest : GuestMsg -> GuestModel -> Guest.Model -> GuestUpdateResult
-updateAsGuest msg model _ =
+updateAsGuest msg model guest =
     case msg of
         CompletedSalePreviewLoad (RemoteData.Success productPreview) ->
             { model | productPreview = RemoteData.Success productPreview }
@@ -207,6 +218,17 @@ updateAsGuest msg model _ =
         CompletedSalePreviewLoad RemoteData.Loading ->
             model
                 |> UR.init
+
+        GotFormInteractionMsgAsGuest subMsg ->
+            { model | form = updateFormInteraction subMsg { maxUnits = Nothing } model.form }
+                |> UR.init
+
+        GotFormMsgAsGuest subMsg ->
+            Form.update guest.shared subMsg model.form
+                |> UR.fromChild (\newForm -> { model | form = newForm })
+                    GotFormMsgAsGuest
+                    (Guest.SetFeedback >> UR.addExt)
+                    model
 
 
 updateAsLoggedIn : LoggedInMsg -> LoggedInModel -> LoggedIn.Model -> LoggedInUpdateResult
@@ -440,16 +462,18 @@ view session model =
                         _ ->
                             shopTitle
 
-        contentContainer children =
-            div [ class "container mx-auto h-full flex items-center" ]
-                [ div [ class "flex flex-wrap" ]
-                    children
-                ]
-
-        cardContainer =
-            div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
-
-        viewContent sale formView =
+        viewContent :
+            { isGuest : Bool }
+            ->
+                { product
+                    | image : Maybe String
+                    , title : String
+                    , description : Markdown
+                    , creator : Profile.Minimal
+                }
+            -> Html msg
+            -> Html msg
+        viewContent { isGuest } sale formView =
             div [ class "flex-grow grid items-center relative bg-white md:bg-gray-100" ]
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
@@ -457,7 +481,7 @@ view session model =
                         [ viewProductImg sale.image
                         , h2 [ class "font-bold text-lg text-black mt-4" ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
-                        , viewContactTheSeller sale.creator
+                        , viewContactTheSeller { isGuest = isGuest } sale.creator
                         ]
                     , div [ class "bg-gray-100 px-4 pt-6 pb-4 w-full rounded-lg md:p-0 md:w-2/3 md:mx-auto md:place-self-start" ]
                         [ formView
@@ -470,18 +494,35 @@ view session model =
                 ( AsGuest model_, Page.Guest guest ) ->
                     case model_.productPreview of
                         RemoteData.Success sale ->
-                            -- contentContainer
-                            --     [ viewProductImg sale.image
-                            --     , cardContainer
-                            --         (viewCard guest.shared
-                            --             Nothing
-                            --             sale
-                            --             (viewGuestButton guest.shared sale)
-                            --             Nothing
-                            --         )
-                            --     ]
-                            -- TODO - Show form with guest user
-                            viewContent sale (div [] [])
+                            viewContent { isGuest = True }
+                                sale
+                                (Form.viewWithoutSubmit []
+                                    guest.shared.translators
+                                    (\_ ->
+                                        [ -- TODO - I18N
+                                          a
+                                            [ Route.ViewSale sale.id
+                                                |> Just
+                                                |> Route.Join
+                                                |> Route.href
+                                            , class "button button-primary w-full"
+                                            ]
+                                            [ text <| t "shop.buy" ]
+                                        ]
+                                    )
+                                    (createForm guest.shared.translators
+                                        { trackStock = False
+                                        , units = 1
+                                        , price = sale.price
+                                        }
+                                        Nothing
+                                        GotFormInteractionMsgAsGuest
+                                    )
+                                    model_.form
+                                    { toMsg = GotFormMsgAsGuest
+                                    }
+                                )
+                                |> Html.map AsGuestMsg
 
                         RemoteData.Failure err ->
                             Page.fullPageGraphQLError (t "shop.title") err
@@ -529,45 +570,20 @@ view session model =
                                     let
                                         maybeBalance =
                                             LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
-                                                |> Maybe.map .asset
-
-                                        -- card =
-                                        --     viewCard
-                                        --         loggedIn.shared
-                                        --         (Just loggedIn.accountName)
-                                        --         sale
-                                        --         (viewLoggedInButton loggedIn model_ sale)
-                                        --         maybeBalance
-                                        transferForm =
-                                            -- TODO - Remove ViewingCard state
-                                            if model_.viewing == ViewingCard then
-                                                []
-
-                                            else
-                                                [ viewTransferForm loggedIn sale model_ ]
                                     in
                                     div [ class "flex-grow flex flex-col" ]
                                         [ Page.viewHeader loggedIn sale.title
-
-                                        -- , contentContainer
-                                        --     [ viewProductImg sale.image
-                                        --     , cardContainer
-                                        --         ([ card
-                                        --          , transferForm
-                                        --          ]
-                                        --             |> List.concat
-                                        --         )
-                                        --     ]
-                                        , viewContent sale
+                                        , viewContent { isGuest = False }
+                                            sale
                                             (Form.view []
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
                                                     [ submitButton [ class "button button-primary w-full" ]
                                                         -- TODO - I18N
-                                                        [ text "Buy" ]
+                                                        [ text <| t "shop.buy" ]
                                                     ]
                                                 )
-                                                (createForm loggedIn.shared.translators sale GotFormInteractionMsg)
+                                                (createForm loggedIn.shared.translators sale maybeBalance GotFormInteractionMsg)
                                                 model_.form
                                                 { toMsg = GotFormMsg
                                                 , onSubmit = ClickedTransfer sale
@@ -587,30 +603,56 @@ view session model =
 viewProductImg : Maybe String -> Html msg
 viewProductImg maybeImgUrl =
     let
-        imageUrl =
+        defaultView =
+            div [ class "flex flex-col items-center gap-2" ]
+                [ Icons.image ""
+                , span [ class "font-bold uppercase text-black text-sm" ]
+                    -- TODO - I18N
+                    [ text "No image" ]
+                ]
+
+        image =
             case maybeImgUrl of
                 Nothing ->
-                    "/icons/shop-placeholder0.svg"
+                    defaultView
 
                 Just "" ->
-                    "/icons/shop-placeholder0.svg"
+                    defaultView
 
                 Just imgUrl ->
-                    imgUrl
+                    img
+                        [ src imgUrl
+                        , class "object-cover object-center rounded max-h-full max-w-full"
+                        , alt ""
+                        ]
+                        []
     in
-    img [ src imageUrl, class "object-cover w-full rounded" ] []
+    div [ class "bg-gray-100 w-full rounded grid place-items-center h-68" ]
+        [ image ]
 
 
-viewContactTheSeller : Profile.Minimal -> Html msg
-viewContactTheSeller profile =
+viewContactTheSeller : { isGuest : Bool } -> Profile.Minimal -> Html msg
+viewContactTheSeller { isGuest } profile =
+    let
+        makeHref originalRoute =
+            if isGuest then
+                originalRoute
+                    |> Just
+                    |> Route.Join
+                    |> Route.href
+
+            else
+                originalRoute
+                    |> Route.href
+    in
     div []
         [ div [ class "flex items-center" ]
-            [ a [ Route.href (Route.Profile profile.account) ]
+            [ a [ makeHref (Route.Profile profile.account) ]
                 [ Avatar.view profile.avatar "w-14 h-14" ]
             , div [ class "ml-4 flex flex-col text-gray-333" ]
                 [ h2 [ class "font-bold lowercase" ] [ text "Contact the seller" ]
                 , a
-                    [ Route.href (Route.Profile profile.account)
+                    [ makeHref (Route.Profile profile.account)
                     , class "hover:underline"
                     ]
                     [ profile.name
@@ -703,20 +745,18 @@ viewCard shared maybeCurrentName sale buttonView maybeAsset =
     ]
 
 
-viewGuestButton : Shared -> ProductPreview -> Html msg
-viewGuestButton { translators } sale =
-    a
-        [ Route.href
-            (Route.ViewSale sale.id
-                |> Just
-                |> Route.Join
-            )
-        , class "button button-primary"
-        ]
-        [ text <| translators.t "shop.buy" ]
 
-
-
+-- viewGuestButton : Shared -> ProductPreview -> Html msg
+-- viewGuestButton { translators } sale =
+--     a
+--         [ Route.href
+--             (Route.ViewSale sale.id
+--                 |> Just
+--                 |> Route.Join
+--             )
+--         , class "button button-primary"
+--         ]
+--         [ text <| translators.t "shop.buy" ]
 -- viewLoggedInButton : LoggedIn.Model -> LoggedInModel -> Product -> Html LoggedInMsg
 -- viewLoggedInButton loggedIn model sale =
 --     let
@@ -778,8 +818,18 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> Product -> (FormInteractionMsg -> msg) -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) product toFormInteractionMsg =
+createForm :
+    Shared.Translators
+    ->
+        { product
+            | trackStock : Bool
+            , units : Int
+            , price : Float
+        }
+    -> Maybe Balance
+    -> (FormInteractionMsg -> msg)
+    -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) product maybeBalance toFormInteractionMsg =
     Form.succeed FormOutput
         |> Form.with
             (Form.Text.init
@@ -851,8 +901,13 @@ createForm ({ t } as translators) product toFormInteractionMsg =
 
                         -- TODO - Optionally receive balance
                         -- TODO - I18N
-                        , span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm" ]
-                            [ text "Você possui 1200 mudas" ]
+                        , case maybeBalance of
+                            Nothing ->
+                                text ""
+
+                            Just balance ->
+                                span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm" ]
+                                    [ text "Você possui 1200 mudas" ]
                         ]
                         |> Form.arbitrary
                 )
@@ -868,16 +923,6 @@ createForm ({ t } as translators) product toFormInteractionMsg =
                     , externalError = always Nothing
                     }
             )
-
-
-viewTransferForm : LoggedIn.Model -> Product -> LoggedInModel -> Html LoggedInMsg
-viewTransferForm { shared } sale model =
-    Form.viewWithoutSubmit []
-        shared.translators
-        (\_ -> [])
-        (createForm shared.translators sale GotFormInteractionMsg)
-        model.form
-        { toMsg = GotFormMsg }
 
 
 
@@ -899,6 +944,12 @@ guestMsgToString msg =
     case msg of
         CompletedSalePreviewLoad r ->
             [ "CompletedSalePreviewLoad", UR.remoteDataToString r ]
+
+        GotFormInteractionMsgAsGuest subMsg ->
+            "GotFormInteractionMsgAsGuest" :: formInteractionMsgToString subMsg
+
+        GotFormMsgAsGuest subMsg ->
+            "GotFormMsgAsGuest" :: Form.msgToString subMsg
 
 
 loggedInMsgToString : LoggedInMsg -> List String
