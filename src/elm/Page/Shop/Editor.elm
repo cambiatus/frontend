@@ -237,17 +237,17 @@ createForm loggedIn =
                             |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
                             |> Form.Text.withElements
                                 [ button
-                                    [ class "absolute top-1 bottom-1 left-1 pl-4 bg-white"
+                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
                                     , type_ "button"
                                     , onClick ClickedDecrementStockUnits
                                     ]
-                                    [ Icons.minus "" ]
+                                    [ Icons.minus "fill-current" ]
                                 , button
-                                    [ class "absolute top-1 bottom-1 right-1 pr-4 bg-white"
+                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
                                     , type_ "button"
                                     , onClick ClickedIncrementStockUnits
                                     ]
-                                    [ Icons.plus "" ]
+                                    [ Icons.plus "fill-current" ]
                                 ]
                             |> Form.textField
                                 { parser =
