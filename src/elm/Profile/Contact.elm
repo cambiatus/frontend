@@ -4,6 +4,7 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
+    , circularIconWithGrayBg
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
@@ -714,13 +715,21 @@ contactTypeToIcon : String -> Bool -> ContactType -> Html msg
 contactTypeToIcon class_ isInverted contactType =
     case contactType of
         Phone ->
-            Icons.phone class_
+            if isInverted then
+                Icons.phoneInverted class_
+
+            else
+                Icons.phone class_
 
         Instagram ->
             Icons.instagram class_
 
         Telegram ->
-            Icons.telegram class_
+            if isInverted then
+                Icons.telegramInverted class_
+
+            else
+                Icons.telegram class_
 
         Whatsapp ->
             if isInverted then
@@ -728,6 +737,15 @@ contactTypeToIcon class_ isInverted contactType =
 
             else
                 Icons.whatsapp class_
+
+
+circularIconWithGrayBg : String -> Normalized -> Html msg
+circularIconWithGrayBg class_ (Normalized normalized) =
+    a
+        [ toHref (Normalized normalized)
+        , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+        ]
+        [ contactTypeToIcon class_ True normalized.contactType ]
 
 
 circularIcon : String -> Normalized -> Html msg
@@ -749,7 +767,10 @@ circularIcon class_ (Normalized normalized) =
     in
     case normalized.contactType of
         Telegram ->
-            a [ toHref (Normalized normalized) ]
+            a
+                [ toHref (Normalized normalized)
+                , class "hover:opacity-80"
+                ]
                 [ contactTypeToIcon class_ False normalized.contactType
                 ]
 
@@ -757,7 +778,7 @@ circularIcon class_ (Normalized normalized) =
             a
                 [ class
                     (String.join " "
-                        [ "p-2 rounded-full flex items-center justify-center"
+                        [ "p-2 rounded-full flex items-center justify-center hover:opacity-80"
                         , bgColor
                         , class_
                         ]
