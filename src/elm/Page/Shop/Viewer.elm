@@ -433,7 +433,7 @@ updateFormInteraction msg { maxUnits } model =
 view : Session -> Model -> { title : String, content : Html Msg }
 view session model =
     let
-        { t } =
+        ({ t } as translators) =
             (Page.toShared session).translators
 
         shopTitle =
@@ -473,7 +473,7 @@ view session model =
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
-                        [ viewProductImg sale.image
+                        [ viewProductImg translators sale.image
                         , h2 [ class "font-bold text-lg text-black mt-4" ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , viewContactTheSeller { isGuest = isGuest } sale.creator
@@ -508,6 +508,7 @@ view session model =
                                         { trackStock = False
                                         , units = 1
                                         , price = sale.price
+                                        , symbol = sale.symbol
                                         }
                                         Nothing
                                         { isDisabled = False }
@@ -587,7 +588,6 @@ view session model =
                                                             [ class "button button-primary w-full"
                                                             , Route.href (Route.EditSale sale.id)
                                                             ]
-                                                            -- TODO - Adjust translation to just "Edit"
                                                             [ text <| t "shop.edit" ]
 
                                                       else
@@ -625,15 +625,14 @@ view session model =
     }
 
 
-viewProductImg : Maybe String -> Html msg
-viewProductImg maybeImgUrl =
+viewProductImg : Shared.Translators -> Maybe String -> Html msg
+viewProductImg { t } maybeImgUrl =
     let
         defaultView =
             div [ class "flex flex-col items-center gap-2" ]
                 [ Icons.image ""
                 , span [ class "font-bold uppercase text-black text-sm" ]
-                    -- TODO - I18N
-                    [ text "No image" ]
+                    [ text <| t "shop.no_image" ]
                 ]
 
         image =
@@ -850,16 +849,16 @@ createForm :
             | trackStock : Bool
             , units : Int
             , price : Float
+            , symbol : Eos.Symbol
         }
     -> Maybe Balance
     -> { isDisabled : Bool }
     -> (FormInteractionMsg -> msg)
     -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) product maybeBalance { isDisabled } toFormInteractionMsg =
+createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toFormInteractionMsg =
     Form.succeed FormOutput
         |> Form.with
             (Form.Text.init
-                -- TODO - Adjust translation
                 { label = t "shop.transfer.units_label"
                 , id = "units-input"
                 }
@@ -930,26 +929,30 @@ createForm ({ t } as translators) product maybeBalance { isDisabled } toFormInte
                                         |> String.fromFloat
                                         |> text
                             ]
-
-                        -- TODO - I18N
                         , span [ class "px-4" ]
-                            [ text "Preço (MUDA)" ]
-
-                        -- TODO - Optionally receive balance
-                        -- TODO - I18N
+                            [ text <|
+                                tr "shop.transfer.price"
+                                    [ ( "symbol", Eos.symbolToSymbolCodeString product.symbol ) ]
+                            ]
                         , case maybeBalance of
                             Nothing ->
                                 text ""
 
                             Just balance ->
-                                span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm" ]
-                                    [ text "Você possui 1200 mudas" ]
+                                span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm uppercase" ]
+                                    [ text <|
+                                        tr "shop.transfer.balance"
+                                            [ ( "asset"
+                                              , Eos.assetToString translators
+                                                    balance.asset
+                                              )
+                                            ]
+                                    ]
                         ]
                         |> Form.arbitrary
                 )
             )
         |> Form.with
-            -- TODO - Adjust translation
             (Form.RichText.init { label = t "shop.transfer.memo_label" }
                 |> Form.RichText.withContainerAttrs [ class "mb-6" ]
                 |> Form.richText
