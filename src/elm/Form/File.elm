@@ -433,7 +433,7 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
                 _ ->
                     div [ class "font-bold text-center" ]
                         [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
-                        , p []
+                        , p [ class "px-4" ]
                             [ Html.text (viewConfig.translators.t "community.actions.proof.upload_hint") ]
                         ]
             ]
