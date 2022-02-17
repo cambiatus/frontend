@@ -4,9 +4,8 @@ module Form.Text exposing
     , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
     , withMask, withAllowedChars
-    , getId, getErrorAttrs
+    , getId, getErrorAttrs, getSubmitOnEnter
     , view
-    , getSubmitOnEnter
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting,
@@ -50,7 +49,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 # Getters
 
-@docs getId, getErrorAttrs
+@docs getId, getErrorAttrs, getSubmitOnEnter
 
 
 # View
