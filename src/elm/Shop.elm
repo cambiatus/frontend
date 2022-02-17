@@ -3,18 +3,16 @@ module Shop exposing
     , Product
     , ProductId
     , ProductPreview
-    , ShopProfile
     , encodeTransferSale
     , productPreviewQuery
     , productQuery
     , productsQuery
     )
 
-import Avatar exposing (Avatar)
+import Avatar
 import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.ProductPreview
-import Cambiatus.Object.User as User
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -23,7 +21,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
-import Profile.Contact as Contact
+import Profile
 
 
 
@@ -40,13 +38,13 @@ type alias Product =
     , image : Maybe String
     , units : Int
     , trackStock : Bool
-    , creator : ShopProfile
+    , creator : Profile.Minimal
     }
 
 
 type alias ProductPreview =
     { symbol : Symbol
-    , creator : ShopProfile
+    , creator : Profile.Minimal
     , description : Markdown
     , id : Int
     , image : Maybe String
@@ -57,16 +55,6 @@ type alias ProductPreview =
 
 type alias ProductId =
     String
-
-
-type alias ShopProfile =
-    { account : Eos.Name
-    , name : Maybe String
-    , avatar : Avatar
-    , email : Maybe String
-    , bio : Maybe Markdown
-    , contacts : List Contact.Normalized
-    }
 
 
 type Filter
@@ -114,7 +102,7 @@ productSelection =
         |> with (detectEmptyString Cambiatus.Object.Product.image)
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
-        |> with (Cambiatus.Object.Product.creator shopProfileSelectionSet)
+        |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
 
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
@@ -145,7 +133,7 @@ detectEmptyString =
         )
 
 
-productPreviewProfile : Eos.Name -> ShopProfile
+productPreviewProfile : Eos.Name -> Profile.Minimal
 productPreviewProfile accountName =
     { account = accountName
     , name = accountName |> Eos.nameToString |> Just
@@ -154,20 +142,6 @@ productPreviewProfile accountName =
     , bio = Nothing
     , contacts = []
     }
-
-
-shopProfileSelectionSet : SelectionSet ShopProfile Cambiatus.Object.User
-shopProfileSelectionSet =
-    SelectionSet.succeed ShopProfile
-        |> with (Eos.nameSelectionSet User.account)
-        |> with User.name
-        |> with (Avatar.selectionSet User.avatar)
-        |> with User.email
-        |> with (Markdown.maybeSelectionSet User.bio)
-        |> with
-            (User.contacts Contact.selectionSet
-                |> SelectionSet.map (List.filterMap identity)
-            )
 
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
