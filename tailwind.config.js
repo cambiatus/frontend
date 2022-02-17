@@ -69,9 +69,10 @@ module.exports = {
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
-      DEFAULT: '0.4rem',
+      sm: '0.25rem',
       label: '0.313rem',
       'md': '0.375rem',
+      DEFAULT: '0.4rem',
       'lg': '1.25rem',
       'full': '9999px',
       'large': '12px'

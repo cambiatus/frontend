@@ -22,8 +22,8 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, img, text)
-import Html.Attributes exposing (autocomplete, class, disabled, href, src)
+import Html exposing (Html, a, button, div, h2, img, span, text)
+import Html.Attributes exposing (autocomplete, class, href, src, type_)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -56,9 +56,9 @@ init session saleId =
             ( AsLoggedIn
                 { status = RemoteData.Loading
                 , viewing = ViewingCard
-                , form2 =
+                , form =
                     Form.init
-                        { units = "0"
+                        { units = "1"
                         , memo = Form.RichText.initModel "memo-input" Nothing
                         }
                 , hasChangedDefaultMemo = False
@@ -102,7 +102,7 @@ type alias GuestModel =
 type alias LoggedInModel =
     { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
     , viewing : ViewState
-    , form2 : Form.Model FormInput
+    , form : Form.Model FormInput
     , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
@@ -141,6 +141,12 @@ type LoggedInMsg
     | ClickedTransfer Product FormOutput
     | GotFormMsg (Form.Msg FormInput)
     | GotTransferResult (Result (Maybe Value) String)
+    | GotFormInteractionMsg FormInteractionMsg
+
+
+type FormInteractionMsg
+    = ClickedDecrementUnits
+    | ClickedIncrementUnits
 
 
 type alias UpdateResult =
@@ -335,8 +341,8 @@ updateAsLoggedIn msg model loggedIn =
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
         GotFormMsg subMsg ->
-            Form.update loggedIn.shared subMsg model.form2
-                |> UR.fromChild (\newForm -> { model | form2 = newForm })
+            Form.update loggedIn.shared subMsg model.form
+                |> UR.fromChild (\newForm -> { model | form = newForm })
                     GotFormMsg
                     LoggedIn.addFeedback
                     model
@@ -350,6 +356,57 @@ updateAsLoggedIn msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
+
+        GotFormInteractionMsg subMsg ->
+            { model
+                | form =
+                    updateFormInteraction subMsg
+                        { maxUnits =
+                            case model.status of
+                                RemoteData.Success product ->
+                                    if product.trackStock then
+                                        Just product.units
+
+                                    else
+                                        Nothing
+
+                                _ ->
+                                    Nothing
+                        }
+                        model.form
+            }
+                |> UR.init
+
+
+updateFormInteraction : FormInteractionMsg -> { maxUnits : Maybe Int } -> Form.Model FormInput -> Form.Model FormInput
+updateFormInteraction msg { maxUnits } model =
+    Form.updateValues
+        (\values ->
+            { values
+                | units =
+                    case String.toInt values.units of
+                        Nothing ->
+                            values.units
+
+                        Just units ->
+                            let
+                                newUnits =
+                                    case msg of
+                                        ClickedIncrementUnits ->
+                                            case maxUnits of
+                                                Nothing ->
+                                                    units + 1
+
+                                                Just maximum ->
+                                                    min maximum (units + 1)
+
+                                        ClickedDecrementUnits ->
+                                            max 1 (units - 1)
+                            in
+                            String.fromInt newUnits
+            }
+        )
+        model
 
 
 
@@ -392,15 +449,18 @@ view session model =
         cardContainer =
             div [ class "w-full md:w-1/2 flex flex-wrap bg-white p-4" ]
 
-        viewContent sale =
-            div [ class "flex-grow grid items-center relative bg-white md:bg-transparent" ]
+        viewContent sale formView =
+            div [ class "flex-grow grid items-center relative bg-white md:bg-gray-100" ]
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
-                , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2 place-items-center" ]
-                    [ div [ class "md:w-2/3 md:mx-auto" ]
+                , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
+                    [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
                         [ viewProductImg sale.image
                         , h2 [ class "font-bold text-lg text-black mt-4" ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , viewContactTheSeller sale.creator
+                        ]
+                    , div [ class "bg-gray-100 px-4 pt-6 pb-4 w-full rounded-lg md:p-0 md:w-2/3 md:mx-auto md:place-self-start" ]
+                        [ formView
                         ]
                     ]
                 ]
@@ -420,7 +480,8 @@ view session model =
                             --             Nothing
                             --         )
                             --     ]
-                            viewContent sale
+                            -- TODO - Show form with guest user
+                            viewContent sale (div [] [])
 
                         RemoteData.Failure err ->
                             Page.fullPageGraphQLError (t "shop.title") err
@@ -470,15 +531,15 @@ view session model =
                                             LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
                                                 |> Maybe.map .asset
 
-                                        card =
-                                            viewCard
-                                                loggedIn.shared
-                                                (Just loggedIn.accountName)
-                                                sale
-                                                (viewLoggedInButton loggedIn model_ sale)
-                                                maybeBalance
-
+                                        -- card =
+                                        --     viewCard
+                                        --         loggedIn.shared
+                                        --         (Just loggedIn.accountName)
+                                        --         sale
+                                        --         (viewLoggedInButton loggedIn model_ sale)
+                                        --         maybeBalance
                                         transferForm =
+                                            -- TODO - Remove ViewingCard state
                                             if model_.viewing == ViewingCard then
                                                 []
 
@@ -498,6 +559,20 @@ view session model =
                                         --         )
                                         --     ]
                                         , viewContent sale
+                                            (Form.view []
+                                                loggedIn.shared.translators
+                                                (\submitButton ->
+                                                    [ submitButton [ class "button button-primary w-full" ]
+                                                        -- TODO - I18N
+                                                        [ text "Buy" ]
+                                                    ]
+                                                )
+                                                (createForm loggedIn.shared.translators sale GotFormInteractionMsg)
+                                                model_.form
+                                                { toMsg = GotFormMsg
+                                                , onSubmit = ClickedTransfer sale
+                                                }
+                                            )
                                         ]
                                         |> Html.map AsLoggedInMsg
 
@@ -641,56 +716,54 @@ viewGuestButton { translators } sale =
         [ text <| translators.t "shop.buy" ]
 
 
-viewLoggedInButton : LoggedIn.Model -> LoggedInModel -> Product -> Html LoggedInMsg
-viewLoggedInButton loggedIn model sale =
-    let
-        text_ =
-            text << loggedIn.shared.translators.t
-    in
-    div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
-        [ if sale.creator.account == loggedIn.accountName then
-            div [ class "flex md:justify-end" ]
-                [ button
-                    [ class "button button-primary w-full px-4"
-                    , onClick (ClickedEdit sale)
-                    ]
-                    [ text_ "shop.edit" ]
-                ]
 
-          else if sale.units <= 0 && sale.trackStock then
-            div [ class "flex -mx-2 md:justify-end" ]
-                [ button
-                    [ disabled True
-                    , class "button button-disabled mx-auto"
-                    ]
-                    [ text_ "shop.out_of_stock" ]
-                ]
-
-          else if model.viewing == EditingTransfer then
-            div [ class "flex md:justify-end" ]
-                [ button
-                    [ class "button button-primary"
-                    , onClick
-                        (Form.parse (createForm loggedIn.shared.translators sale)
-                            model.form2
-                            { onError = GotFormMsg
-                            , onSuccess = ClickedTransfer sale
-                            }
-                        )
-                    , disabled model.isBuyButtonDisabled
-                    ]
-                    [ text_ "shop.transfer.submit" ]
-                ]
-
-          else
-            div [ class "flex -mx-2 md:justify-end" ]
-                [ button
-                    [ class "button button-primary w-full sm:w-40 mx-auto"
-                    , onClick ClickedBuy
-                    ]
-                    [ text_ "shop.buy" ]
-                ]
-        ]
+-- viewLoggedInButton : LoggedIn.Model -> LoggedInModel -> Product -> Html LoggedInMsg
+-- viewLoggedInButton loggedIn model sale =
+--     let
+--         text_ =
+--             text << loggedIn.shared.translators.t
+--     in
+--     div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
+--         [ if sale.creator.account == loggedIn.accountName then
+--             div [ class "flex md:justify-end" ]
+--                 [ button
+--                     [ class "button button-primary w-full px-4"
+--                     , onClick (ClickedEdit sale)
+--                     ]
+--                     [ text_ "shop.edit" ]
+--                 ]
+--           else if sale.units <= 0 && sale.trackStock then
+--             div [ class "flex -mx-2 md:justify-end" ]
+--                 [ button
+--                     [ disabled True
+--                     , class "button button-disabled mx-auto"
+--                     ]
+--                     [ text_ "shop.out_of_stock" ]
+--                 ]
+--           else if model.viewing == EditingTransfer then
+--             div [ class "flex md:justify-end" ]
+--                 [ button
+--                     [ class "button button-primary"
+--                     , onClick
+--                         (Form.parse (createForm loggedIn.shared.translators sale)
+--                             model.form2
+--                             { onError = GotFormMsg
+--                             , onSuccess = ClickedTransfer sale
+--                             }
+--                         )
+--                     , disabled model.isBuyButtonDisabled
+--                     ]
+--                     [ text_ "shop.transfer.submit" ]
+--                 ]
+--           else
+--             div [ class "flex -mx-2 md:justify-end" ]
+--                 [ button
+--                     [ class "button button-primary w-full sm:w-40 mx-auto"
+--                     , onClick ClickedBuy
+--                     ]
+--                     [ text_ "shop.buy" ]
+--                 ]
+--         ]
 
 
 type alias FormInput =
@@ -705,11 +778,12 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> Product -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) product =
+createForm : Shared.Translators -> Product -> (FormInteractionMsg -> msg) -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) product toFormInteractionMsg =
     Form.succeed FormOutput
         |> Form.with
             (Form.Text.init
+                -- TODO - Adjust translation
                 { label = t "shop.transfer.units_label"
                 , id = "units-input"
                 }
@@ -718,6 +792,24 @@ createForm ({ t } as translators) product =
                 |> Form.Text.withExtraAttrs
                     [ autocomplete False
                     , Html.Attributes.min "0"
+                    , class "text-center"
+                    ]
+                |> Form.Text.withContainerAttrs [ class "mb-6" ]
+                |> Form.Text.withElements
+                    [ button
+                        [ class "absolute top-1 bottom-1 left-1 px-4 bg-white rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                        , type_ "button"
+                        , onClick (toFormInteractionMsg ClickedDecrementUnits)
+                        ]
+                        [ Icons.minus "fill-current" ]
+                    , button
+                        [ class "absolute top-1 bottom-1 right-1 px-4 bg-white rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                        , type_ "button"
+                        , onClick (toFormInteractionMsg ClickedIncrementUnits)
+
+                        -- TODO - Test with voice over. We probably need an aria label
+                        ]
+                        [ Icons.plus "fill-current" ]
                     ]
                 |> Form.textField
                     { parser =
@@ -739,30 +831,36 @@ createForm ({ t } as translators) product =
                     }
             )
         |> Form.withNoOutput
-            (Form.Text.init
-                { label = t "shop.transfer.quantity_label"
-                , id = "value-input"
-                }
-                |> Form.Text.withDisabled True
-                |> Form.Text.withCurrency product.symbol
-                |> Form.textField
-                    { parser = Ok
-                    , value =
-                        \{ units } ->
-                            case String.toInt units of
+            (Form.introspect
+                (\values ->
+                    div [ class "bg-green pt-4 mb-6 rounded-sm flex flex-col text-white font-bold text-center" ]
+                        [ span [ class "text-xl px-4" ]
+                            [ case String.toInt values.units of
                                 Nothing ->
-                                    "0"
+                                    text "0"
 
                                 Just unitsValue ->
-                                    String.fromFloat (toFloat unitsValue * product.price)
-                    , update = \_ input -> input
-                    , externalError = always Nothing
-                    }
+                                    (toFloat unitsValue * product.price)
+                                        |> String.fromFloat
+                                        |> text
+                            ]
+
+                        -- TODO - I18N
+                        , span [ class "px-4" ]
+                            [ text "Preço (MUDA)" ]
+
+                        -- TODO - Optionally receive balance
+                        -- TODO - I18N
+                        , span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm" ]
+                            [ text "Você possui 1200 mudas" ]
+                        ]
+                        |> Form.arbitrary
+                )
             )
         |> Form.with
+            -- TODO - Adjust translation
             (Form.RichText.init { label = t "shop.transfer.memo_label" }
-                |> Form.RichText.withPlaceholder (t defaultMemoKey)
-                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withContainerAttrs [ class "mb-6" ]
                 |> Form.richText
                     { parser = Ok
                     , value = .memo
@@ -777,8 +875,8 @@ viewTransferForm { shared } sale model =
     Form.viewWithoutSubmit []
         shared.translators
         (\_ -> [])
-        (createForm shared.translators sale)
-        model.form2
+        (createForm shared.translators sale GotFormInteractionMsg)
+        model.form
         { toMsg = GotFormMsg }
 
 
@@ -829,6 +927,19 @@ loggedInMsgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
+
+        GotFormInteractionMsg subMsg ->
+            "GotFormInteractionMsg" :: formInteractionMsgToString subMsg
+
+
+formInteractionMsgToString : FormInteractionMsg -> List String
+formInteractionMsgToString msg =
+    case msg of
+        ClickedDecrementUnits ->
+            [ "ClickedDecrementUnits" ]
+
+        ClickedIncrementUnits ->
+            [ "ClickedIncrementUnits" ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
