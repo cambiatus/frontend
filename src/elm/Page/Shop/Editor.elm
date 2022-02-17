@@ -518,15 +518,10 @@ update msg model loggedIn =
                 LoadingBalancesUpdate saleId ->
                     let
                         saleFetch =
-                            case String.toInt saleId of
-                                Nothing ->
-                                    Cmd.none
-
-                                Just id ->
-                                    Api.Graphql.query loggedIn.shared
-                                        (Just loggedIn.authToken)
-                                        (Shop.productQuery id)
-                                        CompletedSaleLoad
+                            Api.Graphql.query loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (Shop.productQuery saleId)
+                                CompletedSaleLoad
                     in
                     LoadingSaleUpdate balances
                         |> UR.init

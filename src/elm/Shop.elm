@@ -54,7 +54,7 @@ type alias ProductPreview =
 
 
 type alias ProductId =
-    String
+    Int
 
 
 type Filter

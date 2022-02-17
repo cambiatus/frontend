@@ -68,7 +68,7 @@ type Route
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
-    | EditSale String
+    | EditSale Int
     | ViewSale Int
     | ViewTransfer Int
     | Invite String
@@ -168,7 +168,7 @@ parser url =
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> int)
-        , Url.map EditSale (s "shop" </> string </> s "edit")
+        , Url.map EditSale (s "shop" </> int </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Join
@@ -537,7 +537,7 @@ routeToString route =
                     ( [ "shop", "new", "sell" ], [] )
 
                 EditSale saleId ->
-                    ( [ "shop", saleId, "edit" ], [] )
+                    ( [ "shop", String.fromInt saleId, "edit" ], [] )
 
                 ViewSale saleId ->
                     ( [ "shop", String.fromInt saleId ], [] )

@@ -188,7 +188,7 @@ type Status
     | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
-    | ShopEditor (Maybe String) ShopEditor.Model
+    | ShopEditor (Maybe Int) ShopEditor.Model
     | ShopViewer Int ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
