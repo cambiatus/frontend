@@ -23,7 +23,7 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, a, button, div, h2, img, span, text)
-import Html.Attributes exposing (alt, autocomplete, class, href, src, type_)
+import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, href, src, type_)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -296,14 +296,9 @@ updateAsLoggedIn msg model loggedIn =
             UR.init model
 
         ClickedEdit sale ->
-            let
-                idString =
-                    String.fromInt sale.id
-            in
             model
                 |> UR.init
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale idString))
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale sale.id))
 
         ClickedBuy ->
             { model | viewing = EditingTransfer }
@@ -499,8 +494,7 @@ view session model =
                                 (Form.viewWithoutSubmit []
                                     guest.shared.translators
                                     (\_ ->
-                                        [ -- TODO - I18N
-                                          a
+                                        [ a
                                             [ Route.ViewSale sale.id
                                                 |> Just
                                                 |> Route.Join
@@ -516,6 +510,7 @@ view session model =
                                         , price = sale.price
                                         }
                                         Nothing
+                                        { isDisabled = False }
                                         GotFormInteractionMsgAsGuest
                                     )
                                     model_.form
@@ -570,6 +565,15 @@ view session model =
                                     let
                                         maybeBalance =
                                             LE.find (\bal -> bal.asset.symbol == sale.symbol) model_.balances
+
+                                        isOwner =
+                                            sale.creator.account == loggedIn.accountName
+
+                                        isOutOfStock =
+                                            sale.trackStock && sale.units < 1
+
+                                        isDisabled =
+                                            isOwner || isOutOfStock
                                     in
                                     div [ class "flex-grow flex flex-col" ]
                                         [ Page.viewHeader loggedIn sale.title
@@ -578,13 +582,34 @@ view session model =
                                             (Form.view []
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
-                                                    [ submitButton [ class "button button-primary w-full" ]
-                                                        -- TODO - I18N
-                                                        [ text <| t "shop.buy" ]
+                                                    [ if isOwner then
+                                                        a
+                                                            [ class "button button-primary w-full"
+                                                            , Route.href (Route.EditSale sale.id)
+                                                            ]
+                                                            -- TODO - Adjust translation to just "Edit"
+                                                            [ text <| t "shop.edit" ]
+
+                                                      else
+                                                        submitButton
+                                                            [ class "button button-primary w-full"
+                                                            , disabled isOutOfStock
+                                                            ]
+                                                            [ if isOutOfStock then
+                                                                text <| t "shop.sold_out"
+
+                                                              else
+                                                                text <| t "shop.buy"
+                                                            ]
                                                     ]
                                                 )
-                                                (createForm loggedIn.shared.translators sale maybeBalance GotFormInteractionMsg)
-                                                model_.form
+                                                (createForm loggedIn.shared.translators
+                                                    sale
+                                                    maybeBalance
+                                                    { isDisabled = isDisabled }
+                                                    GotFormInteractionMsg
+                                                )
+                                                (Form.withDisabled isDisabled model_.form)
                                                 { toMsg = GotFormMsg
                                                 , onSubmit = ClickedTransfer sale
                                                 }
@@ -827,9 +852,10 @@ createForm :
             , price : Float
         }
     -> Maybe Balance
+    -> { isDisabled : Bool }
     -> (FormInteractionMsg -> msg)
     -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) product maybeBalance toFormInteractionMsg =
+createForm ({ t } as translators) product maybeBalance { isDisabled } toFormInteractionMsg =
     Form.succeed FormOutput
         |> Form.with
             (Form.Text.init
@@ -847,14 +873,24 @@ createForm ({ t } as translators) product maybeBalance toFormInteractionMsg =
                 |> Form.Text.withContainerAttrs [ class "mb-6" ]
                 |> Form.Text.withElements
                     [ button
-                        [ class "absolute top-1 bottom-1 left-1 px-4 bg-white rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                        [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring text-orange-300"
+                        , classList
+                            [ ( "bg-white hover:text-orange-300/70", not isDisabled )
+                            , ( "bg-gray-500 cursor-default", isDisabled )
+                            ]
                         , type_ "button"
+                        , disabled isDisabled
                         , onClick (toFormInteractionMsg ClickedDecrementUnits)
                         ]
                         [ Icons.minus "fill-current" ]
                     , button
-                        [ class "absolute top-1 bottom-1 right-1 px-4 bg-white rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                        [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring text-orange-300"
+                        , classList
+                            [ ( "bg-white hover:text-orange-300/70", not isDisabled )
+                            , ( "bg-gray-500 cursor-default", isDisabled )
+                            ]
                         , type_ "button"
+                        , disabled isDisabled
                         , onClick (toFormInteractionMsg ClickedIncrementUnits)
 
                         -- TODO - Test with voice over. We probably need an aria label
