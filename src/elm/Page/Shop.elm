@@ -142,6 +142,7 @@ view loggedIn model =
                 Loading ->
                     div [ class "container mx-auto px-4 mt-6 mb-10" ]
                         [ viewHeader loggedIn.shared.translators
+                        , viewShopFilter loggedIn.shared.translators model
                         , Page.fullPageLoading loggedIn.shared
                         ]
 
