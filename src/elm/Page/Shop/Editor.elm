@@ -22,7 +22,8 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, classList, disabled, id, maxlength, type_)
+import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -239,12 +240,14 @@ createForm loggedIn =
                                 [ button
                                     [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
                                     , type_ "button"
+                                    , ariaLabel <| t "shop.subtract_unit"
                                     , onClick ClickedDecrementStockUnits
                                     ]
                                     [ Icons.minus "fill-current" ]
                                 , button
                                     [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
                                     , type_ "button"
+                                    , ariaLabel <| t "shop.add_unit"
                                     , onClick ClickedIncrementStockUnits
                                     ]
                                     [ Icons.plus "fill-current" ]

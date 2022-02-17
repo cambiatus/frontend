@@ -764,6 +764,7 @@
     "units_label": "Quantes unitats tens en estoc?",
     "title": "Botiga",
     "headline": "Ofertes creades amb 💚",
+    "headline_no_emoji": "Ofertes creades amb amor",
     "subtitle": "Compra i ven a la teva comunitat",
     "description": "Aquí podeu utilitzar les vostres monedes per comprar productes i serveis, o guanyar monedes venent els vostres productes i serveis",
     "all_offers": "Totes les ofertes",
@@ -801,8 +802,11 @@
     "by_user": "Per {{user}}",
     "free": "Gratis",
     "sold_out": "Venut",
+    "total_price": "Preu total: {{amount}} {{symbol}}",
     "enjoy": "Gaudeix",
     "no_image": "Cap imatge",
+    "subtract_unit": "Resta una unitat",
+    "add_unit": "Afegir una unitat",
     "transfer": {
       "units_label": "Trieu la quantitat",
       "price": "Preu ({{symbol}})",
@@ -811,6 +815,8 @@
       "default_memo": "Gràcies per la teva ajuda",
       "submit": "Compra ara",
       "success": "Compra satisfactòria!",
+      "contact_seller": "Contacta amb el venedor",
+      "visit_seller": "Visiteu el perfil de {{seller}}",
       "errors": {
         "unitEmpty": "La unitat no pot estar buida",
         "unitTooLow": "La unitat és massa baixa, ha de ser com a mínim 1",
@@ -1118,6 +1124,13 @@
       "instagram": "Instagram",
       "telegram": "Telegram",
       "whatsapp": "Whatsapp"
+    },
+    "reach_out": {
+      "phone": "Contactar per telèfon",
+      "instagram": "Contactar per Instagram",
+      "telegram": "Contactar per Telegram",
+      "whatsapp": "Contactar per Whatsapp",
+      "email": "Contactar per correu electrònic"
     },
     "phone": {
       "label": "Número de telèfon (amb DDD)",

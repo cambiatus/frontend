@@ -33,6 +33,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, tabindex, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
@@ -739,13 +740,30 @@ contactTypeToIcon class_ isInverted contactType =
                 Icons.whatsapp class_
 
 
-circularIconWithGrayBg : String -> Normalized -> Html msg
-circularIconWithGrayBg class_ (Normalized normalized) =
+circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
+circularIconWithGrayBg translators class_ (Normalized normalized) =
     a
         [ toHref (Normalized normalized)
         , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+        , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
         [ contactTypeToIcon class_ True normalized.contactType ]
+
+
+ariaLabelForContactType : Translators -> ContactType -> String
+ariaLabelForContactType { t } contactType =
+    case contactType of
+        Phone ->
+            t "contact_form.reach_out.phone"
+
+        Instagram ->
+            t "contact_form.reach_out.instagram"
+
+        Telegram ->
+            t "contact_form.reach_out.telegram"
+
+        Whatsapp ->
+            t "contact_form.reach_out.whatsapp"
 
 
 circularIcon : String -> Normalized -> Html msg

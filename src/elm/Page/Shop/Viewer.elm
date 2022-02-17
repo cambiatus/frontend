@@ -22,8 +22,9 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, img, span, text)
+import Html exposing (Html, a, button, div, h2, h3, img, span, text)
 import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, href, src, type_)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -474,9 +475,9 @@ view session model =
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
                         [ viewProductImg translators sale.image
-                        , h2 [ class "font-bold text-lg text-black mt-4" ] [ text sale.title ]
+                        , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
-                        , viewContactTheSeller { isGuest = isGuest } sale.creator
+                        , viewContactTheSeller translators { isGuest = isGuest } sale.creator
                         ]
                     , div [ class "bg-gray-100 px-4 pt-6 pb-4 w-full rounded-lg md:p-0 md:w-2/3 md:mx-auto md:place-self-start" ]
                         [ formView
@@ -655,8 +656,8 @@ viewProductImg { t } maybeImgUrl =
         [ image ]
 
 
-viewContactTheSeller : { isGuest : Bool } -> Profile.Minimal -> Html msg
-viewContactTheSeller { isGuest } profile =
+viewContactTheSeller : Shared.Translators -> { isGuest : Bool } -> Profile.Minimal -> Html msg
+viewContactTheSeller ({ t, tr } as translators) { isGuest } profile =
     let
         makeHref originalRoute =
             if isGuest then
@@ -668,26 +669,31 @@ viewContactTheSeller { isGuest } profile =
             else
                 originalRoute
                     |> Route.href
+
+        name =
+            profile.name
+                |> Maybe.withDefault (Eos.nameToString profile.account)
     in
     div []
         [ div [ class "flex items-center" ]
-            [ a [ makeHref (Route.Profile profile.account) ]
+            [ a
+                [ makeHref (Route.Profile profile.account)
+                , ariaHidden True
+                ]
                 [ Avatar.view profile.avatar "w-14 h-14" ]
             , div [ class "ml-4 flex flex-col text-gray-333" ]
-                [ h2 [ class "font-bold lowercase" ] [ text "Contact the seller" ]
+                [ h3 [ class "font-bold lowercase" ] [ text <| t "shop.transfer.contact_seller" ]
                 , a
                     [ makeHref (Route.Profile profile.account)
                     , class "hover:underline"
+                    , ariaLabel <| tr "shop.transfer.visit_seller" [ ( "seller", name ) ]
                     ]
-                    [ profile.name
-                        |> Maybe.withDefault (Eos.nameToString profile.account)
-                        |> text
-                    ]
+                    [ text name ]
                 ]
             ]
         , div [ class "ml-18 mt-2 flex flex-wrap gap-4" ]
             (profile.contacts
-                |> List.map (Profile.Contact.circularIconWithGrayBg "")
+                |> List.map (Profile.Contact.circularIconWithGrayBg translators "")
                 |> (\contacts ->
                         case profile.email of
                             Nothing ->
@@ -698,6 +704,7 @@ viewContactTheSeller { isGuest } profile =
                                     ++ [ a
                                             [ href ("mailto:" ++ email)
                                             , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+                                            , ariaLabel <| t "contact_form.reach_out.email"
                                             ]
                                             [ Icons.mail "" ]
                                        ]
@@ -880,6 +887,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                         , type_ "button"
                         , disabled isDisabled
                         , onClick (toFormInteractionMsg ClickedDecrementUnits)
+                        , ariaLabel <| t "shop.subtract_unit"
                         ]
                         [ Icons.minus "fill-current" ]
                     , button
@@ -891,8 +899,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                         , type_ "button"
                         , disabled isDisabled
                         , onClick (toFormInteractionMsg ClickedIncrementUnits)
-
-                        -- TODO - Test with voice over. We probably need an aria label
+                        , ariaLabel <| t "shop.add_unit"
                         ]
                         [ Icons.plus "fill-current" ]
                     ]
@@ -918,8 +925,13 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
         |> Form.withNoOutput
             (Form.introspect
                 (\values ->
-                    div [ class "bg-green pt-4 mb-6 rounded-sm flex flex-col text-white font-bold text-center" ]
-                        [ span [ class "text-xl px-4" ]
+                    div
+                        [ class "bg-green pt-4 mb-6 rounded-sm flex flex-col text-white font-bold text-center"
+                        ]
+                        [ span
+                            [ class "text-xl px-4"
+                            , ariaHidden True
+                            ]
                             [ case String.toInt values.units of
                                 Nothing ->
                                     text "0"
@@ -929,7 +941,23 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                                         |> String.fromFloat
                                         |> text
                             ]
-                        , span [ class "px-4" ]
+                        , case String.toInt values.units of
+                            Nothing ->
+                                text ""
+
+                            Just unitsValue ->
+                                span [ Html.Attributes.id "total-price-descriptor", class "sr-only" ]
+                                    [ text <|
+                                        tr "shop.total_price"
+                                            [ ( "amount"
+                                              , toFloat unitsValue
+                                                    * product.price
+                                                    |> String.fromFloat
+                                              )
+                                            , ( "symbol", Eos.symbolToSymbolCodeString product.symbol )
+                                            ]
+                                    ]
+                        , span [ class "px-4", ariaHidden True ]
                             [ text <|
                                 tr "shop.transfer.price"
                                     [ ( "symbol", Eos.symbolToSymbolCodeString product.symbol ) ]

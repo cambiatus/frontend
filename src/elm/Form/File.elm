@@ -370,7 +370,7 @@ viewInput : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewInput (Options options) viewConfig toMsg =
     input
         [ id options.id
-        , class "sr-only form-file"
+        , class "hidden form-file"
         , type_ "file"
         , onFileChange (RequestedUploadFile >> toMsg)
         , acceptFileTypes options.fileTypes

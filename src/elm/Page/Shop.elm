@@ -16,8 +16,9 @@ import Dict
 import Eos
 import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, div, h1, h2, img, p, span, text)
+import Html exposing (Html, a, div, h1, h2, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
@@ -180,7 +181,10 @@ view loggedIn model =
 
 viewHeader : Shared.Translators -> Html Msg
 viewHeader { t } =
-    h1 [ class "font-bold text-lg" ]
+    h1
+        [ class "font-bold text-lg"
+        , ariaLabel <| t "shop.headline_no_emoji"
+        ]
         [ text <| t "shop.headline"
         ]
 
@@ -232,7 +236,7 @@ viewGrid loggedIn cards =
                 |> List.filter .isAvailable
     in
     div [ class "mt-6 mb-10" ]
-        [ div [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ]
+        [ ul [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ]
             (List.indexedMap
                 (viewCard loggedIn.shared.translators)
                 (availableCards ++ outOfStockCards)
@@ -257,55 +261,57 @@ viewCard ({ t, tr } as translators) index card =
         isFree =
             card.product.price == 0
     in
-    a
-        [ class "rounded bg-white flex flex-col hover:shadow-md transition-shadow duration-300"
-        , Html.Attributes.title card.product.title
-        , Route.href (Route.ViewSale card.product.id)
-        ]
-        [ img [ src image, alt "", class "rounded-t h-32 object-cover" ] []
-        , div [ class "p-4 flex flex-col flex-grow" ]
-            [ h2 [ class "line-clamp-3" ] [ text card.product.title ]
-            , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
-                [ text <|
-                    tr "shop.by_user"
-                        [ ( "user"
-                          , card.product.creator.name
-                                |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
-                          )
-                        ]
-                ]
-            , div [ class "font-bold flex flex-col mt-4" ]
-                [ span
-                    [ class "text-lg"
-                    , classList
-                        [ ( "text-green", card.isAvailable )
-                        , ( "text-gray-900", not card.isAvailable )
-                        , ( "lowercase", isFree )
-                        ]
+    li [ class "rounded bg-white" ]
+        [ a
+            [ class "h-full flex flex-col hover:shadow-md transition-shadow duration-300"
+            , Html.Attributes.title card.product.title
+            , Route.href (Route.ViewSale card.product.id)
+            ]
+            [ img [ src image, alt "", class "rounded-t h-32 object-cover" ] []
+            , div [ class "p-4 flex flex-col flex-grow" ]
+                [ h2 [ class "line-clamp-3 text-black" ] [ text card.product.title ]
+                , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
+                    [ text <|
+                        tr "shop.by_user"
+                            [ ( "user"
+                              , card.product.creator.name
+                                    |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
+                              )
+                            ]
                     ]
-                    [ if isFree then
-                        text <| t "shop.free"
-
-                      else
-                        text <|
-                            Eos.formatSymbolAmount translators
-                                card.product.symbol
-                                card.product.price
-                    ]
-                , span
-                    [ classList
-                        [ ( "text-sm text-gray-333 uppercase", card.isAvailable )
-                        , ( "text-red font-normal lowercase", not card.isAvailable )
+                , div [ class "font-bold flex flex-col mt-4" ]
+                    [ span
+                        [ class "text-lg"
+                        , classList
+                            [ ( "text-green", card.isAvailable )
+                            , ( "text-gray-900", not card.isAvailable )
+                            , ( "lowercase", isFree )
+                            ]
                         ]
-                    ]
-                    [ if not card.isAvailable then
-                        text <| t "shop.sold_out"
+                        [ if isFree then
+                            text <| t "shop.free"
 
-                      else if isFree then
-                        text <| t "shop.enjoy"
+                          else
+                            text <|
+                                Eos.formatSymbolAmount translators
+                                    card.product.symbol
+                                    card.product.price
+                        ]
+                    , span
+                        [ classList
+                            [ ( "text-sm text-gray-333 uppercase", card.isAvailable )
+                            , ( "text-red font-normal lowercase", not card.isAvailable )
+                            ]
+                        ]
+                        [ if not card.isAvailable then
+                            text <| t "shop.sold_out"
 
-                      else
-                        text <| Eos.symbolToSymbolCodeString card.product.symbol
+                          else if isFree then
+                            text <| t "shop.enjoy"
+
+                          else
+                            text <| Eos.symbolToSymbolCodeString card.product.symbol
+                        ]
                     ]
                 ]
             ]

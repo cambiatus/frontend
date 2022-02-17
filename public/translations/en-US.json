@@ -761,6 +761,7 @@
     "units_label": "How many units do you have in stock?",
     "title": "Shop",
     "headline": "Offers created with 💚",
+    "headline_no_emoji": "Offers created with love",
     "subtitle": "Buy and sell in your community",
     "description": "Here you can use your coins to buy products and services, or earn coins selling your products and services",
     "all_offers": "All offers",
@@ -798,8 +799,11 @@
     "by_user": "By {{user}}",
     "free": "For free",
     "sold_out": "Sold out",
+    "total_price": "Total price: {{amount}} {{symbol}}",
     "enjoy": "Enjoy",
     "no_image": "No image",
+    "subtract_unit": "Subtract a unit",
+    "add_unit": "Add a unit",
     "transfer": {
       "units_label": "Pick the amount",
       "price": "Price ({{symbol}})",
@@ -808,6 +812,8 @@
       "default_memo": "Thanks for the help!",
       "submit": "Buy",
       "success": "Successful purchase!",
+      "contact_seller": "Contact the seller",
+      "visit_seller": "Visit {{seller}}'s profile",
       "errors": {
         "unitEmpty": "Unit cannot be empty",
         "unitTooLow": "Unit is too low, must be at least 1",
@@ -1116,6 +1122,13 @@
       "instagram": "Instagram",
       "telegram": "Telegram",
       "whatsapp": "Whatsapp"
+    },
+    "reach_out": { 
+      "phone": "Reach out via phone",
+      "instagram":  "Reach out on Instagram",
+      "telegram": "Reach out on Telegram",
+      "whatsapp": "Reach out on Whatsapp",
+      "email": "Reach out via email"
     },
     "phone": {
       "label": "Phone Number (with DDD)",

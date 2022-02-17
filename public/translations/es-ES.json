@@ -764,6 +764,7 @@
     "units_label": "Cuantas unidades tienes en stock?",
     "title": "Tienda",
     "headline": "Ofertas creadas con 💚",
+    "headline_no_emoji": "Ofertas creadas con amor",
     "subtitle": "Compra y vende en tu comunidad",
     "description": "Aquí puedes usar tus monedas para comprar productos y servicios, o ganar monedas vendiendo tus productos y servicios",
     "all_offers": "Todas las ofertas",
@@ -801,8 +802,11 @@
     "by_user": "Por {{user}}",
     "free": "Gratis",
     "sold_out": "Liquidado",
+    "total_price": "Precio total: {{amount}} {{symbol}}",
     "enjoy": "Disfruta",
     "no_image": "Sin imágen",
+    "subtract_unit": "Restar una unidad",
+    "add_unit": "Añadir una unidad",
     "transfer": {
       "units_label": "Elige la cantidad",
       "price": "Precio ({{symbol}})",
@@ -811,6 +815,8 @@
       "default_memo": "Gracias por tu ayuda",
       "submit": "Comprar",
       "success": "Compra exitosa!",
+      "contact_seller": "Contacta al vendedor",
+      "visit_seller": "Visita el perfil de {{seller}}",
       "errors": {
         "unitEmpty": "La unidad no puede estar vacía",
         "unitTooLow": "La unidad es demasiado baja, debe ser al menos 1",
@@ -1119,6 +1125,13 @@
       "instagram": "Instagram",
       "telegram": "Telegram",
       "whatsapp": "Whatsapp"
+    },
+    "reach_out": {
+      "phone": "Contacto por teléfono",
+      "instagram": "Contacto por Instagram",
+      "telegram": "Contacto por Telegram",
+      "whatsapp": "Contacto por Whatsapp",
+      "email": "Contacto por correo electrónico"
     },
     "phone": {
       "label": "Número de teléfono (con DDD)",
