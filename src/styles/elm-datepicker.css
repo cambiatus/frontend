@@ -7,7 +7,7 @@
 }
 
 .elm-datepicker--picker {
-  @apply absolute w-full border-solid border border-purple-500 bg-white z-10 rounded-sm;
+  @apply absolute w-full border-solid border border-purple-500 bg-white z-20 rounded-sm;
 }
 
 .elm-datepicker--picker-header,
@@ -114,11 +114,11 @@
 }
 
 .elm-datepicker--picked:hover {
-  background: #45469b;
+  @apply text-white bg-purple-500;
 }
 
 .elm-datepicker--today {
-  @apply font-bold bg-light-grey;
+  @apply font-bold bg-light-grey text-gray-333;
 }
 
 .elm-datepicker--other-month {

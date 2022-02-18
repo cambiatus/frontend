@@ -11,6 +11,7 @@ module Token exposing
     , expiryOptsDataDecoder
     , getExpiryOpts
     , getToken
+    , tokenTypeFromString
     , tokenTypeToString
     , updateTokenDataDecoder
     )
@@ -198,3 +199,16 @@ tokenTypeToString tokenType =
 
         Expiry ->
             "expiry"
+
+
+tokenTypeFromString : String -> Maybe TokenType
+tokenTypeFromString tokenType =
+    case tokenType of
+        "mcc" ->
+            Just Mcc
+
+        "expiry" ->
+            Just Expiry
+
+        _ ->
+            Nothing

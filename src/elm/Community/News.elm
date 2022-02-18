@@ -15,6 +15,7 @@ import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
 import Iso8601
 import List.Extra
+import Markdown exposing (Markdown)
 import Maybe.Extra
 import Profile
 import Route
@@ -22,7 +23,6 @@ import Session.Shared exposing (Shared, Translators)
 import Time
 import Utils
 import View.Components
-import View.MarkdownEditor
 
 
 
@@ -30,7 +30,7 @@ import View.MarkdownEditor
 
 
 type alias Model =
-    { description : String
+    { description : Markdown
     , id : Int
     , title : String
     , receipt : Maybe Receipt
@@ -76,7 +76,7 @@ reactionToString reaction =
             "👏"
 
         FaceWithRaisedEyebrow ->
-            "\u{1F928}"
+            "🤨"
 
         GrinningFaceWithBigEyes ->
             "😃"
@@ -121,7 +121,7 @@ listReactions =
 selectionSet : SelectionSet Model Cambiatus.Object.News
 selectionSet =
     SelectionSet.succeed Model
-        |> SelectionSet.with News.description
+        |> SelectionSet.with (Markdown.selectionSet News.description)
         |> SelectionSet.with News.id
         |> SelectionSet.with News.title
         |> SelectionSet.with (News.receipt receiptSelectionSet)
@@ -231,7 +231,7 @@ viewSummary { t } hasRead news =
             ]
         , style "grid-template-columns" "28px 1fr 80px"
         , title news.title
-        , Route.href (Route.News (Just news.id))
+        , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
         ]
         [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
         , div [ class "truncate ml-4 mr-16" ]
@@ -240,7 +240,7 @@ viewSummary { t } hasRead news =
                 [ class "truncate"
                 , ariaHidden True
                 ]
-                [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                [ text <| Markdown.toUnformattedString news.description ]
             , p [ class "sr-only" ]
                 [ if hasRead then
                     text "Lido"

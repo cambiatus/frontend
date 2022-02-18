@@ -19,7 +19,6 @@ module Community exposing
     , createCommunityData
     , createCommunityDataDecoder
     , currencyTranslationKey
-    , decodeBalance
     , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
@@ -29,7 +28,6 @@ module Community exposing
     , inviteQuery
     , isFieldLoading
     , isNonExistingCommunityError
-    , logoBackground
     , maybeFieldValue
     , mergeFields
     , newCommunitySubscription
@@ -74,6 +72,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
 import List.Extra
+import Markdown exposing (Markdown)
 import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
@@ -102,7 +101,7 @@ type alias Metadata =
 
 type alias Model =
     { name : String
-    , description : String
+    , description : Markdown
     , symbol : Eos.Symbol
     , logo : String
     , subdomain : String
@@ -325,7 +324,7 @@ communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
-        |> with Community.description
+        |> with (Markdown.selectionSet Community.description)
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
@@ -453,30 +452,6 @@ subdomainQuery subdomain =
     Query.community (\optionals -> { optionals | subdomain = Present subdomain }) communitySelectionSet
 
 
-logoUrl : Maybe String -> String
-logoUrl maybeUrl =
-    let
-        logoPlaceholder =
-            "/icons/community_placeholder.png"
-    in
-    case maybeUrl of
-        Nothing ->
-            logoPlaceholder
-
-        Just url ->
-            if String.isEmpty (String.trim url) then
-                logoPlaceholder
-
-            else
-                url
-
-
-logoBackground : Maybe String -> Html.Attribute msg
-logoBackground maybeUrl =
-    Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl maybeUrl ++ ")")
-
-
 addPhotosMutation : Eos.Symbol -> List String -> SelectionSet (Maybe Model) RootMutation
 addPhotosMutation symbol photos =
     Mutation.addCommunityPhotos { symbol = Eos.symbolToString symbol, urls = photos }
@@ -489,7 +464,7 @@ addPhotosMutation symbol photos =
 
 type alias Objective =
     { id : Int
-    , description : String
+    , description : Markdown
     , creator : Eos.Name
     , actions : List Action
     , community : Metadata
@@ -501,7 +476,7 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id
-        |> with Objective.description
+        |> with (Markdown.selectionSet Objective.description)
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity Action.selectionSet)
         |> with (Objective.community communitiesSelectionSet)
@@ -510,7 +485,7 @@ objectiveSelectionSet =
 
 type alias CreateObjectiveAction =
     { communityId : Eos.Symbol
-    , description : String
+    , description : Markdown
     , creator : Eos.Name
     }
 
@@ -520,7 +495,7 @@ encodeCreateObjectiveAction c =
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "objective_id", Encode.int 0 )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "editor", Eos.encodeName c.creator )
         ]
 
@@ -528,7 +503,7 @@ encodeCreateObjectiveAction c =
 type alias UpdateObjectiveAction =
     { communityId : Eos.Symbol
     , objectiveId : Int
-    , description : String
+    , description : Markdown
     , editor : Eos.Name
     }
 
@@ -538,7 +513,7 @@ encodeUpdateObjectiveAction c =
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "objective_id", Encode.int c.objectiveId )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
 
@@ -559,7 +534,7 @@ type alias Contribution =
 type alias ContributionConfiguration =
     { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
     , paypalAccount : Maybe String
-    , thankYouDescription : Maybe String
+    , thankYouDescription : Maybe Markdown
     , thankYouTitle : Maybe String
     }
 
@@ -586,7 +561,7 @@ contributionConfigurationSelectionSet =
     SelectionSet.succeed ContributionConfiguration
         |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
         |> with Cambiatus.Object.ContributionConfig.paypalAccount
-        |> with Cambiatus.Object.ContributionConfig.thankYouDescription
+        |> with (Markdown.maybeSelectionSet Cambiatus.Object.ContributionConfig.thankYouDescription)
         |> with Cambiatus.Object.ContributionConfig.thankYouTitle
 
 
@@ -630,13 +605,6 @@ type alias Balance =
     }
 
 
-decodeBalance : Decoder Balance
-decodeBalance =
-    Decode.succeed Balance
-        |> required "balance" Eos.decodeAsset
-        |> required "last_activity" Utils.decodeTimestamp
-
-
 
 -- CREATE COMMUNITY
 
@@ -646,7 +614,7 @@ type alias CreateCommunityData =
     , creator : Eos.Name
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -663,7 +631,7 @@ type alias CreateCommunityDataInput =
     , symbol : Eos.Symbol
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Float
     , invitedReward : Float
@@ -709,7 +677,7 @@ encodeCreateCommunityData c =
         , ( "creator", Eos.encodeName c.creator )
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
@@ -728,7 +696,7 @@ createCommunityDataDecoder =
         |> required "creator" Eos.nameDecoder
         |> required "logo" Decode.string
         |> required "name" Decode.string
-        |> required "description" Decode.string
+        |> required "description" Markdown.decoder
         |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
@@ -743,7 +711,7 @@ type alias UpdateCommunityData =
     { asset : Eos.Asset
     , logo : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -761,7 +729,7 @@ encodeUpdateData c =
         [ ( "logo", Encode.string c.logo )
         , ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
@@ -813,7 +781,7 @@ inviteQuery invitationId =
 
 type alias CommunityPreview =
     { name : String
-    , description : String
+    , description : Markdown
     , logo : String
     , symbol : Eos.Symbol
     , subdomain : String
@@ -831,7 +799,7 @@ communityPreviewSelectionSet : SelectionSet CommunityPreview Cambiatus.Object.Co
 communityPreviewSelectionSet =
     SelectionSet.succeed CommunityPreview
         |> with CommunityPreview.name
-        |> with CommunityPreview.description
+        |> with (Markdown.selectionSet CommunityPreview.description)
         |> with CommunityPreview.logo
         |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
         |> with (CommunityPreview.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))

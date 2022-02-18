@@ -79,7 +79,6 @@ type EventType
     | GraphqlErrorType
     | UnknownError
     | JsonValue
-    | MarkdownError
     | UnsupportedFeature
     | PaypalError
 
@@ -648,9 +647,6 @@ encodeTag tag =
 
                         JsonValue ->
                             "json value"
-
-                        MarkdownError ->
-                            "markdown error"
 
                         UnsupportedFeature ->
                             "unsupported feature"

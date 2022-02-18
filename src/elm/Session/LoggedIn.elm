@@ -7,6 +7,8 @@ module Session.LoggedIn exposing
     , Page(..)
     , Permission(..)
     , Resource(..)
+    , addFeedback
+    , executeFeedback
     , init
     , initLogin
     , isAccount
@@ -24,7 +26,6 @@ module Session.LoggedIn exposing
     )
 
 import Action
-import Api
 import Api.Graphql
 import Auth
 import Avatar
@@ -51,6 +52,7 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
 import List.Extra as List
 import Log
+import Markdown
 import Maybe.Extra
 import Notification exposing (Notification)
 import Ports
@@ -67,7 +69,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 import View.Modal as Modal
 
 
@@ -79,11 +80,16 @@ import View.Modal as Modal
 -}
 init : Shared -> Eos.Name -> String -> ( Model, Cmd Msg )
 init shared accountName authToken =
-    ( initModel shared Nothing accountName authToken
+    let
+        ( model, cmd ) =
+            initModel shared Nothing accountName authToken
+    in
+    ( model
     , Cmd.batch
         [ Api.Graphql.query shared (Just authToken) (Profile.query accountName) CompletedLoadProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
+        , cmd
         ]
     )
 
@@ -121,12 +127,16 @@ initLogin shared maybePrivateKey_ profile_ authToken =
                 |> RemoteData.Success
                 |> Task.succeed
                 |> Task.perform CompletedLoadProfile
+
+        ( model, cmd ) =
+            initModel shared maybePrivateKey_ profile_.account authToken
     in
-    ( initModel shared maybePrivateKey_ profile_.account authToken
+    ( model
     , Cmd.batch
         [ loadedProfile
         , fetchCommunity shared authToken Nothing
         , Task.perform GotTimeInternal Time.now
+        , cmd
         ]
     )
 
@@ -194,35 +204,41 @@ type Permission
       Permission
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> Model
+initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> String -> ( Model, Cmd Msg )
 initModel shared maybePrivateKey_ accountName authToken =
-    { shared = shared
-    , routeHistory = []
-    , accountName = accountName
-    , profile = RemoteData.Loading
+    let
+        ( authModel, authCmd ) =
+            Auth.init shared.pinVisibility maybePrivateKey_
+    in
+    ( { shared = shared
+      , routeHistory = []
+      , accountName = accountName
+      , profile = RemoteData.Loading
 
-    -- TODO - Use data from GraphQL
-    , permissions = []
-    , showInsufficientPermissionsModal = False
-    , selectedCommunity = RemoteData.Loading
-    , contributionCount = RemoteData.NotAsked
-    , showUserNav = False
-    , showLanguageItems = False
-    , showNotificationModal = False
-    , showMainNav = False
-    , showCommunitySelector = False
-    , showAuthModal = False
-    , auth = Auth.init shared.pinVisibility maybePrivateKey_
-    , notification = Notification.init
-    , unreadCount = 0
-    , feedback = Feedback.Hidden
-    , searchModel = Search.init
-    , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
-    , authToken = authToken
-    , hasSeenDashboard = False
-    , queuedCommunityFields = []
-    , maybeHighlightedNews = Nothing
-    }
+      -- TODO - Use data from GraphQL
+      , permissions = []
+      , showInsufficientPermissionsModal = False
+      , selectedCommunity = RemoteData.Loading
+      , contributionCount = RemoteData.NotAsked
+      , showUserNav = False
+      , showLanguageItems = False
+      , showNotificationModal = False
+      , showMainNav = False
+      , showCommunitySelector = False
+      , showAuthModal = False
+      , auth = authModel
+      , notification = Notification.init
+      , unreadCount = 0
+      , feedback = Feedback.Hidden
+      , searchModel = Search.init
+      , claimingAction = { status = Action.NotAsked, feedback = Nothing, needsPinConfirmation = False }
+      , authToken = authToken
+      , hasSeenDashboard = False
+      , queuedCommunityFields = []
+      , maybeHighlightedNews = Nothing
+      }
+    , Cmd.map GotAuthMsg authCmd
+    )
 
 
 hasPrivateKey : Model -> Bool
@@ -351,7 +367,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     viewClaimWithProofs action p False
 
                 ( False, Action.ClaimInProgress action (Just p) ) ->
-                    viewClaimWithProofs action p True
+                    viewClaimWithProofs action p.proof True
 
                 _ ->
                     viewPageBody model profile_ page content
@@ -421,7 +437,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
 viewHighlightedNews : Translators -> (Msg -> pageMsg) -> Community.News.Model -> Html pageMsg
 viewHighlightedNews { t } toPageMsg news =
     div
-        [ class "bg-purple-500 p-4 sticky top-0 z-10"
+        [ class "bg-purple-500 py-4 sticky top-0 z-10"
         ]
         [ div [ class "container mx-auto px-4 text-white flex items-center" ]
             [ Icons.speechBubble
@@ -436,11 +452,11 @@ viewHighlightedNews { t } toPageMsg news =
                     , text news.title
                     ]
                 , p [ class "truncate" ]
-                    [ text <| View.MarkdownEditor.removeFormatting news.description ]
+                    [ text <| Markdown.toUnformattedString news.description ]
                 ]
             , a
                 [ class "button button-primary w-auto px-4 ml-auto mr-6"
-                , Route.href (Route.News (Just news.id))
+                , Route.href (Route.News { selectedNews = Just news.id, showOthers = True })
                 , onClick (toPageMsg ClickedReadHighlightedNews)
                 ]
                 [ text <| t "news.read" ]
@@ -603,7 +619,7 @@ viewHeader page ({ shared } as model) profile_ =
                 model.searchModel
                 |> Html.map GotSearchMsg
         , div
-            [ class "flex items-center justify-end space-x-8 my-auto flex-shrink-0"
+            [ class "flex items-center justify-end space-x-8 my-auto shrink-0"
             , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
             ]
             [ a
@@ -838,8 +854,11 @@ viewMainMenu page model =
 
         menuItem title route =
             a
-                [ class "text-center text-gray-900 uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
-                , classList [ ( "text-orange-300 font-bold", isActive page route ) ]
+                [ class "text-center uppercase py-2 hover:text-orange-300 focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-50 rounded-sm"
+                , classList
+                    [ ( "text-orange-300 font-bold", isActive page route )
+                    , ( "text-gray-900", not (isActive page route) )
+                    ]
                 , Route.href route
                 , onClick closeClaimWithPhoto
                 ]
@@ -947,6 +966,21 @@ type External msg
     | RequiredAuthentication { successMsg : msg, errorMsg : msg }
     | ShowFeedback Feedback.Status String
     | HideFeedback
+
+
+addFeedback : Feedback.Model -> UR.UpdateResult model msg (External msg) -> UR.UpdateResult model msg (External msg)
+addFeedback feedback ur =
+    UR.addExt (executeFeedback feedback) ur
+
+
+executeFeedback : Feedback.Model -> External msg
+executeFeedback feedback =
+    case feedback of
+        Feedback.Visible status message ->
+            ShowFeedback status message
+
+        Feedback.Hidden ->
+            HideFeedback
 
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
@@ -1279,16 +1313,13 @@ update msg model =
         GotSearchMsg searchMsg ->
             case model.selectedCommunity of
                 RemoteData.Success community ->
-                    let
-                        ( searchModel, searchCmd ) =
-                            Search.update shared model.authToken community.symbol model.searchModel searchMsg
-                    in
-                    { model
-                        | searchModel = searchModel
-                        , hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg
-                    }
-                        |> UR.init
-                        |> UR.addCmd (Cmd.map GotSearchMsg searchCmd)
+                    Search.update shared model.authToken community.symbol model.searchModel searchMsg
+                        |> UR.fromChild (\searchModel -> { model | searchModel = searchModel })
+                            GotSearchMsg
+                            (\feedback -> UR.mapModel (\newModel -> { newModel | feedback = feedback }))
+                            { model | hasSeenDashboard = model.hasSeenDashboard || Search.isOpenMsg searchMsg }
+                        |> UR.mapModel
+                            (\newModel -> { newModel | hasSeenDashboard = newModel.hasSeenDashboard || Search.isOpenMsg searchMsg })
 
                 _ ->
                     UR.init model
@@ -1632,6 +1663,10 @@ update msg model =
                             Auth.UpdatedShared newShared ->
                                 uResult
                                     |> UR.mapModel (\m -> { m | shared = newShared })
+
+                            Auth.SetFeedback feedbackModel ->
+                                uResult
+                                    |> UR.mapModel (\m -> { m | feedback = feedbackModel })
                     )
 
         CompletedLoadUnread payload ->
@@ -1805,7 +1840,6 @@ handleActionMsg ({ shared } as model) actionMsg =
             in
             Action.update (hasPrivateKey model)
                 shared
-                (Api.uploadImage shared)
                 community.symbol
                 model.accountName
                 actionMsg
@@ -1813,7 +1847,7 @@ handleActionMsg ({ shared } as model) actionMsg =
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg
-                    (\extMsg uR -> UR.addExt extMsg uR)
+                    (\feedback -> UR.mapModel (\prevModel -> { prevModel | feedback = feedback }))
                 |> UR.addCmd
                     (case actionMsg of
                         Action.AgreedToClaimWithProof _ ->

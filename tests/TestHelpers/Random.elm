@@ -9,7 +9,6 @@ module TestHelpers.Random exposing
     , dateTime
     , dimex
     , expiryOptsData
-    , markdownString
     , maybe
     , name
     , nite
@@ -27,6 +26,7 @@ import Community
 import Eos
 import Eos.Account as Eos
 import Iso8601
+import Markdown
 import Profile
 import Random
 import Random.Char
@@ -261,7 +261,7 @@ minimalProfile =
         |> with name
         |> with avatar
         |> with (maybe email)
-        |> with (maybe string)
+        |> with (maybe (Markdown.generator string))
         |> with (Random.constant [])
 
 
@@ -273,7 +273,7 @@ actionObjective : Random.Generator Action.Objective
 actionObjective =
     Random.constant Action.Objective
         |> with (Random.int 0 Random.maxInt)
-        |> with string
+        |> with (Markdown.generator string)
         |> with (symbol |> Random.map (\symbol_ -> { symbol = symbol_ }))
         |> with Random.Extra.bool
 
@@ -282,7 +282,7 @@ action : Random.Generator Action.Action
 action =
     Random.constant Action.Action
         |> with (Random.int 0 Random.maxInt)
-        |> with string
+        |> with (Markdown.generator string)
         |> with actionObjective
         |> with (Random.float 0 1000)
         |> with (Random.float 0 1000)
@@ -296,7 +296,7 @@ action =
         |> with Random.Extra.bool
         |> with Random.Extra.bool
         |> with Random.Extra.bool
-        |> with (maybe string)
+        |> with (maybe (Markdown.generator string))
         |> with (maybe (Random.int 0 Random.maxInt))
 
 
@@ -344,7 +344,7 @@ createCommunityDataInput =
         |> with symbol
         |> with (url [] |> Random.map Url.toString)
         |> with string
-        |> with string
+        |> with (Markdown.generator string)
         |> with (cambiatusUrl Nothing |> Random.map Url.toString)
         |> with (Random.float 0 1000)
         |> with (Random.float 0 1000)
@@ -450,59 +450,3 @@ phone =
         |> append (digits 3)
         |> append (Random.Extra.choice "" "-")
         |> append (digits 4)
-
-
-
--- MARKDOWN EDITOR
-
-
-type MarkdownBlackListItem
-    = Strike
-    | Emphasis
-    | Strong
-    | Link
-
-
-markdownString : Random.Generator String
-markdownString =
-    let
-        choices : List MarkdownBlackListItem -> List ( MarkdownBlackListItem, Random.Generator String )
-        choices blackList =
-            [ ( Strong
-              , Random.constant "**"
-                    |> append (Random.lazy (\_ -> helper (Strong :: blackList)))
-                    |> append (Random.constant "**")
-              )
-            , ( Emphasis
-              , Random.constant "_"
-                    |> append (Random.lazy (\_ -> helper (Emphasis :: blackList)))
-                    |> append (Random.constant "_")
-              )
-            , ( Strike
-              , Random.constant "~~"
-                    |> append (Random.lazy (\_ -> helper (Strike :: blackList)))
-                    |> append (Random.constant "~~")
-              )
-            , ( Link
-              , Random.constant "["
-                    |> append (Random.lazy (\_ -> helper (Link :: blackList)))
-                    |> append (Random.constant "](")
-                    |> append (url [] |> Random.map Url.toString)
-                    |> append (Random.constant ")")
-              )
-            ]
-
-        helper : List MarkdownBlackListItem -> Random.Generator String
-        helper blackList =
-            choices blackList
-                |> List.filterMap
-                    (\( listItem, generator ) ->
-                        if List.member listItem blackList then
-                            Nothing
-
-                        else
-                            Just generator
-                    )
-                |> Random.Extra.choices string
-    in
-    helper []

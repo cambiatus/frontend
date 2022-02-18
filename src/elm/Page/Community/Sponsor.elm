@@ -9,13 +9,16 @@ import Cambiatus.Object.Contribution
 import Community
 import Dict
 import Eos
+import Form exposing (Form)
+import Form.Select
+import Form.Text
+import Form.Validate
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, div, h1, img, text)
+import Html exposing (Html, div, img, p, text)
 import Html.Attributes exposing (class, src)
 import Log
-import Mask
 import Page
 import Ports
 import RemoteData exposing (RemoteData)
@@ -26,8 +29,6 @@ import Task
 import UpdateResult as UR
 import Utils
 import View.Feedback
-import View.Form.Input as Input
-import View.Form.Select as Select
 import View.PaypalButtons as PaypalButtons
 
 
@@ -36,24 +37,23 @@ import View.PaypalButtons as PaypalButtons
 
 
 type alias Model =
-    { amount : String
-    , amountProblem : Maybe AmountProblem
-    , isCreatingOrder : Bool
-    , selectedCurrency : PaypalButtons.Currency
+    { isCreatingOrder : Bool
+    , externalAmountProblem : Maybe AmountProblem
+    , form : Form.Model FormInput
     }
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( { amount = ""
-      , amountProblem = Nothing
-      , isCreatingOrder = False
-      , selectedCurrency = defaultPaypalCurrency loggedIn.shared
+    ( { isCreatingOrder = False
+      , externalAmountProblem = Nothing
+      , form =
+            Form.init
+                { amount = ""
+                , selectedCurrency = defaultPaypalCurrency loggedIn.shared
+                }
       }
-    , Cmd.batch
-        [ focusAmountField
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -82,13 +82,13 @@ type AmountProblem
 type Msg
     = NoOp
     | CompletedLoadCommunity Community.Model
-    | SelectedCurrency PaypalButtons.Currency
-    | EnteredAmount String
     | RequestedPaypalInfoFromJs String
+    | StartedCreatingContribution String FormOutput
     | CreatedContribution String (RemoteData (Graphql.Http.Error (Maybe Contribution)) (Maybe Contribution))
     | PaypalApproved
     | PaypalCanceled
     | PaypalErrored PaypalButtons.Error
+    | GotFormMsg (Form.Msg FormInput)
 
 
 type alias UpdateResult =
@@ -102,71 +102,63 @@ update msg model loggedIn =
             UR.init model
 
         CompletedLoadCommunity community ->
-            { model | selectedCurrency = getPaypalCurrency community.contributionConfiguration loggedIn.shared }
-                |> UR.init
-
-        SelectedCurrency currency ->
-            { model | selectedCurrency = currency }
-                |> UR.init
-
-        EnteredAmount amount ->
             { model
-                | amount = amount
-                , amountProblem =
-                    case
-                        amount
-                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
-                            |> String.toFloat
-                    of
-                        Nothing ->
-                            Just InvalidAmount
-
-                        Just value ->
-                            if value < PaypalButtons.minimumAmount then
-                                Just AmountTooSmall
-
-                            else if value > PaypalButtons.maximumAmount then
-                                Just AmountTooBig
-
-                            else
-                                Nothing
+                | form =
+                    Form.updateValues
+                        (\values ->
+                            { values
+                                | selectedCurrency =
+                                    getPaypalCurrency community.contributionConfiguration loggedIn.shared
+                            }
+                        )
+                        model.form
             }
                 |> UR.init
+                |> UR.addCmd focusAmountField
 
         RequestedPaypalInfoFromJs id ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    case
-                        model.amount
-                            |> Mask.removeFloat (Shared.decimalSeparators loggedIn.shared.translators)
-                            |> String.toFloat
-                    of
-                        Nothing ->
-                            -- We handle this case on JS. If the amount is not a
-                            -- valid `Float`, we get an `InvalidAmount` error
-                            model
-                                |> UR.init
-
-                        Just amount ->
-                            { model | isCreatingOrder = True }
-                                |> UR.init
-                                |> UR.addCmd
-                                    (Api.Graphql.mutation loggedIn.shared
-                                        (Just loggedIn.authToken)
-                                        (createContributionSelectionSet
-                                            { amount = amount
-                                            , communityId = community.symbol
-                                            , currency = toCurrencyType model.selectedCurrency
-                                            }
-                                        )
-                                        (CreatedContribution id)
-                                    )
+            case RemoteData.map .contributionConfiguration loggedIn.selectedCommunity of
+                RemoteData.Success (Just configuration) ->
+                    UR.init model
+                        |> UR.addMsg
+                            (Form.parse (createForm loggedIn.shared configuration model)
+                                model.form
+                                { onError = GotFormMsg
+                                , onSuccess = StartedCreatingContribution id
+                                }
+                            )
 
                 _ ->
                     model
                         |> UR.init
                         |> UR.logImpossible msg
-                            "Tried creating a contribution, but community wasn't loaded"
+                            "Tried creating a contribution, but community wasn't loaded, so couldn't get contribution configuration"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Sponsor", function = "update" }
+                            []
+
+        StartedCreatingContribution id formOutput ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    { model | isCreatingOrder = True }
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.mutation loggedIn.shared
+                                (Just loggedIn.authToken)
+                                (createContributionSelectionSet
+                                    { amount = formOutput.amount
+                                    , communityId = community.symbol
+                                    , currency = toCurrencyType formOutput.currency
+                                    }
+                                )
+                                (CreatedContribution id)
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Started creating contribution, but community wasn't loaded"
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Community.Sponsor", function = "update" }
                             []
@@ -221,7 +213,7 @@ update msg model loggedIn =
 
         PaypalErrored PaypalButtons.AmountTooSmall ->
             { model
-                | amountProblem = Just AmountTooSmall
+                | externalAmountProblem = Just AmountTooSmall
                 , isCreatingOrder = False
             }
                 |> UR.init
@@ -229,7 +221,7 @@ update msg model loggedIn =
 
         PaypalErrored PaypalButtons.AmountTooBig ->
             { model
-                | amountProblem = Just AmountTooBig
+                | externalAmountProblem = Just AmountTooBig
                 , isCreatingOrder = False
             }
                 |> UR.init
@@ -237,7 +229,7 @@ update msg model loggedIn =
 
         PaypalErrored PaypalButtons.InvalidAmount ->
             { model
-                | amountProblem = Just InvalidAmount
+                | externalAmountProblem = Just InvalidAmount
                 , isCreatingOrder = False
             }
                 |> UR.init
@@ -276,6 +268,14 @@ update msg model loggedIn =
                     , transaction = msg
                     , level = Log.Error
                     }
+
+        GotFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.form
+                |> UR.fromChild
+                    (\newForm -> { model | form = newForm })
+                    GotFormMsg
+                    LoggedIn.addFeedback
+                    model
 
 
 amountFieldId : String
@@ -350,6 +350,113 @@ toHumanString { t } currency =
 
 
 
+-- FORMS
+
+
+type alias FormInput =
+    { amount : String
+    , selectedCurrency : PaypalButtons.Currency
+    }
+
+
+type alias FormOutput =
+    { amount : Float
+    , currency : PaypalButtons.Currency
+    }
+
+
+createForm : Shared -> Community.ContributionConfiguration -> Model -> Form msg FormInput FormOutput
+createForm ({ translators } as shared) contributionConfiguration model =
+    let
+        defaultCurrency =
+            defaultPaypalCurrency shared
+    in
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.introspect
+                (\{ selectedCurrency } ->
+                    Form.Text.init
+                        { label = translators.t "sponsorship.enter_amount"
+                        , id = amountFieldId
+                        }
+                        |> Form.Text.withCurrency (PaypalButtons.currencyToSymbol selectedCurrency)
+                        |> Form.Text.withLabelAttrs [ class "text-purple-500 text-lg text-center normal-case" ]
+                        |> Form.textField
+                            { parser =
+                                Form.Validate.succeed
+                                    >> Form.Validate.maskedFloat translators
+                                    >> Form.Validate.custom
+                                        (\x ->
+                                            if x < PaypalButtons.minimumAmount then
+                                                Err
+                                                    (\translators_ ->
+                                                        AmountTooSmall
+                                                            |> amountProblemToString translators_
+                                                                selectedCurrency
+                                                    )
+
+                                            else if x > PaypalButtons.maximumAmount then
+                                                Err
+                                                    (\translators_ ->
+                                                        AmountTooBig
+                                                            |> amountProblemToString translators_
+                                                                selectedCurrency
+                                                    )
+
+                                            else
+                                                Ok x
+                                        )
+                                    >> Form.Validate.validate translators
+                            , value = .amount
+                            , update = \amount input -> { input | amount = amount }
+                            , externalError =
+                                \_ ->
+                                    model.externalAmountProblem
+                                        |> Maybe.map (amountProblemToString translators selectedCurrency)
+                            }
+                )
+            )
+        |> Form.with
+            (case
+                contributionConfiguration.acceptedCurrencies
+                    |> List.filterMap toPaypalCurrency
+             of
+                [] ->
+                    Form.succeed defaultCurrency
+
+                [ currency ] ->
+                    Form.succeed currency
+
+                currencies ->
+                    let
+                        toOption currency =
+                            { option = currency
+                            , label =
+                                toHumanString translators currency
+                                    ++ " ("
+                                    ++ PaypalButtons.currencyToString currency
+                                    ++ ")"
+                            }
+                    in
+                    Form.Select.init
+                        { id = "currency-select"
+                        , label = translators.t "sponsorship.select_currency"
+                        , optionToString = PaypalButtons.currencyToString
+                        }
+                        |> Form.Select.withOptions (List.map toOption currencies)
+                        |> Form.Select.withLabelAttrs [ class "text-purple-500 text-lg text-center normal-case" ]
+                        |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                        |> Form.select
+                            (PaypalButtons.currencyFromString >> Maybe.withDefault defaultCurrency)
+                            { parser = Ok
+                            , value = .selectedCurrency
+                            , update = \currency input -> { input | selectedCurrency = currency }
+                            , externalError = always Nothing
+                            }
+            )
+
+
+
 -- VIEW
 
 
@@ -394,86 +501,37 @@ view_ ({ translators } as shared) community contributionConfiguration model =
         [ div [ class "container mx-auto" ]
             [ div [ class "flex flex-col items-center w-full px-4 py-7 bg-white md:w-1/2 md:mx-auto" ]
                 [ img [ class "h-10", src community.logo ] []
-                , h1 [ class "font-bold text-black text-3xl mb-8" ] [ text community.name ]
-                , Input.init
-                    { label = translators.t "sponsorship.enter_amount"
-                    , id = amountFieldId
-                    , onInput = EnteredAmount
-                    , disabled = model.isCreatingOrder
-                    , value = model.amount
-                    , placeholder = Nothing
-                    , problems =
-                        model.amountProblem
-                            |> Maybe.map
-                                (amountProblemToString translators
-                                    model.selectedCurrency
-                                    >> List.singleton
-                                )
-                    , translators = translators
-                    }
-                    |> Input.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                    |> Input.withCurrency (PaypalButtons.currencyToSymbol model.selectedCurrency)
-                    |> Input.withLabelAttrs [ class "text-purple-500 text-lg normal-case text-center whitespace-nowrap" ]
-                    |> Input.toHtml
-                , case
-                    contributionConfiguration.acceptedCurrencies
-                        |> List.filterMap toPaypalCurrency
-                  of
-                    [] ->
-                        text ""
+                , p [ class "font-bold text-black text-3xl mb-8" ] [ text community.name ]
+                , Form.viewWithoutSubmit [ class "w-full lg:w-3/4" ]
+                    translators
+                    (\{ amount, selectedCurrency } ->
+                        [ PaypalButtons.view [ class "w-full lg:w-3/4" ]
+                            { id = "paypal-buttons-sponsorship"
+                            , value =
+                                amount
+                                    |> Shared.floatStringFromSeparatedString translators
+                                    |> String.toFloat
+                                    |> Maybe.andThen
+                                        (\floatAmount ->
+                                            if floatAmount < PaypalButtons.minimumAmount then
+                                                Nothing
 
-                    [ _ ] ->
-                        text ""
+                                            else if floatAmount > PaypalButtons.maximumAmount then
+                                                Nothing
 
-                    firstCurrency :: otherCurrencies ->
-                        let
-                            currencyOption currency =
-                                { value = currency
-                                , label =
-                                    toHumanString translators currency
-                                        ++ " ("
-                                        ++ PaypalButtons.currencyToString currency
-                                        ++ ")"
-                                }
-                        in
-                        Select.init
-                            { id = "currency-selector"
-                            , label = translators.t "sponsorship.select_currency"
-                            , onInput = SelectedCurrency
-                            , firstOption = currencyOption firstCurrency
-                            , value = model.selectedCurrency
-                            , valueToString =
-                                PaypalButtons.currencyToSymbol
-                                    >> Eos.symbolToSymbolCodeString
-                            , disabled = model.isCreatingOrder
-                            , problems = Nothing
+                                            else
+                                                Just floatAmount
+                                        )
+                            , currency = selectedCurrency
+                            , onApprove = PaypalApproved
+                            , onCancel = PaypalCanceled
+                            , onError = PaypalErrored
                             }
-                            |> Select.withOptions (List.map currencyOption otherCurrencies)
-                            |> Select.withContainerAttrs [ class "w-full lg:w-2/3" ]
-                            |> Select.withLabelAttrs [ class "text-purple-500 text-lg normal-case text-center whitespace-nowrap" ]
-                            |> Select.toHtml
-                , PaypalButtons.view [ class "w-full lg:w-2/3" ]
-                    { id = "sponsorship-paypal-buttons"
-                    , value =
-                        model.amount
-                            |> Mask.removeFloat (Shared.decimalSeparators translators)
-                            |> String.toFloat
-                            |> Maybe.andThen
-                                (\amount ->
-                                    if amount < PaypalButtons.minimumAmount then
-                                        Nothing
-
-                                    else if amount > PaypalButtons.maximumAmount then
-                                        Nothing
-
-                                    else
-                                        Just amount
-                                )
-                    , currency = model.selectedCurrency
-                    , onApprove = PaypalApproved
-                    , onCancel = PaypalCanceled
-                    , onError = PaypalErrored
-                    }
+                        ]
+                    )
+                    (createForm shared contributionConfiguration model)
+                    model.form
+                    { toMsg = GotFormMsg }
                 ]
             ]
         ]
@@ -552,14 +610,11 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        SelectedCurrency _ ->
-            [ "SelectedCurrency" ]
-
-        EnteredAmount _ ->
-            [ "EnteredAmount" ]
-
         RequestedPaypalInfoFromJs _ ->
             [ "RequestedPaypalInfoFromJs" ]
+
+        StartedCreatingContribution _ _ ->
+            [ "StartedCreatingContribution" ]
 
         CreatedContribution _ _ ->
             [ "CreatedContribution" ]
@@ -572,3 +627,6 @@ msgToString msg =
 
         PaypalErrored _ ->
             [ "PaypalErrored" ]
+
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg

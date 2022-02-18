@@ -5,7 +5,9 @@
   "thousands_separator": ",",
   "dates": {
     "today": "ዛሬ",
-    "yesterday": "ትናንት"
+    "yesterday": "ትናንት",
+    "select": "ቀን ይምረጡ",
+    "clear": "ግልጽ ቀን"
   },
   "loading": {
     "title": "አንድ አፍታ ይጠብቁ",
@@ -128,6 +130,8 @@
     "unavailablePin": "ፒን የለም",
     "phone": "እባኮን ትክክለኛ ስልክ ቁጥር ይጠቀሙ",
     "invalid_image_file": "ምስል በመስቀል ላይ ስህተት",
+    "file_upload": "ፋይል በመስቀል ላይ ስህተት",
+    "wait_file_upload": "እባክዎ ፋይሉ እስኪሰቀል ድረስ ይጠብቁ",
     "zipcode": "የተሳሳተ አካባቢያዊ መለያ ቁጥር",
     "contracts": {
       "transfer": {
@@ -271,6 +275,8 @@
       "checkingAvailability": "አካዉንቱ እንደሚገኝ የተጣራ ነዉ",
       "button": "Create",
       "company_type": "ኩባንያ አይነት",
+      "company_name": "የድርጅት ስም",
+      "name_example": "ምሳሌ፡ Cambiatus",
       "company": {
         "mipyme": {
           "name": "ጥአመኢ",
@@ -571,6 +577,7 @@
         "manual_detail": " በሌሎች እንደገና ሲታይ ተጠቃሚዉን ይሸልማል",
         "verifier_placeholder": "የተጠቃሚን ስም ፃፍ",
         "verifier_not_found": "ምንም ተጠቃሚ አልተገኘም",
+        "unselect_user": "{{username}}ን አይምረጡ",
         "usages_placeholder": "ቁጥሩን ፃፍ",
         "date_label": "ቀን ምረጥ",
         "quantity_label": "አጠቃቀም ምረጥ",
@@ -860,20 +867,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "ይህ ጥያቄ",
-      "2": "እየተየ ነዉ",
+      "1": "የይገባኛል ጥያቄ",
+      "2": "በመተንተን",
       "3": ", ሌሎቹ አባላት መምረጥ አለባቸዉ"
     },
     "title_cancelled": {
-      "1": "ይህ ጥያቄ",
-      "2": "ተሰር .ል"
+      "1": "የይገባኛል ጥያቄ",
+      "2": "ተሰርዟል"
     },
     "title_approved": {
-      "1": "ይህ ጥያቄ",
+      "1": "የይገባኛል ጥያቄ",
       "2": "ጸድቋል"
     },
     "title_rejected": {
-      "1": "ይህ ጥያቄ",
+      "1": "የይገባኛል ጥያቄ",
       "2": "ተቀባይነት አላገኘም"
     },
     "cancelled_voting_bar": "በመጠባበቅ ላይ ያሉ ድምጾች ነበሩት",

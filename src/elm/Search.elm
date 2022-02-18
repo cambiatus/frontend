@@ -24,12 +24,14 @@ import Cambiatus.Object.SearchResult
 import Cambiatus.Query
 import Eos exposing (Symbol)
 import Eos.Account
+import Form
+import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, required, src, tabindex, type_)
-import Html.Events exposing (onClick, onFocus, onSubmit)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
+import Html.Events exposing (onClick, onFocus)
 import Icons
 import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
@@ -41,9 +43,10 @@ import Route
 import Session.Shared exposing (Shared, Translators)
 import Task
 import Time exposing (Posix)
+import UpdateResult as UR
 import Utils
 import View.Components
-import View.Form.Input as Input
+import View.Feedback as Feedback
 
 
 
@@ -52,7 +55,7 @@ import View.Form.Input as Input
 
 type alias Model =
     { state : State
-    , currentQuery : String
+    , form : Form.Model FormInput
     , recentQueries : List String
     }
 
@@ -60,7 +63,7 @@ type alias Model =
 init : Model
 init =
     { state = Inactive
-    , currentQuery = ""
+    , form = Form.init { query = "" }
     , recentQueries = []
     }
 
@@ -166,35 +169,27 @@ type Msg
     | GotSearchResults FoundData
     | QuerySubmitted
     | TabActivated ActiveTab
-    | CurrentQueryChanged String
+    | GotFormMsg (Form.Msg FormInput)
     | ClearSearchIconClicked
     | FoundItemClicked
 
 
-update : Shared -> String -> Symbol -> Model -> Msg -> ( Model, Cmd Msg )
+type alias UpdateResult =
+    UR.UpdateResult Model Msg Feedback.Model
+
+
+update : Shared -> String -> Symbol -> Model -> Msg -> UpdateResult
 update shared authToken symbol model msg =
     case msg of
         NoOp ->
-            ( model, Cmd.none )
-
-        CurrentQueryChanged q ->
-            if String.isEmpty q then
-                ( { model | currentQuery = q, state = RecentSearchesShowed }
-                , Cmd.none
-                )
-
-            else
-                ( { model | currentQuery = q }
-                , sendSearchQuery symbol shared q authToken
-                )
+            UR.init model
 
         FoundItemClicked ->
-            ( { model
+            { model
                 | state = Inactive
-                , currentQuery = ""
-              }
-            , Cmd.none
-            )
+                , form = Form.updateValues (\form -> { form | query = "" }) model.form
+            }
+                |> UR.init
 
         RecentQueryClicked q ->
             update shared
@@ -202,7 +197,7 @@ update shared authToken symbol model msg =
                 symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
-                    , currentQuery = q
+                    , form = Form.updateValues (\form -> { form | query = q }) model.form
                 }
                 QuerySubmitted
 
@@ -211,61 +206,92 @@ update shared authToken symbol model msg =
                 ResultsShowed r previousActiveTab ->
                     let
                         newRecentQueries =
-                            (model.currentQuery :: model.recentQueries)
+                            (Form.getValue .query model.form :: model.recentQueries)
                                 |> List.unique
                                 |> List.take maximumRecentSearches
                     in
-                    ( { model
+                    { model
                         | state = ResultsShowed r (Just activeTab)
                         , recentQueries = newRecentQueries
-                      }
-                    , case previousActiveTab of
-                        Nothing ->
-                            storeRecentSearches newRecentQueries
+                    }
+                        |> UR.init
+                        |> UR.addCmd
+                            (case previousActiveTab of
+                                Nothing ->
+                                    storeRecentSearches newRecentQueries
 
-                        Just _ ->
-                            Cmd.none
-                    )
+                                Just _ ->
+                                    Cmd.none
+                            )
 
                 _ ->
-                    ( model, Cmd.none )
+                    UR.init model
 
         GotSearchResults res ->
-            ( { model
+            { model
                 | state =
-                    if String.isEmpty model.currentQuery then
+                    if String.isEmpty (Form.getValue .query model.form) then
                         model.state
 
                     else
                         ResultsShowed res Nothing
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         GotRecentSearches queries ->
             case Decode.decodeString (list string) queries of
                 Ok queryList ->
-                    ( { model | recentQueries = queryList }, Cmd.none )
+                    { model | recentQueries = queryList }
+                        |> UR.init
 
                 Err _ ->
-                    ( model, Cmd.none )
+                    UR.init model
 
         CancelClicked ->
-            ( closeSearch model
-            , Cmd.none
-            )
+            closeSearch model
+                |> UR.init
+
+        GotFormMsg subMsg ->
+            let
+                oldQuery =
+                    Form.getValue .query model.form
+
+                updateResult =
+                    Form.update shared subMsg model.form
+                        |> UR.fromChild (\newForm -> { model | form = newForm })
+                            GotFormMsg
+                            UR.addExt
+                            model
+
+                newQuery =
+                    Form.getValue .query updateResult.model.form
+
+                actOnQueryChange =
+                    if String.isEmpty newQuery then
+                        UR.mapModel (\m -> { m | state = RecentSearchesShowed })
+
+                    else if oldQuery /= newQuery then
+                        UR.addCmd (sendSearchQuery symbol shared newQuery authToken)
+
+                    else
+                        identity
+            in
+            updateResult
+                |> actOnQueryChange
 
         ClearSearchIconClicked ->
-            ( { model
-                | currentQuery = ""
+            { model
+                | form = Form.updateValues (\form -> { form | query = "" }) model.form
                 , state = RecentSearchesShowed
-              }
-            , Dom.focus "searchInput"
-                |> Task.attempt (\_ -> NoOp)
-            )
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (Dom.focus "searchInput"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         InputFocused ->
-            ( { model
+            { model
                 | state =
                     case model.state of
                         Inactive ->
@@ -273,35 +299,47 @@ update shared authToken symbol model msg =
 
                         _ ->
                             model.state
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         QuerySubmitted ->
             let
+                currentQuery =
+                    Form.getValue .query model.form
+
                 newRecentSearches : List String
                 newRecentSearches =
-                    (model.currentQuery :: model.recentQueries)
+                    (currentQuery :: model.recentQueries)
                         |> List.unique
                         |> List.take maximumRecentSearches
             in
-            ( { model
+            { model
                 | recentQueries = newRecentSearches
                 , state = ResultsShowed RemoteData.Loading Nothing
-              }
-            , Cmd.batch
-                [ storeRecentSearches newRecentSearches
-                , sendSearchQuery symbol shared model.currentQuery authToken
-                ]
-            )
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (Cmd.batch
+                        [ storeRecentSearches newRecentSearches
+                        , sendSearchQuery symbol shared currentQuery authToken
+                        ]
+                    )
 
 
 
 -- VIEW
 
 
-viewForm : List (Html.Attribute Msg) -> Translators -> Model -> Html Msg
-viewForm attrs ({ t } as translators) model =
+type alias FormInput =
+    { query : String }
+
+
+type alias FormOutput =
+    { query : String }
+
+
+createForm : Translators -> Model -> Form.Form Msg FormInput FormOutput
+createForm { t } model =
     let
         isLoading =
             case model.state of
@@ -310,6 +348,14 @@ viewForm attrs ({ t } as translators) model =
 
                 _ ->
                     False
+
+        isSearchOpen =
+            case model.state of
+                Inactive ->
+                    False
+
+                _ ->
+                    True
 
         iconColor =
             case model.state of
@@ -320,7 +366,7 @@ viewForm attrs ({ t } as translators) model =
                     "text-indigo-500"
 
         viewClearSearchIcon =
-            if isSearchOpen && not (String.isEmpty model.currentQuery) then
+            if isSearchOpen && not (String.isEmpty (Form.getValue .query model.form)) then
                 button
                     [ class "absolute right-3 flex items-center top-1/2 -translate-y-1/2 focus-ring focus-visible:ring-red focus-visible:ring-opacity-50 rounded-full group"
                     , onClick ClearSearchIconClicked
@@ -331,54 +377,54 @@ viewForm attrs ({ t } as translators) model =
 
             else
                 text ""
-
-        isSearchOpen =
-            case model.state of
-                Inactive ->
-                    False
-
-                _ ->
-                    True
-
-        viewCancel =
-            button
-                [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline focus:outline-none focus:underline"
-                , classList [ ( "hidden", not isSearchOpen ) ]
-                , onClick CancelClicked
-                , type_ "button"
-                ]
-                [ text (t "menu.cancel") ]
     in
-    Html.form
-        (class "flex items-center"
-            :: onSubmit QuerySubmitted
-            :: attrs
-        )
-        [ Input.init
-            { label = ""
-            , id = "searchInput"
-            , onInput = CurrentQueryChanged
-            , disabled = isLoading
-            , value = model.currentQuery
-            , placeholder = Just (t "menu.search.placeholder")
-            , problems = Nothing
-            , translators = translators
-            }
-            |> Input.withContainerAttrs [ class "!m-0 w-full" ]
-            |> Input.withAttrs
-                [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
-                , onFocus InputFocused
-                , minlength 3
-                , required isSearchOpen
-                , autocomplete False
-                ]
-            |> Input.withElements
-                [ viewClearSearchIcon
-                , Icons.search <| "absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor
-                ]
-            |> Input.toHtml
-        , viewCancel
-        ]
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Text.init
+                { label = ""
+                , id = "search-input"
+                }
+                |> Form.Text.withPlaceholder (t "menu.search.placeholder")
+                |> Form.Text.withDisabled isLoading
+                |> Form.Text.withContainerAttrs [ class "!m-0 w-full" ]
+                |> Form.Text.withExtraAttrs
+                    [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
+                    , onFocus InputFocused
+                    , minlength 3
+                    , autocomplete False
+                    ]
+                |> Form.Text.withElements
+                    [ viewClearSearchIcon
+                    , Icons.search ("absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor)
+                    ]
+                |> Form.textField
+                    { parser = Ok
+                    , value = .query
+                    , update = \query input -> { input | query = query }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNoOutput
+            (Form.unsafeArbitrary
+                (button
+                    [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline focus:outline-none focus:underline"
+                    , classList [ ( "hidden", not isSearchOpen ) ]
+                    , onClick CancelClicked
+                    , type_ "button"
+                    ]
+                    [ text (t "menu.cancel") ]
+                )
+            )
+
+
+viewForm : List (Html.Attribute Msg) -> Translators -> Model -> Html Msg
+viewForm attrs translators model =
+    Form.viewWithoutSubmit (class "flex items-center" :: attrs)
+        translators
+        (\_ -> [])
+        (createForm translators model)
+        model.form
+        { toMsg = GotFormMsg }
 
 
 viewSearchBody :
@@ -394,7 +440,7 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success results) activeTab ->
                 if List.isEmpty results.actions && List.isEmpty results.offers && List.isEmpty results.members then
-                    viewEmptyResults translators searchModel.currentQuery
+                    viewEmptyResults translators (Form.getValue .query searchModel.form)
                         |> Html.map searchToMsg
 
                 else
@@ -673,7 +719,10 @@ isActive model =
 
 closeSearch : Model -> Model
 closeSearch model =
-    { model | state = Inactive, currentQuery = "" }
+    { model
+        | state = Inactive
+        , form = Form.updateValues (\form -> { form | query = "" }) model.form
+    }
 
 
 closeMsg : Msg

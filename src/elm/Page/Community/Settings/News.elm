@@ -6,6 +6,7 @@ import Cambiatus.Object.Community
 import Community
 import Community.News
 import Eos
+import Form.Toggle
 import Graphql.Http
 import Graphql.OptionalArgument
 import Graphql.SelectionSet
@@ -14,6 +15,7 @@ import Html.Attributes exposing (class)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Log
+import Markdown
 import Page
 import RemoteData exposing (RemoteData)
 import Route
@@ -23,8 +25,6 @@ import Time
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
-import View.Form.Toggle
-import View.MarkdownEditor as MarkdownEditor
 import View.Modal as Modal
 
 
@@ -54,7 +54,8 @@ type HighlightNewsConfirmationModal
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | ToggledHighlightNews Int Bool
     | CompletedSettingHighlightedNews Bool (RemoteData (Graphql.Http.Error (Maybe Community.News.Model)) (Maybe Community.News.Model))
     | ClosedHighlightNewsConfirmationModal
@@ -72,6 +73,9 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 UR.init model
@@ -278,7 +282,7 @@ view_ shared community =
                         (List.map
                             (\newsForCard ->
                                 viewNewsCard shared
-                                    (Just newsForCard == community.highlightedNews)
+                                    (Just newsForCard.id == Maybe.map .id community.highlightedNews)
                                     newsForCard
                             )
                             news
@@ -312,36 +316,52 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                 text ""
 
             Just scheduling ->
+                let
+                    padTime time =
+                        String.repeat (2 - String.length time) "0" ++ time
+                in
                 small [ class "uppercase text-gray-900 text-sm font-bold block mt-2" ]
                     [ text <| translators.t "news.scheduled_at"
-                    , View.Components.dateViewer [] identity shared news.insertedAt
+                    , View.Components.dateViewer [] identity shared scheduling
                     , text <|
                         translators.tr "news.scheduled_at_time"
-                            [ ( "hour", String.fromInt (Time.toHour shared.timezone scheduling) )
-                            , ( "minute", String.fromInt (Time.toMinute shared.timezone scheduling) )
+                            [ ( "hour"
+                              , Time.toHour shared.timezone scheduling
+                                    |> String.fromInt
+                                    |> padTime
+                              )
+                            , ( "minute"
+                              , Time.toMinute shared.timezone scheduling
+                                    |> String.fromInt
+                                    |> padTime
+                              )
                             ]
                     ]
         , div [ class "mb-10 relative mt-4" ]
             [ p [ class "text-gray-900 max-h-11 overflow-hidden" ]
-                [ text (MarkdownEditor.removeFormatting news.description)
+                [ text (Markdown.toUnformattedString news.description)
                 ]
             , a
                 [ class "absolute right-0 bottom-0 bg-white pl-2 text-orange-300 hover:underline focus:underline outline-none"
-                , Route.href (Route.News (Just news.id))
+                , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
                 , ariaLabel <| translators.t "news.view_more"
                 ]
                 [ text <| translators.t "news.view_more_with_ellipsis" ]
             ]
-        , View.Form.Toggle.init
-            { label = text <| translators.t "news.highlight"
-            , id = "highlight-news-toggle-" ++ String.fromInt news.id
-            , onToggle = ToggledHighlightNews news.id
-            , disabled = False
-            , value = isHighlighted
-            }
-            |> View.Form.Toggle.withStatusText View.Form.Toggle.YesNo
-            |> View.Form.Toggle.withAttrs [ class "mt-auto text-base" ]
-            |> View.Form.Toggle.toHtml translators
+        , Form.Toggle.init { label = text <| translators.t "news.highlight", id = "highlight-news-toggle-" ++ String.fromInt news.id }
+            |> Form.Toggle.withContainerAttrs [ class "mt-auto" ]
+            |> Form.Toggle.withStatusText Form.Toggle.YesNo
+            |> (\options ->
+                    Form.Toggle.view options
+                        { onToggle = ToggledHighlightNews news.id
+                        , onBlur = NoOp
+                        , value = isHighlighted
+                        , error = text ""
+                        , hasError = False
+                        , isRequired = False
+                        , translators = translators
+                        }
+               )
         , a
             [ class "button button-primary w-full mt-10 mb-4"
             , Route.href (Route.CommunitySettingsNewsEditor (Route.EditNews news.id))
@@ -372,6 +392,9 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 

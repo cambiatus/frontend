@@ -23,10 +23,14 @@ import Auth
 import Browser.Dom as Dom
 import Dict
 import Eos.Account as Eos
+import Form
+import Form.Text
+import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, form, img, p, span, strong, text)
-import Html.Attributes exposing (autocomplete, autofocus, class, classList, required, rows, src, type_)
-import Html.Events exposing (keyCode, onClick, preventDefaultOn)
+import Html exposing (Html, a, button, div, img, p, span, strong, text)
+import Html.Attributes exposing (autocomplete, autofocus, class, classList, rows, src, type_)
+import Html.Events exposing (onClick)
+import Html.Keyed
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
@@ -35,12 +39,10 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
+import Session.Shared exposing (Shared)
 import Task
 import UpdateResult as UR
-import Validate exposing (Validator)
 import View.Feedback as Feedback
-import View.Form
-import View.Form.Input as Input
 import View.Pin as Pin
 
 
@@ -58,25 +60,29 @@ init _ =
 initPassphraseModel : PassphraseModel
 initPassphraseModel =
     { hasPasted = False
-    , passphrase = ""
-    , problems = []
+    , form = Form.init { passphrase = "" }
     }
 
 
-initPinModel : Bool -> String -> PinModel
+initPinModel : Bool -> String -> ( PinModel, Cmd PinMsg )
 initPinModel pinVisibility passphrase =
-    { isSigningIn = False
-    , passphrase = passphrase
-    , pinModel =
-        Pin.init
-            { label = "auth.pin.label"
-            , id = "pinInput"
-            , withConfirmation = True
-            , submitLabel = "auth.login.submit"
-            , submittingLabel = "auth.login.submitting"
-            , pinVisibility = pinVisibility
-            }
-    }
+    let
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "auth.pin.label"
+                , id = "pinInput"
+                , withConfirmation = True
+                , submitLabel = "auth.login.submit"
+                , submittingLabel = "auth.login.submitting"
+                , pinVisibility = pinVisibility
+                }
+    in
+    ( { isSigningIn = False
+      , passphrase = passphrase
+      , pinModel = pinModel
+      }
+    , Cmd.map GotPinComponentMsg pinCmd
+    )
 
 
 
@@ -90,9 +96,84 @@ type Model
 
 type alias PassphraseModel =
     { hasPasted : Bool
-    , passphrase : String
-    , problems : List String
+    , form : Form.Model PassphraseInput
     }
+
+
+type alias PassphraseInput =
+    { passphrase : String }
+
+
+passphraseForm : Shared -> { hasPasted : Bool } -> Form.Form PassphraseMsg PassphraseInput Passphrase
+passphraseForm ({ translators } as shared) { hasPasted } =
+    let
+        { t } =
+            translators
+
+        viewPasteButton =
+            if shared.canReadClipboard then
+                button
+                    [ class "absolute bottom-4 left-1/2 -translate-x-1/2 button"
+                    , classList
+                        [ ( "button-secondary", not hasPasted )
+                        , ( "button-primary", hasPasted )
+                        ]
+                    , type_ "button"
+                    , onClick ClickedPaste
+                    ]
+                    [ if hasPasted then
+                        text (t "auth.login.wordsMode.input.pasted")
+
+                      else
+                        text (t "auth.login.wordsMode.input.paste")
+                    ]
+
+            else
+                text ""
+    in
+    Form.succeed identity
+        |> Form.withDecoration (viewIllustration "login_key.svg")
+        |> Form.withDecoration
+            (p [ class "text-white mb-6" ]
+                [ span [ class "font-bold block" ]
+                    [ text (t "menu.welcome_to") ]
+                , span [ class "block" ]
+                    [ text (t "auth.login.wordsMode.input.description") ]
+                ]
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "auth.login.wordsMode.input.label"
+                , id = "passphrase-input"
+                }
+                |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = True })
+                |> Form.Text.withPlaceholder (t "auth.login.wordsMode.input.placeholder")
+                |> Form.Text.withExtraAttrs
+                    [ class "min-w-full block p-4"
+                    , classList [ ( "pb-18", shared.canReadClipboard ) ]
+                    , rows 2
+                    , autofocus True
+                    , autocomplete False
+                    ]
+                |> Form.Text.withCounter (Form.Text.CountWords 12)
+                |> Form.Text.withCounterAttrs [ class "!text-white" ]
+                |> Form.Text.withLabelAttrs [ class "text-white" ]
+                |> Form.Text.withErrorAttrs [ class "form-error-on-dark-bg" ]
+                |> Form.Text.withElements [ viewPasteButton ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> passphraseValidator
+                            >> Form.Validate.validate translators
+                    , value = .passphrase
+                    , update = \passphrase input -> { input | passphrase = passphrase }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+type Passphrase
+    = Passphrase String
 
 
 type alias PinModel =
@@ -112,15 +193,18 @@ view guest model =
         guest.shared.translators.t "auth.login.loginTab"
     , content =
         div [ class "bg-purple-500 flex-grow flex flex-col justify-center md:block" ]
-            [ div [ class "flex flex-col flex-grow justify-between w-full p-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
+            [ Html.Keyed.node "div"
+                [ class "flex flex-col flex-grow justify-between w-full p-4 md:max-w-sm md:mx-auto md:pt-20 md:px-0" ]
                 (case model of
                     EnteringPassphrase passphraseModel ->
                         viewPassphrase guest passphraseModel
                             |> List.map (Html.map GotPassphraseMsg)
+                            |> List.indexedMap (\index node -> ( "passphrase-" ++ String.fromInt index, node ))
 
                     EnteringPin pinModel ->
                         viewPin guest pinModel
                             |> List.map (Html.map GotPinMsg)
+                            |> List.indexedMap (\index node -> ( "pin-" ++ String.fromInt index, node ))
                 )
             ]
     }
@@ -129,115 +213,37 @@ view guest model =
 viewPassphrase : Guest.Model -> PassphraseModel -> List (Html PassphraseMsg)
 viewPassphrase ({ shared } as guest) model =
     let
-        { t, tr } =
+        { t } =
             shared.translators
-
-        enterKeyCode =
-            13
-
-        viewPasteButton =
-            if shared.canReadClipboard then
-                button
-                    [ class "absolute bottom-4 left-1/2 transform -translate-x-1/2 button"
-                    , classList
-                        [ ( "button-secondary", not model.hasPasted )
-                        , ( "button-primary", model.hasPasted )
-                        ]
-                    , type_ "button"
-                    , onClick ClickedPaste
-                    ]
-                    [ if model.hasPasted then
-                        text (t "auth.login.wordsMode.input.pasted")
-
-                      else
-                        text (t "auth.login.wordsMode.input.paste")
-                    ]
-
-            else
-                text ""
 
         showRegisterLink =
             RemoteData.map .hasAutoInvite guest.community
                 |> RemoteData.withDefault False
-
-        communityName =
-            case guest.community of
-                RemoteData.Success community ->
-                    community.name
-
-                _ ->
-                    ""
     in
-    [ form [ class "flex flex-col justify-center" ]
-        [ viewIllustration "login_key.svg"
-        , p [ class "text-white mb-6" ]
-            [ span [ class "font-bold block text-white" ]
-                [ text (tr "menu.welcome_to" [ ( "community_name", communityName ) ]) ]
-            , span [ class "text-white block" ]
-                [ text (t "auth.login.wordsMode.input.description") ]
-            ]
-        , Input.init
-            { label = t "auth.login.wordsMode.input.label"
-            , id = "passphrase"
-            , onInput = EnteredPassphrase
-            , disabled = False
-            , value = model.passphrase
-            , placeholder = Just <| t "auth.login.wordsMode.input.placeholder"
-            , problems =
-                model.problems
-                    |> List.map t
-                    |> Just
-            , translators = shared.translators
-            }
-            |> Input.withInputType Input.TextArea
-            |> Input.withAttrs
-                [ class "min-w-full block p-4"
-                , classList
-                    [ ( "field-with-error", not (List.isEmpty model.problems) )
-                    , ( "pb-18", shared.canReadClipboard )
+    [ Form.view [ class "flex flex-col justify-center" ]
+        shared.translators
+        (\submitButton ->
+            [ if showRegisterLink then
+                p [ class "text-white text-center mb-6 block" ]
+                    [ text (t "auth.login.register")
+                    , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
+                        [ text (t "auth.login.registerLink")
+                        ]
                     ]
-                , rows 2
-                , View.Form.noGrammarly
-                , autofocus True
-                , required True
-                , autocomplete False
-                , preventDefaultOn "keydown"
-                    (keyCode
-                        |> Decode.map
-                            (\code ->
-                                if code == enterKeyCode then
-                                    ( ClickedNextStep, True )
 
-                                else
-                                    ( PassphraseIgnored, False )
-                            )
-                    )
+              else
+                text ""
+            , submitButton
+                [ class "button button-primary min-w-full"
                 ]
-            |> Input.withCounter 12
-            |> Input.withCounterType Input.CountWords
-            |> Input.withCounterAttrs [ class "!text-white" ]
-            |> Input.withErrorAttrs [ class "form-error-on-dark-bg" ]
-            |> Input.withElements [ viewPasteButton ]
-            |> Input.withLabelAttrs [ class "text-white" ]
-            |> Input.toHtml
-        ]
-    , div []
-        [ if showRegisterLink then
-            p [ class "text-white text-center mb-6 block" ]
-                [ text (t "auth.login.register")
-                , a [ Route.href (Route.Register Nothing Nothing), class "text-orange-300 underline" ]
-                    [ text (t "auth.login.registerLink")
-                    ]
-                ]
-
-          else
-            text ""
-        , button
-            [ class "button button-primary min-w-full"
-            , onClick ClickedNextStep
+                [ text (t "dashboard.continue") ]
             ]
-            [ text (t "dashboard.continue") ]
-        ]
+        )
+        (passphraseForm shared { hasPasted = model.hasPasted })
+        model.form
+        { toMsg = GotPassphraseFormMsg
+        , onSubmit = ClickedNextStep
+        }
     ]
 
 
@@ -251,7 +257,7 @@ viewPin { shared } model =
             shared.translators
     in
     [ viewIllustration "login_pin.svg"
-    , p [ class "text-white mb-6" ]
+    , p [ class "text-white" ]
         [ text (t (trPrefix "nowCreate"))
         , text " "
         , strong [] [ text (t (trPrefix "sixDigitPin")) ]
@@ -263,9 +269,7 @@ viewPin { shared } model =
         , text <| t (trPrefix "eachLogin")
         ]
     , model.pinModel
-        |> Pin.withAttrs []
-        |> Pin.withLabelAttrs [ class "text-white" ]
-        |> Pin.withCounterAttrs [ class "!text-white" ]
+        |> Pin.withBackgroundColor Pin.Dark
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]
@@ -293,7 +297,7 @@ type alias PinUpdateResult =
 
 
 type Msg
-    = WentToPin (Validate.Valid PassphraseModel)
+    = WentToPin Passphrase
     | GotPassphraseMsg PassphraseMsg
     | GotPinMsg PinMsg
 
@@ -302,8 +306,8 @@ type PassphraseMsg
     = PassphraseIgnored
     | ClickedPaste
     | GotClipboardResponse ClipboardResponse
-    | EnteredPassphrase String
-    | ClickedNextStep
+    | GotPassphraseFormMsg (Form.Msg PassphraseInput)
+    | ClickedNextStep Passphrase
 
 
 type ClipboardResponse
@@ -314,7 +318,7 @@ type ClipboardResponse
 
 
 type PassphraseExternalMsg
-    = FinishedEnteringPassphrase (Validate.Valid PassphraseModel)
+    = FinishedEnteringPassphrase Passphrase
     | PassphraseGuestExternal Guest.External
 
 
@@ -341,26 +345,21 @@ update msg model guest =
                     (\ext ur ->
                         case ext of
                             FinishedEnteringPassphrase validPassphrase ->
-                                ur
-                                    |> UR.addCmd
-                                        (Task.succeed validPassphrase
-                                            |> Task.perform WentToPin
-                                        )
+                                UR.addMsg (WentToPin validPassphrase) ur
 
                             PassphraseGuestExternal guestExternal ->
                                 UR.addExt guestExternal ur
                     )
 
-        ( WentToPin validPassphrase, EnteringPassphrase _ ) ->
-            Validate.fromValid validPassphrase
-                |> .passphrase
-                |> initPinModel guest.shared.pinVisibility
+        ( WentToPin (Passphrase passphrase), EnteringPassphrase _ ) ->
+            let
+                ( pinModel, pinCmd ) =
+                    initPinModel guest.shared.pinVisibility passphrase
+            in
+            pinModel
                 |> EnteringPin
                 |> UR.init
-                |> UR.addCmd
-                    (Dom.focus "pinInput"
-                        |> Task.attempt (\_ -> GotPinMsg PinIgnored)
-                    )
+                |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
 
         ( GotPinMsg pinMsg, EnteringPin pinModel ) ->
             updateWithPin pinMsg pinModel guest
@@ -420,7 +419,7 @@ updateWithPassphrase msg model { shared } =
                     , data = Encode.object [ ( "name", Encode.string "readClipboard" ) ]
                     }
                 |> UR.addCmd
-                    (Dom.focus "passphrase"
+                    (Dom.focus "passphrase-input"
                         |> Task.attempt (\_ -> PassphraseIgnored)
                     )
                 |> UR.addExt
@@ -480,46 +479,34 @@ updateWithPassphrase msg model { shared } =
 
         GotClipboardResponse (WithContent content) ->
             { model
-                | passphrase =
-                    String.trim content
-                        |> String.words
-                        |> List.take 12
-                        |> String.join " "
-                , hasPasted = True
-                , problems = []
+                | hasPasted = True
+                , form =
+                    Form.updateValues (\oldForm -> { oldForm | passphrase = content })
+                        model.form
             }
                 |> UR.init
+                |> UR.addCmd
+                    (Dom.focus "passphrase-input"
+                        |> Task.attempt (\_ -> PassphraseIgnored)
+                    )
                 |> UR.addExt
                     (Feedback.Hidden
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
                     )
 
-        EnteredPassphrase passphrase ->
-            { model
-                | passphrase =
-                    if List.length (String.words passphrase) >= 12 then
-                        String.words passphrase
-                            |> List.take 12
-                            |> String.join " "
+        GotPassphraseFormMsg subMsg ->
+            Form.update shared subMsg model.form
+                |> UR.fromChild
+                    (\newForm -> { model | form = newForm })
+                    GotPassphraseFormMsg
+                    (Guest.SetFeedback >> PassphraseGuestExternal >> UR.addExt)
+                    model
 
-                    else
-                        passphrase
-                , hasPasted = False
-                , problems = []
-            }
+        ClickedNextStep passphrase ->
+            model
                 |> UR.init
-
-        ClickedNextStep ->
-            case Validate.validate passphraseValidator model of
-                Ok validModel ->
-                    { model | problems = [] }
-                        |> UR.init
-                        |> UR.addExt (FinishedEnteringPassphrase validModel)
-
-                Err errors ->
-                    { model | problems = errors }
-                        |> UR.init
+                |> UR.addExt (FinishedEnteringPassphrase passphrase)
 
 
 updateWithPin : PinMsg -> PinModel -> Guest.Model -> PinUpdateResult
@@ -610,49 +597,59 @@ updateWithPin msg model ({ shared } as guest) =
             UR.init model
 
         GotPinComponentMsg subMsg ->
-            let
-                ( pinModel, submitStatus ) =
-                    Pin.update subMsg model.pinModel
+            Pin.update shared subMsg model.pinModel
+                |> UR.fromChild (\pinModel -> { model | pinModel = pinModel })
+                    GotPinComponentMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (PinGuestExternal (Guest.SetFeedback feedback)) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction pinModel submitStatus shared SubmittedPinWithSuccess
-            in
-            { model | pinModel = pinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinModel
+                                            pin
+                                            shared
+                                            SubmittedPinWithSuccess
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (PinGuestExternal (Guest.UpdatedShared newShared))
+                    )
+                    model
 
 
 
 -- UTILS
 
 
-passphraseValidator : Validator String PassphraseModel
+passphraseValidator : Form.Validate.Validator String -> Form.Validate.Validator Passphrase
 passphraseValidator =
-    Validate.fromErrors
-        (\model ->
-            let
-                words =
-                    String.words model.passphrase
-
-                has12Words =
-                    List.length words == 12
-
-                allWordsHaveAtLeastThreeLetters =
-                    List.all (\w -> String.length w > 2) words
-
-                trPrefix s =
-                    "auth.login.wordsMode.input." ++ s
-            in
-            if not has12Words then
-                [ trPrefix "notPassphraseError" ]
-
-            else if not allWordsHaveAtLeastThreeLetters then
-                [ trPrefix "atLeastThreeLettersError" ]
+    let
+        has12Words passphrase =
+            if List.length (String.words passphrase) >= 12 then
+                String.words passphrase
+                    |> List.take 12
+                    |> String.join " "
+                    |> Ok
 
             else
-                []
-        )
+                Err (\translators_ -> translators_.t "auth.login.wordsMode.input.notPassphraseError")
+
+        wordsHave3Letters passphrase =
+            if
+                String.words passphrase
+                    |> List.all (\word -> String.length word > 2)
+            then
+                Ok passphrase
+
+            else
+                Err (\translators_ -> translators_.t "auth.login.wordsMode.input.atLeastThreeLettersError")
+    in
+    Form.Validate.custom has12Words
+        >> Form.Validate.custom wordsHave3Letters
+        >> Form.Validate.map Passphrase
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -721,10 +718,10 @@ passphraseMsgToString msg =
         GotClipboardResponse _ ->
             [ "GotClipboardResponse" ]
 
-        EnteredPassphrase _ ->
-            [ "EnteredPassphrase" ]
+        GotPassphraseFormMsg subMsg ->
+            "GotPassphraseFormMsg" :: Form.msgToString subMsg
 
-        ClickedNextStep ->
+        ClickedNextStep _ ->
             [ "ClickedNextStep" ]
 
 

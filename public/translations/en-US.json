@@ -5,7 +5,9 @@
   "thousands_separator": ",",
   "dates": {
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "select": "Select a date",
+    "clear": "Clear date"
   },
   "loading": {
     "title": "Wait a moment",
@@ -128,6 +130,8 @@
     "unavailablePin": "PIN is unavailable",
     "phone": "Please use a valid phone number",
     "invalid_image_file": "Error uploading image",
+    "file_upload": "Error uploading file",
+    "wait_file_upload": "Please wait for the file to be uploaded",
     "zipcode": "Invalid zipcode",
     "contracts": {
       "transfer": {
@@ -305,6 +309,8 @@
       "checkingAvailability": "Checking availability of that account",
       "button": "Create",
       "company_type": "Company Type",
+      "company_name": "Company Name",
+      "name_example": "Ex.: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
@@ -609,6 +615,7 @@
         "manual_detail": " rewards the user only after reviewed by others",
         "verifier_placeholder": "Type the username",
         "verifier_not_found": "No user found",
+        "unselect_user": "Unselect {{username}}",
         "usages_placeholder": "Type a number",
         "date_label": "Choose date",
         "quantity_label": "Choose usages",
@@ -899,20 +906,20 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "This claim is",
+      "1": "Claim",
       "2": "under review",
       "3": ", other members still need to vote"
     },
     "title_cancelled": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "cancelled"
     },
     "title_approved": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "approved"
     },
     "title_rejected": {
-      "1": "This claim was",
+      "1": "Claim",
       "2": "rejected"
     },
     "cancelled_voting_bar": "pending votes",
