@@ -1472,8 +1472,9 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditSale saleId)
 
         Just (Route.ViewSale saleId) ->
-            ShopViewer.init session saleId
-                |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+            (\s -> ShopViewer.init s saleId)
+                >> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+                |> withSession (Route.ViewSale saleId)
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
