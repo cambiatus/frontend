@@ -39,7 +39,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared)
+import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
@@ -56,7 +56,6 @@ init session saleId =
         Page.LoggedIn { shared, authToken, accountName } ->
             ( AsLoggedIn
                 { status = RemoteData.Loading
-                , viewing = ViewingCard
                 , form =
                     Form.init
                         { units = "1"
@@ -111,22 +110,11 @@ type alias GuestModel =
 
 type alias LoggedInModel =
     { status : RemoteData (Graphql.Http.Error (Maybe Product)) Product
-    , viewing : ViewState
     , form : Form.Model FormInput
     , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
     }
-
-
-defaultMemoKey : String
-defaultMemoKey =
-    "shop.transfer.default_memo"
-
-
-type ViewState
-    = ViewingCard
-    | EditingTransfer
 
 
 
@@ -148,8 +136,6 @@ type LoggedInMsg
     = ClosedAuthModal
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | ClickedBuy
-    | ClickedEdit Product
     | ClickedTransfer Product FormOutput
     | GotFormMsg (Form.Msg FormInput)
     | GotTransferResult (Result (Maybe Value) String)
@@ -295,15 +281,6 @@ updateAsLoggedIn msg model loggedIn =
 
         CompletedSaleLoad _ ->
             UR.init model
-
-        ClickedEdit sale ->
-            model
-                |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.EditSale sale.id))
-
-        ClickedBuy ->
-            { model | viewing = EditingTransfer }
-                |> UR.init
 
         ClickedTransfer sale formOutput ->
             let
@@ -713,130 +690,6 @@ viewContactTheSeller ({ t, tr } as translators) { isGuest } profile =
         ]
 
 
-viewCard :
-    Shared
-    -> Maybe Eos.Name
-    ->
-        { product
-            | title : String
-            , description : Markdown
-            , symbol : Eos.Symbol
-            , price : Float
-            , creator : Profile.Minimal
-        }
-    -> Html msg
-    -> Maybe Eos.Asset
-    -> List (Html msg)
-viewCard shared maybeCurrentName sale buttonView maybeAsset =
-    let
-        text_ str =
-            text (shared.translators.t str)
-
-        currentName =
-            maybeCurrentName
-                |> Maybe.withDefault (Eos.stringToName "")
-    in
-    [ div [ class "font-semibold text-3xl w-full" ] [ text sale.title ]
-    , Markdown.view [ class "text-gray w-full md:text-sm" ] sale.description
-    , div [ class "w-full flex items-center text-sm mt-4" ]
-        [ div [ class "mr-4" ] [ Avatar.view sale.creator.avatar "h-10 w-10" ]
-        , text_ "shop.sold_by"
-        , a
-            [ class "font-bold ml-1"
-            , Route.href (Route.Profile sale.creator.account)
-            ]
-            [ Profile.viewProfileName shared currentName sale.creator ]
-        ]
-    , div [ class "flex flex-wrap w-full justify-between items-center" ]
-        [ div []
-            [ div [ class "flex items-center" ]
-                [ div [ class "text-2xl text-green font-semibold" ]
-                    [ text (String.fromFloat sale.price) ]
-                , div [ class "uppercase text-sm font-extralight ml-2 text-green" ]
-                    [ text (Eos.symbolToSymbolCodeString sale.symbol) ]
-                ]
-            , case maybeAsset of
-                Nothing ->
-                    text ""
-
-                Just asset ->
-                    div [ class "flex" ]
-                        [ div [ class "bg-gray-100 uppercase text-sm px-2" ]
-                            [ text
-                                (shared.translators.tr
-                                    "account.my_wallet.your_current_balance"
-                                    [ ( "balance", Eos.assetToString shared.translators asset ) ]
-                                )
-                            ]
-                        ]
-            ]
-        , div [ class "mt-2 w-full sm:w-40 mb-10" ]
-            [ buttonView ]
-        ]
-    ]
-
-
-
--- viewGuestButton : Shared -> ProductPreview -> Html msg
--- viewGuestButton { translators } sale =
---     a
---         [ Route.href
---             (Route.ViewSale sale.id
---                 |> Just
---                 |> Route.Join
---             )
---         , class "button button-primary"
---         ]
---         [ text <| translators.t "shop.buy" ]
--- viewLoggedInButton : LoggedIn.Model -> LoggedInModel -> Product -> Html LoggedInMsg
--- viewLoggedInButton loggedIn model sale =
---     let
---         text_ =
---             text << loggedIn.shared.translators.t
---     in
---     div [ class "mt-6 md:mt-0 w-full sm:w-40" ]
---         [ if sale.creator.account == loggedIn.accountName then
---             div [ class "flex md:justify-end" ]
---                 [ button
---                     [ class "button button-primary w-full px-4"
---                     , onClick (ClickedEdit sale)
---                     ]
---                     [ text_ "shop.edit" ]
---                 ]
---           else if sale.units <= 0 && sale.trackStock then
---             div [ class "flex -mx-2 md:justify-end" ]
---                 [ button
---                     [ disabled True
---                     , class "button button-disabled mx-auto"
---                     ]
---                     [ text_ "shop.out_of_stock" ]
---                 ]
---           else if model.viewing == EditingTransfer then
---             div [ class "flex md:justify-end" ]
---                 [ button
---                     [ class "button button-primary"
---                     , onClick
---                         (Form.parse (createForm loggedIn.shared.translators sale)
---                             model.form2
---                             { onError = GotFormMsg
---                             , onSuccess = ClickedTransfer sale
---                             }
---                         )
---                     , disabled model.isBuyButtonDisabled
---                     ]
---                     [ text_ "shop.transfer.submit" ]
---                 ]
---           else
---             div [ class "flex -mx-2 md:justify-end" ]
---                 [ button
---                     [ class "button button-primary w-full sm:w-40 mx-auto"
---                     , onClick ClickedBuy
---                     ]
---                     [ text_ "shop.buy" ]
---                 ]
---         ]
-
-
 type alias FormInput =
     { units : String
     , memo : Form.RichText.Model
@@ -1030,12 +883,6 @@ loggedInMsgToString msg =
 
         GotTransferResult _ ->
             [ "GotTransferResult" ]
-
-        ClickedBuy ->
-            [ "ClickedBuy" ]
-
-        ClickedEdit _ ->
-            [ "ClickedEdit" ]
 
         ClickedTransfer _ _ ->
             [ "ClickedTransfer" ]

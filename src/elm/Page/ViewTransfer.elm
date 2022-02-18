@@ -7,7 +7,7 @@ import Emoji
 import Eos
 import Eos.Explorer
 import Graphql.Http
-import Html exposing (Html, a, div, h2, h5, img, p, span, text)
+import Html exposing (Html, a, div, h2, img, p, span, text)
 import Html.Attributes exposing (alt, class, href, src, target)
 import Icons
 import Markdown

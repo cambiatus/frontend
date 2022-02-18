@@ -23,7 +23,6 @@ import Http
 import I18Next exposing (t)
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
-import List.Extra as LE
 import Page exposing (Session(..))
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -331,7 +330,6 @@ type Msg
     | CompletedLoadCommunity Community.Model
     | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
-    | GotProfileSummaryMsg Int Bool Profile.Summary.Msg
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -373,35 +371,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-        GotProfileSummaryMsg index isAvailable subMsg ->
-            case model.cards of
-                Loaded cards ->
-                    let
-                        targetCard =
-                            cards
-                                |> List.filter (\card -> isAvailable == card.isAvailable)
-                                |> LE.getAt index
-
-                        updatedCards =
-                            case targetCard of
-                                Just card ->
-                                    let
-                                        updatedSummary =
-                                            Profile.Summary.update subMsg card.profileSummary
-                                    in
-                                    LE.updateIf (.product >> .id >> (==) card.product.id)
-                                        (\c -> { c | profileSummary = updatedSummary })
-                                        cards
-
-                                Nothing ->
-                                    cards
-                    in
-                    { model | cards = Loaded updatedCards }
-                        |> UR.init
-
-                _ ->
-                    UR.init model
 
 
 updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
@@ -484,6 +453,3 @@ msgToString msg =
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
-
-        GotProfileSummaryMsg _ _ subMsg ->
-            "GotProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

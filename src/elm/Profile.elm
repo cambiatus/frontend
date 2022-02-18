@@ -17,7 +17,6 @@ module Profile exposing
     , upsertKycMutation
     , userContactSelectionSet
     , viewEmpty
-    , viewProfileName
     , viewProfileNameTag
     )
 
