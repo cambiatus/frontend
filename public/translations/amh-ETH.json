@@ -642,6 +642,10 @@
     "edit_success": "መገለጫ በትክክል ተቀምጧል",
     "locations": "መገኛ",
     "interests": "ወለድ",
+    "summary": {
+      "user_summary": "{{user}}፡ የመገለጫ ማጠቃለያ ይክፈቱ",
+      "your_summary": "እርስዎ፡ የመገለጫ ማጠቃለያ ይክፈቱ"
+    },
     "12words": {
       "title": "የእኔ 12 ቃላት",
       "button": "አዉርድ"

@@ -20,6 +20,7 @@ import Avatar
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, href)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Markdown
 import Profile
@@ -149,7 +150,7 @@ view shared loggedInAccount profile model =
 mobileView : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 mobileView shared loggedInAccount profile model =
     div [ class "md:hidden cursor-auto" ]
-        [ viewUserImg profile True model
+        [ viewUserImg shared.translators profile loggedInAccount True model
         , viewUserNameTag shared loggedInAccount profile model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
             |> Modal.withBody [ viewUserInfo profile ]
@@ -166,7 +167,7 @@ desktopView shared loggedInAccount profile model =
             [ onMouseEnter OpenedInfo
             , onMouseLeave ClosedInfo
             ]
-            [ viewUserImg profile False model ]
+            [ viewUserImg shared.translators profile loggedInAccount False model ]
         , viewUserNameTag shared loggedInAccount profile model
         ]
 
@@ -174,7 +175,7 @@ desktopView shared loggedInAccount profile model =
 viewUserNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 viewUserNameTag shared loggedInAccount profile model =
     if model.showNameTag then
-        div [ class "mt-2" ]
+        div [ class "mt-2", ariaHidden True ]
             [ Profile.viewProfileNameTag shared
                 { showBg = model.showNameTagBg }
                 loggedInAccount
@@ -185,8 +186,8 @@ viewUserNameTag shared loggedInAccount profile model =
         text ""
 
 
-viewUserImg : Profile.Basic profile -> Bool -> Model -> Html Msg
-viewUserImg profile isMobile model =
+viewUserImg : Shared.Translators -> Profile.Basic profile -> Eos.Name -> Bool -> Model -> Html Msg
+viewUserImg { t, tr } profile loggedInAccount isMobile model =
     let
         container attrs =
             if isMobile then
@@ -197,7 +198,21 @@ viewUserImg profile isMobile model =
     in
     div [ class "flex flex-col items-center" ]
         [ div [ class ("rounded-full " ++ model.imageSize) ]
-            [ container [] [ Avatar.view profile.avatar model.imageSize ]
+            [ container
+                [ ariaLabel
+                    (if loggedInAccount == profile.account then
+                        t "profile.summary.your_summary"
+
+                     else
+                        tr "profile.summary.user_summary"
+                            [ ( "user"
+                              , profile.name
+                                    |> Maybe.withDefault (Eos.nameToString profile.account)
+                              )
+                            ]
+                    )
+                ]
+                [ Avatar.view profile.avatar model.imageSize ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble
                     { class_ = "w-120 animate-fade-in opacity-0"

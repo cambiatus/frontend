@@ -267,7 +267,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
 viewDetail : List (Html.Attribute Msg) -> String -> Html Msg -> Html Msg
 viewDetail containerAttrs title content =
     div containerAttrs
-        [ h5 [ class "label" ] [ text title ]
+        [ p [ class "label" ] [ text title ]
         , p [] [ content ]
         ]
 

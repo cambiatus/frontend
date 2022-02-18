@@ -685,6 +685,10 @@
     "edit_success": "El perfil s'ha desat correctament",
     "locations": "Localització",
     "interests": "Interessos",
+    "summary": {
+      "user_summary": "{{user}}: Obriu el resum del perfil",
+      "your_summary": "Tu: Obriu el resum del perfil"
+    },
     "12words": {
       "title": "Les meves 12 paraules",
       "button": "Descarregar"

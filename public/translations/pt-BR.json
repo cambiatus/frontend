@@ -689,6 +689,10 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
+    "summary": {
+      "user_summary": "{{user}}: Abrir resumo do perfil",
+      "your_summary": "Você: Abrir resumo do perfil"
+    },
     "12words": {
       "title": "Minhas 12 palavras",
       "button": "Baixar"

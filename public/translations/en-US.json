@@ -681,6 +681,10 @@
     "edit_success": "Profile saved successfully",
     "locations": "Location",
     "interests": "Interests",
+    "summary": {
+      "user_summary": "{{user}}: Open profile summary",
+      "your_summary": "You: Open profile summary"
+    },
     "12words": {
       "title": "My 12 words",
       "button": "Download"
