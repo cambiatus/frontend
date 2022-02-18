@@ -412,6 +412,7 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                                 not (Maybe.Extra.isJust news.receipt)
                                     && not (isAdminPage page)
                                     && not isInNewsPage
+                                    && not (List.member page [ Join, Invite ])
                         in
                         if showHighlightedNews then
                             viewHighlightedNews shared.translators pageMsg news
