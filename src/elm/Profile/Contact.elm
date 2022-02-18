@@ -748,6 +748,9 @@ circularIconWithGrayBg translators class_ (Normalized normalized) =
                 Whatsapp ->
                     "fill-current text-green "
 
+                Phone ->
+                    "fill-current text-orange-500"
+
                 _ ->
                     ""
     in
@@ -778,19 +781,19 @@ ariaLabelForContactType { t } contactType =
 circularIcon : String -> Normalized -> Html msg
 circularIcon class_ (Normalized normalized) =
     let
-        bgColor =
+        ( bgColor, textColor ) =
             case normalized.contactType of
                 Phone ->
-                    "bg-orange-300"
+                    ( "bg-orange-300", "fill-current text-white" )
 
                 Instagram ->
-                    "bg-instagram"
+                    ( "bg-instagram", "" )
 
                 Telegram ->
-                    "bg-telegram"
+                    ( "bg-telegram", "" )
 
                 Whatsapp ->
-                    "bg-whatsapp"
+                    ( "bg-whatsapp", "" )
     in
     case normalized.contactType of
         Telegram ->
@@ -806,6 +809,7 @@ circularIcon class_ (Normalized normalized) =
                 [ class
                     (String.join " "
                         [ "p-2 rounded-full flex items-center justify-center hover:opacity-80"
+                        , textColor
                         , bgColor
                         , class_
                         ]
