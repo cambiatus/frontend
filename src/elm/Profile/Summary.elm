@@ -175,7 +175,7 @@ desktopView shared loggedInAccount profile model =
 viewUserNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 viewUserNameTag shared loggedInAccount profile model =
     if model.showNameTag then
-        div [ class "mt-2", ariaHidden True ]
+        div [ class "mt-2 w-20", ariaHidden True ]
             [ Profile.viewProfileNameTag shared
                 { showBg = model.showNameTagBg }
                 loggedInAccount

@@ -351,8 +351,8 @@ viewProfileNameTag :
     -> Html msg
 viewProfileNameTag shared { showBg } loggedInAccount profile =
     p
-        [ class "py-1 px-3 rounded-label uppercase font-bold text-xs text-center line-clamp-2"
-        , classList [ ( "bg-black text-white", showBg ) ]
+        [ class "py-1 px-3 uppercase font-bold text-xs text-center truncate"
+        , classList [ ( "bg-black text-white rounded-label", showBg ) ]
         ]
         [ viewProfileName shared loggedInAccount profile ]
 
