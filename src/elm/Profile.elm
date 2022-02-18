@@ -40,7 +40,7 @@ import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Iso8601
 import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
@@ -344,9 +344,17 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileNameTag shared loggedInAccount profile =
-    p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
+viewProfileNameTag :
+    { shared | translators : Shared.Translators }
+    -> { showBg : Bool }
+    -> Eos.Name
+    -> { profile | account : Eos.Name, name : Maybe String }
+    -> Html msg
+viewProfileNameTag shared { showBg } loggedInAccount profile =
+    p
+        [ class "py-1 px-3 rounded-label uppercase font-bold text-xs text-center line-clamp-2"
+        , classList [ ( "bg-black text-white", showBg ) ]
+        ]
         [ viewProfileName shared loggedInAccount profile ]
 
 

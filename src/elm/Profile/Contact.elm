@@ -742,12 +742,21 @@ contactTypeToIcon class_ isInverted contactType =
 
 circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
 circularIconWithGrayBg translators class_ (Normalized normalized) =
+    let
+        defaultClass =
+            case normalized.contactType of
+                Whatsapp ->
+                    "fill-current text-green "
+
+                _ ->
+                    ""
+    in
     a
         [ toHref (Normalized normalized)
         , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
         , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
-        [ contactTypeToIcon class_ True normalized.contactType ]
+        [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
 
 
 ariaLabelForContactType : Translators -> ContactType -> String

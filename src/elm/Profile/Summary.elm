@@ -9,6 +9,7 @@ module Profile.Summary exposing
     , view
     , withAttrs
     , withImageSize
+    , withNameBg
     , withPreventScrolling
     , withRelativeSelector
     , withScrollSelector
@@ -41,6 +42,7 @@ type alias Model =
     , relativeSelector : Maybe String
     , scrollSelector : Maybe String
     , showNameTag : Bool
+    , showNameTagBg : Bool
     , extraAttrs : List (Html.Attribute Msg)
     }
 
@@ -58,6 +60,7 @@ init isLarge =
     , relativeSelector = Nothing
     , scrollSelector = Nothing
     , showNameTag = True
+    , showNameTagBg = True
     , extraAttrs = []
     }
 
@@ -115,6 +118,11 @@ withScrollSelector scrollSelector model =
     { model | scrollSelector = Just scrollSelector }
 
 
+withNameBg : Bool -> Model -> Model
+withNameBg showNameTagBg model =
+    { model | showNameTagBg = showNameTagBg }
+
+
 withoutName : Model -> Model
 withoutName model =
     { model | showNameTag = False }
@@ -167,7 +175,11 @@ viewUserNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> P
 viewUserNameTag shared loggedInAccount profile model =
     if model.showNameTag then
         div [ class "mt-2" ]
-            [ Profile.viewProfileNameTag shared loggedInAccount profile ]
+            [ Profile.viewProfileNameTag shared
+                { showBg = model.showNameTagBg }
+                loggedInAccount
+                profile
+            ]
 
     else
         text ""
