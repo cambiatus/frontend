@@ -816,12 +816,15 @@ communitySelectorModal model =
 
 insufficientPermissionsModal : Model -> Html Msg
 insufficientPermissionsModal model =
+    let
+        { t } =
+            model.shared.translators
+    in
     Modal.initWith
         { closeMsg = ClosedInsufficientPermissionsModal
         , isVisible = model.showInsufficientPermissionsModal
         }
-        -- TODO - I18N
-        |> Modal.withHeader "Action not allowed"
+        |> Modal.withHeader (t "permissions.insufficient.title")
         |> Modal.withBody
             [ img
                 [ src "/images/girl-with-ice-cube.svg"
@@ -830,18 +833,16 @@ insufficientPermissionsModal model =
                 ]
                 []
             , p [ class "md:max-w-md md:mx-auto md:text-center" ]
-                [ text "You don't have the permissions needed to perform this action. Reach out to the community admins to know how to get more permissions."
-                ]
+                [ text <| t "permissions.insufficient.explanation" ]
             , p [ class "mt-4 md:max-w-md md:mx-auto md:text-center" ]
-                [ text "Please try again once you have enough permissions!"
-                ]
+                [ text <| t "permissions.insufficient.try_again" ]
             ]
         |> Modal.withFooter
             [ button
                 [ class "button button-primary w-full mt-2"
                 , onClick ClosedInsufficientPermissionsModal
                 ]
-                [ text "Got it" ]
+                [ text <| t "permissions.insufficient.ok" ]
             ]
         |> Modal.toHtml
 

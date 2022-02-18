@@ -1287,5 +1287,13 @@
     "eos_plural": "Eos",
     "eth_plural": "Ethereum",
     "usd_plural": "Dollars"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Action not allowed",
+      "explanation": "You don't have the permissions needed to perform this action. Reach out to the community admins to know how to get more permissions.",
+      "try_again": "Please try again once you have enough permissions!",
+      "ok": "Got it"
+    }
   }
 }
