@@ -523,7 +523,7 @@ viewPageBody ({ shared } as model) profile_ page content =
                     , p [ class "mt-2 mb-6" ]
                         [ text (t "community.kyc.restriction.description") ]
                     , a
-                        [ class "button button-primary m-auto w-full sm:w-56"
+                        [ class "button button-primary m-auto w-full"
                         , Route.href Route.ProfileAddKyc
                         ]
                         [ text (t "community.kyc.restriction.link") ]
