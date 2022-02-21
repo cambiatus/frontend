@@ -436,17 +436,32 @@ view session model =
                             shopTitle
 
         viewContent :
-            { isGuest : Bool }
-            ->
-                { product
-                    | image : Maybe String
-                    , title : String
-                    , description : Markdown
-                    , creator : Profile.Minimal
-                }
+            { product
+                | image : Maybe String
+                , title : String
+                , description : Markdown
+                , creator : Profile.Minimal
+            }
             -> Html msg
             -> Html msg
-        viewContent { isGuest } sale formView =
+        viewContent sale formView =
+            let
+                isGuest =
+                    case session of
+                        Page.Guest _ ->
+                            True
+
+                        Page.LoggedIn _ ->
+                            False
+
+                isCreator =
+                    case session of
+                        Page.Guest _ ->
+                            False
+
+                        Page.LoggedIn loggedIn ->
+                            loggedIn.accountName == sale.creator.account
+            in
             div [ class "flex-grow grid items-center relative bg-white md:bg-gray-100" ]
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
@@ -454,7 +469,11 @@ view session model =
                         [ viewProductImg translators sale.image
                         , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
-                        , viewContactTheSeller translators { isGuest = isGuest } sale.creator
+                        , if isCreator then
+                            text ""
+
+                          else
+                            viewContactTheSeller translators { isGuest = isGuest } sale.creator
                         ]
                     , div [ class "bg-gray-100 px-4 pt-6 pb-4 w-full rounded-lg md:p-0 md:w-2/3 md:mx-auto md:place-self-start" ]
                         [ formView
@@ -467,8 +486,7 @@ view session model =
                 ( AsGuest model_, Page.Guest guest ) ->
                     case model_.productPreview of
                         RemoteData.Success sale ->
-                            viewContent { isGuest = True }
-                                sale
+                            viewContent sale
                                 (Form.viewWithoutSubmit []
                                     guest.shared.translators
                                     (\_ ->
@@ -556,8 +574,7 @@ view session model =
                                     in
                                     div [ class "flex-grow flex flex-col" ]
                                         [ Page.viewHeader loggedIn sale.title
-                                        , viewContent { isGuest = False }
-                                            sale
+                                        , viewContent sale
                                             (Form.view []
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
