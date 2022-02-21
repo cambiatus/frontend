@@ -513,6 +513,7 @@ viewPageBody ({ shared } as model) profile_ page content =
             , ProfileAddKyc
             , PaymentHistory
             , ViewTransfer
+            , Join
             ]
 
         viewKycRestriction =
