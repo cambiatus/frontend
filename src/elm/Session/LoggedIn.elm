@@ -5,7 +5,6 @@ module Session.LoggedIn exposing
     , Model
     , Msg(..)
     , Page(..)
-    , Permission(..)
     , Resource(..)
     , addFeedback
     , executeFeedback
@@ -32,6 +31,7 @@ import Action
 import Api.Graphql
 import Auth
 import Avatar
+import Cambiatus.Enum.Permission exposing (Permission)
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -186,9 +186,6 @@ type alias Model =
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
-    , permissions : List Permission
-
-    -- TODO - Do we need to know which permissions?
     , showInsufficientPermissionsModal : Bool
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
     , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
@@ -213,11 +210,6 @@ type alias Model =
     }
 
 
-type Permission
-    = -- TODO - Use enum from GraphQL
-      Permission
-
-
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 initModel shared maybePrivateKey_ accountName authToken =
     let
@@ -228,9 +220,6 @@ initModel shared maybePrivateKey_ accountName authToken =
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
-
-      -- TODO - Use data from GraphQL
-      , permissions = []
       , showInsufficientPermissionsModal = False
       , selectedCommunity = RemoteData.Loading
       , contributionCount = RemoteData.NotAsked
@@ -2226,7 +2215,7 @@ update msg model =
                     |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
                     |> UR.addExt (AddAfterAuthTokenCallbackInternal callback)
             )
-                |> withPrivateKeyInternal msg model
+                |> withPrivateKeyInternal msg model []
 
         GotAuthTokenPhrase _ (RemoteData.Failure err) ->
             { model
@@ -2258,7 +2247,7 @@ update msg model =
                     |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
                     |> UR.addExt (AddAfterAuthTokenCallback callback)
             )
-                |> withPrivateKeyInternal msg model
+                |> withPrivateKeyInternal msg model []
 
         GotAuthTokenPhraseExternal _ (RemoteData.Failure err) ->
             { model
@@ -2393,6 +2382,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                            )
             in
             Action.update (hasPrivateKey model)
+                (model.profile
+                    |> RemoteData.map (.roles >> List.concatMap .permissions)
+                    |> RemoteData.withDefault []
+                )
                 shared
                 community.symbol
                 model.accountName
@@ -2401,7 +2394,14 @@ handleActionMsg ({ shared } as model) actionMsg =
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg
-                    (\feedback -> UR.mapModel (\prevModel -> { prevModel | feedback = feedback }))
+                    (\ext ->
+                        case ext of
+                            Action.SentFeedback feedback ->
+                                UR.mapModel (\prevModel -> { prevModel | feedback = feedback })
+
+                            Action.ShowInsufficientPermissions ->
+                                UR.mapModel (\prevModel -> { prevModel | showInsufficientPermissionsModal = True })
+                    )
                 |> UR.addCmd
                     (case actionMsg of
                         Action.AgreedToClaimWithProof _ ->
@@ -2427,34 +2427,75 @@ withPrivateKey :
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
 withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
-    let
-        hasPermissions =
-            List.all (\permission -> List.member permission loggedIn.permissions)
-                necessaryPermissions
-    in
-    if hasPermissions then
-        if hasPrivateKey loggedIn then
-            successfulUR
+    case profile loggedIn of
+        Just validProfile ->
+            let
+                allPermissions =
+                    List.concatMap .permissions validProfile.roles
 
-        else
-            UR.init subModel
-                |> UR.addExt (RequiredPrivateKey subMsg)
+                hasPermissions =
+                    List.all (\permission -> List.member permission allPermissions)
+                        necessaryPermissions
+            in
+            if hasPermissions then
+                if hasPrivateKey loggedIn then
+                    successfulUR
 
-    else
-        UR.init subModel
-            |> UR.addExt (UpdatedLoggedIn { loggedIn | showInsufficientPermissionsModal = True })
+                else
+                    UR.init subModel
+                        |> UR.addExt (RequiredPrivateKey subMsg)
 
-
-withPrivateKeyInternal : Msg msg -> Model -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
-withPrivateKeyInternal msg loggedIn successfulUR =
-    case maybePrivateKey loggedIn of
-        Just privateKey ->
-            successfulUR privateKey
+            else
+                UR.init subModel
+                    |> UR.addExt (UpdatedLoggedIn { loggedIn | showInsufficientPermissionsModal = True })
 
         Nothing ->
-            askedAuthentication loggedIn
+            UR.init subModel
+                |> UR.logImpossible subMsg.successMsg
+                    "Tried signing eos transaction, but profile wasn't loaded"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Session.LoggedIn"
+                    , function = "withPrivateKey"
+                    }
+                    []
+
+
+withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
+withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
+    case profile loggedIn of
+        Just validProfile ->
+            let
+                allPermissions =
+                    List.concatMap .permissions validProfile.roles
+
+                hasPermissions =
+                    List.all (\permission -> List.member permission allPermissions)
+                        necessaryPermissions
+            in
+            if hasPermissions then
+                case maybePrivateKey loggedIn of
+                    Just privateKey ->
+                        successfulUR privateKey
+
+                    Nothing ->
+                        askedAuthentication loggedIn
+                            |> UR.init
+                            |> UR.addExt (AddAfterPrivateKeyCallback msg)
+
+            else
+                { loggedIn | showInsufficientPermissionsModal = True }
+                    |> UR.init
+
+        _ ->
+            loggedIn
                 |> UR.init
-                |> UR.addExt (AddAfterPrivateKeyCallback msg)
+                |> UR.logImpossible msg
+                    "Tried signing eos transaction internally, but profile wasn't loaded"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Session.LoggedIn"
+                    , function = "withPrivateKey"
+                    }
+                    []
 
 
 isCommunityMember : Model -> Bool

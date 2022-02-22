@@ -3,6 +3,7 @@ module Action exposing
     , ActionFeedback(..)
     , ClaimingActionStatus(..)
     , Community
+    , ExternalMsg(..)
     , Model
     , Msg(..)
     , Objective
@@ -20,6 +21,7 @@ module Action exposing
     , viewSearchActions
     )
 
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
@@ -127,38 +129,55 @@ type Msg
     | Tick Time.Posix
 
 
+type ExternalMsg
+    = SentFeedback Feedback.Model
+    | ShowInsufficientPermissions
+
+
 update :
     Bool
+    -> List Permission
     -> Shared
     -> Symbol
     -> Eos.Name
     -> Msg
     -> Model
-    -> UR.UpdateResult Model Msg Feedback.Model
-update isPinConfirmed shared selectedCommunity accName msg model =
+    -> UR.UpdateResult Model Msg ExternalMsg
+update isPinConfirmed permissions shared selectedCommunity accName msg model =
     let
         { t, tr } =
             shared.translators
 
-        claimOrAskForPin actionId photoUrl code time m =
-            if isPinConfirmed then
-                m
-                    |> UR.init
-                    |> UR.addPort
-                        (claimActionPort
-                            msg
-                            shared.contracts.community
-                            { communityId = selectedCommunity
-                            , actionId = actionId
-                            , maker = accName
-                            , proofPhoto = photoUrl
-                            , proofCode = code
-                            , proofTime = time
-                            }
-                        )
+        claimOrAskForPin actionId photoUrl code time necessaryPermissions m =
+            let
+                hasPermissions =
+                    List.all (\permission -> List.member permission permissions)
+                        necessaryPermissions
+            in
+            if hasPermissions then
+                if isPinConfirmed then
+                    m
+                        |> UR.init
+                        |> UR.addPort
+                            (claimActionPort
+                                msg
+                                shared.contracts.community
+                                { communityId = selectedCommunity
+                                , actionId = actionId
+                                , maker = accName
+                                , proofPhoto = photoUrl
+                                , proofCode = code
+                                , proofTime = time
+                                }
+                            )
+
+                else
+                    m |> UR.init
 
             else
-                m |> UR.init
+                m
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
@@ -174,7 +193,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                 , feedback = Nothing
                 , needsPinConfirmation = not isPinConfirmed
             }
-                |> claimOrAskForPin action.id "" "" 0
+                |> claimOrAskForPin action.id "" "" 0 [ Permission.Claim ]
 
         ( ActionClaimed action (Just proofRecord), _ ) ->
             let
@@ -193,7 +212,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         , feedback = Nothing
                         , needsPinConfirmation = not isPinConfirmed
                     }
-                        |> claimOrAskForPin action.id image proofCode time
+                        |> claimOrAskForPin action.id image proofCode time [ Permission.Claim ]
 
                 Nothing ->
                     { model
@@ -340,7 +359,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         }
                     )
                     GotFormMsg
-                    UR.addExt
+                    (SentFeedback >> UR.addExt)
                     model
 
         ( GotFormMsg subMsg, PhotoUploaderShowed action (Proof formModel proofCode) ) ->
@@ -350,7 +369,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         { model | status = PhotoUploaderShowed action (Proof newForm proofCode) }
                     )
                     GotFormMsg
-                    UR.addExt
+                    (SentFeedback >> UR.addExt)
                     model
 
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
