@@ -9,6 +9,7 @@ module Page.Profile.Claims exposing
     , view
     )
 
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
@@ -517,7 +518,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withPrivateKey loggedIn
-                            []
+                            [ Permission.Verify ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

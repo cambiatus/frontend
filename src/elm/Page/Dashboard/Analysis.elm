@@ -11,6 +11,7 @@ module Page.Dashboard.Analysis exposing
 
 import Api.Relay
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Query
 import Claim
 import Community
@@ -596,7 +597,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withPrivateKey loggedIn
-                            []
+                            [ Permission.Verify ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

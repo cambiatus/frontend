@@ -1,6 +1,7 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Action
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Query
 import Claim
 import Dict
@@ -566,7 +567,7 @@ update msg model loggedIn =
                             , level = Log.Info
                             }
                         |> LoggedIn.withPrivateKey loggedIn
-                            []
+                            [ Permission.Verify ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
