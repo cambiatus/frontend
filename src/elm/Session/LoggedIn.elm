@@ -8,6 +8,7 @@ module Session.LoggedIn exposing
     , Resource(..)
     , addFeedback
     , executeFeedback
+    , hasPermissions
     , init
     , initLogin
     , isAccount
@@ -978,6 +979,7 @@ viewFooter _ =
 -}
 type External msg
     = UpdatedLoggedIn Model
+    | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
@@ -1317,6 +1319,9 @@ mapExternal mapFn msg =
         UpdatedLoggedIn model ->
             UpdatedLoggedIn model
 
+        ShowInsufficientPermissionsModal ->
+            ShowInsufficientPermissionsModal
+
         AddedCommunity communityInfo ->
             AddedCommunity communityInfo
 
@@ -1397,6 +1402,9 @@ updateExternal externalMsg ({ shared } as model) =
     case externalMsg of
         UpdatedLoggedIn newModel ->
             { defaultResult | model = newModel }
+
+        ShowInsufficientPermissionsModal ->
+            { defaultResult | model = { model | showInsufficientPermissionsModal = True } }
 
         AddedCommunity communityInfo ->
             let
@@ -2429,15 +2437,7 @@ withPrivateKey :
 withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
     case profile loggedIn of
         Just validProfile ->
-            let
-                allPermissions =
-                    List.concatMap .permissions validProfile.roles
-
-                hasPermissions =
-                    List.all (\permission -> List.member permission allPermissions)
-                        necessaryPermissions
-            in
-            if hasPermissions then
+            if hasPermissions validProfile necessaryPermissions then
                 if hasPrivateKey loggedIn then
                     successfulUR
 
@@ -2447,7 +2447,7 @@ withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
 
             else
                 UR.init subModel
-                    |> UR.addExt (UpdatedLoggedIn { loggedIn | showInsufficientPermissionsModal = True })
+                    |> UR.addExt ShowInsufficientPermissionsModal
 
         Nothing ->
             UR.init subModel
@@ -2460,19 +2460,23 @@ withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
                     []
 
 
+{-| Determines if a profile has a set of permissions
+-}
+hasPermissions : Profile.Model -> List Permission -> Bool
+hasPermissions profile_ permissions =
+    let
+        allPermissions =
+            List.concatMap .permissions profile_.roles
+    in
+    List.all (\permission -> List.member permission allPermissions)
+        permissions
+
+
 withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
 withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
     case profile loggedIn of
         Just validProfile ->
-            let
-                allPermissions =
-                    List.concatMap .permissions validProfile.roles
-
-                hasPermissions =
-                    List.all (\permission -> List.member permission allPermissions)
-                        necessaryPermissions
-            in
-            if hasPermissions then
+            if hasPermissions validProfile necessaryPermissions then
                 case maybePrivateKey loggedIn of
                     Just privateKey ->
                         successfulUR privateKey
@@ -2869,6 +2873,9 @@ externalMsgToString externalMsg =
     case externalMsg of
         UpdatedLoggedIn _ ->
             [ "UpdatedLoggedIn" ]
+
+        ShowInsufficientPermissionsModal ->
+            [ "ShowInsufficientPermissionsModal" ]
 
         AddedCommunity _ ->
             [ "AddedCommunity" ]

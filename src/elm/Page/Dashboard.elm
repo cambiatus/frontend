@@ -14,6 +14,7 @@ import Api.Relay
 import Avatar
 import Browser.Dom
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
 import Cambiatus.Query
@@ -1173,19 +1174,36 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         CreateInvite ->
-            case model.balance of
-                RemoteData.Success (Just b) ->
-                    UR.init
-                        { model | inviteModalStatus = InviteModalLoading }
-                        |> UR.addCmd
-                            (CompletedInviteCreation
-                                |> Api.communityInvite loggedIn.shared b.asset.symbol loggedIn.accountName
-                            )
+            case loggedIn.profile of
+                RemoteData.Success profile ->
+                    if LoggedIn.hasPermissions profile [ Permission.Invite ] then
+                        case model.balance of
+                            RemoteData.Success (Just b) ->
+                                UR.init
+                                    { model | inviteModalStatus = InviteModalLoading }
+                                    |> UR.addCmd
+                                        (CompletedInviteCreation
+                                            |> Api.communityInvite loggedIn.shared b.asset.symbol loggedIn.accountName
+                                        )
+
+                            _ ->
+                                UR.init model
+                                    |> UR.logImpossible msg
+                                        "Created invitation, but balance wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.Dashboard", function = "update" }
+                                        []
+
+                    else
+                        model
+                            |> UR.init
+                            |> UR.addExt LoggedIn.ShowInsufficientPermissionsModal
 
                 _ ->
-                    UR.init model
+                    model
+                        |> UR.init
                         |> UR.logImpossible msg
-                            "Created invitation, but balance wasn't loaded"
+                            "Tried creating invitation, but profile wasn't loaded"
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Dashboard", function = "update" }
                             []
