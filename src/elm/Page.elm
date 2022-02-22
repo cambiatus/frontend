@@ -22,7 +22,7 @@ module Page exposing
     , viewTitle
     )
 
-import Auth
+import Api.Graphql
 import Browser.Navigation as Nav
 import Dict
 import Eos.Account
@@ -37,7 +37,6 @@ import Icons
 import Json.Encode exposing (Value)
 import Log
 import Ports
-import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
@@ -47,7 +46,6 @@ import Time
 import Translation
 import UpdateResult as UR
 import Url exposing (Url)
-import Utils
 import View.Components
 
 
@@ -55,24 +53,29 @@ import View.Components
 -- INIT
 
 
-init : Flags -> Nav.Key -> Url -> UpdateResult
+init : Flags -> Nav.Key -> Url -> UpdateResult externalMsg
 init flags navKey url =
     let
         ( shared, sharedCmd ) =
             Shared.init flags navKey url
+
+        initialCmds =
+            Cmd.batch
+                [ fetchTranslations shared.language
+                , fetchTimezone
+                , sharedCmd
+                ]
     in
-    case ( shared.maybeAccount, flags.authToken ) of
-        ( Just ( accountName, _ ), Just authToken ) ->
+    case shared.maybeAccount of
+        Just accountName ->
             let
                 ( model, cmd ) =
-                    LoggedIn.init shared accountName authToken
+                    LoggedIn.init shared accountName flags.authToken
             in
-            UR.init (LoggedIn model)
+            LoggedIn model
+                |> UR.init
+                |> UR.addCmd initialCmds
                 |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
-                |> UR.addCmd (Ports.createAbsintheSocket authToken)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
@@ -81,52 +84,31 @@ init flags navKey url =
                     , level = Log.DebugLevel
                     }
 
-        ( Just ( accountName, _ ), Nothing ) ->
-            let
-                ( model, cmd, signedInCmd ) =
-                    Guest.initLoggingIn shared accountName SignedIn
-            in
-            Guest model
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd signedInCmd
-                |> UR.addCmd sharedCmd
-                |> UR.addBreadcrumb
-                    { type_ = Log.DebugBreadcrumb
-                    , category = Ignored
-                    , message = "Started Elm app with guest logging in"
-                    , data = Dict.empty
-                    , level = Log.DebugLevel
-                    }
-
-        ( Nothing, _ ) ->
+        Nothing ->
             let
                 ( model, cmd ) =
                     Guest.init shared
             in
-            UR.init (Guest model)
+            Guest model
+                |> UR.init
+                |> UR.addCmd initialCmds
                 |> UR.addCmd (Cmd.map GotGuestMsg cmd)
-                |> UR.addCmd (fetchTranslations shared.language)
-                |> UR.addCmd fetchTimezone
-                |> UR.addCmd sharedCmd
                 |> UR.addBreadcrumb
                     { type_ = Log.DebugBreadcrumb
                     , category = Ignored
-                    , message = "Started Elm app with regular guest user"
+                    , message = "Started Elm app with guest user"
                     , data = Dict.empty
                     , level = Log.DebugLevel
                     }
 
 
-fetchTranslations : Translation.Language -> Cmd Msg
+fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
 fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
 
 
-fetchTimezone : Cmd Msg
+fetchTimezone : Cmd (Msg externalMsg)
 fetchTimezone =
     Time.here
         |> Task.attempt GotTimezone
@@ -136,7 +118,7 @@ fetchTimezone =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Session -> Sub Msg
+subscriptions : Session -> Sub (Msg externalMsg)
 subscriptions session =
     case session of
         Guest guest ->
@@ -161,12 +143,12 @@ type Session
 -- VIEW
 
 
-viewGuest : (Msg -> msg) -> Guest.Page -> Guest.Model -> Html msg -> Html msg
+viewGuest : (Msg msg -> msg) -> Guest.Page -> Guest.Model -> Html msg -> Html msg
 viewGuest thisMsg page model content =
     Guest.view (thisMsg << GotGuestMsg) page model content
 
 
-viewLoggedIn : (Msg -> msg) -> LoggedIn.Page -> LoggedIn.Model -> Html msg -> Html msg
+viewLoggedIn : (Msg msg -> msg) -> LoggedIn.Page -> LoggedIn.Model -> Html msg -> Html msg
 viewLoggedIn thisMsg page model content =
     LoggedIn.view (thisMsg << GotLoggedInMsg) page model content
 
@@ -240,7 +222,7 @@ fullPageGraphQLError title_ e =
     div [ class "mx-auto container p-16 flex flex-wrap" ]
         [ div [ class "w-full" ]
             [ p [ class "text-2xl font-bold text-center" ] [ text title_ ]
-            , p [ class "text-center" ] [ text (Utils.errorToString e) ]
+            , p [ class "text-center" ] [ text (Api.Graphql.errorToString e) ]
             ]
         , img [ class "w-full", src "/images/error.svg" ] []
         ]
@@ -261,14 +243,14 @@ fullPageNotFound title subTitle =
 -- UPDATE
 
 
-type alias UpdateResult =
-    UR.UpdateResult Session Msg ExternalMsg
+type alias UpdateResult msg =
+    UR.UpdateResult Session (Msg msg) (ExternalMsg msg)
 
 
 {-| External msg for the `UpdateResult` produced by `Page.update`
 -}
-type ExternalMsg
-    = LoggedInExternalMsg LoggedIn.ExternalMsg
+type ExternalMsg msg
+    = LoggedInExternalMsg (LoggedIn.ExternalMsg msg)
     | GuestBroadcastMsg Guest.BroadcastMsg
 
 
@@ -280,16 +262,15 @@ type External msg
     | GuestExternal Guest.External
 
 
-type Msg
+type Msg msg
     = Ignored
     | CompletedLoadTranslation Translation.Language (Result Http.Error Translations)
     | GotTimezone (Result () Time.Zone)
-    | SignedIn (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
     | GotGuestMsg Guest.Msg
-    | GotLoggedInMsg LoggedIn.Msg
+    | GotLoggedInMsg (LoggedIn.Msg msg)
 
 
-update : Msg -> Session -> UpdateResult
+update : Msg externalMsg -> Session -> UpdateResult externalMsg
 update msg session =
     case ( msg, session ) of
         ( Ignored, _ ) ->
@@ -342,42 +323,6 @@ update msg session =
                         UR.addExt (LoggedInExternalMsg extMsg) uR
                     )
 
-        ( SignedIn (RemoteData.Success (Just { user, token })), Guest guest ) ->
-            let
-                shared =
-                    guest.shared
-
-                ( loggedIn, cmd ) =
-                    LoggedIn.initLogin shared Nothing user token
-            in
-            LoggedIn loggedIn
-                |> UR.init
-                |> UR.addCmd (Ports.createAbsintheSocket token)
-                |> UR.addCmd (Cmd.map GotLoggedInMsg cmd)
-                |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addCmd
-                    (guest.afterLoginRedirect
-                        |> Maybe.withDefault Route.Dashboard
-                        |> Route.replaceUrl shared.navKey
-                    )
-                |> UR.addBreadcrumb
-                    { type_ = Log.InfoBreadcrumb
-                    , category = msg
-                    , message = "User logged in"
-                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
-                    , level = Log.Info
-                    }
-
-        ( SignedIn (RemoteData.Failure error), Guest guest ) ->
-            UR.init session
-                |> UR.addCmd (Route.replaceUrl guest.shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
-                |> UR.logGraphqlError msg
-                    (maybeAccountName session)
-                    "Got an error when trying to sign in"
-                    { moduleName = "Page", function = "update" }
-                    []
-                    error
-
         ( _, _ ) ->
             UR.init session
                 |> UR.logIncompatibleMsg msg
@@ -402,7 +347,7 @@ updateShared session transform =
 -- TRANSFORM
 
 
-logout : LoggedIn.Model -> ( Session, Cmd Msg )
+logout : LoggedIn.Model -> ( Session, Cmd (Msg externalMsg) )
 logout { shared } =
     let
         ( guest, guestCmd ) =
@@ -440,7 +385,7 @@ maybeAccountName session =
             Nothing
 
 
-jsAddressToMsg : List String -> Value -> Maybe Msg
+jsAddressToMsg : List String -> Value -> Maybe (Msg externalMsg)
 jsAddressToMsg addr val =
     case addr of
         "GotLoggedInMsg" :: remainAddress ->
@@ -451,7 +396,7 @@ jsAddressToMsg addr val =
             Nothing
 
 
-msgToString : Msg -> List String
+msgToString : Msg externalMsg -> List String
 msgToString msg =
     case msg of
         Ignored ->
@@ -462,9 +407,6 @@ msgToString msg =
 
         GotTimezone r ->
             [ "GotTimezone", UR.resultToString r ]
-
-        SignedIn r ->
-            [ "SignedIn", UR.remoteDataToString r ]
 
         GotGuestMsg subMsg ->
             "GotGuestMsg" :: Guest.msgToString subMsg

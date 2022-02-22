@@ -339,7 +339,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                                 ]
                                                 [ validatorSummary
                                                     |> Profile.Summary.withRelativeSelector ("#" ++ validatorId)
-                                                    |> Profile.Summary.view shared loggedIn.accountName u
+                                                    |> Profile.Summary.view shared.translators loggedIn.accountName u
                                                     |> Html.map (GotProfileSummaryMsg action.id validatorIndex)
                                                 ]
                                 )

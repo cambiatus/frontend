@@ -9,7 +9,6 @@ module Page.Profile.Claims exposing
     , view
     )
 
-import Api.Graphql
 import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
@@ -34,7 +33,7 @@ import List.Extra as List
 import Log
 import Page
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
@@ -411,7 +410,7 @@ type alias ProfileClaims =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -463,7 +462,11 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community.symbol)
+                |> UR.addExt
+                    (profileClaimQuery loggedIn
+                        model.accountString
+                        community.symbol
+                    )
 
         ClaimMsg claimIndex m ->
             let
@@ -513,7 +516,7 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -552,7 +555,11 @@ update msg model loggedIn =
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (profileClaimQuery loggedIn model.accountString symbol)
+                                |> UR.addExt
+                                    (profileClaimQuery loggedIn
+                                        model.accountString
+                                        symbol
+                                    )
 
                         Nothing ->
                             model
@@ -577,7 +584,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -650,11 +657,10 @@ update msg model loggedIn =
                 |> UR.init
 
 
-profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> Cmd Msg
-profileClaimQuery { shared, authToken } accountName symbol =
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.user { account = accountName } (selectionSet shared.now symbol))
+profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> LoggedIn.External Msg
+profileClaimQuery loggedIn accountName symbol =
+    LoggedIn.query loggedIn
+        (Cambiatus.Query.user { account = accountName } (selectionSet loggedIn.shared.now symbol))
         ClaimsLoaded
 
 

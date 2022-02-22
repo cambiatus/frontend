@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Api.Graphql
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Dict
@@ -60,6 +61,7 @@ import Task
 import Time
 import UpdateResult as UR exposing (UpdateResult)
 import Url exposing (Url)
+import Utils
 import View.Feedback as Feedback
 
 
@@ -111,6 +113,8 @@ init flagsValue url navKey =
             changeRouteTo (Route.fromUrl url)
                 { session = session
                 , afterAuthMsg = Nothing
+                , afterAuthTokenCallbacks = []
+                , afterPrivateKeyCallbacks = []
                 , status = Redirect
                 }
     in
@@ -148,6 +152,8 @@ subscriptions model =
 type alias Model =
     { session : Session
     , afterAuthMsg : Maybe { successMsg : Msg, errorMsg : Msg }
+    , afterAuthTokenCallbacks : List (Api.Graphql.Token -> Cmd Msg)
+    , afterPrivateKeyCallbacks : List Msg
     , status : Status
     }
 
@@ -206,7 +212,7 @@ type Msg
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotJavascriptData Value
-    | GotPageMsg Page.Msg
+    | GotPageMsg (Page.Msg Msg)
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg CommunityPage.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
@@ -349,32 +355,7 @@ update msg model =
                     (\s -> { model | session = s })
                     GotPageMsg
                     (\extMsg uR -> UR.addExt extMsg uR)
-                |> UR.toModelCmd
-                    (\extMsg m ->
-                        case extMsg of
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationSucceed ->
-                                case m.afterAuthMsg of
-                                    Nothing ->
-                                        ( m, Cmd.none )
-
-                                    Just aMsg ->
-                                        update aMsg.successMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
-                                case m.afterAuthMsg of
-                                    Nothing ->
-                                        ( m, Cmd.none )
-
-                                    Just aMsg ->
-                                        update aMsg.errorMsg { m | afterAuthMsg = Nothing }
-
-                            Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
-                                ( m, broadcast broadcastMsg m.status )
-
-                            Page.GuestBroadcastMsg broadcastMsg ->
-                                ( m, broadcastGuest broadcastMsg m.status )
-                    )
-                    msgToString
+                |> UR.toModelCmd updateExternal msgToString
 
         ( GotRegisterMsg subMsg, Register maybeInvitation maybeRedirect subModel ) ->
             -- Will return  a function expecting a Guest Model
@@ -595,7 +576,7 @@ broadcastGuest broadcastMessage status =
     in
     case maybeMsg of
         Just msg ->
-            spawnMessage msg
+            Utils.spawnMessage msg
 
         Nothing ->
             Cmd.none
@@ -723,16 +704,10 @@ broadcast broadcastMessage status =
     in
     case maybeMsg of
         Just msg ->
-            spawnMessage msg
+            Utils.spawnMessage msg
 
         Nothing ->
             Cmd.none
-
-
-spawnMessage : Msg -> Cmd Msg
-spawnMessage msg =
-    Task.succeed ()
-        |> Task.perform (\_ -> msg)
 
 
 updateStatusWith : (subModel -> Status) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
@@ -791,18 +766,18 @@ updateGuestUResult toStatus toMsg model uResult =
 
                 Page.Guest guest ->
                     case commExtMsg of
-                        Guest.LoggedIn privateKey { user, token } ->
+                        Guest.LoggedIn privateKey { profile, token } ->
                             let
                                 shared =
                                     guest.shared
 
                                 userWithCommunity =
-                                    { user
+                                    { profile
                                         | communities =
                                             case guest.community of
                                                 RemoteData.Success community ->
-                                                    if List.any (\c -> c.symbol == community.symbol) user.communities then
-                                                        user.communities
+                                                    if List.any (\c -> c.symbol == community.symbol) profile.communities then
+                                                        profile.communities
 
                                                     else
                                                         { symbol = community.symbol
@@ -813,10 +788,10 @@ updateGuestUResult toStatus toMsg model uResult =
                                                         , hasActions = community.hasObjectives
                                                         , hasKyc = community.hasKyc
                                                         }
-                                                            :: user.communities
+                                                            :: profile.communities
 
                                                 _ ->
-                                                    user.communities
+                                                    profile.communities
                                     }
 
                                 ( session, cmd ) =
@@ -838,13 +813,13 @@ updateGuestUResult toStatus toMsg model uResult =
                                     Page.LoggedIn session
                               }
                             , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) cmd
-                                :: Ports.createAbsintheSocket token
+                                :: Api.Graphql.createAbsintheSocket token
                                 :: Route.pushUrl guest.shared.navKey redirectRoute
                                 :: Log.addBreadcrumb msgToString
                                     { type_ = Log.InfoBreadcrumb
                                     , category = Ignored
                                     , message = "Guest logged in"
-                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName user.account ) ]
+                                    , data = Dict.fromList [ ( "username", Eos.Account.encodeName profile.account ) ]
                                     , level = Log.Info
                                     }
                                 :: cmds_
@@ -874,6 +849,76 @@ updateGuestUResult toStatus toMsg model uResult =
                     )
                 )
            )
+
+
+updateExternal : Page.ExternalMsg Msg -> Model -> ( Model, Cmd Msg )
+updateExternal extMsg model =
+    case extMsg of
+        Page.LoggedInExternalMsg LoggedIn.AuthenticationSucceed ->
+            case model.afterAuthMsg of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just aMsg ->
+                    update aMsg.successMsg { model | afterAuthMsg = Nothing }
+
+        Page.LoggedInExternalMsg LoggedIn.AuthenticationFailed ->
+            case model.afterAuthMsg of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just aMsg ->
+                    update aMsg.errorMsg { model | afterAuthMsg = Nothing }
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterAuthTokenCallback callback) ->
+            ( { model | afterAuthTokenCallbacks = callback :: model.afterAuthTokenCallbacks }, Cmd.none )
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterAuthTokenCallbackInternal callback) ->
+            ( { model
+                | afterAuthTokenCallbacks =
+                    (\token ->
+                        callback token
+                            |> Cmd.map (Page.GotLoggedInMsg >> GotPageMsg)
+                    )
+                        :: model.afterAuthTokenCallbacks
+              }
+            , Cmd.none
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.RunAfterAuthTokenCallbacks authToken) ->
+            ( { model | afterAuthTokenCallbacks = [] }
+            , model.afterAuthTokenCallbacks
+                |> List.map (\callback -> callback authToken)
+                |> Cmd.batch
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.AddAfterPrivateKeyCallback callbackMsg) ->
+            ( { model
+                | afterPrivateKeyCallbacks =
+                    (callbackMsg
+                        |> Page.GotLoggedInMsg
+                        |> GotPageMsg
+                    )
+                        :: model.afterPrivateKeyCallbacks
+              }
+            , Cmd.none
+            )
+
+        Page.LoggedInExternalMsg LoggedIn.RunAfterPrivateKeyCallbacks ->
+            ( { model | afterPrivateKeyCallbacks = [] }
+            , model.afterPrivateKeyCallbacks
+                |> List.map Utils.spawnMessage
+                |> Cmd.batch
+            )
+
+        Page.LoggedInExternalMsg (LoggedIn.Broadcast broadcastMsg) ->
+            ( model, broadcast broadcastMsg model.status )
+
+        Page.LoggedInExternalMsg (LoggedIn.RunExternalMsg subExternalMsg) ->
+            ( model, Utils.spawnMessage subExternalMsg )
+
+        Page.GuestBroadcastMsg broadcastMsg ->
+            ( model, broadcastGuest broadcastMsg model.status )
 
 
 updateLoggedInUResult : (subModel -> Status) -> (subMsg -> Msg) -> Model -> UpdateResult subModel subMsg (LoggedIn.External subMsg) -> ( Model, Cmd Msg )
@@ -906,7 +951,7 @@ updateLoggedInUResult toStatus toMsg model uResult =
                                 )
                                 updateResult.afterAuthMsg
                       }
-                    , Cmd.map (Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
+                    , Cmd.map (LoggedIn.mapMsg toMsg >> Page.GotLoggedInMsg >> GotPageMsg) updateResult.cmd
                         :: broadcastCmd
                         :: cmds_
                     )
@@ -1232,11 +1277,7 @@ changeRouteTo maybeRoute model =
                                 |> Page.Guest
                         , status = Redirect
                       }
-                    , if guest.isLoggingIn then
-                        Cmd.none
-
-                      else
-                        Route.replaceUrl shared.navKey (Route.Join (Just route))
+                    , Route.replaceUrl shared.navKey (Route.Join (Just route))
                     )
 
         withSession : Route -> (Session -> ( Model, Cmd Msg )) -> ( Model, Cmd Msg )
@@ -1313,7 +1354,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.Notification ->
             Notification.init
-                >> updateStatusWith Notification GotNotificationMsg model
+                >> updateLoggedInUResult Notification GotNotificationMsg model
                 |> withLoggedIn Route.Notification
 
         Just (Route.Profile profileName) ->
@@ -1378,7 +1419,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.CommunitySettingsNewsEditor editorKind) ->
             CommunitySettingsNewsEditor.init editorKind
-                >> updateStatusWith CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
+                >> updateLoggedInUResult CommunitySettingsNewsEditor GotCommunitySettingsNewsEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsNewsEditor editorKind)
 
         Just Route.CommunitySettingsCurrency ->
@@ -1453,7 +1494,7 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
-                >> updateStatusWith (Claim objectiveId actionId) GotVerifyClaimMsg model
+                >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
                 |> withLoggedIn (Route.Claim objectiveId actionId claimId)
 
         Just (Route.Shop maybeFilter) ->
@@ -1473,11 +1514,11 @@ changeRouteTo maybeRoute model =
 
         Just (Route.ViewSale saleId) ->
             ShopViewer.init session saleId
-                |> updateStatusWith (ShopViewer saleId) GotShopViewerMsg model
+                |> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
-                >> updateStatusWith (ViewTransfer transferId) GotViewTransferScreenMsg model
+                >> updateLoggedInUResult (ViewTransfer transferId) GotViewTransferScreenMsg model
                 |> withLoggedIn (Route.ViewTransfer transferId)
 
         Just (Route.Invite invitationId) ->

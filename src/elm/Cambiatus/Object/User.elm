@@ -5,6 +5,7 @@
 module Cambiatus.Object.User exposing (..)
 
 import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.Language
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -55,6 +56,11 @@ chatToken =
 chatUserId : SelectionSet (Maybe String) Cambiatus.Object.User
 chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
+
+
+claimNotification : SelectionSet (Maybe Bool) Cambiatus.Object.User
+claimNotification =
+    Object.selectionForField "(Maybe Bool)" "claimNotification" [] (Decode.bool |> Decode.nullable)
 
 
 type alias ClaimsOptionalArguments =
@@ -157,6 +163,11 @@ createdEosAccount =
     Object.selectionForField "(Maybe String)" "createdEosAccount" [] (Decode.string |> Decode.nullable)
 
 
+digest : SelectionSet (Maybe Bool) Cambiatus.Object.User
+digest =
+    Object.selectionForField "(Maybe Bool)" "digest" [] (Decode.bool |> Decode.nullable)
+
+
 email : SelectionSet (Maybe String) Cambiatus.Object.User
 email =
     Object.selectionForField "(Maybe String)" "email" [] (Decode.string |> Decode.nullable)
@@ -188,6 +199,11 @@ kyc object_ =
     Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
 
 
+language : SelectionSet (Maybe Cambiatus.Enum.Language.Language) Cambiatus.Object.User
+language =
+    Object.selectionForField "(Maybe Enum.Language.Language)" "language" [] (Cambiatus.Enum.Language.decoder |> Decode.nullable)
+
+
 location : SelectionSet (Maybe String) Cambiatus.Object.User
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
@@ -210,6 +226,18 @@ products :
     -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.User
 products object_ =
     Object.selectionForCompositeField "products" [] object_ (identity >> Decode.nullable >> Decode.list)
+
+
+roles :
+    SelectionSet decodesTo Cambiatus.Object.Role
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
+roles object_ =
+    Object.selectionForCompositeField "roles" [] object_ (identity >> Decode.list)
+
+
+transferNotification : SelectionSet (Maybe Bool) Cambiatus.Object.User
+transferNotification =
+    Object.selectionForField "(Maybe Bool)" "transferNotification" [] (Decode.bool |> Decode.nullable)
 
 
 type alias TransfersOptionalArguments =

@@ -10,7 +10,6 @@ module Page.Dashboard exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
 import Avatar
 import Browser.Dom
@@ -545,7 +544,7 @@ viewTransfer loggedIn transfer profileSummary =
             |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
             |> addRelativeSelector
             |> Profile.Summary.withScrollSelector "#transfer-list-container"
-            |> Profile.Summary.view loggedIn.shared
+            |> Profile.Summary.view loggedIn.shared.translators
                 loggedIn.accountName
                 otherProfile
             |> Html.map (GotTransferCardProfileSummaryMsg transfer.id)
@@ -993,8 +992,8 @@ update msg model ({ shared, accountName } as loggedIn) =
                     , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
-                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing community)
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
+                |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing community)
+                |> UR.addExt (fetchTransfers loggedIn community Nothing model)
                 |> markSponsorModalAsSeen
 
         CompletedLoadBalance (Ok balance) ->
@@ -1114,7 +1113,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     in
                     { model | transfers = LoadingGraphql (Just transfers) }
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor model)
+                        |> UR.addExt (fetchTransfers loggedIn community maybeCursor model)
 
                 _ ->
                     model
@@ -1148,7 +1147,12 @@ update msg model ({ shared, accountName } as loggedIn) =
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community Nothing newModel)
+                        |> UR.addExt
+                            (fetchTransfers loggedIn
+                                community
+                                Nothing
+                                newModel
+                            )
 
                 _ ->
                     model
@@ -1190,40 +1194,32 @@ update msg model ({ shared, accountName } as loggedIn) =
             case LoggedIn.profile loggedIn of
                 Just userProfile ->
                     let
-                        ( contactModel, cmd, contactResponse ) =
-                            Contact.update subMsg
-                                model.contactModel
-                                loggedIn.shared
-                                loggedIn.authToken
-                                userProfile.contacts
-
-                        addContactResponse model_ =
-                            case contactResponse of
-                                Contact.NotAsked ->
-                                    model_
-                                        |> UR.init
-
-                                Contact.WithError errorMessage ->
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
-
-                                Contact.WithContacts successMessage contacts _ ->
-                                    let
-                                        newProfile =
-                                            { userProfile | contacts = contacts }
-                                    in
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                        |> UR.addExt
-                                            (LoggedIn.ProfileLoaded newProfile
+                        handleExtMsg extMsg =
+                            case extMsg of
+                                Contact.GotContacts successMessage contacts _ ->
+                                    UR.mapModel (\model_ -> { model_ | showContactModal = False })
+                                        >> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                        >> UR.addExt
+                                            ({ userProfile | contacts = contacts }
+                                                |> LoggedIn.ProfileLoaded
                                                 |> LoggedIn.ExternalBroadcast
                                             )
+
+                                Contact.GotContactsError errorMessage ->
+                                    UR.mapModel (\model_ -> { model_ | showContactModal = False })
+                                        >> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+
+                                Contact.GotMutationRequest selectionSet responseMsg ->
+                                    UR.addExt (LoggedIn.mutation loggedIn selectionSet (responseMsg >> GotContactMsg))
                     in
-                    { model | contactModel = contactModel }
-                        |> addContactResponse
-                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+                    Contact.update subMsg
+                        model.contactModel
+                        loggedIn.shared.translators
+                        userProfile.contacts
+                        |> UR.fromChild (\newContactModel -> { model | contactModel = newContactModel })
+                            GotContactMsg
+                            handleExtMsg
+                            model
 
                 Nothing ->
                     model |> UR.init
@@ -1328,10 +1324,9 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> Cmd Msg
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> LoggedIn.External Msg
 fetchTransfers loggedIn community maybeCursor model =
-    Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+    LoggedIn.query loggedIn
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->
@@ -1365,8 +1360,8 @@ fetchTransfers loggedIn community maybeCursor model =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> Cmd Msg
-fetchAvailableAnalysis { shared, authToken } maybeCursor community =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> LoggedIn.External Msg
+fetchAvailableAnalysis loggedIn maybeCursor community =
     let
         arg =
             { communityId = Eos.symbolToString community.symbol
@@ -1403,11 +1398,10 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor community =
                             |> Present
                 }
     in
-    Api.Graphql.query shared
-        (Just authToken)
+    LoggedIn.query loggedIn
         (Cambiatus.Query.pendingClaims optionalArguments
             arg
-            (Claim.claimPaginatedSelectionSet shared.now)
+            (Claim.claimPaginatedSelectionSet loggedIn.shared.now)
         )
         ClaimsLoaded
 

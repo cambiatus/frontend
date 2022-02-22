@@ -24,15 +24,14 @@ module Community exposing
     , encodeCreateObjectiveAction
     , encodeUpdateData
     , encodeUpdateObjectiveAction
+    , fieldSelectionSet
+    , fieldsSelectionSet
     , getField
     , inviteQuery
     , isFieldLoading
-    , isNonExistingCommunityError
     , maybeFieldValue
     , mergeFields
     , newCommunitySubscription
-    , queryForField
-    , queryForFields
     , setFieldAsLoading
     , setFieldValue
     , subdomainQuery
@@ -40,7 +39,6 @@ module Community exposing
     )
 
 import Action exposing (Action)
-import Api.Graphql
 import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation
@@ -77,7 +75,6 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
-import Utils
 
 
 
@@ -405,41 +402,21 @@ selectionSetForField field =
                 |> SelectionSet.map NewsValue
 
 
-queryForField :
-    Eos.Symbol
-    -> Shared
-    -> String
-    -> Field
-    -> (RemoteData (Graphql.Http.Error (Maybe FieldValue)) (Maybe FieldValue) -> msg)
-    -> Cmd msg
-queryForField symbol shared authToken field toMsg =
-    Api.Graphql.query shared
-        (Just authToken)
-        (field
-            |> selectionSetForField
-            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
-        )
-        toMsg
+fieldSelectionSet : Eos.Symbol -> Field -> SelectionSet (Maybe FieldValue) RootQuery
+fieldSelectionSet symbol field =
+    field
+        |> selectionSetForField
+        |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
 
 
-queryForFields :
-    Eos.Symbol
-    -> Shared
-    -> String
-    -> List Field
-    -> (RemoteData (Graphql.Http.Error (List FieldValue)) (List FieldValue) -> msg)
-    -> Cmd msg
-queryForFields symbol shared authToken fields toMsg =
-    Api.Graphql.query shared
-        (Just authToken)
-        (fields
-            |> List.Extra.unique
-            |> List.map selectionSetForField
-            |> SelectionSet.list
-            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
-            |> SelectionSet.withDefault []
-        )
-        toMsg
+fieldsSelectionSet : Eos.Symbol -> List Field -> SelectionSet (List FieldValue) RootQuery
+fieldsSelectionSet symbol fields =
+    fields
+        |> List.Extra.unique
+        |> List.map selectionSetForField
+        |> SelectionSet.list
+        |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+        |> SelectionSet.withDefault []
 
 
 symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
@@ -869,10 +846,3 @@ communityPreviewImage isLeftSide { translators } community =
                 ]
             ]
         ]
-
-
-isNonExistingCommunityError : Graphql.Http.Error community -> Bool
-isNonExistingCommunityError error =
-    Utils.errorToString error
-        |> String.toLower
-        |> String.contains "no community found using the domain"

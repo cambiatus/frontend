@@ -1,5 +1,6 @@
 module Search exposing
     ( ActiveTab(..)
+    , ExternalMsg(..)
     , Model
     , Msg
     , State(..)
@@ -15,7 +16,6 @@ module Search exposing
     )
 
 import Action exposing (Action)
-import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
@@ -27,6 +27,7 @@ import Eos.Account
 import Form
 import Form.Text
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
@@ -109,15 +110,13 @@ type alias FoundData =
     RemoteData (Graphql.Http.Error SearchResults) SearchResults
 
 
-sendSearchQuery : Symbol -> Shared -> String -> String -> Cmd Msg
-sendSearchQuery selectedCommunity shared queryString authToken =
+sendSearchQuery : Symbol -> String -> ExternalMsg
+sendSearchQuery selectedCommunity queryString =
     let
         req =
             { communityId = Eos.symbolToString selectedCommunity }
     in
-    Api.Graphql.query
-        shared
-        (Just authToken)
+    RequestQuery
         (Cambiatus.Query.search req (searchResultSelectionSet queryString))
         GotSearchResults
 
@@ -175,11 +174,16 @@ type Msg
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg Feedback.Model
+    UR.UpdateResult Model Msg ExternalMsg
 
 
-update : Shared -> String -> Symbol -> Model -> Msg -> UpdateResult
-update shared authToken symbol model msg =
+type ExternalMsg
+    = SetFeedback Feedback.Model
+    | RequestQuery (SelectionSet SearchResults RootQuery) (FoundData -> Msg)
+
+
+update : Shared -> Symbol -> Model -> Msg -> UpdateResult
+update shared symbol model msg =
     case msg of
         NoOp ->
             UR.init model
@@ -193,7 +197,6 @@ update shared authToken symbol model msg =
 
         RecentQueryClicked q ->
             update shared
-                authToken
                 symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
@@ -260,7 +263,7 @@ update shared authToken symbol model msg =
                     Form.update shared subMsg model.form
                         |> UR.fromChild (\newForm -> { model | form = newForm })
                             GotFormMsg
-                            UR.addExt
+                            (SetFeedback >> UR.addExt)
                             model
 
                 newQuery =
@@ -271,7 +274,7 @@ update shared authToken symbol model msg =
                         UR.mapModel (\m -> { m | state = RecentSearchesShowed })
 
                     else if oldQuery /= newQuery then
-                        UR.addCmd (sendSearchQuery symbol shared newQuery authToken)
+                        UR.addExt (sendSearchQuery symbol newQuery)
 
                     else
                         identity
@@ -318,12 +321,8 @@ update shared authToken symbol model msg =
                 , state = ResultsShowed RemoteData.Loading Nothing
             }
                 |> UR.init
-                |> UR.addCmd
-                    (Cmd.batch
-                        [ storeRecentSearches newRecentSearches
-                        , sendSearchQuery symbol shared currentQuery authToken
-                        ]
-                    )
+                |> UR.addCmd (storeRecentSearches newRecentSearches)
+                |> UR.addExt (sendSearchQuery symbol currentQuery)
 
 
 

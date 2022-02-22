@@ -1,6 +1,5 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Mutation
 import Community
 import Dict
@@ -221,7 +220,7 @@ update msg model loggedIn =
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -230,7 +229,7 @@ update msg model loggedIn =
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -248,9 +247,8 @@ update msg model loggedIn =
                 RemoteData.Success community ->
                     { model | hasNews = newsValue }
                         |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
                                 (Cambiatus.Mutation.hasNews
                                     { communityId = Eos.symbolToString community.symbol
                                     , hasNews = newsValue

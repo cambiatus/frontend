@@ -1,7 +1,6 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Action
-import Api.Graphql
 import Cambiatus.Query
 import Claim
 import Dict
@@ -21,7 +20,7 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External)
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
 import String.Extra
@@ -35,11 +34,15 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared, authToken } claimId =
-    ( initModel claimId
-    , fetchClaim claimId shared authToken
-    )
+init : LoggedIn.Model -> Claim.ClaimId -> UpdateResult
+init loggedIn claimId =
+    let
+        model =
+            initModel claimId
+    in
+    model
+        |> UR.init
+        |> UR.addExt (fetchClaim claimId loggedIn)
 
 
 
@@ -112,7 +115,10 @@ view ({ shared } as loggedIn) model =
                         div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn title
                             , div [ class "mt-10 mb-8 flex items-center justify-center" ]
-                                [ Profile.Summary.view shared loggedIn.accountName claim.claimer profileSummaries.claimer
+                                [ Profile.Summary.view shared.translators
+                                    loggedIn.accountName
+                                    claim.claimer
+                                    profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)
                                 ]
                             , div [ class "mx-auto container px-4" ]
@@ -238,7 +244,7 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
 
 
 viewTitle : Shared -> Model -> Claim.Model -> Html msg
-viewTitle shared model claim =
+viewTitle shared _ claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -278,7 +284,7 @@ viewTitle shared model claim =
 
 
 viewDetails : LoggedIn.Model -> Model -> Claim.Model -> Html msg
-viewDetails { shared } model claim =
+viewDetails { shared } _ claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -370,7 +376,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
         [ div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.approved_by" ]
             , if List.isEmpty claim.checks then
-                div [ class "flex mb-10" ] [ Profile.viewEmpty shared ]
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared.translators ]
 
               else
                 div [ class "flex flex-wrap -mx-2" ]
@@ -378,7 +384,10 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
                         (\profileSummary index c ->
                             if c.isApproved then
                                 div [ class "px-2" ]
-                                    [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
+                                    [ Profile.Summary.view shared.translators
+                                        loggedIn.accountName
+                                        c.validator
+                                        profileSummary
                                         |> Html.map (GotProfileSummaryMsg (VoterSummary index))
                                     ]
 
@@ -393,7 +402,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.disapproved_by" ]
             , if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                div [ class "flex mb-10" ] [ Profile.viewEmpty shared ]
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared.translators ]
 
               else
                 div [ class "flex flex-wrap mb-10 -mx-2 pt-2" ]
@@ -401,7 +410,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
                         (\profileSummary index c ->
                             if not c.isApproved then
                                 div [ class "px-2" ]
-                                    [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
+                                    [ Profile.Summary.view shared.translators loggedIn.accountName c.validator profileSummary
                                         |> Html.map (GotProfileSummaryMsg (VoterSummary index))
                                     ]
 
@@ -416,14 +425,14 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
         , div [ class "mb-8" ]
             [ p [ class "label" ] [ text_ "claim.pending" ]
             , if List.length claim.checks == claim.action.verifications then
-                div [ class "flex" ] [ Profile.viewEmpty shared ]
+                div [ class "flex" ] [ Profile.viewEmpty shared.translators ]
 
               else
                 div [ class "flex flex-row flex-wrap space-x-6" ]
                     (pendingValidators claim
                         |> List.map3
                             (\profileSummary index v ->
-                                Profile.Summary.view shared loggedIn.accountName v profileSummary
+                                Profile.Summary.view shared.translators loggedIn.accountName v profileSummary
                                     |> Html.map (GotProfileSummaryMsg (PendingSummary index))
                             )
                             profileSummaries.pending
@@ -438,7 +447,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -556,7 +565,7 @@ update msg model loggedIn =
                                     ]
                             , level = Log.Info
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
@@ -651,12 +660,11 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchClaim : Claim.ClaimId -> Shared -> String -> Cmd Msg
-fetchClaim claimId shared authToken =
-    Api.Graphql.query
-        shared
-        (Just authToken)
-        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet shared.now))
+fetchClaim : Claim.ClaimId -> LoggedIn.Model -> LoggedIn.External Msg
+fetchClaim claimId loggedIn =
+    LoggedIn.query
+        loggedIn
+        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet loggedIn.shared.now))
         ClaimLoaded
 
 

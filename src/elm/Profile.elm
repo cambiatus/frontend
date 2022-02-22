@@ -28,7 +28,7 @@ import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Contribution
-import Cambiatus.Object.DeleteKycAddress
+import Cambiatus.Object.DeleteStatus
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -46,8 +46,8 @@ import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Session.Shared as Shared exposing (Shared)
 import Time
+import Translation
 
 
 type alias Basic a =
@@ -181,11 +181,14 @@ mutation form =
         { input =
             { name = Present form.name
             , email = Present form.email
+            , claimNotification = Absent
             , bio = Present (Markdown.toRawString form.bio)
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
+            , digest = Absent
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
+            , transferNotification = Absent
             }
         }
         selectionSet
@@ -276,8 +279,8 @@ deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutatio
 deleteKycMutation _ =
     Cambiatus.Mutation.deleteKyc
         (SelectionSet.succeed DeleteKycResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 
@@ -291,8 +294,8 @@ deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) Roo
 deleteAddressMutation _ =
     Cambiatus.Mutation.deleteAddress
         (SelectionSet.succeed DeleteAddressResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 
@@ -344,14 +347,14 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileNameTag shared loggedInAccount profile =
+viewProfileNameTag : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileNameTag translators loggedInAccount profile =
     p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
-        [ viewProfileName shared loggedInAccount profile ]
+        [ viewProfileName translators loggedInAccount profile ]
 
 
-viewProfileName : { shared | translators : Shared.Translators } -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName { translators } loggedInAccount profile =
+viewProfileName : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName translators loggedInAccount profile =
     if profile.account == loggedInAccount then
         text (translators.t "transfer_result.you")
 
@@ -364,11 +367,11 @@ viewProfileName { translators } loggedInAccount profile =
                 Eos.viewName profile.account
 
 
-viewEmpty : Shared -> Html msg
-viewEmpty shared =
+viewEmpty : Translation.Translators -> Html msg
+viewEmpty translators =
     div
         []
         [ p
             [ class "uppercase text-gray-900 text-sm" ]
-            [ text (shared.translators.t "profile.no_one") ]
+            [ text (translators.t "profile.no_one") ]
         ]

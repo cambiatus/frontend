@@ -65,7 +65,7 @@ import Html.Attributes exposing (class, classList, disabled, id, placeholder, re
 import Html.Events as Events exposing (onInput)
 import Mask
 import Maybe.Extra
-import Session.Shared as Shared
+import Translation
 import View.Components
 
 
@@ -360,7 +360,7 @@ type alias ViewConfig msg =
     , value : String
     , error : Html msg
     , hasError : Bool
-    , translators : Shared.Translators
+    , translators : Translation.Translators
     , isRequired : Bool
     }
 
@@ -456,7 +456,7 @@ viewInput (Options options) ({ onChange, value, hasError, onBlur, translators, i
                                     x
 
                         separators =
-                            Shared.decimalSeparators translators
+                            Translation.decimalSeparators translators
 
                         previousDecimalSeparator =
                             if decimalDigitsAmount == 0 then

@@ -1,6 +1,5 @@
 module Page.Community.Settings.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Mutation
 import Cambiatus.Object.Community
 import Community
@@ -90,12 +89,12 @@ update msg model loggedIn =
                     case community.highlightedNews of
                         Nothing ->
                             UR.init model
-                                |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+                                |> setHighlightNews loggedIn community newsId isHighlighted
 
                         Just highlightedNews ->
                             if highlightedNews.id == newsId then
                                 UR.init model
-                                    |> UR.addCmd (setHighlightNews loggedIn community newsId isHighlighted)
+                                    |> setHighlightNews loggedIn community newsId isHighlighted
 
                             else
                                 { model
@@ -163,7 +162,7 @@ update msg model loggedIn =
                 RemoteData.Success community ->
                     model
                         |> UR.init
-                        |> UR.addCmd (setHighlightNews loggedIn community newsId True)
+                        |> setHighlightNews loggedIn community newsId True
 
                 _ ->
                     model
@@ -175,10 +174,9 @@ update msg model loggedIn =
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
 
-setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> Cmd Msg
+setHighlightNews : LoggedIn.Model -> Community.Model -> Int -> Bool -> (UpdateResult -> UpdateResult)
 setHighlightNews loggedIn community newsId isHighlighted =
-    Api.Graphql.mutation loggedIn.shared
-        (Just loggedIn.authToken)
+    LoggedIn.mutation loggedIn
         (Cambiatus.Mutation.highlightedNews
             (\optionals ->
                 { optionals
@@ -195,6 +193,7 @@ setHighlightNews loggedIn community newsId isHighlighted =
             |> Graphql.SelectionSet.map (Maybe.andThen identity)
         )
         (CompletedSettingHighlightedNews isHighlighted)
+        |> UR.addExt
 
 
 

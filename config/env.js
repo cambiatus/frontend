@@ -73,8 +73,6 @@ function getClientEnvironment (publicUrl) {
         // This should only be used as an escape hatch. Normally you would put
         // images into the `src` and `import` them in code to get their paths.
         PUBLIC_URL: publicUrl,
-        // GraphQL password for signing in
-        GRAPHQL_SECRET: process.env.GRAPHQL_SECRET || '',
         // Controls if you should be redirected to specific subdomains for each community
         USE_SUBDOMAIN: process.env.USE_SUBDOMAIN
       }
