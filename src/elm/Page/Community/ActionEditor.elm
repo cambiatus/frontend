@@ -284,7 +284,7 @@ update msg model ({ shared } as loggedIn) =
                         model
                         formOutput
                     )
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -299,7 +299,7 @@ update msg model ({ shared } as loggedIn) =
                         model
                         formOutput
                     )
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

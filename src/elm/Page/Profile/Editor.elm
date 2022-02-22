@@ -8,7 +8,6 @@ module Page.Profile.Editor exposing
     , view
     )
 
-import Api.Graphql
 import Avatar
 import Dict
 import Form
@@ -330,9 +329,8 @@ update msg model loggedIn =
                     model
                         |> UR.init
                         |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
                                 (Profile.mutation (Profile.profileToForm newProfile))
                                 GotSaveResult
                             )

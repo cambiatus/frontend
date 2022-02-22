@@ -1,6 +1,5 @@
 module Page.News exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Mutation
 import Community
@@ -105,9 +104,8 @@ update msg model loggedIn =
 
                                 Nothing ->
                                     -- Only mark as read if the user hasn't read it yet
-                                    UR.addCmd
-                                        (Api.Graphql.mutation loggedIn.shared
-                                            (Just loggedIn.authToken)
+                                    UR.addExt
+                                        (LoggedIn.mutation loggedIn
                                             (Cambiatus.Mutation.read
                                                 { newsId = selectedNews.id }
                                                 Community.News.receiptSelectionSet
@@ -193,9 +191,8 @@ update msg model loggedIn =
                 Just selectedNews ->
                     model
                         |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
                                 (Community.News.reactToNews selectedNews
                                     { newsId = selectedNews.id
                                     , reaction = reaction
@@ -407,7 +404,7 @@ viewMainNews ({ shared } as loggedIn) model news =
                     [ model.lastEditorSummary
                         |> Profile.Summary.withoutName
                         |> Profile.Summary.withImageSize "h-8 w-8"
-                        |> Profile.Summary.view shared
+                        |> Profile.Summary.view shared.translators
                             loggedIn.accountName
                             news.creator
                         |> Html.map GotLastEditorSummaryMsg

@@ -9,6 +9,7 @@ module Page.Community exposing
     )
 
 import Action exposing (Action)
+import Api.Graphql
 import Avatar
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
@@ -153,7 +154,7 @@ view loggedIn model =
                                         objectivesContainer
                                             [ div [ class "w-full" ]
                                                 [ p [ class "text-2xl font-bold text-center" ] [ text (t "community.objectives.error_loading") ]
-                                                , p [ class "text-center" ] [ text (Utils.errorToString err) ]
+                                                , p [ class "text-center" ] [ text (Api.Graphql.errorToString err) ]
                                                 ]
                                             , img [ class "w-1/3 mx-auto", src "/images/error.svg" ] []
                                             ]

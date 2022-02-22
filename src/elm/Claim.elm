@@ -469,7 +469,7 @@ viewClaimCard loggedIn profileSummaries claim =
                     Nothing ->
                         class "justify-center"
                 ]
-                [ Profile.Summary.view loggedIn.shared loggedIn.accountName claim.claimer profileSummaries.cardSummary
+                [ Profile.Summary.view loggedIn.shared.translators loggedIn.accountName claim.claimer profileSummaries.cardSummary
                     |> Html.map (GotProfileSummaryMsg CardSummary >> GotExternalMsg)
                 , case claim.proofPhoto of
                     Just url ->
@@ -733,7 +733,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
 
         profileSummaryEmpty =
             div [ class claimVerifiersFewerProfiles ]
-                [ div [ class "mb-10" ] [ Profile.viewEmpty shared ]
+                [ div [ class "mb-10" ] [ Profile.viewEmpty shared.translators ]
                 ]
 
         viewProfileSummary profile_ profileSummary_ =
@@ -741,7 +741,7 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                 |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
                 |> Profile.Summary.withRelativeSelector ".modal-content"
                 |> Profile.Summary.withScrollSelector ".modal-body-lg"
-                |> Profile.Summary.view shared accountName profile_
+                |> Profile.Summary.view shared.translators accountName profile_
 
         viewClaimerProfileSummary =
             viewProfileSummary claim.claimer profileSummaries.topModalSummary

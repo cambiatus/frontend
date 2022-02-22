@@ -1,7 +1,7 @@
 module Eos.Explorer exposing (Subject(..), link)
 
+import Environment exposing (Environment)
 import Eos.Account
-import Session.Shared as Shared
 import Transfer
 import Url.Builder
 
@@ -15,7 +15,7 @@ type Subject
     | Transfer Transfer.CreatedTx
 
 
-link : Shared.Environment -> Subject -> String
+link : Environment -> Subject -> String
 link environment subject =
     Url.Builder.crossOrigin baseUrl
         (path subject)
@@ -44,33 +44,33 @@ path subject =
             [ "transaction", Transfer.createdTxToString createdTx ]
 
 
-nodeUrl : Shared.Environment -> String
+nodeUrl : Environment -> String
 nodeUrl environment =
     case environment of
-        Shared.Development ->
+        Environment.Development ->
             "https://staging.cambiatus.io"
 
-        Shared.Staging ->
+        Environment.Staging ->
             "https://staging.cambiatus.io"
 
-        Shared.Demo ->
+        Environment.Demo ->
             "https://demo.cambiatus.io"
 
-        Shared.Production ->
+        Environment.Production ->
             "https://app.cambiatus.io"
 
 
-coreSymbol : Shared.Environment -> String
+coreSymbol : Environment -> String
 coreSymbol environment =
     case environment of
-        Shared.Development ->
+        Environment.Development ->
             "SYS"
 
-        Shared.Staging ->
+        Environment.Staging ->
             "SYS"
 
-        Shared.Demo ->
+        Environment.Demo ->
             "SYS"
 
-        Shared.Production ->
+        Environment.Production ->
             "EOS"

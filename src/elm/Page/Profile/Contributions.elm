@@ -1,6 +1,5 @@
 module Page.Profile.Contributions exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
 import Cambiatus.Enum.ContributionStatusType
 import Community
 import Dict
@@ -62,9 +61,8 @@ update msg model loggedIn =
         CompletedLoadCommunity community ->
             { model | contributions = RemoteData.Loading }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
                         (Profile.contributionsQuery community.symbol model.profileName)
                         CompletedLoadContributions
                     )

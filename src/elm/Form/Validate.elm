@@ -60,8 +60,8 @@ import Date exposing (Date)
 import Eos.Account
 import Markdown exposing (Markdown)
 import Regex
-import Session.Shared as Shared
 import Time
+import Translation
 import Url
 
 
@@ -79,7 +79,7 @@ type Validator output
 string. It's designed this way so we only need to pass in `translators` once.
 -}
 type alias Error =
-    Shared.Translators -> String
+    Translation.Translators -> String
 
 
 {-| Start a validation pipeline
@@ -111,7 +111,7 @@ map fn (Validator validator) =
             |> Form.Validate.validate
 
 -}
-validate : Shared.Translators -> Validator a -> Result String a
+validate : Translation.Translators -> Validator a -> Result String a
 validate translators (Validator result) =
     Result.mapError (\error -> error translators) result
 
@@ -148,7 +148,7 @@ custom validation (Validator validator) =
 {-| Switch the current error. Useful when you want to provide a custom error
 message that is more context-aware.
 -}
-withCustomError : (Shared.Translators -> String) -> Validator a -> Validator a
+withCustomError : (Translation.Translators -> String) -> Validator a -> Validator a
 withCustomError newError (Validator validator) =
     case validator of
         Ok ok ->
@@ -211,9 +211,9 @@ floatLowerThanOrEqualTo =
     numberLowerThanOrEqualTo String.fromFloat
 
 
-maskedFloat : Shared.Translators -> Validator String -> Validator Float
+maskedFloat : Translation.Translators -> Validator String -> Validator Float
 maskedFloat translators =
-    mapValidation (Shared.floatStringFromSeparatedString translators)
+    mapValidation (Translation.floatStringFromSeparatedString translators)
         >> float
 
 

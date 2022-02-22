@@ -40,9 +40,8 @@ import Html.Attributes exposing (attribute, class, for, src)
 import Html.Events exposing (on)
 import Icons
 import Json.Decode
-import Session.Shared exposing (Shared, Translators)
 import Time
-import Translation
+import Translation exposing (Translators)
 import Utils
 
 
@@ -161,7 +160,13 @@ string so we can replace it on JS
 dateViewer :
     List (Html.Attribute msg)
     -> (DateTranslations -> DateTranslations)
-    -> Shared
+    ->
+        { shared
+            | now : Time.Posix
+            , timezone : Time.Zone
+            , translators : Translators
+            , language : Translation.Language
+        }
     -> Time.Posix
     -> Html msg
 dateViewer attrs fillInTranslations shared time =

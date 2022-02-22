@@ -1,12 +1,7 @@
 module Session.Shared exposing
-    ( Environment(..)
-    , Shared
+    ( Shared
     , TranslationStatus(..)
     , Translators
-    , communityDomain
-    , decimalSeparators
-    , environmentFromUrl
-    , floatStringFromSeparatedString
     , init
     , langFlag
     , loadTranslation
@@ -19,6 +14,7 @@ module Session.Shared exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Flags exposing (Endpoints, Flags)
@@ -28,7 +24,6 @@ import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import Http
 import I18Next exposing (Translations, initialTranslations)
-import Mask
 import Ports
 import Time exposing (Posix)
 import Translation
@@ -42,7 +37,7 @@ type alias Shared =
     , translators : Translators
     , translationsStatus : TranslationStatus
     , environment : Environment
-    , maybeAccount : Maybe ( Eos.Name, Bool )
+    , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -51,7 +46,6 @@ type alias Shared =
     , allowCommunityCreation : Bool
     , url : Url
     , contracts : { token : String, community : String }
-    , graphqlSecret : String
     , canReadClipboard : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
@@ -64,7 +58,7 @@ init : Flags -> Nav.Key -> Url -> ( Shared, Cmd msg )
 init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
     let
         environment =
-            environmentFromUrl url
+            Environment.fromUrl url
     in
     ( { navKey = navKey
       , language =
@@ -92,7 +86,6 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , allowCommunityCreation = allowCommunityCreation
       , url = url
       , contracts = { token = tokenContract, community = communityContract }
-      , graphqlSecret = flags.graphqlSecret
       , canReadClipboard = flags.canReadClipboard
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
@@ -100,7 +93,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , hasSeenSponsorModal = flags.hasSeenSponsorModal
       }
     , case environment of
-        Production ->
+        Environment.Production ->
             Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
 
         _ ->
@@ -123,9 +116,7 @@ type TranslationStatus
 {-| Contains functions with bounded dictionaries for translating plain strings and strings with placeholders.
 -}
 type alias Translators =
-    { t : String -> String
-    , tr : String -> I18Next.Replacements -> String
-    }
+    Translation.Translators
 
 
 makeTranslators : Translations -> Translators
@@ -147,117 +138,6 @@ makeTranslators translations =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
-
-
-decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
-decimalSeparators { t } =
-    { decimalSeparator = t "decimal_separator"
-    , thousandsSeparator = t "thousands_separator"
-    }
-
-
-{-| Normalize a masked float string into a string that can be parsed into a float
-by Elm
--}
-floatStringFromSeparatedString : Translators -> String -> String
-floatStringFromSeparatedString translators =
-    Mask.removeFloat (decimalSeparators translators)
-
-
-
--- ENVIRONMENT
-
-
-type Environment
-    = Development
-    | Staging
-    | Demo
-    | Production
-
-
-environmentFromUrl : Url -> Environment
-environmentFromUrl url =
-    if String.endsWith ".localhost" url.host then
-        Development
-
-    else if String.endsWith ".staging.cambiatus.io" url.host then
-        Staging
-
-    else if String.endsWith ".demo.cambiatus.io" url.host then
-        Demo
-
-    else if String.endsWith ".cambiatus.io" url.host then
-        Production
-
-    else
-        Staging
-
-
-{-| Get the community subdomain and the current environment, based on current
-url. Example possible outputs:
-
-    [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
-
-    [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
-
-    [ "cambiatus" ] -- Cambiatus community in the prod environment
-
--}
-communitySubdomainParts : Url -> Environment -> List String
-communitySubdomainParts url environment =
-    let
-        allParts =
-            url.host |> String.split "."
-
-        isStaging =
-            case environmentFromUrl url of
-                Development ->
-                    True
-
-                Staging ->
-                    True
-
-                _ ->
-                    False
-
-        addStaging parts =
-            if isStaging then
-                parts ++ [ "staging" ]
-
-            else
-                parts
-    in
-    case allParts of
-        [] ->
-            addStaging [ "cambiatus" ]
-
-        [ subdomain ] ->
-            addStaging [ subdomain ]
-
-        subdomain :: "localhost" :: _ ->
-            [ subdomain, "staging" ]
-
-        subdomain :: "cambiatus" :: _ ->
-            [ subdomain ]
-
-        subdomain :: env :: _ ->
-            [ subdomain, env ]
-
-
-{-| Returns the full `subdomain` of a community based on the current url
-
-Note: it takes an extensible record just so we can test it. The reason we can't
-pass in the entire `Shared` is because we can't create one without a `Nav.Key`
-(as stated in an [issue](https://github.com/elm-explorations/test/issues/24) on
-the `elm-explorations/test` repo)
-
--}
-communityDomain : { shared | url : Url, environment : Environment } -> String
-communityDomain shared =
-    String.join "."
-        (communitySubdomainParts shared.url shared.environment
-            ++ [ "cambiatus", "io" ]
-        )
 
 
 

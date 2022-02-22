@@ -8,7 +8,6 @@ module Page.PaymentHistory exposing
     , view
     )
 
-import Api.Graphql
 import Api.Relay
 import Avatar exposing (Avatar)
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue
@@ -192,14 +191,13 @@ profileWithTransfersSelectionSet community model =
             )
 
 
-fetchProfileWithTransfers : Shared -> Community.Model -> Model -> String -> Cmd Msg
-fetchProfileWithTransfers shared community model authToken =
+fetchProfileWithTransfers : LoggedIn.Model -> Community.Model -> Model -> LoggedIn.External Msg
+fetchProfileWithTransfers loggedIn community model =
     let
         accountName =
             Eos.Account.nameToString model.recipientProfile.account
     in
-    Api.Graphql.query shared
-        (Just authToken)
+    LoggedIn.query loggedIn
         (Cambiatus.Query.user
             { account = accountName }
             (profileWithTransfersSelectionSet community model)
@@ -207,8 +205,8 @@ fetchProfileWithTransfers shared community model authToken =
         RecipientProfileWithTransfersLoaded
 
 
-fetchProfilesForAutocomplete : Shared -> Model -> String -> String -> Cmd Msg
-fetchProfilesForAutocomplete shared model payerAccount authToken =
+fetchProfilesForAutocomplete : LoggedIn.Model -> Model -> String -> LoggedIn.External Msg
+fetchProfilesForAutocomplete loggedIn model payerAccount =
     let
         autocompleteSelectionSet : SelectionSet Profile.Minimal Cambiatus.Object.User
         autocompleteSelectionSet =
@@ -228,8 +226,7 @@ fetchProfilesForAutocomplete shared model payerAccount authToken =
         accountName =
             Eos.Account.nameToString model.recipientProfile.account
     in
-    Api.Graphql.query shared
-        (Just authToken)
+    LoggedIn.query loggedIn
         (Cambiatus.Query.user
             { account = accountName
             }
@@ -312,8 +309,8 @@ getTransfers maybeObj =
 -- UPDATE
 
 
-update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg extMsg
-update msg model ({ shared, authToken } as loggedIn) =
+update : Msg -> Model -> LoggedIn.Model -> UR.UpdateResult Model Msg (LoggedIn.External Msg)
+update msg model ({ shared } as loggedIn) =
     case msg of
         NoOp ->
             UR.init model
@@ -321,7 +318,7 @@ update msg model ({ shared, authToken } as loggedIn) =
         CompletedLoadCommunity community ->
             model
                 |> UR.init
-                |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+                |> UR.addExt (fetchProfileWithTransfers loggedIn community model)
 
         AutocompleteProfilesLoaded (RemoteData.Success maybeProfileWithPayers) ->
             case maybeProfileWithPayers of
@@ -424,7 +421,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                 RemoteData.Success community ->
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchProfileWithTransfers shared community model authToken)
+                        |> UR.addExt (fetchProfileWithTransfers loggedIn community model)
 
                 _ ->
                     model
@@ -468,7 +465,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                                         }
                                 in
                                 ( newModel_
-                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                , UR.addExt (fetchProfileWithTransfers loggedIn community newModel_)
                                 )
 
                             _ ->
@@ -485,13 +482,12 @@ update msg model ({ shared, authToken } as loggedIn) =
                         identity
 
                     else
-                        UR.addCmd
-                            (fetchProfilesForAutocomplete shared
+                        UR.addExt
+                            (fetchProfilesForAutocomplete loggedIn
                                 model
                                 (Form.UserPicker.getCurrentQuery
                                     (Form.UserPicker.fromSinglePicker newUserPicker)
                                 )
-                                authToken
                             )
             in
             newModel
@@ -530,7 +526,7 @@ update msg model ({ shared, authToken } as loggedIn) =
                                         }
                                 in
                                 ( newModel_
-                                , UR.addCmd (fetchProfileWithTransfers shared community newModel_ authToken)
+                                , UR.addExt (fetchProfileWithTransfers loggedIn community newModel_)
                                 )
 
                             _ ->

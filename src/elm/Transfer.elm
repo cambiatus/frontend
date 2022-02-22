@@ -295,7 +295,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-14 h-14"
-            |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
+            |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName otherProfile
             |> Html.map profileSummaryToMsg
         , div [ class "ml-4 w-full overflow-ellipsis overflow-hidden" ]
             [ p
