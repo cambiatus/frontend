@@ -148,36 +148,29 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
         { t, tr } =
             shared.translators
 
-        claimOrAskForPin actionId photoUrl code time necessaryPermissions m =
-            let
-                hasPermissions =
-                    List.all (\permission -> List.member permission permissions)
-                        necessaryPermissions
-            in
-            if hasPermissions then
-                if isPinConfirmed then
-                    m
-                        |> UR.init
-                        |> UR.addPort
-                            (claimActionPort
-                                msg
-                                shared.contracts.community
-                                { communityId = selectedCommunity
-                                , actionId = actionId
-                                , maker = accName
-                                , proofPhoto = photoUrl
-                                , proofCode = code
-                                , proofTime = time
-                                }
-                            )
+        hasPermissions necessaryPermissions =
+            List.all (\permission -> List.member permission permissions)
+                necessaryPermissions
 
-                else
-                    m |> UR.init
-
-            else
+        claimOrAskForPin actionId photoUrl code time m =
+            if isPinConfirmed then
                 m
                     |> UR.init
-                    |> UR.addExt ShowInsufficientPermissions
+                    |> UR.addPort
+                        (claimActionPort
+                            msg
+                            shared.contracts.community
+                            { communityId = selectedCommunity
+                            , actionId = actionId
+                            , maker = accName
+                            , proofPhoto = photoUrl
+                            , proofCode = code
+                            , proofTime = time
+                            }
+                        )
+
+            else
+                m |> UR.init
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
@@ -188,12 +181,18 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                 |> UR.init
 
         ( ActionClaimed action Nothing, _ ) ->
-            { model
-                | status = ClaimInProgress action Nothing
-                , feedback = Nothing
-                , needsPinConfirmation = not isPinConfirmed
-            }
-                |> claimOrAskForPin action.id "" "" 0 [ Permission.Claim ]
+            if hasPermissions [ Permission.Claim ] then
+                { model
+                    | status = ClaimInProgress action Nothing
+                    , feedback = Nothing
+                    , needsPinConfirmation = not isPinConfirmed
+                }
+                    |> claimOrAskForPin action.id "" "" 0
+
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
 
         ( ActionClaimed action (Just proofRecord), _ ) ->
             let
@@ -205,21 +204,27 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                         Proof _ Nothing ->
                             ( "", 0 )
             in
-            case proofRecord.image of
-                Just image ->
-                    { model
-                        | status = ClaimInProgress action (Just proofRecord)
-                        , feedback = Nothing
-                        , needsPinConfirmation = not isPinConfirmed
-                    }
-                        |> claimOrAskForPin action.id image proofCode time [ Permission.Claim ]
+            if hasPermissions [ Permission.Claim ] then
+                case proofRecord.image of
+                    Just image ->
+                        { model
+                            | status = ClaimInProgress action (Just proofRecord)
+                            , feedback = Nothing
+                            , needsPinConfirmation = not isPinConfirmed
+                        }
+                            |> claimOrAskForPin action.id image proofCode time
 
-                Nothing ->
-                    { model
-                        | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
-                        , needsPinConfirmation = False
-                    }
-                        |> UR.init
+                    Nothing ->
+                        { model
+                            | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
+                            , needsPinConfirmation = False
+                        }
+                            |> UR.init
+
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
 
         ( AgreedToClaimWithProof action, _ ) ->
             { model
