@@ -2,7 +2,7 @@ module UpdateResult exposing
     ( UpdateResult
     , init, addCmd, addMsg, addExt, addPort, logHttpError, logImpossible, logGraphqlError, toModelCmd
     , fromChild
-    , map, mapModel, mapExt, setModel
+    , map, mapModel, setModel
     , addBreadcrumb, logDecodingError, logEvent, logIncompatibleMsg, logJsonValue, remoteDataToString, resultToString
     )
 
@@ -29,7 +29,7 @@ In a scenario such as displaying a request to sign a transfer or a sale is where
 
 # Mapping UpdateResults
 
-@docs map, mapModel, mapExt, setModel
+@docs map, mapModel, setModel
 
 -}
 
@@ -164,19 +164,6 @@ mapModel transform uResult =
     { model = transform uResult.model
     , cmds = uResult.cmds
     , exts = uResult.exts
-    , ports = uResult.ports
-    , breadcrumbs = uResult.breadcrumbs
-    , events = uResult.events
-    }
-
-
-{-| Applies a transformation to all of the external msgs of an UpdateResult.
--}
-mapExt : (eMsg -> eMsg2) -> UpdateResult m msg eMsg -> UpdateResult m msg eMsg2
-mapExt transform uResult =
-    { model = uResult.model
-    , cmds = uResult.cmds
-    , exts = List.map transform uResult.exts
     , ports = uResult.ports
     , breadcrumbs = uResult.breadcrumbs
     , events = uResult.events

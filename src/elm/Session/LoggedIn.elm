@@ -2493,7 +2493,7 @@ withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
                     "Tried signing eos transaction internally, but profile wasn't loaded"
                     (Just loggedIn.accountName)
                     { moduleName = "Session.LoggedIn"
-                    , function = "withPrivateKey"
+                    , function = "withPrivateKeyInternal"
                     }
                     []
 
