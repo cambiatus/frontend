@@ -173,31 +173,6 @@ encodeClaimsFilter input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
-buildCompleteObjectiveInput :
-    CompleteObjectiveInputRequiredFields
-    -> CompleteObjectiveInput
-buildCompleteObjectiveInput required =
-    { objectiveId = required.objectiveId }
-
-
-type alias CompleteObjectiveInputRequiredFields =
-    { objectiveId : Int }
-
-
-{-| Type for the CompleteObjectiveInput input object.
--}
-type alias CompleteObjectiveInput =
-    { objectiveId : Int }
-
-
-{-| Encode a CompleteObjectiveInput into a value that can be used as an argument.
--}
-encodeCompleteObjectiveInput : CompleteObjectiveInput -> Value
-encodeCompleteObjectiveInput input =
-    Encode.maybeObject
-        [ ( "objectiveId", Encode.int input.objectiveId |> Just ) ]
-
-
 buildContactInput :
     (ContactInputOptionalFields -> ContactInputOptionalFields)
     -> ContactInput
@@ -543,19 +518,22 @@ buildUserUpdateInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { avatar = Absent, bio = Absent, contacts = Absent, email = Absent, interests = Absent, location = Absent, name = Absent }
+                { avatar = Absent, bio = Absent, claimNotification = Absent, contacts = Absent, digest = Absent, email = Absent, interests = Absent, location = Absent, name = Absent, transferNotification = Absent }
     in
-    { avatar = optionals.avatar, bio = optionals.bio, contacts = optionals.contacts, email = optionals.email, interests = optionals.interests, location = optionals.location, name = optionals.name }
+    { avatar = optionals.avatar, bio = optionals.bio, claimNotification = optionals.claimNotification, contacts = optionals.contacts, digest = optionals.digest, email = optionals.email, interests = optionals.interests, location = optionals.location, name = optionals.name, transferNotification = optionals.transferNotification }
 
 
 type alias UserUpdateInputOptionalFields =
     { avatar : OptionalArgument String
     , bio : OptionalArgument String
+    , claimNotification : OptionalArgument Bool
     , contacts : OptionalArgument (List ContactInput)
+    , digest : OptionalArgument Bool
     , email : OptionalArgument String
     , interests : OptionalArgument String
     , location : OptionalArgument String
     , name : OptionalArgument String
+    , transferNotification : OptionalArgument Bool
     }
 
 
@@ -564,11 +542,14 @@ type alias UserUpdateInputOptionalFields =
 type alias UserUpdateInput =
     { avatar : OptionalArgument String
     , bio : OptionalArgument String
+    , claimNotification : OptionalArgument Bool
     , contacts : OptionalArgument (List ContactInput)
+    , digest : OptionalArgument Bool
     , email : OptionalArgument String
     , interests : OptionalArgument String
     , location : OptionalArgument String
     , name : OptionalArgument String
+    , transferNotification : OptionalArgument Bool
     }
 
 
@@ -577,4 +558,4 @@ type alias UserUpdateInput =
 encodeUserUpdateInput : UserUpdateInput -> Value
 encodeUserUpdateInput input =
     Encode.maybeObject
-        [ ( "avatar", Encode.string |> Encode.optional input.avatar ), ( "bio", Encode.string |> Encode.optional input.bio ), ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input.contacts ), ( "email", Encode.string |> Encode.optional input.email ), ( "interests", Encode.string |> Encode.optional input.interests ), ( "location", Encode.string |> Encode.optional input.location ), ( "name", Encode.string |> Encode.optional input.name ) ]
+        [ ( "avatar", Encode.string |> Encode.optional input.avatar ), ( "bio", Encode.string |> Encode.optional input.bio ), ( "claimNotification", Encode.bool |> Encode.optional input.claimNotification ), ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input.contacts ), ( "digest", Encode.bool |> Encode.optional input.digest ), ( "email", Encode.string |> Encode.optional input.email ), ( "interests", Encode.string |> Encode.optional input.interests ), ( "location", Encode.string |> Encode.optional input.location ), ( "name", Encode.string |> Encode.optional input.name ), ( "transferNotification", Encode.bool |> Encode.optional input.transferNotification ) ]

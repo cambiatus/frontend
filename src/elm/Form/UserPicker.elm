@@ -341,7 +341,7 @@ viewSelectedProfile (Options options) viewConfig { profile, summary } =
         [ summary
             |> addRelativeSelector
             |> addScrollSelector
-            |> Profile.Summary.view { translators = viewConfig.translators }
+            |> Profile.Summary.view viewConfig.translators
                 options.currentUser
                 profile
             |> Html.map (GotProfileSummaryMsg profile)

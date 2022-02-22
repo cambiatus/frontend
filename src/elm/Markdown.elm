@@ -60,8 +60,8 @@ import Markdown.Parser
 import Markdown.Renderer
 import Maybe.Extra
 import Random
-import Session.Shared as Shared
 import Shrink exposing (Shrinker)
+import Translation exposing (Translators)
 
 
 {-| Markdown is just a string. It's an opaque type so we can ensure it's
@@ -86,14 +86,14 @@ empty =
 
 {-| Convert a translation into Markdown
 -}
-fromTranslation : Shared.Translators -> String -> Markdown
+fromTranslation : Translators -> String -> Markdown
 fromTranslation { t } key =
     Markdown (t key)
 
 
 {-| Convert a translation with replacements into Markdown
 -}
-fromTranslationWithReplacements : Shared.Translators -> String -> I18Next.Replacements -> Markdown
+fromTranslationWithReplacements : Translators -> String -> I18Next.Replacements -> Markdown
 fromTranslationWithReplacements { tr } key replacements =
     Markdown (tr key replacements)
 

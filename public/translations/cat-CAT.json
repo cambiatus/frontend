@@ -180,6 +180,7 @@
     "required": "Autenticació requerida per a aquesta acció",
     "pin_instr": "6 números",
     "failed": "L'autenticació ha fallat",
+    "failed_generating_phrase": "S'ha produït un error en iniciar la vostra autenticació",
     "login": {
       "modalFormTitle": "Introduïu el PIN",
       "enterPinToContinue": "Introduïu el PIN de seguretat actual per continuar.",

@@ -146,6 +146,7 @@
     "required": "በኢህ ምዕራፍ ማረጋገጫ ያስፈልጋል",
     "pin_instr": "6 ቁጥሮች",
     "failed": "ማረጋገጥ አልተሳካም",
+    "failed_generating_phrase": "ማረጋገጥ ሲጀመር የሆነ ችግር ተፈጥሯል።",
     "login": {
       "modalFormTitle": "የሚስጢር ቁጥር ያስገቡ",
       "enterPinToContinue": "እባኮን, ለመቀጠል የአሁኑን የደህንነት ሚስጢር ቁጥር ያስገቡ.",

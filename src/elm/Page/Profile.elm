@@ -10,7 +10,6 @@ module Page.Profile exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
 import Avatar
 import Cambiatus.Enum.CurrencyType
@@ -88,16 +87,19 @@ init loggedIn profileName =
     let
         fetchProfile =
             if loggedIn.accountName == profileName then
-                LoggedIn.maybeInitWith
-                    (Just >> RemoteData.Success >> CompletedLoadProfile)
-                    .profile
-                    loggedIn
+                UR.addCmd
+                    (LoggedIn.maybeInitWith
+                        (Just >> RemoteData.Success >> CompletedLoadProfile)
+                        .profile
+                        loggedIn
+                    )
 
             else
-                Api.Graphql.query loggedIn.shared
-                    (Just loggedIn.authToken)
-                    (Profile.query profileName)
-                    CompletedLoadProfile
+                UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Profile.query profileName)
+                        CompletedLoadProfile
+                    )
 
         ( pinModel, pinCmd ) =
             Pin.init
@@ -108,21 +110,24 @@ init loggedIn profileName =
                 , submittingLabel = "profile.pin.button"
                 , pinVisibility = loggedIn.shared.pinVisibility
                 }
+
+        model =
+            { profileName = profileName
+            , profile = RemoteData.Loading
+            , balance = RemoteData.Loading
+            , graphqlInfo = RemoteData.Loading
+            , contributionInfo = Nothing
+            , transfersStatus = Loading []
+            , isDeleteKycModalVisible = False
+            , downloadingPdfStatus = NotDownloading
+            , isNewPinModalVisible = False
+            , pinInputModel = pinModel
+            , currentPin = Nothing
+            }
     in
-    { profileName = profileName
-    , profile = RemoteData.Loading
-    , balance = RemoteData.Loading
-    , graphqlInfo = RemoteData.Loading
-    , contributionInfo = Nothing
-    , transfersStatus = Loading []
-    , isDeleteKycModalVisible = False
-    , downloadingPdfStatus = NotDownloading
-    , isNewPinModalVisible = False
-    , pinInputModel = pinModel
-    , currentPin = Nothing
-    }
+    model
         |> UR.init
-        |> UR.addCmd fetchProfile
+        |> fetchProfile
         |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
         |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
@@ -277,13 +282,12 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd fetchBalance
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
                         (graphqlInfoQuery model.profileName community.symbol)
                         CompletedLoadGraphqlInfo
                     )
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing)
+                |> UR.addExt (fetchTransfers loggedIn community Nothing)
 
         CompletedLoadContributions contributions ->
             let
@@ -439,9 +443,8 @@ update msg model loggedIn =
         DeleteKycAccepted ->
             { model | isDeleteKycModalVisible = False }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
                         (Profile.deleteKycAndAddressMutation loggedIn.accountName)
                         DeleteKycAndAddressCompleted
                     )
@@ -490,7 +493,7 @@ update msg model loggedIn =
                             , ( "pin", Encode.string currentPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -519,7 +522,7 @@ update msg model loggedIn =
                 , pinInputModel = { oldPinInputModel | isPinVisible = loggedIn.auth.pinModel.isPinVisible }
             }
                 |> UR.init
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -569,7 +572,7 @@ update msg model loggedIn =
                             , ( "newPin", Encode.string newPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -617,7 +620,7 @@ update msg model loggedIn =
                     in
                     { model | transfersStatus = Loading transfers }
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor)
+                        |> UR.addExt (fetchTransfers loggedIn community maybeCursor)
 
                 _ ->
                     model
@@ -1383,10 +1386,9 @@ networkSelectionSet =
             )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Cmd Msg
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> LoggedIn.External Msg
 fetchTransfers loggedIn community maybeCursor =
-    Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+    LoggedIn.query loggedIn
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->

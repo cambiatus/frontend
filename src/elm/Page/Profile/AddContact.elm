@@ -42,7 +42,7 @@ type alias UpdateResult =
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
-update msg model ({ shared, authToken } as loggedIn) =
+update msg model ({ shared } as loggedIn) =
     case msg of
         CompletedLoadProfile profile ->
             profile.contacts
@@ -54,26 +54,18 @@ update msg model ({ shared, authToken } as loggedIn) =
             case ( model, LoggedIn.profile loggedIn ) of
                 ( RemoteData.Success contactModel, Just profile_ ) ->
                     let
-                        ( newModel, cmd, newContacts ) =
-                            Contact.update subMsg
-                                contactModel
-                                shared
-                                authToken
-                                profile_.contacts
-
-                        actOnNewContacts updateResult =
-                            case newContacts of
-                                Contact.WithContacts successMessage contacts shouldRedirect ->
+                        handleExtMsg extMsg =
+                            case extMsg of
+                                Contact.GotContacts successMessage contacts shouldRedirect ->
                                     case loggedIn.profile of
                                         RemoteData.Success profile ->
-                                            updateResult
-                                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                                |> UR.addExt
+                                            UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                                >> UR.addExt
                                                     ({ profile | contacts = contacts }
                                                         |> LoggedIn.ProfileLoaded
                                                         |> LoggedIn.ExternalBroadcast
                                                     )
-                                                |> (if shouldRedirect then
+                                                >> (if shouldRedirect then
                                                         UR.addCmd
                                                             (Route.replaceUrl shared.navKey
                                                                 (Route.Profile loggedIn.accountName)
@@ -84,25 +76,23 @@ update msg model ({ shared, authToken } as loggedIn) =
                                                    )
 
                                         _ ->
-                                            updateResult
-                                                |> UR.logImpossible msg
-                                                    "Tried updating contacts, but profile is not loaded"
-                                                    (Just loggedIn.accountName)
-                                                    { moduleName = "Page.Profile.AddContact", function = "update" }
-                                                    []
+                                            UR.logImpossible msg
+                                                "Tried updating contacts, but profile is not loaded"
+                                                (Just loggedIn.accountName)
+                                                { moduleName = "Page.Profile.AddContact", function = "update" }
+                                                []
 
-                                Contact.WithError errorMessage ->
-                                    updateResult
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+                                Contact.GotContactsError errorMessage ->
+                                    UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
-                                Contact.NotAsked ->
-                                    updateResult
+                                Contact.GotMutationRequest selectionSet responseMsg ->
+                                    UR.addExt (LoggedIn.mutation loggedIn selectionSet (responseMsg >> GotContactMsg))
                     in
-                    newModel
-                        |> RemoteData.Success
-                        |> UR.init
-                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
-                        |> actOnNewContacts
+                    Contact.update subMsg contactModel shared.translators profile_.contacts
+                        |> UR.fromChild RemoteData.Success
+                            GotContactMsg
+                            handleExtMsg
+                            model
 
                 _ ->
                     UR.init model

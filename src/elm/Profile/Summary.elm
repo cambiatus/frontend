@@ -24,7 +24,7 @@ import Markdown
 import Profile
 import Profile.Contact as Contact
 import Route
-import Session.Shared as Shared
+import Translation
 import Utils exposing (onClickNoBubble)
 import View.Components
 import View.Modal as Modal
@@ -130,19 +130,19 @@ withAttrs attrs model =
     { model | extraAttrs = model.extraAttrs ++ attrs }
 
 
-view : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
-view shared loggedInAccount profile model =
+view : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+view translators loggedInAccount profile model =
     div [ Utils.onClickPreventAll Ignored ]
-        [ desktopView shared loggedInAccount profile model
-        , mobileView shared loggedInAccount profile model
+        [ desktopView translators loggedInAccount profile model
+        , mobileView translators loggedInAccount profile model
         ]
 
 
-mobileView : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
-mobileView shared loggedInAccount profile model =
+mobileView : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+mobileView translators loggedInAccount profile model =
     div [ class "md:hidden cursor-auto" ]
         [ viewUserImg profile True model
-        , viewUserNameTag shared loggedInAccount profile model
+        , viewUserNameTag translators loggedInAccount profile model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
             |> Modal.withBody [ viewUserInfo profile ]
             |> Modal.withPreventScrolling model.preventScrolling
@@ -150,8 +150,8 @@ mobileView shared loggedInAccount profile model =
         ]
 
 
-desktopView : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
-desktopView shared loggedInAccount profile model =
+desktopView : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+desktopView translators loggedInAccount profile model =
     div
         [ class "mx-auto hidden md:block" ]
         [ div
@@ -159,15 +159,15 @@ desktopView shared loggedInAccount profile model =
             , onMouseLeave ClosedInfo
             ]
             [ viewUserImg profile False model ]
-        , viewUserNameTag shared loggedInAccount profile model
+        , viewUserNameTag translators loggedInAccount profile model
         ]
 
 
-viewUserNameTag : { shared | translators : Shared.Translators } -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
-viewUserNameTag shared loggedInAccount profile model =
+viewUserNameTag : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
+viewUserNameTag translators loggedInAccount profile model =
     if model.showNameTag then
         div [ class "mt-2" ]
-            [ Profile.viewProfileNameTag shared loggedInAccount profile ]
+            [ Profile.viewProfileNameTag translators loggedInAccount profile ]
 
     else
         text ""

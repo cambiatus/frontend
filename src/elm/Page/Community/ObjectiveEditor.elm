@@ -1,7 +1,6 @@
 module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action
-import Api.Graphql
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Objective as Objective
@@ -412,7 +411,7 @@ objectiveSelectionSet =
 
 completeObjectiveSelectionSet : Int -> SelectionSet (Maybe Objective) RootMutation
 completeObjectiveSelectionSet objectiveId =
-    Mutation.completeObjective { input = { objectiveId = objectiveId } }
+    Mutation.completeObjective { id = objectiveId }
         objectiveSelectionSet
 
 
@@ -558,7 +557,11 @@ update msg model loggedIn =
                                 |> Authorized form
                     }
                         |> UR.init
-                        |> completeActionOrObjective loggedIn model msg completionStatus objective
+                        |> completeActionOrObjective loggedIn
+                            model
+                            msg
+                            completionStatus
+                            objective
 
                 _ ->
                     UR.init model
@@ -801,7 +804,7 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -833,7 +836,7 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -960,12 +963,10 @@ completeActionOrObjective :
 completeActionOrObjective loggedIn model msg completionStatus objective =
     case List.head completionStatus.left of
         Nothing ->
-            Api.Graphql.mutation
-                loggedIn.shared
-                (Just loggedIn.authToken)
+            LoggedIn.mutation loggedIn
                 (completeObjectiveSelectionSet objective.id)
                 GotCompleteObjectiveResponse
-                |> UR.addCmd
+                |> UR.addExt
 
         Just { action } ->
             UR.addPort
@@ -978,7 +979,7 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                             }
                        )
                 )
-                >> LoggedIn.withAuthentication loggedIn
+                >> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

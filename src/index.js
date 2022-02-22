@@ -26,7 +26,6 @@ const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
 const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
 const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
@@ -293,11 +292,9 @@ function flags () {
   }
 
   return {
-    graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
     accountName: accountName,
-    isPinAvailable: !!(user && user.encryptedKey),
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
@@ -643,8 +640,8 @@ async function handleJavascriptPort (arg) {
         }
       }
     }
-    case 'login': {
-      const passphrase = arg.data.passphrase
+    case 'getAccountFrom12Words': {
+      const { passphrase } = arg.data
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
       if (!ecc.isValidPrivate(privateKey)) {
@@ -653,60 +650,57 @@ async function handleJavascriptPort (arg) {
         try {
           const publicKey = ecc.privateToPublic(privateKey)
           const accounts = await eos.getKeyAccounts(publicKey)
-          addBreadcrumb({
-            type: 'debug',
-            category: 'login',
-            message: 'Got accounts from public key',
-            data: { numberOfAccounts: accounts.account_names.length },
-            localData: { accounts },
-            level: 'debug'
-          })
 
           if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
             return { error: 'error.accountNotFound' }
           } else {
-            const accountName = accounts.account_names[0]
-
-            logout()
-
-            storePin(
-              {
-                accountName,
-                privateKey,
-                passphrase
-              },
-              arg.data.pin
-            )
-
-            // Save credentials to EOS
-            eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
-            if (env !== 'development') {
-              Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
-            }
-            addBreadcrumb({
-              type: 'debug',
-              category: 'login',
-              message: 'Saved credentials to EOS',
-              data: {},
-              localData: { accountName },
-              level: 'debug'
-            })
-
+            const [accountName] = accounts.account_names
             return { accountName, privateKey }
           }
         } catch (err) {
           logEvent({
             user: null,
-            message: 'Login port error',
+            message: 'Get account from key port error',
             tags: { 'cambiatus.kind': 'auth' },
             contexts: [{ name: 'Error details', extras: { error: err } }],
-            transaction: 'login',
+            transaction: 'getAccountFromKey',
             level: 'error'
           })
 
           return { error: 'error.unknown' }
         }
       }
+    }
+    case 'signString': {
+      const { input, privateKey } = arg.data
+
+      const signed = ecc.sign(input, privateKey)
+
+      return { signed }
+    }
+    case 'login': {
+      const { privateKey, passphrase, accountName, pin } = arg.data
+
+      logout()
+
+      storePin({ accountName, passphrase, privateKey }, pin)
+
+      // Save credentials to EOS
+      eos = Eos(Object.assign(config.eosOptions, { keyProvider: privateKey }))
+      if (env !== 'development') {
+        Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+      }
+
+      addBreadcrumb({
+        type: 'debug',
+        category: 'login',
+        message: 'Saved credentials to EOS',
+        data: {},
+        localData: { accountName },
+        level: 'debug'
+      })
+
+      return {}
     }
     case 'changePin': {
       const userStorage = JSON.parse(getItem(USER_KEY))

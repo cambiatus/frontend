@@ -8,7 +8,6 @@ module Page.Community.New exposing
     , view
     )
 
-import Api.Graphql
 import Community
 import Dict
 import Eos
@@ -351,15 +350,9 @@ update msg model loggedIn =
         SubmittedForm formOutput ->
             { model | isDisabled = True }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Community.domainAvailableQuery
-                            (Route.communityFullDomain
-                                loggedIn.shared
-                                formOutput.url
-                            )
-                        )
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Community.domainAvailableQuery (Route.communityFullDomain loggedIn.shared formOutput.url))
                         (GotDomainAvailableResponse formOutput)
                     )
 
@@ -418,7 +411,7 @@ update msg model loggedIn =
                             , ( "subscription", Encode.string subscriptionDoc )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
                 |> UR.addBreadcrumb

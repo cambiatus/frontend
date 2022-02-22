@@ -8,18 +8,23 @@ The login process has two steps: `EnteringPassphrase` and `EnteringPin`.
 
 First, the user enters the passphrase that was generated during the registering
 process, and we check if that's valid. If so, we go on to the next step, and have
-the user create a PIN. We store all the data we're going to need in localStorage
-and in our application, and then perform a `signIn` mutation to get an auth token
-from the backend.
+the user create a PIN. We store all the data we're going to need in cookies
+and in our application.
 
 The passphrase is a sequence of 12 english words that uniquely identifies the user,
 and the PIN is a 6-digit sequence that we use to encrypt the passphrase, generating
 the Private Key (PK), which can be used to sign EOS transactions.
 
+In order to get an auth token from the backend, we use asymmetric cryptography:
+
+1.  We request a phrase from the backend
+2.  We sign the phrase with the user's private key
+3.  We call the `signIn` mutation on GraphQL, passing the signed phrase as password
+4.  The backend can use the user's public key to verify if the phrase was signed with the user's private key. If it is, we get back an auth token
+
 -}
 
 import Api.Graphql
-import Auth
 import Browser.Dom as Dom
 import Dict
 import Eos.Account as Eos
@@ -35,7 +40,6 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Log
-import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Guest as Guest
@@ -77,7 +81,7 @@ initPinModel pinVisibility passphrase =
                 , pinVisibility = pinVisibility
                 }
     in
-    ( { isSigningIn = False
+    ( { status = InputtingPin
       , passphrase = passphrase
       , pinModel = pinModel
       }
@@ -177,10 +181,20 @@ type Passphrase
 
 
 type alias PinModel =
-    { isSigningIn : Bool
+    { status : PinStatus
     , passphrase : String
     , pinModel : Pin.Model
     }
+
+
+type PinStatus
+    = InputtingPin
+    | GettingAccountName
+    | LoggingIn
+        { accountName : Eos.Name
+        , pin : String
+        , privateKey : Eos.PrivateKey
+        }
 
 
 
@@ -255,6 +269,14 @@ viewPin { shared } model =
 
         { t } =
             shared.translators
+
+        isInputtingPin =
+            case model.status of
+                InputtingPin ->
+                    True
+
+                _ ->
+                    False
     in
     [ viewIllustration "login_pin.svg"
     , p [ class "text-white" ]
@@ -270,6 +292,7 @@ viewPin { shared } model =
         ]
     , model.pinModel
         |> Pin.withBackgroundColor Pin.Dark
+        |> Pin.withDisabled (not isInputtingPin)
         |> Pin.view shared.translators
         |> Html.map GotPinComponentMsg
     ]
@@ -325,8 +348,10 @@ type PassphraseExternalMsg
 type PinMsg
     = PinIgnored
     | SubmittedPinWithSuccess String
-    | GotSubmitResult (Result String ( Eos.Name, Eos.PrivateKey ))
-    | GotSignInResult Eos.PrivateKey (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | GotAccountName (Result String { accountName : Eos.Name, privateKey : Eos.PrivateKey, pin : String })
+    | GeneratedAuthPhrase (RemoteData (Graphql.Http.Error Api.Graphql.Phrase) Api.Graphql.Phrase)
+    | SignedAuthPhrase Api.Graphql.Password
+    | GotSignInResult Eos.PrivateKey String (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
     | GotPinComponentMsg Pin.Msg
 
 
@@ -516,30 +541,26 @@ updateWithPin msg model ({ shared } as guest) =
             UR.init model
 
         SubmittedPinWithSuccess pin ->
-            { model | isSigningIn = True }
+            { model | status = GettingAccountName }
                 |> UR.init
                 |> UR.addPort
                     { responseAddress = SubmittedPinWithSuccess pin
-                    , responseData = Encode.null
+                    , responseData = Encode.string pin
                     , data =
                         Encode.object
-                            [ ( "name", Encode.string "login" )
+                            [ ( "name", Encode.string "getAccountFrom12Words" )
                             , ( "passphrase", Encode.string model.passphrase )
-                            , ( "pin", Encode.string pin )
                             ]
                     }
 
-        GotSubmitResult (Ok ( accountName, privateKey )) ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (Auth.signIn accountName shared guest.maybeInvitation)
-                        (GotSignInResult privateKey)
-                    )
+        GotAccountName (Ok userData) ->
+            { model | status = LoggingIn userData }
+                |> UR.init
+                |> UR.addCmd (Api.Graphql.askForPhrase shared userData.accountName GeneratedAuthPhrase)
 
-        GotSubmitResult (Err err) ->
-            UR.init model
+        GotAccountName (Err err) ->
+            { model | status = InputtingPin }
+                |> UR.init
                 |> UR.addExt
                     (Feedback.Visible Feedback.Failure (shared.translators.t err)
                         |> Guest.SetFeedback
@@ -547,30 +568,88 @@ updateWithPin msg model ({ shared } as guest) =
                     )
                 |> UR.addExt RevertProcess
 
-        GotSignInResult privateKey (RemoteData.Success (Just signInResponse)) ->
-            UR.init model
-                |> UR.addCmd (Ports.storeAuthToken signInResponse.token)
-                |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
+        GeneratedAuthPhrase (RemoteData.Success phrase) ->
+            case model.status of
+                LoggingIn { privateKey } ->
+                    model
+                        |> UR.init
+                        |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
 
-        GotSignInResult _ (RemoteData.Success Nothing) ->
-            UR.init model
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Generated auth phrase, but wasn't logging in"
+                            Nothing
+                            { moduleName = "Page.Login"
+                            , function = "updateWithPin"
+                            }
+                            []
+
+        GeneratedAuthPhrase (RemoteData.Failure err) ->
+            model
+                |> UR.init
                 |> UR.addExt
-                    (Feedback.Visible Feedback.Failure (shared.translators.t "error.unknown")
+                    (Feedback.Visible Feedback.Failure (shared.translators.t "auth.failed_generating_phrase")
                         |> Guest.SetFeedback
                         |> PinGuestExternal
                     )
+                |> UR.logGraphqlError msg
+                    Nothing
+                    "Got an error when generating auth phrase for login"
+                    { moduleName = "Page.Login"
+                    , function = "updateWithPin"
+                    }
+                    []
+                    err
+                |> UR.addExt RevertProcess
+
+        GeneratedAuthPhrase _ ->
+            UR.init model
+
+        SignedAuthPhrase signedPhrase ->
+            case model.status of
+                LoggingIn userData ->
+                    model
+                        |> UR.init
+                        |> UR.addCmd
+                            (Api.Graphql.signIn shared
+                                { account = userData.accountName
+                                , password = signedPhrase
+                                , invitationId = guest.maybeInvitation
+                                }
+                                (GotSignInResult userData.privateKey userData.pin)
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Signed auth phrase, but wasn't logging in"
+                            Nothing
+                            { moduleName = "Page.Login"
+                            , function = "updateWithPin"
+                            }
+                            []
+
+        GotSignInResult privateKey pin (RemoteData.Success signInResponse) ->
+            UR.init model
+                |> UR.addCmd (Api.Graphql.storeToken signInResponse.token)
                 |> UR.addPort
                     { responseAddress = PinIgnored
                     , responseData = Encode.null
-                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "login" )
+                            , ( "privateKey", Eos.encodePrivateKey privateKey )
+                            , ( "passphrase", Encode.string model.passphrase )
+                            , ( "accountName", Eos.encodeName signInResponse.profile.account )
+                            , ( "pin", Encode.string pin )
+                            ]
                     }
-                |> UR.logImpossible msg
-                    "Got a sign in response with Nothing"
-                    Nothing
-                    { moduleName = "Page.Login", function = "updateWithPin" }
-                    []
+                |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
 
-        GotSignInResult _ (RemoteData.Failure err) ->
+        GotSignInResult _ _ (RemoteData.Failure err) ->
             UR.init model
                 |> UR.logGraphqlError msg
                     Nothing
@@ -590,10 +669,10 @@ updateWithPin msg model ({ shared } as guest) =
                     )
                 |> UR.addExt RevertProcess
 
-        GotSignInResult _ RemoteData.NotAsked ->
+        GotSignInResult _ _ RemoteData.NotAsked ->
             UR.init model
 
-        GotSignInResult _ RemoteData.Loading ->
+        GotSignInResult _ _ RemoteData.Loading ->
             UR.init model
 
         GotPinComponentMsg subMsg ->
@@ -672,19 +751,24 @@ jsAddressToMsg addr val =
                 val
                 |> Result.toMaybe
 
-        "GotPinMsg" :: "SubmittedPinWithSuccess" :: _ :: [] ->
+        "GotPinMsg" :: "SubmittedPinWithSuccess" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
-                    [ Decode.succeed Tuple.pair
+                    [ Decode.succeed (\pin account privateKey -> { pin = pin, accountName = account, privateKey = privateKey })
+                        |> DecodePipeline.required "addressData" Decode.string
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
-                        |> Decode.map (Ok >> GotSubmitResult >> GotPinMsg)
+                        |> Decode.map (Ok >> GotAccountName >> GotPinMsg)
                     , Decode.field "error" Decode.string
-                        |> Decode.map (Err >> GotSubmitResult >> GotPinMsg)
+                        |> Decode.map (Err >> GotAccountName >> GotPinMsg)
                     ]
                 )
                 val
                 |> Result.toMaybe
+
+        "GotPinMsg" :: "GeneratedAuthPhrase" :: _ ->
+            Api.Graphql.decodeSignedPhrasePort (SignedAuthPhrase >> GotPinMsg)
+                val
 
         "GotPinMsg" :: "PinIgnored" :: [] ->
             Just (GotPinMsg PinIgnored)
@@ -731,13 +815,19 @@ pinMsgToString msg =
         PinIgnored ->
             [ "PinIgnored" ]
 
-        SubmittedPinWithSuccess pin ->
-            [ "SubmittedPinWithSuccess", pin ]
+        SubmittedPinWithSuccess _ ->
+            [ "SubmittedPinWithSuccess" ]
 
-        GotSubmitResult r ->
-            [ "GotSubmitResult", UR.resultToString r ]
+        GotAccountName r ->
+            [ "GotAccountName", UR.resultToString r ]
 
-        GotSignInResult _ r ->
+        GeneratedAuthPhrase _ ->
+            [ "GeneratedAuthPhrase" ]
+
+        SignedAuthPhrase _ ->
+            [ "SignedAuthPhrase" ]
+
+        GotSignInResult _ _ r ->
             [ "GotSignInResult", UR.remoteDataToString r ]
 
         GotPinComponentMsg subMsg ->
