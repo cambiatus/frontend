@@ -539,12 +539,18 @@
         "error_marking_as_complete": "S'ha produït un error en marcar l'objectiu com a completat",
         "completed_progress": "{{progress}} de {{total}} accions finalitzades",
         "completion_text": "Es completaran totes les accions relacionades amb aquest objectiu",
-        "completed_success": "L'objectiu s'ha completat correctament",
         "modal": {
           "title": "Marca l'objectiu com a complet",
           "body": "No es pot desfer la marca de l’objectiu com a complet. Les accions d'aquest objectiu també es marcaran com a completes i ja no estaran disponibles per a l'anàlisi. Segur que voleu marcar aquest objectiu com a complet?",
           "confirm": "Sí",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Felicitacions",
+          "completed": "Aquesta comunitat ha complert un objectiu!",
+          "special_moment": "Estem contents de formar part d'aquest moment especial.",
+          "cheers": "Salutacions pel futur!",
+          "return": "Tornar als objectius"
         }
       },
       "disabled": {

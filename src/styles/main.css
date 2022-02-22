@@ -248,11 +248,11 @@ body > * {
 }
 
 .modal-content {
-  @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full;
+  @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full flex flex-col;
 }
 
 .modal-content-full {
-  @apply rounded-t-none top-0 overflow-auto;
+  @apply rounded-t-none top-0 overflow-auto h-screen;
 }
 
 .modal-header {
@@ -260,7 +260,7 @@ body > * {
 }
 
 .modal-body {
-  @apply p-4 pt-0 overflow-y-auto h-full;
+  @apply p-4 pt-0 overflow-y-auto flex-grow;
 
   min-height: 4rem;
   max-height: 60vh;
@@ -274,7 +274,7 @@ body > * {
 }
 
 .modal-body-full {
-  max-height: unset;
+  max-height: 100%;
 }
 
 .modal-footer {
@@ -296,6 +296,10 @@ body > * {
     /* Using -translate-y-1/2 and -translate-x-1/2 doesn't work because they
     overwrite each other, so we just set the variables tailwind uses */
     --tw-translate-x: -50%;
+  }
+
+  .modal-content-full {
+    height: unset;
   }
 
   .modal-content-lg,

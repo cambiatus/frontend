@@ -13,8 +13,8 @@ import Form.RichText
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, button, div, span, text)
-import Html.Attributes exposing (class, disabled, style, type_)
+import Html exposing (Html, a, br, button, div, h2, img, p, span, text)
+import Html.Attributes exposing (alt, class, disabled, src, style, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
@@ -86,6 +86,7 @@ type EditingStatus
     | SavingEdit
     | RequestingConfirmation
     | CompletingActions CompletionStatus
+    | CompletedObjective
 
 
 type alias CompletionStatus =
@@ -117,6 +118,7 @@ type Msg
     | GotCompleteActionResponse (Result Int String)
     | GotCompleteObjectiveResponse (RemoteData (Graphql.Http.Error (Maybe Objective)) (Maybe Objective))
     | GotSaveObjectiveResponse (Result Value String)
+    | ClosedCelebrateObjectiveModal
 
 
 initForm : Maybe Markdown -> Form.Model Form.RichText.Model
@@ -188,6 +190,7 @@ view ({ shared } as loggedIn) model =
 
                             _ ->
                                 text ""
+                        , viewCompletionCelebrationModal shared.translators model
                         ]
     in
     { title = title
@@ -210,6 +213,43 @@ view ({ shared } as loggedIn) model =
             RemoteData.Failure e ->
                 Page.fullPageGraphQLError (t "community.error_loading") e
     }
+
+
+viewCompletionCelebrationModal : Shared.Translators -> Model -> Html Msg
+viewCompletionCelebrationModal { t } model =
+    Modal.initWith
+        { closeMsg = ClosedCelebrateObjectiveModal
+        , isVisible = hasCompletedObjective model
+        }
+        |> Modal.withBody
+            [ div [ class "min-h-full flex flex-col text-white text-center mx-auto" ]
+                [ img
+                    [ src "/images/animated-sparkling-doggo.svg"
+                    , alt ""
+                    , class "px-4 max-w-sm mx-auto"
+                    ]
+                    []
+                , h2 [ class "font-bold text-xl mt-7" ]
+                    [ text <| t "community.objectives.editor.celebration.title"
+                    ]
+                , p [ class "mt-3 flex-grow" ]
+                    [ text <| t "community.objectives.editor.celebration.completed"
+                    , br [] []
+                    , br [] []
+                    , text <| t "community.objectives.editor.celebration.special_moment"
+                    , br [] []
+                    , text <| t "community.objectives.editor.celebration.cheers"
+                    ]
+                , a
+                    [ class "button button-primary w-full mt-8 flex-shrink-0"
+                    , Route.href Route.Objectives
+                    ]
+                    [ text <| t "community.objectives.editor.celebration.return" ]
+                ]
+            ]
+        |> Modal.withAttrs [ class "bg-purple-500" ]
+        |> Modal.withSize Modal.FullScreen
+        |> Modal.toHtml
 
 
 createForm : Shared.Translators -> Form msg Form.RichText.Model Markdown
@@ -680,9 +720,35 @@ update msg model loggedIn =
                             []
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
-            UR.init model
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Objectives)
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "community.objectives.editor.completed_success"))
+            case model.status of
+                Authorized formModel formStatus ->
+                    case formStatus of
+                        EditingObjective objective _ ->
+                            { model
+                                | status =
+                                    CompletedObjective
+                                        |> EditingObjective objective
+                                        |> Authorized formModel
+                            }
+                                |> UR.init
+
+                        CreatingObjective _ ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Completed objective, but was just creating an objective"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    []
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Completed objective, but was not authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            []
 
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
             { model
@@ -857,9 +923,34 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
                             []
 
+        ClosedCelebrateObjectiveModal ->
+            model
+                |> UR.init
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Objectives)
+
 
 
 -- UTILS
+
+
+hasCompletedObjective : Model -> Bool
+hasCompletedObjective model =
+    case model.status of
+        Authorized _ formStatus ->
+            case formStatus of
+                CreatingObjective _ ->
+                    False
+
+                EditingObjective _ status ->
+                    case status of
+                        CompletedObjective ->
+                            True
+
+                        _ ->
+                            False
+
+        _ ->
+            False
 
 
 completeActionOrObjective :
@@ -973,3 +1064,6 @@ msgToString msg =
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: Form.msgToString subMsg
+
+        ClosedCelebrateObjectiveModal ->
+            [ "ClosedCelebrateObjectiveModal" ]

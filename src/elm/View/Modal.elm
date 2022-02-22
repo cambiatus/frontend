@@ -2,6 +2,7 @@ module View.Modal exposing
     ( ModalSize(..)
     , initWith
     , toHtml
+    , withAttrs
     , withBody
     , withFooter
     , withHeader
@@ -52,6 +53,7 @@ type alias Options msg =
     , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
     , size : ModalSize
+    , attrs : List (Html.Attribute msg)
     }
 
 
@@ -89,6 +91,7 @@ initWith reqOpts =
         , body = Nothing
         , footer = Nothing
         , size = Default
+        , attrs = []
         }
 
 
@@ -124,6 +127,11 @@ withPreventScrolling preventScrolling (Modal options) =
 withSize : ModalSize -> Modal msg -> Modal msg
 withSize size (Modal options) =
     Modal { options | size = size }
+
+
+withAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
+withAttrs attrs (Modal options) =
+    Modal { options | attrs = attrs ++ options.attrs }
 
 
 
@@ -207,7 +215,7 @@ viewModalDetails options =
             ]
             options.preventScrolling
         , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg, .modal-footer" }
-            [ class content ]
+            (class content :: options.attrs)
             [ header
             , body
             , footer
