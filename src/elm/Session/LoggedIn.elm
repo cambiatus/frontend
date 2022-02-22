@@ -856,7 +856,7 @@ insufficientPermissionsModal model =
                 []
             , p [ class "md:max-w-md md:mx-auto md:text-center" ]
                 [ text <| t "permissions.insufficient.explanation" ]
-            , p [ class "mt-4 md:max-w-md md:mx-auto md:text-center" ]
+            , p [ class "my-4 md:max-w-md md:mx-auto md:text-center" ]
                 [ text <| t "permissions.insufficient.try_again" ]
             ]
         |> Modal.withFooter
@@ -866,6 +866,7 @@ insufficientPermissionsModal model =
                 ]
                 [ text <| t "permissions.insufficient.ok" ]
             ]
+        |> Modal.withSize Modal.Large
         |> Modal.toHtml
 
 
