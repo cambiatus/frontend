@@ -1,6 +1,5 @@
 module Page.ViewTransfer exposing (Model, Msg, init, msgToString, update, view)
 
-import Api.Graphql
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.Scalar exposing (DateTime(..))
 import Emoji
@@ -26,17 +25,20 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> Int -> ( Model, Cmd Msg )
-init { shared, authToken } transferId =
+init : LoggedIn.Model -> Int -> UpdateResult
+init loggedIn transferId =
     let
         model =
             { status = Loading
             , transferId = transferId
             }
     in
-    ( model
-    , Api.Graphql.query shared (Just authToken) (transferQuery transferId) CompletedTransferLoad
-    )
+    UR.init model
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (transferQuery transferId)
+                CompletedTransferLoad
+            )
 
 
 
@@ -230,7 +232,7 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
             summary
                 |> Profile.Summary.withNameBg False
                 |> Profile.Summary.withRelativeSelector "#content-container"
-                |> Profile.Summary.view loggedIn.shared loggedIn.accountName profile
+                |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile
                 |> Html.map (profileSummaryToMsg (profile == leftProfile))
     in
     div

@@ -9,7 +9,6 @@ module Page.Community.Settings.Info exposing
     , view
     )
 
-import Api.Graphql
 import Community
 import Dict
 import Eos
@@ -251,9 +250,8 @@ update msg model ({ shared } as loggedIn) =
             else
                 { model | isLoading = True }
                     |> UR.init
-                    |> UR.addCmd
-                        (Api.Graphql.query shared
-                            (Just loggedIn.authToken)
+                    |> UR.addExt
+                        (LoggedIn.query loggedIn
                             (Community.domainAvailableQuery (Url.toString formOutput.subdomain))
                             (GotDomainAvailableResponse formOutput)
                         )
@@ -271,6 +269,20 @@ update msg model ({ shared } as loggedIn) =
                             { amount = amount
                             , symbol = community.symbol
                             }
+
+                        addCoverPhoto =
+                            case newUpload of
+                                Nothing ->
+                                    identity
+
+                                Just url ->
+                                    LoggedIn.mutation loggedIn
+                                        (Community.addPhotosMutation
+                                            community.symbol
+                                            (url :: communityUploads)
+                                        )
+                                        (CompletedAddingCoverPhoto formOutput)
+                                        |> UR.addExt
 
                         newUpload =
                             if List.head communityUploads == formOutput.coverPhoto then
@@ -308,7 +320,7 @@ update msg model ({ shared } as loggedIn) =
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
                                             , hasShop = Eos.boolToEosBool community.hasShop
                                             , hasKyc = Eos.boolToEosBool community.hasKyc
-                                            , hasAutoInvite = Eos.boolToEosBool formOutput.hasAutoInvite
+                                            , hasAutoInvite = Eos.boolToEosBool (not formOutput.hasAutoInvite)
                                             , website =
                                                 Maybe.map Url.toString formOutput.website
                                                     |> Maybe.withDefault ""
@@ -317,22 +329,8 @@ update msg model ({ shared } as loggedIn) =
                                       }
                                     ]
                             }
-                        |> UR.addCmd
-                            (case newUpload of
-                                Just url ->
-                                    Api.Graphql.mutation
-                                        shared
-                                        (Just loggedIn.authToken)
-                                        (Community.addPhotosMutation
-                                            community.symbol
-                                            (url :: communityUploads)
-                                        )
-                                        (CompletedAddingCoverPhoto formOutput)
-
-                                Nothing ->
-                                    Cmd.none
-                            )
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> addCoverPhoto
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
                         |> UR.addBreadcrumb
@@ -709,8 +707,8 @@ createForm shared community { isLoading } =
                 |> Form.Toggle.withTopLabel (t "settings.community_info.invitation.title")
                 |> Form.toggle
                     { parser = Ok
-                    , value = .hasAutoInvite
-                    , update = \hasAutoInvite input -> { input | hasAutoInvite = hasAutoInvite }
+                    , value = .hasAutoInvite >> not
+                    , update = \hasAutoInvite input -> { input | hasAutoInvite = not hasAutoInvite }
                     , externalError = always Nothing
                     }
             )

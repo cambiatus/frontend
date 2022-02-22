@@ -32,7 +32,6 @@ import Session.Shared exposing (Shared)
 import Time
 import Time.Extra
 import UpdateResult as UR
-import Utils
 import View.Components
 import View.Feedback as Feedback
 
@@ -49,33 +48,45 @@ type Model
     | WithError (Graphql.Http.Error (Maybe Community.News.Model))
 
 
-init : Route.NewsEditorKind -> LoggedIn.Model -> ( Model, Cmd Msg )
+init : Route.NewsEditorKind -> LoggedIn.Model -> UpdateResult
 init kind loggedIn =
     let
         queryForNews newsId =
-            Api.Graphql.query loggedIn.shared
-                (Just loggedIn.authToken)
+            LoggedIn.query loggedIn
                 (Cambiatus.Query.news { newsId = newsId }
                     Community.News.selectionSet
                 )
                 CompletedLoadNews
+                |> UR.addExt
 
         initWithCommunity =
             LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     in
     case kind of
         Route.CreateNews ->
-            ( Editing CreateNew (emptyForm loggedIn.shared), initWithCommunity )
+            Editing CreateNew (emptyForm loggedIn.shared)
+                |> UR.init
+                |> UR.addCmd initWithCommunity
 
         Route.EditNews newsId ->
-            ( WaitingNewsToEdit
-            , Cmd.batch [ queryForNews newsId, initWithCommunity ]
-            )
+            let
+                model =
+                    WaitingNewsToEdit
+            in
+            model
+                |> UR.init
+                |> UR.addCmd initWithCommunity
+                |> queryForNews newsId
 
         Route.CopyNews newsId ->
-            ( WaitingNewsToCopy
-            , Cmd.batch [ queryForNews newsId, initWithCommunity ]
-            )
+            let
+                model =
+                    WaitingNewsToCopy
+            in
+            model
+                |> UR.init
+                |> UR.addCmd initWithCommunity
+                |> queryForNews newsId
 
 
 emptyForm : Shared -> Form.Model FormInput
@@ -211,7 +222,7 @@ update msg model loggedIn =
                 |> UR.init
 
         CompletedLoadNews (RemoteData.Failure err) ->
-            if Utils.errorToString err == "News not found" then
+            if Api.Graphql.isNewsNotFoundError err then
                 NewsNotFound
                     |> UR.init
 
@@ -270,7 +281,7 @@ update msg model loggedIn =
 
         SubmittedForm formOutput ->
             case model of
-                Editing action formInput ->
+                Editing action _ ->
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
                             let
@@ -278,40 +289,33 @@ update msg model loggedIn =
                                     formOutput.publicationDate
                                         |> Maybe.map (Iso8601.fromTime >> Cambiatus.Scalar.DateTime)
 
-                                mutation =
+                                optionalArgs optionals =
                                     case action of
                                         CreateNew ->
-                                            Cambiatus.Mutation.news
-                                                (\optionals ->
-                                                    { optionals | scheduling = OptionalArgument.fromMaybe schedulingTime }
-                                                )
-                                                { communityId = Eos.symbolToString community.symbol
-                                                , description = Markdown.toRawString formOutput.description
-                                                , title = formOutput.title
-                                                }
-                                                Community.News.selectionSet
+                                            { optionals
+                                                | scheduling = OptionalArgument.fromMaybe schedulingTime
+                                                , communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
+                                            }
 
                                         EditExisting news ->
-                                            Cambiatus.Mutation.updateNews
-                                                (\optionals ->
-                                                    { optionals
-                                                        | description = OptionalArgument.Present <| Markdown.toRawString formOutput.description
-                                                        , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
-                                                        , title = OptionalArgument.Present formOutput.title
-                                                    }
-                                                )
-                                                { id = news.id }
-                                                Community.News.selectionSet
+                                            { optionals
+                                                | communityId = OptionalArgument.Present <| Eos.symbolToString community.symbol
+                                                , id = OptionalArgument.Present news.id
+                                                , scheduling = OptionalArgument.fromMaybeWithNull schedulingTime
+                                            }
+
+                                mutation =
+                                    Cambiatus.Mutation.news
+                                        optionalArgs
+                                        { description = Markdown.toRawString formOutput.description
+                                        , title = formOutput.title
+                                        }
+                                        Community.News.selectionSet
                             in
                             model
                                 |> setDisabled True
                                 |> UR.init
-                                |> UR.addCmd
-                                    (Api.Graphql.mutation loggedIn.shared
-                                        (Just loggedIn.authToken)
-                                        mutation
-                                        CompletedSaving
-                                    )
+                                |> UR.addExt (LoggedIn.mutation loggedIn mutation CompletedSaving)
 
                         _ ->
                             UR.init model
@@ -467,7 +471,7 @@ createForm loggedIn =
                                 [ profileSummary
                                     |> Profile.Summary.withoutName
                                     |> Profile.Summary.withImageSize "h-8 w-8"
-                                    |> Profile.Summary.view loggedIn.shared
+                                    |> Profile.Summary.view loggedIn.shared.translators
                                         loggedIn.accountName
                                         creator
                                     |> Html.map

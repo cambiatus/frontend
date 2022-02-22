@@ -4,6 +4,7 @@ module Eos.Account exposing
     , PrivateKey
     , encodeName
     , encodePermissionName
+    , encodePrivateKey
     , errorToString
     , fromString
     , nameDecoder
@@ -162,6 +163,11 @@ type PrivateKey
 privateKeyDecoder : Decoder PrivateKey
 privateKeyDecoder =
     Decode.map PrivateKey Decode.string
+
+
+encodePrivateKey : PrivateKey -> Value
+encodePrivateKey (PrivateKey pk) =
+    Encode.string pk
 
 
 privateKeyToString : PrivateKey -> String

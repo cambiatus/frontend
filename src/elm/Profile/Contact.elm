@@ -1,5 +1,5 @@
 module Profile.Contact exposing
-    ( ContactResponse(..)
+    ( External(..)
     , Model
     , Msg
     , Normalized
@@ -17,7 +17,6 @@ module Profile.Contact exposing
     , view
     )
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Mutation
@@ -43,8 +42,9 @@ import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Shared, Translators)
 import Task
+import Translation exposing (Translators)
+import UpdateResult as UR
 import Validate
 import View.Components
 import View.Modal as Modal
@@ -205,12 +205,6 @@ type alias UpdatedData =
     RemoteData (Graphql.Http.Error (Maybe Profile)) (Maybe Profile)
 
 
-type ContactResponse
-    = NotAsked
-    | WithContacts String (List Normalized) Bool
-    | WithError String
-
-
 
 -- UPDATE
 
@@ -231,8 +225,23 @@ type Msg
     | PressedDownArrowOnFlagSelect ContactType
 
 
-update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) authToken profileContacts =
+type External
+    = GotContacts String (List Normalized) Bool
+    | GotContactsError String
+    | GotMutationRequest (SelectionSet (Maybe Profile) RootMutation) (UpdatedData -> Msg)
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg External
+
+
+update :
+    Msg
+    -> Model
+    -> Translators
+    -> List Normalized
+    -> UpdateResult
+update msg model translators profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact
@@ -304,41 +313,37 @@ update msg model ({ translators } as shared) authToken profileContacts =
     in
     case msg of
         NoOp ->
-            ( model, Cmd.none, NotAsked )
+            UR.init model
 
         SelectedCountry contactType country ->
-            ( updateKind contactType (setCountry country)
-            , flagSelectorId contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setCountry country)
+                |> UR.init
+                |> UR.addCmd
+                    (flagSelectorId contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClickedToggleContactFlags contactType ->
-            ( updateKind contactType toggleFlags
-            , flagSelectorId contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType toggleFlags
+                |> UR.init
+                |> UR.addCmd
+                    (flagSelectorId contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         EnteredContactText contactType newContact ->
-            ( updateKind contactType (setContact newContact)
-            , Cmd.none
-            , NotAsked
-            )
+            updateKind contactType (setContact newContact)
+                |> UR.init
 
         ClosedDeleteModal ->
-            ( { model | contactTypeToDelete = Nothing }
-            , Cmd.none
-            , NotAsked
-            )
+            { model | contactTypeToDelete = Nothing }
+                |> UR.init
 
         ClickedDeleteContact contactType ->
-            ( { model | contactTypeToDelete = Just contactType }
-            , Cmd.none
-            , NotAsked
-            )
+            { model | contactTypeToDelete = Just contactType }
+                |> UR.init
 
         ConfirmedDeleteContact contactTypeToDelete ->
             let
@@ -356,21 +361,17 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         (\(Normalized { contactType }) -> contactType /= contactTypeToDelete)
                         profileContacts
             in
-            ( { withoutContact
+            { withoutContact
                 | contactTypeToDelete = Nothing
                 , state = RemoteData.Loading
-              }
-            , Api.Graphql.mutation shared
-                (Just authToken)
-                (mutation newContacts)
-                CompletedDeleteContact
-            , NotAsked
-            )
+            }
+                |> UR.init
+                |> UR.addExt (GotMutationRequest (mutation newContacts) CompletedDeleteContact)
 
         EnteredContactOption option ->
             case model.kind of
                 Single contact ->
-                    ( { model
+                    { model
                         | kind =
                             Single
                                 { contact
@@ -378,36 +379,26 @@ update msg model ({ translators } as shared) authToken profileContacts =
                                     , errors = Nothing
                                     , contact = ""
                                 }
-                      }
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    }
+                        |> UR.init
 
                 Multiple _ ->
-                    ( model
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    model
+                        |> UR.init
 
         ClickedSubmit ->
             case submit translators model.kind of
                 Err withError ->
-                    ( { model | kind = withError }
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    { model | kind = withError }
+                        |> UR.init
 
                 Ok normalized ->
-                    ( { model
+                    { model
                         | state = RemoteData.Loading
                         , kind = removeErrors model.kind
-                      }
-                    , Api.Graphql.mutation shared
-                        (Just authToken)
-                        (mutation normalized)
-                        CompletedUpdateContact
-                    , NotAsked
-                    )
+                    }
+                        |> UR.init
+                        |> UR.addExt (GotMutationRequest (mutation normalized) CompletedUpdateContact)
 
         CompletedUpdateContact result ->
             let
@@ -422,25 +413,27 @@ update msg model ({ translators } as shared) authToken profileContacts =
                             "failure"
                         ]
                         |> translators.t
+
+                addContactResponse =
+                    case result of
+                        RemoteData.Success (Just profile) ->
+                            UR.addExt (GotContacts (feedbackString True) profile.contacts True)
+
+                        RemoteData.Success Nothing ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.Failure _ ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.NotAsked ->
+                            identity
+
+                        RemoteData.Loading ->
+                            identity
             in
-            ( { model | state = result }
-            , Cmd.none
-            , case result of
-                RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts True
-
-                RemoteData.Success Nothing ->
-                    WithError (feedbackString False)
-
-                RemoteData.Failure _ ->
-                    WithError (feedbackString False)
-
-                RemoteData.NotAsked ->
-                    NotAsked
-
-                RemoteData.Loading ->
-                    NotAsked
-            )
+            { model | state = result }
+                |> UR.init
+                |> addContactResponse
 
         CompletedDeleteContact result ->
             let
@@ -454,25 +447,27 @@ update msg model ({ translators } as shared) authToken profileContacts =
                             "failure"
                         ]
                         |> translators.t
+
+                addContactResponse =
+                    case result of
+                        RemoteData.Success (Just profile) ->
+                            UR.addExt (GotContacts (feedbackString True) profile.contacts False)
+
+                        RemoteData.Success Nothing ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.Failure _ ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.NotAsked ->
+                            identity
+
+                        RemoteData.Loading ->
+                            identity
             in
-            ( { model | state = RemoteData.NotAsked }
-            , Cmd.none
-            , case result of
-                RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts False
-
-                RemoteData.Success Nothing ->
-                    WithError (feedbackString False)
-
-                RemoteData.Failure _ ->
-                    WithError (feedbackString False)
-
-                RemoteData.NotAsked ->
-                    NotAsked
-
-                RemoteData.Loading ->
-                    NotAsked
-            )
+            { model | state = RemoteData.NotAsked }
+                |> UR.init
+                |> addContactResponse
 
         PressedUpArrowOnFlagSelect contactType ->
             let
@@ -495,12 +490,13 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         |> Maybe.andThen (\index -> LE.getAt index countries)
                         |> Maybe.withDefault defaultCountry
             in
-            ( updateKind contactType (setFocusedFlag nextCountry)
-            , flagId nextCountry contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setFocusedFlag nextCountry)
+                |> UR.init
+                |> UR.addCmd
+                    (flagId nextCountry contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         PressedDownArrowOnFlagSelect contactType ->
             let
@@ -523,12 +519,13 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         |> Maybe.andThen (\index -> LE.getAt index countries)
                         |> Maybe.withDefault defaultCountry
             in
-            ( updateKind contactType (setFocusedFlag nextCountry)
-            , flagId nextCountry contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setFocusedFlag nextCountry)
+                |> UR.init
+                |> UR.addCmd
+                    (flagId nextCountry contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
 
 updateIfContactType : ContactType -> (Basic -> Basic) -> List Basic -> List Basic
@@ -1363,11 +1360,14 @@ mutation contacts =
         { input =
             { avatar = Absent
             , bio = Absent
+            , claimNotification = Absent
             , contacts = Present (List.map contactInput contacts)
+            , digest = Absent
             , email = Absent
             , interests = Absent
             , location = Absent
             , name = Absent
+            , transferNotification = Absent
             }
         }
         profileSelectionSet

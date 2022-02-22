@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Cambiatus.Object.DeleteKycAddress exposing (..)
+module Cambiatus.Object.Reward exposing (..)
 
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -19,11 +19,15 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-reason : SelectionSet String Cambiatus.Object.DeleteKycAddress
-reason =
-    Object.selectionForField "String" "reason" [] Decode.string
+action :
+    SelectionSet decodesTo Cambiatus.Object.Action
+    -> SelectionSet decodesTo Cambiatus.Object.Reward
+action object_ =
+    Object.selectionForCompositeField "action" [] object_ identity
 
 
-status : SelectionSet String Cambiatus.Object.DeleteKycAddress
-status =
-    Object.selectionForField "String" "status" [] Decode.string
+receiver :
+    SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet decodesTo Cambiatus.Object.Reward
+receiver object_ =
+    Object.selectionForCompositeField "receiver" [] object_ identity

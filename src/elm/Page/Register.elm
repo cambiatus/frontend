@@ -2,8 +2,6 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, re
 
 import Address
 import Api.Graphql
-import Cambiatus.Mutation as Mutation
-import Cambiatus.Object.Session
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -12,7 +10,6 @@ import Form.Checkbox
 import Form.Text
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet exposing (with)
 import Html exposing (Html, a, button, div, img, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, id, src)
 import Html.Events exposing (onClick)
@@ -23,7 +20,6 @@ import Page
 import Page.Register.DefaultForm as DefaultForm
 import Page.Register.JuridicalForm as JuridicalForm
 import Page.Register.NaturalForm as NaturalForm
-import Profile
 import RemoteData exposing (RemoteData)
 import Result
 import Route
@@ -167,7 +163,7 @@ type alias AccountKeys =
     , activeKey : String
     , accountName : Eos.Name
     , words : String
-    , privateKey : String
+    , privateKey : Eos.PrivateKey
     }
 
 
@@ -520,7 +516,7 @@ type Msg
     | CompletedLoadInvite (RemoteData (Graphql.Http.Error (Maybe Invite)) (Maybe Invite))
     | CompletedLoadCountry (RemoteData (Graphql.Http.Error (Maybe Address.Country)) (Maybe Address.Country))
     | AccountTypeSelected AccountType
-    | CompletedSignUp (RemoteData (Graphql.Http.Error (Maybe SignUpResponse)) (Maybe SignUpResponse))
+    | CompletedSignUp (RemoteData (Graphql.Http.Error Api.Graphql.SignUpResponse) Api.Graphql.SignUpResponse)
     | GotFormMsg FormMsg
     | SubmittedForm FormOutput
 
@@ -648,12 +644,7 @@ update _ msg model ({ shared } as guest) =
         AccountKeysGenerated formOutput (Ok accountKeys) ->
             { model | accountKeys = Just accountKeys }
                 |> UR.init
-                |> UR.addCmd
-                    (signUp shared
-                        accountKeys
-                        model.invitationId
-                        formOutput
-                    )
+                |> UR.addCmd (signUp shared accountKeys model.invitationId formOutput)
 
         AgreedToSave12Words val ->
             { model | hasAgreedToSavePassphrase = val }
@@ -696,30 +687,23 @@ update _ msg model ({ shared } as guest) =
                 |> UR.addCmd
                     (Route.replaceUrl shared.navKey (Route.Login guest.maybeInvitation guest.afterLoginRedirect))
 
-        CompletedSignUp (RemoteData.Success resp) ->
-            case resp of
-                Just _ ->
-                    case model.accountKeys of
-                        Nothing ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
-                                    "Completed signing up, but didn't have account keys"
-                                    Nothing
-                                    { moduleName = "Page.Register", function = "update" }
-                                    []
-
-                        Just accountKeys ->
-                            { model
-                                | status = AccountCreated accountKeys
-                                , step = SavePassphrase
-                            }
-                                |> UR.init
-
+        CompletedSignUp (RemoteData.Success _) ->
+            case model.accountKeys of
                 Nothing ->
                     model
                         |> UR.init
-                        |> UR.addExt (Guest.SetFeedback <| Feedback.Visible Feedback.Failure (t "register.account_error.title"))
+                        |> UR.logImpossible msg
+                            "Completed signing up, but didn't have account keys"
+                            Nothing
+                            { moduleName = "Page.Register", function = "update" }
+                            []
+
+                Just accountKeys ->
+                    { model
+                        | status = AccountCreated accountKeys
+                        , step = SavePassphrase
+                    }
+                        |> UR.init
 
         CompletedSignUp (RemoteData.Failure error) ->
             model
@@ -880,32 +864,11 @@ loadedCommunity shared model community maybeInvite =
             |> UR.init
 
 
-type alias SignUpResponse =
-    { user : Profile.Minimal
-    , token : String
-    }
-
-
 signUp : Shared -> AccountKeys -> InvitationId -> FormOutput -> Cmd Msg
 signUp shared { accountName, ownerKey } invitationId formOutput =
     let
         { email, name } =
             getSignUpFields formOutput
-
-        requiredArgs =
-            { account = Eos.nameToString accountName
-            , email = email
-            , name = name
-            , password = shared.graphqlSecret
-            , publicKey = ownerKey
-            , userType =
-                case formOutput of
-                    JuridicalFormOutput _ ->
-                        "juridical"
-
-                    _ ->
-                        "natural"
-            }
 
         ( kycOpts, addressOpts ) =
             case formOutput of
@@ -951,16 +914,20 @@ signUp shared { accountName, ownerKey } invitationId formOutput =
                 , address = addressOpts
             }
     in
-    Api.Graphql.mutation shared
-        Nothing
-        (Mutation.signUp
-            fillOptionals
-            requiredArgs
-            (Graphql.SelectionSet.succeed SignUpResponse
-                |> with (Cambiatus.Object.Session.user Profile.minimalSelectionSet)
-                |> with Cambiatus.Object.Session.token
-            )
-        )
+    Api.Graphql.signUp shared
+        { accountName = accountName
+        , email = email
+        , name = name
+        , publicKey = ownerKey
+        , userType =
+            case formOutput of
+                JuridicalFormOutput _ ->
+                    "juridical"
+
+                _ ->
+                    "natural"
+        }
+        fillOptionals
         CompletedSignUp
 
 
@@ -996,7 +963,7 @@ jsAddressToMsg addr val =
                         |> DecodePipeline.required "activeKey" Decode.string
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "words" Decode.string
-                        |> DecodePipeline.required "privateKey" Decode.string
+                        |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
 
                 decodedAccount : Result Decode.Error AccountKeys
                 decodedAccount =

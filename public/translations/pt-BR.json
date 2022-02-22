@@ -185,6 +185,7 @@
     "account_instr": "Apenas letras de a-z e números de 1-5",
     "pin_instr": "6 números",
     "failed": "Falha na autenticação",
+    "failed_generating_phrase": "Algo de errado aconteceu ao iniciar sua autenticação",
     "login": {
       "modalFormTitle": "Insira seu PIN",
       "enterPinToContinue": "Por favor, insira seu PIN de segurança atual para continuar.",

@@ -12,7 +12,7 @@
     "build": "yarn bundle",
     "build-book": "cd elm-book && yarn build",
     "bundle": "NODE_ENV=production yarn webpack --color --mode=production --config config/webpack.config.prod.js",
-    "start": "yarn check-js && GRAPHQL_SECRET=gAK2_Fdjyy8 node scripts/start.js",
+    "start": "yarn check-js && node scripts/start.js",
     "start-book": "cd elm-book && yarn start",
     "review": "elm-review",
     "check-js": "standard scripts src config elm-book",

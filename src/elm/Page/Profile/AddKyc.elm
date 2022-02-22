@@ -74,9 +74,9 @@ update msg model loggedIn =
                 KycForm.Submitted formOutput ->
                     formUpdateResult
                         |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = RemoteData.Loading })
-                        |> UR.addCmd
+                        |> UR.addExt
                             (KycForm.saveKycData loggedIn formOutput
-                                |> Cmd.map FormMsg
+                                |> LoggedIn.mapExternal FormMsg
                             )
 
                 KycForm.Saved result ->

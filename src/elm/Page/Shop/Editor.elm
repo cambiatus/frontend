@@ -10,7 +10,6 @@ module Page.Shop.Editor exposing
     )
 
 import Api
-import Api.Graphql
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -520,15 +519,15 @@ update msg model loggedIn =
 
                 LoadingBalancesUpdate saleId ->
                     let
-                        saleFetch =
-                            Api.Graphql.query loggedIn.shared
-                                (Just loggedIn.authToken)
+                        addSaleFetch =
+                            LoggedIn.query loggedIn
                                 (Shop.productQuery saleId)
                                 CompletedSaleLoad
+                                |> UR.addExt
                     in
                     LoadingSaleUpdate balances
                         |> UR.init
-                        |> UR.addCmd saleFetch
+                        |> addSaleFetch
 
                 _ ->
                     model
@@ -587,7 +586,7 @@ update msg model loggedIn =
                         loggedIn
                         "createsale"
                         (encodeCreateForm loggedIn formOutput)
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -600,7 +599,7 @@ update msg model loggedIn =
                                 loggedIn
                                 "updatesale"
                                 (encodeUpdateForm sale formOutput community.symbol)
-                                |> LoggedIn.withAuthentication loggedIn
+                                |> LoggedIn.withPrivateKey loggedIn
                                     model
                                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -643,7 +642,7 @@ update msg model loggedIn =
                         loggedIn
                         "deletesale"
                         (encodeDeleteForm sale)
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 

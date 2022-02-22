@@ -1,6 +1,5 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
-import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account as Eos
@@ -27,15 +26,14 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, authToken } as loggedIn) =
-    ( initModel
-    , Api.Graphql.query
-        shared
-        (Just authToken)
-        (Notification.notificationHistoryQuery loggedIn.accountName)
-        CompletedLoadNotificationHistory
-    )
+init : LoggedIn.Model -> UpdateResult
+init loggedIn =
+    UR.init initModel
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (Notification.notificationHistoryQuery loggedIn.accountName)
+                CompletedLoadNotificationHistory
+            )
 
 
 
@@ -370,9 +368,8 @@ update msg model loggedIn =
 
         MarkAsRead notificationId data ->
             let
-                cmd =
-                    Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
+                markAsRead =
+                    LoggedIn.mutation loggedIn
                         (Notification.markAsReadMutation notificationId)
                         CompletedReading
 
@@ -392,7 +389,7 @@ update msg model loggedIn =
                 T transfer ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
                         |> UR.addCmd
                             (Route.ViewTransfer transfer.id
                                 |> redirectCmd transfer.community
@@ -401,12 +398,12 @@ update msg model loggedIn =
                 M ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
 
                 S sale ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
                         |> UR.addCmd
                             (Route.ViewSale sale.product.id
                                 |> redirectCmd sale.product.community

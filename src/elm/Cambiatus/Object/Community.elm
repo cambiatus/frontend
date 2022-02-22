@@ -206,6 +206,13 @@ productCount =
     Object.selectionForField "Int" "productCount" [] Decode.int
 
 
+rewards :
+    SelectionSet decodesTo Cambiatus.Object.Reward
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+rewards object_ =
+    Object.selectionForCompositeField "rewards" [] object_ (identity >> Decode.list)
+
+
 subdomain :
     SelectionSet decodesTo Cambiatus.Object.Subdomain
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community

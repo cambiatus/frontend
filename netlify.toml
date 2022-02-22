@@ -2,7 +2,6 @@
 # unless otherwise overridden by more specific contexts.
 [build]
   [build.environment]
-    GRAPHQL_SECRET = "gAK2_Fdjyy8"
     USE_SUBDOMAIN = "false"
 
 # Redirects and headers are GLOBAL for all builds – they do not get scoped to

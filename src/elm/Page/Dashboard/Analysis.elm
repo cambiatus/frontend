@@ -9,7 +9,6 @@ module Page.Dashboard.Analysis exposing
     , view
     )
 
-import Api.Graphql
 import Api.Relay
 import Cambiatus.Enum.Direction
 import Cambiatus.Query
@@ -36,7 +35,7 @@ import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
 import View.Components
@@ -450,7 +449,7 @@ viewPagination { shared } maybePageInfo =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -546,8 +545,8 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing WaitingToVote community.symbol)
-                |> UR.addCmd (fetchAnalysis loggedIn model Nothing Analyzed community.symbol)
+                |> UR.addExt (fetchAnalysis loggedIn model Nothing WaitingToVote community.symbol)
+                |> UR.addExt (fetchAnalysis loggedIn model Nothing Analyzed community.symbol)
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
         ClaimMsg claimIndex m ->
@@ -596,7 +595,7 @@ update msg model loggedIn =
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -669,7 +668,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -707,7 +706,13 @@ update msg model loggedIn =
                     addFetchCommand =
                         case loggedIn.selectedCommunity of
                             RemoteData.Success community ->
-                                UR.addCmd (fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol)
+                                UR.addExt
+                                    (fetchAnalysis loggedIn
+                                        newModel
+                                        Nothing
+                                        model.selectedTab
+                                        community.symbol
+                                    )
 
                             _ ->
                                 identity
@@ -729,7 +734,13 @@ update msg model loggedIn =
                 addFetchCommand =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            UR.addCmd (fetchAnalysis loggedIn newModel Nothing tab community.symbol)
+                            UR.addExt
+                                (fetchAnalysis loggedIn
+                                    newModel
+                                    Nothing
+                                    tab
+                                    community.symbol
+                                )
 
                         _ ->
                             identity
@@ -763,7 +774,13 @@ update msg model loggedIn =
                     in
                     model
                         |> UR.init
-                        |> UR.addCmd (fetchAnalysis loggedIn model cursor model.selectedTab community.symbol)
+                        |> UR.addExt
+                            (fetchAnalysis loggedIn
+                                model
+                                cursor
+                                model.selectedTab
+                                community.symbol
+                            )
                         |> UR.addBreadcrumb
                             { type_ = Log.QueryBreadcrumb
                             , category = msg
@@ -787,14 +804,18 @@ update msg model loggedIn =
             in
             newModel
                 |> UR.init
-                |> UR.addCmd
-                    (case loggedIn.selectedCommunity of
+                |> (case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
+                            fetchAnalysis loggedIn
+                                newModel
+                                Nothing
+                                model.selectedTab
+                                community.symbol
+                                |> UR.addExt
 
                         _ ->
-                            Cmd.none
-                    )
+                            identity
+                   )
 
         ToggleSorting ->
             let
@@ -812,21 +833,26 @@ update msg model loggedIn =
                         , status = RemoteData.Loading
                     }
 
-                fetchCmd =
+                addFetchCmd =
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            fetchAnalysis loggedIn newModel Nothing model.selectedTab community.symbol
+                            fetchAnalysis loggedIn
+                                newModel
+                                Nothing
+                                model.selectedTab
+                                community.symbol
+                                |> UR.addExt
 
                         _ ->
-                            Cmd.none
+                            identity
             in
             newModel
                 |> UR.init
-                |> UR.addCmd fetchCmd
+                |> addFetchCmd
 
 
-fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> Cmd Msg
-fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
+fetchAnalysis : LoggedIn.Model -> Model -> Maybe String -> Tab -> Eos.Symbol -> LoggedIn.External Msg
+fetchAnalysis loggedIn model maybeCursorAfter tab symbol =
     let
         cursorAfter =
             case maybeCursorAfter of
@@ -891,9 +917,9 @@ fetchAnalysis { shared, authToken } model maybeCursorAfter tab symbol =
         query =
             queryFn optionals
                 required
-                (Claim.claimPaginatedSelectionSet shared.now)
+                (Claim.claimPaginatedSelectionSet loggedIn.shared.now)
     in
-    Api.Graphql.query shared (Just authToken) query (ClaimsLoaded tab)
+    LoggedIn.query loggedIn query (ClaimsLoaded tab)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg

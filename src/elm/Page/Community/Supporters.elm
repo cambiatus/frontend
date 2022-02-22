@@ -178,7 +178,7 @@ viewSupporter loggedIn index profileSummary profile =
                 |> Profile.Summary.withoutName
                 |> Profile.Summary.withImageSize "w-14 h-14"
                 |> Profile.Summary.withAttrs [ tabindex -1 ]
-                |> Profile.Summary.view loggedIn.shared loggedIn.accountName profile
+                |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile
                 |> Html.map (GotProfileSummaryMsg index)
             , p [ class "ml-4 font-bold text-black" ]
                 [ text

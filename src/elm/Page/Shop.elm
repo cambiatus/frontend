@@ -10,7 +10,6 @@ module Page.Shop exposing
     )
 
 import Api
-import Api.Graphql
 import Community exposing (Balance)
 import Dict
 import Eos
@@ -352,9 +351,8 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
                         (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
                         CompletedSalesLoad
                     )

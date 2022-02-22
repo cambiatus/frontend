@@ -1,6 +1,5 @@
 module Page.Community.Sponsor exposing (Model, Msg, init, msgToString, receiveBroadcast, subscriptions, update, view)
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation
@@ -8,6 +7,7 @@ import Cambiatus.Object.Community
 import Cambiatus.Object.Contribution
 import Community
 import Dict
+import Environment
 import Eos
 import Form exposing (Form)
 import Form.Select
@@ -24,8 +24,9 @@ import Ports
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared as Shared exposing (Shared, Translators)
+import Session.Shared exposing (Shared)
 import Task
+import Translation exposing (Translators)
 import UpdateResult as UR
 import Utils
 import View.Feedback
@@ -142,9 +143,8 @@ update msg model loggedIn =
                 RemoteData.Success community ->
                     { model | isCreatingOrder = True }
                         |> UR.init
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
                                 (createContributionSelectionSet
                                     { amount = formOutput.amount
                                     , communityId = community.symbol
@@ -286,16 +286,16 @@ amountFieldId =
 defaultPaypalCurrency : Shared -> PaypalButtons.Currency
 defaultPaypalCurrency shared =
     case shared.environment of
-        Shared.Development ->
+        Environment.Development ->
             PaypalButtons.BRL
 
-        Shared.Staging ->
+        Environment.Staging ->
             PaypalButtons.BRL
 
-        Shared.Demo ->
+        Environment.Demo ->
             PaypalButtons.USD
 
-        Shared.Production ->
+        Environment.Production ->
             PaypalButtons.USD
 
 
@@ -509,7 +509,7 @@ view_ ({ translators } as shared) community contributionConfiguration model =
                             { id = "paypal-buttons-sponsorship"
                             , value =
                                 amount
-                                    |> Shared.floatStringFromSeparatedString translators
+                                    |> Translation.floatStringFromSeparatedString translators
                                     |> String.toFloat
                                     |> Maybe.andThen
                                         (\floatAmount ->
