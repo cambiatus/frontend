@@ -84,6 +84,9 @@ type alias Model =
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
+    , claimNotification : Bool
+    , digest : Bool
+    , transferNotification : Bool
     }
 
 
@@ -125,6 +128,9 @@ selectionSet =
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
+        |> with (User.claimNotification |> SelectionSet.map (Maybe.withDefault True))
+        |> with (User.digest |> SelectionSet.map (Maybe.withDefault True))
+        |> with (User.transferNotification |> SelectionSet.map (Maybe.withDefault True))
 
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User
