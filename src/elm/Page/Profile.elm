@@ -204,7 +204,7 @@ type Msg
     | ToggledClaimNotification Bool
     | ToggledTransferNotification Bool
     | ToggledDigest Bool
-    | CompletedSettingNotificationPreferences (RemoteData (Graphql.Http.Error (Maybe NotificationPreferences)) (Maybe NotificationPreferences))
+    | CompletedSettingNotificationPreferences (Maybe NotificationPreferences) (RemoteData (Graphql.Http.Error (Maybe NotificationPreferences)) (Maybe NotificationPreferences))
     | ToggleDeleteKycModal
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
@@ -460,14 +460,39 @@ update msg model loggedIn =
                 (\profile -> { profile | digest = newValue })
                 (\optionals -> { optionals | digest = OptionalArgument.Present newValue })
 
-        CompletedSettingNotificationPreferences (RemoteData.Failure err) ->
-            -- TODO - Log error
-            -- TODO - Show error feedback
-            -- TODO - Revert state
-            model
-                |> UR.init
+        CompletedSettingNotificationPreferences maybeOriginalPreferences (RemoteData.Failure err) ->
+            let
+                revertPreferences profileRemoteData =
+                    case maybeOriginalPreferences of
+                        Nothing ->
+                            profileRemoteData
 
-        CompletedSettingNotificationPreferences _ ->
+                        Just preferences ->
+                            case profileRemoteData of
+                                RemoteData.Success profile ->
+                                    { profile
+                                        | claimNotification = preferences.claim
+                                        , transferNotification = preferences.transfer
+                                        , digest = preferences.digest
+                                    }
+                                        |> RemoteData.Success
+
+                                _ ->
+                                    profileRemoteData
+            in
+            { model | profile = revertPreferences model.profile }
+                |> UR.init
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = revertPreferences loggedIn.profile })
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when saving your preferences")
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when setting notification preferences"
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
+                    err
+
+        CompletedSettingNotificationPreferences _ _ ->
             -- We already do an optimistic update on the UI, so no need to do anything else
             UR.init model
 
@@ -677,6 +702,27 @@ actOnNotificationPreferenceToggle loggedIn model updateProfile fillMutationArgs 
 
                 _ ->
                     profileRemoteData
+
+        originalPreferences =
+            let
+                profile =
+                    case loggedIn.profile of
+                        RemoteData.Success profile_ ->
+                            RemoteData.Success profile_
+
+                        _ ->
+                            model.profile
+            in
+            case profile of
+                RemoteData.Success validProfile ->
+                    Just
+                        { claim = validProfile.claimNotification
+                        , transfer = validProfile.transferNotification
+                        , digest = validProfile.digest
+                        }
+
+                _ ->
+                    Nothing
     in
     { model | profile = updatedProfile model.profile }
         |> UR.init
@@ -686,7 +732,7 @@ actOnNotificationPreferenceToggle loggedIn model updateProfile fillMutationArgs 
                     fillMutationArgs
                     notificationsSelectionSet
                 )
-                CompletedSettingNotificationPreferences
+                (CompletedSettingNotificationPreferences originalPreferences)
             )
         |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = updatedProfile loggedIn.profile })
 
@@ -1600,7 +1646,7 @@ msgToString msg =
         ToggledDigest _ ->
             [ "ToggledDigest" ]
 
-        CompletedSettingNotificationPreferences r ->
+        CompletedSettingNotificationPreferences _ r ->
             [ "CompletedSettingNotificationPreferences", UR.remoteDataToString r ]
 
         ToggleDeleteKycModal ->
