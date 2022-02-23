@@ -149,9 +149,9 @@ selectionSet =
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
-        |> with (User.claimNotification |> SelectionSet.map (Maybe.withDefault True))
-        |> with (User.digest |> SelectionSet.map (Maybe.withDefault True))
-        |> with (User.transferNotification |> SelectionSet.map (Maybe.withDefault True))
+        |> with User.claimNotification
+        |> with User.digest
+        |> with User.transferNotification
         |> with languageSelectionSet
 
 

@@ -1572,9 +1572,9 @@ type alias NotificationPreferences =
 notificationsSelectionSet : SelectionSet NotificationPreferences Cambiatus.Object.User
 notificationsSelectionSet =
     SelectionSet.succeed NotificationPreferences
-        |> SelectionSet.with (User.claimNotification |> SelectionSet.map (Maybe.withDefault True))
-        |> SelectionSet.with (User.transferNotification |> SelectionSet.map (Maybe.withDefault True))
-        |> SelectionSet.with (User.digest |> SelectionSet.map (Maybe.withDefault True))
+        |> SelectionSet.with User.claimNotification
+        |> SelectionSet.with User.transferNotification
+        |> SelectionSet.with User.digest
 
 
 
