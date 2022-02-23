@@ -709,6 +709,12 @@
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
     },
+    "preferences": {
+      "claim_notification": "Claim notification",
+      "transfer_notification": "Transfer notification",
+      "digest": "Monthly news about the community",
+      "error": "Something went wrong when saving your preferences"
+    },
     "edit": {
       "avatar_section": "Avatar",
       "general_section": "General",

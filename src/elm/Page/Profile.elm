@@ -483,8 +483,10 @@ update msg model loggedIn =
             { model | profile = revertPreferences model.profile }
                 |> UR.init
                 |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = revertPreferences loggedIn.profile })
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when saving your preferences")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (loggedIn.shared.translators.t "profile.preferences.error")
+                    )
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when setting notification preferences"
@@ -1234,22 +1236,19 @@ viewSettings loggedIn profile =
                                     kycButton
                                     Top
                         , viewDetailsToggle loggedIn.shared.translators
-                            -- TODO - I18N
-                            { label = "Claim notification"
+                            { label = loggedIn.shared.translators.t "profile.preferences.claim_notification"
                             , id = "claim-notification-toggle"
                             , onToggle = ToggledClaimNotification
                             , value = profile.claimNotification
                             }
                         , viewDetailsToggle loggedIn.shared.translators
-                            -- TODO - I18N
-                            { label = "Transfer notification"
+                            { label = loggedIn.shared.translators.t "profile.preferences.transfer_notification"
                             , id = "transfer-notification-toggle"
                             , onToggle = ToggledTransferNotification
                             , value = profile.transferNotification
                             }
                         , viewDetailsToggle loggedIn.shared.translators
-                            -- TODO - I18N
-                            { label = "Monthly news about the community"
+                            { label = loggedIn.shared.translators.t "profile.preferences.digest"
                             , id = "monthly-digest-toggle"
                             , onToggle = ToggledDigest
                             , value = profile.digest

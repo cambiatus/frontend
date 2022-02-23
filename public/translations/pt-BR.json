@@ -716,6 +716,12 @@
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
     },
+    "preferences": {
+      "claim_notification": "Notificação de reivindicação",
+      "transfer_notification": "Notificação de transferência",
+      "digest": "Notícias mensais sobre a comunidade",
+      "error": "Algo deu errado ao salvar suas preferências"
+    },
     "edit": {
       "avatar_section": "Avatar",
       "general_section": "Geral",
