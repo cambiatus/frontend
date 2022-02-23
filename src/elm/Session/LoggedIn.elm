@@ -31,6 +31,8 @@ import Action
 import Api.Graphql
 import Auth
 import Avatar
+import Cambiatus.Enum.Language
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -43,6 +45,7 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
@@ -125,6 +128,40 @@ fetchTranslations : Translation.Language -> Cmd (Msg externalMsg)
 fetchTranslations language =
     CompletedLoadTranslation language
         |> Translation.get language
+
+
+sendPreferredLanguage : Model -> Translation.Language -> Cmd (Msg externalMsg)
+sendPreferredLanguage model language =
+    let
+        languageEnum =
+            case language of
+                Translation.Amharic ->
+                    Just Cambiatus.Enum.Language.Amheth
+
+                Translation.English ->
+                    Just Cambiatus.Enum.Language.Enus
+
+                Translation.Spanish ->
+                    Just Cambiatus.Enum.Language.Eses
+
+                Translation.Portuguese ->
+                    Just Cambiatus.Enum.Language.Ptbr
+
+                Translation.Catalan ->
+                    -- We don't support catalan on the backend (See frontend issue #672)
+                    Nothing
+    in
+    case languageEnum of
+        Nothing ->
+            Cmd.none
+
+        Just languageArg ->
+            internalMutation model
+                (Cambiatus.Mutation.preference
+                    (\optionals -> { optionals | language = OptionalArgument.Present languageArg })
+                    (Graphql.SelectionSet.succeed ())
+                )
+                CompletedSendingLanguagePreference
 
 
 {-| Initialize logged in user after signing-in.
@@ -1069,6 +1106,15 @@ internalQuery model selectionSet toMsg =
     internalGraphqlOperation Api.Graphql.query model selectionSet toMsg
 
 
+internalMutation :
+    Model
+    -> SelectionSet result RootMutation
+    -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
+    -> Cmd (Msg externalMsg)
+internalMutation model selectionSet toMsg =
+    internalGraphqlOperation Api.Graphql.mutation model selectionSet toMsg
+
+
 internalGraphqlOperation :
     (Shared
      -> Maybe Api.Graphql.Token
@@ -1176,6 +1222,9 @@ mapMsg mapFn msg =
 
         ClickedLanguage language ->
             ClickedLanguage language
+
+        CompletedSendingLanguagePreference result ->
+            CompletedSendingLanguagePreference result
 
         ClosedAuthModal ->
             ClosedAuthModal
@@ -1577,6 +1626,7 @@ type Msg externalMsg
     | ShowUserNav Bool
     | ToggleLanguageItems
     | ClickedLanguage Translation.Language
+    | CompletedSendingLanguagePreference (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClosedAuthModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
@@ -1701,8 +1751,20 @@ update msg model =
             in
             case profile_ of
                 Just p ->
+                    let
+                        sendLanguagePreference =
+                            -- If the backend doesn't know the user's preferred
+                            -- language, we send it so we can have nicer email communication
+                            case p.preferredLanguage of
+                                Nothing ->
+                                    sendPreferredLanguage model model.shared.language
+
+                                Just _ ->
+                                    Cmd.none
+                    in
                     { model | profile = RemoteData.Success p }
                         |> UR.init
+                        |> UR.addCmd sendLanguagePreference
                         |> UR.addExt (ProfileLoaded p |> Broadcast)
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
@@ -1946,6 +2008,21 @@ update msg model =
                     , showUserNav = False
                 }
                 |> UR.addCmd (fetchTranslations lang)
+                |> UR.addCmd (sendPreferredLanguage model lang)
+
+        CompletedSendingLanguagePreference (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when sending language preference"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedSendingLanguagePreference _ ->
+            model
+                |> UR.init
 
         ClosedAuthModal ->
             UR.init closeAllModals
@@ -2690,6 +2767,9 @@ msgToString msg =
 
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
+
+        CompletedSendingLanguagePreference r ->
+            [ "CompletedSendingLanguagePreference", UR.remoteDataToString r ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
