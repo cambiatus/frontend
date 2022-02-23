@@ -676,6 +676,12 @@
       "edit": "አርትዕ",
       "viewPrivatekey": "የግል ቁልፍ ተመለከት"
     },
+    "preferences": {
+      "claim_notification": "የይገባኛል ጥያቄ ማስታወቂያ",
+      "transfer_notification": "ማሳወቂያ ማስተላለፍ",
+      "digest": "ስለ ማህበረሰቡ ወርሃዊ ዜና",
+      "error": "ምርጫዎችዎን በሚያስቀምጡበት ጊዜ የሆነ ችግር ተፈጥሯል"
+    },
     "edit": {
       "avatar_section": "አምሳያ",
       "general_section": "ጠቅላላ",

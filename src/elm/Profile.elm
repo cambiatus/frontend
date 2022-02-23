@@ -24,6 +24,7 @@ module Profile exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
+import Cambiatus.Enum.Language
 import Cambiatus.Enum.Permission exposing (Permission)
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -94,6 +95,10 @@ type alias Model =
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
+    , claimNotification : Bool
+    , digest : Bool
+    , transferNotification : Bool
+    , preferredLanguage : Maybe Translation.Language
     }
 
 
@@ -144,6 +149,32 @@ selectionSet =
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
+        |> with User.claimNotification
+        |> with User.digest
+        |> with User.transferNotification
+        |> with languageSelectionSet
+
+
+languageSelectionSet : SelectionSet (Maybe Translation.Language) Cambiatus.Object.User
+languageSelectionSet =
+    User.language
+        |> SelectionSet.map
+            (Maybe.map
+                (\language ->
+                    case language of
+                        Cambiatus.Enum.Language.Amheth ->
+                            Translation.Amharic
+
+                        Cambiatus.Enum.Language.Enus ->
+                            Translation.English
+
+                        Cambiatus.Enum.Language.Eses ->
+                            Translation.Spanish
+
+                        Cambiatus.Enum.Language.Ptbr ->
+                            Translation.Portuguese
+                )
+            )
 
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User

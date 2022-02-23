@@ -718,6 +718,12 @@
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
     },
+    "preferences": {
+      "claim_notification": "Notificación de reclamo",
+      "transfer_notification": "Notificación de transferencia",
+      "digest": "Noticias mensuales sobre la comunidad",
+      "error": "Algo salió mal al guardar tus preferencias"
+    },
     "edit": {
       "avatar_section": "Avatar",
       "general_section": "General",

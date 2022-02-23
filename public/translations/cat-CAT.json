@@ -718,6 +718,12 @@
       "edit": "Editar",
       "viewPrivatekey": "Veure clau privada"
     },
+    "preferences": {
+      "claim_notification": "Notificació de reclamació",
+      "transfer_notification": "Notificació de transferència",
+      "digest": "Notícies mensuals sobre la comunitat",
+      "error": "S'ha produït un error en desar les preferències"
+    },
     "edit": {
       "avatar_section": "Avatar",
       "general_section": "General",
