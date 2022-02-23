@@ -13,6 +13,7 @@ module Page.Shop.Viewer exposing
 import Api
 import Api.Graphql
 import Avatar
+import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
 import Eos.Account as Eos
@@ -334,6 +335,7 @@ updateAsLoggedIn msg model loggedIn =
                             ]
                     }
                 |> LoggedIn.withPrivateKey loggedIn
+                    [ Permission.Order ]
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

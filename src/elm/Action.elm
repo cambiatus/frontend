@@ -3,6 +3,7 @@ module Action exposing
     , ActionFeedback(..)
     , ClaimingActionStatus(..)
     , Community
+    , ExternalMsg(..)
     , Model
     , Msg(..)
     , Objective
@@ -20,6 +21,7 @@ module Action exposing
     , viewSearchActions
     )
 
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
@@ -127,18 +129,28 @@ type Msg
     | Tick Time.Posix
 
 
+type ExternalMsg
+    = SentFeedback Feedback.Model
+    | ShowInsufficientPermissions
+
+
 update :
     Bool
+    -> List Permission
     -> Shared
     -> Symbol
     -> Eos.Name
     -> Msg
     -> Model
-    -> UR.UpdateResult Model Msg Feedback.Model
-update isPinConfirmed shared selectedCommunity accName msg model =
+    -> UR.UpdateResult Model Msg ExternalMsg
+update isPinConfirmed permissions shared selectedCommunity accName msg model =
     let
         { t, tr } =
             shared.translators
+
+        hasPermissions necessaryPermissions =
+            List.all (\permission -> List.member permission permissions)
+                necessaryPermissions
 
         claimOrAskForPin actionId photoUrl code time m =
             if isPinConfirmed then
@@ -148,7 +160,8 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         (claimActionPort
                             msg
                             shared.contracts.community
-                            { actionId = actionId
+                            { communityId = selectedCommunity
+                            , actionId = actionId
                             , maker = accName
                             , proofPhoto = photoUrl
                             , proofCode = code
@@ -168,12 +181,18 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                 |> UR.init
 
         ( ActionClaimed action Nothing, _ ) ->
-            { model
-                | status = ClaimInProgress action Nothing
-                , feedback = Nothing
-                , needsPinConfirmation = not isPinConfirmed
-            }
-                |> claimOrAskForPin action.id "" "" 0
+            if hasPermissions [ Permission.Claim ] then
+                { model
+                    | status = ClaimInProgress action Nothing
+                    , feedback = Nothing
+                    , needsPinConfirmation = not isPinConfirmed
+                }
+                    |> claimOrAskForPin action.id "" "" 0
+
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
 
         ( ActionClaimed action (Just proofRecord), _ ) ->
             let
@@ -185,21 +204,27 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         Proof _ Nothing ->
                             ( "", 0 )
             in
-            case proofRecord.image of
-                Just image ->
-                    { model
-                        | status = ClaimInProgress action (Just proofRecord)
-                        , feedback = Nothing
-                        , needsPinConfirmation = not isPinConfirmed
-                    }
-                        |> claimOrAskForPin action.id image proofCode time
+            if hasPermissions [ Permission.Claim ] then
+                case proofRecord.image of
+                    Just image ->
+                        { model
+                            | status = ClaimInProgress action (Just proofRecord)
+                            , feedback = Nothing
+                            , needsPinConfirmation = not isPinConfirmed
+                        }
+                            |> claimOrAskForPin action.id image proofCode time
 
-                Nothing ->
-                    { model
-                        | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
-                        , needsPinConfirmation = False
-                    }
-                        |> UR.init
+                    Nothing ->
+                        { model
+                            | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
+                            , needsPinConfirmation = False
+                        }
+                            |> UR.init
+
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
 
         ( AgreedToClaimWithProof action, _ ) ->
             { model
@@ -339,7 +364,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         }
                     )
                     GotFormMsg
-                    UR.addExt
+                    (SentFeedback >> UR.addExt)
                     model
 
         ( GotFormMsg subMsg, PhotoUploaderShowed action (Proof formModel proofCode) ) ->
@@ -349,7 +374,7 @@ update isPinConfirmed shared selectedCommunity accName msg model =
                         { model | status = PhotoUploaderShowed action (Proof newForm proofCode) }
                     )
                     GotFormMsg
-                    UR.addExt
+                    (SentFeedback >> UR.addExt)
                     model
 
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
@@ -692,7 +717,8 @@ encode action =
             { symbol = action.objective.community.symbol, amount = amount }
     in
     Encode.object
-        [ ( "action_id", Encode.int action.id )
+        [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
+        , ( "action_id", Encode.int action.id )
         , ( "objective_id", Encode.int action.objective.id )
         , ( "description", Markdown.encode action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
@@ -722,6 +748,7 @@ encode action =
         , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
         , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
         , ( "photo_proof_instructions", Markdown.encode (Maybe.withDefault Markdown.empty action.photoProofInstructions) )
+        , ( "image", Encode.string "" )
         ]
 
 
@@ -738,7 +765,7 @@ updateAction accountName shared action =
 
 
 claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
+claimActionPort msg contractsCommunity action =
     { responseAddress = msg
     , responseData = Encode.null
     , data =
@@ -746,24 +773,18 @@ claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode,
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = maker
+                    { actor = action.maker
                     , permissionName = Eos.samplePermission
                     }
-              , data =
-                    { actionId = actionId
-                    , maker = maker
-                    , proofPhoto = proofPhoto
-                    , proofCode = proofCode
-                    , proofTime = proofTime
-                    }
-                        |> encodeClaimAction
+              , data = encodeClaimAction action
               }
             ]
     }
 
 
 type alias ClaimedAction =
-    { actionId : Int
+    { communityId : Symbol
+    , actionId : Int
     , maker : Eos.Name
     , proofPhoto : String
     , proofCode : String
@@ -774,7 +795,8 @@ type alias ClaimedAction =
 encodeClaimAction : ClaimedAction -> Encode.Value
 encodeClaimAction c =
     Encode.object
-        [ ( "action_id", Encode.int c.actionId )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "action_id", Encode.int c.actionId )
         , ( "maker", Eos.encodeName c.maker )
         , ( "proof_photo", Encode.string c.proofPhoto )
         , ( "proof_code", Encode.string c.proofCode )
