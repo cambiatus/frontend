@@ -790,13 +790,13 @@ update msg model loggedIn =
                             , data =
                                 Eos.encodeTransaction
                                     [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "newobjective"
+                                      , name = "upsertobjctv"
                                       , authorization =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
                                       , data =
-                                            { asset = Eos.Asset 0 community.symbol
+                                            { communityId = community.symbol
                                             , description = description
                                             , creator = loggedIn.accountName
                                             }
@@ -805,6 +805,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withPrivateKey loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -822,13 +823,14 @@ update msg model loggedIn =
                             , data =
                                 Eos.encodeTransaction
                                     [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "updobjective"
+                                      , name = "upsertobjctv"
                                       , authorization =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
                                       , data =
-                                            { objectiveId = objective.id
+                                            { communityId = objective.community.symbol
+                                            , objectiveId = objective.id
                                             , description = description
                                             , editor = loggedIn.accountName
                                             }
@@ -837,6 +839,7 @@ update msg model loggedIn =
                                     ]
                             }
                         |> LoggedIn.withPrivateKey loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -980,6 +983,7 @@ completeActionOrObjective loggedIn model msg completionStatus objective =
                        )
                 )
                 >> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 

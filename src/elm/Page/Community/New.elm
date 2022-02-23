@@ -412,6 +412,7 @@ update msg model loggedIn =
                             ]
                     }
                 |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
                 |> UR.addBreadcrumb

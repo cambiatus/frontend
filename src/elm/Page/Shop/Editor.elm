@@ -10,6 +10,7 @@ module Page.Shop.Editor exposing
     )
 
 import Api
+import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -553,6 +554,7 @@ update msg model loggedIn =
                         "createsale"
                         (encodeCreateForm loggedIn formOutput)
                         |> LoggedIn.withPrivateKey loggedIn
+                            [ Permission.Sell ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -566,6 +568,7 @@ update msg model loggedIn =
                                 "updatesale"
                                 (encodeUpdateForm sale formOutput community.symbol)
                                 |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
                                     model
                                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -609,6 +612,7 @@ update msg model loggedIn =
                         "deletesale"
                         (encodeDeleteForm sale)
                         |> LoggedIn.withPrivateKey loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
