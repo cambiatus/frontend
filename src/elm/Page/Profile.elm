@@ -13,6 +13,7 @@ import Api
 import Api.Relay
 import Avatar
 import Cambiatus.Enum.CurrencyType
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -24,6 +25,7 @@ import Community
 import Eos
 import Eos.Account as Eos
 import Eos.Explorer
+import Form.Toggle
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
@@ -199,6 +201,10 @@ type Msg
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
+    | ToggledClaimNotification Bool
+    | ToggledTransferNotification Bool
+    | ToggledDigest Bool
+    | CompletedSettingNotificationPreferences (RemoteData (Graphql.Http.Error (Maybe NotificationPreferences)) (Maybe NotificationPreferences))
     | ToggleDeleteKycModal
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
@@ -436,6 +442,35 @@ update msg model loggedIn =
         CompletedLoadUserTransfers RemoteData.NotAsked ->
             UR.init model
 
+        ToggledClaimNotification newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | claimNotification = newValue })
+                (\optionals -> { optionals | claimNotification = OptionalArgument.Present newValue })
+
+        ToggledTransferNotification newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | transferNotification = newValue })
+                (\optionals -> { optionals | transferNotification = OptionalArgument.Present newValue })
+
+        ToggledDigest newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | digest = newValue })
+                (\optionals -> { optionals | digest = OptionalArgument.Present newValue })
+
+        CompletedSettingNotificationPreferences (RemoteData.Failure err) ->
+            -- TODO - Log error
+            -- TODO - Show error feedback
+            -- TODO - Revert state
+            model
+                |> UR.init
+
+        CompletedSettingNotificationPreferences _ ->
+            -- We already do an optimistic update on the UI, so no need to do anything else
+            UR.init model
+
         ToggleDeleteKycModal ->
             { model | isDeleteKycModalVisible = not model.isDeleteKycModalVisible }
                 |> UR.init
@@ -625,6 +660,35 @@ update msg model loggedIn =
                 _ ->
                     model
                         |> UR.init
+
+
+actOnNotificationPreferenceToggle :
+    LoggedIn.Model
+    -> Model
+    -> (Profile.Model -> Profile.Model)
+    -> (Cambiatus.Mutation.PreferenceOptionalArguments -> Cambiatus.Mutation.PreferenceOptionalArguments)
+    -> UpdateResult
+actOnNotificationPreferenceToggle loggedIn model updateProfile fillMutationArgs =
+    let
+        updatedProfile profileRemoteData =
+            case profileRemoteData of
+                RemoteData.Success profile ->
+                    RemoteData.Success (updateProfile profile)
+
+                _ ->
+                    profileRemoteData
+    in
+    { model | profile = updatedProfile model.profile }
+        |> UR.init
+        |> UR.addExt
+            (LoggedIn.mutation loggedIn
+                (Cambiatus.Mutation.preference
+                    fillMutationArgs
+                    notificationsSelectionSet
+                )
+                CompletedSettingNotificationPreferences
+            )
+        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = updatedProfile loggedIn.profile })
 
 
 
@@ -979,6 +1043,28 @@ viewDetailsItem label content verticalAlign =
         ]
 
 
+viewDetailsToggle :
+    Translators
+    -> { label : String, id : String, onToggle : Bool -> Msg, value : Bool }
+    -> Html Msg
+viewDetailsToggle translators { label, id, onToggle, value } =
+    li [ class "py-4" ]
+        [ Form.Toggle.init { label = text label, id = id }
+            |> Form.Toggle.withContainerAttrs [ class "text-sm" ]
+            |> (\options ->
+                    Form.Toggle.view options
+                        { onToggle = onToggle
+                        , onBlur = Ignored
+                        , value = value
+                        , error = text ""
+                        , hasError = False
+                        , isRequired = False
+                        , translators = translators
+                        }
+               )
+        ]
+
+
 viewAddress : Translators -> Profile.Address.Address -> Html msg
 viewAddress { t } address =
     let
@@ -1101,6 +1187,27 @@ viewSettings loggedIn profile =
                                     )
                                     kycButton
                                     Top
+                        , viewDetailsToggle loggedIn.shared.translators
+                            -- TODO - I18N
+                            { label = "Claim notification"
+                            , id = "claim-notification-toggle"
+                            , onToggle = ToggledClaimNotification
+                            , value = profile.claimNotification
+                            }
+                        , viewDetailsToggle loggedIn.shared.translators
+                            -- TODO - I18N
+                            { label = "Transfer notification"
+                            , id = "transfer-notification-toggle"
+                            , onToggle = ToggledTransferNotification
+                            , value = profile.transferNotification
+                            }
+                        , viewDetailsToggle loggedIn.shared.translators
+                            -- TODO - I18N
+                            { label = "Monthly news about the community"
+                            , id = "monthly-digest-toggle"
+                            , onToggle = ToggledDigest
+                            , value = profile.digest
+                            }
                         ]
                     ]
                 ]
@@ -1407,6 +1514,21 @@ fetchTransfers loggedIn community maybeCursor =
         CompletedLoadUserTransfers
 
 
+type alias NotificationPreferences =
+    { claim : Bool
+    , transfer : Bool
+    , digest : Bool
+    }
+
+
+notificationsSelectionSet : SelectionSet NotificationPreferences Cambiatus.Object.User
+notificationsSelectionSet =
+    SelectionSet.succeed NotificationPreferences
+        |> SelectionSet.with (User.claimNotification |> SelectionSet.map (Maybe.withDefault True))
+        |> SelectionSet.with (User.transferNotification |> SelectionSet.map (Maybe.withDefault True))
+        |> SelectionSet.with (User.digest |> SelectionSet.map (Maybe.withDefault True))
+
+
 
 -- UTILS
 
@@ -1468,6 +1590,18 @@ msgToString msg =
 
         CompletedLoadUserTransfers r ->
             [ "CompletedLoadUserTransfers", UR.remoteDataToString r ]
+
+        ToggledClaimNotification _ ->
+            [ "ToggledClaimNotification" ]
+
+        ToggledTransferNotification _ ->
+            [ "ToggledTransferNotification" ]
+
+        ToggledDigest _ ->
+            [ "ToggledDigest" ]
+
+        CompletedSettingNotificationPreferences r ->
+            [ "CompletedSettingNotificationPreferences", UR.remoteDataToString r ]
 
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
