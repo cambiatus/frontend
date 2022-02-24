@@ -272,7 +272,7 @@ requireInvitationToggle { t } =
                 { targetId = "require-invitation-toggle"
                 , labelText = t "settings.community_info.invitation.title"
                 }
-                |> Form.arbitrary
+                |> Form.arbitraryWith ()
             )
             (Form.Toggle.init
                 { label = text <| t "settings.community_info.fields.invitation"
