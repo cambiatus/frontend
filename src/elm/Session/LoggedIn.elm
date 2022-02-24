@@ -2513,29 +2513,37 @@ withPrivateKey :
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
 withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
-    case profile loggedIn of
-        Just validProfile ->
-            if hasPermissions validProfile necessaryPermissions then
-                if hasPrivateKey loggedIn then
-                    successfulUR
-
-                else
-                    UR.init subModel
-                        |> UR.addExt (RequiredPrivateKey subMsg)
+    let
+        actWithPrivateKey =
+            if hasPrivateKey loggedIn then
+                successfulUR
 
             else
                 UR.init subModel
-                    |> UR.addExt ShowInsufficientPermissionsModal
+                    |> UR.addExt (RequiredPrivateKey subMsg)
+    in
+    if List.isEmpty necessaryPermissions then
+        actWithPrivateKey
 
-        Nothing ->
-            UR.init subModel
-                |> UR.logImpossible subMsg.successMsg
-                    "Tried signing eos transaction, but profile wasn't loaded"
-                    (Just loggedIn.accountName)
-                    { moduleName = "Session.LoggedIn"
-                    , function = "withPrivateKey"
-                    }
-                    []
+    else
+        case profile loggedIn of
+            Just validProfile ->
+                if hasPermissions validProfile necessaryPermissions then
+                    actWithPrivateKey
+
+                else
+                    UR.init subModel
+                        |> UR.addExt ShowInsufficientPermissionsModal
+
+            Nothing ->
+                UR.init subModel
+                    |> UR.logImpossible subMsg.successMsg
+                        "Tried signing eos transaction, but profile wasn't loaded"
+                        (Just loggedIn.accountName)
+                        { moduleName = "Session.LoggedIn"
+                        , function = "withPrivateKey"
+                        }
+                        []
 
 
 {-| Determines if a profile has a set of permissions
@@ -2552,32 +2560,40 @@ hasPermissions profile_ permissions =
 
 withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
 withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
-    case profile loggedIn of
-        Just validProfile ->
-            if hasPermissions validProfile necessaryPermissions then
-                case maybePrivateKey loggedIn of
-                    Just privateKey ->
-                        successfulUR privateKey
+    let
+        actWithPrivateKey =
+            case maybePrivateKey loggedIn of
+                Just privateKey ->
+                    successfulUR privateKey
 
-                    Nothing ->
-                        askedAuthentication loggedIn
-                            |> UR.init
-                            |> UR.addExt (AddAfterPrivateKeyCallback msg)
+                Nothing ->
+                    askedAuthentication loggedIn
+                        |> UR.init
+                        |> UR.addExt (AddAfterPrivateKeyCallback msg)
+    in
+    if List.isEmpty necessaryPermissions then
+        actWithPrivateKey
 
-            else
-                { loggedIn | showInsufficientPermissionsModal = True }
+    else
+        case profile loggedIn of
+            Just validProfile ->
+                if hasPermissions validProfile necessaryPermissions then
+                    actWithPrivateKey
+
+                else
+                    { loggedIn | showInsufficientPermissionsModal = True }
+                        |> UR.init
+
+            _ ->
+                loggedIn
                     |> UR.init
-
-        _ ->
-            loggedIn
-                |> UR.init
-                |> UR.logImpossible msg
-                    "Tried signing eos transaction internally, but profile wasn't loaded"
-                    (Just loggedIn.accountName)
-                    { moduleName = "Session.LoggedIn"
-                    , function = "withPrivateKeyInternal"
-                    }
-                    []
+                    |> UR.logImpossible msg
+                        "Tried signing eos transaction internally, but profile wasn't loaded"
+                        (Just loggedIn.accountName)
+                        { moduleName = "Session.LoggedIn"
+                        , function = "withPrivateKeyInternal"
+                        }
+                        []
 
 
 isCommunityMember : Model -> Bool
