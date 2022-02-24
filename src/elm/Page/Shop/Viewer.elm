@@ -648,7 +648,7 @@ viewProductImg { t } maybeImgUrl =
                 Just imgUrl ->
                     img
                         [ src imgUrl
-                        , class "object-cover object-center rounded max-h-full max-w-full"
+                        , class "object-cover object-center rounded max-h-68 max-w-full"
                         , alt ""
                         ]
                         []
@@ -823,7 +823,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                                 text ""
 
                             Just unitsValue ->
-                                span [ Html.Attributes.id "total-price-descriptor", class "sr-only" ]
+                                span [ class "sr-only" ]
                                     [ text <|
                                         tr "shop.total_price"
                                             [ ( "amount"
@@ -834,7 +834,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                                             , ( "symbol", Eos.symbolToSymbolCodeString product.symbol )
                                             ]
                                     ]
-                        , span [ class "px-4", ariaHidden True ]
+                        , span [ class "px-4 mb-4", ariaHidden True ]
                             [ text <|
                                 tr "shop.transfer.price"
                                     [ ( "symbol", Eos.symbolToSymbolCodeString product.symbol ) ]
@@ -844,7 +844,7 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                                 text ""
 
                             Just balance ->
-                                span [ class "text-sm mt-4 py-3 px-4 bg-black bg-opacity-20 rounded-b-sm uppercase" ]
+                                span [ class "text-sm py-3 px-4 bg-black bg-opacity-20 rounded-b-sm uppercase" ]
                                     [ text <|
                                         tr "shop.transfer.balance"
                                             [ ( "asset"
