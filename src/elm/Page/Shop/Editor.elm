@@ -470,11 +470,13 @@ viewConfirmDeleteModal t =
             [ button
                 [ class "modal-cancel"
                 , onClick ClickedDeleteCancel
+                , type_ "button"
                 ]
                 [ text (t "shop.delete_modal.cancel") ]
             , button
                 [ class "modal-accept"
                 , onClick ClickedDeleteConfirm
+                , type_ "button"
                 ]
                 [ text (t "shop.delete_modal.confirm") ]
             ]
