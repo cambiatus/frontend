@@ -245,7 +245,7 @@ view (Options options) viewConfig =
                 div [ class "flex" ]
                     [ viewLabel (Options options)
                     , Html.label
-                        [ class "flex cursor-pointer ml-auto space-x-7"
+                        [ class "flex cursor-pointer ml-auto space-x-7 pl-4"
                         , for options.id
                         ]
                         [ viewStatusText (Options options) viewConfig

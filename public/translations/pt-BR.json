@@ -543,12 +543,18 @@
         "error_marking_as_complete": "Algo de errado aconteceu ao completar seu objetivo",
         "completed_progress": "{{progress}} de {{total}} ações completadas",
         "completion_text": "Todas as ações relacionadas a esse objetivo serão completadas",
-        "completed_success": "Objetivo completado com sucesso",
         "modal": {
           "title": "Marcar objetivo como completo",
           "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo também serão marcadas como completas, e não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
           "confirm": "Sim",
           "cancel": "Não"
+        },
+        "celebration": {
+          "title": "Parabéns",
+          "completed": "Essa comunidade completou um objetivo!",
+          "special_moment": "Estamos felizes por sermos parte deste momento especial.",
+          "cheers": "Um brinde ao futuro!",
+          "return": "Retornar aos objetivos"
         }
       },
       "disabled": {
@@ -719,6 +725,12 @@
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
+    },
+    "preferences": {
+      "claim_notification": "Notificação de reivindicação",
+      "transfer_notification": "Notificação de transferência",
+      "digest": "Notícias mensais sobre a comunidade",
+      "error": "Algo deu errado ao salvar suas preferências"
     },
     "edit": {
       "avatar_section": "Avatar",
@@ -1321,5 +1333,13 @@
     "eos_plural": "Eos",
     "eth_plural": "Ethereum",
     "usd_plural": "Dólares"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Ação não permitida",
+      "explanation": "Você não tem as permissões necessárias para realizar esta ação. Contate os administradores da comunidade para saber como ganhar mais permissões.",
+      "try_again": "Por favor tente novamente quando tiver permissões o suficiente!",
+      "ok": "Entendi"
+    }
   }
 }

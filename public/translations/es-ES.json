@@ -539,12 +539,18 @@
         "error_marking_as_complete": "Algo salió mal al marcar tu objetivo como completado",
         "completed_progress": "{{progress}} de {{total}} acciones completadas",
         "completion_text": "Se completarán todas las acciones relacionadas con este objetivo",
-        "completed_success": "Objetivo completado con éxito",
         "modal": {
           "title": "Marcar objetivo como completo",
           "body": "Marcar el objetivo como completo no se puede deshacer. Las acciones de este objetivo también se marcarán como completadas y ya no estarán disponibles para su análisis. ¿De verdad quieres marcar este objetivo como completo?",
           "confirm": "Sí",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Felicitaciones",
+          "completed": "¡Esta comunidad completó un objetivo!",
+          "special_moment": "Estamos felices de ser parte de este momento especial.",
+          "cheers": "¡Saludos al futuro!",
+          "return": "Volver a los objetivos"
         }
       },
       "disabled": {
@@ -715,6 +721,12 @@
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver Llave Privada"
+    },
+    "preferences": {
+      "claim_notification": "Notificación de reclamo",
+      "transfer_notification": "Notificación de transferencia",
+      "digest": "Noticias mensuales sobre la comunidad",
+      "error": "Algo salió mal al guardar tus preferencias"
     },
     "edit": {
       "avatar_section": "Avatar",
@@ -1318,5 +1330,13 @@
     "eos_plural": "Eos",
     "eth_plural": "Ethereum",
     "usd_plural": "Dolares"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Acción no permitida",
+      "explanation": "No tienes los permisos necesarios para realizar esta acción. Comuníquese con los administradores de la comunidad para saber cómo obtener más permisos.",
+      "try_again": "¡Vuelva a intentarlo una vez que tenga suficientes permisos!",
+      "ok": "Entendí"
+    }
   }
 }

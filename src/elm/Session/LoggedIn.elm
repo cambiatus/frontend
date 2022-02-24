@@ -8,6 +8,7 @@ module Session.LoggedIn exposing
     , Resource(..)
     , addFeedback
     , executeFeedback
+    , hasPermissions
     , init
     , initLogin
     , isAccount
@@ -31,6 +32,9 @@ import Action
 import Api.Graphql
 import Auth
 import Avatar
+import Cambiatus.Enum.Language
+import Cambiatus.Enum.Permission exposing (Permission)
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
@@ -43,6 +47,7 @@ import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
@@ -127,6 +132,40 @@ fetchTranslations language =
         |> Translation.get language
 
 
+sendPreferredLanguage : Model -> Translation.Language -> Cmd (Msg externalMsg)
+sendPreferredLanguage model language =
+    let
+        languageEnum =
+            case language of
+                Translation.Amharic ->
+                    Just Cambiatus.Enum.Language.Amheth
+
+                Translation.English ->
+                    Just Cambiatus.Enum.Language.Enus
+
+                Translation.Spanish ->
+                    Just Cambiatus.Enum.Language.Eses
+
+                Translation.Portuguese ->
+                    Just Cambiatus.Enum.Language.Ptbr
+
+                Translation.Catalan ->
+                    -- We don't support catalan on the backend (See frontend issue #672)
+                    Nothing
+    in
+    case languageEnum of
+        Nothing ->
+            Cmd.none
+
+        Just languageArg ->
+            internalMutation model
+                (Cambiatus.Mutation.preference
+                    (\optionals -> { optionals | language = OptionalArgument.Present languageArg })
+                    (Graphql.SelectionSet.succeed ())
+                )
+                CompletedSendingLanguagePreference
+
+
 {-| Initialize logged in user after signing-in.
 -}
 initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
@@ -185,6 +224,7 @@ type alias Model =
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
+    , showInsufficientPermissionsModal : Bool
     , selectedCommunity : RemoteData (Graphql.Http.Error (Maybe Community.Model)) Community.Model
     , contributionCount : RemoteData (Graphql.Http.Error (Maybe Int)) Int
     , showUserNav : Bool
@@ -218,6 +258,7 @@ initModel shared maybePrivateKey_ accountName authToken =
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
+      , showInsufficientPermissionsModal = False
       , selectedCommunity = RemoteData.Loading
       , contributionCount = RemoteData.NotAsked
       , showUserNav = False
@@ -429,6 +470,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
                , communitySelectorModal model
+                    |> Html.map pageMsg
+               , insufficientPermissionsModal model
                     |> Html.map pageMsg
                ]
         )
@@ -830,6 +873,40 @@ communitySelectorModal model =
         text ""
 
 
+insufficientPermissionsModal : Model -> Html (Msg externalMsg)
+insufficientPermissionsModal model =
+    let
+        { t } =
+            model.shared.translators
+    in
+    Modal.initWith
+        { closeMsg = ClosedInsufficientPermissionsModal
+        , isVisible = model.showInsufficientPermissionsModal
+        }
+        |> Modal.withHeader (t "permissions.insufficient.title")
+        |> Modal.withBody
+            [ img
+                [ src "/images/girl-with-ice-cube.svg"
+                , alt ""
+                , class "mx-auto mt-4 mb-6"
+                ]
+                []
+            , p [ class "md:max-w-md md:mx-auto md:text-center" ]
+                [ text <| t "permissions.insufficient.explanation" ]
+            , p [ class "my-4 md:max-w-md md:mx-auto md:text-center" ]
+                [ text <| t "permissions.insufficient.try_again" ]
+            ]
+        |> Modal.withFooter
+            [ button
+                [ class "button button-primary w-full mt-2"
+                , onClick ClosedInsufficientPermissionsModal
+                ]
+                [ text <| t "permissions.insufficient.ok" ]
+            ]
+        |> Modal.withSize Modal.Large
+        |> Modal.toHtml
+
+
 viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
@@ -947,6 +1024,7 @@ viewFooter _ =
 -}
 type External msg
     = UpdatedLoggedIn Model
+    | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
     | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
@@ -1076,6 +1154,15 @@ internalQuery model selectionSet toMsg =
     internalGraphqlOperation Api.Graphql.query model selectionSet toMsg
 
 
+internalMutation :
+    Model
+    -> SelectionSet result RootMutation
+    -> (RemoteData (Graphql.Http.Error result) result -> Msg externalMsg)
+    -> Cmd (Msg externalMsg)
+internalMutation model selectionSet toMsg =
+    internalGraphqlOperation Api.Graphql.mutation model selectionSet toMsg
+
+
 internalGraphqlOperation :
     (Shared
      -> Maybe Api.Graphql.Token
@@ -1184,8 +1271,14 @@ mapMsg mapFn msg =
         ClickedLanguage language ->
             ClickedLanguage language
 
+        CompletedSendingLanguagePreference result ->
+            CompletedSendingLanguagePreference result
+
         ClosedAuthModal ->
             ClosedAuthModal
+
+        ClosedInsufficientPermissionsModal ->
+            ClosedInsufficientPermissionsModal
 
         GotAuthMsg subMsg ->
             GotAuthMsg subMsg
@@ -1283,6 +1376,9 @@ mapExternal mapFn msg =
         UpdatedLoggedIn model ->
             UpdatedLoggedIn model
 
+        ShowInsufficientPermissionsModal ->
+            ShowInsufficientPermissionsModal
+
         AddedCommunity communityInfo ->
             AddedCommunity communityInfo
 
@@ -1363,6 +1459,9 @@ updateExternal externalMsg ({ shared } as model) =
     case externalMsg of
         UpdatedLoggedIn newModel ->
             { defaultResult | model = newModel }
+
+        ShowInsufficientPermissionsModal ->
+            { defaultResult | model = { model | showInsufficientPermissionsModal = True } }
 
         AddedCommunity communityInfo ->
             let
@@ -1584,7 +1683,9 @@ type Msg externalMsg
     | ShowUserNav Bool
     | ToggleLanguageItems
     | ClickedLanguage Translation.Language
+    | CompletedSendingLanguagePreference (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClosedAuthModal
+    | ClosedInsufficientPermissionsModal
     | GotAuthMsg Auth.Msg
     | CompletedLoadUnread Value
     | OpenCommunitySelector
@@ -1622,6 +1723,7 @@ update msg model =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , showInsufficientPermissionsModal = False
             }
     in
     case msg of
@@ -1708,8 +1810,20 @@ update msg model =
             in
             case profile_ of
                 Just p ->
+                    let
+                        sendLanguagePreference =
+                            -- If the backend doesn't know the user's preferred
+                            -- language, we send it so we can have nicer email communication
+                            case p.preferredLanguage of
+                                Nothing ->
+                                    sendPreferredLanguage model model.shared.language
+
+                                Just _ ->
+                                    Cmd.none
+                    in
                     { model | profile = RemoteData.Success p }
                         |> UR.init
+                        |> UR.addCmd sendLanguagePreference
                         |> UR.addExt (ProfileLoaded p |> Broadcast)
                         |> UR.addPort
                             { responseAddress = CompletedLoadUnread (Encode.string "")
@@ -1953,10 +2067,29 @@ update msg model =
                     , showUserNav = False
                 }
                 |> UR.addCmd (fetchTranslations lang)
+                |> UR.addCmd (sendPreferredLanguage model lang)
+
+        CompletedSendingLanguagePreference (RemoteData.Failure err) ->
+            model
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when sending language preference"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedSendingLanguagePreference _ ->
+            model
+                |> UR.init
 
         ClosedAuthModal ->
             UR.init closeAllModals
                 |> UR.addExt AuthenticationFailed
+
+        ClosedInsufficientPermissionsModal ->
+            { model | showInsufficientPermissionsModal = False }
+                |> UR.init
 
         GotAuthMsg authMsg ->
             Auth.update authMsg shared model.auth
@@ -2175,7 +2308,7 @@ update msg model =
                     |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
                     |> UR.addExt (AddAfterAuthTokenCallbackInternal callback)
             )
-                |> withPrivateKeyInternal msg model
+                |> withPrivateKeyInternal msg model []
 
         GotAuthTokenPhrase _ (RemoteData.Failure err) ->
             { model
@@ -2207,7 +2340,7 @@ update msg model =
                     |> UR.addPort (Api.Graphql.signPhrasePort msg privateKey phrase)
                     |> UR.addExt (AddAfterAuthTokenCallback callback)
             )
-                |> withPrivateKeyInternal msg model
+                |> withPrivateKeyInternal msg model []
 
         GotAuthTokenPhraseExternal _ (RemoteData.Failure err) ->
             { model
@@ -2342,6 +2475,10 @@ handleActionMsg ({ shared } as model) actionMsg =
                            )
             in
             Action.update (hasPrivateKey model)
+                (model.profile
+                    |> RemoteData.map (.roles >> List.concatMap .permissions)
+                    |> RemoteData.withDefault []
+                )
                 shared
                 community.symbol
                 model.accountName
@@ -2350,7 +2487,14 @@ handleActionMsg ({ shared } as model) actionMsg =
                 |> UR.map
                     actionModelToLoggedIn
                     GotActionMsg
-                    (\feedback -> UR.mapModel (\prevModel -> { prevModel | feedback = feedback }))
+                    (\ext ->
+                        case ext of
+                            Action.SentFeedback feedback ->
+                                UR.mapModel (\prevModel -> { prevModel | feedback = feedback })
+
+                            Action.ShowInsufficientPermissions ->
+                                UR.mapModel (\prevModel -> { prevModel | showInsufficientPermissionsModal = True })
+                    )
                 |> UR.addCmd
                     (case actionMsg of
                         Action.AgreedToClaimWithProof _ ->
@@ -2370,29 +2514,77 @@ again. Necessary to perform EOS transactions
 -}
 withPrivateKey :
     Model
+    -> List Permission
     -> subModel
     -> { successMsg : subMsg, errorMsg : subMsg }
     -> UR.UpdateResult subModel subMsg (External subMsg)
     -> UR.UpdateResult subModel subMsg (External subMsg)
-withPrivateKey loggedIn subModel subMsg successfulUR =
-    if hasPrivateKey loggedIn then
-        successfulUR
+withPrivateKey loggedIn necessaryPermissions subModel subMsg successfulUR =
+    case profile loggedIn of
+        Just validProfile ->
+            if hasPermissions validProfile necessaryPermissions then
+                if hasPrivateKey loggedIn then
+                    successfulUR
 
-    else
-        UR.init subModel
-            |> UR.addExt (RequiredPrivateKey subMsg)
+                else
+                    UR.init subModel
+                        |> UR.addExt (RequiredPrivateKey subMsg)
 
-
-withPrivateKeyInternal : Msg msg -> Model -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
-withPrivateKeyInternal msg loggedIn successfulUR =
-    case maybePrivateKey loggedIn of
-        Just privateKey ->
-            successfulUR privateKey
+            else
+                UR.init subModel
+                    |> UR.addExt ShowInsufficientPermissionsModal
 
         Nothing ->
-            askedAuthentication loggedIn
+            UR.init subModel
+                |> UR.logImpossible subMsg.successMsg
+                    "Tried signing eos transaction, but profile wasn't loaded"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Session.LoggedIn"
+                    , function = "withPrivateKey"
+                    }
+                    []
+
+
+{-| Determines if a profile has a set of permissions
+-}
+hasPermissions : Profile.Model -> List Permission -> Bool
+hasPermissions profile_ permissions =
+    let
+        allPermissions =
+            List.concatMap .permissions profile_.roles
+    in
+    List.all (\permission -> List.member permission allPermissions)
+        permissions
+
+
+withPrivateKeyInternal : Msg msg -> Model -> List Permission -> (Eos.PrivateKey -> UpdateResult msg) -> UpdateResult msg
+withPrivateKeyInternal msg loggedIn necessaryPermissions successfulUR =
+    case profile loggedIn of
+        Just validProfile ->
+            if hasPermissions validProfile necessaryPermissions then
+                case maybePrivateKey loggedIn of
+                    Just privateKey ->
+                        successfulUR privateKey
+
+                    Nothing ->
+                        askedAuthentication loggedIn
+                            |> UR.init
+                            |> UR.addExt (AddAfterPrivateKeyCallback msg)
+
+            else
+                { loggedIn | showInsufficientPermissionsModal = True }
+                    |> UR.init
+
+        _ ->
+            loggedIn
                 |> UR.init
-                |> UR.addExt (AddAfterPrivateKeyCallback msg)
+                |> UR.logImpossible msg
+                    "Tried signing eos transaction internally, but profile wasn't loaded"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Session.LoggedIn"
+                    , function = "withPrivateKeyInternal"
+                    }
+                    []
 
 
 isCommunityMember : Model -> Bool
@@ -2538,6 +2730,7 @@ closeModal ({ model } as uResult) =
                 , showUserNav = False
                 , showMainNav = False
                 , showAuthModal = False
+                , showInsufficientPermissionsModal = False
             }
     }
 
@@ -2549,6 +2742,7 @@ askedAuthentication model =
         , showUserNav = False
         , showMainNav = False
         , showAuthModal = True
+        , showInsufficientPermissionsModal = False
     }
 
 
@@ -2698,8 +2892,14 @@ msgToString msg =
         ClickedLanguage _ ->
             [ "ClickedLanguage" ]
 
+        CompletedSendingLanguagePreference r ->
+            [ "CompletedSendingLanguagePreference", UR.remoteDataToString r ]
+
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
+
+        ClosedInsufficientPermissionsModal ->
+            [ "ClosedInsufficientPermissionsModal" ]
 
         GotAuthMsg subMsg ->
             "GotAuthMsg" :: Auth.msgToString subMsg
@@ -2761,6 +2961,9 @@ externalMsgToString externalMsg =
     case externalMsg of
         UpdatedLoggedIn _ ->
             [ "UpdatedLoggedIn" ]
+
+        ShowInsufficientPermissionsModal ->
+            [ "ShowInsufficientPermissionsModal" ]
 
         AddedCommunity _ ->
             [ "AddedCommunity" ]

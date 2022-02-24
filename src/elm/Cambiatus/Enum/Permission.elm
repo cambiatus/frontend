@@ -14,6 +14,7 @@ import Json.Decode as Decode exposing (Decoder)
   - Invite - Role permission that allows to create invitations to the community
   - Order - Role permission that allows to create orders to buy from the shop
   - Sell - Role permission that allows to sell products and services in the community
+  - Transfer - Role permission that allows users to transfer tokens on their community
   - Verify - Role permission that allows to verify claims
 
 -}
@@ -23,12 +24,13 @@ type Permission
     | Invite
     | Order
     | Sell
+    | Transfer
     | Verify
 
 
 list : List Permission
 list =
-    [ Award, Claim, Invite, Order, Sell, Verify ]
+    [ Award, Claim, Invite, Order, Sell, Transfer, Verify ]
 
 
 decoder : Decoder Permission
@@ -51,6 +53,9 @@ decoder =
 
                     "SELL" ->
                         Decode.succeed Sell
+
+                    "TRANSFER" ->
+                        Decode.succeed Transfer
 
                     "VERIFY" ->
                         Decode.succeed Verify
@@ -79,6 +84,9 @@ toString enum =
 
         Sell ->
             "SELL"
+
+        Transfer ->
+            "TRANSFER"
 
         Verify ->
             "VERIFY"
@@ -112,6 +120,9 @@ fromString enumString =
 
         "SELL" ->
             Just Sell
+
+        "TRANSFER" ->
+            Just Transfer
 
         "VERIFY" ->
             Just Verify

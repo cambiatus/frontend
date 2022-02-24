@@ -58,9 +58,9 @@ chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
 
-claimNotification : SelectionSet (Maybe Bool) Cambiatus.Object.User
+claimNotification : SelectionSet Bool Cambiatus.Object.User
 claimNotification =
-    Object.selectionForField "(Maybe Bool)" "claimNotification" [] (Decode.bool |> Decode.nullable)
+    Object.selectionForField "Bool" "claimNotification" [] Decode.bool
 
 
 type alias ClaimsOptionalArguments =
@@ -163,9 +163,9 @@ createdEosAccount =
     Object.selectionForField "(Maybe String)" "createdEosAccount" [] (Decode.string |> Decode.nullable)
 
 
-digest : SelectionSet (Maybe Bool) Cambiatus.Object.User
+digest : SelectionSet Bool Cambiatus.Object.User
 digest =
-    Object.selectionForField "(Maybe Bool)" "digest" [] (Decode.bool |> Decode.nullable)
+    Object.selectionForField "Bool" "digest" [] Decode.bool
 
 
 email : SelectionSet (Maybe String) Cambiatus.Object.User
@@ -235,9 +235,9 @@ roles object_ =
     Object.selectionForCompositeField "roles" [] object_ (identity >> Decode.list)
 
 
-transferNotification : SelectionSet (Maybe Bool) Cambiatus.Object.User
+transferNotification : SelectionSet Bool Cambiatus.Object.User
 transferNotification =
-    Object.selectionForField "(Maybe Bool)" "transferNotification" [] (Decode.bool |> Decode.nullable)
+    Object.selectionForField "Bool" "transferNotification" [] Decode.bool
 
 
 type alias TransfersOptionalArguments =

@@ -23,11 +23,14 @@ module Profile exposing
 import Avatar exposing (Avatar)
 import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.Enum.CurrencyType
+import Cambiatus.Enum.Language
+import Cambiatus.Enum.Permission exposing (Permission)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.Contribution
 import Cambiatus.Object.DeleteStatus
+import Cambiatus.Object.Role
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -70,6 +73,13 @@ type alias Minimal =
     }
 
 
+type alias Role =
+    { color : Maybe String
+    , name : String
+    , permissions : List Permission
+    }
+
+
 type alias Model =
     { name : Maybe String
     , account : Eos.Name
@@ -80,9 +90,14 @@ type alias Model =
     , contacts : List Contact.Normalized
     , interests : List String
     , communities : List CommunityInfo
+    , roles : List Role
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
+    , claimNotification : Bool
+    , digest : Bool
+    , transferNotification : Bool
+    , preferredLanguage : Maybe Translation.Language
     }
 
 
@@ -103,6 +118,14 @@ userContactSelectionSet =
         |> SelectionSet.map (List.filterMap identity)
 
 
+roleSelectionSet : SelectionSet Role Cambiatus.Object.Role
+roleSelectionSet =
+    SelectionSet.succeed Role
+        |> with Cambiatus.Object.Role.color
+        |> with Cambiatus.Object.Role.name
+        |> with Cambiatus.Object.Role.permissions
+
+
 selectionSet : SelectionSet Model Cambiatus.Object.User
 selectionSet =
     SelectionSet.succeed Model
@@ -121,9 +144,36 @@ selectionSet =
                     )
             )
         |> with (User.communities communityInfoSelectionSet)
+        |> with (User.roles roleSelectionSet)
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
+        |> with User.claimNotification
+        |> with User.digest
+        |> with User.transferNotification
+        |> with languageSelectionSet
+
+
+languageSelectionSet : SelectionSet (Maybe Translation.Language) Cambiatus.Object.User
+languageSelectionSet =
+    User.language
+        |> SelectionSet.map
+            (Maybe.map
+                (\language ->
+                    case language of
+                        Cambiatus.Enum.Language.Amheth ->
+                            Translation.Amharic
+
+                        Cambiatus.Enum.Language.Enus ->
+                            Translation.English
+
+                        Cambiatus.Enum.Language.Eses ->
+                            Translation.Spanish
+
+                        Cambiatus.Enum.Language.Ptbr ->
+                            Translation.Portuguese
+                )
+            )
 
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User

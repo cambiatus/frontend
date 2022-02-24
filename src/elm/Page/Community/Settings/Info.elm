@@ -331,6 +331,7 @@ update msg model ({ shared } as loggedIn) =
                             }
                         |> addCoverPhoto
                         |> LoggedIn.withPrivateKey loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
                         |> UR.addBreadcrumb

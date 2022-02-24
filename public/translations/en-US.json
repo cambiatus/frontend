@@ -535,12 +535,18 @@
         "error_marking_as_complete": "Something went wrong when marking your objective as completed",
         "completed_progress": "{{progress}} of {{total}} completed actions",
         "completion_text": "All actions related to this objective will be completed",
-        "completed_success": "Objective successfully completed",
         "modal": {
           "title": "Mark objective as complete",
           "body": "Marking the objective as complete cannot be undone. Actions from this objective will also be marked as complete, and will no longer be available for analysis. Do you really want to mark this objective as complete?",
           "confirm": "Yes",
           "cancel": "No"
+        },
+        "celebration": {
+          "title": "Congratulations",
+          "completed": "This community has completed an objective!",
+          "special_moment": "We are happy to be part of this special moment.",
+          "cheers": "Cheers to the future!",
+          "return": "Return to objectives"
         }
       },
       "disabled": {
@@ -712,6 +718,12 @@
     "actions": {
       "edit": "Edit",
       "viewPrivatekey": "View Private Key"
+    },
+    "preferences": {
+      "claim_notification": "Claim notification",
+      "transfer_notification": "Transfer notification",
+      "digest": "Monthly news about the community",
+      "error": "Something went wrong when saving your preferences"
     },
     "edit": {
       "avatar_section": "Avatar",
@@ -1315,5 +1327,13 @@
     "eos_plural": "Eos",
     "eth_plural": "Ethereum",
     "usd_plural": "Dollars"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Action not allowed",
+      "explanation": "You don't have the permissions needed to perform this action. Reach out to the community admins to know how to get more permissions.",
+      "try_again": "Please try again once you have enough permissions!",
+      "ok": "Got it"
+    }
   }
 }

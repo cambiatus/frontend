@@ -146,6 +146,7 @@ update msg model ({ shared } as loggedIn) =
                                     )
                             }
                         |> LoggedIn.withPrivateKey loggedIn
+                            []
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
