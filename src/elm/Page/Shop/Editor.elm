@@ -161,6 +161,7 @@ createForm loggedIn =
             (Form.Text.init { label = t "shop.what_label", id = "title-input" }
                 |> Form.Text.withExtraAttrs [ maxlength 255 ]
                 |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                |> Form.Text.withPlaceholder (t "shop.what_label")
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -175,6 +176,7 @@ createForm loggedIn =
         |> Form.with
             (Form.RichText.init { label = t "shop.description_label" }
                 |> Form.RichText.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
+                |> Form.RichText.withPlaceholder (t "shop.description_placeholder")
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed

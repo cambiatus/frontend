@@ -806,6 +806,7 @@
     "photo_label": "Imagem do produto",
     "what_label": "Nome do produto",
     "description_label": "Descreva o produto",
+    "description_placeholder": "Descreva completamente seu produto. Isso ajudará nas vendas",
     "which_community_label": "Em qual comunidade voce deseja vender?",
     "choose_community_label": "Escolha uma comunidade",
     "track_stock_label": "Deseja controlar estoque pelo app?",

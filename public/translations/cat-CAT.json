@@ -802,6 +802,7 @@
     "photo_label": "Imatge del producte",
     "what_label": "Nom del producte",
     "description_label": "Descriure el producte",
+    "description_placeholder": "Descriu el teu producte completament. Això ajudarà en les vendes",
     "which_community_label": "En quina comunitat vols fer la venda?",
     "choose_community_label": "Escull una comunitat",
     "track_stock_label": "Voleu fer un seguiment de les unitats a l'aplicació?",

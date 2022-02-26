@@ -799,6 +799,7 @@
     "photo_label": "Product's image",
     "what_label": "Product's name",
     "description_label": "Describe the product",
+    "description_placeholder": "Describe your product fully. This will help in sales",
     "which_community_label": "In which community do you want to sell it?",
     "choose_community_label": "Choose a community",
     "track_stock_label": "Do you want to track units on the app?",

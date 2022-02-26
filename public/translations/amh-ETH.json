@@ -760,6 +760,7 @@
     "photo_label": "የምርት ምስል",
     "what_label": "የምርት ስም",
     "description_label": "ምርቱን ይግለጹ",
+    "description_placeholder": "ምርትዎን ሙሉ በሙሉ ይግለጹ። ይህ በሽያጭ ላይ ይረዳል",
     "which_community_label": "በየትኛዉ ማህበረሰብ ዉስጥ መነገድ ይፈልጋሉ?",
     "choose_community_label": "ማህበረሰብ ምርጥ",
     "track_stock_label": "በመተግበሪያው ላይ ክፍሎችን መከታተል ይፈልጋሉ?",
