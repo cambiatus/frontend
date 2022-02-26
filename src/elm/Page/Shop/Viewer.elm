@@ -469,7 +469,7 @@ view session model =
                         Page.LoggedIn loggedIn ->
                             loggedIn.accountName == sale.creator.account
             in
-            div [ class "flex-grow grid items-center relative bg-white md:bg-gray-100" ]
+            div [ class "flex flex-grow items-center relative bg-white md:bg-gray-100" ]
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
