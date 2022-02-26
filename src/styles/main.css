@@ -497,7 +497,8 @@ https://tailwindcss.com/docs/adding-new-utilities */
 }
 
 .ql-editor.ql-blank::before {
-  @apply text-gray-400;
+  /* QuillJS's placeholder */
+  @apply text-gray-900 not-italic;
 }
 
 .ql-stroke {
