@@ -817,6 +817,7 @@
     "edit": "Edita",
     "sold_by": "Venut per",
     "by_user": "Per {{user}}",
+    "by_you": "Per vostè",
     "free": "Gratis",
     "sold_out": "Venut",
     "total_price": "Preu total: {{amount}} {{symbol}}",

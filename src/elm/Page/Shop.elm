@@ -232,15 +232,18 @@ viewGrid loggedIn cards =
     div [ class "mt-6 mb-10" ]
         [ ul [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" ]
             (List.indexedMap
-                (viewCard loggedIn.shared.translators)
+                (viewCard loggedIn)
                 (availableCards ++ outOfStockCards)
             )
         ]
 
 
-viewCard : Shared.Translators -> Int -> Card -> Html Msg
-viewCard ({ t, tr } as translators) index card =
+viewCard : LoggedIn.Model -> Int -> Card -> Html Msg
+viewCard loggedIn index card =
     let
+        ({ t, tr } as translators) =
+            loggedIn.shared.translators
+
         image =
             Maybe.withDefault
                 ("/icons/shop-placeholder"
@@ -265,13 +268,17 @@ viewCard ({ t, tr } as translators) index card =
             , div [ class "p-4 flex flex-col flex-grow" ]
                 [ h2 [ class "line-clamp-3 text-black" ] [ text card.product.title ]
                 , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
-                    [ text <|
-                        tr "shop.by_user"
-                            [ ( "user"
-                              , card.product.creator.name
-                                    |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
-                              )
-                            ]
+                    [ if loggedIn.accountName == card.product.creatorId then
+                        text <| t "shop.by_you"
+
+                      else
+                        text <|
+                            tr "shop.by_user"
+                                [ ( "user"
+                                  , card.product.creator.name
+                                        |> Maybe.withDefault (Eos.Account.nameToString card.product.creator.account)
+                                  )
+                                ]
                     ]
                 , div [ class "font-bold flex flex-col mt-4" ]
                     [ span

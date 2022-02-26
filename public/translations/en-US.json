@@ -814,6 +814,7 @@
     "edit": "Edit",
     "sold_by": "Sold by",
     "by_user": "By {{user}}",
+    "by_you": "By you",
     "free": "For free",
     "sold_out": "Sold out",
     "total_price": "Total price: {{amount}} {{symbol}}",
@@ -1140,9 +1141,9 @@
       "telegram": "Telegram",
       "whatsapp": "Whatsapp"
     },
-    "reach_out": { 
+    "reach_out": {
       "phone": "Reach out via phone",
-      "instagram":  "Reach out on Instagram",
+      "instagram": "Reach out on Instagram",
       "telegram": "Reach out on Telegram",
       "whatsapp": "Reach out on Whatsapp",
       "email": "Reach out via email"

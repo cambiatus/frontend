@@ -817,6 +817,7 @@
     "edit": "Editar",
     "sold_by": "Vendido por",
     "by_user": "Por {{user}}",
+    "by_you": "Por ti",
     "free": "Gratis",
     "sold_out": "Liquidado",
     "total_price": "Precio total: {{amount}} {{symbol}}",
