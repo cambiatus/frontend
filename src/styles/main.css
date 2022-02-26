@@ -507,6 +507,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
   stroke: currentColor !important;
 }
 
+.ql-toolbar.ql-snow > span.ql-formats {
+  @apply mr-2;
+}
+
 .ql-snow .ql-fill {
   @apply text-gray-600;
 
