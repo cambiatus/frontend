@@ -194,14 +194,14 @@ viewShopFilter { t } model =
                 Shop.UserSales ->
                     Shop.All
     in
-    div [ class "flex mt-4 gap-4 flex-wrap" ]
+    div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
         [ a
-            [ class "button button-primary"
+            [ class "w-full md:w-40 button button-primary"
             , Route.href Route.NewSale
             ]
             [ text <| t "shop.create_new_offer" ]
         , a
-            [ class "button button-secondary"
+            [ class "w-full md:w-40 button button-secondary"
             , Route.href (Route.Shop newFilter)
             ]
             [ case model.filter of
