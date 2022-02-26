@@ -448,6 +448,7 @@ upsertAction { markAsCompleted } msg maybeAction loggedIn model formOutput =
                                 |> (\isCompleted -> isCompleted || markAsCompleted)
                                 |> encodeBool
                           )
+                        , ( "image", Encode.string "" )
                         ]
               }
             ]
