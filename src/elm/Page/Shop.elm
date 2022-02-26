@@ -2,7 +2,6 @@ module Page.Shop exposing
     ( Model
     , Msg
     , init
-    , jsAddressToMsg
     , msgToString
     , receiveBroadcast
     , update
@@ -11,7 +10,6 @@ module Page.Shop exposing
 
 import Api
 import Community exposing (Balance)
-import Dict
 import Eos
 import Eos.Account
 import Graphql.Http
@@ -20,8 +18,6 @@ import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Http
 import I18Next exposing (t)
-import Json.Decode exposing (Value)
-import Json.Encode as Encode
 import Page exposing (Session(..))
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -327,7 +323,6 @@ type alias UpdateResult =
 type Msg
     = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
-    | TransferSuccess Int
     | CompletedLoadBalances (Result Http.Error (List Balance))
 
 
@@ -357,9 +352,6 @@ update msg model loggedIn =
                         CompletedSalesLoad
                     )
 
-        TransferSuccess index ->
-            updateCard msg index (\card -> ( card, [] )) (UR.init model)
-
         CompletedLoadBalances res ->
             case res of
                 Ok bals ->
@@ -369,62 +361,6 @@ update msg model loggedIn =
                 Err _ ->
                     model
                         |> UR.init
-
-
-updateCard : Msg -> Int -> (Card -> ( Card, List (UpdateResult -> UpdateResult) )) -> UpdateResult -> UpdateResult
-updateCard msg cardIndex transform ({ model } as uResult) =
-    case model.cards of
-        Loaded cards ->
-            let
-                head =
-                    List.take cardIndex cards
-
-                tail =
-                    List.drop cardIndex cards
-            in
-            case tail of
-                x :: xs ->
-                    let
-                        ( newX, xCmds ) =
-                            transform x
-                    in
-                    { model | cards = Loaded (head ++ newX :: xs) }
-                        |> UR.setModel uResult
-                        |> (\uR -> List.foldl (\fn uR_ -> fn uR_) uR xCmds)
-
-                _ ->
-                    uResult
-                        |> UR.logImpossible msg
-                            "Tried updating sale card, but the index was invalid"
-                            Nothing
-                            { moduleName = "Page.Shop", function = "updateCard" }
-                            [ { name = "Card info"
-                              , extras =
-                                    Dict.fromList
-                                        [ ( "givenIndex", Encode.int cardIndex )
-                                        , ( "listLength", Encode.int (List.length cards) )
-                                        ]
-                              }
-                            ]
-
-        _ ->
-            uResult
-                |> UR.logImpossible msg
-                    "Tried updating sale card, but cards weren't loaded"
-                    Nothing
-                    { moduleName = "Page.Shop", function = "updateCard" }
-                    []
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr _ =
-    case addr of
-        "TransferSuccess" :: [ index ] ->
-            String.toInt index
-                |> Maybe.map TransferSuccess
-
-        _ ->
-            Nothing
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -445,9 +381,6 @@ msgToString msg =
 
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        TransferSuccess index ->
-            [ "TransferSuccess", String.fromInt index ]
 
         CompletedLoadBalances _ ->
             [ "CompletedLoadBalances" ]
