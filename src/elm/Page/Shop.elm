@@ -267,7 +267,7 @@ viewCard loggedIn index card =
             [ img [ src image, alt "", class "rounded-t h-32 object-cover" ] []
             , div [ class "p-4 flex flex-col flex-grow" ]
                 [ h2 [ class "line-clamp-3 text-black" ] [ text card.product.title ]
-                , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2" ]
+                , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2 mt-1" ]
                     [ if loggedIn.accountName == card.product.creatorId then
                         text <| t "shop.by_you"
 
