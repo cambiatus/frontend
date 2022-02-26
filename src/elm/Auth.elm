@@ -234,7 +234,10 @@ update msg shared model =
                 newModel =
                     { model
                         | status = WithPrivateKey privateKey
-                        , pinModel = Pin.withDisabled False model.pinModel
+                        , pinModel =
+                            model.pinModel
+                                |> Pin.withDisabled False
+                                |> Pin.withIsSubmitting False
                     }
             in
             newModel
@@ -242,8 +245,16 @@ update msg shared model =
                 |> UR.addExt (CompletedAuth accountName newModel)
 
         GotPrivateKey (Err err) ->
-            model
-                |> authFailed err
+            { model
+                | status = WithoutPrivateKey
+                , error = Nothing
+                , pinModel =
+                    model.pinModel
+                        |> Pin.withProblem Pin.Pin err
+                        |> Pin.withDisabled False
+                        |> Pin.withIsSubmitting False
+            }
+                |> UR.init
                 |> UR.logEvent
                     { username = Nothing
                     , message = "Got an error when submitting PIN"
@@ -260,18 +271,6 @@ update msg shared model =
                     , transaction = msg
                     , level = Log.Error
                     }
-
-
-authFailed : String -> Model -> UpdateResult
-authFailed error model =
-    { model
-        | status = WithoutPrivateKey
-        , error = Nothing
-        , pinModel =
-            model.pinModel
-                |> Pin.withProblem Pin.Pin error
-    }
-        |> UR.init
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
