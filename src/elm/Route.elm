@@ -2,6 +2,7 @@ module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
     , communityFullDomain
+    , communityFullDomainFromUrl
     , externalHref
     , fromUrl
     , href
@@ -236,8 +237,13 @@ communityFullDomain shared subdomain =
         communityUrl =
             externalCommunityLink shared subdomain Root
     in
-    { communityUrl
-        | host = String.replace "localhost" "cambiatus.io" communityUrl.host
+    communityFullDomainFromUrl communityUrl
+
+
+communityFullDomainFromUrl : Url.Url -> String
+communityFullDomainFromUrl url =
+    { url
+        | host = String.replace "localhost" "cambiatus.io" url.host
         , port_ = Nothing
     }
         |> Url.toString

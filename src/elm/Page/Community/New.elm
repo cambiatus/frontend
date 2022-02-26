@@ -33,6 +33,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Token
 import UpdateResult as UR
+import Url
 import View.Components
 import View.Feedback as Feedback
 
@@ -104,7 +105,7 @@ type alias FormInput =
 type alias FormOutput =
     { description : Markdown
     , name : String
-    , url : String
+    , url : Url.Url
     , symbol : Eos.Symbol
     , invitedReward : Float
     , inviterReward : Float
@@ -134,7 +135,10 @@ createForm ({ t } as translators) { isDisabled } =
                 , id = "currency-name-input"
                 }
                 |> Form.textField
-                    { parser = Ok
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLongerThan 1
+                            >> Form.Validate.validate translators
                     , value = .name
                     , update = \name input -> { input | name = name }
                     , externalError = always Nothing
@@ -160,7 +164,11 @@ createForm ({ t } as translators) { isDisabled } =
                                     ]
                            )
                         |> Form.textField
-                            { parser = Ok
+                            { parser =
+                                Form.Validate.succeed
+                                    >> Form.Validate.map String.toLower
+                                    >> Form.Validate.url
+                                    >> Form.Validate.validate translators
                             , value = .url
                             , update = \url input -> { input | url = url }
                             , externalError = always Nothing
@@ -175,6 +183,7 @@ createForm ({ t } as translators) { isDisabled } =
                 }
                 |> Form.Text.withPlaceholder ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
                 |> Form.Text.withMask { mask = "#," ++ String.concat (List.repeat Eos.maxSymbolLength "#"), replace = '#' }
+                |> Form.Text.withExtraAttrs [ class "uppercase" ]
                 |> Form.textField
                     { parser =
                         Eos.symbolFromString
@@ -352,7 +361,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.query loggedIn
-                        (Community.domainAvailableQuery (Route.communityFullDomain loggedIn.shared formOutput.url))
+                        (Community.domainAvailableQuery (Route.communityFullDomainFromUrl formOutput.url))
                         (GotDomainAvailableResponse formOutput)
                     )
 
@@ -365,7 +374,7 @@ update msg model loggedIn =
                         , logoUrl = formOutput.logo
                         , name = formOutput.name
                         , description = formOutput.description
-                        , subdomain = Route.communityFullDomain loggedIn.shared formOutput.url
+                        , subdomain = Route.communityFullDomainFromUrl formOutput.url
                         , inviterReward = formOutput.inviterReward
                         , invitedReward = formOutput.invitedReward
                         , hasShop = True
@@ -422,7 +431,7 @@ update msg model loggedIn =
                     , data =
                         Dict.fromList
                             [ ( "domain"
-                              , Route.communityFullDomain loggedIn.shared formOutput.url
+                              , Route.communityFullDomainFromUrl formOutput.url
                                     |> Encode.string
                               )
                             ]
@@ -443,7 +452,7 @@ update msg model loggedIn =
                     , data =
                         Dict.fromList
                             [ ( "domain"
-                              , Route.communityFullDomain loggedIn.shared formOutput.url
+                              , Route.communityFullDomainFromUrl formOutput.url
                                     |> Encode.string
                               )
                             ]
@@ -461,7 +470,7 @@ update msg model loggedIn =
                       , extras =
                             Dict.fromList
                                 [ ( "tried"
-                                  , Route.communityFullDomain loggedIn.shared formOutput.url
+                                  , Route.communityFullDomainFromUrl formOutput.url
                                         |> Encode.string
                                   )
                                 ]
