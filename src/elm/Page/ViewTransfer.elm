@@ -145,7 +145,7 @@ viewTransfer loggedIn transfer direction =
                 ]
             , p []
                 [ text (t "transfer_result.transaction_id.body") ]
-            , p [ class "text-4xl mt-4" ]
+            , p [ class "text-xl md:text-2xl mt-4" ]
                 [ text (Emoji.encode transfer.createdTx) ]
             ]
         ]
