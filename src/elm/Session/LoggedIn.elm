@@ -49,7 +49,7 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
+import Html exposing (Html, a, br, button, div, footer, h2, img, li, nav, p, span, strong, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
 import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
 import Html.Events exposing (onClick, onMouseEnter)
@@ -200,6 +200,8 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
+
+        -- TODO - Add delay before user can deny code of conduct again
         , Time.every (60 * 1000) GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
@@ -221,6 +223,8 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
+    , hasAcceptedTermsOfService : Bool
+    , codeOfConductModalStatus : CodeOfConductModalStatus
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
@@ -248,6 +252,12 @@ type alias Model =
     }
 
 
+type CodeOfConductModalStatus
+    = CodeOfConductNotShown
+    | CodeOfConductShown
+    | CodeOfConductShownWithWarning
+
+
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 initModel shared maybePrivateKey_ accountName authToken =
     let
@@ -255,6 +265,12 @@ initModel shared maybePrivateKey_ accountName authToken =
             Auth.init shared.pinVisibility maybePrivateKey_
     in
     ( { shared = shared
+
+      -- TODO - Get this from somewhere
+      , hasAcceptedTermsOfService = False
+
+      -- TODO - Get this from somewhere
+      , codeOfConductModalStatus = CodeOfConductShown
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
@@ -472,6 +488,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                , communitySelectorModal model
                     |> Html.map pageMsg
                , insufficientPermissionsModal model
+                    |> Html.map pageMsg
+               , codeOfConductModal model
                     |> Html.map pageMsg
                ]
         )
@@ -907,6 +925,75 @@ insufficientPermissionsModal model =
         |> Modal.toHtml
 
 
+codeOfConductModal : Model -> Html (Msg externalMsg)
+codeOfConductModal model =
+    Modal.initWith
+        { closeMsg = ClickedDenyCodeOfConduct
+        , isVisible = model.codeOfConductModalStatus /= CodeOfConductNotShown
+        }
+        -- TODO - I18N
+        |> Modal.withHeader "Diretrizes da comunidade e Código de conduta 1.0"
+        |> Modal.withBody
+            (case model.codeOfConductModalStatus of
+                CodeOfConductNotShown ->
+                    []
+
+                CodeOfConductShown ->
+                    -- TODO - I18N
+                    [ p [ class "mt-4" ] [ text "Todas as comunidades digitais criadas usando o webapp Cambiatus são regidas pelas Diretrizes da comunidade e Código de conduta da Cambiatus." ]
+                    , br [] []
+
+                    -- TODO - I18N
+                    , p [] [ text "Para que você continue tendo uma boa experiência com a comunidade, recomendamos que leia nossas Diretrizes e Código de conduta." ]
+                    , br [] []
+                    , p [ class "mb-6" ]
+                        [ a
+                            [ Html.Attributes.href (codeOfConductUrl model.shared.language)
+                            , Html.Attributes.target "_blank"
+                            , class "text-orange-300 hover:underline"
+                            ]
+                            -- TODO - I18N
+                            [ text "Ler Diretrizes da comunidade e Código de conduta 1.0 da Cambiatus" ]
+                        ]
+                    ]
+
+                CodeOfConductShownWithWarning ->
+                    [ p [ class "text-red mt-4" ]
+                        -- TODO - I18N
+                        [ strong [ class "uppercase" ] [ text "Atenção: " ]
+                        , text "O não aceite das Diretrizes da comunidade e Código de conduta impede que você realize atividades dentro da comunidade, como comprar, vender, transferir, convidar amigos, etc."
+                        ]
+                    , br [] []
+                    , p []
+                        -- TODO - I18N
+                        [ text "Para que você pertença e desfrute de todas as atividades que envolvem a comunidade, você deve aceitar as Diretrizes da comunidade e Código de conduta 1.0."
+                        ]
+                    , br [] []
+                    , p [ class "mb-6" ]
+                        -- TODO - I18N
+                        [ text "Tem certeza que deseja não aceitar?"
+                        ]
+                    ]
+            )
+        |> Modal.withFooter
+            [ div [ class "w-full grid gap-4 md:grid-cols-2" ]
+                [ button
+                    [ onClick ClickedAcceptCodeOfConduct
+                    , class "button button-primary w-full"
+                    ]
+                    -- TODO - I18N
+                    [ text "Aceito" ]
+                , button
+                    [ onClick ClickedDenyCodeOfConduct
+                    , class "button button-secondary w-full"
+                    ]
+                    -- TODO - I18N
+                    [ text "Não aceito" ]
+                ]
+            ]
+        |> Modal.toHtml
+
+
 viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
@@ -994,19 +1081,56 @@ isAdminPage page =
 
 
 viewFooter : Shared -> Html msg
-viewFooter _ =
+viewFooter shared =
     footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
         [ p [ class "text-sm flex w-full justify-center items-center" ]
+            -- TODO - I18N
             [ text "Created with"
             , Icons.heartSolid
             , text "by Satisfied Vagabonds"
             ]
+        , a
+            [ Html.Attributes.href (codeOfConductUrl shared.language)
+            , Html.Attributes.target "_blank"
+            ]
+            -- TODO - I18N
+            [ text "Diretrizes e código de conduta 1.0" ]
         , img
+            -- TODO - Add alt attribute
             [ class "h-24 w-full"
             , src "/images/satisfied-vagabonds.svg"
             ]
             []
         ]
+
+
+codeOfConductUrl : Translation.Language -> String
+codeOfConductUrl language =
+    let
+        defaultEndpoint =
+            "/code-of-conduct"
+
+        baseUrl =
+            "https://www.cambiatus.com"
+
+        endpoint =
+            case language of
+                Translation.English ->
+                    defaultEndpoint
+
+                Translation.Portuguese ->
+                    "/pt-br/codigo-de-conduta"
+
+                Translation.Spanish ->
+                    "/es/condigo-de-conducta"
+
+                Translation.Catalan ->
+                    defaultEndpoint
+
+                Translation.Amharic ->
+                    defaultEndpoint
+    in
+    baseUrl ++ endpoint
 
 
 
@@ -1362,6 +1486,12 @@ mapMsg mapFn msg =
                         Ok (mapMsg mapFn resultMsg)
                 )
 
+        ClickedAcceptCodeOfConduct ->
+            ClickedAcceptCodeOfConduct
+
+        ClickedDenyCodeOfConduct ->
+            ClickedDenyCodeOfConduct
+
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
 mapExternal mapFn msg =
@@ -1702,6 +1832,8 @@ type Msg externalMsg
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
     | RequestedQuery (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd externalMsg } externalMsg)
     | RequestedQueryInternal (Result (Api.Graphql.Token -> Cmd (Msg externalMsg)) (Msg externalMsg))
+    | ClickedAcceptCodeOfConduct
+    | ClickedDenyCodeOfConduct
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -2435,6 +2567,27 @@ update msg model =
                 |> UR.init
                 |> UR.addMsg (RequestedNewAuthTokenPhrase callbackCmd)
 
+        ClickedAcceptCodeOfConduct ->
+            -- TODO - Treat this case
+            model
+                |> UR.init
+
+        ClickedDenyCodeOfConduct ->
+            case model.codeOfConductModalStatus of
+                CodeOfConductNotShown ->
+                    -- TODO - Maybe log impossible?
+                    model
+                        |> UR.init
+
+                CodeOfConductShown ->
+                    { model | codeOfConductModalStatus = CodeOfConductShownWithWarning }
+                        |> UR.init
+
+                CodeOfConductShownWithWarning ->
+                    -- TODO - Treat this case
+                    model
+                        |> UR.init
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
 handleActionMsg ({ shared } as model) actionMsg =
@@ -2963,6 +3116,12 @@ msgToString msg =
 
         RequestedQueryInternal r ->
             [ "RequestedQueryInternal", UR.resultToString r ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]
+
+        ClickedDenyCodeOfConduct ->
+            [ "ClickedDenyCodeOfConduct" ]
 
 
 externalMsgToString : External msg -> List String
