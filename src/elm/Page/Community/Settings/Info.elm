@@ -604,7 +604,7 @@ createForm shared community { isLoading } =
             )
         |> Form.with
             (Form.RichText.init { label = t "settings.community_info.placeholders.description" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
                 |> Form.RichText.withPlaceholder (t "settings.community_info.placeholders.description")
                 |> Form.richText
                     { parser = Ok

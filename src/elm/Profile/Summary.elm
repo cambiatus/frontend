@@ -9,6 +9,7 @@ module Profile.Summary exposing
     , view
     , withAttrs
     , withImageSize
+    , withNameBg
     , withPreventScrolling
     , withRelativeSelector
     , withScrollSelector
@@ -19,6 +20,7 @@ import Avatar
 import Eos.Account as Eos
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes exposing (class, href)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onMouseEnter, onMouseLeave)
 import Markdown
 import Profile
@@ -41,6 +43,7 @@ type alias Model =
     , relativeSelector : Maybe String
     , scrollSelector : Maybe String
     , showNameTag : Bool
+    , showNameTagBg : Bool
     , extraAttrs : List (Html.Attribute Msg)
     }
 
@@ -58,6 +61,7 @@ init isLarge =
     , relativeSelector = Nothing
     , scrollSelector = Nothing
     , showNameTag = True
+    , showNameTagBg = True
     , extraAttrs = []
     }
 
@@ -115,6 +119,11 @@ withScrollSelector scrollSelector model =
     { model | scrollSelector = Just scrollSelector }
 
 
+withNameBg : Bool -> Model -> Model
+withNameBg showNameTagBg model =
+    { model | showNameTagBg = showNameTagBg }
+
+
 withoutName : Model -> Model
 withoutName model =
     { model | showNameTag = False }
@@ -141,7 +150,7 @@ view translators loggedInAccount profile model =
 mobileView : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 mobileView translators loggedInAccount profile model =
     div [ class "md:hidden cursor-auto" ]
-        [ viewUserImg profile True model
+        [ viewUserImg translators profile loggedInAccount True model
         , viewUserNameTag translators loggedInAccount profile model
         , Modal.initWith { closeMsg = ClosedInfo, isVisible = model.isExpanded }
             |> Modal.withBody [ viewUserInfo profile ]
@@ -158,7 +167,7 @@ desktopView translators loggedInAccount profile model =
             [ onMouseEnter OpenedInfo
             , onMouseLeave ClosedInfo
             ]
-            [ viewUserImg profile False model ]
+            [ viewUserImg translators profile loggedInAccount False model ]
         , viewUserNameTag translators loggedInAccount profile model
         ]
 
@@ -166,15 +175,19 @@ desktopView translators loggedInAccount profile model =
 viewUserNameTag : Translation.Translators -> Eos.Name -> Profile.Basic profile -> Model -> Html Msg
 viewUserNameTag translators loggedInAccount profile model =
     if model.showNameTag then
-        div [ class "mt-2" ]
-            [ Profile.viewProfileNameTag translators loggedInAccount profile ]
+        div [ class "mt-2 w-20", ariaHidden True ]
+            [ Profile.viewProfileNameTag translators
+                { showBg = model.showNameTagBg }
+                loggedInAccount
+                profile
+            ]
 
     else
         text ""
 
 
-viewUserImg : Profile.Basic profile -> Bool -> Model -> Html Msg
-viewUserImg profile isMobile model =
+viewUserImg : Translation.Translators -> Profile.Basic profile -> Eos.Name -> Bool -> Model -> Html Msg
+viewUserImg { t, tr } profile loggedInAccount isMobile model =
     let
         container attrs =
             if isMobile then
@@ -185,7 +198,21 @@ viewUserImg profile isMobile model =
     in
     div [ class "flex flex-col items-center" ]
         [ div [ class ("rounded-full " ++ model.imageSize) ]
-            [ container [] [ Avatar.view profile.avatar model.imageSize ]
+            [ container
+                [ ariaLabel
+                    (if loggedInAccount == profile.account then
+                        t "profile.summary.your_summary"
+
+                     else
+                        tr "profile.summary.user_summary"
+                            [ ( "user"
+                              , profile.name
+                                    |> Maybe.withDefault (Eos.nameToString profile.account)
+                              )
+                            ]
+                    )
+                ]
+                [ Avatar.view profile.avatar model.imageSize ]
             , if not isMobile && model.isExpanded then
                 View.Components.dialogBubble
                     { class_ = "w-120 animate-fade-in opacity-0"

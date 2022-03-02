@@ -22,9 +22,11 @@ import Form.Text
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class, disabled, id, maxlength, type_)
+import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
+import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
@@ -113,14 +115,14 @@ type UnitTracking
     | DontTrackUnits
 
 
-createForm : LoggedIn.Model -> Form.Form msg FormInput FormOutput
+createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
 createForm loggedIn =
     let
         ({ t } as translators) =
             loggedIn.shared.translators
     in
     Form.succeed
-        (\maybeImage title description trackUnits unitsInStock price ->
+        (\maybeImage title description price trackUnits unitsInStock ->
             { image = maybeImage
             , title = title
             , description = description
@@ -134,20 +136,32 @@ createForm loggedIn =
             }
         )
         |> Form.with
-            (Form.File.init { label = "", id = "image-uploader" }
-                |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                |> Form.File.withContainerAttrs [ class "mb-10" ]
-                |> Form.file
-                    { translators = translators
-                    , value = .image
-                    , update = \image input -> { input | image = image }
-                    , externalError = always Nothing
-                    }
-                |> Form.optional
+            (Form.introspect
+                (\values ->
+                    Form.File.init { label = t "shop.photo_label", id = "image-uploader" }
+                        |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
+                        |> Form.File.withContainerAttrs
+                            [ class "mb-10 lg:place-self-center lg:w-2/3"
+                            , classList
+                                [ ( "lg:row-span-5", not values.trackUnits )
+                                , ( "lg:row-span-6", values.trackUnits )
+                                ]
+                            ]
+                        |> Form.File.withAttrs [ class "border border-dashed border-gray-900 rounded" ]
+                        |> Form.file
+                            { translators = translators
+                            , value = .image
+                            , update = \image input -> { input | image = image }
+                            , externalError = always Nothing
+                            }
+                        |> Form.optional
+                )
             )
         |> Form.with
             (Form.Text.init { label = t "shop.what_label", id = "title-input" }
                 |> Form.Text.withExtraAttrs [ maxlength 255 ]
+                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                |> Form.Text.withPlaceholder (t "shop.what_label")
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -161,7 +175,8 @@ createForm loggedIn =
             )
         |> Form.with
             (Form.RichText.init { label = t "shop.description_label" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10" ]
+                |> Form.RichText.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
+                |> Form.RichText.withPlaceholder (t "shop.description_placeholder")
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -173,6 +188,28 @@ createForm loggedIn =
                     }
             )
         |> Form.with
+            (Form.Text.init { label = t "shop.price_label", id = "price-input" }
+                |> (case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            Form.Text.withCurrency community.symbol
+
+                        _ ->
+                            identity
+                   )
+                |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.floatGreaterThan 0
+                            >> Form.Validate.validate translators
+                    , value = .price
+                    , update = \price input -> { input | price = price }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
             (Form.Select.init
                 { label = t "shop.track_stock_label"
                 , id = "track-stock-select"
@@ -180,7 +217,7 @@ createForm loggedIn =
                 }
                 |> Form.Select.withOption False (t "shop.track_stock_no")
                 |> Form.Select.withOption True (t "shop.track_stock_yes")
-                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
                 |> Form.select (boolFromString >> Maybe.withDefault False)
                     { parser = Ok
                     , value = .trackUnits
@@ -193,15 +230,35 @@ createForm loggedIn =
                 (\values ->
                     if values.trackUnits then
                         Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
+                            |> Form.Text.withPlaceholder "0"
                             |> Form.Text.asNumeric
                             |> Form.Text.withType Form.Text.Number
-                            |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                            |> Form.Text.withExtraAttrs
+                                [ Html.Attributes.min "0"
+                                , class "text-center"
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                            |> Form.Text.withElements
+                                [ button
+                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
+                                    , type_ "button"
+                                    , ariaLabel <| t "shop.subtract_unit"
+                                    , onClick ClickedDecrementStockUnits
+                                    ]
+                                    [ Icons.minus "fill-current" ]
+                                , button
+                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
+                                    , type_ "button"
+                                    , ariaLabel <| t "shop.add_unit"
+                                    , onClick ClickedIncrementStockUnits
+                                    ]
+                                    [ Icons.plus "fill-current" ]
+                                ]
                             |> Form.textField
                                 { parser =
                                     Form.Validate.succeed
                                         >> Form.Validate.int
                                         >> Form.Validate.intGreaterThanOrEqualTo 0
-                                        >> Form.Validate.intLowerThanOrEqualTo 2000
                                         >> Form.Validate.validate translators
                                 , value = .unitsInStock
                                 , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
@@ -211,27 +268,6 @@ createForm loggedIn =
                     else
                         Form.succeed 0
                 )
-            )
-        |> Form.with
-            (Form.Text.init { label = t "shop.price_label", id = "price-input" }
-                |> (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            Form.Text.withCurrency community.symbol
-
-                        _ ->
-                            identity
-                   )
-                |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> Form.Validate.maskedFloat translators
-                            >> Form.Validate.floatGreaterThan 0
-                            >> Form.Validate.validate translators
-                    , value = .price
-                    , update = \price input -> { input | price = price }
-                    , externalError = always Nothing
-                    }
             )
 
 
@@ -382,41 +418,44 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
             else
                 ( t "menu.create", t "shop.create_offer" )
     in
-    div [ class "bg-white" ]
+    div [ class "flex flex-col flex-grow mb-10 lg:mb-0" ]
         [ Page.viewHeader loggedIn pageTitle
-        , Form.view [ class "container mx-auto px-4" ]
-            shared.translators
-            (\submitButton ->
-                [ div [ class "flex flex-col-reverse sm:flex-row align-center justify-center mb-10" ]
-                    [ if isEdit then
-                        button
-                            [ class "button button-danger w-full mt-4 sm:w-40 sm:mt-0 sm:mr-4"
+        , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
+            [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
+            , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+                shared.translators
+                (\submitButton ->
+                    [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
+                        [ if isEdit then
+                            button
+                                [ class "button button-danger w-full"
+                                , disabled isDisabled
+                                , onClick ClickedDelete
+                                , type_ "button"
+                                ]
+                                [ text (t "shop.delete") ]
+
+                          else
+                            text ""
+                        , submitButton
+                            [ class "button button-primary w-full"
                             , disabled isDisabled
-                            , onClick ClickedDelete
-                            , type_ "button"
                             ]
-                            [ text (t "shop.delete") ]
+                            [ text actionText ]
+                        ]
+                    , if isEdit && deleteModal == Open then
+                        viewConfirmDeleteModal t
 
                       else
                         text ""
-                    , submitButton
-                        [ class "button button-primary w-full sm:w-40"
-                        , disabled isDisabled
-                        ]
-                        [ text actionText ]
                     ]
-                , if isEdit && deleteModal == Open then
-                    viewConfirmDeleteModal t
-
-                  else
-                    text ""
-                ]
-            )
-            (createForm loggedIn)
-            (Form.withDisabled isDisabled form)
-            { toMsg = GotFormMsg
-            , onSubmit = ClickedSave
-            }
+                )
+                (createForm loggedIn)
+                (Form.withDisabled isDisabled form)
+                { toMsg = GotFormMsg
+                , onSubmit = ClickedSave
+                }
+            ]
         ]
 
 
@@ -433,11 +472,13 @@ viewConfirmDeleteModal t =
             [ button
                 [ class "modal-cancel"
                 , onClick ClickedDeleteCancel
+                , type_ "button"
                 ]
                 [ text (t "shop.delete_modal.cancel") ]
             , button
                 [ class "modal-accept"
                 , onClick ClickedDeleteConfirm
+                , type_ "button"
                 ]
                 [ text (t "shop.delete_modal.confirm") ]
             ]
@@ -463,6 +504,8 @@ type Msg
     | GotSaveResponse (Result Value String)
     | GotDeleteResponse (Result Value String)
     | ClosedAuthModal
+    | ClickedDecrementStockUnits
+    | ClickedIncrementStockUnits
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -482,15 +525,10 @@ update msg model loggedIn =
                 LoadingBalancesUpdate saleId ->
                     let
                         addSaleFetch =
-                            case String.toInt saleId of
-                                Nothing ->
-                                    identity
-
-                                Just id ->
-                                    LoggedIn.query loggedIn
-                                        (Shop.productQuery id)
-                                        CompletedSaleLoad
-                                        |> UR.addExt
+                            LoggedIn.query loggedIn
+                                (Shop.productQuery saleId)
+                                CompletedSaleLoad
+                                |> UR.addExt
                     in
                     LoadingSaleUpdate balances
                         |> UR.init
@@ -713,6 +751,12 @@ update msg model loggedIn =
         GotFormMsg subMsg ->
             updateForm loggedIn.shared subMsg model
 
+        ClickedDecrementStockUnits ->
+            updateFormStockUnits (\price -> price - 1) model
+
+        ClickedIncrementStockUnits ->
+            updateFormStockUnits (\price -> price + 1) model
+
 
 performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
 performRequest msg status { shared, accountName } action data =
@@ -733,6 +777,53 @@ performRequest msg status { shared, accountName } action data =
                       }
                     ]
             }
+
+
+updateFormStockUnits : (Int -> Int) -> Model -> UpdateResult
+updateFormStockUnits updateFn model =
+    let
+        maybeFormInfo =
+            case model of
+                EditingCreate balances form ->
+                    Just ( form, EditingCreate balances )
+
+                Creating balances form ->
+                    Just ( form, Creating balances )
+
+                EditingUpdate balances product deleteModalStatus form ->
+                    Just ( form, EditingUpdate balances product deleteModalStatus )
+
+                Saving balances product form ->
+                    Just ( form, Saving balances product )
+
+                Deleting balances product form ->
+                    Just ( form, Deleting balances product )
+
+                _ ->
+                    Nothing
+    in
+    case maybeFormInfo of
+        Nothing ->
+            UR.init model
+
+        Just ( form, updateModel ) ->
+            Form.updateValues
+                (\values ->
+                    case String.toInt values.unitsInStock of
+                        Just unitsInStock ->
+                            { values
+                                | unitsInStock =
+                                    updateFn unitsInStock
+                                        |> max 0
+                                        |> String.fromInt
+                            }
+
+                        Nothing ->
+                            values
+                )
+                form
+                |> updateModel
+                |> UR.init
 
 
 updateForm : Shared -> Form.Msg FormInput -> Model -> UpdateResult
@@ -963,3 +1054,9 @@ msgToString msg =
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: Form.msgToString subMsg
+
+        ClickedDecrementStockUnits ->
+            [ "ClickedDecrementStockUnits" ]
+
+        ClickedIncrementStockUnits ->
+            [ "ClickedIncrementStockUnits" ]

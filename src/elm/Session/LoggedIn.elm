@@ -51,7 +51,7 @@ import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src, type_)
-import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel, ariaLive, role)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -995,8 +995,15 @@ isAdminPage page =
 
 viewFooter : Shared -> Html msg
 viewFooter _ =
-    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
-        [ p [ class "text-sm flex w-full justify-center items-center" ]
+    footer
+        [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0"
+        , role "contentinfo"
+        ]
+        [ p [ class "sr-only" ] [ text "Created with love by Satisfied Vagabonds" ]
+        , p
+            [ class "text-sm flex w-full justify-center items-center"
+            , ariaHidden True
+            ]
             [ text "Created with"
             , Icons.heartSolid
             , text "by Satisfied Vagabonds"
