@@ -435,6 +435,7 @@
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",
+      "created": "Comunitat creada amb èxit! És possible que triguem una estona a processar-lo, així que proveu d'accedir-hi en uns segons",
       "labels": {
         "title": "Nom",
         "symbol": "Símbol",

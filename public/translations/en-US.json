@@ -431,6 +431,7 @@
     "create": {
       "title": "Create community",
       "success": "Successfully saved community",
+      "created": "Community created with success! We might take a while to process it, so try to access it in a few seconds",
       "labels": {
         "title": "Title",
         "symbol": "Symbol",
