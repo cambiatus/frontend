@@ -435,6 +435,7 @@
     "create": {
       "title": "Crear comunidad",
       "success": "Comunidad guardada con éxito",
+      "created": "¡Comunidad creada con éxito! Es posible que tardemos un poco en procesarlo, así que intente acceder a él en unos segundos",
       "labels": {
         "title": "Nombre",
         "symbol": "Simbolo",

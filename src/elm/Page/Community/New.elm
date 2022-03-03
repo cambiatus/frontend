@@ -10,6 +10,7 @@ module Page.Community.New exposing
 
 import Community
 import Dict
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Form
@@ -33,6 +34,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Token
 import UpdateResult as UR
+import Url
 import View.Components
 import View.Feedback as Feedback
 
@@ -104,7 +106,7 @@ type alias FormInput =
 type alias FormOutput =
     { description : Markdown
     , name : String
-    , url : String
+    , url : Url.Url
     , symbol : Eos.Symbol
     , invitedReward : Float
     , inviterReward : Float
@@ -115,8 +117,8 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) { isDisabled } =
+createForm : Shared.Translators -> Environment -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) environment { isDisabled } =
     Form.succeed FormOutput
         |> Form.with
             (Form.RichText.init { label = t "community.create.labels.description" }
@@ -134,38 +136,38 @@ createForm ({ t } as translators) { isDisabled } =
                 , id = "currency-name-input"
                 }
                 |> Form.textField
-                    { parser = Ok
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLongerThan 1
+                            >> Form.Validate.validate translators
                     , value = .name
                     , update = \name input -> { input | name = name }
                     , externalError = always Nothing
                     }
             )
         |> Form.with
-            (Form.introspect
-                (\values ->
-                    Form.Text.init
-                        { label = t "settings.community_info.url.title"
-                        , id = "subdomain-input"
-                        }
-                        |> (if String.isEmpty values.url then
-                                identity
-
-                            else
-                                Form.Text.withElements
-                                    [ span
-                                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
-                                        , classList [ ( "bg-gray-500", isDisabled ) ]
-                                        ]
-                                        [ text ".cambiatus.io" ]
-                                    ]
-                           )
-                        |> Form.textField
-                            { parser = Ok
-                            , value = .url
-                            , update = \url input -> { input | url = url }
-                            , externalError = always Nothing
-                            }
-                )
+            (Form.Text.init
+                { label = t "settings.community_info.url.title"
+                , id = "subdomain-input"
+                }
+                |> Form.Text.withElements
+                    [ span
+                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
+                        , classList [ ( "bg-gray-500", isDisabled ) ]
+                        ]
+                        [ text ".cambiatus.io" ]
+                    ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.map String.toLower
+                            >> Form.Validate.url
+                            >> Form.Validate.map (Route.addEnvironmentToUrl environment)
+                            >> Form.Validate.validate translators
+                    , value = .url
+                    , update = \url input -> { input | url = url }
+                    , externalError = always Nothing
+                    }
             )
         |> Form.withGroup
             [ class "grid grid-cols-2 gap-4" ]
@@ -175,6 +177,7 @@ createForm ({ t } as translators) { isDisabled } =
                 }
                 |> Form.Text.withPlaceholder ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
                 |> Form.Text.withMask { mask = "#," ++ String.concat (List.repeat Eos.maxSymbolLength "#"), replace = '#' }
+                |> Form.Text.withExtraAttrs [ class "uppercase" ]
                 |> Form.textField
                     { parser =
                         Eos.symbolFromString
@@ -272,7 +275,7 @@ requireInvitationToggle { t } =
                 { targetId = "require-invitation-toggle"
                 , labelText = t "settings.community_info.invitation.title"
                 }
-                |> Form.arbitrary
+                |> Form.arbitraryWith ()
             )
             (Form.Toggle.init
                 { label = text <| t "settings.community_info.fields.invitation"
@@ -313,7 +316,7 @@ view ({ shared } as loggedIn) model =
                         [ text <| t "community.create.submit" ]
                     ]
                 )
-                (createForm shared.translators { isDisabled = model.isDisabled })
+                (createForm shared.translators shared.environment { isDisabled = model.isDisabled })
                 model.form
                 { toMsg = GotFormMsg
                 , onSubmit = SubmittedForm
@@ -352,7 +355,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.query loggedIn
-                        (Community.domainAvailableQuery (Route.communityFullDomain loggedIn.shared formOutput.url))
+                        (Community.domainAvailableQuery formOutput.url.host)
                         (GotDomainAvailableResponse formOutput)
                     )
 
@@ -365,7 +368,7 @@ update msg model loggedIn =
                         , logoUrl = formOutput.logo
                         , name = formOutput.name
                         , description = formOutput.description
-                        , subdomain = Route.communityFullDomain loggedIn.shared formOutput.url
+                        , subdomain = formOutput.url.host
                         , inviterReward = formOutput.inviterReward
                         , invitedReward = formOutput.invitedReward
                         , hasShop = True
@@ -419,13 +422,7 @@ update msg model loggedIn =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Checked that domain is available"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , Route.communityFullDomain loggedIn.shared formOutput.url
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
                     , level = Log.DebugLevel
                     }
 
@@ -440,13 +437,7 @@ update msg model loggedIn =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Tried domain that is unavailable"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , Route.communityFullDomain loggedIn.shared formOutput.url
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
                     , level = Log.DebugLevel
                     }
 
@@ -458,13 +449,7 @@ update msg model loggedIn =
                     "Got an error when checking if community domain is available"
                     { moduleName = "Page.Community.New", function = "update" }
                     [ { name = "Domain"
-                      , extras =
-                            Dict.fromList
-                                [ ( "tried"
-                                  , Route.communityFullDomain loggedIn.shared formOutput.url
-                                        |> Encode.string
-                                  )
-                                ]
+                      , extras = Dict.fromList [ ( "tried", Encode.string formOutput.url.host ) ]
                       }
                     ]
                     err

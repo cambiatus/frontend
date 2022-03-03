@@ -12,6 +12,7 @@ module View.Pin exposing
     , view
     , withBackgroundColor
     , withDisabled
+    , withIsSubmitting
     , withProblem
     )
 
@@ -305,11 +306,37 @@ update shared msg model =
             UR.init model
 
         GotFormMsg subMsg ->
+            let
+                hasChangedField field newForm =
+                    Form.getValue field model.form /= Form.getValue field newForm
+
+                clearFieldErrors : Field -> (FormInput -> value) -> UpdateResult -> UpdateResult
+                clearFieldErrors field fieldAccessor ur =
+                    let
+                        newForm =
+                            ur.model.form
+                    in
+                    if hasChangedField fieldAccessor newForm then
+                        UR.mapModel
+                            (\m ->
+                                { m
+                                    | problems =
+                                        List.filter (\( field_, _ ) -> field /= field_)
+                                            m.problems
+                                }
+                            )
+                            ur
+
+                    else
+                        ur
+            in
             Form.update shared subMsg model.form
                 |> UR.fromChild (\newForm -> { model | form = newForm })
                     GotFormMsg
                     (\feedback -> UR.addExt (SendFeedback feedback))
                     model
+                |> clearFieldErrors Pin .pin
+                |> clearFieldErrors PinConfirmation .confirmation
 
         SubmittedForm { pin } ->
             { model
@@ -357,6 +384,11 @@ postSubmitAction model pin shared toMsg =
 withDisabled : Bool -> Model -> Model
 withDisabled disabled model =
     { model | disabled = disabled }
+
+
+withIsSubmitting : Bool -> Model -> Model
+withIsSubmitting isSubmitting model =
+    { model | isSubmitting = isSubmitting }
 
 
 withProblem : Field -> String -> Model -> Model

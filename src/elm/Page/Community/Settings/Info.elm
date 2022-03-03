@@ -239,7 +239,7 @@ update msg model ({ shared } as loggedIn) =
                 isSameSubdomain =
                     maybeCommunity
                         |> Maybe.map .subdomain
-                        |> Maybe.map ((==) (Url.toString formOutput.subdomain))
+                        |> Maybe.map ((==) formOutput.subdomain.host)
                         |> Maybe.withDefault False
             in
             if isSameSubdomain then
@@ -252,7 +252,7 @@ update msg model ({ shared } as loggedIn) =
                     |> UR.init
                     |> UR.addExt
                         (LoggedIn.query loggedIn
-                            (Community.domainAvailableQuery (Url.toString formOutput.subdomain))
+                            (Community.domainAvailableQuery formOutput.subdomain.host)
                             (GotDomainAvailableResponse formOutput)
                         )
 
@@ -309,12 +309,7 @@ update msg model ({ shared } as loggedIn) =
                                             , logo = formOutput.logo
                                             , name = formOutput.name
                                             , description = formOutput.description
-                                            , subdomain =
-                                                formOutput.subdomain.host
-                                                    |> String.split "."
-                                                    |> List.head
-                                                    |> Maybe.map (Route.communityFullDomain shared)
-                                                    |> Maybe.withDefault community.subdomain
+                                            , subdomain = formOutput.subdomain.host
                                             , inviterReward = asset formOutput.inviterReward
                                             , invitedReward = asset formOutput.invitedReward
                                             , hasObjectives = Eos.boolToEosBool community.hasObjectives
@@ -338,14 +333,7 @@ update msg model ({ shared } as loggedIn) =
                             { type_ = Log.DebugBreadcrumb
                             , category = msg
                             , message = "Checked that domain is available"
-                            , data =
-                                Dict.fromList
-                                    [ ( "domain"
-                                      , formOutput.subdomain
-                                            |> Url.toString
-                                            |> Encode.string
-                                      )
-                                    ]
+                            , data = Dict.fromList [ ( "domain", Encode.string formOutput.subdomain.host ) ]
                             , level = Log.DebugLevel
                             }
 
@@ -368,14 +356,7 @@ update msg model ({ shared } as loggedIn) =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Tried domain that is unavailable"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , formOutput.subdomain
-                                    |> Url.toString
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.subdomain.host ) ]
                     , level = Log.DebugLevel
                     }
 
@@ -387,14 +368,7 @@ update msg model ({ shared } as loggedIn) =
                     { moduleName = "Page.Community.Settings.Info", function = "update" }
                     [ Log.contextFromCommunity loggedIn.selectedCommunity
                     , { name = "Domain"
-                      , extras =
-                            Dict.fromList
-                                [ ( "tried"
-                                  , formOutput.subdomain
-                                        |> Url.toString
-                                        |> Encode.string
-                                  )
-                                ]
+                      , extras = Dict.fromList [ ( "tried", Encode.string formOutput.subdomain.host ) ]
                       }
                     ]
                     err
@@ -438,7 +412,7 @@ update msg model ({ shared } as loggedIn) =
                         let
                             newCommunity =
                                 { symbol = community.symbol
-                                , subdomain = Url.toString formOutput.subdomain
+                                , subdomain = formOutput.subdomain.host
                                 }
 
                             redirectToCommunity =
@@ -653,11 +627,8 @@ createForm shared community { isLoading } =
                             ]
                         |> Form.Text.withElements
                             [ span
-                                [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2 transition-opacity"
-                                , classList
-                                    [ ( "opacity-0", String.isEmpty values.subdomain )
-                                    , ( "bg-gray-500", isLoading )
-                                    ]
+                                [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
+                                , classList [ ( "bg-gray-500", isLoading ) ]
                                 ]
                                 [ text ".cambiatus.io" ]
                             ]
@@ -681,8 +652,8 @@ createForm shared community { isLoading } =
                                                 Err (\translators_ -> translators_.t "settings.community_info.errors.url.invalid_case")
                                         )
                                     >> Form.Validate.stringLongerThan 1
-                                    >> Form.Validate.map (Route.communityFullDomain shared)
                                     >> Form.Validate.url
+                                    >> Form.Validate.map (Route.addEnvironmentToUrl shared.environment)
                                     >> Form.Validate.validate translators
                             , value = .subdomain
                             , update = \subdomain input -> { input | subdomain = subdomain }

@@ -1482,12 +1482,11 @@ updateExternal externalMsg ({ shared } as model) =
                 , cmd = cmd
             }
 
-        CreatedCommunity symbol subdomain ->
-            let
-                ( newModel, cmd ) =
-                    selectCommunity model { symbol = symbol, subdomain = subdomain } Route.Dashboard
-            in
-            { defaultResult | model = newModel, cmd = cmd }
+        CreatedCommunity _ _ ->
+            { defaultResult
+                | model = { model | feedback = Feedback.Visible Feedback.Success (shared.translators.t "community.create.created") }
+                , cmd = Route.pushUrl shared.navKey Route.Dashboard
+            }
 
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
@@ -2733,7 +2732,10 @@ selectCommunity ({ shared } as model) community route =
 
     else
         ( { model | selectedCommunity = RemoteData.Loading }
-        , fetchCommunity model (Just community.symbol)
+        , Cmd.batch
+            [ fetchCommunity model (Just community.symbol)
+            , Route.replaceUrl shared.navKey route
+            ]
         )
 
 
