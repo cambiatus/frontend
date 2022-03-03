@@ -51,6 +51,7 @@ import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
 import Time
 import Translation
+import Utils
 
 
 type alias Basic a =
@@ -99,6 +100,7 @@ type alias Model =
     , digest : Bool
     , transferNotification : Bool
     , preferredLanguage : Maybe Translation.Language
+    , latestAcceptedTerms : Maybe Time.Posix
     }
 
 
@@ -153,6 +155,10 @@ selectionSet =
         |> with User.digest
         |> with User.transferNotification
         |> with languageSelectionSet
+        |> with
+            (User.latestAcceptedTerms
+                |> SelectionSet.map (Maybe.map Utils.fromDateTime)
+            )
 
 
 languageSelectionSet : SelectionSet (Maybe Translation.Language) Cambiatus.Object.User

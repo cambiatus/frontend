@@ -223,7 +223,6 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
-    , hasAcceptedTermsOfService : Bool
     , codeOfConductModalStatus : CodeOfConductModalStatus
     , routeHistory : List Route
     , accountName : Eos.Name
@@ -265,12 +264,7 @@ initModel shared maybePrivateKey_ accountName authToken =
             Auth.init shared.pinVisibility maybePrivateKey_
     in
     ( { shared = shared
-
-      -- TODO - Get this from somewhere
-      , hasAcceptedTermsOfService = False
-
-      -- TODO - Get this from somewhere
-      , codeOfConductModalStatus = CodeOfConductShown
+      , codeOfConductModalStatus = CodeOfConductNotShown
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
@@ -950,7 +944,7 @@ codeOfConductModal model =
                         [ a
                             [ Html.Attributes.href (codeOfConductUrl model.shared.language)
                             , Html.Attributes.target "_blank"
-                            , class "text-orange-300 hover:underline"
+                            , class "text-orange-300 hover:underline focus-visible:underline focus-visible:outline-none rounded-sm"
                             ]
                             -- TODO - I18N
                             [ text "Ler Diretrizes da comunidade e Código de conduta 1.0 da Cambiatus" ]
@@ -969,9 +963,19 @@ codeOfConductModal model =
                         [ text "Para que você pertença e desfrute de todas as atividades que envolvem a comunidade, você deve aceitar as Diretrizes da comunidade e Código de conduta 1.0."
                         ]
                     , br [] []
-                    , p [ class "mb-6" ]
+                    , p []
                         -- TODO - I18N
                         [ text "Tem certeza que deseja não aceitar?"
+                        ]
+                    , br [] []
+                    , p [ class "mb-6" ]
+                        [ a
+                            [ Html.Attributes.href (codeOfConductUrl model.shared.language)
+                            , Html.Attributes.target "_blank"
+                            , class "text-orange-300 hover:underline"
+                            ]
+                            -- TODO - I18N
+                            [ text "Ler Diretrizes da comunidade e Código de conduta 1.0 da Cambiatus" ]
                         ]
                     ]
             )
@@ -1492,6 +1496,9 @@ mapMsg mapFn msg =
         ClickedDenyCodeOfConduct ->
             ClickedDenyCodeOfConduct
 
+        CompletedAcceptingCodeOfConduct result ->
+            CompletedAcceptingCodeOfConduct result
+
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
 mapExternal mapFn msg =
@@ -1834,6 +1841,7 @@ type Msg externalMsg
     | RequestedQueryInternal (Result (Api.Graphql.Token -> Cmd (Msg externalMsg)) (Msg externalMsg))
     | ClickedAcceptCodeOfConduct
     | ClickedDenyCodeOfConduct
+    | CompletedAcceptingCodeOfConduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -1946,7 +1954,17 @@ update msg model =
                                 Just _ ->
                                     Cmd.none
                     in
-                    { model | profile = RemoteData.Success p }
+                    { model
+                        | profile = RemoteData.Success p
+                        , codeOfConductModalStatus =
+                            -- TODO - Should we care about the date?
+                            case p.latestAcceptedTerms of
+                                Just _ ->
+                                    CodeOfConductNotShown
+
+                                Nothing ->
+                                    CodeOfConductShown
+                    }
                         |> UR.init
                         |> UR.addCmd sendLanguagePreference
                         |> UR.addExt (ProfileLoaded p |> Broadcast)
@@ -2568,9 +2586,13 @@ update msg model =
                 |> UR.addMsg (RequestedNewAuthTokenPhrase callbackCmd)
 
         ClickedAcceptCodeOfConduct ->
-            -- TODO - Treat this case
-            model
+            { model | codeOfConductModalStatus = CodeOfConductNotShown }
                 |> UR.init
+                |> UR.addCmd
+                    (internalMutation model
+                        (Cambiatus.Mutation.acceptTerms (Graphql.SelectionSet.succeed ()))
+                        CompletedAcceptingCodeOfConduct
+                    )
 
         ClickedDenyCodeOfConduct ->
             case model.codeOfConductModalStatus of
@@ -2587,6 +2609,22 @@ update msg model =
                     -- TODO - Treat this case
                     model
                         |> UR.init
+
+        CompletedAcceptingCodeOfConduct (RemoteData.Failure err) ->
+            -- TODO - I18N
+            -- TODO - Should we try to sync it when possible?
+            { model | feedback = Feedback.Visible Feedback.Failure "Something went wrong when accepting code of conduct" }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when accepting code of conduct"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedAcceptingCodeOfConduct _ ->
+            model
+                |> UR.init
 
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
@@ -3122,6 +3160,9 @@ msgToString msg =
 
         ClickedDenyCodeOfConduct ->
             [ "ClickedDenyCodeOfConduct" ]
+
+        CompletedAcceptingCodeOfConduct r ->
+            [ "CompletedAcceptingCodeOfConduct", UR.remoteDataToString r ]
 
 
 externalMsgToString : External msg -> List String
