@@ -46,6 +46,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Document
 import Graphql.Http
+import Graphql.Http.GraphqlError exposing (PossiblyParsedData(..))
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
@@ -2726,7 +2727,10 @@ selectCommunity ({ shared } as model) community route =
 
     else
         ( { model | selectedCommunity = RemoteData.Loading }
-        , fetchCommunity model (Just community.symbol)
+        , Cmd.batch
+            [ fetchCommunity model (Just community.symbol)
+            , Route.replaceUrl shared.navKey route
+            ]
         )
 
 
