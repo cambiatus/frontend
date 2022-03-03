@@ -10,6 +10,7 @@ module Page.Community.New exposing
 
 import Community
 import Dict
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Form
@@ -116,8 +117,8 @@ type alias FormOutput =
     }
 
 
-createForm : Shared.Translators -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
-createForm ({ t } as translators) { isDisabled } =
+createForm : Shared.Translators -> Environment -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) environment { isDisabled } =
     Form.succeed FormOutput
         |> Form.with
             (Form.RichText.init { label = t "community.create.labels.description" }
@@ -161,6 +162,7 @@ createForm ({ t } as translators) { isDisabled } =
                         Form.Validate.succeed
                             >> Form.Validate.map String.toLower
                             >> Form.Validate.url
+                            >> Form.Validate.map (Route.addEnvironmentToUrl environment)
                             >> Form.Validate.validate translators
                     , value = .url
                     , update = \url input -> { input | url = url }
@@ -314,7 +316,7 @@ view ({ shared } as loggedIn) model =
                         [ text <| t "community.create.submit" ]
                     ]
                 )
-                (createForm shared.translators { isDisabled = model.isDisabled })
+                (createForm shared.translators shared.environment { isDisabled = model.isDisabled })
                 model.form
                 { toMsg = GotFormMsg
                 , onSubmit = SubmittedForm
@@ -353,7 +355,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.query loggedIn
-                        (Community.domainAvailableQuery (Route.communityFullDomainFromUrl formOutput.url))
+                        (Community.domainAvailableQuery formOutput.url.host)
                         (GotDomainAvailableResponse formOutput)
                     )
 
@@ -366,7 +368,7 @@ update msg model loggedIn =
                         , logoUrl = formOutput.logo
                         , name = formOutput.name
                         , description = formOutput.description
-                        , subdomain = Route.communityFullDomainFromUrl formOutput.url
+                        , subdomain = formOutput.url.host
                         , inviterReward = formOutput.inviterReward
                         , invitedReward = formOutput.invitedReward
                         , hasShop = True
@@ -420,13 +422,7 @@ update msg model loggedIn =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Checked that domain is available"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , Route.communityFullDomainFromUrl formOutput.url
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
                     , level = Log.DebugLevel
                     }
 
@@ -441,13 +437,7 @@ update msg model loggedIn =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Tried domain that is unavailable"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , Route.communityFullDomainFromUrl formOutput.url
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
                     , level = Log.DebugLevel
                     }
 
@@ -459,13 +449,7 @@ update msg model loggedIn =
                     "Got an error when checking if community domain is available"
                     { moduleName = "Page.Community.New", function = "update" }
                     [ { name = "Domain"
-                      , extras =
-                            Dict.fromList
-                                [ ( "tried"
-                                  , Route.communityFullDomainFromUrl formOutput.url
-                                        |> Encode.string
-                                  )
-                                ]
+                      , extras = Dict.fromList [ ( "tried", Encode.string formOutput.url.host ) ]
                       }
                     ]
                     err

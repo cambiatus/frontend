@@ -1,8 +1,7 @@
 module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
-    , communityFullDomain
-    , communityFullDomainFromUrl
+    , addEnvironmentToUrl
     , externalHref
     , fromUrl
     , href
@@ -12,6 +11,7 @@ module Route exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account
 import Html exposing (Attribute)
@@ -231,31 +231,24 @@ externalHref shared community route =
         |> Attr.href
 
 
-communityFullDomain : Shared -> String -> String
-communityFullDomain shared subdomain =
+addEnvironmentToUrl : Environment -> Url.Url -> Url.Url
+addEnvironmentToUrl environment url =
     let
-        communityUrl =
-            externalCommunityLink shared subdomain Root
+        environmentString =
+            case environment of
+                Environment.Development ->
+                    ".staging.cambiatus.io"
+
+                Environment.Staging ->
+                    ".staging.cambiatus.io"
+
+                Environment.Demo ->
+                    ".demo.cambiatus.io"
+
+                Environment.Production ->
+                    ".cambiatus.io"
     in
-    communityFullDomainFromUrl communityUrl
-
-
-communityFullDomainFromUrl : Url.Url -> String
-communityFullDomainFromUrl url =
-    { url
-        | host = String.replace "localhost" "cambiatus.io" url.host
-        , port_ = Nothing
-    }
-        |> Url.toString
-        |> String.replace "http://" ""
-        |> String.replace "https://" ""
-        |> (\domain ->
-                if String.endsWith "/" domain then
-                    String.dropRight 1 domain
-
-                else
-                    domain
-           )
+    { url | host = url.host ++ environmentString }
 
 
 
