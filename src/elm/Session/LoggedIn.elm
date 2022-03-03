@@ -1106,25 +1106,24 @@ isAdminPage page =
 
 viewFooter : Shared -> Html msg
 viewFooter shared =
-    footer [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0" ]
-        [ p [ class "text-sm flex w-full justify-center items-center" ]
+    footer [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8" ]
+        [ p [ class "text-sm text-center flex w-full justify-center items-center mb-4" ]
             -- TODO - I18N
-            [ text "Created with"
+            [ span [] [ text "Created with" ]
             , Icons.heartSolid
-            , text "by Satisfied Vagabonds"
+            , span [] [ text "by Satisfied Vagabonds" ]
             ]
-
-        -- TODO - Fix styling
         , a
             [ Html.Attributes.href (codeOfConductUrl shared.language)
             , Html.Attributes.target "_blank"
+            , class "text-center text-orange-300 hover:underline"
             ]
             -- TODO - I18N
             [ text "Diretrizes e código de conduta 1.0" ]
         , img
-            -- TODO - Add alt attribute
-            [ class "h-24 w-full"
+            [ class "h-24 w-full mt-3"
             , src "/images/satisfied-vagabonds.svg"
+            , alt ""
             ]
             []
         ]
