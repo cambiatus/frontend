@@ -145,35 +145,27 @@ createForm ({ t } as translators) { isDisabled } =
                     }
             )
         |> Form.with
-            (Form.introspect
-                (\values ->
-                    Form.Text.init
-                        { label = t "settings.community_info.url.title"
-                        , id = "subdomain-input"
-                        }
-                        |> (if String.isEmpty values.url then
-                                identity
-
-                            else
-                                Form.Text.withElements
-                                    [ span
-                                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
-                                        , classList [ ( "bg-gray-500", isDisabled ) ]
-                                        ]
-                                        [ text ".cambiatus.io" ]
-                                    ]
-                           )
-                        |> Form.textField
-                            { parser =
-                                Form.Validate.succeed
-                                    >> Form.Validate.map String.toLower
-                                    >> Form.Validate.url
-                                    >> Form.Validate.validate translators
-                            , value = .url
-                            , update = \url input -> { input | url = url }
-                            , externalError = always Nothing
-                            }
-                )
+            (Form.Text.init
+                { label = t "settings.community_info.url.title"
+                , id = "subdomain-input"
+                }
+                |> Form.Text.withElements
+                    [ span
+                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
+                        , classList [ ( "bg-gray-500", isDisabled ) ]
+                        ]
+                        [ text ".cambiatus.io" ]
+                    ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.map String.toLower
+                            >> Form.Validate.url
+                            >> Form.Validate.validate translators
+                    , value = .url
+                    , update = \url input -> { input | url = url }
+                    , externalError = always Nothing
+                    }
             )
         |> Form.withGroup
             [ class "grid grid-cols-2 gap-4" ]
