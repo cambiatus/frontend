@@ -1147,7 +1147,7 @@ codeOfConductUrl language =
                     "/pt-br/codigo-de-conduta"
 
                 Translation.Spanish ->
-                    "/es/condigo-de-conducta"
+                    "/es/codigo-de-conducta"
 
                 Translation.Catalan ->
                     defaultEndpoint
