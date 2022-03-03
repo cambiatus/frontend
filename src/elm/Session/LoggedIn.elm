@@ -50,7 +50,7 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, footer, h2, img, li, nav, p, span, strong, text, ul)
-import Html.Attributes exposing (alt, class, classList, src, type_)
+import Html.Attributes exposing (alt, class, classList, disabled, src, type_)
 import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -200,8 +200,6 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
-
-        -- TODO - Add delay before user can deny code of conduct again
         , Time.every (60 * 1000) GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
@@ -254,7 +252,7 @@ type alias Model =
 type CodeOfConductModalStatus
     = CodeOfConductNotShown
     | CodeOfConductShown
-    | CodeOfConductShownWithWarning
+    | CodeOfConductShownWithWarning { hasCompletedAnimation : Bool }
 
 
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
@@ -921,6 +919,15 @@ insufficientPermissionsModal model =
 
 codeOfConductModal : Model -> Html (Msg externalMsg)
 codeOfConductModal model =
+    let
+        needsToWaitBeforeDenyingAgain =
+            case model.codeOfConductModalStatus of
+                CodeOfConductShownWithWarning { hasCompletedAnimation } ->
+                    not hasCompletedAnimation
+
+                _ ->
+                    False
+    in
     Modal.initWith
         { closeMsg = ClickedDenyCodeOfConduct
         , isVisible = model.codeOfConductModalStatus /= CodeOfConductNotShown
@@ -951,7 +958,7 @@ codeOfConductModal model =
                         ]
                     ]
 
-                CodeOfConductShownWithWarning ->
+                CodeOfConductShownWithWarning _ ->
                     [ p [ class "text-red mt-4" ]
                         -- TODO - I18N
                         [ strong [ class "uppercase" ] [ text "Atenção: " ]
@@ -989,10 +996,23 @@ codeOfConductModal model =
                     [ text "Aceito" ]
                 , button
                     [ onClick ClickedDenyCodeOfConduct
-                    , class "button button-secondary w-full"
+                    , class "button button-secondary !bg-white w-full relative overflow-hidden"
+                    , disabled needsToWaitBeforeDenyingAgain
                     ]
+                    [ case model.codeOfConductModalStatus of
+                        CodeOfConductShownWithWarning _ ->
+                            div
+                                [ class "absolute top-0 left-0 bottom-0 bg-gray-500 w-full origin-left animate-scale-down"
+                                , Html.Events.on "animationend" (Decode.succeed EndedCodeOfConductWarningAnimation)
+                                ]
+                                []
+
+                        _ ->
+                            text ""
+
                     -- TODO - I18N
-                    [ text "Não aceito" ]
+                    , span [ class "z-10" ] [ text "Não aceito" ]
+                    ]
                 ]
             ]
         |> Modal.toHtml
@@ -1093,6 +1113,8 @@ viewFooter shared =
             , Icons.heartSolid
             , text "by Satisfied Vagabonds"
             ]
+
+        -- TODO - Fix styling
         , a
             [ Html.Attributes.href (codeOfConductUrl shared.language)
             , Html.Attributes.target "_blank"
@@ -1499,6 +1521,9 @@ mapMsg mapFn msg =
         CompletedAcceptingCodeOfConduct result ->
             CompletedAcceptingCodeOfConduct result
 
+        EndedCodeOfConductWarningAnimation ->
+            EndedCodeOfConductWarningAnimation
+
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
 mapExternal mapFn msg =
@@ -1842,6 +1867,7 @@ type Msg externalMsg
     | ClickedAcceptCodeOfConduct
     | ClickedDenyCodeOfConduct
     | CompletedAcceptingCodeOfConduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | EndedCodeOfConductWarningAnimation
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -2597,18 +2623,27 @@ update msg model =
         ClickedDenyCodeOfConduct ->
             case model.codeOfConductModalStatus of
                 CodeOfConductNotShown ->
-                    -- TODO - Maybe log impossible?
                     model
                         |> UR.init
+                        |> UR.logImpossible msg
+                            "Denied code of conduct, but modal wasn't shown"
+                            (Just model.accountName)
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            []
 
                 CodeOfConductShown ->
-                    { model | codeOfConductModalStatus = CodeOfConductShownWithWarning }
+                    { model | codeOfConductModalStatus = CodeOfConductShownWithWarning { hasCompletedAnimation = False } }
                         |> UR.init
 
-                CodeOfConductShownWithWarning ->
-                    -- TODO - Treat this case
-                    model
-                        |> UR.init
+                CodeOfConductShownWithWarning { hasCompletedAnimation } ->
+                    if not hasCompletedAnimation then
+                        model
+                            |> UR.init
+
+                    else
+                        -- TODO - Treat this case
+                        model
+                            |> UR.init
 
         CompletedAcceptingCodeOfConduct (RemoteData.Failure err) ->
             -- TODO - I18N
@@ -2624,6 +2659,18 @@ update msg model =
 
         CompletedAcceptingCodeOfConduct _ ->
             model
+                |> UR.init
+
+        EndedCodeOfConductWarningAnimation ->
+            { model
+                | codeOfConductModalStatus =
+                    case model.codeOfConductModalStatus of
+                        CodeOfConductShownWithWarning _ ->
+                            CodeOfConductShownWithWarning { hasCompletedAnimation = True }
+
+                        _ ->
+                            model.codeOfConductModalStatus
+            }
                 |> UR.init
 
 
@@ -3163,6 +3210,9 @@ msgToString msg =
 
         CompletedAcceptingCodeOfConduct r ->
             [ "CompletedAcceptingCodeOfConduct", UR.remoteDataToString r ]
+
+        EndedCodeOfConductWarningAnimation ->
+            [ "EndedCodeOfConductWarningAnimation" ]
 
 
 externalMsgToString : External msg -> List String
