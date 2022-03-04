@@ -920,6 +920,9 @@ insufficientPermissionsModal model =
 codeOfConductModal : Model -> Html (Msg externalMsg)
 codeOfConductModal model =
     let
+        { t, tr } =
+            model.shared.translators
+
         needsToWaitBeforeDenyingAgain =
             case model.codeOfConductModalStatus of
                 CodeOfConductShownWithWarning { hasCompletedAnimation } ->
@@ -932,20 +935,16 @@ codeOfConductModal model =
         { closeMsg = ClickedDenyCodeOfConduct
         , isVisible = model.codeOfConductModalStatus /= CodeOfConductNotShown
         }
-        -- TODO - I18N
-        |> Modal.withHeader "Diretrizes da comunidade e Código de conduta 1.0"
+        |> Modal.withHeader (tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ])
         |> Modal.withBody
             (case model.codeOfConductModalStatus of
                 CodeOfConductNotShown ->
                     []
 
                 CodeOfConductShown ->
-                    -- TODO - I18N
-                    [ p [ class "mt-4" ] [ text "Todas as comunidades digitais criadas usando o webapp Cambiatus são regidas pelas Diretrizes da comunidade e Código de conduta da Cambiatus." ]
+                    [ p [ class "mt-4" ] [ text <| t "terms_of_conduct.description" ]
                     , br [] []
-
-                    -- TODO - I18N
-                    , p [] [ text "Para que você continue tendo uma boa experiência com a comunidade, recomendamos que leia nossas Diretrizes e Código de conduta." ]
+                    , p [] [ text <| t "terms_of_conduct.to_have_good_experience" ]
                     , br [] []
                     , p [ class "mb-6" ]
                         [ a
@@ -953,27 +952,19 @@ codeOfConductModal model =
                             , Html.Attributes.target "_blank"
                             , class "text-orange-300 hover:underline focus-visible:underline focus-visible:outline-none rounded-sm"
                             ]
-                            -- TODO - I18N
-                            [ text "Ler Diretrizes da comunidade e Código de conduta 1.0 da Cambiatus" ]
+                            [ text <| tr "terms_of_conduct.link" [ ( "version", codeOfConductVersion ) ] ]
                         ]
                     ]
 
                 CodeOfConductShownWithWarning _ ->
                     [ p [ class "text-red mt-4" ]
-                        -- TODO - I18N
-                        [ strong [ class "uppercase" ] [ text "Atenção: " ]
-                        , text "O não aceite das Diretrizes da comunidade e Código de conduta impede que você realize atividades dentro da comunidade, como comprar, vender, transferir, convidar amigos, etc."
+                        [ strong [ class "uppercase" ] [ text <| t "terms_of_conduct.attention" ]
+                        , text <| t "terms_of_conduct.not_accepting"
                         ]
                     , br [] []
-                    , p []
-                        -- TODO - I18N
-                        [ text "Para que você pertença e desfrute de todas as atividades que envolvem a comunidade, você deve aceitar as Diretrizes da comunidade e Código de conduta 1.0."
-                        ]
+                    , p [] [ text <| tr "terms_of_conduct.to_participate" [ ( "version", codeOfConductVersion ) ] ]
                     , br [] []
-                    , p []
-                        -- TODO - I18N
-                        [ text "Tem certeza que deseja não aceitar?"
-                        ]
+                    , p [] [ text <| t "terms_of_conduct.are_you_sure" ]
                     , br [] []
                     , p [ class "mb-6" ]
                         [ a
@@ -981,8 +972,7 @@ codeOfConductModal model =
                             , Html.Attributes.target "_blank"
                             , class "text-orange-300 hover:underline"
                             ]
-                            -- TODO - I18N
-                            [ text "Ler Diretrizes da comunidade e Código de conduta 1.0 da Cambiatus" ]
+                            [ text <| tr "terms_of_conduct.link" [ ( "version", codeOfConductVersion ) ] ]
                         ]
                     ]
             )
@@ -992,8 +982,7 @@ codeOfConductModal model =
                     [ onClick ClickedAcceptCodeOfConduct
                     , class "button button-primary w-full"
                     ]
-                    -- TODO - I18N
-                    [ text "Aceito" ]
+                    [ text <| t "terms_of_conduct.accept" ]
                 , button
                     [ onClick ClickedDenyCodeOfConduct
                     , class "button button-secondary !bg-white w-full relative overflow-hidden"
@@ -1009,9 +998,7 @@ codeOfConductModal model =
 
                         _ ->
                             text ""
-
-                    -- TODO - I18N
-                    , span [ class "z-10" ] [ text "Não aceito" ]
+                    , span [ class "z-10" ] [ text <| t "terms_of_conduct.deny" ]
                     ]
                 ]
             ]
@@ -1106,20 +1093,22 @@ isAdminPage page =
 
 viewFooter : Shared -> Html msg
 viewFooter shared =
+    let
+        { t, tr } =
+            shared.translators
+    in
     footer [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8" ]
         [ p [ class "text-sm text-center flex w-full justify-center items-center mb-4" ]
-            -- TODO - I18N
-            [ span [] [ text "Created with" ]
+            [ span [] [ text <| t "footer.created_with" ]
             , Icons.heartSolid
-            , span [] [ text "by Satisfied Vagabonds" ]
+            , span [] [ text <| t "footer.created_by" ]
             ]
         , a
             [ Html.Attributes.href (codeOfConductUrl shared.language)
             , Html.Attributes.target "_blank"
             , class "text-center text-orange-300 hover:underline"
             ]
-            -- TODO - I18N
-            [ text "Diretrizes e código de conduta 1.0" ]
+            [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
         , img
             [ class "h-24 w-full mt-3"
             , src "/images/satisfied-vagabonds.svg"
@@ -2645,9 +2634,8 @@ update msg model =
                             |> UR.init
 
         CompletedAcceptingCodeOfConduct (RemoteData.Failure err) ->
-            -- TODO - I18N
             -- TODO - Should we try to sync it when possible?
-            { model | feedback = Feedback.Visible Feedback.Failure "Something went wrong when accepting code of conduct" }
+            { model | feedback = Feedback.Visible Feedback.Failure (shared.translators.t "terms_of_conduct.error_accepting") }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just model.accountName)
@@ -2990,6 +2978,11 @@ askedAuthentication model =
         , showAuthModal = True
         , showInsufficientPermissionsModal = False
     }
+
+
+codeOfConductVersion : String
+codeOfConductVersion =
+    "1.0"
 
 
 

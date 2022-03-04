@@ -1310,5 +1310,22 @@
       "try_again": "Si us plau, torneu-ho a provar quan tingueu prou permisos!",
       "ok": "Entès"
     }
+  },
+  "terms_of_conduct": {
+    "title": "Directrius de la comunitat i codi de conducta {{version}}",
+    "description": "Totes les comunitats digitals creades amb l'aplicació web de Cambiatus es regeixen per les Directrius de la comunitat i el Codi de conducta de Cambiatus.",
+    "to_have_good_experience": "Per tal que continueu tenint una bona experiència amb la comunitat, us recomanem que llegiu les nostres Directrius i Codi de conducta.",
+    "link": "Llegeix les Directrius de la comunitat i el Codi de conducta de Cambiatus {{version}}",
+    "attention": "Caps amunt: ",
+    "not_accepting": "L'incompliment de les Directrius de la comunitat i del Codi de conducta impedeix realitzar activitats dins de la comunitat, com ara comprar, vendre, transferir, convidar amics, etc.",
+    "to_participate": "Perquè pugueu pertànyer i gaudir de totes les activitats que involucren la comunitat, heu d'acceptar les Directrius de la comunitat i el Codi de conducta {{version}}.",
+    "are_you_sure": "Estàs segur que no vols acceptar?",
+    "accept": "Accepto",
+    "deny": "No accepto",
+    "error_accepting": "S'ha produït un error en acceptar el Codi de conducta"
+  },
+  "footer": {
+    "created_with": "Creat amb",
+    "created_by": "per Satisfied Vagabonds"
   }
 }
