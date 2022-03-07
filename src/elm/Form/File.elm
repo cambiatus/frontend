@@ -1,6 +1,6 @@
 module Form.File exposing
     ( init, Options
-    , withDisabled, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
+    , withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
     , isEmpty, parser
     , view
@@ -25,7 +25,7 @@ module Form.File exposing
 
 ## Adding attributes
 
-@docs withDisabled, withContainerAttrs, withFileTypes, FileType, withVariant, Variant, RectangleBackground
+@docs withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType, withVariant, Variant, RectangleBackground
 
 
 # Getters
@@ -149,6 +149,7 @@ type Options msg
         , id : String
         , disabled : Bool
         , containerAttrs : List (Html.Attribute msg)
+        , extraAttrs : List (Html.Attribute msg)
         , fileTypes : List FileType
         , variant : Variant
         }
@@ -163,6 +164,7 @@ init { label, id } =
         , id = id
         , disabled = False
         , containerAttrs = []
+        , extraAttrs = []
         , fileTypes = [ Image ]
         , variant = LargeRectangle Purple
         }
@@ -315,6 +317,13 @@ withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
 
 
+{-| Adds attributes to the element that contains the file uploader
+-}
+withAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withAttrs attrs (Options options) =
+    Options { options | extraAttrs = options.extraAttrs ++ attrs }
+
+
 {-| Adds file types that the input accepts
 -}
 withFileTypes : List FileType -> Options msg -> Options msg
@@ -361,7 +370,7 @@ viewInput : Options msg -> ViewConfig msg -> (Msg -> msg) -> Html msg
 viewInput (Options options) viewConfig toMsg =
     input
         [ id options.id
-        , class "sr-only form-file"
+        , class "hidden form-file"
         , type_ "file"
         , onFileChange (RequestedUploadFile >> toMsg)
         , acceptFileTypes options.fileTypes
@@ -387,15 +396,16 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
         [ View.Components.label [] { targetId = options.id, labelText = options.label }
         , viewInput (Options options) viewConfig toMsg
         , Html.label
-            [ class "relative w-full h-56 rounded-sm flex justify-center items-center file-decoration"
-            , class backgroundColor
-            , class foregroundColor
-            , classList
-                [ ( "cursor-pointer", not options.disabled )
-                , ( "cursor-not-allowed", options.disabled )
-                ]
-            , for options.id
-            ]
+            (class "relative w-full h-56 rounded-sm flex justify-center items-center file-decoration"
+                :: class backgroundColor
+                :: class foregroundColor
+                :: classList
+                    [ ( "cursor-pointer", not options.disabled )
+                    , ( "cursor-not-allowed", options.disabled )
+                    ]
+                :: for options.id
+                :: options.extraAttrs
+            )
             [ case value of
                 RemoteData.Loading ->
                     View.Components.loadingLogoAnimated viewConfig.translators ""
@@ -423,7 +433,7 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
                 _ ->
                     div [ class "font-bold text-center" ]
                         [ div [ class "w-10 mx-auto mb-2" ] [ icon ]
-                        , p []
+                        , p [ class "px-4" ]
                             [ Html.text (viewConfig.translators.t "community.actions.proof.upload_hint") ]
                         ]
             ]
@@ -473,13 +483,14 @@ viewSmallCircle (Options options) viewConfig value toMsg =
         , div [ class "mt-2 m-auto w-20 h-20 relative" ]
             [ viewInput (Options options) viewConfig toMsg
             , Html.label
-                [ for options.id
-                , class "block"
-                , classList
-                    [ ( "cursor-pointer", not options.disabled )
-                    , ( "cursor-not-allowed", options.disabled )
-                    ]
-                ]
+                (for options.id
+                    :: class "block"
+                    :: classList
+                        [ ( "cursor-pointer", not options.disabled )
+                        , ( "cursor-not-allowed", options.disabled )
+                        ]
+                    :: options.extraAttrs
+                )
                 [ viewImg
                 , span
                     [ class "absolute bottom-0 right-0 bg-orange-300 rounded-full transition-all file-decoration"
@@ -543,9 +554,10 @@ viewHardcodedChoices (Options options) viewConfig choices toMsg =
             (List.indexedMap viewItem choices.files
                 ++ [ viewInput (Options options) viewConfig toMsg
                    , Html.label
-                        [ for options.id
-                        , class ("flex-col text-center cursor-pointer " ++ itemClass)
-                        ]
+                        (for options.id
+                            :: class ("flex-col text-center cursor-pointer " ++ itemClass)
+                            :: options.extraAttrs
+                        )
                         [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
                             [ Icons.imageMultiple "text-white fill-current w-8 h-8"
                             ]

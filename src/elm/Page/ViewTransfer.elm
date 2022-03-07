@@ -6,8 +6,8 @@ import Emoji
 import Eos
 import Eos.Explorer
 import Graphql.Http
-import Html exposing (Html, a, div, h2, h5, img, p, span, text)
-import Html.Attributes exposing (class, href, src, target)
+import Html exposing (Html, a, div, h2, img, p, span, text)
+import Html.Attributes exposing (alt, class, href, src, target)
 import Icons
 import Markdown
 import Page
@@ -94,11 +94,18 @@ view loggedIn model =
                 Loaded maybeTransfer direction profileSummaries ->
                     case maybeTransfer of
                         Just transfer ->
-                            div []
+                            div [ class "flex-grow flex flex-col" ]
                                 [ Page.viewHeader loggedIn (t "transfer_result.title")
-                                , div []
-                                    [ viewTransfer loggedIn transfer direction
-                                    , viewDetails loggedIn transfer profileSummaries direction
+                                , div [ class "relative flex-grow grid items-center" ]
+                                    [ div [ class "bg-purple-500 absolute top-0 bottom-0 left-0 right-1/2 hidden lg:block" ] []
+                                    , div [ class "bg-white absolute top-0 bottom-0 left-1/2 right-0 hidden lg:block" ] []
+                                    , div
+                                        [ class "relative flex-grow grid mb-10 lg:container lg:mx-auto lg:px-4 lg:grid-cols-2 lg:py-10 lg:mb-0"
+                                        , Html.Attributes.id "content-container"
+                                        ]
+                                        [ viewTransfer loggedIn transfer direction
+                                        , viewDetails loggedIn transfer profileSummaries direction
+                                        ]
                                     ]
                                 ]
 
@@ -119,33 +126,27 @@ viewTransfer loggedIn transfer direction =
         t =
             loggedIn.shared.translators.t
     in
-    div [ class "flex w-full justify-center bg-green py-8" ]
-        [ div [ class "flex-row w-full lg:w-2/3" ]
-            [ div [ class "flex flex-wrap justify-center items-center" ]
-                [ img
-                    [ class "h-64 w-full lg:w-1/3"
-                    , src "/images/transfer-doggo.svg"
-                    ]
-                    []
-                , h2 [ class "w-full lg:w-2/3 mt-8 lg:px-8 text-center lg:text-left text-3xl font-semibold text-white" ]
-                    [ text <|
-                        case direction of
-                            TransferDirectionValue.Sending ->
-                                t "transfer_result.transfer_success"
-
-                            TransferDirectionValue.Receiving ->
-                                t "transfer_result.receive_success"
-                    ]
-                , div
-                    [ class "flex flex-wrap w-full p-4 mt-4 mx-2 bg-black bg-opacity-10 rounded-lg" ]
-                    [ p [ class "w-full text-sm text-white uppercase font-bold" ]
-                        [ text (t "transfer_result.transaction_id.title") ]
-                    , p [ class "w-full text-sm text-white uppercase" ]
-                        [ text (t "transfer_result.transaction_id.body") ]
-                    , p [ class "w-full tracking-widest text-center text-4xl mt-4" ]
-                        [ text (Emoji.encode transfer.createdTx) ]
-                    ]
+    div [ class "isolate text-white text-center bg-purple-500 pt-4 pb-6 lg:pb-0 lg:pt-0 lg:w-2/3 lg:mx-auto" ]
+        [ div [ class "container mx-auto px-4 lg:mx-0 lg:px-0 lg:max-w-none" ]
+            [ img
+                [ class "h-64 w-full"
+                , src "/images/transfer-doggo.svg"
+                , alt ""
                 ]
+                []
+            , h2 [ class "font-bold text-xl mt-7 mb-4" ]
+                [ text <|
+                    case direction of
+                        TransferDirectionValue.Sending ->
+                            t "transfer_result.transfer_success"
+
+                        TransferDirectionValue.Receiving ->
+                            t "transfer_result.receive_success"
+                ]
+            , p []
+                [ text (t "transfer_result.transaction_id.body") ]
+            , p [ class "text-xl md:text-2xl mt-4" ]
+                [ text (Emoji.encode transfer.createdTx) ]
             ]
         ]
 
@@ -162,43 +163,43 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
             shared.translators.t str
                 |> String.toUpper
     in
-    div [ class "flex flex-wrap mb-4 bg-white" ]
-        [ div [ class "container mx-auto" ]
+    div [ class "bg-white pt-6 pb-10 lg:pt-0 lg:pb-0 lg:w-2/3 lg:mx-auto lg:self-center" ]
+        [ div [ class "container mx-auto px-4 lg:mx-0 lg:px-0 lg:max-w-none" ]
             [ viewTransferCard loggedIn
                 transfer
                 direction
                 profileSummaries
                 GotProfileSummaryMsg
-                [ class "w-full px-4 bg-gray-100 py-6 my-8 md:px-20" ]
-            , div [ class "w-full mb-10 px-4" ]
-                [ viewDetail (t "transfer_result.date")
-                    (View.Components.dateViewer []
-                        identity
-                        shared
-                        (Utils.fromDateTime transfer.blockTime)
-                    )
-                , case transfer.memo of
-                    Just memo ->
-                        if memo == Markdown.empty then
-                            text ""
+                [ class "pb-6 border-b border-gray-500" ]
+            , viewDetail [ class "mt-6" ]
+                (t "transfer_result.date")
+                (View.Components.dateViewer []
+                    identity
+                    shared
+                    (Utils.fromDateTime transfer.blockTime)
+                )
+            , case transfer.memo of
+                Nothing ->
+                    text ""
 
-                        else
-                            Markdown.view [] memo
-                                |> viewDetail (t "transfer_result.message")
-
-                    Nothing ->
+                Just memo ->
+                    if memo == Markdown.empty then
                         text ""
-                , a
-                    [ class "button button-primary w-full mt-10"
-                    , Eos.Explorer.Transfer transfer.createdTx
-                        |> Eos.Explorer.link shared.environment
-                        |> href
-                    , target "_blank"
-                    ]
-                    [ text (t "block_explorer.see") ]
-                , a [ class "button button-secondary w-full mt-4", Route.href Route.Dashboard ]
-                    [ text (t "transfer_result.my_balance") ]
+
+                    else
+                        viewDetail [ class "mt-6" ]
+                            (t "transfer_result.message")
+                            (Markdown.view [] memo)
+            , a
+                [ class "button button-primary w-full mt-6"
+                , Eos.Explorer.Transfer transfer.createdTx
+                    |> Eos.Explorer.link shared.environment
+                    |> href
+                , target "_blank"
                 ]
+                [ text (t "block_explorer.see") ]
+            , a [ class "button button-secondary w-full mt-4", Route.href Route.Dashboard ]
+                [ text (t "transfer_result.my_balance") ]
             ]
         ]
 
@@ -225,21 +226,24 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                     ( transfer.from, transfer.to, "-rotate-90" )
 
         arrowClass =
-            "fill-current text-green " ++ rotateClass
+            "fill-current text-black " ++ rotateClass
 
         viewSummary profile summary =
-            Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile summary
+            summary
+                |> Profile.Summary.withNameBg False
+                |> Profile.Summary.withRelativeSelector "#content-container"
+                |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName profile
                 |> Html.map (profileSummaryToMsg (profile == leftProfile))
     in
     div
-        (class "grid grid-cols-5 place-items-center"
+        (class "flex justify-between"
             :: attrs
         )
         [ viewSummary leftProfile profileSummaries.left
-        , div [ class "col-span-3 flex items-center space-x-2 md:space-x-3" ]
+        , div [ class "flex mt-2 space-x-2 justify-self-center" ]
             [ Icons.arrowDown arrowClass
-            , div [ class "bg-white border border-green rounded-label px-3 pb-1 min-w-30" ]
-                [ span [ class "text-gray-900 text-sm uppercase" ]
+            , div [ class "flex flex-col px-2 font-bold" ]
+                [ span [ class "text-black text-sm uppercase" ]
                     [ text <|
                         case transferDirection of
                             TransferDirectionValue.Receiving ->
@@ -248,18 +252,12 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
                             TransferDirectionValue.Sending ->
                                 t "transfer_result.transferred"
                     ]
-                , div [ class "flex text-green" ]
-                    [ span [ class "font-semibold text-lg" ]
-                        [ transfer.value
-                            |> Eos.formatSymbolAmount loggedIn.shared.translators
-                                transfer.community.symbol
-                            |> text
-                        ]
-                    , span [ class "text-sm ml-2 mb-2" ]
-                        [ transfer.community.symbol
-                            |> Eos.symbolToSymbolCodeString
-                            |> text
-                        ]
+                , span [ class "text-green" ]
+                    [ Eos.assetToString loggedIn.shared.translators
+                        { amount = transfer.value
+                        , symbol = transfer.community.symbol
+                        }
+                        |> text
                     ]
                 ]
             , Icons.arrowDown arrowClass
@@ -268,10 +266,10 @@ viewTransferCard loggedIn transfer transferDirection profileSummaries profileSum
         ]
 
 
-viewDetail : String -> Html Msg -> Html Msg
-viewDetail title content =
-    div [ class "my-4" ]
-        [ h5 [ class "label" ] [ text title ]
+viewDetail : List (Html.Attribute Msg) -> String -> Html Msg -> Html Msg
+viewDetail containerAttrs title content =
+    div containerAttrs
+        [ p [ class "label" ] [ text title ]
         , p [] [ content ]
         ]
 

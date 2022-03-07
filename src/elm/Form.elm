@@ -2,7 +2,7 @@ module Form exposing
     ( Form
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
     , optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
-    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, unsafeArbitrary
+    , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
     , parse
@@ -77,7 +77,7 @@ documentation if you're stuck.
 
 ## Fields
 
-@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, unsafeArbitrary
+@docs textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
 
 
 ## Viewing
@@ -656,6 +656,32 @@ arbitrary html =
                   }
                 ]
             , result = OptNothing
+            }
+        )
+
+
+{-| Arbitrary HTML that can change the values of the form, while giving the form
+some value. You should usually not need this, but it can be useful for forms that
+need buttons to manipulate the input, or something similar.
+
+If you're having issues with form elements that have `OptNothing` as their result
+(when submitting the form, only a `Form.NoOp` msg is fired), you might want to use
+this instead of `Form.arbitrary`, because of how `OptNothing` just bubbles up the
+form's result.
+
+-}
+arbitraryWith : output -> Html (values -> values) -> Form msg values output
+arbitraryWith succeedValue html =
+    Form
+        (\_ ->
+            { fields =
+                [ { state = Arbitrary html
+                  , error = Nothing
+                  , validationStrategy = ValidateOnBlur
+                  , isRequired = False
+                  }
+                ]
+            , result = OptOk succeedValue
             }
         )
 

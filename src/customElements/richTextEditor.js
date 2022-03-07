@@ -132,11 +132,18 @@ export default (app) => (
 
     setDisabled () {
       const isDisabled = this.getAttribute('elm-disabled') === 'true'
+      const toolbarButtons = this.querySelectorAll(".ql-toolbar.ql-snow button")
 
       if (isDisabled) {
         this._quill.disable()
+        toolbarButtons.forEach((toolbarButton) => {
+          toolbarButton.disabled = true
+        })
       } else {
         this._quill.enable()
+        toolbarButtons.forEach((toolbarButton) => {
+          toolbarButton.disabled = false
+        })
       }
     }
 

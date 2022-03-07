@@ -17,7 +17,6 @@ module Profile exposing
     , upsertKycMutation
     , userContactSelectionSet
     , viewEmpty
-    , viewProfileName
     , viewProfileNameTag
     )
 
@@ -43,7 +42,7 @@ import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, p, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Iso8601
 import Kyc exposing (ProfileKyc)
 import Markdown exposing (Markdown)
@@ -403,10 +402,18 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileNameTag translators loggedInAccount profile =
-    p [ class "py-1 px-3 rounded-label uppercase font-bold text-white bg-black text-xs text-center" ]
-        [ viewProfileName translators loggedInAccount profile ]
+viewProfileNameTag :
+    Translation.Translators
+    -> { showBg : Bool }
+    -> Eos.Name
+    -> { profile | account : Eos.Name, name : Maybe String }
+    -> Html msg
+viewProfileNameTag shared { showBg } loggedInAccount profile =
+    p
+        [ class "py-1 px-3 uppercase font-bold text-xs text-center truncate"
+        , classList [ ( "bg-black text-white rounded-label", showBg ) ]
+        ]
+        [ viewProfileName shared loggedInAccount profile ]
 
 
 viewProfileName : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg

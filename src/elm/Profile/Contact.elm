@@ -4,6 +4,7 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
+    , circularIconWithGrayBg
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
@@ -31,6 +32,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, tabindex, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
@@ -711,13 +713,21 @@ contactTypeToIcon : String -> Bool -> ContactType -> Html msg
 contactTypeToIcon class_ isInverted contactType =
     case contactType of
         Phone ->
-            Icons.phone class_
+            if isInverted then
+                Icons.phoneInverted class_
+
+            else
+                Icons.phone class_
 
         Instagram ->
             Icons.instagram class_
 
         Telegram ->
-            Icons.telegram class_
+            if isInverted then
+                Icons.telegramInverted class_
+
+            else
+                Icons.telegram class_
 
         Whatsapp ->
             if isInverted then
@@ -727,26 +737,67 @@ contactTypeToIcon class_ isInverted contactType =
                 Icons.whatsapp class_
 
 
+circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
+circularIconWithGrayBg translators class_ (Normalized normalized) =
+    let
+        defaultClass =
+            case normalized.contactType of
+                Whatsapp ->
+                    "fill-current text-green "
+
+                Phone ->
+                    "fill-current text-orange-500"
+
+                _ ->
+                    ""
+    in
+    a
+        [ toHref (Normalized normalized)
+        , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+        , ariaLabel (ariaLabelForContactType translators normalized.contactType)
+        ]
+        [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
+
+
+ariaLabelForContactType : Translators -> ContactType -> String
+ariaLabelForContactType { t } contactType =
+    case contactType of
+        Phone ->
+            t "contact_form.reach_out.phone"
+
+        Instagram ->
+            t "contact_form.reach_out.instagram"
+
+        Telegram ->
+            t "contact_form.reach_out.telegram"
+
+        Whatsapp ->
+            t "contact_form.reach_out.whatsapp"
+
+
 circularIcon : String -> Normalized -> Html msg
 circularIcon class_ (Normalized normalized) =
     let
-        bgColor =
+        ( bgColor, textColor ) =
             case normalized.contactType of
                 Phone ->
-                    "bg-orange-300"
+                    ( "bg-orange-300", "fill-current text-white" )
 
                 Instagram ->
-                    "bg-instagram"
+                    ( "bg-instagram", "" )
 
                 Telegram ->
-                    "bg-telegram"
+                    ( "bg-telegram", "" )
 
                 Whatsapp ->
-                    "bg-whatsapp"
+                    ( "bg-whatsapp", "" )
     in
     case normalized.contactType of
         Telegram ->
-            a [ toHref (Normalized normalized) ]
+            a
+                [ toHref (Normalized normalized)
+                , class "hover:opacity-80"
+                ]
                 [ contactTypeToIcon class_ False normalized.contactType
                 ]
 
@@ -754,7 +805,8 @@ circularIcon class_ (Normalized normalized) =
             a
                 [ class
                     (String.join " "
-                        [ "p-2 rounded-full flex items-center justify-center"
+                        [ "p-2 rounded-full flex items-center justify-center hover:opacity-80"
+                        , textColor
                         , bgColor
                         , class_
                         ]

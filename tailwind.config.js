@@ -69,9 +69,10 @@ module.exports = {
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
-      DEFAULT: '0.4rem',
+      sm: '0.25rem',
       label: '0.313rem',
       'md': '0.375rem',
+      DEFAULT: '0.4rem',
       'lg': '1.25rem',
       'full': '9999px',
       'large': '12px'
@@ -123,6 +124,7 @@ module.exports = {
         '18': '4.5rem',
         '29': '7.25rem',
         '44': '11rem',
+        '68': '17rem',
         '72': '18rem',
         '80': '20rem',
         select: '18.75rem',
@@ -232,6 +234,7 @@ module.exports = {
       '3d': false // defaults to false
     }),
     require('@tailwindcss/forms'),
+    require('@tailwindcss/line-clamp'),
     // class support for rotation
     function ({ addUtilities, config }) {
       const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {

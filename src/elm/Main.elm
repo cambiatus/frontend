@@ -194,7 +194,7 @@ type Status
     | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
-    | ShopEditor (Maybe String) ShopEditor.Model
+    | ShopEditor (Maybe Int) ShopEditor.Model
     | ShopViewer Int ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
@@ -1513,8 +1513,9 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn (Route.EditSale saleId)
 
         Just (Route.ViewSale saleId) ->
-            ShopViewer.init session saleId
-                |> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
+            (\s -> ShopViewer.init s saleId)
+                >> updatePageUResult (ShopViewer saleId) GotShopViewerMsg model
+                |> withSession (Route.ViewSale saleId)
 
         Just (Route.ViewTransfer transferId) ->
             (\l -> ViewTransfer.init l transferId)
@@ -1576,10 +1577,6 @@ jsAddressToMsg address val =
         "GotRegisterMsg" :: rAddress ->
             Maybe.map GotRegisterMsg
                 (Register.jsAddressToMsg rAddress val)
-
-        "GotShopMsg" :: rAddress ->
-            Maybe.map GotShopMsg
-                (Shop.jsAddressToMsg rAddress val)
 
         "GotProfileMsg" :: rAddress ->
             Maybe.map GotProfileMsg

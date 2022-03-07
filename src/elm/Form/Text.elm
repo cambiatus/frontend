@@ -4,9 +4,8 @@ module Form.Text exposing
     , withDisabled, withCounterAttrs, withErrorAttrs, withExtraAttrs, withContainerAttrs, withLabelAttrs
     , withType, asNumeric, withInputElement, InputType(..), InputElement(..)
     , withMask, withAllowedChars
-    , getId, getErrorAttrs
+    , getId, getErrorAttrs, getSubmitOnEnter
     , view
-    , getSubmitOnEnter
     )
 
 {-| Creates a Cambiatus-style text input that supports error reporting,
@@ -50,7 +49,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 
 # Getters
 
-@docs getId, getErrorAttrs
+@docs getId, getErrorAttrs, getSubmitOnEnter
 
 
 # View
@@ -62,6 +61,7 @@ placeholders, localization and character counters. Use it within a `Form.Form`:
 import Eos
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, classList, disabled, id, placeholder, required, type_)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events as Events exposing (onInput)
 import Mask
 import Maybe.Extra
@@ -577,6 +577,7 @@ viewCurrencyElement symbol { hasError } =
             [ ( "border-red", hasError )
             , ( "border-gray-500 peer-focus:border-green", not hasError )
             ]
+        , ariaHidden True
         ]
         [ Html.text <| Eos.symbolToSymbolCodeString symbol
         ]

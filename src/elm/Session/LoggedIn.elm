@@ -51,7 +51,7 @@ import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, footer, h2, img, li, nav, p, span, strong, text, ul)
 import Html.Attributes exposing (alt, class, classList, disabled, src, type_)
-import Html.Attributes.Aria exposing (ariaLabel, ariaLive)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel, ariaLive, role)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
 import I18Next exposing (Delims(..), Translations)
@@ -1099,8 +1099,16 @@ viewFooter shared =
         { t, tr } =
             shared.translators
     in
-    footer [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8" ]
-        [ p [ class "text-sm text-center flex w-full justify-center items-center mb-4" ]
+    footer
+        [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8"
+        , role "contentinfo"
+        ]
+        -- TODO - I18N
+        [ p [ class "sr-only" ] [ text "Created with love by Satisfied Vagabonds" ]
+        , p
+            [ class "text-sm text-center flex w-full justify-center items-center mb-4"
+            , ariaHidden True
+            ]
             [ span [] [ text <| t "footer.created_with" ]
             , Icons.heartSolid
             , span [] [ text <| t "footer.created_by" ]
@@ -1631,12 +1639,11 @@ updateExternal externalMsg ({ shared } as model) =
                 , cmd = cmd
             }
 
-        CreatedCommunity symbol subdomain ->
-            let
-                ( newModel, cmd ) =
-                    selectCommunity model { symbol = symbol, subdomain = subdomain } Route.Dashboard
-            in
-            { defaultResult | model = newModel, cmd = cmd }
+        CreatedCommunity _ _ ->
+            { defaultResult
+                | model = { model | feedback = Feedback.Visible Feedback.Success (shared.translators.t "community.create.created") }
+                , cmd = Route.pushUrl shared.navKey Route.Dashboard
+            }
 
         ExternalBroadcast broadcastMsg ->
             case broadcastMsg of
@@ -2963,7 +2970,10 @@ selectCommunity ({ shared } as model) community route =
 
     else
         ( { model | selectedCommunity = RemoteData.Loading }
-        , fetchCommunity model (Just community.symbol)
+        , Cmd.batch
+            [ fetchCommunity model (Just community.symbol)
+            , Route.replaceUrl shared.navKey route
+            ]
         )
 
 

@@ -1,7 +1,7 @@
 module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
-    , communityFullDomain
+    , addEnvironmentToUrl
     , externalHref
     , fromUrl
     , href
@@ -11,6 +11,7 @@ module Route exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account
 import Html exposing (Attribute)
@@ -68,7 +69,7 @@ type Route
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
-    | EditSale String
+    | EditSale Int
     | ViewSale Int
     | ViewTransfer Int
     | Invite String
@@ -168,7 +169,7 @@ parser url =
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
         , Url.map ViewSale (s "shop" </> int)
-        , Url.map EditSale (s "shop" </> string </> s "edit")
+        , Url.map EditSale (s "shop" </> int </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Join
@@ -230,26 +231,24 @@ externalHref shared community route =
         |> Attr.href
 
 
-communityFullDomain : Shared -> String -> String
-communityFullDomain shared subdomain =
+addEnvironmentToUrl : Environment -> Url.Url -> Url.Url
+addEnvironmentToUrl environment url =
     let
-        communityUrl =
-            externalCommunityLink shared subdomain Root
-    in
-    { communityUrl
-        | host = String.replace "localhost" "cambiatus.io" communityUrl.host
-        , port_ = Nothing
-    }
-        |> Url.toString
-        |> String.replace "http://" ""
-        |> String.replace "https://" ""
-        |> (\domain ->
-                if String.endsWith "/" domain then
-                    String.dropRight 1 domain
+        environmentString =
+            case environment of
+                Environment.Development ->
+                    ".staging.cambiatus.io"
 
-                else
-                    domain
-           )
+                Environment.Staging ->
+                    ".staging.cambiatus.io"
+
+                Environment.Demo ->
+                    ".demo.cambiatus.io"
+
+                Environment.Production ->
+                    ".cambiatus.io"
+    in
+    { url | host = url.host ++ environmentString }
 
 
 
@@ -537,7 +536,7 @@ routeToString route =
                     ( [ "shop", "new", "sell" ], [] )
 
                 EditSale saleId ->
-                    ( [ "shop", saleId, "edit" ], [] )
+                    ( [ "shop", String.fromInt saleId, "edit" ], [] )
 
                 ViewSale saleId ->
                     ( [ "shop", String.fromInt saleId ], [] )
