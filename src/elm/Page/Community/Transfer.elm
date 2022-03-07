@@ -22,7 +22,7 @@ import Form.UserPicker
 import Form.Validate
 import Graphql.Document
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (class, value)
+import Html.Attributes exposing (class, disabled, value)
 import Http
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode exposing (Value)
@@ -265,7 +265,10 @@ viewForm ({ shared } as loggedIn) model community maxTransferAmount =
         , Form.view [ class "container mx-auto p-4" ]
             shared.translators
             (\submitButton ->
-                [ submitButton [ class "w-full mt-6 button button-primary" ]
+                [ submitButton
+                    [ class "w-full mt-6 button button-primary"
+                    , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                    ]
                     [ text_ "account.my_wallet.transfer.submit" ]
                 ]
             )
