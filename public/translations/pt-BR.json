@@ -1360,6 +1360,13 @@
   },
   "footer": {
     "created_with": "Criado com",
-    "created_by": "por Satisfied Vagabonds"
+    "created_by": "por Satisfied Vagabonds",
+    "created_with_love": "Criado com amor por Satisfied Vagabonds"
+  },
+  "account_frozen": {
+    "title": "Sua conta está congelada",
+    "why": "Você não aceitou as Diretrizes da comunidade e Código de conduta.",
+    "solve": "Para resolver essa situação e fazer parte da comunidade, ",
+    "solve_link": "aceite as Diretrizes da comunidade e Código de conduta."
   }
 }

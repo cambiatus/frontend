@@ -54,6 +54,7 @@ import Shop
 import Task
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
+import Translation
 import UpdateResult as UR
 import Url
 import Utils
@@ -204,7 +205,7 @@ view ({ shared } as loggedIn) model =
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
-                                viewFrozenAccountCard
+                                viewFrozenAccountCard shared.translators
 
                               else
                                 text ""
@@ -680,8 +681,8 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
-viewFrozenAccountCard : Html Msg
-viewFrozenAccountCard =
+viewFrozenAccountCard : Translation.Translators -> Html Msg
+viewFrozenAccountCard { t } =
     div [ class "bg-white rounded py-10 px-4 mb-6 md:mb-0" ]
         [ img
             [ src "/images/girl-with-ice-cube.svg"
@@ -690,21 +691,17 @@ viewFrozenAccountCard =
             ]
             []
         , h2 [ class "font-bold text-black text-lg mb-6" ]
-            -- TODO - I18N
-            [ text "Sua conta está congelada" ]
+            [ text <| t "account_frozen.title" ]
         , p [ class "text-black mb-3" ]
-            -- TODO - I18N
-            [ text "Você não aceitou as Diretrizes da comunidade e Código de conduta." ]
+            [ text <| t "account_frozen.why" ]
         , p []
-            -- TODO - I18N
-            [ text "Para resolver essa situação e fazer parte da comunidade, "
+            [ text <| t "account_frozen.solve"
             , a
                 [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
                 , Route.href Route.Dashboard
                 , onClick ClickedAcceptCodeOfConduct
                 ]
-                -- TODO - I18N
-                [ text "aceite as Diretrizes da comunidade e Código de conduta." ]
+                [ text <| t "account_frozen.solve_link" ]
             ]
         ]
 

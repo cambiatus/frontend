@@ -1348,12 +1348,19 @@
     "not_accepting": "Not accepting the Community guidelines & Code of conduct prevents you from performing activities inside the community, such as buying, selling, transferring, inviting friends, etc.",
     "to_participate": "So that you can belong and enjoy all activities that envolvhe the community, you must accept the Community guidelines & Code of conduct {{version}}.",
     "are_you_sure": "Are you sure you don't want to accept them?",
-    "accept": "I accept",
-    "deny": "I don't accept",
+    "accept": "Accept",
+    "deny": "Don't accept",
     "error_accepting": "Something went wrong when accepting the Code of conduct"
   },
   "footer": {
     "created_with": "Created with",
-    "created_by": "by Satisfied Vagabonds"
+    "created_by": "by Satisfied Vagabonds",
+    "created_with_love": "Created with love by Satisfied Vagabonds"
+  },
+  "account_frozen": {
+    "title": "Your account is frozen",
+    "why": "You haven't accepted the Community guidelines & Code of conduct.",
+    "solve": "To resolve this situation and be a part of the community, ",
+    "solve_link": "accept the Community guidelines & Code of conduct."
   }
 }

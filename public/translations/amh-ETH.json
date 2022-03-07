@@ -1313,6 +1313,13 @@
   },
   "footer": {
     "created_with": "ጋር የተፈጠረ",
-    "created_by": "በ Satisfied Vagabonds"
+    "created_by": "በ Satisfied Vagabonds",
+    "created_with_love": "በአረካ ቫጋቦንስ በፍቅር የተፈጠረ"
+  },
+  "account_frozen": {
+    "title": "መለያህ ታግዷል",
+    "why": "የማህበረሰብ መመሪያዎችን እና የስነምግባር ደንቡን አልተቀበሉም።",
+    "solve": "ይህንን ሁኔታ ለመፍታት, ",
+    "solve_link": "የማህበረሰብ መመሪያዎችን እና የስነምግባር ደንቦችን ይቀበሉ።"
   }
 }

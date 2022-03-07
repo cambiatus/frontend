@@ -1103,8 +1103,7 @@ viewFooter shared =
         [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8"
         , role "contentinfo"
         ]
-        -- TODO - I18N
-        [ p [ class "sr-only" ] [ text "Created with love by Satisfied Vagabonds" ]
+        [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
         , p
             [ class "text-sm text-center flex w-full justify-center items-center mb-4"
             , ariaHidden True

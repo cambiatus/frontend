@@ -1342,7 +1342,7 @@
     }
   },
   "terms_of_conduct": {
-    "title": "Directrius de la comunitat i codi de conducta {{version}}",
+    "title": "Directrius de la comunitat i Codi de conducta {{version}}",
     "description": "Totes les comunitats digitals creades amb l'aplicació web de Cambiatus es regeixen per les Directrius de la comunitat i el Codi de conducta de Cambiatus.",
     "to_have_good_experience": "Per tal que continueu tenint una bona experiència amb la comunitat, us recomanem que llegiu les nostres Directrius i Codi de conducta.",
     "link": "Llegeix les Directrius de la comunitat i el Codi de conducta de Cambiatus {{version}}",
@@ -1356,6 +1356,13 @@
   },
   "footer": {
     "created_with": "Creat amb",
-    "created_by": "per Satisfied Vagabonds"
+    "created_by": "per Satisfied Vagabonds",
+    "created_with_love": "Creat amb amor per Satisfied Vagabonds"
+  },
+  "account_frozen": {
+    "title": "El teu compte està congelat",
+    "why": "No heu acceptat les Directrius de la comunitat i Codi de conducta.",
+    "solve": "Per resoldre aquesta situació i formar part de la comunitat, ",
+    "solve_link": "accepta les Directrius de la comunitat i Codi de conducta."
   }
 }
