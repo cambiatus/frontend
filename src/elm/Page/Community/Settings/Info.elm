@@ -21,7 +21,7 @@ import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Html exposing (Html, div, form, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, maxlength)
+import Html.Attributes exposing (class, classList, disabled, maxlength)
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode
@@ -526,7 +526,10 @@ view ({ shared } as loggedIn) model =
                                     [ class "container mx-auto px-4 pb-10 pt-4" ]
                                     shared.translators
                                     (\submitButton ->
-                                        [ submitButton [ class "button button-primary w-full mt-14" ]
+                                        [ submitButton
+                                            [ class "button button-primary w-full mt-14"
+                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                            ]
                                             [ text <| t "menu.save" ]
                                         ]
                                     )

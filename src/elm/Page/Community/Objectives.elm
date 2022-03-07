@@ -119,8 +119,9 @@ view ({ shared } as loggedIn) model =
 viewNewObjectiveButton : LoggedIn.Model -> Community.Model -> Html msg
 viewNewObjectiveButton ({ shared } as loggedIn) community =
     if LoggedIn.isAccount community.creator loggedIn then
-        a
+        View.Components.disablableLink { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "button button-primary button-sm w-full md:w-64"
+            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
             , Route.href Route.NewObjective
             ]
             [ text (shared.translators.t "community.objectives.new") ]
@@ -186,16 +187,18 @@ viewObjective ({ shared } as loggedIn) model index objective =
         , if isOpen then
             div [ class "p-4 sm:px-6 pt-0" ]
                 [ div [ class "flex flex-wrap mt-2" ]
-                    [ a
+                    [ View.Components.disablableLink
+                        { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
                         , Route.href (Route.EditObjective objective.id)
-                        , classList [ ( "button-disabled", objective.isCompleted ) ]
+                        , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.objectives.edit" ]
-                    , a
+                    , View.Components.disablableLink
+                        { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-4 sm:mt-2 px-1 mb-4"
                         , Route.href (Route.NewAction objective.id)
-                        , classList [ ( "button-disabled", objective.isCompleted ) ]
+                        , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.actions.new" ]
                     ]
@@ -346,15 +349,11 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                                 action.validators
                             )
                     ]
-                , a
+                , View.Components.disablableLink
+                    { isDisabled = action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
                     , Route.href (Route.EditAction objectiveId action.id)
-                    , classList [ ( "button-disabled", action.objective.isCompleted ) ]
-                    , if action.objective.isCompleted then
-                        tabindex -1
-
-                      else
-                        class ""
+                    , classList [ ( "button-disabled", action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                     ]
                     [ text_ "community.actions.edit" ]
                 ]

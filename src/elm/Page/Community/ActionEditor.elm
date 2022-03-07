@@ -27,7 +27,7 @@ import Form.Toggle
 import Form.UserPicker
 import Form.Validate
 import Html exposing (Html, b, button, div, p, span, text)
-import Html.Attributes exposing (class, classList, type_)
+import Html.Attributes exposing (class, classList, disabled, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as Json exposing (Value)
 import Json.Encode as Encode
@@ -1045,7 +1045,10 @@ view ({ shared } as loggedIn) model =
                             shared.translators
                             (\submitButton ->
                                 [ div [ class "mt-18 sm:flex sm:align-center" ]
-                                    [ submitButton [ class "button button-primary w-full sm:w-48" ]
+                                    [ submitButton
+                                        [ class "button button-primary w-full sm:w-48"
+                                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                        ]
                                         [ if Maybe.Extra.isJust model.actionId then
                                             text <| t "menu.save"
 
@@ -1056,6 +1059,7 @@ view ({ shared } as loggedIn) model =
                                         button
                                             [ type_ "button"
                                             , class "button button-secondary w-full mt-4 sm:w-48 sm:mt-0 sm:ml-4"
+                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                                             , onClick
                                                 (Form.parse form_
                                                     formModel

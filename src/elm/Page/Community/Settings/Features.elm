@@ -109,7 +109,7 @@ view loggedIn model =
 
                         viewToggle { label, id, action, disabled, value, tooltip } =
                             Form.Toggle.init { label = text <| t label, id = id }
-                                |> Form.Toggle.withDisabled disabled
+                                |> Form.Toggle.withDisabled (disabled || not loggedIn.hasAcceptedCodeOfConduct)
                                 |> Form.Toggle.withContainerAttrs [ class "py-6" ]
                                 |> addTooltip tooltip
                                 |> (\options ->
