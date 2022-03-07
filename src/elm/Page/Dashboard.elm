@@ -718,13 +718,6 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
         text_ =
             text << t
 
-        disablableLink isDisabled route attrs =
-            if isDisabled then
-                span (class "select-none" :: attrs)
-
-            else
-                a (Route.href route :: attrs)
-
         listItem :
             (String -> Html Msg)
             -> Bool
@@ -766,10 +759,11 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
                     [ text (tr "dashboard.your_balance" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]) ]
                 , div [ class "flex space-x-4 mt-4" ]
-                    [ disablableLink (not loggedIn.hasAcceptedCodeOfConduct)
-                        (Route.Transfer Nothing)
+                    [ View.Components.disablableLink
+                        { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-primary w-full"
                         , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
+                        , Route.href (Route.Transfer Nothing)
                         ]
                         [ text_ "dashboard.transfer" ]
                     , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
@@ -790,7 +784,11 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5"
                     (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
-                    (disablableLink (not loggedIn.hasAcceptedCodeOfConduct) Route.Community)
+                    (\attrs ->
+                        View.Components.disablableLink
+                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                            (Route.href Route.Community :: attrs)
+                    )
                     []
                 , listItem Icons.profile
                     (not loggedIn.hasAcceptedCodeOfConduct)

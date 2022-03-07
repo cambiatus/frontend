@@ -1,7 +1,7 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label
+    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
     )
 
@@ -26,7 +26,7 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label
+@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label, disablableLink
 
 
 # Helpers
@@ -267,6 +267,26 @@ label attrs { targetId, labelText } =
     Html.label (class "label" :: for targetId :: attrs)
         [ text labelText
         ]
+
+
+{-| An element that acts as a link when it's not disabled, or as regular text when it is disabled.
+No styling is done, so you need to do it yourself wherever you're using this component, usually with `classList`:
+
+    disablableLink { isDisabled = isDisabled }
+        [ Route.href Route.Transfer
+        , class "button button-primary"
+        , classList [ ( "button-disabled", isDisabled ) ]
+        ]
+        [ text "Transfer to a friend " ]
+
+-}
+disablableLink : { isDisabled : Bool } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+disablableLink { isDisabled } =
+    if isDisabled then
+        Html.span
+
+    else
+        Html.a
 
 
 
