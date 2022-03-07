@@ -157,8 +157,10 @@ viewHeaderAndOptions ({ shared } as loggedIn) maybeClaims model =
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
             [ if not loggedIn.hasAcceptedCodeOfConduct then
                 LoggedIn.viewFrozenAccountCard shared.translators
-                    { onClick = ClickedAcceptCodeOfConduct }
-                    [ class "shadow-lg max-w-sm mx-auto" ]
+                    { onClick = ClickedAcceptCodeOfConduct
+                    , isHorizontal = True
+                    }
+                    [ class "shadow-lg" ]
 
               else
                 viewGoodPracticesCard shared

@@ -205,7 +205,9 @@ view ({ shared } as loggedIn) model =
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
                                 LoggedIn.viewFrozenAccountCard shared.translators
-                                    { onClick = ClickedAcceptCodeOfConduct }
+                                    { onClick = ClickedAcceptCodeOfConduct
+                                    , isHorizontal = False
+                                    }
                                     [ class "mb-6 lg:mb-0 self-start" ]
 
                               else

@@ -541,27 +541,34 @@ viewHighlightedNews { t } toPageMsg news =
         ]
 
 
-viewFrozenAccountCard : Translation.Translators -> { onClick : msg } -> List (Html.Attribute msg) -> Html msg
+viewFrozenAccountCard : Translation.Translators -> { onClick : msg, isHorizontal : Bool } -> List (Html.Attribute msg) -> Html msg
 viewFrozenAccountCard { t } options attrs =
-    div (class "bg-white rounded py-10 px-4" :: attrs)
+    div
+        (class "bg-white rounded py-10 px-4"
+            :: classList [ ( "md:flex md:space-x-6 lg:max-w-2xl md:py-6 md:px-10", options.isHorizontal ) ]
+            :: attrs
+        )
         [ img
             [ src "/images/girl-with-ice-cube.svg"
             , alt ""
             , class "mx-auto mb-8"
+            , classList [ ( "md:mb-0", options.isHorizontal ) ]
             ]
             []
-        , h2 [ class "font-bold text-black text-lg mb-6" ]
-            [ text <| t "account_frozen.title" ]
-        , p [ class "text-black mb-3" ]
-            [ text <| t "account_frozen.why" ]
-        , p []
-            [ text <| t "account_frozen.solve"
-            , a
-                [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
-                , Html.Attributes.href "#"
-                , onClick options.onClick
+        , div [ class "flex flex-col" ]
+            [ h2 [ class "font-bold text-black text-lg mb-6" ]
+                [ text <| t "account_frozen.title" ]
+            , p [ class "text-black mb-3" ]
+                [ text <| t "account_frozen.why" ]
+            , p []
+                [ text <| t "account_frozen.solve"
+                , a
+                    [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
+                    , Html.Attributes.href "#"
+                    , onClick options.onClick
+                    ]
+                    [ text <| t "account_frozen.solve_link" ]
                 ]
-                [ text <| t "account_frozen.solve_link" ]
             ]
         ]
 

@@ -136,8 +136,10 @@ view loggedIn model =
         viewFrozenAccountCard =
             if not loggedIn.hasAcceptedCodeOfConduct then
                 LoggedIn.viewFrozenAccountCard loggedIn.shared.translators
-                    { onClick = ClickedAcceptCodeOfConduct }
-                    [ class "max-w-sm mx-auto shadow-lg" ]
+                    { onClick = ClickedAcceptCodeOfConduct
+                    , isHorizontal = True
+                    }
+                    [ class "mx-auto shadow-lg mb-6" ]
 
             else
                 text ""
