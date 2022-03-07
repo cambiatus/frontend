@@ -31,8 +31,8 @@ import Form.Text
 import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, br, button, div, h1, hr, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, id, src, style, tabindex)
+import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -203,8 +203,13 @@ view ({ shared } as loggedIn) model =
                     in
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
-                            [ viewWelcomeCard loggedIn community balance
-                            , if community.hasObjectives && isValidator then
+                            [ if not loggedIn.hasAcceptedCodeOfConduct then
+                                viewFrozenAccountCard
+
+                              else
+                                text ""
+                            , viewWelcomeCard loggedIn community balance
+                            , if community.hasObjectives && isValidator && loggedIn.hasAcceptedCodeOfConduct then
                                 viewActionsForAnalysisCard loggedIn model
 
                               else
@@ -675,6 +680,35 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         |> Modal.toHtml
 
 
+viewFrozenAccountCard : Html Msg
+viewFrozenAccountCard =
+    div [ class "bg-white rounded py-10 px-4 mb-6 md:mb-0" ]
+        [ img
+            [ src "/images/girl-with-ice-cube.svg"
+            , alt ""
+            , class "mx-auto mb-8"
+            ]
+            []
+        , h2 [ class "font-bold text-black text-lg mb-6" ]
+            -- TODO - I18N
+            [ text "Sua conta está congelada" ]
+        , p [ class "text-black mb-3" ]
+            -- TODO - I18N
+            [ text "Você não aceitou as Diretrizes da comunidade e Código de conduta." ]
+        , p []
+            -- TODO - I18N
+            [ text "Para resolver essa situação e fazer parte da comunidade, "
+            , a
+                [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
+                , Route.href Route.Dashboard
+                , onClick ClickedAcceptCodeOfConduct
+                ]
+                -- TODO - I18N
+                [ text "aceite as Diretrizes da comunidade e Código de conduta." ]
+            ]
+        ]
+
+
 viewWelcomeCard : LoggedIn.Model -> Community.Model -> Balance -> Html Msg
 viewWelcomeCard ({ shared } as loggedIn) community balance =
     let
@@ -684,16 +718,31 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
         text_ =
             text << t
 
+        disablableLink isDisabled route attrs =
+            if isDisabled then
+                span (class "select-none" :: attrs)
+
+            else
+                a (Route.href route :: attrs)
+
         listItem :
             (String -> Html Msg)
+            -> Bool
             -> String
             -> String
             -> (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg)
             -> List (Html.Attribute Msg)
             -> Html Msg
-        listItem icon iconSize description element attrs =
+        listItem icon isDisabled iconSize description element attrs =
             li []
-                [ element (class "py-2 flex items-center w-full group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm" :: attrs)
+                [ element
+                    (class "py-2 flex items-center w-full"
+                        :: classList
+                            [ ( "group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm", not isDisabled )
+                            , ( "text-gray-900", isDisabled )
+                            ]
+                        :: attrs
+                    )
                     [ icon (iconSize ++ " mr-4 text-gray-500 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300")
                     , text description
                     , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300"
@@ -717,15 +766,17 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
                     [ text (tr "dashboard.your_balance" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]) ]
                 , div [ class "flex space-x-4 mt-4" ]
-                    [ a
+                    [ disablableLink (not loggedIn.hasAcceptedCodeOfConduct)
+                        (Route.Transfer Nothing)
                         [ class "button button-primary w-full"
-                        , Route.href (Route.Transfer Nothing)
+                        , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "dashboard.transfer" ]
                     , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
                         Just _ ->
                             button
                                 [ class "button button-secondary w-full"
+                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                                 , onClick ClickedSupportUsButton
                                 ]
                                 [ text_ "community.index.support_us" ]
@@ -736,17 +787,23 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 ]
             , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
                 [ listItem Icons.cambiatusCoin
+                    (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5"
                     (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
-                    a
-                    [ Route.href Route.Community ]
+                    (disablableLink (not loggedIn.hasAcceptedCodeOfConduct) Route.Community)
+                    []
                 , listItem Icons.profile
+                    (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5 h-5"
                     (t "dashboard.invite")
                     button
-                    [ onClick CreateInvite ]
+                    [ onClick CreateInvite
+                    , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                    , classList [ ( "cursor-default", not loggedIn.hasAcceptedCodeOfConduct ) ]
+                    ]
                 , if community.hasObjectives then
                     listItem Icons.flagWithoutBackground
+                        False
                         "h-5"
                         (t "dashboard.my_claims")
                         a
@@ -756,6 +813,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     text ""
                 , if community.hasShop then
                     listItem Icons.shop
+                        False
                         "w-5 h-5"
                         (t "dashboard.my_offers")
                         a
@@ -767,6 +825,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     RemoteData.Success contributionCount ->
                         if contributionCount > 0 then
                             listItem Icons.heartStroke
+                                False
                                 "w-5 h-5"
                                 (t "dashboard.my_contributions")
                                 a
@@ -797,7 +856,7 @@ viewActionsForAnalysisCard loggedIn model =
             text << t
     in
     div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
-        [ h1 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
+        [ h2 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
             [ strong [] [ text_ "dashboard.analysis.title.1" ]
             , text " "
             , text_ "dashboard.analysis.title.2"
@@ -891,7 +950,7 @@ viewTimelineCard loggedIn isValidator model =
         , id "transfer-list-container"
         ]
         [ div [ class "flex justify-between items-center mt-6 mb-4 lg:mt-0" ]
-            [ h1 [ class "text-gray-333" ]
+            [ h2 [ class "text-gray-333" ]
                 [ text_ "transfer.transfers_latest"
                 , text " "
                 , strong [] [ text_ "transfer.transfers" ]
@@ -956,6 +1015,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ClosedModalRequestingSponsor
+    | ClickedAcceptCodeOfConduct
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1296,6 +1356,11 @@ update msg model ({ shared, accountName } as loggedIn) =
             { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
                 |> UR.init
 
+        ClickedAcceptCodeOfConduct ->
+            model
+                |> UR.init
+                |> UR.addExt LoggedIn.ShowCodeOfConductModal
+
 
 
 -- HELPERS
@@ -1509,3 +1574,6 @@ msgToString msg =
 
         ClosedModalRequestingSponsor ->
             [ "ClosedModalRequestingSponsor" ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]

@@ -222,6 +222,7 @@ subscriptions model =
 type alias Model =
     { shared : Shared
     , codeOfConductModalStatus : CodeOfConductModalStatus
+    , hasAcceptedCodeOfConduct : Bool
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
@@ -263,6 +264,7 @@ initModel shared maybePrivateKey_ accountName authToken =
     in
     ( { shared = shared
       , codeOfConductModalStatus = CodeOfConductNotShown
+      , hasAcceptedCodeOfConduct = True
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
@@ -1168,6 +1170,7 @@ type External msg
     | RequestQuery (Cmd (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd msg } msg))
     | ShowFeedback Feedback.Status String
     | HideFeedback
+    | ShowCodeOfConductModal
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1574,6 +1577,9 @@ mapExternal mapFn msg =
         HideFeedback ->
             HideFeedback
 
+        ShowCodeOfConductModal ->
+            ShowCodeOfConductModal
+
 
 type Resource
     = CommunityResource
@@ -1786,6 +1792,9 @@ updateExternal externalMsg ({ shared } as model) =
         HideFeedback ->
             { defaultResult | model = { model | feedback = Feedback.Hidden } }
 
+        ShowCodeOfConductModal ->
+            { defaultResult | model = { model | codeOfConductModalStatus = CodeOfConductShown } }
+
 
 type alias UpdateResult msg =
     UR.UpdateResult Model (Msg msg) (ExternalMsg msg)
@@ -1967,17 +1976,19 @@ update msg model =
 
                                 Just _ ->
                                     Cmd.none
+
+                        hasAcceptedCodeOfConduct =
+                            Maybe.Extra.isJust p.latestAcceptedTerms
                     in
                     { model
                         | profile = RemoteData.Success p
+                        , hasAcceptedCodeOfConduct = model.hasAcceptedCodeOfConduct || hasAcceptedCodeOfConduct
                         , codeOfConductModalStatus =
-                            -- TODO - Should we care about the date?
-                            case p.latestAcceptedTerms of
-                                Just _ ->
-                                    CodeOfConductNotShown
+                            if hasAcceptedCodeOfConduct then
+                                CodeOfConductNotShown
 
-                                Nothing ->
-                                    CodeOfConductShown
+                            else
+                                CodeOfConductShown
                     }
                         |> UR.init
                         |> UR.addCmd sendLanguagePreference
@@ -2629,12 +2640,13 @@ update msg model =
                             |> UR.init
 
                     else
-                        -- TODO - Treat this case
-                        model
+                        { model
+                            | hasAcceptedCodeOfConduct = False
+                            , codeOfConductModalStatus = CodeOfConductNotShown
+                        }
                             |> UR.init
 
         CompletedAcceptingCodeOfConduct (RemoteData.Failure err) ->
-            -- TODO - Should we try to sync it when possible?
             { model | feedback = Feedback.Visible Feedback.Failure (shared.translators.t "terms_of_conduct.error_accepting") }
                 |> UR.init
                 |> UR.logGraphqlError msg
@@ -2645,7 +2657,7 @@ update msg model =
                     err
 
         CompletedAcceptingCodeOfConduct _ ->
-            model
+            { model | hasAcceptedCodeOfConduct = True }
                 |> UR.init
 
         EndedCodeOfConductWarningAnimation ->
@@ -3251,3 +3263,6 @@ externalMsgToString externalMsg =
 
         HideFeedback ->
             [ "HideFeedback" ]
+
+        ShowCodeOfConductModal ->
+            [ "ShowCodeOfConductModal" ]
