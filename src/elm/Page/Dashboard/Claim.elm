@@ -10,7 +10,7 @@ import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
 import Html exposing (Html, button, div, h3, p, span, strong, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
@@ -138,7 +138,7 @@ view ({ shared } as loggedIn) model =
                                         Claim.isVotable claim loggedIn.accountName shared.now
                                             && not model.isValidated
                                     then
-                                        viewVoteButtons shared.translators claim.id model.claimModalStatus
+                                        viewVoteButtons loggedIn claim.id model.claimModalStatus
 
                                     else
                                         text ""
@@ -203,13 +203,16 @@ viewProofs { t } claim =
             text ""
 
 
-viewVoteButtons : Translators -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
-viewVoteButtons ({ t } as translators) claimId modalStatus =
+viewVoteButtons : LoggedIn.Model -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
+viewVoteButtons loggedIn claimId modalStatus =
     let
+        { t } =
+            loggedIn.shared.translators
+
         viewVoteModal : Bool -> Bool -> Html Msg
         viewVoteModal isApproving isInProgress =
             Claim.viewVoteClaimModal
-                translators
+                loggedIn.shared.translators
                 { voteMsg = VoteClaim
                 , closeMsg = ClaimMsg Claim.CloseClaimModals
                 , claimId = claimId
@@ -224,11 +227,13 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
             [ button
                 [ class "button button-secondary text-red"
                 , onClick (ClaimMsg <| Claim.OpenVoteModal claimId False)
+                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                 ]
                 [ text <| t "dashboard.reject" ]
             , button
                 [ class "button button-primary"
                 , onClick (ClaimMsg <| Claim.OpenVoteModal claimId True)
+                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                 ]
                 [ text <| t "dashboard.verify" ]
             ]

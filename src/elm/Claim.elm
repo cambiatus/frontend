@@ -549,11 +549,13 @@ viewClaimCard loggedIn profileSummaries claim =
                     [ button
                         [ class "button button-danger"
                         , Utils.onClickNoBubble (OpenVoteModal claim.id False)
+                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                         ]
                         [ text (t "dashboard.reject") ]
                     , button
                         [ class "button button-primary"
                         , Utils.onClickNoBubble (OpenVoteModal claim.id True)
+                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                         ]
                         [ text (t "dashboard.verify") ]
                     ]
@@ -718,7 +720,7 @@ viewVotingProgress shared completionStatus =
 
 
 viewClaimModal : LoggedIn.Model -> ClaimProfileSummaries -> Model -> Html Msg
-viewClaimModal { shared, accountName } profileSummaries claim =
+viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
     let
         { t } =
             shared.translators
@@ -1024,11 +1026,13 @@ viewClaimModal { shared, accountName } profileSummaries claim =
                         [ button
                             [ class "w-full button button-danger"
                             , onClick (OpenVoteModal claim.id False)
+                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                             ]
                             [ text (t "dashboard.reject") ]
                         , button
                             [ class "w-full button button-primary"
                             , onClick (OpenVoteModal claim.id True)
+                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                             ]
                             [ text (t "dashboard.verify") ]
                         ]
