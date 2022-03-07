@@ -338,7 +338,8 @@ type Msg
     | SubmittedForm FormOutput
     | GotDomainAvailableResponse FormOutput (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
+    | GotCreateCommunityResponse (Result Value Eos.Symbol)
+    | CompletedCreatingCommunity
     | Redirect Community.CreateCommunityData
     | ClosedAuthModal
 
@@ -491,10 +492,24 @@ update msg model loggedIn =
                             ]
                     }
 
-        GotCreateCommunityResponse (Ok ( symbol, subdomain )) ->
+        GotCreateCommunityResponse (Ok symbol) ->
             model
                 |> UR.init
-                |> UR.addExt (LoggedIn.CreatedCommunity symbol subdomain)
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Eos.encodeTransaction
+                            [ { accountName = loggedIn.shared.contracts.community
+                              , name = "upsertrole"
+                              , authorization =
+                                    { actor = loggedIn.accountName
+                                    , permissionName = Eos.samplePermission
+                                    }
+                              , data = defaultRoleTransaction symbol
+                              }
+                            ]
+                    }
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -506,6 +521,12 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.New", function = "update" }
                     []
                     val
+
+        CompletedCreatingCommunity ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.created"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
         Redirect communityData ->
             let
@@ -532,6 +553,25 @@ update msg model loggedIn =
                     GotFormMsg
                     LoggedIn.addFeedback
                     model
+
+
+defaultRoleTransaction : Eos.Symbol -> Encode.Value
+defaultRoleTransaction symbol =
+    Encode.object
+        [ ( "community_id", Eos.encodeSymbol symbol )
+        , ( "name", Encode.string "member" )
+        , ( "color", Encode.string "#ffffff" )
+        , ( "permissions"
+          , Encode.list Encode.string
+                [ "invite"
+                , "claim"
+                , "order"
+                , "verify"
+                , "sell"
+                , "transfer"
+                ]
+          )
+        ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -564,19 +604,17 @@ jsAddressToMsg addr val =
 
         "StartedCreatingCommunity" :: [] ->
             Decode.decodeValue
-                (Decode.map2 (\_ s -> s)
+                (Decode.map2 (\_ symbol -> symbol)
                     (Decode.field "transactionId" Decode.string)
-                    (Decode.field "addressData"
-                        (Decode.map2 Tuple.pair
-                            (Decode.field "symbol" Eos.symbolDecoder)
-                            (Decode.field "subdomain" Decode.string)
-                        )
-                    )
+                    (Decode.at [ "addressData", "symbol" ] Eos.symbolDecoder)
                 )
                 val
                 |> Result.mapError (\_ -> val)
                 |> GotCreateCommunityResponse
                 |> Just
+
+        "GotCreateCommunityResponse" :: _ ->
+            Just CompletedCreatingCommunity
 
         _ ->
             Nothing
@@ -599,6 +637,9 @@ msgToString msg =
 
         GotCreateCommunityResponse _ ->
             [ "GotCreateCommunityResponse" ]
+
+        CompletedCreatingCommunity ->
+            [ "CompletedCreatingCommunity" ]
 
         Redirect _ ->
             [ "Redirect" ]
