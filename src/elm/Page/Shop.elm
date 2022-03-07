@@ -26,6 +26,7 @@ import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Shop exposing (Filter, Product)
 import UpdateResult as UR
+import View.Components
 
 
 
@@ -137,7 +138,7 @@ view loggedIn model =
                 Loading ->
                     div [ class "container mx-auto px-4 mt-6 mb-10" ]
                         [ viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn.shared.translators model
+                        , viewShopFilter loggedIn model
                         , Page.fullPageLoading loggedIn.shared
                         ]
 
@@ -147,7 +148,7 @@ view loggedIn model =
                 Loaded cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
                         [ viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn.shared.translators model
+                        , viewShopFilter loggedIn model
                         , viewGrid loggedIn cards
                         ]
     in
@@ -183,9 +184,12 @@ viewHeader { t } =
         ]
 
 
-viewShopFilter : Shared.Translators -> Model -> Html Msg
-viewShopFilter { t } model =
+viewShopFilter : LoggedIn.Model -> Model -> Html Msg
+viewShopFilter loggedIn model =
     let
+        { t } =
+            loggedIn.shared.translators
+
         newFilter =
             case model.filter of
                 Shop.All ->
@@ -195,8 +199,10 @@ viewShopFilter { t } model =
                     Shop.All
     in
     div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
-        [ a
+        [ View.Components.disablableLink
+            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "w-full md:w-40 button button-primary"
+            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
             , Route.href Route.NewSale
             ]
             [ text <| t "shop.create_new_offer" ]
