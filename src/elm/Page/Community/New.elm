@@ -555,7 +555,7 @@ update msg model loggedIn =
                     model
 
 
-defaultRoleTransaction : Eos.Symbol -> Encode.Value
+defaultRoleTransaction : Eos.Symbol -> Value
 defaultRoleTransaction symbol =
     Encode.object
         [ ( "community_id", Eos.encodeSymbol symbol )
