@@ -542,7 +542,7 @@ viewHighlightedNews { t } toPageMsg news =
 
 
 viewFrozenAccountCard : Translation.Translators -> { onClick : msg } -> List (Html.Attribute msg) -> Html msg
-viewFrozenAccountCard { t } { onClick } attrs =
+viewFrozenAccountCard { t } options attrs =
     div (class "bg-white rounded py-10 px-4" :: attrs)
         [ img
             [ src "/images/girl-with-ice-cube.svg"
@@ -559,7 +559,7 @@ viewFrozenAccountCard { t } { onClick } attrs =
             , a
                 [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
                 , Html.Attributes.href "#"
-                , Html.Events.onClick onClick
+                , onClick options.onClick
                 ]
                 [ text <| t "account_frozen.solve_link" ]
             ]

@@ -283,7 +283,7 @@ No styling is done, so you need to do it yourself wherever you're using this com
 disablableLink : { isDisabled : Bool } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
 disablableLink { isDisabled } =
     if isDisabled then
-        Html.span
+        span
 
     else
         Html.a

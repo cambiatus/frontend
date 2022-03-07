@@ -5,8 +5,8 @@ import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Dict exposing (Dict)
 import Eos
-import Html exposing (Html, a, button, div, p, text)
-import Html.Attributes exposing (class, classList, id, tabindex)
+import Html exposing (Html, button, div, p, text)
+import Html.Attributes exposing (class, classList, id)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
