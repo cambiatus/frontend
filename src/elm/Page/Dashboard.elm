@@ -205,7 +205,9 @@ view ({ shared } as loggedIn) model =
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
                             [ if not loggedIn.hasAcceptedCodeOfConduct then
-                                viewFrozenAccountCard shared.translators
+                                LoggedIn.viewFrozenAccountCard shared.translators
+                                    { onClick = ClickedAcceptCodeOfConduct }
+                                    [ class "mb-6 lg:mb-0 self-start" ]
 
                               else
                                 text ""
@@ -679,31 +681,6 @@ viewTransferFilters ({ shared } as loggedIn) users model =
                 }
             ]
         |> Modal.toHtml
-
-
-viewFrozenAccountCard : Translation.Translators -> Html Msg
-viewFrozenAccountCard { t } =
-    div [ class "bg-white rounded py-10 px-4 mb-6 md:mb-0" ]
-        [ img
-            [ src "/images/girl-with-ice-cube.svg"
-            , alt ""
-            , class "mx-auto mb-8"
-            ]
-            []
-        , h2 [ class "font-bold text-black text-lg mb-6" ]
-            [ text <| t "account_frozen.title" ]
-        , p [ class "text-black mb-3" ]
-            [ text <| t "account_frozen.why" ]
-        , p []
-            [ text <| t "account_frozen.solve"
-            , a
-                [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
-                , Route.href Route.Dashboard
-                , onClick ClickedAcceptCodeOfConduct
-                ]
-                [ text <| t "account_frozen.solve_link" ]
-            ]
-        ]
 
 
 viewWelcomeCard : LoggedIn.Model -> Community.Model -> Balance -> Html Msg

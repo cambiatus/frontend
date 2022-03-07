@@ -25,6 +25,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
+    , viewFrozenAccountCard
     , withPrivateKey
     )
 
@@ -536,6 +537,31 @@ viewHighlightedNews { t } toPageMsg news =
                 , onClick (toPageMsg ClosedHighlightedNews)
                 ]
                 [ Icons.close "fill-current" ]
+            ]
+        ]
+
+
+viewFrozenAccountCard : Translation.Translators -> { onClick : msg } -> List (Html.Attribute msg) -> Html msg
+viewFrozenAccountCard { t } { onClick } attrs =
+    div (class "bg-white rounded py-10 px-4" :: attrs)
+        [ img
+            [ src "/images/girl-with-ice-cube.svg"
+            , alt ""
+            , class "mx-auto mb-8"
+            ]
+            []
+        , h2 [ class "font-bold text-black text-lg mb-6" ]
+            [ text <| t "account_frozen.title" ]
+        , p [ class "text-black mb-3" ]
+            [ text <| t "account_frozen.why" ]
+        , p []
+            [ text <| t "account_frozen.solve"
+            , a
+                [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
+                , Html.Attributes.href "#"
+                , Html.Events.onClick onClick
+                ]
+                [ text <| t "account_frozen.solve_link" ]
             ]
         ]
 
