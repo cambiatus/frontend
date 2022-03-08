@@ -204,6 +204,11 @@ language =
     Object.selectionForField "(Maybe Enum.Language.Language)" "language" [] (Cambiatus.Enum.Language.decoder |> Decode.nullable)
 
 
+latestAcceptedTerms : SelectionSet (Maybe Cambiatus.ScalarCodecs.DateTime) Cambiatus.Object.User
+latestAcceptedTerms =
+    Object.selectionForField "(Maybe ScalarCodecs.DateTime)" "latestAcceptedTerms" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder |> Decode.nullable)
+
+
 location : SelectionSet (Maybe String) Cambiatus.Object.User
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)

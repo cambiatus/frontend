@@ -1344,5 +1344,29 @@
       "try_again": "Por favor tente novamente quando tiver permissões o suficiente!",
       "ok": "Entendi"
     }
+  },
+  "terms_of_conduct": {
+    "title": "Diretrizes da comunidade e Código de conduta {{version}}",
+    "description": "Todas as comunidades digitais criadas usando o webapp Cambiatus são regidas pelas Diretrizes da comunidade e Código de conduta da Cambiatus.",
+    "to_have_good_experience": "Para que você continue tendo uma boa experiência com a comunidade, recomendamos que leia nossas Diretrizes e Código de conduta.",
+    "link": "Ler Diretrizes da comunidade e Código de conduta {{version}} da Cambiatus",
+    "attention": "Atenção: ",
+    "not_accepting": "O não aceite das Diretrizes da comunidade e Código de conduta impede que você realize atividades dentro da comunidade, como comprar, vender, transferir, convidar amigos, etc.",
+    "to_participate": "Para que você pertença e desfrute de todas as atividades que envolvem a comunidade, você deve aceitar as Diretrizes da comunidade e Código de conduta {{version}}.",
+    "are_you_sure": "Tem certeza que deseja não aceitar?",
+    "accept": "Aceito",
+    "deny": "Não aceito",
+    "error_accepting": "Algo de errado aconteceu ao aceitar o Código de conduta"
+  },
+  "footer": {
+    "created_with": "Criado com",
+    "created_by": "por Satisfied Vagabonds",
+    "created_with_love": "Criado com amor por Satisfied Vagabonds"
+  },
+  "account_frozen": {
+    "title": "Sua conta está congelada",
+    "why": "Você não aceitou as Diretrizes da comunidade e Código de conduta.",
+    "solve": "Para resolver essa situação e fazer parte da comunidade, ",
+    "solve_link": "aceite as Diretrizes da comunidade e Código de conduta."
   }
 }

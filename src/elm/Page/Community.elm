@@ -507,7 +507,7 @@ viewObjective loggedIn model metadata index objective =
                             (LoggedIn.isAccount metadata.creator loggedIn)
                             loggedIn.shared.now
                             action
-                            isDisabled
+                            (isDisabled || not loggedIn.hasAcceptedCodeOfConduct)
                     )
     in
     if objective.isCompleted then

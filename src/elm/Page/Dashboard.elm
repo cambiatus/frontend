@@ -31,8 +31,8 @@ import Form.Text
 import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, br, button, div, h1, hr, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, id, src, style, tabindex)
+import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
+import Html.Attributes exposing (class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -203,8 +203,17 @@ view ({ shared } as loggedIn) model =
                     in
                     div []
                         [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
-                            [ viewWelcomeCard loggedIn community balance
-                            , if community.hasObjectives && isValidator then
+                            [ if not loggedIn.hasAcceptedCodeOfConduct then
+                                LoggedIn.viewFrozenAccountCard shared.translators
+                                    { onClick = ClickedAcceptCodeOfConduct
+                                    , isHorizontal = False
+                                    }
+                                    [ class "mb-6 lg:mb-0 self-start" ]
+
+                              else
+                                text ""
+                            , viewWelcomeCard loggedIn community balance
+                            , if community.hasObjectives && isValidator && loggedIn.hasAcceptedCodeOfConduct then
                                 viewActionsForAnalysisCard loggedIn model
 
                               else
@@ -686,14 +695,22 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 
         listItem :
             (String -> Html Msg)
+            -> Bool
             -> String
             -> String
             -> (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg)
             -> List (Html.Attribute Msg)
             -> Html Msg
-        listItem icon iconSize description element attrs =
+        listItem icon isDisabled iconSize description element attrs =
             li []
-                [ element (class "py-2 flex items-center w-full group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm" :: attrs)
+                [ element
+                    (class "py-2 flex items-center w-full"
+                        :: classList
+                            [ ( "group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm", not isDisabled )
+                            , ( "text-gray-900", isDisabled )
+                            ]
+                        :: attrs
+                    )
                     [ icon (iconSize ++ " mr-4 text-gray-500 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300")
                     , text description
                     , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300"
@@ -717,8 +734,10 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
                     [ text (tr "dashboard.your_balance" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]) ]
                 , div [ class "flex space-x-4 mt-4" ]
-                    [ a
+                    [ View.Components.disablableLink
+                        { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-primary w-full"
+                        , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
                         , Route.href (Route.Transfer Nothing)
                         ]
                         [ text_ "dashboard.transfer" ]
@@ -726,6 +745,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                         Just _ ->
                             button
                                 [ class "button button-secondary w-full"
+                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                                 , onClick ClickedSupportUsButton
                                 ]
                                 [ text_ "community.index.support_us" ]
@@ -736,17 +756,27 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                 ]
             , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
                 [ listItem Icons.cambiatusCoin
+                    (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5"
                     (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
-                    a
-                    [ Route.href Route.Community ]
+                    (\attrs ->
+                        View.Components.disablableLink
+                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                            (Route.href Route.Community :: attrs)
+                    )
+                    []
                 , listItem Icons.profile
+                    (not loggedIn.hasAcceptedCodeOfConduct)
                     "w-5 h-5"
                     (t "dashboard.invite")
                     button
-                    [ onClick CreateInvite ]
+                    [ onClick CreateInvite
+                    , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                    , classList [ ( "cursor-default", not loggedIn.hasAcceptedCodeOfConduct ) ]
+                    ]
                 , if community.hasObjectives then
                     listItem Icons.flagWithoutBackground
+                        False
                         "h-5"
                         (t "dashboard.my_claims")
                         a
@@ -756,6 +786,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     text ""
                 , if community.hasShop then
                     listItem Icons.shop
+                        False
                         "w-5 h-5"
                         (t "dashboard.my_offers")
                         a
@@ -767,6 +798,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     RemoteData.Success contributionCount ->
                         if contributionCount > 0 then
                             listItem Icons.heartStroke
+                                False
                                 "w-5 h-5"
                                 (t "dashboard.my_contributions")
                                 a
@@ -797,7 +829,7 @@ viewActionsForAnalysisCard loggedIn model =
             text << t
     in
     div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
-        [ h1 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
+        [ h2 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
             [ strong [] [ text_ "dashboard.analysis.title.1" ]
             , text " "
             , text_ "dashboard.analysis.title.2"
@@ -891,7 +923,7 @@ viewTimelineCard loggedIn isValidator model =
         , id "transfer-list-container"
         ]
         [ div [ class "flex justify-between items-center mt-6 mb-4 lg:mt-0" ]
-            [ h1 [ class "text-gray-333" ]
+            [ h2 [ class "text-gray-333" ]
                 [ text_ "transfer.transfers_latest"
                 , text " "
                 , strong [] [ text_ "transfer.transfers" ]
@@ -956,6 +988,7 @@ type Msg
     | CopyToClipboard String
     | CopiedToClipboard
     | ClosedModalRequestingSponsor
+    | ClickedAcceptCodeOfConduct
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -1296,6 +1329,11 @@ update msg model ({ shared, accountName } as loggedIn) =
             { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
                 |> UR.init
 
+        ClickedAcceptCodeOfConduct ->
+            model
+                |> UR.init
+                |> UR.addExt LoggedIn.ShowCodeOfConductModal
+
 
 
 -- HELPERS
@@ -1509,3 +1547,6 @@ msgToString msg =
 
         ClosedModalRequestingSponsor ->
             [ "ClosedModalRequestingSponsor" ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]

@@ -22,7 +22,7 @@ import Form.Validate
 import Graphql.Document
 import Graphql.Http
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class, classList, disabled)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Log
@@ -312,7 +312,10 @@ view ({ shared } as loggedIn) model =
             , Form.view [ class "container mx-auto px-4 mt-10" ]
                 shared.translators
                 (\submitButton ->
-                    [ submitButton [ class "button button-primary w-full mt-10" ]
+                    [ submitButton
+                        [ class "button button-primary w-full mt-10"
+                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                        ]
                         [ text <| t "community.create.submit" ]
                     ]
                 )

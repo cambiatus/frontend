@@ -1338,5 +1338,29 @@
       "try_again": "Please try again once you have enough permissions!",
       "ok": "Got it"
     }
+  },
+  "terms_of_conduct": {
+    "title": "Community guidelines & Code of conduct {{version}}",
+    "description": "All digital communities created using the Cambiatus webapp are bound by Cambiatus' Community guidelines & Code of conduct.",
+    "to_have_good_experience": "For you to continue having a good experience with the community, we recommend you read our Guidelines & Code of conduct.",
+    "link": "Read Cambiatus' Community guidelines & Code of conduct {{version}}",
+    "attention": "Attention: ",
+    "not_accepting": "Not accepting the Community guidelines & Code of conduct prevents you from performing activities inside the community, such as buying, selling, transferring, inviting friends, etc.",
+    "to_participate": "So that you can belong and enjoy all activities that envolvhe the community, you must accept the Community guidelines & Code of conduct {{version}}.",
+    "are_you_sure": "Are you sure you don't want to accept them?",
+    "accept": "Accept",
+    "deny": "Don't accept",
+    "error_accepting": "Something went wrong when accepting the Code of conduct"
+  },
+  "footer": {
+    "created_with": "Created with",
+    "created_by": "by Satisfied Vagabonds",
+    "created_with_love": "Created with love by Satisfied Vagabonds"
+  },
+  "account_frozen": {
+    "title": "Your account is frozen",
+    "why": "You haven't accepted the Community guidelines & Code of conduct.",
+    "solve": "To resolve this situation and be a part of the community, ",
+    "solve_link": "accept the Community guidelines & Code of conduct."
   }
 }

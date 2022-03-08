@@ -22,6 +22,15 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+{-| [Auth required] Set the latest\_accept\_terms date
+-}
+acceptTerms :
+    SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe decodesTo) RootMutation
+acceptTerms object_ =
+    Object.selectionForCompositeField "acceptTerms" [] object_ (identity >> Decode.nullable)
+
+
 type alias AddCommunityPhotosRequiredArguments =
     { symbol : String
     , urls : List String

@@ -144,18 +144,26 @@ view loggedIn model =
         div []
             (Page.viewHeader loggedIn pageTitle
                 :: viewFiltersModal loggedIn.shared model
-                :: viewHeaderAndOptions loggedIn.shared maybeClaims model
+                :: viewHeaderAndOptions loggedIn maybeClaims model
                 ++ content
             )
     }
 
 
-viewHeaderAndOptions : Shared -> Maybe (List Claim.Model) -> Model -> List (Html Msg)
-viewHeaderAndOptions shared maybeClaims model =
+viewHeaderAndOptions : LoggedIn.Model -> Maybe (List Claim.Model) -> Model -> List (Html Msg)
+viewHeaderAndOptions ({ shared } as loggedIn) maybeClaims model =
     [ div
         [ class "bg-white pt-5 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-            [ viewGoodPracticesCard shared
+            [ if not loggedIn.hasAcceptedCodeOfConduct then
+                LoggedIn.viewFrozenAccountCard shared.translators
+                    { onClick = ClickedAcceptCodeOfConduct
+                    , isHorizontal = True
+                    }
+                    [ class "shadow-lg" ]
+
+              else
+                viewGoodPracticesCard shared
             , viewTabSelector shared maybeClaims model
             ]
         ]
@@ -428,6 +436,7 @@ type Msg
     | ToggledSorting
     | SelectedStatusFilter StatusFilter
     | ClickedApplyFilters
+    | ClickedAcceptCodeOfConduct
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -657,6 +666,11 @@ update msg model loggedIn =
             }
                 |> UR.init
 
+        ClickedAcceptCodeOfConduct ->
+            model
+                |> UR.init
+                |> UR.addExt LoggedIn.ShowCodeOfConductModal
+
 
 profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> LoggedIn.External Msg
 profileClaimQuery loggedIn accountName symbol =
@@ -748,3 +762,6 @@ msgToString msg =
 
         ClickedApplyFilters ->
             [ "ClickedApplyFilters" ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]

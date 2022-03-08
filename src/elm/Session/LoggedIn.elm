@@ -25,6 +25,7 @@ module Session.LoggedIn exposing
     , update
     , updateExternal
     , view
+    , viewFrozenAccountCard
     , withPrivateKey
     )
 
@@ -49,8 +50,8 @@ import Graphql.Http
 import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, button, div, footer, h2, img, li, nav, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, src, type_)
+import Html exposing (Html, a, br, button, div, footer, h2, img, li, nav, p, span, strong, text, ul)
+import Html.Attributes exposing (alt, class, classList, disabled, src, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel, ariaLive, role)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -221,6 +222,8 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
+    , codeOfConductModalStatus : CodeOfConductModalStatus
+    , hasAcceptedCodeOfConduct : Bool
     , routeHistory : List Route
     , accountName : Eos.Name
     , profile : RemoteData (Graphql.Http.Error (Maybe Profile.Model)) Profile.Model
@@ -248,6 +251,12 @@ type alias Model =
     }
 
 
+type CodeOfConductModalStatus
+    = CodeOfConductNotShown
+    | CodeOfConductShown
+    | CodeOfConductShownWithWarning { hasCompletedAnimation : Bool }
+
+
 initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
 initModel shared maybePrivateKey_ accountName authToken =
     let
@@ -255,6 +264,8 @@ initModel shared maybePrivateKey_ accountName authToken =
             Auth.init shared.pinVisibility maybePrivateKey_
     in
     ( { shared = shared
+      , codeOfConductModalStatus = CodeOfConductNotShown
+      , hasAcceptedCodeOfConduct = True
       , routeHistory = []
       , accountName = accountName
       , profile = RemoteData.Loading
@@ -473,6 +484,8 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                     |> Html.map pageMsg
                , insufficientPermissionsModal model
                     |> Html.map pageMsg
+               , codeOfConductModal model
+                    |> Html.map pageMsg
                ]
         )
 
@@ -524,6 +537,38 @@ viewHighlightedNews { t } toPageMsg news =
                 , onClick (toPageMsg ClosedHighlightedNews)
                 ]
                 [ Icons.close "fill-current" ]
+            ]
+        ]
+
+
+viewFrozenAccountCard : Translation.Translators -> { onClick : msg, isHorizontal : Bool } -> List (Html.Attribute msg) -> Html msg
+viewFrozenAccountCard { t } options attrs =
+    div
+        (class "bg-white rounded py-10 px-4"
+            :: classList [ ( "md:flex md:space-x-6 lg:max-w-2xl md:py-6 md:px-10", options.isHorizontal ) ]
+            :: attrs
+        )
+        [ img
+            [ src "/images/girl-with-ice-cube.svg"
+            , alt ""
+            , class "mx-auto mb-8"
+            , classList [ ( "md:mb-0", options.isHorizontal ) ]
+            ]
+            []
+        , div [ class "flex flex-col" ]
+            [ h2 [ class "font-bold text-black text-lg mb-6" ]
+                [ text <| t "account_frozen.title" ]
+            , p [ class "text-black mb-3" ]
+                [ text <| t "account_frozen.why" ]
+            , p []
+                [ text <| t "account_frozen.solve"
+                , a
+                    [ class "text-orange-300 hover:underline focus-ring focus-visible:ring-orange-300 focus-visible:ring-opacity-30 rounded-sm"
+                    , Html.Attributes.href "#"
+                    , onClick options.onClick
+                    ]
+                    [ text <| t "account_frozen.solve_link" ]
+                ]
             ]
         ]
 
@@ -907,6 +952,94 @@ insufficientPermissionsModal model =
         |> Modal.toHtml
 
 
+codeOfConductModal : Model -> Html (Msg externalMsg)
+codeOfConductModal model =
+    let
+        { t, tr } =
+            model.shared.translators
+
+        needsToWaitBeforeDenyingAgain =
+            case model.codeOfConductModalStatus of
+                CodeOfConductShownWithWarning { hasCompletedAnimation } ->
+                    not hasCompletedAnimation
+
+                _ ->
+                    False
+    in
+    Modal.initWith
+        { closeMsg = ClickedDenyCodeOfConduct
+        , isVisible = model.codeOfConductModalStatus /= CodeOfConductNotShown
+        }
+        |> Modal.withHeader (tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ])
+        |> Modal.withBody
+            (case model.codeOfConductModalStatus of
+                CodeOfConductNotShown ->
+                    []
+
+                CodeOfConductShown ->
+                    [ p [ class "mt-4" ] [ text <| t "terms_of_conduct.description" ]
+                    , br [] []
+                    , p [] [ text <| t "terms_of_conduct.to_have_good_experience" ]
+                    , br [] []
+                    , p [ class "mb-6" ]
+                        [ a
+                            [ Html.Attributes.href (codeOfConductUrl model.shared.language)
+                            , Html.Attributes.target "_blank"
+                            , class "text-orange-300 hover:underline focus-visible:underline focus-visible:outline-none rounded-sm"
+                            ]
+                            [ text <| tr "terms_of_conduct.link" [ ( "version", codeOfConductVersion ) ] ]
+                        ]
+                    ]
+
+                CodeOfConductShownWithWarning _ ->
+                    [ p [ class "text-red mt-4" ]
+                        [ strong [ class "uppercase" ] [ text <| t "terms_of_conduct.attention" ]
+                        , text <| t "terms_of_conduct.not_accepting"
+                        ]
+                    , br [] []
+                    , p [] [ text <| tr "terms_of_conduct.to_participate" [ ( "version", codeOfConductVersion ) ] ]
+                    , br [] []
+                    , p [] [ text <| t "terms_of_conduct.are_you_sure" ]
+                    , br [] []
+                    , p [ class "mb-6" ]
+                        [ a
+                            [ Html.Attributes.href (codeOfConductUrl model.shared.language)
+                            , Html.Attributes.target "_blank"
+                            , class "text-orange-300 hover:underline"
+                            ]
+                            [ text <| tr "terms_of_conduct.link" [ ( "version", codeOfConductVersion ) ] ]
+                        ]
+                    ]
+            )
+        |> Modal.withFooter
+            [ div [ class "w-full grid gap-4 md:grid-cols-2" ]
+                [ button
+                    [ onClick ClickedAcceptCodeOfConduct
+                    , class "button button-primary w-full"
+                    ]
+                    [ text <| t "terms_of_conduct.accept" ]
+                , button
+                    [ onClick ClickedDenyCodeOfConduct
+                    , class "button button-secondary !bg-white w-full relative overflow-hidden"
+                    , disabled needsToWaitBeforeDenyingAgain
+                    ]
+                    [ case model.codeOfConductModalStatus of
+                        CodeOfConductShownWithWarning _ ->
+                            div
+                                [ class "absolute top-0 left-0 bottom-0 bg-gray-500 w-full origin-left animate-scale-down"
+                                , Html.Events.on "animationend" (Decode.succeed EndedCodeOfConductWarningAnimation)
+                                ]
+                                []
+
+                        _ ->
+                            text ""
+                    , span [ class "z-10" ] [ text <| t "terms_of_conduct.deny" ]
+                    ]
+                ]
+            ]
+        |> Modal.toHtml
+
+
 viewMainMenu : Page -> Model -> Html (Msg externalMsg)
 viewMainMenu page model =
     let
@@ -994,26 +1127,66 @@ isAdminPage page =
 
 
 viewFooter : Shared -> Html msg
-viewFooter _ =
+viewFooter shared =
+    let
+        { t, tr } =
+            shared.translators
+    in
     footer
-        [ class "bg-white w-full flex flex-wrap mx-auto border-t border-grey-500 p-4 pt-6 h-40 bottom-0"
+        [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8"
         , role "contentinfo"
         ]
-        [ p [ class "sr-only" ] [ text "Created with love by Satisfied Vagabonds" ]
+        [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
         , p
-            [ class "text-sm flex w-full justify-center items-center"
+            [ class "text-sm text-center flex w-full justify-center items-center mb-4"
             , ariaHidden True
             ]
-            [ text "Created with"
+            [ span [] [ text <| t "footer.created_with" ]
             , Icons.heartSolid
-            , text "by Satisfied Vagabonds"
+            , span [] [ text <| t "footer.created_by" ]
             ]
+        , a
+            [ Html.Attributes.href (codeOfConductUrl shared.language)
+            , Html.Attributes.target "_blank"
+            , class "text-center text-orange-300 hover:underline"
+            ]
+            [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
         , img
-            [ class "h-24 w-full"
+            [ class "h-24 w-full mt-3"
             , src "/images/satisfied-vagabonds.svg"
+            , alt ""
             ]
             []
         ]
+
+
+codeOfConductUrl : Translation.Language -> String
+codeOfConductUrl language =
+    let
+        defaultEndpoint =
+            "/code-of-conduct"
+
+        baseUrl =
+            "https://www.cambiatus.com"
+
+        endpoint =
+            case language of
+                Translation.English ->
+                    defaultEndpoint
+
+                Translation.Portuguese ->
+                    "/pt-br/codigo-de-conduta"
+
+                Translation.Spanish ->
+                    "/es/codigo-de-conducta"
+
+                Translation.Catalan ->
+                    defaultEndpoint
+
+                Translation.Amharic ->
+                    defaultEndpoint
+    in
+    baseUrl ++ endpoint
 
 
 
@@ -1037,6 +1210,7 @@ type External msg
     | RequestQuery (Cmd (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd msg } msg))
     | ShowFeedback Feedback.Status String
     | HideFeedback
+    | ShowCodeOfConductModal
 
 
 {-| Perform a GraphQL query. This function is preferred over `Api.Graphql.query`
@@ -1369,6 +1543,18 @@ mapMsg mapFn msg =
                         Ok (mapMsg mapFn resultMsg)
                 )
 
+        ClickedAcceptCodeOfConduct ->
+            ClickedAcceptCodeOfConduct
+
+        ClickedDenyCodeOfConduct ->
+            ClickedDenyCodeOfConduct
+
+        CompletedAcceptingCodeOfConduct result ->
+            CompletedAcceptingCodeOfConduct result
+
+        EndedCodeOfConductWarningAnimation ->
+            EndedCodeOfConductWarningAnimation
+
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
 mapExternal mapFn msg =
@@ -1430,6 +1616,9 @@ mapExternal mapFn msg =
 
         HideFeedback ->
             HideFeedback
+
+        ShowCodeOfConductModal ->
+            ShowCodeOfConductModal
 
 
 type Resource
@@ -1642,6 +1831,9 @@ updateExternal externalMsg ({ shared } as model) =
         HideFeedback ->
             { defaultResult | model = { model | feedback = Feedback.Hidden } }
 
+        ShowCodeOfConductModal ->
+            { defaultResult | model = { model | codeOfConductModalStatus = CodeOfConductShown } }
+
 
 type alias UpdateResult msg =
     UR.UpdateResult Model (Msg msg) (ExternalMsg msg)
@@ -1708,6 +1900,10 @@ type Msg externalMsg
     | CompletedGeneratingAuthToken (RemoteData (Graphql.Http.Error Api.Graphql.SignInResponse) Api.Graphql.SignInResponse)
     | RequestedQuery (Result { callbackCmd : Shared -> Api.Graphql.Token -> Cmd externalMsg } externalMsg)
     | RequestedQueryInternal (Result (Api.Graphql.Token -> Cmd (Msg externalMsg)) (Msg externalMsg))
+    | ClickedAcceptCodeOfConduct
+    | ClickedDenyCodeOfConduct
+    | CompletedAcceptingCodeOfConduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
+    | EndedCodeOfConductWarningAnimation
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -1819,8 +2015,20 @@ update msg model =
 
                                 Just _ ->
                                     Cmd.none
+
+                        hasAcceptedCodeOfConduct =
+                            Maybe.Extra.isJust p.latestAcceptedTerms
                     in
-                    { model | profile = RemoteData.Success p }
+                    { model
+                        | profile = RemoteData.Success p
+                        , hasAcceptedCodeOfConduct = model.hasAcceptedCodeOfConduct || hasAcceptedCodeOfConduct
+                        , codeOfConductModalStatus =
+                            if hasAcceptedCodeOfConduct then
+                                CodeOfConductNotShown
+
+                            else
+                                CodeOfConductShown
+                    }
                         |> UR.init
                         |> UR.addCmd sendLanguagePreference
                         |> UR.addExt (ProfileLoaded p |> Broadcast)
@@ -2441,6 +2649,68 @@ update msg model =
                 |> UR.init
                 |> UR.addMsg (RequestedNewAuthTokenPhrase callbackCmd)
 
+        ClickedAcceptCodeOfConduct ->
+            { model | codeOfConductModalStatus = CodeOfConductNotShown }
+                |> UR.init
+                |> UR.addCmd
+                    (internalMutation model
+                        (Cambiatus.Mutation.acceptTerms (Graphql.SelectionSet.succeed ()))
+                        CompletedAcceptingCodeOfConduct
+                    )
+
+        ClickedDenyCodeOfConduct ->
+            case model.codeOfConductModalStatus of
+                CodeOfConductNotShown ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Denied code of conduct, but modal wasn't shown"
+                            (Just model.accountName)
+                            { moduleName = "Session.LoggedIn", function = "update" }
+                            []
+
+                CodeOfConductShown ->
+                    { model | codeOfConductModalStatus = CodeOfConductShownWithWarning { hasCompletedAnimation = False } }
+                        |> UR.init
+
+                CodeOfConductShownWithWarning { hasCompletedAnimation } ->
+                    if not hasCompletedAnimation then
+                        model
+                            |> UR.init
+
+                    else
+                        { model
+                            | hasAcceptedCodeOfConduct = False
+                            , codeOfConductModalStatus = CodeOfConductNotShown
+                        }
+                            |> UR.init
+
+        CompletedAcceptingCodeOfConduct (RemoteData.Failure err) ->
+            { model | feedback = Feedback.Visible Feedback.Failure (shared.translators.t "terms_of_conduct.error_accepting") }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just model.accountName)
+                    "Got an error when accepting code of conduct"
+                    { moduleName = "Session.LoggedIn", function = "update" }
+                    []
+                    err
+
+        CompletedAcceptingCodeOfConduct _ ->
+            { model | hasAcceptedCodeOfConduct = True }
+                |> UR.init
+
+        EndedCodeOfConductWarningAnimation ->
+            { model
+                | codeOfConductModalStatus =
+                    case model.codeOfConductModalStatus of
+                        CodeOfConductShownWithWarning _ ->
+                            CodeOfConductShownWithWarning { hasCompletedAnimation = True }
+
+                        _ ->
+                            model.codeOfConductModalStatus
+            }
+                |> UR.init
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
 handleActionMsg ({ shared } as model) actionMsg =
@@ -2764,6 +3034,11 @@ askedAuthentication model =
     }
 
 
+codeOfConductVersion : String
+codeOfConductVersion =
+    "1.0"
+
+
 
 -- INFO
 
@@ -2973,6 +3248,18 @@ msgToString msg =
         RequestedQueryInternal r ->
             [ "RequestedQueryInternal", UR.resultToString r ]
 
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]
+
+        ClickedDenyCodeOfConduct ->
+            [ "ClickedDenyCodeOfConduct" ]
+
+        CompletedAcceptingCodeOfConduct r ->
+            [ "CompletedAcceptingCodeOfConduct", UR.remoteDataToString r ]
+
+        EndedCodeOfConductWarningAnimation ->
+            [ "EndedCodeOfConductWarningAnimation" ]
+
 
 externalMsgToString : External msg -> List String
 externalMsgToString externalMsg =
@@ -3018,3 +3305,6 @@ externalMsgToString externalMsg =
 
         HideFeedback ->
             [ "HideFeedback" ]
+
+        ShowCodeOfConductModal ->
+            [ "ShowCodeOfConductModal" ]

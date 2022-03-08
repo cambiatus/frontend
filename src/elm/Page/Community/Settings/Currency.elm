@@ -18,7 +18,7 @@ import Form.Radio
 import Form.Text
 import Form.Validate
 import Html exposing (Html, br, div, form, span, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, disabled)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -378,7 +378,10 @@ view ({ shared } as loggedIn) model =
                                 , Form.view [ class "container mx-auto px-4 pt-4 pb-10" ]
                                     shared.translators
                                     (\submitButton ->
-                                        [ submitButton [ class "button button-primary w-full mt-12" ]
+                                        [ submitButton
+                                            [ class "button button-primary w-full mt-12"
+                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                            ]
                                             [ text <| t "menu.save" ]
                                         ]
                                     )

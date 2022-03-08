@@ -44,6 +44,7 @@ import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
+import View.Components
 import View.Feedback as Feedback
 
 
@@ -586,8 +587,10 @@ view session model =
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
                                                     [ if isOwner then
-                                                        a
+                                                        View.Components.disablableLink
+                                                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
                                                             [ class "button button-primary w-full"
+                                                            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
                                                             , Route.href (Route.EditSale sale.id)
                                                             ]
                                                             [ text <| t "shop.edit" ]
@@ -595,7 +598,7 @@ view session model =
                                                       else
                                                         submitButton
                                                             [ class "button button-primary w-full"
-                                                            , disabled isOutOfStock
+                                                            , disabled (isOutOfStock || not loggedIn.hasAcceptedCodeOfConduct)
                                                             ]
                                                             [ if isOutOfStock then
                                                                 text <| t "shop.sold_out"

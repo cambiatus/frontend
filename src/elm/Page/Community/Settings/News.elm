@@ -10,7 +10,7 @@ import Graphql.Http
 import Graphql.OptionalArgument
 import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h1, p, small, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Log
@@ -19,7 +19,6 @@ import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
-import Session.Shared exposing (Shared)
 import Time
 import UpdateResult as UR
 import View.Components
@@ -214,7 +213,7 @@ view loggedIn model =
                 RemoteData.Success community ->
                     div []
                         [ Page.viewHeader loggedIn title
-                        , view_ loggedIn.shared community
+                        , view_ loggedIn community
                         , case model.highlightNewsConfirmationModal of
                             NotVisible ->
                                 text ""
@@ -262,13 +261,15 @@ view loggedIn model =
     { title = title, content = content }
 
 
-view_ : Shared -> Community.Model -> Html Msg
-view_ shared community =
+view_ : LoggedIn.Model -> Community.Model -> Html Msg
+view_ ({ shared } as loggedIn) community =
     div []
         [ div [ class "bg-white py-4" ]
             [ div [ class "container mx-auto px-4" ]
-                [ a
+                [ View.Components.disablableLink
+                    { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
                     [ class "button button-primary w-full"
+                    , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
                     , Route.href (Route.CommunitySettingsNewsEditor Route.CreateNews)
                     ]
                     [ text (shared.translators.t "news.create") ]
@@ -280,7 +281,7 @@ view_ shared community =
                     div [ class "grid gap-4 md:grid-cols-2" ]
                         (List.map
                             (\newsForCard ->
-                                viewNewsCard shared
+                                viewNewsCard loggedIn
                                     (Just newsForCard.id == Maybe.map .id community.highlightedNews)
                                     newsForCard
                             )
@@ -301,8 +302,12 @@ view_ shared community =
         ]
 
 
-viewNewsCard : Shared -> Bool -> Community.News.Model -> Html Msg
-viewNewsCard ({ translators } as shared) isHighlighted news =
+viewNewsCard : LoggedIn.Model -> Bool -> Community.News.Model -> Html Msg
+viewNewsCard loggedIn isHighlighted news =
+    let
+        ({ translators } as shared) =
+            loggedIn.shared
+    in
     div [ class "bg-white rounded p-4 pb-6 flex flex-col" ]
         [ h1 [ class "font-bold" ]
             [ text news.title ]
@@ -350,6 +355,7 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
         , Form.Toggle.init { label = text <| translators.t "news.highlight", id = "highlight-news-toggle-" ++ String.fromInt news.id }
             |> Form.Toggle.withContainerAttrs [ class "mt-auto" ]
             |> Form.Toggle.withStatusText Form.Toggle.YesNo
+            |> Form.Toggle.withDisabled (not loggedIn.hasAcceptedCodeOfConduct)
             |> (\options ->
                     Form.Toggle.view options
                         { onToggle = ToggledHighlightNews news.id
@@ -361,13 +367,15 @@ viewNewsCard ({ translators } as shared) isHighlighted news =
                         , translators = translators
                         }
                )
-        , a
+        , View.Components.disablableLink { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "button button-primary w-full mt-10 mb-4"
+            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
             , Route.href (Route.CommunitySettingsNewsEditor (Route.EditNews news.id))
             ]
             [ text <| translators.t "news.edit" ]
-        , a
+        , View.Components.disablableLink { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "button button-secondary w-full"
+            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
             , Route.href (Route.CommunitySettingsNewsEditor (Route.CopyNews news.id))
             ]
             [ text <| translators.t "news.copy" ]

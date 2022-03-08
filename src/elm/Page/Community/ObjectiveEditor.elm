@@ -265,7 +265,7 @@ createForm { t } =
 
 
 viewForm : LoggedIn.Model -> Form.Model Form.RichText.Model -> FormStatus -> Html Msg
-viewForm { shared } formModel formStatus =
+viewForm ({ shared } as loggedIn) formModel formStatus =
     let
         ( isDisabled, isEdit, isCompleted ) =
             case formStatus of
@@ -287,7 +287,7 @@ viewForm { shared } formModel formStatus =
             [ div [ class "mt-10 flex flex-col w-full gap-4 md:flex-row md:justify-between" ]
                 [ submitButton
                     [ class "button button-primary w-full md:w-48"
-                    , disabled isDisabled
+                    , disabled (isDisabled || not loggedIn.hasAcceptedCodeOfConduct)
                     ]
                     [ text <| shared.translators.t "community.objectives.editor.submit" ]
                 , if isEdit && not isCompleted then
@@ -295,7 +295,7 @@ viewForm { shared } formModel formStatus =
                         [ class "button button-secondary w-full md:w-auto md:px-6 md:ml-auto"
                         , type_ "button"
                         , onClick ClickedCompleteObjective
-                        , disabled isDisabled
+                        , disabled (isDisabled || not loggedIn.hasAcceptedCodeOfConduct)
                         ]
                         [ text <| shared.translators.t "community.objectives.editor.mark_as_complete" ]
 
