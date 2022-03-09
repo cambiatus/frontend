@@ -143,6 +143,12 @@ initBasicWith ((Normalized { contactType }) as normalized) =
                     newPhoneContact
                         -- 22 == String.length "https://instagram.com/"
                         |> String.dropLeft 22
+
+                Email ->
+                    newPhoneContact
+
+                Link ->
+                    newPhoneContact
     in
     { initial
         | contact = newContact
@@ -736,6 +742,12 @@ contactTypeToIcon class_ isInverted contactType =
             else
                 Icons.whatsapp class_
 
+        Email ->
+            Icons.mail class_
+
+        Link ->
+            Debug.todo ""
+
 
 circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
 circularIconWithGrayBg translators class_ (Normalized normalized) =
@@ -774,6 +786,12 @@ ariaLabelForContactType { t } contactType =
         Whatsapp ->
             t "contact_form.reach_out.whatsapp"
 
+        Email ->
+            t "contact_form.reach_out.email"
+
+        Link ->
+            Debug.todo "Add translation for link"
+
 
 circularIcon : String -> Normalized -> Html msg
 circularIcon class_ (Normalized normalized) =
@@ -791,6 +809,12 @@ circularIcon class_ (Normalized normalized) =
 
                 Whatsapp ->
                     ( "bg-whatsapp", "" )
+
+                Email ->
+                    Debug.todo "Check what color is being used for email"
+
+                Link ->
+                    Debug.todo ""
     in
     case normalized.contactType of
         Telegram ->
@@ -836,6 +860,12 @@ toHref (Normalized { contactType, contact }) =
                        )
                 )
 
+        Email ->
+            href ("mailto:" ++ contact)
+
+        Link ->
+            href contact
+
 
 contactTypeTextColor : ContactType -> String
 contactTypeTextColor contactType =
@@ -851,6 +881,12 @@ contactTypeTextColor contactType =
 
         Whatsapp ->
             "text-whatsapp"
+
+        Email ->
+            Debug.todo "Check what color is being used for email"
+
+        Link ->
+            Debug.todo ""
 
 
 viewInput : Translators -> Basic -> Html Msg
@@ -1183,6 +1219,12 @@ normalize { country } validatedContact =
 
                 Whatsapp ->
                     String.join " " [ "+" ++ country.countryCode, contact ]
+
+                Email ->
+                    contact
+
+                Link ->
+                    contact
         }
 
 
@@ -1249,6 +1291,13 @@ validator contactType translators =
 
                 Telegram ->
                     ( validateRegex telegramRegex, "username" )
+
+                -- TODO - We can use validators from `Form.Validate` as inspiration for these two
+                Email ->
+                    ( Debug.todo "", Debug.todo "Add translations for blank and invalid emails" )
+
+                Link ->
+                    ( Debug.todo "", Debug.todo "Add translations for blank and invalid links" )
 
         baseTranslation =
             "contact_form.validation"
@@ -1354,9 +1403,12 @@ mutation : List Normalized -> SelectionSet (Maybe Profile) RootMutation
 mutation contacts =
     let
         contactInput (Normalized { contactType, contact }) =
-            { type_ = Present contactType, externalId = Present contact }
+            { type_ = Present contactType
+            , externalId = Present contact
+            , label = Debug.todo "Add label to contact"
+            }
     in
-    Cambiatus.Mutation.updateUser
+    Cambiatus.Mutation.user
         { input =
             { avatar = Absent
             , bio = Absent

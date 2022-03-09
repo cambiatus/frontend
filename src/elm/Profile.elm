@@ -156,7 +156,7 @@ selectionSet =
         |> with languageSelectionSet
         |> with
             (User.latestAcceptedTerms
-                |> SelectionSet.map (Maybe.map Utils.fromDateTime)
+                |> SelectionSet.map (Maybe.map Utils.fromNaiveDateTime)
             )
 
 
@@ -230,9 +230,12 @@ mutation form =
                 |> Maybe.withDefault Absent
 
         contactInput { contactType, contact } =
-            { type_ = Present contactType, externalId = Present contact }
+            { type_ = Present contactType
+            , externalId = Present contact
+            , label = Debug.todo "Add label to contact"
+            }
     in
-    Cambiatus.Mutation.updateUser
+    Cambiatus.Mutation.user
         { input =
             { name = Present form.name
             , email = Present form.email
