@@ -339,7 +339,6 @@ type Msg
     | GotDomainAvailableResponse FormOutput (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
     | GotCreateCommunityResponse (Result Value Eos.Symbol)
-    | CompletedCreatingCommunity
     | Redirect Community.CreateCommunityData
     | ClosedAuthModal
 
@@ -489,27 +488,22 @@ update msg model loggedIn =
                               , authorization = authorization
                               , data = Token.encodeCreateTokenData createTokenData
                               }
-                            ]
-                    }
-
-        GotCreateCommunityResponse (Ok symbol) ->
-            model
-                |> UR.init
-                |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Eos.encodeTransaction
-                            [ { accountName = loggedIn.shared.contracts.community
+                            , { accountName = loggedIn.shared.contracts.community
                               , name = "upsertrole"
                               , authorization =
                                     { actor = loggedIn.accountName
                                     , permissionName = Eos.samplePermission
                                     }
-                              , data = defaultRoleTransaction symbol
+                              , data = defaultRoleTransaction createCommunityData.cmmAsset.symbol
                               }
                             ]
                     }
+
+        GotCreateCommunityResponse (Ok _) ->
+            model
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.created"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -521,12 +515,6 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.New", function = "update" }
                     []
                     val
-
-        CompletedCreatingCommunity ->
-            model
-                |> UR.init
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.created"))
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
         Redirect communityData ->
             let
@@ -613,9 +601,6 @@ jsAddressToMsg addr val =
                 |> GotCreateCommunityResponse
                 |> Just
 
-        "GotCreateCommunityResponse" :: _ ->
-            Just CompletedCreatingCommunity
-
         _ ->
             Nothing
 
@@ -637,9 +622,6 @@ msgToString msg =
 
         GotCreateCommunityResponse _ ->
             [ "GotCreateCommunityResponse" ]
-
-        CompletedCreatingCommunity ->
-            [ "CompletedCreatingCommunity" ]
 
         Redirect _ ->
             [ "Redirect" ]
