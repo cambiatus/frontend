@@ -341,7 +341,7 @@ type Msg
     | SubmittedForm FormOutput
     | GotDomainAvailableResponse FormOutput (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
+    | GotCreateCommunityResponse (Result Value Eos.Symbol)
     | Redirect Community.CreateCommunityData
     | ClosedAuthModal
 
@@ -491,13 +491,22 @@ update msg model loggedIn =
                               , authorization = authorization
                               , data = Token.encodeCreateTokenData createTokenData
                               }
+                            , { accountName = loggedIn.shared.contracts.community
+                              , name = "upsertrole"
+                              , authorization =
+                                    { actor = loggedIn.accountName
+                                    , permissionName = Eos.samplePermission
+                                    }
+                              , data = defaultRoleTransaction createCommunityData.cmmAsset.symbol
+                              }
                             ]
                     }
 
-        GotCreateCommunityResponse (Ok ( symbol, subdomain )) ->
+        GotCreateCommunityResponse (Ok _) ->
             model
                 |> UR.init
-                |> UR.addExt (LoggedIn.CreatedCommunity symbol subdomain)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.created"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -537,6 +546,25 @@ update msg model loggedIn =
                     model
 
 
+defaultRoleTransaction : Eos.Symbol -> Value
+defaultRoleTransaction symbol =
+    Encode.object
+        [ ( "community_id", Eos.encodeSymbol symbol )
+        , ( "name", Encode.string "member" )
+        , ( "color", Encode.string "#ffffff" )
+        , ( "permissions"
+          , Encode.list Encode.string
+                [ "invite"
+                , "claim"
+                , "order"
+                , "verify"
+                , "sell"
+                , "transfer"
+                ]
+          )
+        ]
+
+
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -567,14 +595,9 @@ jsAddressToMsg addr val =
 
         "StartedCreatingCommunity" :: [] ->
             Decode.decodeValue
-                (Decode.map2 (\_ s -> s)
+                (Decode.map2 (\_ symbol -> symbol)
                     (Decode.field "transactionId" Decode.string)
-                    (Decode.field "addressData"
-                        (Decode.map2 Tuple.pair
-                            (Decode.field "symbol" Eos.symbolDecoder)
-                            (Decode.field "subdomain" Decode.string)
-                        )
-                    )
+                    (Decode.at [ "addressData", "symbol" ] Eos.symbolDecoder)
                 )
                 val
                 |> Result.mapError (\_ -> val)

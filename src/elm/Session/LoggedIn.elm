@@ -1199,7 +1199,6 @@ type External msg
     = UpdatedLoggedIn Model
     | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
-    | CreatedCommunity Eos.Symbol String
     | ExternalBroadcast BroadcastMsg
     | ReloadResource Resource
     | RequestedReloadCommunityField Community.Field
@@ -1568,9 +1567,6 @@ mapExternal mapFn msg =
         AddedCommunity communityInfo ->
             AddedCommunity communityInfo
 
-        CreatedCommunity symbol name ->
-            CreatedCommunity symbol name
-
         ExternalBroadcast broadcastMsg ->
             ExternalBroadcast broadcastMsg
 
@@ -1669,12 +1665,6 @@ updateExternal externalMsg ({ shared } as model) =
             { defaultResult
                 | model = { newModel | profile = profileWithCommunity }
                 , cmd = cmd
-            }
-
-        CreatedCommunity _ _ ->
-            { defaultResult
-                | model = { model | feedback = Feedback.Visible Feedback.Success (shared.translators.t "community.create.created") }
-                , cmd = Route.pushUrl shared.navKey Route.Dashboard
             }
 
         ExternalBroadcast broadcastMsg ->
@@ -3272,9 +3262,6 @@ externalMsgToString externalMsg =
 
         AddedCommunity _ ->
             [ "AddedCommunity" ]
-
-        CreatedCommunity symbol _ ->
-            [ "CreatedCommunity", Eos.symbolToString symbol ]
 
         ExternalBroadcast _ ->
             [ "ExternalBroadcast" ]
