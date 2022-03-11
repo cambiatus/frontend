@@ -1133,35 +1133,64 @@ viewFooter shared =
             shared.translators
     in
     footer
-        [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8"
+        [ class "bg-white w-full border-t border-grey-500 relative overflow-hidden"
         , role "contentinfo"
         ]
-        [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
-        , p
-            [ class "text-sm text-center flex w-full justify-center items-center mb-4"
-            , ariaHidden True
+        [ div [ class "container mx-auto px-4 py-8 flex flex-col md:flex-row md:overflow-hidden md:py-4 md:relative md:overflow-hidden" ]
+            [ div [ class "flex flex-col md:items-center md:flex-row md:flex-grow after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 after:md:mr-8 after:md:mt-0 after:md:w-px after:md:h-full" ]
+                [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
+                , p
+                    [ class "text-sm text-center flex justify-center items-center"
+                    , ariaHidden True
+                    ]
+                    [ span [] [ text <| t "footer.created_with" ]
+                    , Icons.heartSolid
+                    , span [] [ text <| t "footer.created_by" ]
+                    ]
+
+                -- TODO - Where should this go?
+                -- , a
+                --     [ Html.Attributes.href (codeOfConductUrl shared.language)
+                --     , Html.Attributes.target "_blank"
+                --     , class "text-center text-orange-300 hover:underline"
+                --     ]
+                --     [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
+                , div [ class "flex items-center mt-2 mx-auto md:mt-0 md:ml-8" ]
+                    [ img
+                        [ class "h-8"
+                        , src "/images/logo-cambiatus-mobile.svg"
+                        , alt ""
+                        ]
+                        []
+                    , img
+                        [ class "h-14 ml-8"
+                        , src "/images/satisfied-vagabonds.svg"
+                        , alt ""
+                        ]
+                        []
+                    ]
+                ]
+            , div [ class "mt-4 md:mt-0 md:flex" ]
+                [ div [ class "md:mr-60" ]
+                    [ -- TODO - I18N
+                      p [] [ text "Need help?" ]
+
+                    -- TODO - Add support link
+                    -- TODO - I18N
+                    , a [ class "text-orange-300 hover:underline focus-ring" ]
+                        [ text "Contact our support" ]
+
+                    -- TODO - I18N
+                    , p [ class "mt-6 text-gray-900" ] [ text ("VERSION " ++ shared.version) ]
+                    ]
+                , img
+                    [ src "/images/man-with-envelope.svg"
+                    , alt ""
+                    , class "absolute w-53 -bottom-12 -right-8 md:right-4 md:-bottom-16"
+                    ]
+                    []
+                ]
             ]
-            [ span [] [ text <| t "footer.created_with" ]
-            , Icons.heartSolid
-            , span [] [ text <| t "footer.created_by" ]
-            ]
-        , a
-            [ Html.Attributes.href (codeOfConductUrl shared.language)
-            , Html.Attributes.target "_blank"
-            , class "text-center text-orange-300 hover:underline"
-            ]
-            [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
-        , img
-            [ class "h-24 w-full mt-3"
-            , src "/images/satisfied-vagabonds.svg"
-            , alt ""
-            ]
-            []
-        , img
-            [ src "/images/logo-cambiatus-mobile.svg"
-            , alt ""
-            ]
-            []
         ]
 
 

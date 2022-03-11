@@ -155,6 +155,7 @@ module.exports = {
       },
       width: {
         form: '45.625rem',
+        '53': '13.25rem',
         '120': '30rem'
       },
       minWidth: {
