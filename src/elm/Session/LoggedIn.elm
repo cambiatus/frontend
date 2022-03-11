@@ -1171,7 +1171,7 @@ viewFooter shared =
                     ]
                 ]
             , div [ class "mt-4 md:mt-0 md:flex" ]
-                [ div [ class "md:mr-60" ]
+                [ div [ class "mr-48 md:mr-60" ]
                     [ -- TODO - I18N
                       p [] [ text "Need help?" ]
 
