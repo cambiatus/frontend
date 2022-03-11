@@ -1157,6 +1157,11 @@ viewFooter shared =
             , alt ""
             ]
             []
+        , img
+            [ src "/images/logo-cambiatus-mobile.svg"
+            , alt ""
+            ]
+            []
         ]
 
 
