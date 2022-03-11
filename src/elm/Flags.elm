@@ -14,6 +14,7 @@ import Json.Decode.Pipeline exposing (required)
 
 type alias Flags =
     { language : String
+    , version : String
     , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
@@ -34,6 +35,7 @@ type alias Flags =
 default : Flags
 default =
     { language = "en-US"
+    , version = "1.0.0"
     , maybeAccount = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.png"
@@ -55,6 +57,7 @@ decode : Decoder Flags
 decode =
     Decode.succeed Flags
         |> required "language" Decode.string
+        |> required "version" Decode.string
         |> required "accountName" (Decode.nullable Eos.nameDecoder)
         |> required "endpoints" decodeEndpoints
         |> required "logo" Decode.string

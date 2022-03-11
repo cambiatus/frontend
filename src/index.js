@@ -294,6 +294,8 @@ function flags () {
   return {
     endpoints: config.endpoints,
     language: getUserLanguage(),
+    // TODO - Receive this as an env variable somehow
+    version: '1.0.0',
     accountName: accountName,
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
