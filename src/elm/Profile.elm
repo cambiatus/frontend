@@ -229,10 +229,10 @@ mutation form =
             Maybe.map Present form.avatar
                 |> Maybe.withDefault Absent
 
-        contactInput { contactType, contact } =
+        contactInput { contactType, contact, label } =
             { type_ = Present contactType
             , externalId = Present contact
-            , label = Debug.todo "Add label to contact"
+            , label = Graphql.OptionalArgument.fromMaybe label
             }
     in
     Cambiatus.Mutation.user

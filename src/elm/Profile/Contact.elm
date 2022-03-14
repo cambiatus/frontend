@@ -101,6 +101,7 @@ type alias Basic =
     { supportedCountry : SupportedCountry
     , contactType : ContactType
     , contact : String
+    , label : Maybe String
     , errors : Maybe (List String)
     , showFlags : Bool
     , focusedFlag : Maybe SupportedCountry
@@ -111,6 +112,7 @@ initBasic : ContactType -> Basic
 initBasic contactType =
     { supportedCountry = defaultCountry
     , contactType = contactType
+    , label = Nothing
     , contact = ""
     , errors = Nothing
     , showFlags = False
@@ -187,6 +189,7 @@ countryFromNormalized (Normalized { contactType, contact }) =
 type alias Contact =
     { contactType : ContactType
     , contact : String
+    , label : Maybe String
     }
 
 
@@ -1202,7 +1205,7 @@ isMultiple kind =
 normalize : SupportedCountry -> Validate.Valid Basic -> Normalized
 normalize { country } validatedContact =
     let
-        { contactType, contact } =
+        { contactType, contact, label } =
             Validate.fromValid validatedContact
     in
     Normalized
@@ -1226,6 +1229,7 @@ normalize { country } validatedContact =
 
                 Link ->
                     contact
+        , label = label
         }
 
 
@@ -1399,16 +1403,22 @@ supportedCountries =
 selectionSet : SelectionSet (Maybe Normalized) Cambiatus.Object.Contact
 selectionSet =
     SelectionSet.succeed
-        (\maybeType maybeExternalId ->
+        (\maybeType maybeExternalId label ->
             case ( maybeType, maybeExternalId ) of
                 ( Just type_, Just externalId ) ->
-                    Contact type_ externalId |> Normalized |> Just
+                    Normalized
+                        { contactType = type_
+                        , contact = externalId
+                        , label = label
+                        }
+                        |> Just
 
                 _ ->
                     Nothing
         )
         |> with Cambiatus.Object.Contact.type_
         |> with Cambiatus.Object.Contact.externalId
+        |> with Cambiatus.Object.Contact.label
 
 
 profileSelectionSet : SelectionSet Profile Cambiatus.Object.User
@@ -1424,10 +1434,10 @@ profileSelectionSet =
 mutation : List Normalized -> SelectionSet (Maybe Profile) RootMutation
 mutation contacts =
     let
-        contactInput (Normalized { contactType, contact }) =
+        contactInput (Normalized { contactType, contact, label }) =
             { type_ = Present contactType
             , externalId = Present contact
-            , label = Debug.todo "Add label to contact"
+            , label = Graphql.OptionalArgument.fromMaybe label
             }
     in
     Cambiatus.Mutation.user
