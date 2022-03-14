@@ -1168,6 +1168,14 @@
       "username": {
         "blank": "Please enter your profile name",
         "invalid": "Please enter a valid profile name"
+      },
+      "email": {
+        "blank": "Please enter your email",
+        "invalid": "Please enter a valid email"
+      },
+      "link": {
+        "blank": "Please enter a link",
+        "invalid": "Please enter a valid link"
       }
     },
     "feedback": {

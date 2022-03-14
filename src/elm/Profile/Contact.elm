@@ -45,6 +45,7 @@ import RemoteData exposing (RemoteData)
 import Task
 import Translation exposing (Translators)
 import UpdateResult as UR
+import Url
 import Validate
 import View.Components
 import View.Modal as Modal
@@ -1292,12 +1293,33 @@ validator contactType translators =
                 Telegram ->
                     ( validateRegex telegramRegex, "username" )
 
-                -- TODO - We can use validators from `Form.Validate` as inspiration for these two
                 Email ->
-                    ( Debug.todo "", Debug.todo "Add translations for blank and invalid emails" )
+                    ( \error -> Validate.ifInvalidEmail .contact (\_ -> error), "email" )
 
                 Link ->
-                    ( Debug.todo "", Debug.todo "Add translations for blank and invalid links" )
+                    ( \error ->
+                        Validate.fromErrors
+                            (\{ contact } ->
+                                let
+                                    withProtocol =
+                                        if String.isEmpty contact then
+                                            ""
+
+                                        else if String.startsWith "https://" contact || String.startsWith "http://" contact then
+                                            contact
+
+                                        else
+                                            "http://" ++ contact
+                                in
+                                case Url.fromString withProtocol of
+                                    Nothing ->
+                                        [ error ]
+
+                                    Just _ ->
+                                        []
+                            )
+                    , "link"
+                    )
 
         baseTranslation =
             "contact_form.validation"

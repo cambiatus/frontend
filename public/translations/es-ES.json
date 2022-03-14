@@ -1171,6 +1171,14 @@
       "username": {
         "blank": "Ingrese su nombre de perfil",
         "invalid": "Ingrese un nombre de perfil válido"
+      },
+      "email": {
+        "blank": "Por favor introduzca su correo electrónico",
+        "invalid": "Por favor introduzca una dirección de correo electrónico válida"
+      },
+      "link": {
+        "blank": "Por favor inserte un enlace",
+        "invalid": "Por favor introduzca un enlace válido"
       }
     },
     "feedback": {

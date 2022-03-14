@@ -1170,6 +1170,14 @@
       "username": {
         "blank": "Introduïu el nom del vostre perfil",
         "invalid": "Introduïu un nom de perfil vàlid"
+      },
+      "email": {
+        "blank": "Introduïu el vostre correu electrònic",
+        "invalid": "Introduïu un correu electrònic vàlid"
+      },
+      "link": {
+        "blank": "Introduïu un enllaç",
+        "invalid": "Introduïu un enllaç vàlid"
       }
     },
     "feedback": {
