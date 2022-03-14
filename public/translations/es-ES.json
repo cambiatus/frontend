@@ -1358,7 +1358,10 @@
   "footer": {
     "created_with": "Creado con",
     "created_by": "por",
-    "created_with_love": "Creado con amor por Satisfied Vagabonds y Cambiatus"
+    "created_with_love": "Creado con amor por Satisfied Vagabonds y Cambiatus",
+    "need_help": "¿Necesita ayuda?",
+    "contact_support": "Habla con nuestro soporte",
+    "version": "VERSIÓN {{version}}"
   },
   "account_frozen": {
     "title": "Tu cuenta está congelada",

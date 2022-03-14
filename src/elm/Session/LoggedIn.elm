@@ -1172,16 +1172,13 @@ viewFooter shared =
                 ]
             , div [ class "mt-4 md:mt-0 md:flex" ]
                 [ div [ class "mr-48 md:mr-60" ]
-                    [ -- TODO - I18N
-                      p [] [ text "Need help?" ]
+                    [ p [] [ text <| t "footer.need_help" ]
 
                     -- TODO - Add support link
-                    -- TODO - I18N
                     , a [ class "text-orange-300 hover:underline focus-ring" ]
-                        [ text "Contact our support" ]
-
-                    -- TODO - I18N
-                    , p [ class "mt-6 text-gray-900" ] [ text ("VERSION " ++ shared.version) ]
+                        [ text <| t "footer.contact_support" ]
+                    , p [ class "mt-6 text-gray-900" ]
+                        [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
                     ]
                 , img
                     [ src "/images/man-with-envelope.svg"
