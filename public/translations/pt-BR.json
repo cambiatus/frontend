@@ -1154,7 +1154,8 @@
       "instagram": "Contate pelo Instagram",
       "telegram": "Contate pelo Telegram",
       "whatsapp": "Contate pelo Whatsapp",
-      "email": "Contate por email"
+      "email": "Contate por email",
+      "link": "Veja esse link"
     },
     "phone": {
       "label": "Número de Telefone (com DDD)",

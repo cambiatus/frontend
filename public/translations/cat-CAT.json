@@ -1150,7 +1150,8 @@
       "instagram": "Contactar per Instagram",
       "telegram": "Contactar per Telegram",
       "whatsapp": "Contactar per Whatsapp",
-      "email": "Contactar per correu electrònic"
+      "email": "Contactar per correu electrònic",
+      "link": "Mireu aquest enllaç"
     },
     "phone": {
       "label": "Número de telèfon (amb DDD)",

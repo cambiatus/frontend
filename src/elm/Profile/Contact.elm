@@ -747,7 +747,7 @@ contactTypeToIcon class_ isInverted contactType =
             Icons.mail class_
 
         Link ->
-            Debug.todo ""
+            Debug.todo "Get icon for link"
 
 
 circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
@@ -791,7 +791,7 @@ ariaLabelForContactType { t } contactType =
             t "contact_form.reach_out.email"
 
         Link ->
-            Debug.todo "Add translation for link"
+            t "contact_form.reach_out.link"
 
 
 circularIcon : String -> Normalized -> Html msg
@@ -812,10 +812,10 @@ circularIcon class_ (Normalized normalized) =
                     ( "bg-whatsapp", "" )
 
                 Email ->
-                    Debug.todo "Check what color is being used for email"
+                    ( "bg-gray-500", "fill-current text-orange-300" )
 
                 Link ->
-                    Debug.todo ""
+                    Debug.todo "Get colors for link"
     in
     case normalized.contactType of
         Telegram ->
@@ -884,10 +884,10 @@ contactTypeTextColor contactType =
             "text-whatsapp"
 
         Email ->
-            Debug.todo "Check what color is being used for email"
+            "text-orange-300"
 
         Link ->
-            Debug.todo ""
+            Debug.todo "Get color for link"
 
 
 viewInput : Translators -> Basic -> Html Msg
@@ -1260,7 +1260,7 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\({ supportedCountry, contact } as basic) ->
+        (\{ supportedCountry, contact } ->
             if
                 PhoneNumber.valid
                     { defaultCountry = supportedCountry.country
