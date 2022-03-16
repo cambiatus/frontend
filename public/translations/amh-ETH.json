@@ -1102,12 +1102,9 @@
       "phone": "ስልክ",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
-    },
-    "phone": {
-      "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
-      "placeholder": "ዘጸ-{{example_number}}",
-      "submit": "ስልክ ቁጥር ያክሉ"
+      "whatsapp": "Whatsapp",
+      "email": "ኢሜይል",
+      "link": "አገናኝ"
     },
     "reach_out": {
       "phone": "በስልክ መገናኘት",
@@ -1117,10 +1114,25 @@
       "email": "በኢሜል ያነጋግሩ",
       "link": "ይህንን ሊንክ ይመልከቱ"
     },
+    "phone": {
+      "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
+      "placeholder": "ዘጸ-{{example_number}}",
+      "submit": "ስልክ ቁጥር ያክሉ"
+    },
     "username": {
       "label": "የተጠቃሚ ስም",
       "placeholder": "ዘፀ: cambiatus",
       "submit": "መገለጫ ያክሉ"
+    },
+    "link": {
+      "label": "አገናኝ",
+      "placeholder": "ለምሳሌ፡ https://cambiatus.com",
+      "submit": "አገናኝ አክል"
+    },
+    "email": {
+      "label": "ኢሜይል",
+      "placeholder": "ለምሳሌ: cambiatus@cambiatus.com",
+      "submit": "ኢሜይል አክል"
     },
     "validation": {
       "phone": {

@@ -602,11 +602,24 @@ view translators model =
         submitText =
             (case model.kind of
                 Single contact ->
-                    if usesPhone contact.contactType then
-                        "contact_form.phone.submit"
+                    case contact.contactType of
+                        Instagram ->
+                            "contact_form.username.submit"
 
-                    else
-                        "contact_form.username.submit"
+                        Telegram ->
+                            "contact_form.username.submit"
+
+                        Link ->
+                            "contact_form.link.submit"
+
+                        Email ->
+                            "contact_form.email.submit"
+
+                        Whatsapp ->
+                            "contact_form.phone.submit"
+
+                        Phone ->
+                            "contact_form.phone.submit"
 
                 Multiple _ ->
                     "contact_form.submit_multiple"
@@ -750,7 +763,7 @@ contactTypeToIcon class_ isInverted contactType =
             Icons.mail class_
 
         Link ->
-            Debug.todo "Get icon for link"
+            Icons.link class_
 
 
 circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
@@ -818,7 +831,7 @@ circularIcon class_ (Normalized normalized) =
                     ( "bg-gray-500", "fill-current text-orange-300" )
 
                 Link ->
-                    Debug.todo "Get colors for link"
+                    ( "bg-gray-500", "" )
     in
     case normalized.contactType of
         Telegram ->
@@ -890,7 +903,7 @@ contactTypeTextColor contactType =
             "text-orange-300"
 
         Link ->
-            Debug.todo "Get color for link"
+            "text-orange-300"
 
 
 viewInput : Translators -> Basic -> Html Msg
@@ -900,7 +913,7 @@ viewInput translators basic =
             [ viewFlagsSelect translators basic, viewPhoneInput translators basic ]
 
          else
-            [ viewProfileInput translators basic ]
+            [ viewTextInput translators basic ]
         )
 
 
@@ -1123,13 +1136,34 @@ phoneMask basic =
     }
 
 
-viewProfileInput : Translators -> Basic -> Html Msg
-viewProfileInput ({ t } as translators) basic =
+viewTextInput : Translators -> Basic -> Html Msg
+viewTextInput ({ t } as translators) basic =
+    let
+        contactKey =
+            case basic.contactType of
+                Instagram ->
+                    "username"
+
+                Telegram ->
+                    "username"
+
+                Link ->
+                    "link"
+
+                Email ->
+                    "email"
+
+                Whatsapp ->
+                    "phone"
+
+                Phone ->
+                    "phone"
+    in
     Form.Text.init
-        { label = t "contact_form.username.label"
+        { label = t ("contact_form." ++ contactKey ++ ".label")
         , id = ContactType.toString basic.contactType ++ "-input"
         }
-        |> Form.Text.withPlaceholder (t "contact_form.username.placeholder")
+        |> Form.Text.withPlaceholder (t ("contact_form." ++ contactKey ++ ".placeholder"))
         |> Form.Text.withContainerAttrs [ class "w-full" ]
         |> (\options ->
                 Form.Text.view options

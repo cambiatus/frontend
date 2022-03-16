@@ -1143,7 +1143,9 @@
       "phone": "Telèfon",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Correu electrònic",
+      "link": "Enllaç"
     },
     "reach_out": {
       "phone": "Contactar per telèfon",
@@ -1162,6 +1164,16 @@
       "label": "Nom d'usuari",
       "placeholder": "Ex.: cambiatus",
       "submit": "Afegeix un perfil"
+    },
+    "link": {
+      "label": "Enllaç",
+      "placeholder": "Ex.: https://cambiatus.com",
+      "submit": "Afegeix un Enllaç"
+    },
+    "email": {
+      "label": "Correu electrònic",
+      "placeholder": "Ex.: cambiatus@cambiatus.com",
+      "submit": "Afegir correu electrònic"
     },
     "validation": {
       "phone": {

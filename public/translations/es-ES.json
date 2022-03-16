@@ -1144,7 +1144,9 @@
       "phone": "Teléfono",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Correo electrónico",
+      "link": "Enlace"
     },
     "reach_out": {
       "phone": "Contacto por teléfono",
@@ -1163,6 +1165,16 @@
       "label": "Nombre de Usuario",
       "placeholder": "Ej.: cambiatus",
       "submit": "Agregar Perfil"
+    },
+    "link": {
+      "label": "Enlace",
+      "placeholder": "Ej.: https://cambiatus.com",
+      "submit": "Agregar Link"
+    },
+    "email": {
+      "label": "Correo electrónico",
+      "placeholder": "Ej.: cambiatus@cambiatus.com",
+      "submit": "Agregar Correo Electrónico"
     },
     "validation": {
       "phone": {
