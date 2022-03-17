@@ -1344,6 +1344,15 @@ async function handleJavascriptPort (arg) {
         return { notSupported: true }
       }
     }
+    case 'setFavicon': {
+      const { favicon } = arg.data
+      document.head.querySelectorAll('link[rel*=icon]')
+        .forEach((icon) => {
+          icon.href = favicon
+        })
+
+      return {}
+    }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
     }
