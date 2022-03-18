@@ -1370,9 +1370,10 @@ async function handleJavascriptPort (arg) {
         ...items
       }
 
-      const stringManifest = JSON.stringify(newManifest);
-      const blob = new Blob([stringManifest], { type: 'application/json' });
-      const newManifestLink = URL.createObjectURL(blob);
+      const stringManifest = JSON.stringify(newManifest)
+      /* global Blob */
+      const blob = new Blob([stringManifest], { type: 'application/json' })
+      const newManifestLink = URL.createObjectURL(blob)
 
       manifestElement.href = newManifestLink
       document.head.appendChild(manifestElement)
