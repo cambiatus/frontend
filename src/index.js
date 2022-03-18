@@ -1353,6 +1353,32 @@ async function handleJavascriptPort (arg) {
 
       return {}
     }
+    case 'setManifestItems': {
+      const { items } = arg.data
+      // Remove old manifest element
+      const oldManifestElement = document.head.querySelector('link[rel=manifest]')
+      if (oldManifestElement) {
+        oldManifestElement.remove()
+      }
+      // TODO - Check if we can get the current manifest's href JSON
+
+      const manifestElement = document.createElement('link')
+      manifestElement.rel = 'manifest'
+
+      const newManifest = {
+        ...require('../public/manifest.json'),
+        ...items
+      }
+
+      const stringManifest = JSON.stringify(newManifest);
+      const blob = new Blob([stringManifest], { type: 'application/json' });
+      const newManifestLink = URL.createObjectURL(blob);
+
+      manifestElement.href = newManifestLink
+      document.head.appendChild(manifestElement)
+
+      return {}
+    }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
     }

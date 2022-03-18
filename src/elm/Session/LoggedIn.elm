@@ -2104,6 +2104,21 @@ update msg model =
                             ]
                     }
                 |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "setManifestItems" )
+                            , ( "items"
+                              , Encode.object
+                                    [ ( "name", Encode.string (community.name ++ " | Cambiatus") )
+                                    , ( "short_name", Encode.string community.name )
+                                    , ( "description", Markdown.encodeUnformatted community.description )
+                                    ]
+                              )
+                            ]
+                    }
+                |> UR.addPort
                     { responseAddress = ReceivedNewHighlightedNews Encode.null
                     , responseData = Encode.null
                     , data =
