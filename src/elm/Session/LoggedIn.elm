@@ -1155,19 +1155,25 @@ viewFooter shared =
                         ]
                         []
                     , img
-                        [ class "h-14 ml-8"
+                        [ class "h-12 ml-8"
                         , src "/images/satisfied-vagabonds.svg"
                         , alt ""
                         ]
                         []
                     ]
+                , a
+                    [ Html.Attributes.href (codeOfConductUrl shared.language)
+                    , Html.Attributes.target "_blank"
+                    , class "text-center text-sm text-orange-300 mt-4 hover:underline md:hidden"
+                    ]
+                    [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
                 ]
             , div [ class "mt-4 md:mt-0 md:flex md:w-2/5 md:pr-12 lg:pr-0 lg:w-auto" ]
-                [ div [ class "mr-48 md:mr-0 lg:mr-60 md:pt-6" ]
+                [ div [ class "text-sm mr-48 md:mr-24 lg:mr-60 md:pt-6" ]
                     [ a
                         [ Html.Attributes.href (codeOfConductUrl shared.language)
                         , Html.Attributes.target "_blank"
-                        , class "text-center text-orange-300 hover:underline"
+                        , class "text-center text-orange-300 hover:underline hidden md:inline"
                         ]
                         [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
                     , p [ class "mt-6 text-gray-900" ]
