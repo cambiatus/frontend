@@ -1144,14 +1144,17 @@
       "phone": "Teléfono",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Correo electrónico",
+      "link": "Enlace"
     },
     "reach_out": {
       "phone": "Contacto por teléfono",
       "instagram": "Contacto por Instagram",
       "telegram": "Contacto por Telegram",
       "whatsapp": "Contacto por Whatsapp",
-      "email": "Contacto por correo electrónico"
+      "email": "Contacto por correo electrónico",
+      "link": "Ver este enlace"
     },
     "phone": {
       "label": "Número de teléfono (con DDD)",
@@ -1163,6 +1166,16 @@
       "placeholder": "Ej.: cambiatus",
       "submit": "Agregar Perfil"
     },
+    "link": {
+      "label": "Enlace",
+      "placeholder": "Ej.: https://cambiatus.com",
+      "submit": "Agregar Link"
+    },
+    "email": {
+      "label": "Correo electrónico",
+      "placeholder": "Ej.: cambiatus@cambiatus.com",
+      "submit": "Agregar Correo Electrónico"
+    },
     "validation": {
       "phone": {
         "blank": "Por favor, introduzca su número de teléfono",
@@ -1171,6 +1184,14 @@
       "username": {
         "blank": "Ingrese su nombre de perfil",
         "invalid": "Ingrese un nombre de perfil válido"
+      },
+      "email": {
+        "blank": "Por favor introduzca su correo electrónico",
+        "invalid": "Por favor introduzca una dirección de correo electrónico válida"
+      },
+      "link": {
+        "blank": "Por favor inserte un enlace",
+        "invalid": "Por favor introduzca un enlace válido"
       }
     },
     "feedback": {
@@ -1357,8 +1378,9 @@
   },
   "footer": {
     "created_with": "Creado con",
-    "created_by": "por Satisfied Vagabonds",
-    "created_with_love": "Creado con amor por Satisfied Vagabonds"
+    "created_by": "por",
+    "created_with_love": "Creado con amor por Satisfied Vagabonds y Cambiatus",
+    "version": "VERSIÓN {{version}}"
   },
   "account_frozen": {
     "title": "Tu cuenta está congelada",

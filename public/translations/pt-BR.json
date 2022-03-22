@@ -1147,14 +1147,17 @@
       "phone": "Telefone",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Email",
+      "link": "Link"
     },
     "reach_out": {
       "phone": "Contate pelo telefone",
       "instagram": "Contate pelo Instagram",
       "telegram": "Contate pelo Telegram",
       "whatsapp": "Contate pelo Whatsapp",
-      "email": "Contate por email"
+      "email": "Contate por email",
+      "link": "Veja esse link"
     },
     "phone": {
       "label": "Número de Telefone (com DDD)",
@@ -1166,6 +1169,16 @@
       "placeholder": "Ex.: cambiatus",
       "submit": "Adicionar Perfil"
     },
+    "link": {
+      "label": "Link",
+      "placeholder": "Ex.: https://cambiatus.com",
+      "submit": "Adicionar Link"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "Ex.: cambiatus@cambiatus.com",
+      "submit": "Adicionar Email"
+    },
     "validation": {
       "phone": {
         "blank": "Por favor insira seu número de telefone",
@@ -1174,6 +1187,14 @@
       "username": {
         "blank": "Por favor insira seu perfil",
         "invalid": "Por favor insira um perfil válido"
+      },
+      "email": {
+        "blank": "Por favor insira seu email",
+        "invalid": "Por favor insira um email válido"
+      },
+      "link": {
+        "blank": "Por favor insira um link",
+        "invalid": "Por favor insira um link válido"
       }
     },
     "feedback": {
@@ -1360,8 +1381,9 @@
   },
   "footer": {
     "created_with": "Criado com",
-    "created_by": "por Satisfied Vagabonds",
-    "created_with_love": "Criado com amor por Satisfied Vagabonds"
+    "created_by": "por",
+    "created_with_love": "Criado com amor por Satisfied Vagabonds e Cambiatus",
+    "version": "VERSÃO {{version}}"
   },
   "account_frozen": {
     "title": "Sua conta está congelada",

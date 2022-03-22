@@ -173,6 +173,40 @@ encodeClaimsFilter input =
         [ ( "claimer", Encode.string |> Encode.optional input.claimer ), ( "direction", Encode.enum Cambiatus.Enum.Direction.toString |> Encode.optional input.direction ), ( "status", Encode.string |> Encode.optional input.status ) ]
 
 
+buildCommunityUpdateInput :
+    (CommunityUpdateInputOptionalFields -> CommunityUpdateInputOptionalFields)
+    -> CommunityUpdateInput
+buildCommunityUpdateInput fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { contacts = Absent, hasNews = Absent }
+    in
+    { contacts = optionals.contacts, hasNews = optionals.hasNews }
+
+
+type alias CommunityUpdateInputOptionalFields =
+    { contacts : OptionalArgument (List ContactInput)
+    , hasNews : OptionalArgument Bool
+    }
+
+
+{-| Type for the CommunityUpdateInput input object.
+-}
+type alias CommunityUpdateInput =
+    { contacts : OptionalArgument (List ContactInput)
+    , hasNews : OptionalArgument Bool
+    }
+
+
+{-| Encode a CommunityUpdateInput into a value that can be used as an argument.
+-}
+encodeCommunityUpdateInput : CommunityUpdateInput -> Value
+encodeCommunityUpdateInput input =
+    Encode.maybeObject
+        [ ( "contacts", (encodeContactInput |> Encode.list) |> Encode.optional input.contacts ), ( "hasNews", Encode.bool |> Encode.optional input.hasNews ) ]
+
+
 buildContactInput :
     (ContactInputOptionalFields -> ContactInputOptionalFields)
     -> ContactInput
@@ -180,13 +214,14 @@ buildContactInput fillOptionals =
     let
         optionals =
             fillOptionals
-                { externalId = Absent, type_ = Absent }
+                { externalId = Absent, label = Absent, type_ = Absent }
     in
-    { externalId = optionals.externalId, type_ = optionals.type_ }
+    { externalId = optionals.externalId, label = optionals.label, type_ = optionals.type_ }
 
 
 type alias ContactInputOptionalFields =
     { externalId : OptionalArgument String
+    , label : OptionalArgument String
     , type_ : OptionalArgument Cambiatus.Enum.ContactType.ContactType
     }
 
@@ -195,6 +230,7 @@ type alias ContactInputOptionalFields =
 -}
 type alias ContactInput =
     { externalId : OptionalArgument String
+    , label : OptionalArgument String
     , type_ : OptionalArgument Cambiatus.Enum.ContactType.ContactType
     }
 
@@ -204,7 +240,7 @@ type alias ContactInput =
 encodeContactInput : ContactInput -> Value
 encodeContactInput input =
     Encode.maybeObject
-        [ ( "externalId", Encode.string |> Encode.optional input.externalId ), ( "type", Encode.enum Cambiatus.Enum.ContactType.toString |> Encode.optional input.type_ ) ]
+        [ ( "externalId", Encode.string |> Encode.optional input.externalId ), ( "label", Encode.string |> Encode.optional input.label ), ( "type", Encode.enum Cambiatus.Enum.ContactType.toString |> Encode.optional input.type_ ) ]
 
 
 buildCountryInput :

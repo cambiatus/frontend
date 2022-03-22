@@ -25,6 +25,13 @@ externalId =
     Object.selectionForField "(Maybe String)" "externalId" [] (Decode.string |> Decode.nullable)
 
 
+{-| A label that can be used to better identify the contact
+-}
+label : SelectionSet (Maybe String) Cambiatus.Object.Contact
+label =
+    Object.selectionForField "(Maybe String)" "label" [] (Decode.string |> Decode.nullable)
+
+
 type_ : SelectionSet (Maybe Cambiatus.Enum.ContactType.ContactType) Cambiatus.Object.Contact
 type_ =
     Object.selectionForField "(Maybe Enum.ContactType.ContactType)" "type" [] (Cambiatus.Enum.ContactType.decoder |> Decode.nullable)

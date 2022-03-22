@@ -33,6 +33,7 @@ import Url exposing (Url)
 type alias Shared =
     { navKey : Nav.Key
     , language : Translation.Language
+    , version : String
     , translations : Translations
     , translators : Translators
     , translationsStatus : TranslationStatus
@@ -73,6 +74,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
                     flags.language
                         |> Translation.languageFromLocale
                         |> Maybe.withDefault Translation.defaultLanguage
+      , version = flags.version
       , translations = initialTranslations
       , translators = makeTranslators initialTranslations
       , translationsStatus = LoadingTranslation

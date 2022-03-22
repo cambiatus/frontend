@@ -1143,14 +1143,17 @@
       "phone": "Telèfon",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Correu electrònic",
+      "link": "Enllaç"
     },
     "reach_out": {
       "phone": "Contactar per telèfon",
       "instagram": "Contactar per Instagram",
       "telegram": "Contactar per Telegram",
       "whatsapp": "Contactar per Whatsapp",
-      "email": "Contactar per correu electrònic"
+      "email": "Contactar per correu electrònic",
+      "link": "Mireu aquest enllaç"
     },
     "phone": {
       "label": "Número de telèfon (amb DDD)",
@@ -1162,6 +1165,16 @@
       "placeholder": "Ex.: cambiatus",
       "submit": "Afegeix un perfil"
     },
+    "link": {
+      "label": "Enllaç",
+      "placeholder": "Ex.: https://cambiatus.com",
+      "submit": "Afegeix un Enllaç"
+    },
+    "email": {
+      "label": "Correu electrònic",
+      "placeholder": "Ex.: cambiatus@cambiatus.com",
+      "submit": "Afegir correu electrònic"
+    },
     "validation": {
       "phone": {
         "blank": "Introduïu el vostre número de telèfon",
@@ -1170,6 +1183,14 @@
       "username": {
         "blank": "Introduïu el nom del vostre perfil",
         "invalid": "Introduïu un nom de perfil vàlid"
+      },
+      "email": {
+        "blank": "Introduïu el vostre correu electrònic",
+        "invalid": "Introduïu un correu electrònic vàlid"
+      },
+      "link": {
+        "blank": "Introduïu un enllaç",
+        "invalid": "Introduïu un enllaç vàlid"
       }
     },
     "feedback": {
@@ -1356,8 +1377,9 @@
   },
   "footer": {
     "created_with": "Creat amb",
-    "created_by": "per Satisfied Vagabonds",
-    "created_with_love": "Creat amb amor per Satisfied Vagabonds"
+    "created_by": "per",
+    "created_with_love": "Creat amb amor per Satisfied Vagabonds i Cambiatus",
+    "version": "VERSIÓ {{version}}"
   },
   "account_frozen": {
     "title": "El teu compte està congelat",

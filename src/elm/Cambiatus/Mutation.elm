@@ -47,6 +47,22 @@ addCommunityPhotos requiredArgs object_ =
     Object.selectionForCompositeField "addCommunityPhotos" [ Argument.required "symbol" requiredArgs.symbol Encode.string, Argument.required "urls" requiredArgs.urls (Encode.string |> Encode.list) ] object_ (identity >> Decode.nullable)
 
 
+type alias CommunityRequiredArguments =
+    { communityId : String
+    , input : Cambiatus.InputObject.CommunityUpdateInput
+    }
+
+
+{-| [Auth required - Admin only] Updates various fields in a community
+-}
+community :
+    CommunityRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Community
+    -> SelectionSet (Maybe decodesTo) RootMutation
+community requiredArgs object_ =
+    Object.selectionForCompositeField "community" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeCommunityUpdateInput ] object_ (identity >> Decode.nullable)
+
+
 type alias CompleteObjectiveRequiredArguments =
     { id : Int }
 
@@ -122,22 +138,6 @@ genAuth :
     -> SelectionSet decodesTo RootMutation
 genAuth requiredArgs object_ =
     Object.selectionForCompositeField "genAuth" [ Argument.required "account" requiredArgs.account Encode.string ] object_ identity
-
-
-type alias HasNewsRequiredArguments =
-    { communityId : String
-    , hasNews : Bool
-    }
-
-
-{-| [Auth required - Admin only] Set has\_news flag of community
--}
-hasNews :
-    HasNewsRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.Community
-    -> SelectionSet (Maybe decodesTo) RootMutation
-hasNews requiredArgs object_ =
-    Object.selectionForCompositeField "hasNews" [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "hasNews" requiredArgs.hasNews Encode.bool ] object_ (identity >> Decode.nullable)
 
 
 type alias HighlightedNewsOptionalArguments =
@@ -360,20 +360,6 @@ signUp fillInOptionals requiredArgs object_ =
     Object.selectionForCompositeField "signUp" (optionalArgs ++ [ Argument.required "account" requiredArgs.account Encode.string, Argument.required "email" requiredArgs.email Encode.string, Argument.required "name" requiredArgs.name Encode.string, Argument.required "publicKey" requiredArgs.publicKey Encode.string, Argument.required "userType" requiredArgs.userType Encode.string ]) object_ identity
 
 
-type alias UpdateUserRequiredArguments =
-    { input : Cambiatus.InputObject.UserUpdateInput }
-
-
-{-| [Auth required] A mutation to update a user
--}
-updateUser :
-    UpdateUserRequiredArguments
-    -> SelectionSet decodesTo Cambiatus.Object.User
-    -> SelectionSet (Maybe decodesTo) RootMutation
-updateUser requiredArgs object_ =
-    Object.selectionForCompositeField "updateUser" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUserUpdateInput ] object_ (identity >> Decode.nullable)
-
-
 type alias UpsertAddressRequiredArguments =
     { input : Cambiatus.InputObject.AddressUpdateInput }
 
@@ -400,3 +386,17 @@ upsertKyc :
     -> SelectionSet (Maybe decodesTo) RootMutation
 upsertKyc requiredArgs object_ =
     Object.selectionForCompositeField "upsertKyc" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeKycDataUpdateInput ] object_ (identity >> Decode.nullable)
+
+
+type alias UserRequiredArguments =
+    { input : Cambiatus.InputObject.UserUpdateInput }
+
+
+{-| [Auth required] A mutation to update a user
+-}
+user :
+    UserRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.User
+    -> SelectionSet (Maybe decodesTo) RootMutation
+user requiredArgs object_ =
+    Object.selectionForCompositeField "user" [ Argument.required "input" requiredArgs.input Cambiatus.InputObject.encodeUserUpdateInput ] object_ (identity >> Decode.nullable)

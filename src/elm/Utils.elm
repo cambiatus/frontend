@@ -5,6 +5,7 @@ module Utils exposing
     , formatFloat
     , fromDateTime
     , fromMaybeDateTime
+    , fromNaiveDateTime
     , onClickNoBubble
     , onClickPreventAll
     , onSubmitPreventAll
@@ -13,7 +14,7 @@ module Utils exposing
     )
 
 import Browser.Events
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime(..), NaiveDateTime(..))
 import Date
 import Html
 import Html.Events
@@ -36,6 +37,12 @@ fromMaybeDateTime maybeDateTime =
 
 fromDateTime : DateTime -> Posix
 fromDateTime (DateTime dateTime) =
+    Iso8601.toTime dateTime
+        |> Result.withDefault (Time.millisToPosix 0)
+
+
+fromNaiveDateTime : NaiveDateTime -> Posix
+fromNaiveDateTime (NaiveDateTime dateTime) =
     Iso8601.toTime dateTime
         |> Result.withDefault (Time.millisToPosix 0)
 

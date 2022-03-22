@@ -101,6 +101,7 @@
     "eosjs": "^16.0.9",
     "eosjs-ecc": "^4.0.4",
     "focus-visible": "^5.2.0",
+    "git-hash-webpack-plugin": "^1.0.1",
     "husky": "^4.2.5",
     "pdfjs-dist": "^2.7.570",
     "pdfmake": "^0.1.64",
