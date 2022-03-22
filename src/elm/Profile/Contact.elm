@@ -45,6 +45,7 @@ import RemoteData exposing (RemoteData)
 import Task
 import Translation exposing (Translators)
 import UpdateResult as UR
+import Url
 import Validate
 import View.Components
 import View.Modal as Modal
@@ -100,6 +101,7 @@ type alias Basic =
     { supportedCountry : SupportedCountry
     , contactType : ContactType
     , contact : String
+    , label : Maybe String
     , errors : Maybe (List String)
     , showFlags : Bool
     , focusedFlag : Maybe SupportedCountry
@@ -110,6 +112,7 @@ initBasic : ContactType -> Basic
 initBasic contactType =
     { supportedCountry = defaultCountry
     , contactType = contactType
+    , label = Nothing
     , contact = ""
     , errors = Nothing
     , showFlags = False
@@ -143,6 +146,12 @@ initBasicWith ((Normalized { contactType }) as normalized) =
                     newPhoneContact
                         -- 22 == String.length "https://instagram.com/"
                         |> String.dropLeft 22
+
+                Email ->
+                    newPhoneContact
+
+                Link ->
+                    newPhoneContact
     in
     { initial
         | contact = newContact
@@ -180,6 +189,7 @@ countryFromNormalized (Normalized { contactType, contact }) =
 type alias Contact =
     { contactType : ContactType
     , contact : String
+    , label : Maybe String
     }
 
 
@@ -592,11 +602,24 @@ view translators model =
         submitText =
             (case model.kind of
                 Single contact ->
-                    if usesPhone contact.contactType then
-                        "contact_form.phone.submit"
+                    case contact.contactType of
+                        Instagram ->
+                            "contact_form.username.submit"
 
-                    else
-                        "contact_form.username.submit"
+                        Telegram ->
+                            "contact_form.username.submit"
+
+                        Link ->
+                            "contact_form.link.submit"
+
+                        Email ->
+                            "contact_form.email.submit"
+
+                        Whatsapp ->
+                            "contact_form.phone.submit"
+
+                        Phone ->
+                            "contact_form.phone.submit"
 
                 Multiple _ ->
                     "contact_form.submit_multiple"
@@ -736,6 +759,12 @@ contactTypeToIcon class_ isInverted contactType =
             else
                 Icons.whatsapp class_
 
+        Email ->
+            Icons.mail class_
+
+        Link ->
+            Icons.link class_
+
 
 circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
 circularIconWithGrayBg translators class_ (Normalized normalized) =
@@ -774,6 +803,12 @@ ariaLabelForContactType { t } contactType =
         Whatsapp ->
             t "contact_form.reach_out.whatsapp"
 
+        Email ->
+            t "contact_form.reach_out.email"
+
+        Link ->
+            t "contact_form.reach_out.link"
+
 
 circularIcon : String -> Normalized -> Html msg
 circularIcon class_ (Normalized normalized) =
@@ -791,6 +826,12 @@ circularIcon class_ (Normalized normalized) =
 
                 Whatsapp ->
                     ( "bg-whatsapp", "" )
+
+                Email ->
+                    ( "bg-gray-500", "fill-current text-orange-300" )
+
+                Link ->
+                    ( "bg-gray-500", "" )
     in
     case normalized.contactType of
         Telegram ->
@@ -836,6 +877,12 @@ toHref (Normalized { contactType, contact }) =
                        )
                 )
 
+        Email ->
+            href ("mailto:" ++ contact)
+
+        Link ->
+            href contact
+
 
 contactTypeTextColor : ContactType -> String
 contactTypeTextColor contactType =
@@ -852,6 +899,12 @@ contactTypeTextColor contactType =
         Whatsapp ->
             "text-whatsapp"
 
+        Email ->
+            "text-orange-300"
+
+        Link ->
+            "text-orange-300"
+
 
 viewInput : Translators -> Basic -> Html Msg
 viewInput translators basic =
@@ -860,7 +913,7 @@ viewInput translators basic =
             [ viewFlagsSelect translators basic, viewPhoneInput translators basic ]
 
          else
-            [ viewProfileInput translators basic ]
+            [ viewTextInput translators basic ]
         )
 
 
@@ -1083,13 +1136,34 @@ phoneMask basic =
     }
 
 
-viewProfileInput : Translators -> Basic -> Html Msg
-viewProfileInput ({ t } as translators) basic =
+viewTextInput : Translators -> Basic -> Html Msg
+viewTextInput ({ t } as translators) basic =
+    let
+        contactKey =
+            case basic.contactType of
+                Instagram ->
+                    "username"
+
+                Telegram ->
+                    "username"
+
+                Link ->
+                    "link"
+
+                Email ->
+                    "email"
+
+                Whatsapp ->
+                    "phone"
+
+                Phone ->
+                    "phone"
+    in
     Form.Text.init
-        { label = t "contact_form.username.label"
+        { label = t ("contact_form." ++ contactKey ++ ".label")
         , id = ContactType.toString basic.contactType ++ "-input"
         }
-        |> Form.Text.withPlaceholder (t "contact_form.username.placeholder")
+        |> Form.Text.withPlaceholder (t ("contact_form." ++ contactKey ++ ".placeholder"))
         |> Form.Text.withContainerAttrs [ class "w-full" ]
         |> (\options ->
                 Form.Text.view options
@@ -1165,7 +1239,7 @@ isMultiple kind =
 normalize : SupportedCountry -> Validate.Valid Basic -> Normalized
 normalize { country } validatedContact =
     let
-        { contactType, contact } =
+        { contactType, contact, label } =
             Validate.fromValid validatedContact
     in
     Normalized
@@ -1183,6 +1257,13 @@ normalize { country } validatedContact =
 
                 Whatsapp ->
                     String.join " " [ "+" ++ country.countryCode, contact ]
+
+                Email ->
+                    contact
+
+                Link ->
+                    contact
+        , label = label
         }
 
 
@@ -1217,7 +1298,7 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\({ supportedCountry, contact } as basic) ->
+        (\{ supportedCountry, contact } ->
             if
                 PhoneNumber.valid
                     { defaultCountry = supportedCountry.country
@@ -1249,6 +1330,34 @@ validator contactType translators =
 
                 Telegram ->
                     ( validateRegex telegramRegex, "username" )
+
+                Email ->
+                    ( \error -> Validate.ifInvalidEmail .contact (\_ -> error), "email" )
+
+                Link ->
+                    ( \error ->
+                        Validate.fromErrors
+                            (\{ contact } ->
+                                let
+                                    withProtocol =
+                                        if String.isEmpty contact then
+                                            ""
+
+                                        else if String.startsWith "https://" contact || String.startsWith "http://" contact then
+                                            contact
+
+                                        else
+                                            "http://" ++ contact
+                                in
+                                case Url.fromString withProtocol of
+                                    Nothing ->
+                                        [ error ]
+
+                                    Just _ ->
+                                        []
+                            )
+                    , "link"
+                    )
 
         baseTranslation =
             "contact_form.validation"
@@ -1328,16 +1437,22 @@ supportedCountries =
 selectionSet : SelectionSet (Maybe Normalized) Cambiatus.Object.Contact
 selectionSet =
     SelectionSet.succeed
-        (\maybeType maybeExternalId ->
+        (\maybeType maybeExternalId label ->
             case ( maybeType, maybeExternalId ) of
                 ( Just type_, Just externalId ) ->
-                    Contact type_ externalId |> Normalized |> Just
+                    Normalized
+                        { contactType = type_
+                        , contact = externalId
+                        , label = label
+                        }
+                        |> Just
 
                 _ ->
                     Nothing
         )
         |> with Cambiatus.Object.Contact.type_
         |> with Cambiatus.Object.Contact.externalId
+        |> with Cambiatus.Object.Contact.label
 
 
 profileSelectionSet : SelectionSet Profile Cambiatus.Object.User
@@ -1353,10 +1468,13 @@ profileSelectionSet =
 mutation : List Normalized -> SelectionSet (Maybe Profile) RootMutation
 mutation contacts =
     let
-        contactInput (Normalized { contactType, contact }) =
-            { type_ = Present contactType, externalId = Present contact }
+        contactInput (Normalized { contactType, contact, label }) =
+            { type_ = Present contactType
+            , externalId = Present contact
+            , label = Graphql.OptionalArgument.fromMaybe label
+            }
     in
-    Cambiatus.Mutation.updateUser
+    Cambiatus.Mutation.user
         { input =
             { avatar = Absent
             , bio = Absent

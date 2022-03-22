@@ -1102,24 +1102,37 @@
       "phone": "ስልክ",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
-    },
-    "phone": {
-      "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
-      "placeholder": "ዘጸ-{{example_number}}",
-      "submit": "ስልክ ቁጥር ያክሉ"
+      "whatsapp": "Whatsapp",
+      "email": "ኢሜይል",
+      "link": "አገናኝ"
     },
     "reach_out": {
       "phone": "በስልክ መገናኘት",
       "instagram": "በ Instagram በኩል ያነጋግሩ",
       "telegram": "በ Telegram በኩል ያነጋግሩ",
       "whatsapp": "በ WhatsApp ያነጋግሩ",
-      "email": "በኢሜል ያነጋግሩ"
+      "email": "በኢሜል ያነጋግሩ",
+      "link": "ይህንን ሊንክ ይመልከቱ"
+    },
+    "phone": {
+      "label": "የስልክ ቁጥር (ከዲዲዲ ጋር)",
+      "placeholder": "ዘጸ-{{example_number}}",
+      "submit": "ስልክ ቁጥር ያክሉ"
     },
     "username": {
       "label": "የተጠቃሚ ስም",
       "placeholder": "ዘፀ: cambiatus",
       "submit": "መገለጫ ያክሉ"
+    },
+    "link": {
+      "label": "አገናኝ",
+      "placeholder": "ለምሳሌ፡ https://cambiatus.com",
+      "submit": "አገናኝ አክል"
+    },
+    "email": {
+      "label": "ኢሜይል",
+      "placeholder": "ለምሳሌ: cambiatus@cambiatus.com",
+      "submit": "ኢሜይል አክል"
     },
     "validation": {
       "phone": {
@@ -1129,6 +1142,14 @@
       "username": {
         "blank": "እባክዎን የመገለጫ ስምዎን ያስገቡ",
         "invalid": "እባክዎ ትክክለኛ የመገለጫ ስም ያስገቡ"
+      },
+      "email": {
+        "blank": "እባክህ ኢሜልህን አስገባ",
+        "invalid": "እባክዎ ትክክለኛ ኢሜይል ያስገቡ"
+      },
+      "link": {
+        "blank": "እባክህ አገናኝ አስገባ",
+        "invalid": "እባክህ የሚሰራ አገናኝ አስገባ"
       }
     },
     "feedback": {
@@ -1313,8 +1334,9 @@
   },
   "footer": {
     "created_with": "ጋር የተፈጠረ",
-    "created_by": "በ Satisfied Vagabonds",
-    "created_with_love": "በአረካ ቫጋቦንስ በፍቅር የተፈጠረ"
+    "created_by": "በ",
+    "created_with_love": "በአረካ ቫጋቦንድ እና ካምቢያተስ በፍቅር የተፈጠረ",
+    "version": "ስሪት {{version}}"
   },
   "account_frozen": {
     "title": "መለያህ ታግዷል",

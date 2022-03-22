@@ -1133,30 +1133,60 @@ viewFooter shared =
             shared.translators
     in
     footer
-        [ class "bg-white w-full flex flex-col items-center border-t border-grey-500 px-4 py-8"
+        [ class "bg-white w-full border-t border-grey-500 relative overflow-hidden"
         , role "contentinfo"
         ]
-        [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
-        , p
-            [ class "text-sm text-center flex w-full justify-center items-center mb-4"
-            , ariaHidden True
+        [ div [ class "container mx-auto px-4 py-8 flex flex-col md:flex-row md:py-4 lg:relative lg:overflow-hidden" ]
+            [ div [ class "flex flex-col md:items-center md:flex-row md:flex-grow md:flex-shrink-0 after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 after:md:mr-8 after:md:mt-0 after:md:w-px after:md:h-full after:lg:ml-auto" ]
+                [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
+                , p
+                    [ class "text-sm text-center flex justify-center items-center"
+                    , ariaHidden True
+                    ]
+                    [ span [] [ text <| t "footer.created_with" ]
+                    , Icons.heartSolid
+                    , span [] [ text <| t "footer.created_by" ]
+                    ]
+                , div [ class "flex items-center mt-2 mx-auto md:mt-0 md:ml-8" ]
+                    [ img
+                        [ class "h-8"
+                        , src "/images/logo-cambiatus-mobile.svg"
+                        , alt ""
+                        ]
+                        []
+                    , img
+                        [ class "h-12 ml-8"
+                        , src "/images/satisfied-vagabonds.svg"
+                        , alt ""
+                        ]
+                        []
+                    ]
+                , a
+                    [ Html.Attributes.href (codeOfConductUrl shared.language)
+                    , Html.Attributes.target "_blank"
+                    , class "text-center text-sm text-orange-300 mt-4 hover:underline md:hidden"
+                    ]
+                    [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
+                ]
+            , div [ class "mt-4 md:mt-0 md:flex md:w-2/5 md:pr-12 lg:pr-0 lg:w-auto" ]
+                [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
+                    [ a
+                        [ Html.Attributes.href (codeOfConductUrl shared.language)
+                        , Html.Attributes.target "_blank"
+                        , class "text-sm text-center text-orange-300 hover:underline hidden md:inline"
+                        ]
+                        [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
+                    , p [ class "text-xs mt-6 text-gray-900" ]
+                        [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
+                    ]
+                , img
+                    [ src "/images/man-with-envelope.svg"
+                    , alt ""
+                    , class "pointer-events-none absolute w-40 -bottom-12 -right-8 lg:right-4 md:-bottom-13 md:w-44"
+                    ]
+                    []
+                ]
             ]
-            [ span [] [ text <| t "footer.created_with" ]
-            , Icons.heartSolid
-            , span [] [ text <| t "footer.created_by" ]
-            ]
-        , a
-            [ Html.Attributes.href (codeOfConductUrl shared.language)
-            , Html.Attributes.target "_blank"
-            , class "text-center text-orange-300 hover:underline"
-            ]
-            [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
-        , img
-            [ class "h-24 w-full mt-3"
-            , src "/images/satisfied-vagabonds.svg"
-            , alt ""
-            ]
-            []
         ]
 
 

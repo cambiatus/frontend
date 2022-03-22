@@ -151,6 +151,7 @@ module.exports = {
         super: '2.5rem'
       },
       inset: {
+        '-13': '-3.25rem',
         modal: '10rem'
       },
       width: {

@@ -12,6 +12,7 @@ module Page.Profile exposing
 import Api
 import Api.Relay
 import Avatar
+import Cambiatus.Enum.ContactType as ContactType
 import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation
 import Cambiatus.Object
@@ -970,13 +971,23 @@ viewProfile loggedIn profile =
                                     let
                                         { contactType } =
                                             Contact.unwrap contact
+
+                                        contactClass =
+                                            case contactType of
+                                                ContactType.Whatsapp ->
+                                                    "fill-current text-green"
+
+                                                _ ->
+                                                    ""
                                     in
                                     a
                                         [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeTextColor contactType)
                                         , Contact.toHref contact
                                         , target "_blank"
                                         ]
-                                        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
+                                        [ Contact.contactTypeToIcon ("mr-2 w-6 h-6 " ++ contactClass)
+                                            True
+                                            contactType
                                         , text (Contact.contactTypeToString loggedIn.shared.translators contactType)
                                         ]
                                 )

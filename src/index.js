@@ -294,6 +294,7 @@ function flags () {
   return {
     endpoints: config.endpoints,
     language: getUserLanguage(),
+    version: process.env.COMMIT,
     accountName: accountName,
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,

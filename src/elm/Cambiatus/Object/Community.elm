@@ -35,6 +35,13 @@ claimCount =
     Object.selectionForField "Int" "claimCount" [] Decode.int
 
 
+contacts :
+    SelectionSet decodesTo Cambiatus.Object.Contact
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+contacts object_ =
+    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
+
+
 contributionConfiguration :
     SelectionSet decodesTo Cambiatus.Object.ContributionConfig
     -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community

@@ -6,6 +6,7 @@ import Dict
 import Eos
 import Eos.Account
 import Form.Toggle
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
@@ -249,9 +250,9 @@ update msg model loggedIn =
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
-                                (Cambiatus.Mutation.hasNews
+                                (Cambiatus.Mutation.community
                                     { communityId = Eos.symbolToString community.symbol
-                                    , hasNews = newsValue
+                                    , input = { hasNews = Present newsValue, contacts = Absent }
                                     }
                                     Graphql.SelectionSet.empty
                                 )
