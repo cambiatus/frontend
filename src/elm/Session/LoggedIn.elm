@@ -1169,20 +1169,20 @@ viewFooter shared =
                     [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
                 ]
             , div [ class "mt-4 md:mt-0 md:flex md:w-2/5 md:pr-12 lg:pr-0 lg:w-auto" ]
-                [ div [ class "text-sm mr-48 md:mr-24 lg:mr-60 md:pt-6" ]
+                [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
                     [ a
                         [ Html.Attributes.href (codeOfConductUrl shared.language)
                         , Html.Attributes.target "_blank"
-                        , class "text-center text-orange-300 hover:underline hidden md:inline"
+                        , class "text-sm text-center text-orange-300 hover:underline hidden md:inline"
                         ]
                         [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
-                    , p [ class "mt-6 text-gray-900" ]
+                    , p [ class "text-xs mt-6 text-gray-900" ]
                         [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
                     ]
                 , img
                     [ src "/images/man-with-envelope.svg"
                     , alt ""
-                    , class "pointer-events-none absolute w-53 -bottom-12 -right-8 lg:right-4 md:-bottom-16"
+                    , class "pointer-events-none absolute w-40 -bottom-12 -right-8 lg:right-4 md:-bottom-16 md:w-44"
                     ]
                     []
                 ]
