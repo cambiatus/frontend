@@ -1182,7 +1182,7 @@ viewFooter shared =
                 , img
                     [ src "/images/man-with-envelope.svg"
                     , alt ""
-                    , class "pointer-events-none absolute w-40 -bottom-12 -right-8 lg:right-4 md:-bottom-16 md:w-44"
+                    , class "pointer-events-none absolute w-40 -bottom-12 -right-8 lg:right-4 md:-bottom-13 md:w-44"
                     ]
                     []
                 ]
