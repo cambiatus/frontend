@@ -2144,6 +2144,27 @@ update msg model =
                                     [ ( "name", Encode.string (community.name ++ " | Cambiatus") )
                                     , ( "short_name", Encode.string community.name )
                                     , ( "description", Markdown.encodeUnformatted community.description )
+                                    , ( "start_url", Encode.string "http://buss.staging.localhost:3000/" )
+                                    , ( "icons"
+                                      , Encode.list
+                                            (\icon ->
+                                                Encode.object
+                                                    [ ( "src", Encode.string icon.src )
+                                                    , ( "sizes", Encode.string icon.sizes )
+                                                    , ( "type", Encode.string "image/png" )
+                                                    , ( "density", Encode.string icon.density )
+                                                    ]
+                                            )
+                                            [ { src = community.logo
+                                              , sizes = "36x36"
+                                              , density = "0.75"
+                                              }
+                                            , { src = community.logo
+                                              , sizes = "144x144"
+                                              , density = "3.0"
+                                              }
+                                            ]
+                                      )
                                     ]
                               )
                             ]
