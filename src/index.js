@@ -1345,6 +1345,16 @@ async function handleJavascriptPort (arg) {
         return { notSupported: true }
       }
     }
+    case 'share': {
+      const { title, text, url } = arg.data
+
+      try {
+        await navigator.share({ title, text, url })
+        return {}
+      } catch (err) {
+        return { error: err }
+      }
+    }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }
     }

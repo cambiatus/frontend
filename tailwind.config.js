@@ -135,6 +135,7 @@ module.exports = {
         '-10': '-10'
       },
       maxHeight: {
+        '43': '10.75rem',
         '108': '27rem'
       },
       minHeight: {
@@ -154,7 +155,11 @@ module.exports = {
         '-13': '-3.25rem',
         modal: '10rem'
       },
+      height: {
+        '21': '5.25rem',
+      },
       width: {
+        '21': '5.25rem',
         form: '45.625rem',
         '120': '30rem'
       },

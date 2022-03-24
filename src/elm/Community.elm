@@ -72,6 +72,7 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra
 import Markdown exposing (Markdown)
 import Profile
+import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
@@ -127,6 +128,7 @@ type alias Model =
     , validators : List Eos.Name
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
+    , contacts : List Contact.Normalized
     }
 
 
@@ -350,6 +352,10 @@ communitySelectionSet =
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
+        |> with
+            (Community.contacts Contact.selectionSet
+                |> SelectionSet.map (List.filterMap identity)
+            )
 
 
 

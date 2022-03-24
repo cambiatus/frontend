@@ -1410,7 +1410,7 @@ changeRouteTo maybeRoute model =
 
         Just Route.CommunityAbout ->
             CommunityAbout.init
-                >> updateStatusWith CommunityAbout GotCommunityAboutMsg model
+                >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
                 |> withLoggedIn Route.CommunityAbout
 
         Just Route.CommunitySettings ->
@@ -1573,6 +1573,10 @@ jsAddressToMsg address val =
         "GotDashboardMsg" :: rAddress ->
             Maybe.map GotDashboardMsg
                 (Dashboard.jsAddressToMsg rAddress val)
+
+        "GotCommunityAboutMsg" :: rAddress ->
+            Maybe.map GotCommunityAboutMsg
+                (CommunityAbout.jsAddressToMsg rAddress val)
 
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg
