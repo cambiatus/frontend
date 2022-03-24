@@ -317,6 +317,7 @@ type Page
     | Dashboard
     | News (Maybe Int)
     | Community
+    | CommunityAbout
     | CommunitySettings
     | CommunitySettingsInfo
     | CommunitySettingsNews

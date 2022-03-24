@@ -46,6 +46,7 @@ type Route
     | ProfileContributions Eos.Account.Name
     | Dashboard
     | Community
+    | CommunityAbout
     | NewCommunity
     | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
@@ -128,6 +129,7 @@ parser url =
                         (Query.string "showOthers")
             )
         , Url.map Community (s "community")
+        , Url.map CommunityAbout (s "community" </> s "about")
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
@@ -432,6 +434,9 @@ routeToString route =
 
                 Community ->
                     ( [ "community" ], [] )
+
+                CommunityAbout ->
+                    ( [ "community", "about" ], [] )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )

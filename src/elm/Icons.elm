@@ -18,6 +18,7 @@ module Icons exposing
     , externalLink
     , flag
     , flagWithoutBackground
+    , globe
     , heartSolid
     , heartStroke
     , image
@@ -219,6 +220,16 @@ flagWithoutBackground : String -> Svg msg
 flagWithoutBackground class_ =
     svg [ width "19", height "20", viewBox "0 0 19 20", fill "none", class class_ ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M15.9168 6.62927L18.2501 2.91707C18.5353 2.46401 18.5317 1.90851 18.2407 1.45845C17.9497 1.0084 17.4152 0.731624 16.8371 0.731707H1.62416C1.62416 0.327597 1.26058 0 0.81208 0C0.36358 0 0 0.327597 0 0.731707V19.2683C0 19.6724 0.36358 20 0.81208 20C1.26058 20 1.62416 19.6724 1.62416 19.2683V12.9268H16.783C17.3453 12.9261 17.8672 12.6634 18.1627 12.2323C18.4581 11.8012 18.4851 11.2631 18.2339 10.8098L15.9168 6.62927ZM1.6241 11.4634V2.19512H16.7829L14.0381 6.58536L16.745 11.4634H1.6241Z" ] [] ]
+
+
+globe : String -> Svg msg
+globe class_ =
+    svg [ width "24", height "24", viewBox "0 0 24 24", fill "none", class class_ ]
+        [ Svg.path [ d "M12 14C9.79086 14 8 12.2091 8 10C8 7.79086 9.79086 6 12 6C14.2091 6 16 7.79086 16 10C16 12.2091 14.2091 14 12 14Z", stroke "currentColor", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round", fill "none" ] []
+        , Svg.path [ d "M17.25 16C16.4061 16.733 15.4181 17.2814 14.3497 17.61C13.2812 17.9385 12.1558 18.0399 11.0458 17.9076C9.93582 17.7754 8.86577 17.4124 7.9044 16.842C6.94303 16.2716 6.1116 15.5065 5.46353 14.5957C4.81545 13.6849 4.36507 12.6486 4.1413 11.5533C3.91753 10.4581 3.92534 9.32822 4.16421 8.2362C4.40308 7.14418 4.86774 6.1142 5.52833 5.21243C6.18892 4.31066 7.03084 3.55705 8 3", stroke "currentColor", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round", fill "none" ] []
+        , Svg.path [ d "M12 18V22", stroke "currentColor", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] []
+        , Svg.path [ d "M16 22H8", stroke "currentColor", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] []
+        ]
 
 
 exclamation : String -> Svg msg

@@ -12,6 +12,7 @@ import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
 import Page.Community as CommunityPage
+import Page.Community.About as CommunityAbout
 import Page.Community.ActionEditor as ActionEditor
 import Page.Community.Invite as Invite
 import Page.Community.New as CommunityEditor
@@ -164,6 +165,7 @@ type Status
     | ComingSoon
     | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
+    | CommunityAbout CommunityAbout.Model
     | CommunityEditor CommunityEditor.Model
     | CommunitySettings CommunitySettings.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
@@ -215,6 +217,7 @@ type Msg
     | GotPageMsg (Page.Msg Msg)
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg CommunityPage.Msg
+    | GotCommunityAboutMsg CommunityAbout.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
@@ -395,6 +398,11 @@ update msg model =
         ( GotCommunityMsg subMsg, Community subModel ) ->
             CommunityPage.update subMsg subModel
                 >> updateLoggedInUResult Community GotCommunityMsg model
+                |> withLoggedIn
+
+        ( GotCommunityAboutMsg subMsg, CommunityAbout subModel ) ->
+            CommunityAbout.update subMsg subModel
+                >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
                 |> withLoggedIn
 
         ( GotCommunityEditorMsg subMsg, CommunityEditor subModel ) ->
@@ -1008,6 +1016,9 @@ statusToRoute status session =
         Community _ ->
             Just Route.Community
 
+        CommunityAbout _ ->
+            Just Route.CommunityAbout
+
         CommunityEditor _ ->
             Just Route.NewCommunity
 
@@ -1397,6 +1408,11 @@ changeRouteTo maybeRoute model =
                 >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn Route.Community
 
+        Just Route.CommunityAbout ->
+            CommunityAbout.init
+                >> updateStatusWith CommunityAbout GotCommunityAboutMsg model
+                |> withLoggedIn Route.CommunityAbout
+
         Just Route.CommunitySettings ->
             CommunitySettings.init
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
@@ -1639,6 +1655,9 @@ msgToString msg =
         GotCommunityMsg subMsg ->
             "GotCommunityMsg" :: CommunityPage.msgToString subMsg
 
+        GotCommunityAboutMsg subMsg ->
+            "GotCommunityAboutMsg" :: CommunityAbout.msgToString subMsg
+
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
@@ -1865,6 +1884,9 @@ view model =
 
         Community subModel ->
             viewLoggedIn subModel LoggedIn.Community GotCommunityMsg CommunityPage.view
+
+        CommunityAbout subModel ->
+            viewLoggedIn subModel LoggedIn.CommunityAbout GotCommunityAboutMsg CommunityAbout.view
 
         CommunitySettings subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view

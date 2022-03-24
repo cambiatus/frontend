@@ -809,6 +809,13 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 
                     _ ->
                         text ""
+                , listItem Icons.globe
+                    False
+                    "w-5 h-5"
+                    (t "dashboard.about_community")
+                    a
+                    [ Route.href Route.CommunityAbout
+                    ]
                 ]
             ]
         , img
