@@ -491,14 +491,6 @@ update msg model loggedIn =
                               , authorization = authorization
                               , data = Token.encodeCreateTokenData createTokenData
                               }
-                            , { accountName = loggedIn.shared.contracts.community
-                              , name = "upsertrole"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.samplePermission
-                                    }
-                              , data = defaultRoleTransaction createCommunityData.cmmAsset.symbol
-                              }
                             ]
                     }
 
@@ -544,25 +536,6 @@ update msg model loggedIn =
                     GotFormMsg
                     LoggedIn.addFeedback
                     model
-
-
-defaultRoleTransaction : Eos.Symbol -> Value
-defaultRoleTransaction symbol =
-    Encode.object
-        [ ( "community_id", Eos.encodeSymbol symbol )
-        , ( "name", Encode.string "member" )
-        , ( "color", Encode.string "#ffffff" )
-        , ( "permissions"
-          , Encode.list Encode.string
-                [ "invite"
-                , "claim"
-                , "order"
-                , "verify"
-                , "sell"
-                , "transfer"
-                ]
-          )
-        ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
