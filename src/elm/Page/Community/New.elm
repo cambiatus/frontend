@@ -538,25 +538,6 @@ update msg model loggedIn =
                     model
 
 
-defaultRoleTransaction : Eos.Symbol -> Value
-defaultRoleTransaction symbol =
-    Encode.object
-        [ ( "community_id", Eos.encodeSymbol symbol )
-        , ( "name", Encode.string "member" )
-        , ( "color", Encode.string "#ffffff" )
-        , ( "permissions"
-          , Encode.list Encode.string
-                [ "invite"
-                , "claim"
-                , "order"
-                , "verify"
-                , "sell"
-                , "transfer"
-                ]
-          )
-        ]
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
