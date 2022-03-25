@@ -8,7 +8,7 @@ import Icons
 import Json.Encode as Encode
 import Markdown
 import Profile.Contact as Contact
-import RemoteData exposing (RemoteData(..))
+import RemoteData
 import Session.LoggedIn as LoggedIn
 import Translation
 import UpdateResult as UR
@@ -169,10 +169,12 @@ viewCommunityCard translators community =
                 let
                     removeProtocol site =
                         if String.startsWith "http://" site then
-                            String.dropLeft (String.length "http://") site
+                            -- Remove http://
+                            String.dropLeft 7 site
 
                         else if String.startsWith "https://" website then
-                            String.dropLeft (String.length "https://") site
+                            -- Remove https://
+                            String.dropLeft 8 site
 
                         else
                             site
