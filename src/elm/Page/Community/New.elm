@@ -491,14 +491,6 @@ update msg model loggedIn =
                               , authorization = authorization
                               , data = Token.encodeCreateTokenData createTokenData
                               }
-                            , { accountName = loggedIn.shared.contracts.community
-                              , name = "upsertrole"
-                              , authorization =
-                                    { actor = loggedIn.accountName
-                                    , permissionName = Eos.samplePermission
-                                    }
-                              , data = defaultRoleTransaction createCommunityData.cmmAsset.symbol
-                              }
                             ]
                     }
 
