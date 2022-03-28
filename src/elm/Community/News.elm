@@ -189,7 +189,7 @@ timeFromNaiveDateTime (Cambiatus.Scalar.NaiveDateTime dateTime) =
 
 viewList : Shared -> List (Html.Attribute msg) -> List Model -> Html msg
 viewList shared attrs news =
-    div (class "divide-y divide-gray-500 space-y-4" :: attrs)
+    div (class "divide-y divide-gray-100 space-y-4" :: attrs)
         (news
             |> List.Extra.groupWhile
                 (\news1 news2 ->
@@ -207,7 +207,7 @@ viewList shared attrs news =
                                 shared
                                 firstNews.insertedAt
                             ]
-                        , div [ class "divide-y divide-gray-500" ]
+                        , div [ class "divide-y divide-gray-100" ]
                             (List.map
                                 (\theseNews ->
                                     viewSummary shared.translators
@@ -224,38 +224,38 @@ viewList shared attrs news =
 viewSummary : Translators -> Bool -> Model -> Html msg
 viewSummary { t } hasRead news =
     a
-        [ class "grid items-center py-4 focus-ring rounded-sm"
-        , classList
-            [ ( "text-gray-900 hover:text-gray-400", hasRead )
-            , ( "text-purple-500 hover:opacity-80", not hasRead )
-            ]
-        , style "grid-template-columns" "28px 1fr 80px"
+        [ class "grid items-center py-4 focus-ring rounded-sm hover:opacity-70"
+        , style "grid-template-columns" "32px 1fr 80px"
         , title news.title
         , Route.href (Route.News { selectedNews = Just news.id, showOthers = False })
         ]
-        [ Icons.speechBubble [ ariaHidden True ] "flex-shrink-0 stroke-current"
-        , div [ class "truncate ml-4 mr-16" ]
-            [ h4 [ class "font-bold truncate" ] [ text news.title ]
+        [ Icons.speechBubble
+            [ ariaHidden True
+            ]
+            "h-8 w-8 stroke-current text-blue bg-gray-100 rounded-full p-[6px] overflow-visible"
+        , div [ class "truncate mx-4" ]
+            [ h4
+                [ class "font-bold truncate"
+                , classList
+                    [ ( "text-purple-500", not hasRead )
+                    , ( "text-gray-333", hasRead )
+                    ]
+                ]
+                [ text news.title ]
             , p
-                [ class "truncate"
+                [ class "truncate text-gray-333"
                 , ariaHidden True
                 ]
                 [ text <| Markdown.toUnformattedString news.description ]
             , p [ class "sr-only" ]
                 [ if hasRead then
+                    -- TODO - I18N
                     text "Lido"
 
                   else
+                    -- TODO - I18N
                     text "Não lido"
                 ]
             ]
-        , if not hasRead then
-            span
-                [ class "button button-primary w-auto px-4"
-                , ariaHidden True
-                ]
-                [ text <| t "news.read" ]
-
-          else
-            Icons.arrowDown "-rotate-90 fill-current ml-auto"
+        , Icons.arrowDown "-rotate-90 fill-current text-orange-300 ml-auto rounded-full bg-gray-100"
         ]

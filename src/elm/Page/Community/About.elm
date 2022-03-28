@@ -2,7 +2,8 @@ module Page.Community.About exposing (Model, Msg, init, jsAddressToMsg, msgToStr
 
 import Avatar
 import Community
-import Html exposing (Html, a, button, div, h1, h2, img, li, p, span, text, ul)
+import Community.News
+import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, href, media, src, style)
 import Html.Events exposing (onClick)
 import Icons
@@ -13,9 +14,11 @@ import Profile.Contact as Contact
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Shared)
 import Translation
 import UpdateResult as UR
 import Url
+import View.Components
 
 
 
@@ -31,6 +34,7 @@ init _ =
     UR.init {}
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
 
 
 
@@ -133,6 +137,7 @@ view loggedIn model =
                     , div [ class "container mx-auto px-4 py-10 grid md:grid-cols-3 gap-6" ]
                         [ viewCommunityCard loggedIn.shared.translators community
                         , viewSupportersCard loggedIn.shared.translators community
+                        , viewNewsCard loggedIn.shared community
                         ]
                     ]
 
@@ -284,6 +289,61 @@ viewSupportersCard { t } community =
                 ]
                 [ text <| t "community.index.see_all_supporters" ]
             ]
+        ]
+
+
+viewNewsCard : Shared -> Community.Model -> Html Msg
+viewNewsCard ({ translators } as shared) community =
+    let
+        { t } =
+            translators
+    in
+    div []
+        [ h2 []
+            [ span [] [ text <| t "community.index.our_messages" ]
+            , text " "
+            , span [ class "font-bold" ] [ text <| t "community.index.messages" ]
+            ]
+        , div [ class "bg-white rounded px-4 pt-4 pb-6 mt-4 relative" ]
+            (img
+                [ src "/images/doggo-announcing.svg"
+                , class "absolute top-0 right-0 -translate-y-full"
+                , alt ""
+                ]
+                []
+                :: (case community.news of
+                        RemoteData.Success news ->
+                            if List.isEmpty news then
+                                [ p [ class "text-center text-gray-900 pt-10 pb-8" ]
+                                    [ text <| t "menu.coming_soon" ]
+                                ]
+
+                            else
+                                [ news
+                                    |> List.filter (Community.News.isPublished shared.now)
+                                    |> List.take 3
+                                    |> Community.News.viewList shared []
+                                , hr [ class "mb-4 border-gray-100" ] []
+                                , a
+                                    [ class "button button-secondary w-full"
+                                    , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
+                                    ]
+                                    -- TODO - Change text to `See all news`
+                                    [ text <| t "news.view_more" ]
+                                ]
+
+                        RemoteData.Loading ->
+                            [ View.Components.loadingLogoAnimated translators "mb-10" ]
+
+                        RemoteData.NotAsked ->
+                            [ View.Components.loadingLogoAnimated translators "mb-10" ]
+
+                        RemoteData.Failure _ ->
+                            [ p [ class "text-center text-gray-900 pt-10 pb-8" ]
+                                [ text <| t "news.error_fetching" ]
+                            ]
+                   )
+            )
         ]
 
 
