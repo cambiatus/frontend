@@ -434,11 +434,10 @@
       "supporters": "ደጋፊዎች",
       "our_messages": "የእኛ",
       "messages": "ማስታወቂያዎች",
-      "you": "አንቺ",
-      "your_turn": "{{community}} ረድቶዎታል ፣ አሁን የእርስዎ ተራ ነው!",
       "support_us": "ይደግፉን",
       "see_supporters": "እኛን የሚደግፉን የቅርብ ጊዜ አባላትን ይመልከቱ።",
-      "see_all_supporters": "ሁሉንም ደጋፊዎች ይመልከቱ"
+      "see_all_supporters": "ሁሉንም ደጋፊዎች ይመልከቱ",
+      "you_can_support": "ለዚህ ማህበረሰብ እድገት በገንዘብ ማበርከት ይችላሉ."
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",

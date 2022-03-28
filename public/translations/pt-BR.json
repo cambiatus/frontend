@@ -480,11 +480,10 @@
       "supporters": "Apoiadores",
       "our_messages": "Nossos",
       "messages": "Comunicados",
-      "you": "Você",
-      "your_turn": "{{community}} te ajudou, agora é sua vez!",
       "support_us": "Nos apoie",
       "see_supporters": "Veja os últimos membros que nos apoiaram.",
-      "see_all_supporters": "Veja todos os apoiadores"
+      "see_all_supporters": "Veja todos os apoiadores",
+      "you_can_support": "Você pode contribuir financeiramente para o crescimento desta comunidade."
     },
     "invite": {
       "title": "Convide um amigo",

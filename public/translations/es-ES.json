@@ -476,11 +476,10 @@
       "supporters": "Partidarios",
       "our_messages": "Nuestros",
       "messages": "Anuncios",
-      "you": "Tú",
-      "your_turn": "{{community}} te ayudó, ¡ahora te toca a ti!",
       "support_us": "Apoyanos",
       "see_supporters": "Vea los miembros más recientes que nos apoyaron.",
-      "see_all_supporters": "Ver todos los partidarios"
+      "see_all_supporters": "Ver todos los partidarios",
+      "you_can_support": "Puede contribuir financieramente al crecimiento de esta comunidad."
     },
     "invite": {
       "title": "Invita a un amigo",

@@ -476,11 +476,10 @@
       "supporters": "Seguidors",
       "our_messages": "Els nostres",
       "messages": "Anuncis",
-      "you": "Tu",
-      "your_turn": "{{community}} t’ha ajudat, ara és el teu torn!",
       "support_us": "recolza’ns",
       "see_supporters": "Consulteu els darrers membres que ens van donar suport.",
-      "see_all_supporters": "Veure tots els seguidors"
+      "see_all_supporters": "Veure tots els seguidors",
+      "you_can_support": "Podeu contribuir econòmicament al creixement d'aquesta comunitat."
     },
     "invite": {
       "title": "Convida als teus amics",

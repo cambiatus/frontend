@@ -472,11 +472,10 @@
       "supporters": "Supporters",
       "our_messages": "Our",
       "messages": "Communications",
-      "you": "You",
-      "your_turn": "{{community}} supported you, now it's your turn!",
       "support_us": "Support us",
       "see_supporters": "See the latest members who supported us.",
-      "see_all_supporters": "See all supporters"
+      "see_all_supporters": "See all supporters",
+      "you_can_support": "You can contribute finantially to the growth of this community."
     },
     "invite": {
       "title": "Invite your friends",
