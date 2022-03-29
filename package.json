@@ -64,7 +64,7 @@
     "html-webpack-plugin": "^4.0.0-alpha.2",
     "http-proxy-middleware": "^0.17.4",
     "mini-css-extract-plugin": "^0.4.0",
-    "minimist": "1.2.3",
+    "minimist": "1.2.6",
     "postcss-flexbugs-fixes": "^3.3.0",
     "promise": "8.0.1",
     "react-error-overlay": "^4.0.0",
