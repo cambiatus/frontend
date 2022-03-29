@@ -30,7 +30,6 @@ import I18Next exposing (Delims(..), Translations)
 import Icons
 import Json.Encode as Encode
 import Log
-import Markdown
 import Ports
 import Profile exposing (Model)
 import RemoteData exposing (RemoteData)
@@ -380,21 +379,6 @@ update msg ({ shared } as model) =
                         Encode.object
                             [ ( "name", Encode.string "setFavicon" )
                             , ( "favicon", Encode.string communityPreview.logo )
-                            ]
-                    }
-                |> UR.addPort
-                    { responseAddress = msg
-                    , responseData = Encode.null
-                    , data =
-                        Encode.object
-                            [ ( "name", Encode.string "setManifestItems" )
-                            , ( "items"
-                              , Encode.object
-                                    [ ( "name", Encode.string (communityPreview.name ++ " | Cambiatus") )
-                                    , ( "short_name", Encode.string communityPreview.name )
-                                    , ( "description", Markdown.encodeUnformatted communityPreview.description )
-                                    ]
-                              )
                             ]
                     }
 

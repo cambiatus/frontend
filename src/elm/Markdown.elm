@@ -1,7 +1,7 @@
 module Markdown exposing
     ( view, toUnformattedString, toRawString
     , Markdown, empty, fromTranslation, fromTranslationWithReplacements
-    , encode, decoder, encodeUnformatted
+    , encode, decoder
     , selectionSet, maybeSelectionSet
     , QuillOp, fromQuillOps, toQuillOps, encodeQuillOp, quillOpDecoder
     , generator, shrink
@@ -27,7 +27,7 @@ At the same time, we need some helper functions to work with Markdown
 
 ## Interop with JSON
 
-@docs encode, decoder, encodeUnformatted
+@docs encode, decoder
 
 
 ## Interop with GraphQL
@@ -498,11 +498,6 @@ formattingStrings formatting =
 encode : Markdown -> Json.Encode.Value
 encode (Markdown markdown) =
     Json.Encode.string (String.trim markdown)
-
-
-encodeUnformatted : Markdown -> Json.Encode.Value
-encodeUnformatted =
-    toUnformattedString >> Json.Encode.string
 
 
 decoder : Json.Decode.Decoder Markdown
