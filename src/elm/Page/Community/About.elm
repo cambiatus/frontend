@@ -1,23 +1,29 @@
-module Page.Community.About exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
+module Page.Community.About exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Avatar
 import Community
 import Community.News
+import Eos
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, href, media, src, style)
+import Html.Attributes exposing (alt, class, classList, href, media, src, style)
 import Html.Events exposing (onClick)
+import Http
 import Icons
 import Json.Encode as Encode
 import List.Extra
+import Log
 import Markdown
+import Page
 import Profile.Contact as Contact
-import RemoteData
+import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
+import Token
 import Translation
 import UpdateResult as UR
 import Url
+import Utils
 import View.Components
 
 
@@ -26,12 +32,14 @@ import View.Components
 
 
 type alias Model =
-    {}
+    { tokenInfo : RemoteData Http.Error Token.Model }
 
 
 init : LoggedIn.Model -> UpdateResult
-init _ =
-    UR.init {}
+init loggedIn =
+    { tokenInfo = RemoteData.Loading }
+        |> UR.init
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
@@ -43,6 +51,8 @@ init _ =
 
 type Msg
     = NoOp
+    | CompletedLoadCommunity Community.Model
+    | GotTokenInfo (Result Http.Error Token.Model)
     | ClickedShareCommunity
 
 
@@ -60,6 +70,24 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
+        CompletedLoadCommunity community ->
+            UR.init model
+                |> UR.addCmd (Token.getToken loggedIn.shared community.symbol GotTokenInfo)
+
+        GotTokenInfo (Ok tokenInfo) ->
+            { model | tokenInfo = RemoteData.Success tokenInfo }
+                |> UR.init
+
+        GotTokenInfo (Err err) ->
+            { model | tokenInfo = RemoteData.Failure err }
+                |> UR.init
+                |> UR.logHttpError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when retrieving token info"
+                    { moduleName = "Page.Community.About", function = "update" }
+                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+                    err
+
         ClickedShareCommunity ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
@@ -71,10 +99,6 @@ update msg model loggedIn =
                                 Encode.object
                                     [ ( "name", Encode.string "share" )
                                     , ( "title", Encode.string community.name )
-
-                                    -- TODO - Figure out a nice description
-                                    -- TODO - Detect if can share. If can't, do what? Just hide the button?
-                                    -- , ( "text", Markdown.encode community.description )
                                     , ( "url"
                                       , loggedIn.shared.url
                                             |> Url.toString
@@ -111,18 +135,21 @@ view loggedIn model =
                     []
                 , img
                     [ src "/images/community-bg-desktop.svg"
-                    , class "mb-6 object-cover min-w-full max-h-[10.75rem] sm:max-h-60 lg:max-h-80"
+                    , class "mb-6 object-cover min-w-full max-h-43 sm:max-h-60 lg:max-h-80"
                     , style "object-position" "50% 62%"
                     , alt ""
                     ]
                     []
                 ]
+
+        { t, tr } =
+            loggedIn.shared.translators
     in
-    { title = "TODO"
+    { title = t "community.index.about_title"
     , content =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
-                div []
+                div [ class "mb-20" ]
                     [ case RemoteData.map List.head community.uploads of
                         RemoteData.Success (Just upload) ->
                             img
@@ -132,25 +159,91 @@ view loggedIn model =
                                 ]
                                 []
 
+                        RemoteData.Loading ->
+                            div [ class "w-full h-43 sm:h-60 lg:h-80 animate-skeleton-loading" ] []
+
                         _ ->
                             defaultCoverPhoto
-                    , div [ class "container mx-auto px-4 py-10 grid md:grid-cols-3 gap-6" ]
-                        [ viewCommunityCard loggedIn.shared.translators community
-                        , viewSupportersCard loggedIn.shared.translators community
-                        , viewNewsCard loggedIn.shared community
+                    , div [ class "container mx-auto px-4 py-10" ]
+                        [ div
+                            [ class "grid lg:grid-cols-3 gap-6"
+                            ]
+                            [ viewCommunityCard loggedIn.shared community
+                            , viewSupportersCard loggedIn.shared.translators community
+                            , viewNewsCard loggedIn.shared community
+                            ]
+                        , h2 [ class "mt-6" ]
+                            [ span [] [ text <| t "community.index.our_numbers" ]
+                            , text " "
+                            , span [ class "font-bold" ] [ text <| t "community.index.numbers" ]
+                            ]
+                        , div [ class "mt-4 grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4" ]
+                            [ case model.tokenInfo of
+                                RemoteData.Success tokenInfo ->
+                                    viewStatsCard loggedIn.shared.translators
+                                        { number = round tokenInfo.supply.amount
+                                        , description =
+                                            tr "community.index.amount_in_circulation"
+                                                [ ( "currency_name", Eos.symbolToSymbolCodeString community.symbol ) ]
+                                        , imgSrc = "/images/three_coins.svg"
+                                        , imgClass = "place-self-center"
+                                        }
+
+                                RemoteData.Loading ->
+                                    div [ class "rounded animate-skeleton-loading" ] []
+
+                                _ ->
+                                    text ""
+                            , viewStatsCard loggedIn.shared.translators
+                                { number = community.memberCount
+                                , description = t "community.index.members"
+                                , imgSrc = "/images/man_sipping_coconut_water.svg"
+                                , imgClass = "mt-auto mx-auto"
+                                }
+                            , viewStatsCard loggedIn.shared.translators
+                                { number = community.claimCount
+                                , description = t "community.index.claims"
+                                , imgSrc = "/images/woman_driving_truck.svg"
+                                , imgClass = "self-center"
+                                }
+                            , viewStatsCard loggedIn.shared.translators
+                                { number = community.transferCount
+                                , description = t "community.index.transfers"
+                                , imgSrc = "/images/people_trading_bread.svg"
+                                , imgClass = "mt-auto mx-auto"
+                                }
+                            , viewStatsCard loggedIn.shared.translators
+                                { number = community.productCount
+                                , description = t "community.index.products"
+                                , imgSrc = "/images/man_in_shop.svg"
+                                , imgClass = "mt-auto"
+                                }
+                            , viewStatsCard loggedIn.shared.translators
+                                { number = community.orderCount
+                                , description = t "community.index.orders"
+                                , imgSrc = "/images/dog_walking_with_purse.svg"
+                                , imgClass = "place-self-center"
+                                }
+                            ]
                         ]
                     ]
 
-            _ ->
-                text "TODO"
+            RemoteData.Loading ->
+                Page.fullPageLoading loggedIn.shared
+
+            RemoteData.NotAsked ->
+                Page.fullPageLoading loggedIn.shared
+
+            RemoteData.Failure e ->
+                Page.fullPageGraphQLError (t "community.index.about_title") e
     }
 
 
-viewCommunityCard : Translation.Translators -> Community.Model -> Html Msg
-viewCommunityCard translators community =
+viewCommunityCard : Shared -> Community.Model -> Html Msg
+viewCommunityCard ({ translators } as shared) community =
     div []
         -- We need some hidden text so the cards are aligned on desktop
-        [ p [ class "mb-4 opacity-0 pointer-events-none hidden md:block" ] [ text "hidden text" ]
+        [ p [ class "mb-4 opacity-0 pointer-events-none hidden lg:block" ] [ text "hidden text" ]
         , div [ class "flex flex-col bg-white rounded relative px-4 pt-4 pb-6" ]
             -- TW doesn't support translating on the x and y axies simultaneously,
             -- so we need a parent element to center the icon horizontally
@@ -161,19 +254,25 @@ viewCommunityCard translators community =
                     [ img
                         [ src community.logo
                         , class "max-w-full max-h-full"
-
-                        -- TODO - Add alt explaining it's the community's logo
-                        , alt ""
+                        , alt <| translators.tr "community.index.logo" [ ( "community", community.name ) ]
                         ]
                         []
                     ]
                 ]
-            , button
-                [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring"
-                , onClick ClickedShareCommunity
+            , if shared.canShare then
+                button
+                    [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-80"
+                    , onClick ClickedShareCommunity
+                    ]
+                    [ Icons.share "" ]
+
+              else
+                text ""
+            , h1
+                [ class "text-lg font-bold text-center"
+                , classList [ ( "mt-10", not shared.canShare ) ]
                 ]
-                [ Icons.share "" ]
-            , h1 [ class "text-lg font-bold text-center" ] [ text community.name ]
+                [ text community.name ]
             , case community.website of
                 Nothing ->
                     text ""
@@ -298,7 +397,7 @@ viewNewsCard ({ translators } as shared) community =
         { t } =
             translators
     in
-    div []
+    div [ class "mt-4 lg:mt-0" ]
         [ h2 []
             [ span [] [ text <| t "community.index.our_messages" ]
             , text " "
@@ -328,7 +427,6 @@ viewNewsCard ({ translators } as shared) community =
                                     [ class "button button-secondary w-full"
                                     , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
                                     ]
-                                    -- TODO - Change text to `See all news`
                                     [ text <| t "news.view_more" ]
                                 ]
 
@@ -347,8 +445,46 @@ viewNewsCard ({ translators } as shared) community =
         ]
 
 
+viewStatsCard :
+    Translation.Translators
+    ->
+        { number : Int
+        , description : String
+        , imgSrc : String
+        , imgClass : String
+        }
+    -> Html Msg
+viewStatsCard translators { number, description, imgSrc, imgClass } =
+    div [ class "grid grid-cols-3 bg-white rounded" ]
+        [ img
+            [ src imgSrc
+            , class imgClass
+            ]
+            []
+        , div [ class "col-span-2 py-6 text-center" ]
+            [ p [ class "text-xl font-bold text-green" ]
+                [ number
+                    |> Utils.formatInt (Just translators)
+                    |> text
+                ]
+            , p [ class "uppercase text-sm font-bold text-gray-900" ]
+                [ text description ]
+            ]
+        ]
+
+
 
 -- UTILS
+
+
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityLoaded community ->
+            Just (CompletedLoadCommunity community)
+
+        _ ->
+            Nothing
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -366,6 +502,12 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        CompletedLoadCommunity _ ->
+            [ "CompletedLoadCommunity" ]
+
+        GotTokenInfo r ->
+            [ "GotTokenInfo", UR.resultToString r ]
 
         ClickedShareCommunity ->
             [ "ClickedShareCommunity" ]

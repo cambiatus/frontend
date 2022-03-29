@@ -627,6 +627,10 @@ broadcast broadcastMessage status =
                     CommunityPage.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunityMsg
 
+                CommunityAbout _ ->
+                    CommunityAbout.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunityAboutMsg
+
                 CommunitySettingsFeatures _ ->
                     CommunitySettingsFeatures.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsFeaturesMsg

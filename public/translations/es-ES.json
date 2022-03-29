@@ -479,7 +479,11 @@
       "support_us": "Apoyanos",
       "see_supporters": "Vea los miembros más recientes que nos apoyaron.",
       "see_all_supporters": "Ver todos los partidarios",
-      "you_can_support": "Puede contribuir financieramente al crecimiento de esta comunidad."
+      "you_can_support": "Puede contribuir financieramente al crecimiento de esta comunidad.",
+      "logo": "Logotipo de {{community}}",
+      "about_title": "Acerca de la comunidad",
+      "our_numbers": "Nuestros",
+      "numbers": "Numeros"
     },
     "invite": {
       "title": "Invita a un amigo",
@@ -1276,7 +1280,7 @@
     "got_community_news": "Obtuve una nueva comunicación comunitaria:",
     "read": "Leer",
     "other_news": "otras comunicaciones",
-    "view_more": "Ver más",
+    "view_more": "Ver todas las comunicaciones",
     "view_more_with_ellipsis": "... Ver más",
     "edit": "Editar",
     "copy": "Crear una copia",

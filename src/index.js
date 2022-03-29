@@ -304,6 +304,7 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
+    canShare: Boolean(navigator.share),
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,

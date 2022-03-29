@@ -482,8 +482,12 @@
       "messages": "Comunicados",
       "support_us": "Nos apoie",
       "see_supporters": "Veja os últimos membros que nos apoiaram.",
-      "see_all_supporters": "Veja todos os apoiadores",
-      "you_can_support": "Você pode contribuir financeiramente para o crescimento desta comunidade."
+      "see_all_supporters": "Ver todos os apoiadores",
+      "you_can_support": "Você pode contribuir financeiramente para o crescimento desta comunidade.",
+      "logo": "Logo de {{community}}",
+      "about_title": "Sobre a comunidade",
+      "our_numbers": "Nossos",
+      "numbers": "Números"
     },
     "invite": {
       "title": "Convide um amigo",
@@ -1279,7 +1283,7 @@
     "got_community_news": "Nova comunicação da comunidade recebida:",
     "read": "Ler",
     "other_news": "outros comunicados",
-    "view_more": "Ver mais",
+    "view_more": "Ver todas as notícias",
     "view_more_with_ellipsis": "... Ver mais",
     "edit": "Editar",
     "copy": "Criar cópia",

@@ -48,6 +48,7 @@ type alias Shared =
     , url : Url
     , contracts : { token : String, community : String }
     , canReadClipboard : Bool
+    , canShare : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
@@ -89,6 +90,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , url = url
       , contracts = { token = tokenContract, community = communityContract }
       , canReadClipboard = flags.canReadClipboard
+      , canShare = flags.canShare
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility

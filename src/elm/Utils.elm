@@ -3,6 +3,7 @@ module Utils exposing
     , decodeTimestamp
     , escSubscription
     , formatFloat
+    , formatInt
     , fromDateTime
     , fromMaybeDateTime
     , fromNaiveDateTime
@@ -80,6 +81,13 @@ formatFloat maybeTranslators decimalCases number =
                 }
         )
         number
+
+
+{-| Format an Int to separate thousands.
+-}
+formatInt : Maybe { translators | t : String -> String } -> Int -> String
+formatInt maybeTranslators number =
+    formatFloat maybeTranslators 0 (toFloat number)
 
 
 escSubscription : msg -> Sub msg

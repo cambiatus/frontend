@@ -437,7 +437,11 @@
       "support_us": "ይደግፉን",
       "see_supporters": "እኛን የሚደግፉን የቅርብ ጊዜ አባላትን ይመልከቱ።",
       "see_all_supporters": "ሁሉንም ደጋፊዎች ይመልከቱ",
-      "you_can_support": "ለዚህ ማህበረሰብ እድገት በገንዘብ ማበርከት ይችላሉ."
+      "you_can_support": "ለዚህ ማህበረሰብ እድገት በገንዘብ ማበርከት ይችላሉ.",
+      "logo": "{{community}} አርማ",
+      "about_title": "ስለ ማህበረሰቡ",
+      "our_numbers": "የእኛ",
+      "numbers": "ቁጥሮች"
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",
@@ -1234,7 +1238,7 @@
     "got_community_news": "አዲስ የማህበረሰብ ግንኙነት አግኝቷል፡",
     "read": "አንብብ",
     "other_news": "ሌሎች ማስታወቂያዎች",
-    "view_more": "ተጨማሪ ይመልከቱ",
+    "view_more": "ሁሉንም ዜና ይመልከቱ",
     "view_more_with_ellipsis": "... ተጨማሪ ይመልከቱ",
     "edit": "ለማርትዕ",
     "copy": "ቅጂ ይፍጠሩ",

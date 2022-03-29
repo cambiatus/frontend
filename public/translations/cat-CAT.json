@@ -479,7 +479,11 @@
       "support_us": "recolza’ns",
       "see_supporters": "Consulteu els darrers membres que ens van donar suport.",
       "see_all_supporters": "Veure tots els seguidors",
-      "you_can_support": "Podeu contribuir econòmicament al creixement d'aquesta comunitat."
+      "you_can_support": "Podeu contribuir econòmicament al creixement d'aquesta comunitat.",
+      "logo": "Logotip de {{community}}",
+      "about_title": "Sobre la comunitat",
+      "our_numbers": "Els nostres",
+      "numbers": "Números"
     },
     "invite": {
       "title": "Convida als teus amics",
@@ -1275,7 +1279,7 @@
     "got_community_news": "Teniu una nova comunicació de la comunitat:",
     "read": "Llegeix",
     "other_news": "altres anuncis",
-    "view_more": "Veure més",
+    "view_more": "Veure tots els anuncis",
     "view_more_with_ellipsis": "... Veure més",
     "edit": "Editar",
     "copy": "Crear una còpia",

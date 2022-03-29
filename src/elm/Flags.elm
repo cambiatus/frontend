@@ -25,6 +25,7 @@ type alias Flags =
     , communityContract : String
     , authToken : Maybe Api.Graphql.Token
     , canReadClipboard : Bool
+    , canShare : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
@@ -46,6 +47,7 @@ default =
     , communityContract = "bes.cmm"
     , authToken = Nothing
     , canReadClipboard = False
+    , canShare = False
     , useSubdomain = True
     , selectedCommunity = Nothing
     , pinVisibility = False
@@ -68,6 +70,7 @@ decode =
         |> required "communityContract" Decode.string
         |> required "authToken" (Decode.nullable Api.Graphql.tokenDecoder)
         |> required "canReadClipboard" Decode.bool
+        |> required "canShare" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
         |> required "pinVisibility" Decode.bool
