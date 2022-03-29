@@ -473,6 +473,7 @@ viewStatsCard translators { number, description, imgSrc, imgClass } =
     div [ class "grid grid-cols-3 bg-white rounded" ]
         [ img
             [ src imgSrc
+            , alt ""
             , class imgClass
             ]
             []
