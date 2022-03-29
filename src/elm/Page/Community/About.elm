@@ -13,6 +13,7 @@ import Json.Encode as Encode
 import List.Extra
 import Log
 import Markdown
+import Maybe.Extra
 import Page
 import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
@@ -165,12 +166,18 @@ view loggedIn model =
                         _ ->
                             defaultCoverPhoto
                     , div [ class "container mx-auto px-4 py-10" ]
-                        [ div
-                            [ class "grid lg:grid-cols-3 gap-6"
-                            ]
+                        [ div [ class "grid lg:grid-cols-3 gap-6" ]
                             [ viewCommunityCard loggedIn.shared community
-                            , viewSupportersCard loggedIn.shared.translators community
-                            , viewNewsCard loggedIn.shared community
+                            , if showSupportersCard community then
+                                viewSupportersCard loggedIn.shared.translators community
+
+                              else
+                                text ""
+                            , if showNewsCard community then
+                                viewNewsCard loggedIn.shared community
+
+                              else
+                                text ""
                             ]
                         , h2 [ class "mt-6" ]
                             [ span [] [ text <| t "community.index.our_numbers" ]
@@ -241,7 +248,15 @@ view loggedIn model =
 
 viewCommunityCard : Shared -> Community.Model -> Html Msg
 viewCommunityCard ({ translators } as shared) community =
-    div []
+    div
+        [ classList
+            [ ( "lg:col-start-2", not (showSupportersCard community) && not (showNewsCard community) )
+            , ( "lg:col-span-2"
+              , xor (not <| showSupportersCard community)
+                    (not <| showNewsCard community)
+              )
+            ]
+        ]
         -- We need some hidden text so the cards are aligned on desktop
         [ p [ class "mb-4 opacity-0 pointer-events-none hidden lg:block" ] [ text "hidden text" ]
         , div [ class "flex flex-col bg-white rounded relative px-4 pt-4 pb-6" ]
@@ -471,6 +486,18 @@ viewStatsCard translators { number, description, imgSrc, imgClass } =
                 [ text description ]
             ]
         ]
+
+
+showSupportersCard : Community.Model -> Bool
+showSupportersCard community =
+    community.contributionConfiguration
+        |> Maybe.andThen .paypalAccount
+        |> Maybe.Extra.isJust
+
+
+showNewsCard : Community.Model -> Bool
+showNewsCard community =
+    community.hasNews
 
 
 

@@ -782,7 +782,7 @@ circularIconWithGrayBg translators class_ (Normalized normalized) =
     in
     a
         [ toHref (Normalized normalized)
-        , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70"
+        , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70 focus-ring"
         , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
         [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
