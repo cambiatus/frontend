@@ -9,7 +9,7 @@ import Cambiatus.Object.ReactionType
 import Cambiatus.Scalar
 import Graphql.Operation
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (Html, a, div, h3, h4, p, span, text)
+import Html exposing (Html, a, div, h3, h4, p, text)
 import Html.Attributes exposing (class, classList, style, title)
 import Html.Attributes.Aria exposing (ariaHidden)
 import Icons
