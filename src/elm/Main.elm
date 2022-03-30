@@ -15,6 +15,7 @@ import Page.Community as CommunityPage
 import Page.Community.About as CommunityAbout
 import Page.Community.Invite as Invite
 import Page.Community.New as CommunityEditor
+import Page.Community.Objectives as CommunityObjectives
 import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.ActionEditor as CommunitySettingsActionEditor
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
@@ -166,6 +167,7 @@ type Status
     | PaymentHistory PaymentHistory.Model
     | Community CommunityPage.Model
     | CommunityAbout CommunityAbout.Model
+    | CommunityObjectives CommunityObjectives.Model
     | CommunityEditor CommunityEditor.Model
     | CommunitySettings CommunitySettings.Model
     | CommunitySettingsFeatures CommunitySettingsFeatures.Model
@@ -218,6 +220,7 @@ type Msg
     | GotNotificationMsg Notification.Msg
     | GotCommunityMsg CommunityPage.Msg
     | GotCommunityAboutMsg CommunityAbout.Msg
+    | GotCommunityObjectivesMsg CommunityObjectives.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
     | GotCommunitySettingsMsg CommunitySettings.Msg
     | GotCommunitySettingsFeaturesMsg CommunitySettingsFeatures.Msg
@@ -403,6 +406,11 @@ update msg model =
         ( GotCommunityAboutMsg subMsg, CommunityAbout subModel ) ->
             CommunityAbout.update subMsg subModel
                 >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
+                |> withLoggedIn
+
+        ( GotCommunityObjectivesMsg subMsg, CommunityObjectives subModel ) ->
+            CommunityObjectives.update subMsg subModel
+                >> updateLoggedInUResult CommunityObjectives GotCommunityObjectivesMsg model
                 |> withLoggedIn
 
         ( GotCommunityEditorMsg subMsg, CommunityEditor subModel ) ->
@@ -1023,6 +1031,9 @@ statusToRoute status session =
         CommunityAbout _ ->
             Just Route.CommunityAbout
 
+        CommunityObjectives _ ->
+            Just Route.CommunityObjectives
+
         CommunityEditor _ ->
             Just Route.NewCommunity
 
@@ -1417,6 +1428,11 @@ changeRouteTo maybeRoute model =
                 >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
                 |> withLoggedIn Route.CommunityAbout
 
+        Just Route.CommunityObjectives ->
+            CommunityObjectives.init
+                >> updateLoggedInUResult CommunityObjectives GotCommunityObjectivesMsg model
+                |> withLoggedIn Route.CommunityObjectives
+
         Just Route.CommunitySettings ->
             CommunitySettings.init
                 >> updateStatusWith CommunitySettings GotCommunitySettingsMsg model
@@ -1666,6 +1682,9 @@ msgToString msg =
         GotCommunityAboutMsg subMsg ->
             "GotCommunityAboutMsg" :: CommunityAbout.msgToString subMsg
 
+        GotCommunityObjectivesMsg subMsg ->
+            "GotCommunityObjectivesMsg" :: CommunityObjectives.msgToString subMsg
+
         GotCommunityEditorMsg subMsg ->
             "GotCommunityEditorMsg" :: CommunityEditor.msgToString subMsg
 
@@ -1895,6 +1914,9 @@ view model =
 
         CommunityAbout subModel ->
             viewLoggedIn subModel LoggedIn.CommunityAbout GotCommunityAboutMsg CommunityAbout.view
+
+        CommunityObjectives subModel ->
+            viewLoggedIn subModel LoggedIn.CommunityObjectives GotCommunityObjectivesMsg CommunityObjectives.view
 
         CommunitySettings subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettings GotCommunitySettingsMsg CommunitySettings.view

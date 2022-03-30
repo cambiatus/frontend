@@ -318,6 +318,7 @@ type Page
     | News (Maybe Int)
     | Community
     | CommunityAbout
+    | CommunityObjectives
     | CommunitySettings
     | CommunitySettingsInfo
     | CommunitySettingsNews

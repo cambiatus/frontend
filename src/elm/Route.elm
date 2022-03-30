@@ -47,6 +47,7 @@ type Route
     | Dashboard
     | Community
     | CommunityAbout
+    | CommunityObjectives
     | NewCommunity
     | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
@@ -130,6 +131,7 @@ parser url =
             )
         , Url.map Community (s "community")
         , Url.map CommunityAbout (s "community" </> s "about")
+        , Url.map CommunityObjectives (s "community" </> s "objectives")
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
@@ -437,6 +439,9 @@ routeToString route =
 
                 CommunityAbout ->
                     ( [ "community", "about" ], [] )
+
+                CommunityObjectives ->
+                    ( [ "community", "objectives" ], [] )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )
