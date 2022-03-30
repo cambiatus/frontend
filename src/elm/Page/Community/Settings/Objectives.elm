@@ -1,4 +1,4 @@
-module Page.Community.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
+module Page.Community.Settings.Objectives exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action)
 import Cambiatus.Enum.VerificationType as VerificationType
@@ -122,7 +122,7 @@ viewNewObjectiveButton ({ shared } as loggedIn) community =
         View.Components.disablableLink { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "button button-primary button-sm w-full md:w-64"
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-            , Route.href Route.NewObjective
+            , Route.href Route.CommunitySettingsNewObjective
             ]
             [ text (shared.translators.t "community.objectives.new") ]
 
@@ -190,14 +190,14 @@ viewObjective ({ shared } as loggedIn) model index objective =
                     [ View.Components.disablableLink
                         { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-2 px-1 sm:mr-4"
-                        , Route.href (Route.EditObjective objective.id)
+                        , Route.href (Route.CommunitySettingsEditObjective objective.id)
                         , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.objectives.edit" ]
                     , View.Components.disablableLink
                         { isDisabled = objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                         [ class "button button-secondary button-sm w-full sm:w-48 mt-4 sm:mt-2 px-1 mb-4"
-                        , Route.href (Route.NewAction objective.id)
+                        , Route.href (Route.CommunitySettingsNewAction objective.id)
                         , classList [ ( "button-disabled", objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                         ]
                         [ text_ "community.actions.new" ]
@@ -352,7 +352,7 @@ viewAction ({ shared } as loggedIn) model objectiveId action =
                 , View.Components.disablableLink
                     { isDisabled = action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct }
                     [ class "button button-primary button-sm w-full sm:w-40 mt-8 focus:ring-offset-indigo-500"
-                    , Route.href (Route.EditAction objectiveId action.id)
+                    , Route.href (Route.CommunitySettingsEditAction objectiveId action.id)
                     , classList [ ( "button-disabled", action.objective.isCompleted || not loggedIn.hasAcceptedCodeOfConduct ) ]
                     ]
                     [ text_ "community.actions.edit" ]

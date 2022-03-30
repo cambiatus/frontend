@@ -332,9 +332,9 @@ type Page
     | CommunityThankYou
     | CommunitySponsor
     | CommunitySupporters
-    | Objectives
-    | ObjectiveEditor
-    | ActionEditor
+    | CommunitySettingsObjectives
+    | CommunitySettingsObjectiveEditor
+    | CommunitySettingsActionEditor
     | Claim
     | Notification
     | Shop
@@ -1122,8 +1122,8 @@ isAdminPage page =
         , CommunitySettingsSponsorship
         , CommunitySettingsSponsorshipFiat
         , CommunitySettingsSponsorshipThankYouMessage
-        , ObjectiveEditor
-        , ActionEditor
+        , CommunitySettingsObjectiveEditor
+        , CommunitySettingsActionEditor
         ]
 
 

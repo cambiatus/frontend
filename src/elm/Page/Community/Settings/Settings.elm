@@ -99,7 +99,7 @@ viewSettingsList shared community =
         [ settingCard (t "settings.community_info.title") (t "menu.edit") (t "settings.community_info.description") Route.CommunitySettingsInfo
         , settingCard (t "settings.community_currency.title") (t "menu.edit") (Eos.symbolToSymbolCodeString community.symbol) Route.CommunitySettingsCurrency
         , if community.hasObjectives then
-            settingCard (t "settings.actions.title") (t "menu.edit") "" Route.Objectives
+            settingCard (t "settings.actions.title") (t "menu.edit") "" Route.CommunitySettingsObjectives
 
           else
             text ""

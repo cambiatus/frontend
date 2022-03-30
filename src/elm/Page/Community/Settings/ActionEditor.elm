@@ -1,4 +1,4 @@
-module Page.Community.ActionEditor exposing
+module Page.Community.Settings.ActionEditor exposing
     ( Model
     , Msg
     , init
@@ -308,7 +308,7 @@ update msg model ({ shared } as loggedIn) =
         CompletedSavingAction (Ok _) ->
             model
                 |> UR.init
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Objectives)
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.CommunitySettingsObjectives)
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.actions.save_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
@@ -326,7 +326,7 @@ update msg model ({ shared } as loggedIn) =
                 |> UR.logJsonValue msg
                     (Just loggedIn.accountName)
                     "Got an error when saving action"
-                    { moduleName = "Page.Community.ActionEditor", function = "update" }
+                    { moduleName = "Page.Community.Settings.ActionEditor", function = "update" }
                     []
                     val
                 |> UR.addExt (ShowFeedback Feedback.Failure (t "error.unknown"))

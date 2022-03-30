@@ -58,15 +58,15 @@ type Route
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
     | CommunitySettingsSponsorshipThankYouMessage
+    | CommunitySettingsObjectives
+    | CommunitySettingsNewObjective
+    | CommunitySettingsEditObjective Int
+    | CommunitySettingsNewAction Int
+    | CommunitySettingsEditAction Int Int
     | CommunitySelector (Maybe Route)
     | CommunityThankYou
     | CommunitySponsor
     | CommunitySupporters
-    | Objectives
-    | NewObjective
-    | EditObjective Int
-    | NewAction Int
-    | EditAction Int Int
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -141,6 +141,7 @@ parser url =
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
         , Url.map CommunitySettingsSponsorshipThankYouMessage (s "community" </> s "settings" </> s "sponsorship" </> s "thank-you")
+        , Url.map CommunitySettingsObjectives (s "community" </> s "settings" </> s "objectives")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -151,11 +152,10 @@ parser url =
         , Url.map CommunityThankYou (s "community" </> s "thank-you")
         , Url.map CommunitySponsor (s "community" </> s "sponsor")
         , Url.map CommunitySupporters (s "community" </> s "supporters")
-        , Url.map Objectives (s "community" </> s "objectives")
-        , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
-        , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
-        , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map CommunitySettingsNewObjective (s "community" </> s "settings" </> s "objectives" </> s "new")
+        , Url.map CommunitySettingsEditObjective (s "community" </> s "settings" </> s "objectives" </> int </> s "edit")
+        , Url.map CommunitySettingsNewAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map CommunitySettingsEditAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -502,22 +502,22 @@ routeToString route =
                                 queryBuilder boolToString (Just showOthers) "showOthers"
                             )
 
-                Objectives ->
-                    ( [ "community", "objectives" ], [] )
+                CommunitySettingsObjectives ->
+                    ( [ "community", "settings", "objectives" ], [] )
 
-                NewObjective ->
-                    ( [ "community", "objectives", "new" ], [] )
+                CommunitySettingsNewObjective ->
+                    ( [ "community", "settings", "objectives", "new" ], [] )
 
-                EditObjective objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
+                CommunitySettingsEditObjective objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "edit" ], [] )
 
-                NewAction objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", "new" ]
+                CommunitySettingsNewAction objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", "new" ]
                     , []
                     )
 
-                EditAction objectiveId actionId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
+                CommunitySettingsEditAction objectiveId actionId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 
