@@ -372,6 +372,15 @@ update msg ({ shared } as model) =
                             ]
                     , level = Log.Info
                     }
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "setFavicon" )
+                            , ( "favicon", Encode.string communityPreview.logo )
+                            ]
+                    }
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->
             UR.init model

@@ -15,7 +15,7 @@
     "start": "yarn check-js && node scripts/start.js",
     "start-book": "cd elm-book && yarn start",
     "review": "elm-review",
-    "check-js": "standard scripts src config elm-book",
+    "check-js": "standard",
     "check-format": "elm-format ./ --validate",
     "check-css": "stylelint \"./src/**/*.css\" \"./elm-book/src/**/*.css\"",
     "make": "elm make",

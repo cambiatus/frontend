@@ -2125,6 +2125,15 @@ update msg model =
                 |> UR.addCmd cmd
                 |> UR.addCmd (Ports.getRecentSearches ())
                 |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "setFavicon" )
+                            , ( "favicon", Encode.string community.logo )
+                            ]
+                    }
+                |> UR.addPort
                     { responseAddress = ReceivedNewHighlightedNews Encode.null
                     , responseData = Encode.null
                     , data =
