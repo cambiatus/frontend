@@ -261,7 +261,8 @@ actionCardId action =
 
 idFromActionCardId : String -> Maybe Int
 idFromActionCardId elementId =
-    String.dropLeft (String.length "action-card-") elementId
+    -- Remove the leading "action-card-"
+    String.dropLeft 12 elementId
         |> String.toInt
 
 
