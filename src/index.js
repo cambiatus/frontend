@@ -855,7 +855,19 @@ async function handleJavascriptPort (arg) {
       return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
     }
     case 'scrollIntoView': {
-      document.getElementById(arg.data.id).scrollIntoView(true)
+      document.getElementById(arg.data.id).scrollIntoView(false)
+
+      return {}
+    }
+    case 'smoothHorizontalScroll': {
+      const { containerId, targetId } = arg.data
+
+      const targetLeft = document.getElementById(targetId).getBoundingClientRect().left
+      const container = document.getElementById(containerId)
+      container.scrollTo({
+        left: container.scrollLeft + targetLeft,
+        behavior: 'smooth'
+      })
 
       return {}
     }

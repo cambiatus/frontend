@@ -2,7 +2,7 @@ module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver
 
 -}
 
@@ -431,6 +431,31 @@ focusTrap { firstFocusContainer } attrs children =
     node "focus-trap"
         (optionalAttr "first-focus-container" firstFocusContainer :: attrs)
         children
+
+
+{-| A wrapper around the intersection observer API. Note that targetSelector is
+a `String` that works with the `querySelector` API, so if you want to get an element
+by id you need to use `#` as a prefix.
+-}
+intersectionObserver :
+    { targetSelectors : List String
+    , threshold : Float
+    , onStartedIntersecting : String -> msg
+    }
+    -> Html msg
+intersectionObserver options =
+    node "intersection-observer"
+        [ attribute "elm-target" (String.join " " options.targetSelectors)
+        , attribute "elm-threshold" (String.fromFloat options.threshold)
+        , on "started-intersecting"
+            (Json.Decode.at [ "detail", "targetId" ] Json.Decode.string
+                |> Json.Decode.andThen
+                    (\targetId ->
+                        Json.Decode.succeed (options.onStartedIntersecting targetId)
+                    )
+            )
+        ]
+        []
 
 
 

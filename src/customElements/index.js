@@ -8,6 +8,7 @@ import richTextEditor from './richTextEditor'
 import dateFormatter from './dateFormatter'
 import dialogBubble from './dialogBubble'
 import pdfViewer from './pdfViewer'
+import intersectionObserverElement from './intersectionObserverElement'
 
 const customElements = {
   'bg-no-scroll': bgNoScroll,
@@ -19,7 +20,8 @@ const customElements = {
   'masked-input-helper': maskedInputHelper,
   'paypal-buttons': paypalButtons,
   'pdf-viewer': pdfViewer,
-  'richtext-editor': richTextEditor
+  'richtext-editor': richTextEditor,
+  'intersection-observer': intersectionObserverElement
 }
 
 const register = (app, config, addBreadcrumb) => {
