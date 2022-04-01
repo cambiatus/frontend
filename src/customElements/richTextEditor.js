@@ -70,7 +70,6 @@ export default (app) => (
         this.linkHandler()
       })
 
-
       this.setId()
       this.setTooltipTexts()
       this.setDisabled()
@@ -132,7 +131,7 @@ export default (app) => (
 
     setDisabled () {
       const isDisabled = this.getAttribute('elm-disabled') === 'true'
-      const toolbarButtons = this.querySelectorAll(".ql-toolbar.ql-snow button")
+      const toolbarButtons = this.querySelectorAll('.ql-toolbar.ql-snow button')
 
       if (isDisabled) {
         this._quill.disable()
