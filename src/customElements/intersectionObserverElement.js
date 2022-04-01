@@ -1,11 +1,10 @@
-/* global HTMLElement, CustomEvent */
+/* global HTMLElement, CustomEvent, IntersectionObserver */
 
 export default () => (
   class IntersectionObserverElement extends HTMLElement {
     connectedCallback () {
       const targetSelectors = this.getAttribute('elm-target').split(' ')
       const threshold = parseFloat(this.getAttribute('elm-threshold')) || 1
-
 
       const options = { threshold }
 
@@ -14,7 +13,7 @@ export default () => (
         .filter((target) => target !== null)
 
       if (!this.targets) {
-        console.error("INVALID TARGETS FOR INTERSECTION OBSERVER")
+        console.error('INVALID TARGETS FOR INTERSECTION OBSERVER')
         return
       }
 

@@ -156,7 +156,7 @@ module.exports = {
         modal: '10rem'
       },
       height: {
-        '21': '5.25rem',
+        '21': '5.25rem'
       },
       width: {
         '21': '5.25rem',
