@@ -41,6 +41,10 @@ export default () => (
     }
 
     disconnectedCallback () {
+      if (!this.observer) {
+        return
+      }
+
       if (this.targets) {
         this.targets.forEach((target) => this.observer.unobserve(target))
       }
