@@ -263,7 +263,12 @@ viewAction translators index action =
                 , text "Compartilhar"
                 ]
             , button [ class "button button-primary w-full sm:col-span-1" ]
-                [ Icons.camera "w-4 mr-2 flex-shrink-0"
+                [ if action.hasProofPhoto then
+                    -- TODO - Test this
+                    Icons.camera "w-4 mr-2 flex-shrink-0"
+
+                  else
+                    text ""
 
                 -- TODO - I18N
                 , text "Reivindicar"
