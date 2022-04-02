@@ -113,15 +113,30 @@ view loggedIn model =
                         ]
                     , case community.objectives of
                         RemoteData.Success objectives ->
-                            -- TODO - Filter objectives that should be shown
+                            let
+                                filteredObjectives =
+                                    -- TODO - Test this
+                                    List.filter (\objective -> not objective.isCompleted) objectives
+                            in
                             div []
-                                [ ul [ class "space-y-4 mt-4" ] (List.map (viewObjective loggedIn.shared.translators model) objectives)
+                                [ ul [ class "space-y-4 mt-4" ]
+                                    (List.map
+                                        (viewObjective loggedIn.shared.translators model)
+                                        filteredObjectives
+                                    )
                                 , intersectionObserver
                                     { targetSelectors =
-                                        objectives
+                                        filteredObjectives
                                             |> List.concatMap .actions
-                                            |> List.map actionCardId
-                                            |> List.map (\id -> "#" ++ id)
+                                            -- TODO - Test this
+                                            |> List.filterMap
+                                                (\action ->
+                                                    if action.isCompleted then
+                                                        Nothing
+
+                                                    else
+                                                        Just ("#" ++ actionCardId action)
+                                                )
                                     , threshold = 0.9
                                     , onStartedIntersecting = StartedIntersecting
                                     }
@@ -165,6 +180,11 @@ view loggedIn model =
 
 viewObjective : Translation.Translators -> Model -> Community.Objective -> Html Msg
 viewObjective translators model objective =
+    let
+        filteredActions =
+            -- TODO - Test this
+            List.filter (\action -> not action.isCompleted) objective.actions
+    in
     li []
         [ details []
             [ summary [ class "marker-hidden" ]
@@ -181,7 +201,10 @@ viewObjective translators model objective =
                 [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4 lg:gap-6 lg:grid lg:grid-cols-2 xl:grid-cols-3"
                 , id (objectiveContainerId objective)
                 ]
-                (List.indexedMap (viewAction translators) objective.actions)
+                (List.indexedMap
+                    (viewAction translators)
+                    filteredActions
+                )
 
             -- TODO - Adjust case where some cards are taller than others
             , div [ class "flex justify-center gap-2 lg:hidden" ]
