@@ -9,6 +9,7 @@ import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
 import Markdown
+import Page
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
@@ -81,7 +82,11 @@ update msg model loggedIn =
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
-    { title = "TODO"
+    let
+        title =
+            "TODO"
+    in
+    { title = title
     , content =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
@@ -142,17 +147,29 @@ view loggedIn model =
                                     }
                                 ]
 
+                        -- TODO - Check if figma has loading/error states
                         RemoteData.Loading ->
-                            -- TODO - Show loading state
-                            div [] []
+                            -- TODO - Test this
+                            ul [ class "space-y-4 mt-4" ]
+                                (List.range 0 4
+                                    |> List.map (\_ -> li [ class "bg-white py-7 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                                )
 
                         RemoteData.NotAsked ->
-                            -- TODO - Show loading state
-                            div [] []
+                            -- TODO - Test this
+                            ul [ class "space-y-4 mt-4" ]
+                                (List.range 0 4
+                                    |> List.map (\_ -> li [ class "bg-white py-7 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                                )
 
                         RemoteData.Failure _ ->
-                            -- TODO - Show error state
-                            div [] []
+                            -- TODO - Test this
+                            div [ class "mt-4 bg-white rounded py-6 px-4 flex items-center lg:w-2/3 lg:mx-auto" ]
+                                [ img [ alt "", src "/images/not_found.svg" ] []
+
+                                -- TODO - I18N
+                                , p [] [ text "Algo de errado aconteceu ao buscar os objetivos da comunidade" ]
+                                ]
                     , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
                         -- TODO - I18N
                         [ p [] [ text "Visite a página da comunidade para saber mais sobre." ]
@@ -173,8 +190,14 @@ view loggedIn model =
                         ]
                     ]
 
-            _ ->
-                text "TODO"
+            RemoteData.Loading ->
+                Page.fullPageLoading loggedIn.shared
+
+            RemoteData.NotAsked ->
+                Page.fullPageLoading loggedIn.shared
+
+            RemoteData.Failure err ->
+                Page.fullPageGraphQLError title err
     }
 
 
@@ -189,6 +212,7 @@ viewObjective translators model objective =
         [ details []
             [ summary [ class "marker-hidden" ]
                 [ div
+                    -- TODO - Do we need `cursor-pointer` here?
                     [ class "flex marker-hidden items-center bg-white rounded px-4 py-6 cursor-pointer lg:w-2/3 lg:mx-auto"
                     ]
                     [ Icons.cambiatusCoin "text-blue fill-current flex-shrink-0 self-start mt-1"
