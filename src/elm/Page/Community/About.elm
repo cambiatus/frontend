@@ -4,8 +4,9 @@ import Avatar
 import Community
 import Community.News
 import Eos
+import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, href, media, src, style)
+import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -92,21 +93,35 @@ update msg model loggedIn =
         ClickedShareCommunity ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
+                    let
+                        sharePort =
+                            if loggedIn.shared.canShare then
+                                { responseAddress = msg
+                                , responseData = Encode.null
+                                , data =
+                                    Encode.object
+                                        [ ( "name", Encode.string "share" )
+                                        , ( "title", Encode.string community.name )
+                                        , ( "url"
+                                          , loggedIn.shared.url
+                                                |> Url.toString
+                                                |> Encode.string
+                                          )
+                                        ]
+                                }
+
+                            else
+                                { responseAddress = msg
+                                , responseData = Encode.null
+                                , data =
+                                    Encode.object
+                                        [ ( "name", Encode.string "copyToClipboard" )
+                                        , ( "id", Encode.string "share-fallback-input" )
+                                        ]
+                                }
+                    in
                     UR.init model
-                        |> UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "share" )
-                                    , ( "title", Encode.string community.name )
-                                    , ( "url"
-                                      , loggedIn.shared.url
-                                            |> Url.toString
-                                            |> Encode.string
-                                      )
-                                    ]
-                            }
+                        |> UR.addPort sharePort
 
                 _ ->
                     UR.init model
@@ -274,12 +289,33 @@ viewCommunityCard ({ translators } as shared) community =
                         []
                     ]
                 ]
-            , if shared.canShare then
-                button
-                    [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-80"
-                    , onClick ClickedShareCommunity
-                    ]
-                    [ Icons.share "" ]
+            , button
+                [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-80"
+                , onClick ClickedShareCommunity
+                ]
+                [ Icons.share "" ]
+            , if not shared.canShare then
+                Form.Text.view
+                    (Form.Text.init
+                        { label = ""
+                        , id = "share-fallback-input"
+                        }
+                        |> Form.Text.withExtraAttrs
+                            [ class "absolute opacity-0 left-[-9999em]"
+                            , tabindex -1
+                            ]
+                        |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                    )
+                    { onChange = \_ -> NoOp
+                    , onBlur = NoOp
+
+                    -- TODO - Test this
+                    , value = Url.toString shared.url
+                    , error = text ""
+                    , hasError = False
+                    , translators = shared.translators
+                    , isRequired = False
+                    }
 
               else
                 text ""
