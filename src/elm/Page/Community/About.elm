@@ -290,7 +290,7 @@ viewCommunityCard ({ translators } as shared) community =
                     ]
                 ]
             , button
-                [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-80"
+                [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-60 active:opacity-80"
                 , onClick ClickedShareCommunity
                 ]
                 [ Icons.share "" ]
@@ -309,8 +309,10 @@ viewCommunityCard ({ translators } as shared) community =
                     { onChange = \_ -> NoOp
                     , onBlur = NoOp
 
-                    -- TODO - Test this
-                    , value = Url.toString shared.url
+                    -- TODO - Create some nice text
+                    , value =
+                        Route.addRouteToUrl shared Route.CommunityAbout
+                            |> Url.toString
                     , error = text ""
                     , hasError = False
                     , translators = shared.translators

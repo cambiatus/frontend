@@ -2,6 +2,7 @@ module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
     , addEnvironmentToUrl
+    , addRouteToUrl
     , externalHref
     , fromUrl
     , href
@@ -253,6 +254,33 @@ addEnvironmentToUrl environment url =
                     ".cambiatus.io"
     in
     { url | host = url.host ++ environmentString }
+
+
+addRouteToUrl :
+    { shared | url : Url.Url }
+    -> Route
+    -> Url.Url
+addRouteToUrl shared route =
+    let
+        protocol =
+            case shared.url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        port_ =
+            case shared.url.port_ of
+                Nothing ->
+                    ""
+
+                Just p ->
+                    ":" ++ String.fromInt p
+    in
+    (protocol ++ shared.url.host ++ port_ ++ routeToString route)
+        |> Url.fromString
+        |> Maybe.withDefault shared.url
 
 
 

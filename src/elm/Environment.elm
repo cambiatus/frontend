@@ -12,7 +12,7 @@ type Environment
 
 fromUrl : Url -> Environment
 fromUrl url =
-    if String.endsWith ".localhost" url.host then
+    if String.endsWith "localhost" url.host then
         Development
 
     else if String.endsWith ".staging.cambiatus.io" url.host then
