@@ -120,7 +120,6 @@ view loggedIn model =
                         RemoteData.Success objectives ->
                             let
                                 filteredObjectives =
-                                    -- TODO - Test this
                                     List.filter (\objective -> not objective.isCompleted) objectives
                             in
                             div []
@@ -133,7 +132,6 @@ view loggedIn model =
                                     { targetSelectors =
                                         filteredObjectives
                                             |> List.concatMap .actions
-                                            -- TODO - Test this
                                             |> List.filterMap
                                                 (\action ->
                                                     if action.isCompleted then
@@ -147,28 +145,29 @@ view loggedIn model =
                                     }
                                 ]
 
-                        -- TODO - Check if figma has loading/error states
                         RemoteData.Loading ->
-                            -- TODO - Test this
                             ul [ class "space-y-4 mt-4" ]
                                 (List.range 0 4
-                                    |> List.map (\_ -> li [ class "bg-white py-7 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                                    |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
                                 )
 
                         RemoteData.NotAsked ->
-                            -- TODO - Test this
                             ul [ class "space-y-4 mt-4" ]
                                 (List.range 0 4
-                                    |> List.map (\_ -> li [ class "bg-white py-7 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
+                                    |> List.map (\_ -> li [ class "bg-white py-10 rounded animate-skeleton-loading lg:w-2/3 lg:mx-auto" ] [])
                                 )
 
                         RemoteData.Failure _ ->
-                            -- TODO - Test this
-                            div [ class "mt-4 bg-white rounded py-6 px-4 flex items-center lg:w-2/3 lg:mx-auto" ]
-                                [ img [ alt "", src "/images/not_found.svg" ] []
+                            div [ class "mt-4 bg-white rounded py-6 px-4 flex flex-col items-center lg:w-2/3 lg:mx-auto" ]
+                                [ img
+                                    [ alt ""
+                                    , src "/images/not_found.svg"
+                                    , class "max-h-40"
+                                    ]
+                                    []
 
                                 -- TODO - I18N
-                                , p [] [ text "Algo de errado aconteceu ao buscar os objetivos da comunidade" ]
+                                , p [ class "text-center mt-4" ] [ text "Algo de errado aconteceu ao buscar os objetivos da comunidade" ]
                                 ]
                     , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
                         -- TODO - I18N
@@ -205,14 +204,13 @@ viewObjective : Translation.Translators -> Model -> Community.Objective -> Html 
 viewObjective translators model objective =
     let
         filteredActions =
-            -- TODO - Test this
-            List.filter (\action -> not action.isCompleted) objective.actions
+            List.filter (\action -> not action.isCompleted)
+                objective.actions
     in
     li []
         [ details []
             [ summary [ class "marker-hidden" ]
                 [ div
-                    -- TODO - Do we need `cursor-pointer` here?
                     [ class "flex marker-hidden items-center bg-white rounded px-4 py-6 cursor-pointer lg:w-2/3 lg:mx-auto"
                     ]
                     [ Icons.cambiatusCoin "text-blue fill-current flex-shrink-0 self-start mt-1"
@@ -232,7 +230,7 @@ viewObjective translators model objective =
 
             -- TODO - Adjust case where some cards are taller than others
             , div [ class "flex justify-center gap-2 lg:hidden" ]
-                (objective.actions
+                (filteredActions
                     |> List.map
                         (\action ->
                             button
@@ -280,15 +278,17 @@ viewAction translators index action =
                 ]
             ]
         , div [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6" ]
+            -- TODO - Add action
             [ button [ class "button button-secondary w-full" ]
                 [ Icons.share "mr-2 flex-shrink-0"
 
                 -- TODO - I18N
                 , text "Compartilhar"
                 ]
+
+            -- TODO - Add action
             , button [ class "button button-primary w-full sm:col-span-1" ]
                 [ if action.hasProofPhoto then
-                    -- TODO - Test this
                     Icons.camera "w-4 mr-2 flex-shrink-0"
 
                   else
