@@ -1,6 +1,7 @@
 module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
+    , SelectedObjective(..)
     , addEnvironmentToUrl
     , addRouteToUrl
     , externalHref
@@ -31,6 +32,11 @@ type NewsEditorKind
     | CopyNews Int
 
 
+type SelectedObjective
+    = WithObjectiveSelected { id : Int, action : Maybe Int }
+    | WithNoObjectiveSelected
+
+
 type Route
     = Root
     | ComingSoon
@@ -48,7 +54,7 @@ type Route
     | Dashboard
     | Community
     | CommunityAbout
-    | CommunityObjectives
+    | CommunityObjectives SelectedObjective
     | NewCommunity
     | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
@@ -132,7 +138,21 @@ parser url =
             )
         , Url.map Community (s "community")
         , Url.map CommunityAbout (s "community" </> s "about")
-        , Url.map CommunityObjectives (s "community" </> s "objectives")
+        , Url.map CommunityObjectives
+            (s "community"
+                </> s "objectives"
+                <?> Query.map2
+                        (\maybeObjectiveId maybeActionId ->
+                            case maybeObjectiveId of
+                                Nothing ->
+                                    WithNoObjectiveSelected
+
+                                Just objectiveId ->
+                                    WithObjectiveSelected { id = objectiveId, action = maybeActionId }
+                        )
+                        (Query.int "objective")
+                        (Query.int "action")
+            )
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
@@ -468,8 +488,16 @@ routeToString route =
                 CommunityAbout ->
                     ( [ "community", "about" ], [] )
 
-                CommunityObjectives ->
-                    ( [ "community", "objectives" ], [] )
+                CommunityObjectives selectedObjective ->
+                    ( [ "community", "objectives" ]
+                    , case selectedObjective of
+                        WithNoObjectiveSelected ->
+                            []
+
+                        WithObjectiveSelected { id, action } ->
+                            queryBuilder String.fromInt (Just id) "objective"
+                                ++ queryBuilder String.fromInt action "action"
+                    )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )

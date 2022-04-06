@@ -855,7 +855,7 @@ async function handleJavascriptPort (arg) {
       return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
     }
     case 'scrollIntoView': {
-      document.getElementById(arg.data.id).scrollIntoView(false)
+      document.getElementById(arg.data.id).scrollIntoView(true)
 
       return {}
     }
@@ -1255,8 +1255,14 @@ async function handleJavascriptPort (arg) {
       return { isSubscription: true }
     }
     case 'copyToClipboard': {
-      document.querySelector('#' + arg.data.id).select()
-      document.execCommand('copy')
+      // We might need to want to change the dom before copying contents of the input
+      await new Promise(function (resolve) {
+        window.setTimeout(() => {
+          document.querySelector('#' + arg.data.id).select()
+          document.execCommand('copy')
+          resolve()
+        }, 0)
+      })
 
       return { copied: true }
     }

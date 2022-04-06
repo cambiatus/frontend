@@ -762,7 +762,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     (\attrs ->
                         View.Components.disablableLink
                             { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
-                            (Route.href Route.CommunityObjectives :: attrs)
+                            (Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected) :: attrs)
                     )
                     []
                 , listItem Icons.profile

@@ -8,6 +8,7 @@ import Eos.Account
 import Flags
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Value)
+import Json.Encode as Encode
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
@@ -337,7 +338,10 @@ update msg model =
                                 "Got invalid address from JavaScript"
                                 (Page.maybeAccountName model.session)
                                 { moduleName = "Main", function = "update" }
-                                []
+                                [ { name = "Data"
+                                  , extras = Dict.fromList [ ( "address", Encode.list Encode.string jsAddress ) ]
+                                  }
+                                ]
                                 |> Log.send msgToString
                             )
 
@@ -638,6 +642,10 @@ broadcast broadcastMessage status =
                 CommunityAbout _ ->
                     CommunityAbout.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunityAboutMsg
+
+                CommunityObjectives _ ->
+                    CommunityObjectives.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunityObjectivesMsg
 
                 CommunitySettingsFeatures _ ->
                     CommunitySettingsFeatures.receiveBroadcast broadcastMessage
@@ -1032,7 +1040,7 @@ statusToRoute status session =
             Just Route.CommunityAbout
 
         CommunityObjectives _ ->
-            Just Route.CommunityObjectives
+            Just (Route.CommunityObjectives Route.WithNoObjectiveSelected)
 
         CommunityEditor _ ->
             Just Route.NewCommunity
@@ -1428,10 +1436,10 @@ changeRouteTo maybeRoute model =
                 >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
                 |> withLoggedIn Route.CommunityAbout
 
-        Just Route.CommunityObjectives ->
-            CommunityObjectives.init
+        Just (Route.CommunityObjectives selectedObjective) ->
+            CommunityObjectives.init selectedObjective
                 >> updateLoggedInUResult CommunityObjectives GotCommunityObjectivesMsg model
-                |> withLoggedIn Route.CommunityObjectives
+                |> withLoggedIn (Route.CommunityObjectives selectedObjective)
 
         Just Route.CommunitySettings ->
             CommunitySettings.init
@@ -1597,6 +1605,10 @@ jsAddressToMsg address val =
         "GotCommunityAboutMsg" :: rAddress ->
             Maybe.map GotCommunityAboutMsg
                 (CommunityAbout.jsAddressToMsg rAddress val)
+
+        "GotCommunityObjectivesMsg" :: rAddress ->
+            Maybe.map GotCommunityObjectivesMsg
+                (CommunityObjectives.jsAddressToMsg rAddress val)
 
         "GotCommunityEditorMsg" :: rAddress ->
             Maybe.map GotCommunityEditorMsg

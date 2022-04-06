@@ -1,14 +1,16 @@
-module Page.Community.Objectives exposing (Model, Msg, init, msgToString, update, view)
+module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action)
 import Community
 import Eos
+import Form.Text
 import Html exposing (Html, a, b, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, style, title)
+import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (role)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
+import List.Extra
 import Markdown
 import Page
 import RemoteData
@@ -16,6 +18,7 @@ import Route
 import Session.LoggedIn as LoggedIn
 import Translation
 import UpdateResult as UR
+import Url
 import View.Components exposing (intersectionObserver)
 
 
@@ -26,13 +29,32 @@ import View.Components exposing (intersectionObserver)
 type alias Model =
     -- TODO - Review how we store shownAction
     { shownAction : Maybe Int
-    , shownObjectives : List Community.Objective
+    , shownObjectives : List Int
+    , highlightedAction : Maybe { objectiveId : Int, actionId : Int }
+    , sharingAction : Maybe Action
     }
 
 
-init : LoggedIn.Model -> UpdateResult
-init _ =
-    UR.init { shownAction = Just 175, shownObjectives = [] }
+init : Route.SelectedObjective -> LoggedIn.Model -> UpdateResult
+init selectedObjective _ =
+    UR.init
+        { shownAction = Nothing
+        , highlightedAction =
+            case selectedObjective of
+                Route.WithNoObjectiveSelected ->
+                    Nothing
+
+                Route.WithObjectiveSelected { id, action } ->
+                    Maybe.map (\actionId -> { objectiveId = id, actionId = actionId }) action
+        , shownObjectives =
+            case selectedObjective of
+                Route.WithNoObjectiveSelected ->
+                    []
+
+                Route.WithObjectiveSelected { id } ->
+                    [ id ]
+        , sharingAction = Nothing
+        }
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
 
@@ -42,8 +64,10 @@ init _ =
 
 type Msg
     = NoOp
+    | CompletedLoadObjectives (List Community.Objective)
     | ClickedToggleObjectiveVisibility Community.Objective
     | ClickedScrollToAction Action
+    | ClickedShareAction Action
     | StartedIntersecting String
 
 
@@ -61,14 +85,49 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
+        CompletedLoadObjectives objectives ->
+            let
+                scrollActionIntoView =
+                    case model.highlightedAction of
+                        Nothing ->
+                            identity
+
+                        Just { objectiveId, actionId } ->
+                            let
+                                maybeAction =
+                                    List.Extra.find (\objective -> objective.id == objectiveId) objectives
+                                        |> Maybe.andThen
+                                            (\foundObjective ->
+                                                List.Extra.find (\action -> action.id == actionId) foundObjective.actions
+                                            )
+                            in
+                            case maybeAction of
+                                Nothing ->
+                                    identity
+
+                                Just highlightedAction ->
+                                    UR.addPort
+                                        { responseAddress = NoOp
+                                        , responseData = Encode.null
+                                        , data =
+                                            Encode.object
+                                                [ ( "name", Encode.string "scrollIntoView" )
+                                                , ( "id", Encode.string (actionCardId highlightedAction) )
+                                                ]
+                                        }
+            in
+            UR.init model
+                |> scrollActionIntoView
+
         ClickedToggleObjectiveVisibility objective ->
             { model
                 | shownObjectives =
-                    if List.member objective model.shownObjectives then
-                        List.filter (\shownObjective -> shownObjective /= objective) model.shownObjectives
+                    if List.member objective.id model.shownObjectives then
+                        List.filter (\shownObjective -> shownObjective /= objective.id) model.shownObjectives
 
                     else
-                        objective :: model.shownObjectives
+                        objective.id :: model.shownObjectives
+                , highlightedAction = Nothing
             }
                 |> UR.init
 
@@ -85,6 +144,46 @@ update msg model loggedIn =
                             , ( "targetId", Encode.string (actionCardId action) )
                             ]
                     }
+
+        ClickedShareAction action ->
+            let
+                sharePort =
+                    if loggedIn.shared.canShare then
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "share" )
+
+                                -- TODO - Maybe we should add some extra text?
+                                , ( "title", Markdown.encode action.description )
+                                , ( "url"
+                                  , Route.CommunityObjectives
+                                        (Route.WithObjectiveSelected
+                                            { id = action.objective.id
+                                            , action = Just action.id
+                                            }
+                                        )
+                                        |> Route.addRouteToUrl loggedIn.shared
+                                        |> Url.toString
+                                        |> Encode.string
+                                  )
+                                ]
+                        }
+
+                    else
+                        { responseAddress = msg
+                        , responseData = Encode.null
+                        , data =
+                            Encode.object
+                                [ ( "name", Encode.string "copyToClipboard" )
+                                , ( "id", Encode.string "share-fallback-input" )
+                                ]
+                        }
+            in
+            { model | sharingAction = Just action }
+                |> UR.init
+                |> UR.addPort sharePort
 
         StartedIntersecting actionId ->
             { model | shownAction = idFromActionCardId actionId }
@@ -159,6 +258,42 @@ view loggedIn model =
                                     , threshold = 0.9
                                     , onStartedIntersecting = StartedIntersecting
                                     }
+                                , if not loggedIn.shared.canShare then
+                                    Form.Text.view
+                                        (Form.Text.init
+                                            { label = ""
+                                            , id = "share-fallback-input"
+                                            }
+                                            |> Form.Text.withExtraAttrs
+                                                [ class "absolute opacity-0 left-[-9999em]"
+                                                , tabindex -1
+                                                ]
+                                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                                        )
+                                        { onChange = \_ -> NoOp
+                                        , onBlur = NoOp
+                                        , value =
+                                            -- TODO - Add some better text
+                                            case model.sharingAction of
+                                                Nothing ->
+                                                    Url.toString loggedIn.shared.url
+
+                                                Just sharingAction ->
+                                                    Route.WithObjectiveSelected
+                                                        { id = sharingAction.objective.id
+                                                        , action = Just sharingAction.id
+                                                        }
+                                                        |> Route.CommunityObjectives
+                                                        |> Route.addRouteToUrl loggedIn.shared
+                                                        |> Url.toString
+                                        , error = text ""
+                                        , hasError = False
+                                        , translators = loggedIn.shared.translators
+                                        , isRequired = False
+                                        }
+
+                                  else
+                                    text ""
                                 ]
 
                         RemoteData.Loading ->
@@ -224,7 +359,7 @@ viewObjective translators model objective =
                 objective.actions
 
         isOpen =
-            List.member objective model.shownObjectives
+            List.member objective.id model.shownObjectives
     in
     li []
         [ details
@@ -268,7 +403,7 @@ viewObjective translators model objective =
                     , role "list"
                     ]
                     (List.indexedMap
-                        (viewAction translators)
+                        (viewAction translators model)
                         filteredActions
                     )
 
@@ -290,14 +425,24 @@ viewObjective translators model objective =
         ]
 
 
-viewAction : Translation.Translators -> Int -> Action -> Html Msg
-viewAction translators index action =
+viewAction : Translation.Translators -> Model -> Int -> Action -> Html Msg
+viewAction translators model index action =
+    let
+        isHighlighted =
+            case model.highlightedAction of
+                Nothing ->
+                    False
+
+                Just { actionId } ->
+                    actionId == action.id
+    in
     li
         -- TODO - Join all of these `class`es
         [ class "bg-white rounded px-4 pt-4 pb-6 self-start"
         , class "w-full flex-shrink-0 snap-center snap-always"
         , class "mb-6"
         , class "animate-fade-in-from-above motion-reduce:animate-none"
+        , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
         , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
         ]
@@ -326,8 +471,10 @@ viewAction translators index action =
                 ]
             ]
         , div [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6" ]
-            -- TODO - Add action
-            [ button [ class "button button-secondary w-full" ]
+            [ button
+                [ class "button button-secondary w-full"
+                , onClick (ClickedShareAction action)
+                ]
                 [ Icons.share "mr-2 flex-shrink-0"
 
                 -- TODO - I18N
@@ -370,17 +517,43 @@ idFromActionCardId elementId =
 -- UTILS
 
 
+receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
+receiveBroadcast broadcastMsg =
+    case broadcastMsg of
+        LoggedIn.CommunityFieldLoaded _ (Community.ObjectivesValue objectives) ->
+            Just (CompletedLoadObjectives objectives)
+
+        _ ->
+            Nothing
+
+
+jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
+jsAddressToMsg addr _ =
+    case addr of
+        "ClickedShareAction" :: _ ->
+            Just NoOp
+
+        _ ->
+            Nothing
+
+
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
 
+        CompletedLoadObjectives _ ->
+            [ "CompletedLoadObjectives" ]
+
         ClickedToggleObjectiveVisibility _ ->
             [ "ClickedToggleObjectiveVisibility" ]
 
         ClickedScrollToAction _ ->
             [ "ClickedScrollToAction" ]
+
+        ClickedShareAction _ ->
+            [ "ClickedShareAction" ]
 
         StartedIntersecting _ ->
             [ "StartedIntersecting" ]
