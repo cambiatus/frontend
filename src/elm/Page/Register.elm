@@ -2,6 +2,7 @@ module Page.Register exposing (Model, Msg, init, jsAddressToMsg, msgToString, re
 
 import Address
 import Api.Graphql
+import Browser.Dom
 import Cambiatus.Scalar exposing (Id(..))
 import Community exposing (Invite)
 import Eos.Account as Eos
@@ -26,6 +27,7 @@ import Route
 import Session.Guest as Guest exposing (External(..))
 import Session.Shared exposing (Shared, Translators)
 import Set exposing (Set)
+import Task
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
@@ -555,15 +557,9 @@ update _ msg model ({ shared } as guest) =
             shared.translators
 
         scrollTop =
-            UR.addPort
-                { responseAddress = NoOp
-                , responseData = Encode.null
-                , data =
-                    Encode.object
-                        [ ( "id", Encode.string "registrationPage" )
-                        , ( "name", Encode.string "scrollIntoView" )
-                        ]
-                }
+            Browser.Dom.setViewport 0 0
+                |> Task.attempt (\_ -> NoOp)
+                |> UR.addCmd
     in
     case msg of
         NoOp ->
