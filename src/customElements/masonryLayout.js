@@ -3,17 +3,17 @@
 export default () => (
   class MasonryLayout extends HTMLElement {
     connectedCallback () {
-      this.childNodes.forEach((item) => this.resizeItem(item))
+      this.resizeItems = () => {
+        this.childNodes.forEach((item) => this.resizeItem(item))
+      }
+
+      this.resizeItems()
 
       window.addEventListener('resize', this.resizeItems)
     }
 
     disconnectedCallback () {
       window.removeEventListener('resize', this.resizeItems)
-    }
-
-    resizeItems () {
-      this.childNodes.forEach((item) => this.resizeItem(item))
     }
 
     resizeItem (item) {
