@@ -116,10 +116,10 @@ masonryLayout breakpoints attrs children =
             case breakpoint of
                 Lg ->
                     -- Tailwind might purge if we do something with List.map instead of explicitly writing these
-                    "lg:gap-y-px lg:grid lg:auto-rows-[0px]"
+                    "lg:gap-y-0 lg:grid lg:auto-rows-[1px]"
 
                 Xl ->
-                    "xl:gap-y-px xl:grid xl:auto-rows-[0px]"
+                    "xl:gap-y-0 xl:grid xl:auto-rows-[1px]"
     in
     node "masonry-layout"
         ((List.map classesForBreakpoint breakpoints
