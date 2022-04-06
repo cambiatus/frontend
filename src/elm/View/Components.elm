@@ -1,6 +1,6 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
-    , dialogBubble
+    , dialogBubble, masonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
     , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
     )
@@ -16,7 +16,7 @@ state or configuration, such as loading indicators and containers
 
 # Containers
 
-@docs dialogBubble
+@docs dialogBubble, masonryLayout, Breakpoint
 
 
 ## Helper types
@@ -89,6 +89,46 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
         , optionalAttr "elm-scroll-selector" scrollSelector
         ]
         elements
+
+
+type Breakpoint
+    = Lg
+    | Xl
+
+
+{-| Create a masonry layout, similar to Pinterest. This uses CSS Grid + some JS
+magic. If you're changing `gap-y` or `auto-rows`, test it very well, since the
+accuracy of this component depends on those properties. If you want vertical
+gutters, give each child element a `mb-*` class and this element a negative bottom margin.
+
+You must provide at least one `Breakpoint` to specify screen sizes this should
+work as a masonry layout.
+
+-}
+masonryLayout :
+    List Breakpoint
+    -> List (Html.Attribute msg)
+    -> List (Html msg)
+    -> Html msg
+masonryLayout breakpoints attrs children =
+    let
+        classesForBreakpoint breakpoint =
+            case breakpoint of
+                Lg ->
+                    -- Tailwind might purge if we do something with List.map instead of explicitly writing these
+                    "lg:gap-y-px lg:grid lg:auto-rows-[0px]"
+
+                Xl ->
+                    "xl:gap-y-px xl:grid xl:auto-rows-[0px]"
+    in
+    node "masonry-layout"
+        ((List.map classesForBreakpoint breakpoints
+            |> String.join " "
+            |> class
+         )
+            :: attrs
+        )
+        children
 
 
 

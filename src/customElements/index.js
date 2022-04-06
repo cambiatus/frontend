@@ -9,6 +9,7 @@ import dateFormatter from './dateFormatter'
 import dialogBubble from './dialogBubble'
 import pdfViewer from './pdfViewer'
 import intersectionObserverElement from './intersectionObserverElement'
+import masonryLayout from './masonryLayout'
 
 const customElements = {
   'bg-no-scroll': bgNoScroll,
@@ -21,7 +22,8 @@ const customElements = {
   'paypal-buttons': paypalButtons,
   'pdf-viewer': pdfViewer,
   'richtext-editor': richTextEditor,
-  'intersection-observer': intersectionObserverElement
+  'intersection-observer': intersectionObserverElement,
+  'masonry-layout': masonryLayout
 }
 
 const register = (app, config, addBreadcrumb) => {

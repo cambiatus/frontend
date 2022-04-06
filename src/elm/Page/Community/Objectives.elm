@@ -4,7 +4,8 @@ import Action exposing (Action)
 import Community
 import Eos
 import Html exposing (Html, a, b, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
-import Html.Attributes exposing (alt, class, classList, id, src, title)
+import Html.Attributes exposing (alt, class, classList, id, src, style, title)
+import Html.Attributes.Aria exposing (role)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode
@@ -23,13 +24,15 @@ import View.Components exposing (intersectionObserver)
 
 
 type alias Model =
+    -- TODO - Review how we store shownAction
     { shownAction : Maybe Int
+    , shownObjectives : List Community.Objective
     }
 
 
 init : LoggedIn.Model -> UpdateResult
 init _ =
-    UR.init { shownAction = Just 175 }
+    UR.init { shownAction = Just 175, shownObjectives = [] }
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
 
 
@@ -39,6 +42,7 @@ init _ =
 
 type Msg
     = NoOp
+    | ClickedToggleObjectiveVisibility Community.Objective
     | ClickedScrollToAction Action
     | StartedIntersecting String
 
@@ -56,6 +60,17 @@ update msg model loggedIn =
     case msg of
         NoOp ->
             UR.init model
+
+        ClickedToggleObjectiveVisibility objective ->
+            { model
+                | shownObjectives =
+                    if List.member objective model.shownObjectives then
+                        List.filter (\shownObjective -> shownObjective /= objective) model.shownObjectives
+
+                    else
+                        objective :: model.shownObjectives
+            }
+                |> UR.init
 
         ClickedScrollToAction action ->
             model
@@ -120,7 +135,8 @@ view loggedIn model =
                         RemoteData.Success objectives ->
                             let
                                 filteredObjectives =
-                                    List.filter (\objective -> not objective.isCompleted) objectives
+                                    List.filter (\objective -> not objective.isCompleted)
+                                        objectives
                             in
                             div []
                                 [ ul [ class "space-y-4 mt-4" ]
@@ -206,27 +222,55 @@ viewObjective translators model objective =
         filteredActions =
             List.filter (\action -> not action.isCompleted)
                 objective.actions
+
+        isOpen =
+            List.member objective model.shownObjectives
     in
     li []
-        [ details []
-            [ summary [ class "marker-hidden" ]
+        [ details
+            [ if isOpen then
+                Html.Attributes.attribute "open" "true"
+
+              else
+                class ""
+            ]
+            [ summary
+                [ class "marker-hidden"
+                , onClick (ClickedToggleObjectiveVisibility objective)
+                ]
                 [ div
                     [ class "flex marker-hidden items-center bg-white rounded px-4 py-6 cursor-pointer lg:w-2/3 lg:mx-auto"
                     ]
                     [ Icons.cambiatusCoin "text-blue fill-current flex-shrink-0 self-start mt-1"
                     , h3 [ title (Markdown.toRawString objective.description) ]
                         [ Markdown.view [ class "font-bold px-4 line-clamp-4 self-start mt-1" ] objective.description ]
-                    , Icons.arrowDown "ml-auto text-gray-900 fill-current flex-shrink-0"
+                    , span
+                        [ class "ml-auto flex-shrink-0 transition-transform duration-150 motion-reduce:transition-none"
+                        , classList
+                            [ ( "rotate-180", isOpen )
+                            , ( "rotate-0", not isOpen )
+                            ]
+                        ]
+                        [ Icons.arrowDown "text-gray-900 fill-current"
+                        ]
                     ]
                 ]
-            , ul
-                [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4 lg:gap-6 lg:grid lg:grid-cols-2 xl:grid-cols-3"
-                , id (objectiveContainerId objective)
-                ]
-                (List.indexedMap
-                    (viewAction translators)
-                    filteredActions
-                )
+            , if not isOpen then
+                text ""
+
+              else
+                View.Components.masonryLayout
+                    [ View.Components.Lg, View.Components.Xl ]
+                    -- TODO - Join all of these `class`es
+                    [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4"
+                    , class "lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
+                    , id (objectiveContainerId objective)
+                    , role "list"
+                    ]
+                    (List.indexedMap
+                        (viewAction translators)
+                        filteredActions
+                    )
 
             -- TODO - Adjust case where some cards are taller than others
             , div [ class "flex justify-center gap-2 lg:hidden" ]
@@ -249,8 +293,12 @@ viewObjective translators model objective =
 viewAction : Translation.Translators -> Int -> Action -> Html Msg
 viewAction translators index action =
     li
+        -- TODO - Join all of these `class`es
         [ class "bg-white rounded px-4 pt-4 pb-6 self-start"
         , class "w-full flex-shrink-0 snap-center snap-always"
+        , class "mb-6"
+        , class "animate-fade-in-from-above motion-reduce:animate-none"
+        , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
         ]
         [ div [ class "flex" ]
@@ -327,6 +375,9 @@ msgToString msg =
     case msg of
         NoOp ->
             [ "NoOp" ]
+
+        ClickedToggleObjectiveVisibility _ ->
+            [ "ClickedToggleObjectiveVisibility" ]
 
         ClickedScrollToAction _ ->
             [ "ClickedScrollToAction" ]
