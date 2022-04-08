@@ -41,7 +41,6 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Markdown exposing (Markdown)
-import Ports
 import Profile
 import Route
 import Session.Shared exposing (Shared, Translators)
@@ -153,26 +152,9 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             List.all (\permission -> List.member permission permissions)
                 necessaryPermissions
 
+        -- TODO - Remove this
         claimOrAskForPin actionId photoUrl code time m =
-            if isPinConfirmed then
-                m
-                    |> UR.init
-                    |> UR.addPort
-                        (claimActionPort
-                            msg
-                            shared.contracts.community
-                            -- { communityId = selectedCommunity
-                            -- , actionId = actionId
-                            -- , claimer = accName
-                            -- , proofPhoto = photoUrl
-                            -- , proofCode = code
-                            -- , proofTime = time
-                            -- }
-                            (Debug.todo "")
-                        )
-
-            else
-                m |> UR.init
+            m |> UR.init
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
@@ -763,26 +745,6 @@ updateAction accountName shared action =
         , permissionName = Eos.samplePermission
         }
     , data = encode action
-    }
-
-
-claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity action =
-    { responseAddress = msg
-    , responseData = Encode.null
-    , data =
-        Eos.encodeTransaction
-            [ { accountName = contractsCommunity
-              , name = "claimaction"
-              , authorization =
-                    { actor = action.claimer
-                    , permissionName = Eos.samplePermission
-                    }
-
-              --   , data = encodeClaimAction action
-              , data = Debug.todo ""
-              }
-            ]
     }
 
 

@@ -111,7 +111,7 @@ type Msg
     | ConfirmedClaimActionWithPhotoProof String
     | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
     | GotUint64Name String
-    | GotTime Time.Posix
+    | GotTime
     | CompletedClaimingAction (Result Encode.Value ())
 
 
@@ -398,7 +398,7 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        GotTime _ ->
+        GotTime ->
             UR.init model
                 |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
 
@@ -992,7 +992,8 @@ receiveBroadcast broadcastMsg =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 1000 GotTime
+    -- We just tell logged in to get the time. This way, we have a single source of truth for time
+    Time.every 1000 (\_ -> GotTime)
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
@@ -1063,7 +1064,7 @@ msgToString msg =
         GotUint64Name _ ->
             [ "GotUint64Name" ]
 
-        GotTime _ ->
+        GotTime ->
             [ "GotTime" ]
 
         CompletedClaimingAction r ->
