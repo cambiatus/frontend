@@ -10,6 +10,7 @@ module Utils exposing
     , onClickNoBubble
     , onClickPreventAll
     , onSubmitPreventAll
+    , padInt
     , previousDay
     , spawnMessage
     )
@@ -88,6 +89,21 @@ formatFloat maybeTranslators decimalCases number =
 formatInt : Maybe { translators | t : String -> String } -> Int -> String
 formatInt maybeTranslators number =
     formatFloat maybeTranslators 0 (toFloat number)
+
+
+{-| Pad an Int with zeros to a given length
+-}
+padInt : Int -> Int -> String
+padInt totalLength number =
+    let
+        currentLength =
+            String.fromInt number
+                |> String.length
+
+        missingLength =
+            totalLength - currentLength
+    in
+    String.repeat missingLength "0" ++ String.fromInt number
 
 
 escSubscription : msg -> Sub msg

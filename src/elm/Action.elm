@@ -8,6 +8,7 @@ module Action exposing
     , Msg(..)
     , Objective
     , Proof(..)
+    , encodeClaimAction
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -160,13 +161,14 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                         (claimActionPort
                             msg
                             shared.contracts.community
-                            { communityId = selectedCommunity
-                            , actionId = actionId
-                            , maker = accName
-                            , proofPhoto = photoUrl
-                            , proofCode = code
-                            , proofTime = time
-                            }
+                            -- { communityId = selectedCommunity
+                            -- , actionId = actionId
+                            -- , claimer = accName
+                            -- , proofPhoto = photoUrl
+                            -- , proofCode = code
+                            -- , proofTime = time
+                            -- }
+                            (Debug.todo "")
                         )
 
             else
@@ -773,10 +775,12 @@ claimActionPort msg contractsCommunity action =
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = action.maker
+                    { actor = action.claimer
                     , permissionName = Eos.samplePermission
                     }
-              , data = encodeClaimAction action
+
+              --   , data = encodeClaimAction action
+              , data = Debug.todo ""
               }
             ]
     }
@@ -785,22 +789,36 @@ claimActionPort msg contractsCommunity action =
 type alias ClaimedAction =
     { communityId : Symbol
     , actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
+    , claimer : Eos.Name
+    , proof :
+        Maybe
+            { photo : String
+            , code : String
+            , time : Time.Posix
+            }
     }
 
 
 encodeClaimAction : ClaimedAction -> Encode.Value
 encodeClaimAction c =
+    let
+        encodeProofItem getter default encoder =
+            c.proof
+                |> Maybe.map getter
+                |> Maybe.withDefault default
+                |> encoder
+    in
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
+        , ( "maker", Eos.encodeName c.claimer )
+        , ( "proof_photo", encodeProofItem .photo "" Encode.string )
+        , ( "proof_code", encodeProofItem .code "" Encode.string )
+        , ( "proof_time"
+          , encodeProofItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
+                0
+                Encode.int
+          )
         ]
 
 
