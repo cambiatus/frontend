@@ -2,18 +2,42 @@
 
 export default () => (
   class IntersectionObserverElement extends HTMLElement {
-    connectedCallback () {
-      const targetSelectors = this.getAttribute('elm-target').split(' ')
-      const threshold = parseFloat(this.getAttribute('elm-threshold')) || 1
+    static get observedAttributes () { return ['elm-target', 'elm-threshold'] }
 
-      const options = { threshold }
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'elm-target') {
+        this.setTargets(newValue.split(' '))
+      } else if (name === 'elm-threshold') {
+        this.threshold = parseFloat(newValue) || 1
+      }
 
+      this.unobserve()
+      this.observe()
+    }
+
+    setTargets (targetSelectors) {
       this.targets = targetSelectors
+        .filter((targetSelector) => { return Boolean(targetSelector) })
         .map(selector => document.querySelector(selector))
         .filter((target) => target !== null)
+    }
 
+    connectedCallback () {
+      const targetSelectors = this.getAttribute('elm-target').split(' ')
+      this.setTargets(targetSelectors)
+
+      this.threshold = parseFloat(this.getAttribute('elm-threshold')) || 1
+
+      this.observe()
+    }
+
+    disconnectedCallback () {
+      this.unobserve()
+    }
+
+    observe () {
       if (!this.targets) {
-        console.error('INVALID TARGETS FOR INTERSECTION OBSERVER')
+        console.error('Invalid targets for intersectionObserver')
         return
       }
 
@@ -35,12 +59,16 @@ export default () => (
           wasIntersecting[entry.target.id] = entry.isIntersecting
         })
       }
-      this.observer = new IntersectionObserver(this.callback, options)
+
+      this.observer = new IntersectionObserver(this.callback, {
+        threshold: this.threshold,
+        rootMargin: '100% 0px 100% 0px'
+      })
 
       this.targets.forEach((target) => this.observer.observe(target))
     }
 
-    disconnectedCallback () {
+    unobserve () {
       if (!this.observer) {
         return
       }
