@@ -107,10 +107,11 @@ work as a masonry layout.
 -}
 masonryLayout :
     List Breakpoint
+    -> { transitionWithParent : Bool }
     -> List (Html.Attribute msg)
     -> List (Html msg)
     -> Html msg
-masonryLayout breakpoints attrs children =
+masonryLayout breakpoints { transitionWithParent } attrs children =
     let
         classesForBreakpoint breakpoint =
             case breakpoint of
@@ -126,6 +127,7 @@ masonryLayout breakpoints attrs children =
             |> String.join " "
             |> class
          )
+            :: attribute "elm-transition-with-parent" (boolToString transitionWithParent)
             :: attrs
         )
         children

@@ -496,6 +496,7 @@ view loggedIn model =
                                 , intersectionObserver
                                     { targetSelectors =
                                         filteredObjectives
+                                            |> List.filter (\objective -> List.member objective.id model.shownObjectives)
                                             |> List.concatMap .actions
                                             |> List.filterMap
                                                 (\action ->
@@ -636,22 +637,29 @@ viewObjective translators model objective =
                         ]
                     ]
                 ]
-            , if not isOpen then
-                text ""
-
-              else
-                View.Components.masonryLayout
-                    [ View.Components.Lg, View.Components.Xl ]
-                    -- TODO - Join all of these `class`es
-                    [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4"
-                    , class "lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
-                    , id (objectiveContainerId objective)
-                    , role "list"
+            , div
+                [ class "transition-transform duration-300 ease-in-out origin-top motion-reduce:transition-none"
+                , classList
+                    [ ( "lg:scale-0", not isOpen )
+                    , ( "lg:scale-1", isOpen )
                     ]
-                    (List.indexedMap
-                        (viewAction translators model)
-                        filteredActions
-                    )
+                ]
+                [ if not isOpen then
+                    text ""
+
+                  else
+                    View.Components.masonryLayout
+                        [ View.Components.Lg, View.Components.Xl ]
+                        { transitionWithParent = True }
+                        [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4 lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
+                        , id (objectiveContainerId objective)
+                        , role "list"
+                        ]
+                        (List.indexedMap
+                            (viewAction translators model)
+                            filteredActions
+                        )
+                ]
 
             -- TODO - Adjust case where some cards are taller than others
             , div [ class "flex justify-center gap-2 lg:hidden" ]
@@ -691,11 +699,7 @@ viewAction translators model index action =
                     False
     in
     li
-        -- TODO - Join all of these `class`es
-        [ class "bg-white rounded px-4 pt-4 pb-6 self-start"
-        , class "w-full flex-shrink-0 snap-center snap-always"
-        , class "mb-6"
-        , class "animate-fade-in-from-above motion-reduce:animate-none"
+        [ class "bg-white rounded px-4 pt-4 pb-6 self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"
         , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
         , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
