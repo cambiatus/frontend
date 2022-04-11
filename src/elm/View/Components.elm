@@ -482,26 +482,50 @@ by id you need to use `#` as a prefix.
 intersectionObserver :
     { targetSelectors : List String
     , threshold : Float
-    , onStartedIntersecting : String -> msg
+    , breakpointToExclude : Breakpoint
+    , onStartedIntersecting : Maybe (String -> msg)
+    , onStoppedIntersecting : Maybe (String -> msg)
     }
     -> Html msg
 intersectionObserver options =
+    let
+        optionalEvent eventName maybeToMsg =
+            case maybeToMsg of
+                Nothing ->
+                    class ""
+
+                Just toMsg ->
+                    on eventName (decodeTargetId toMsg)
+
+        decodeTargetId toMsg =
+            Json.Decode.at [ "detail", "targetId" ] Json.Decode.string
+                |> Json.Decode.map toMsg
+    in
     node "intersection-observer"
         [ attribute "elm-target" (String.join " " options.targetSelectors)
         , attribute "elm-threshold" (String.fromFloat options.threshold)
-        , on "started-intersecting"
-            (Json.Decode.at [ "detail", "targetId" ] Json.Decode.string
-                |> Json.Decode.andThen
-                    (\targetId ->
-                        Json.Decode.succeed (options.onStartedIntersecting targetId)
-                    )
-            )
+        , attribute "elm-max-width" (String.fromInt <| breakpointToPixels options.breakpointToExclude)
+        , optionalEvent "started-intersecting" options.onStartedIntersecting
+        , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
         ]
         []
 
 
 
 -- INTERNALS
+
+
+{-| Convert a breakpoint to it's minimum width value in pixels. Should be in sync
+with our tailwind config
+-}
+breakpointToPixels : Breakpoint -> Int
+breakpointToPixels breakpoint =
+    case breakpoint of
+        Lg ->
+            1024
+
+        Xl ->
+            1280
 
 
 boolToString : Bool -> String

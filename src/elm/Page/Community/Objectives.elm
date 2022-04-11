@@ -1,9 +1,11 @@
 module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, subscriptions, update, view)
 
 import Action exposing (Action, Msg(..))
+import Browser.Dom
 import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Enum.VerificationType as VerificationType
 import Community
+import Dict exposing (Dict)
 import Eos
 import Eos.Account
 import Form
@@ -17,13 +19,16 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
+import Log
 import Markdown
+import Maybe.Extra
 import Page
 import RemoteData
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Sha256
+import Task
 import Time
 import Time.Extra
 import Translation
@@ -40,13 +45,22 @@ import View.Modal
 
 
 type alias Model =
-    -- TODO - Review how we store shownAction
-    { shownAction : Maybe Int
-    , shownObjectives : List Int
+    { shownObjectives :
+        Dict
+            ObjectiveId
+            { visibleAction : Maybe Int
+            , visibleActionHeight : Maybe Float
+            , previousVisibleAction : Maybe Int
+            , previousVisibleActionHeight : Maybe Float
+            }
     , highlightedAction : Maybe { objectiveId : Int, actionId : Int }
     , sharingAction : Maybe Action
     , claimingStatus : ClaimingStatus
     }
+
+
+type alias ObjectiveId =
+    Int
 
 
 type ClaimingStatus
@@ -71,8 +85,7 @@ type ProofCode
 init : Route.SelectedObjective -> LoggedIn.Model -> UpdateResult
 init selectedObjective _ =
     UR.init
-        { shownAction = Nothing
-        , highlightedAction =
+        { highlightedAction =
             case selectedObjective of
                 Route.WithNoObjectiveSelected ->
                     Nothing
@@ -82,10 +95,18 @@ init selectedObjective _ =
         , shownObjectives =
             case selectedObjective of
                 Route.WithNoObjectiveSelected ->
-                    []
+                    Dict.empty
 
                 Route.WithObjectiveSelected { id } ->
-                    [ id ]
+                    Dict.fromList
+                        [ ( id
+                          , { visibleAction = Nothing
+                            , visibleActionHeight = Nothing
+                            , previousVisibleAction = Nothing
+                            , previousVisibleActionHeight = Nothing
+                            }
+                          )
+                        ]
         , sharingAction = Nothing
 
         -- TODO - Open modal when action is selected on url?
@@ -102,11 +123,13 @@ type Msg
     = NoOp
     | CompletedLoadObjectives (List Community.Objective)
     | ClickedToggleObjectiveVisibility Community.Objective
+    | GotVisibleActionViewport { objectiveId : ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | ClickedShareAction Action
     | ClickedClaimAction Action
     | ClickedCloseClaimModal
     | StartedIntersecting String
+    | StoppedIntersecting String
     | ConfirmedClaimAction
     | ConfirmedClaimActionWithPhotoProof String
     | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
@@ -166,13 +189,48 @@ update msg model loggedIn =
         ClickedToggleObjectiveVisibility objective ->
             { model
                 | shownObjectives =
-                    if List.member objective.id model.shownObjectives then
-                        List.filter (\shownObjective -> shownObjective /= objective.id) model.shownObjectives
+                    Dict.update objective.id
+                        (\currentValue ->
+                            case currentValue of
+                                Nothing ->
+                                    Just
+                                        { visibleAction = Nothing
+                                        , visibleActionHeight = Nothing
+                                        , previousVisibleAction = Nothing
+                                        , previousVisibleActionHeight = Nothing
+                                        }
 
-                    else
-                        objective.id :: model.shownObjectives
+                                Just _ ->
+                                    Nothing
+                        )
+                        model.shownObjectives
                 , highlightedAction = Nothing
             }
+                |> UR.init
+
+        GotVisibleActionViewport { objectiveId, actionId } (Ok { viewport }) ->
+            { model
+                | shownObjectives =
+                    model.shownObjectives
+                        |> Dict.update objectiveId
+                            (\maybeValue ->
+                                case maybeValue of
+                                    Nothing ->
+                                        Just
+                                            { visibleAction = Just actionId
+                                            , visibleActionHeight = Just viewport.height
+                                            , previousVisibleAction = Nothing
+                                            , previousVisibleActionHeight = Nothing
+                                            }
+
+                                    Just value ->
+                                        Just { value | visibleActionHeight = Just viewport.height }
+                            )
+            }
+                |> UR.init
+
+        GotVisibleActionViewport _ (Err _) ->
+            model
                 |> UR.init
 
         ClickedScrollToAction action ->
@@ -261,8 +319,98 @@ update msg model loggedIn =
             { model | claimingStatus = NotClaiming }
                 |> UR.init
 
-        StartedIntersecting actionId ->
-            { model | shownAction = idFromActionCardId actionId }
+        StartedIntersecting actionCard ->
+            case Community.getField loggedIn.selectedCommunity .objectives of
+                RemoteData.Success ( _, objectives ) ->
+                    let
+                        maybeActionIdAndParentObjective =
+                            idFromActionCardId actionCard
+                                |> Maybe.andThen
+                                    (\actionId ->
+                                        objectives
+                                            |> List.Extra.find
+                                                (\objective ->
+                                                    objective.actions
+                                                        |> List.map .id
+                                                        |> List.member actionId
+                                                )
+                                            |> Maybe.map (Tuple.pair actionId)
+                                    )
+                    in
+                    case maybeActionIdAndParentObjective of
+                        Nothing ->
+                            model
+                                |> UR.init
+
+                        Just ( actionId, parentObjective ) ->
+                            { model
+                                | shownObjectives =
+                                    Dict.update parentObjective.id
+                                        (\maybeValue ->
+                                            case maybeValue of
+                                                Nothing ->
+                                                    Just
+                                                        { visibleAction = Just actionId
+                                                        , visibleActionHeight = Nothing
+                                                        , previousVisibleAction = Nothing
+                                                        , previousVisibleActionHeight = Nothing
+                                                        }
+
+                                                Just value ->
+                                                    Just
+                                                        { visibleAction = Just actionId
+                                                        , visibleActionHeight = Nothing
+                                                        , previousVisibleAction = value.visibleAction
+                                                        , previousVisibleActionHeight = value.visibleActionHeight
+                                                        }
+                                        )
+                                        model.shownObjectives
+                            }
+                                |> UR.init
+                                |> UR.addCmd
+                                    (Browser.Dom.getViewportOf actionCard
+                                        |> Task.attempt
+                                            (GotVisibleActionViewport { objectiveId = parentObjective.id, actionId = actionId })
+                                    )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Action started showing up, but objectives weren't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Objectives.elm", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
+
+        StoppedIntersecting targetId ->
+            let
+                newShownObjectives =
+                    Dict.foldl
+                        (\objectiveId value currDict ->
+                            if value.visibleAction == idFromActionCardId targetId then
+                                Dict.insert objectiveId
+                                    { visibleAction = value.previousVisibleAction
+                                    , visibleActionHeight = value.previousVisibleActionHeight
+                                    , previousVisibleAction = Nothing
+                                    , previousVisibleActionHeight = Nothing
+                                    }
+                                    currDict
+
+                            else if value.previousVisibleAction == idFromActionCardId targetId then
+                                Dict.insert objectiveId
+                                    { value
+                                        | previousVisibleAction = Nothing
+                                        , previousVisibleActionHeight = Nothing
+                                    }
+                                    currDict
+
+                            else
+                                Dict.insert objectiveId value currDict
+                        )
+                        Dict.empty
+                        model.shownObjectives
+            in
+            { model | shownObjectives = newShownObjectives }
                 |> UR.init
 
         ConfirmedClaimAction ->
@@ -496,7 +644,7 @@ view loggedIn model =
                                 , intersectionObserver
                                     { targetSelectors =
                                         filteredObjectives
-                                            |> List.filter (\objective -> List.member objective.id model.shownObjectives)
+                                            |> List.filter (\objective -> List.member objective.id (Dict.keys model.shownObjectives))
                                             |> List.concatMap .actions
                                             |> List.filterMap
                                                 (\action ->
@@ -506,8 +654,10 @@ view loggedIn model =
                                                     else
                                                         Just ("#" ++ actionCardId action)
                                                 )
-                                    , threshold = 0.9
-                                    , onStartedIntersecting = StartedIntersecting
+                                    , threshold = 0.01
+                                    , breakpointToExclude = View.Components.Lg
+                                    , onStartedIntersecting = Just StartedIntersecting
+                                    , onStoppedIntersecting = Just StoppedIntersecting
                                     }
                                 , if not loggedIn.shared.canShare then
                                     Form.Text.view
@@ -611,7 +761,22 @@ viewObjective translators model objective =
                 objective.actions
 
         isOpen =
-            List.member objective.id model.shownObjectives
+            List.member objective.id (Dict.keys model.shownObjectives)
+
+        maybeShownObjectivesInfo =
+            Dict.get objective.id model.shownObjectives
+
+        visibleActionId =
+            maybeShownObjectivesInfo
+                |> Maybe.andThen .visibleAction
+
+        visibleActionHeight =
+            maybeShownObjectivesInfo
+                |> Maybe.andThen .visibleActionHeight
+
+        previousVisibleActionHeight =
+            maybeShownObjectivesInfo
+                |> Maybe.andThen .previousVisibleActionHeight
     in
     li []
         [ details
@@ -638,11 +803,30 @@ viewObjective translators model objective =
                     ]
                 ]
             , div
-                [ class "transition-transform duration-300 ease-in-out origin-top motion-reduce:transition-none"
+                [ class "duration-300 ease-in-out origin-top lg:!h-full motion-reduce:transition-none"
                 , classList
                     [ ( "lg:scale-0", not isOpen )
                     , ( "lg:scale-1", isOpen )
+                    , ( "transition-all", Maybe.Extra.isJust visibleActionHeight )
+                    , ( "transition-transform", Maybe.Extra.isNothing visibleActionHeight )
                     ]
+                , case visibleActionHeight of
+                    Nothing ->
+                        case previousVisibleActionHeight of
+                            Nothing ->
+                                class ""
+
+                            Just height ->
+                                style "height"
+                                    ("calc(" ++ String.fromInt (ceiling height) ++ "px + 24px)")
+
+                    Just height ->
+                        style "height"
+                            (max (ceiling height)
+                                (ceiling <| Maybe.withDefault 0 <| previousVisibleActionHeight)
+                                |> String.fromInt
+                                |> (\heightString -> "calc(" ++ heightString ++ "px + 24px")
+                            )
                 ]
                 [ if not isOpen then
                     text ""
@@ -651,7 +835,7 @@ viewObjective translators model objective =
                     View.Components.masonryLayout
                         [ View.Components.Lg, View.Components.Xl ]
                         { transitionWithParent = True }
-                        [ class "mt-4 mb-2 flex overflow-scroll snap-x snap-proximity scrollbar-hidden gap-4 lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
+                        [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x snap-proximity scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
                         , id (objectiveContainerId objective)
                         , role "list"
                         ]
@@ -660,15 +844,13 @@ viewObjective translators model objective =
                             filteredActions
                         )
                 ]
-
-            -- TODO - Adjust case where some cards are taller than others
             , div [ class "flex justify-center gap-2 lg:hidden" ]
                 (filteredActions
                     |> List.map
                         (\action ->
                             button
                                 [ class "border border-gray-900 rounded-full w-3 h-3 transition-colors"
-                                , classList [ ( "border-orange-300 bg-orange-300", Just action.id == model.shownAction ) ]
+                                , classList [ ( "border-orange-300 bg-orange-300", Just action.id == visibleActionId ) ]
                                 , id ("go-to-action-" ++ String.fromInt action.id)
                                 , onClick (ClickedScrollToAction action)
                                 ]
@@ -1041,6 +1223,9 @@ msgToString msg =
         ClickedToggleObjectiveVisibility _ ->
             [ "ClickedToggleObjectiveVisibility" ]
 
+        GotVisibleActionViewport _ _ ->
+            [ "GotVisibleActionViewport" ]
+
         ClickedScrollToAction _ ->
             [ "ClickedScrollToAction" ]
 
@@ -1055,6 +1240,9 @@ msgToString msg =
 
         StartedIntersecting _ ->
             [ "StartedIntersecting" ]
+
+        StoppedIntersecting _ ->
+            [ "StoppedIntersecting" ]
 
         ConfirmedClaimAction ->
             [ "ConfirmedClaimAction" ]

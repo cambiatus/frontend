@@ -23,6 +23,11 @@ export default () => (
     }
 
     connectedCallback () {
+      this.maxWidth = parseInt(this.getAttribute('elm-max-width')) || 0
+      if (window.innerWidth >= this.maxWidth) {
+        return
+      }
+
       const targetSelectors = this.getAttribute('elm-target').split(' ')
       this.setTargets(targetSelectors)
 
@@ -32,10 +37,18 @@ export default () => (
     }
 
     disconnectedCallback () {
+      if (window.innerWidth >= this.maxWidth) {
+        return
+      }
+
       this.unobserve()
     }
 
     observe () {
+      if (window.innerWidth >= this.maxWidth) {
+        return
+      }
+
       if (!this.targets) {
         console.error('Invalid targets for intersectionObserver')
         return
@@ -54,6 +67,8 @@ export default () => (
         entries.forEach((entry) => {
           if (entry.isIntersecting && !wasIntersecting[entry.target.id]) {
             this.dispatchEvent(new CustomEvent('started-intersecting', { detail: { targetId: entry.target.id } }))
+          } else if (!entry.isInterecting && wasIntersecting[entry.target.id]) {
+            this.dispatchEvent(new CustomEvent('stopped-intersecting', { detail: { targetId: entry.target.id } }))
           }
 
           wasIntersecting[entry.target.id] = entry.isIntersecting
