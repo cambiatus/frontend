@@ -65,7 +65,7 @@ type alias ObjectiveId =
 
 type ClaimingStatus
     = NotClaiming
-    | Claiming Action Proof
+    | Claiming { position : Int, action : Action, proof : Proof }
 
 
 type Proof
@@ -126,7 +126,7 @@ type Msg
     | GotVisibleActionViewport { objectiveId : ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | ClickedShareAction Action
-    | ClickedClaimAction Action
+    | ClickedClaimAction { position : Int, action : Action }
     | ClickedCloseClaimModal
     | StartedIntersecting String
     | StoppedIntersecting String
@@ -287,7 +287,7 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addPort sharePort
 
-        ClickedClaimAction action ->
+        ClickedClaimAction { position, action } ->
             let
                 proof =
                     if action.hasProofPhoto then
@@ -311,7 +311,14 @@ update msg model loggedIn =
                     else
                         identity
             in
-            { model | claimingStatus = Claiming action proof }
+            { model
+                | claimingStatus =
+                    Claiming
+                        { position = position
+                        , action = action
+                        , proof = proof
+                        }
+            }
                 |> UR.init
                 |> generateProofCodePort
 
@@ -415,7 +422,7 @@ update msg model loggedIn =
 
         ConfirmedClaimAction ->
             case model.claimingStatus of
-                Claiming action _ ->
+                Claiming { action } ->
                     UR.init model
                         |> UR.addPort
                             { responseAddress = msg
@@ -453,38 +460,43 @@ update msg model loggedIn =
 
         ConfirmedClaimActionWithPhotoProof proofUrl ->
             case model.claimingStatus of
-                Claiming action (WithProof _ (WithCode { code, generation })) ->
-                    UR.init model
-                        |> UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "claimaction"
-                                      , authorization =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.Account.samplePermission
-                                            }
-                                      , data =
-                                            Action.encodeClaimAction
-                                                { communityId = action.objective.community.symbol
-                                                , actionId = action.id
-                                                , claimer = loggedIn.accountName
-                                                , proof =
-                                                    Just
-                                                        { photo = proofUrl
-                                                        , code = code
-                                                        , time = generation
+                Claiming { action, proof } ->
+                    case proof of
+                        WithProof _ (WithCode { code, generation }) ->
+                            UR.init model
+                                |> UR.addPort
+                                    { responseAddress = msg
+                                    , responseData = Encode.null
+                                    , data =
+                                        Eos.encodeTransaction
+                                            [ { accountName = loggedIn.shared.contracts.community
+                                              , name = "claimaction"
+                                              , authorization =
+                                                    { actor = loggedIn.accountName
+                                                    , permissionName = Eos.Account.samplePermission
+                                                    }
+                                              , data =
+                                                    Action.encodeClaimAction
+                                                        { communityId = action.objective.community.symbol
+                                                        , actionId = action.id
+                                                        , claimer = loggedIn.accountName
+                                                        , proof =
+                                                            Just
+                                                                { photo = proofUrl
+                                                                , code = code
+                                                                , time = generation
+                                                                }
                                                         }
-                                                }
-                                      }
-                                    ]
-                            }
-                        |> LoggedIn.withPrivateKey loggedIn
-                            [ Permission.Claim ]
-                            model
-                            { successMsg = msg, errorMsg = NoOp }
+                                              }
+                                            ]
+                                    }
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Claim ]
+                                    model
+                                    { successMsg = msg, errorMsg = NoOp }
+
+                        _ ->
+                            UR.init model
 
                 _ ->
                     UR.init model
@@ -496,52 +508,67 @@ update msg model loggedIn =
 
         GotPhotoProofFormMsg subMsg ->
             case model.claimingStatus of
-                Claiming action (WithProof formModel proofCode) ->
-                    Form.update loggedIn.shared subMsg formModel
-                        |> UR.fromChild
-                            (\newFormModel ->
-                                { model
-                                    | claimingStatus =
-                                        Claiming action
-                                            (WithProof newFormModel proofCode)
-                                }
-                            )
-                            GotPhotoProofFormMsg
-                            LoggedIn.addFeedback
-                            model
+                Claiming { position, action, proof } ->
+                    case proof of
+                        WithProof formModel proofCode ->
+                            Form.update loggedIn.shared subMsg formModel
+                                |> UR.fromChild
+                                    (\newFormModel ->
+                                        { model
+                                            | claimingStatus =
+                                                Claiming
+                                                    { position = position
+                                                    , action = action
+                                                    , proof = WithProof newFormModel proofCode
+                                                    }
+                                        }
+                                    )
+                                    GotPhotoProofFormMsg
+                                    LoggedIn.addFeedback
+                                    model
 
-                Claiming _ NoProofNecessary ->
-                    UR.init model
+                        NoProofNecessary ->
+                            UR.init model
 
                 NotClaiming ->
                     UR.init model
 
         GotUint64Name uint64Name ->
             case model.claimingStatus of
-                Claiming action (WithProof formModel _) ->
-                    let
-                        proofCode =
-                            generateProofCode action
-                                uint64Name
-                                loggedIn.shared.now
+                Claiming { position, action, proof } ->
+                    case proof of
+                        WithProof formModel _ ->
+                            let
+                                proofCode =
+                                    generateProofCode action
+                                        uint64Name
+                                        loggedIn.shared.now
 
-                        expiration =
-                            Time.Extra.add Time.Extra.Minute
-                                30
-                                loggedIn.shared.timezone
-                                loggedIn.shared.now
-                    in
-                    { model
-                        | claimingStatus =
-                            WithCode
-                                { code = proofCode
-                                , expiration = expiration
-                                , generation = loggedIn.shared.now
-                                }
-                                |> WithProof formModel
-                                |> Claiming action
-                    }
-                        |> UR.init
+                                expiration =
+                                    Time.Extra.add Time.Extra.Minute
+                                        30
+                                        loggedIn.shared.timezone
+                                        loggedIn.shared.now
+                            in
+                            { model
+                                | claimingStatus =
+                                    Claiming
+                                        { position = position
+                                        , action = action
+                                        , proof =
+                                            WithProof formModel
+                                                (WithCode
+                                                    { code = proofCode
+                                                    , expiration = expiration
+                                                    , generation = loggedIn.shared.now
+                                                    }
+                                                )
+                                        }
+                            }
+                                |> UR.init
+
+                        NoProofNecessary ->
+                            UR.init model
 
                 _ ->
                     UR.init model
@@ -943,7 +970,7 @@ viewAction translators model index action =
             , if isClaimable then
                 button
                     [ class "button button-primary w-full sm:col-span-1"
-                    , onClick (ClickedClaimAction action)
+                    , onClick (ClickedClaimAction { position = index + 1, action = action })
                     ]
                     [ if action.hasProofPhoto then
                         Icons.camera "w-4 mr-2 flex-shrink-0"
@@ -967,7 +994,7 @@ viewClaimModal ({ translators } as shared) model =
         NotClaiming ->
             text ""
 
-        Claiming action proof ->
+        Claiming { position, action, proof } ->
             let
                 viewClaimCount attrs =
                     div
@@ -983,6 +1010,8 @@ viewClaimModal ({ translators } as shared) model =
 
                         -- TODO - I18N
                         , text "Membros reivindicaram esta ação"
+
+                        -- TODO - Use real data
                         , span [ class "text-base ml-1 font-bold" ] [ text " 340 vezes" ]
                         ]
             in
@@ -992,8 +1021,7 @@ viewClaimModal ({ translators } as shared) model =
                 }
                 |> View.Modal.withBody
                     [ div [ class "flex" ]
-                        [ -- TODO - Use action position
-                          span [ class "text-lg text-gray-500 font-bold" ] [ text "1." ]
+                        [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt position ++ ".") ]
                         , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                             [ Markdown.view [ class "truncate" ] action.description
                             , div [ class "md:flex md:justify-between md:w-full" ]
