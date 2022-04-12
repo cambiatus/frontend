@@ -847,7 +847,12 @@ viewObjective translators model objective =
                                 Just { objectiveId } ->
                                     objectiveId /= objective.id
                         }
-                        [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x snap-proximity scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
+                        [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x snap-proximity scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4"
+                        , classList
+                            [ ( "lg:grid-cols-1 lg:w-1/2 lg:mx-auto xl:w-1/3", List.length filteredActions == 1 )
+                            , ( "lg:grid-cols-2 xl:grid-cols-2 xl:w-2/3 xl:mx-auto", List.length filteredActions == 2 )
+                            , ( "lg:grid-cols-2 xl:grid-cols-3", List.length filteredActions > 2 )
+                            ]
                         , id (objectiveContainerId objective)
                         , role "list"
                         ]
