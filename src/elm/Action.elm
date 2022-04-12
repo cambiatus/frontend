@@ -33,6 +33,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Form
 import Form.File
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled, type_)
@@ -106,6 +107,7 @@ type alias Action =
     , hasProofCode : Bool
     , photoProofInstructions : Maybe Markdown
     , position : Maybe Int
+    , claimCount : Int
     }
 
 
@@ -458,6 +460,7 @@ selectionSet =
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
         |> with (Markdown.maybeSelectionSet ActionObject.photoProofInstructions)
         |> with ActionObject.position
+        |> with (ActionObject.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
 
 
 

@@ -1010,9 +1010,13 @@ viewClaimModal ({ translators } as shared) model =
 
                         -- TODO - I18N
                         , text "Membros reivindicaram esta ação"
+                        , text " "
 
-                        -- TODO - Use real data
-                        , span [ class "text-base ml-1 font-bold" ] [ text " 340 vezes" ]
+                        -- TODO - I18N
+                        , span [ class "text-base ml-1 font-bold" ]
+                            [ text (String.fromInt action.claimCount)
+                            , text " vezes"
+                            ]
                         ]
             in
             View.Modal.initWith

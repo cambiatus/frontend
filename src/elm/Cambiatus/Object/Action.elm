@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.Action exposing (..)
 
+import Cambiatus.Enum.ClaimStatus
 import Cambiatus.Enum.VerificationType
 import Cambiatus.InputObject
 import Cambiatus.Interface
@@ -18,6 +19,25 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
+
+
+type alias ClaimCountOptionalArguments =
+    { status : OptionalArgument Cambiatus.Enum.ClaimStatus.ClaimStatus }
+
+
+claimCount :
+    (ClaimCountOptionalArguments -> ClaimCountOptionalArguments)
+    -> SelectionSet Int Cambiatus.Object.Action
+claimCount fillInOptionals =
+    let
+        filledInOptionals =
+            fillInOptionals { status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ClaimStatus.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForField "Int" "claimCount" optionalArgs Decode.int
 
 
 claims :
@@ -82,6 +102,11 @@ hasProofPhoto =
 id : SelectionSet Int Cambiatus.Object.Action
 id =
     Object.selectionForField "Int" "id" [] Decode.int
+
+
+image : SelectionSet (Maybe String) Cambiatus.Object.Action
+image =
+    Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
 isCompleted : SelectionSet Bool Cambiatus.Object.Action
