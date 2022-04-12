@@ -9,6 +9,8 @@ export default () => (
 
       if (this.getAttribute('elm-transition-with-parent') === 'true') {
         this.transitionWithParent()
+      } else {
+        this.resizeItems()
       }
 
       window.addEventListener('resize', this.resizeItems)

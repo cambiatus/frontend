@@ -780,7 +780,12 @@ viewObjective translators model objective =
     in
     li []
         [ details
-            []
+            [ if isOpen then
+                Html.Attributes.attribute "open" "true"
+
+              else
+                class ""
+            ]
             [ summary
                 [ class "marker-hidden lg:w-2/3 lg:mx-auto"
                 , onClick (ClickedToggleObjectiveVisibility objective)
@@ -834,7 +839,14 @@ viewObjective translators model objective =
                   else
                     View.Components.masonryLayout
                         [ View.Components.Lg, View.Components.Xl ]
-                        { transitionWithParent = True }
+                        { transitionWithParent =
+                            case model.highlightedAction of
+                                Nothing ->
+                                    True
+
+                                Just { objectiveId } ->
+                                    objectiveId /= objective.id
+                        }
                         [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x snap-proximity scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4 lg:grid-cols-2 xl:grid-cols-3"
                         , id (objectiveContainerId objective)
                         , role "list"
