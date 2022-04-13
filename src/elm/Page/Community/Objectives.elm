@@ -926,7 +926,7 @@ viewAction translators model index action =
                     False
     in
     li
-        [ class "bg-white rounded px-4 pt-4 pb-6 self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"
+        [ class "bg-white rounded self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"
         , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
         , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
@@ -939,61 +939,66 @@ viewAction translators model index action =
                 text ""
 
             Just image ->
-                img [ src image ] []
-        , div [ class "flex" ]
-            [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt (index + 1)), text "." ]
-            , div [ class "ml-5 mt-1 min-w-0" ]
-                [ h4
-                    [ class "line-clamp-3"
-                    , title (Markdown.toRawString action.description)
+                div [ class "mt-2 mx-2 relative" ]
+                    [ img [ src image, alt "", class "rounded" ] []
+                    , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                     ]
-                    [ Markdown.view [] action.description ]
-                , span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
-                    -- TODO - I18N
-                    [ text "Recompensa" ]
-                , div [ class "mt-1 text-green font-bold" ]
-                    [ span [ class "text-2xl mr-1" ]
-                        [ text
-                            (Eos.formatSymbolAmount
-                                translators
-                                action.objective.community.symbol
-                                action.reward
-                            )
+        , div [ class "px-4 pt-4 pb-6" ]
+            [ div [ class "flex" ]
+                [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt (index + 1)), text "." ]
+                , div [ class "ml-5 mt-1 min-w-0" ]
+                    [ h4
+                        [ class "line-clamp-3"
+                        , title (Markdown.toRawString action.description)
                         ]
-                    , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                        [ Markdown.view [] action.description ]
+                    , span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
+                        -- TODO - I18N
+                        [ text "Recompensa" ]
+                    , div [ class "mt-1 text-green font-bold" ]
+                        [ span [ class "text-2xl mr-1" ]
+                            [ text
+                                (Eos.formatSymbolAmount
+                                    translators
+                                    action.objective.community.symbol
+                                    action.reward
+                                )
+                            ]
+                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                        ]
                     ]
                 ]
-            ]
-        , div
-            [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
-            , classList [ ( "sm:grid-cols-1", not isClaimable ) ]
-            ]
-            [ button
-                [ class "button button-secondary w-full"
-                , onClick (ClickedShareAction action)
+            , div
+                [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
+                , classList [ ( "sm:grid-cols-1", not isClaimable ) ]
                 ]
-                [ Icons.share "mr-2 flex-shrink-0"
-
-                -- TODO - I18N
-                , text "Compartilhar"
-                ]
-            , if isClaimable then
-                button
-                    [ class "button button-primary w-full sm:col-span-1"
-                    , onClick (ClickedClaimAction { position = index + 1, action = action })
+                [ button
+                    [ class "button button-secondary w-full"
+                    , onClick (ClickedShareAction action)
                     ]
-                    [ if action.hasProofPhoto then
-                        Icons.camera "w-4 mr-2 flex-shrink-0"
-
-                      else
-                        text ""
+                    [ Icons.share "mr-2 flex-shrink-0"
 
                     -- TODO - I18N
-                    , text "Reivindicar"
+                    , text "Compartilhar"
                     ]
+                , if isClaimable then
+                    button
+                        [ class "button button-primary w-full sm:col-span-1"
+                        , onClick (ClickedClaimAction { position = index + 1, action = action })
+                        ]
+                        [ if action.hasProofPhoto then
+                            Icons.camera "w-4 mr-2 flex-shrink-0"
 
-              else
-                text ""
+                          else
+                            text ""
+
+                        -- TODO - I18N
+                        , text "Reivindicar"
+                        ]
+
+                  else
+                    text ""
+                ]
             ]
         ]
 
