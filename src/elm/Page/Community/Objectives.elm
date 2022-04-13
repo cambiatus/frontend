@@ -136,6 +136,7 @@ type Msg
     | GotUint64Name String
     | GotTime
     | CompletedClaimingAction (Result Encode.Value ())
+    | CopiedShareLinkToClipboard
 
 
 type alias UpdateResult =
@@ -613,6 +614,12 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.Objectives", function = "update" }
                     []
                     val
+
+        CopiedShareLinkToClipboard ->
+            model
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copiado")
 
 
 
@@ -1275,7 +1282,15 @@ jsAddressToMsg addr val =
     in
     case addr of
         "ClickedShareAction" :: _ ->
-            Just NoOp
+            case Decode.decodeValue (Decode.field "copied" Decode.bool) val of
+                Ok True ->
+                    Just CopiedShareLinkToClipboard
+
+                Ok False ->
+                    Just NoOp
+
+                Err _ ->
+                    Just NoOp
 
         "ClickedClaimAction" :: _ ->
             Decode.decodeValue (Decode.field "uint64name" Decode.string) val
@@ -1342,3 +1357,6 @@ msgToString msg =
 
         CompletedClaimingAction r ->
             [ "CompletedClaimingAction", UR.resultToString r ]
+
+        CopiedShareLinkToClipboard ->
+            [ "CopiedShareLinkToClipboard" ]
