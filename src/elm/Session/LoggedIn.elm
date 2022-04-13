@@ -316,7 +316,6 @@ type Page
     | Invite
     | Dashboard
     | News (Maybe Int)
-    | Community
     | CommunityAbout
     | CommunityObjectives
     | CommunitySettings

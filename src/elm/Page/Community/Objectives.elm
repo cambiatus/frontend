@@ -385,7 +385,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Action started showing up, but objectives weren't loaded"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Objectives.elm", function = "update" }
+                            { moduleName = "Page.Community.Objectives", function = "update" }
                             [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         StoppedIntersecting targetId ->
@@ -869,7 +869,7 @@ viewObjective translators model objective =
                     Just height ->
                         style "height"
                             (max (ceiling height)
-                                (ceiling <| Maybe.withDefault 0 <| previousVisibleActionHeight)
+                                (ceiling <| Maybe.withDefault 0 previousVisibleActionHeight)
                                 |> String.fromInt
                                 |> (\heightString -> "calc(" ++ heightString ++ "px + 24px")
                             )
