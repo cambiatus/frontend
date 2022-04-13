@@ -10,6 +10,7 @@ import Html.Attributes exposing (alt, class, classList, href, media, src, style,
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
 import Log
@@ -27,6 +28,7 @@ import UpdateResult as UR
 import Url
 import Utils
 import View.Components
+import View.Feedback
 
 
 
@@ -56,6 +58,7 @@ type Msg
     | CompletedLoadCommunity Community.Model
     | GotTokenInfo (Result Http.Error Token.Model)
     | ClickedShareCommunity
+    | CopiedShareLinkToClipboard
 
 
 type alias UpdateResult =
@@ -130,6 +133,12 @@ update msg model loggedIn =
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Community.About", function = "update" }
                             []
+
+        CopiedShareLinkToClipboard ->
+            model
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copiado")
 
 
 
@@ -554,10 +563,18 @@ receiveBroadcast broadcastMsg =
 
 
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
-jsAddressToMsg addr _ =
+jsAddressToMsg addr val =
     case addr of
         "ClickedShareCommunity" :: _ ->
-            Just NoOp
+            case Decode.decodeValue (Decode.field "copied" Decode.bool) val of
+                Ok True ->
+                    Just CopiedShareLinkToClipboard
+
+                Ok False ->
+                    Just NoOp
+
+                Err _ ->
+                    Just NoOp
 
         _ ->
             Nothing
@@ -577,3 +594,6 @@ msgToString msg =
 
         ClickedShareCommunity ->
             [ "ClickedShareCommunity" ]
+
+        CopiedShareLinkToClipboard ->
+            [ "CopiedShareLinkToClipboard" ]
