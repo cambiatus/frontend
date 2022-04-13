@@ -92,6 +92,7 @@ type alias ProofCode =
 type alias Action =
     { id : Int
     , description : Markdown
+    , image : Maybe String
     , objective : Objective
     , reward : Float
     , verifierReward : Float
@@ -435,6 +436,7 @@ selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
         |> with (Markdown.selectionSet ActionObject.description)
+        |> with ActionObject.image
         |> with
             (SelectionSet.map
                 (\o ->

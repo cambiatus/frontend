@@ -623,7 +623,8 @@ view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
         title =
-            "TODO"
+            -- TODO - I18N
+            "Objetivos"
     in
     { title = title
     , content =
@@ -930,7 +931,16 @@ viewAction translators model index action =
         , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
         ]
-        [ div [ class "flex" ]
+        [ case action.image of
+            Nothing ->
+                text ""
+
+            Just "" ->
+                text ""
+
+            Just image ->
+                img [ src image ] []
+        , div [ class "flex" ]
             [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt (index + 1)), text "." ]
             , div [ class "ml-5 mt-1 min-w-0" ]
                 [ h4
