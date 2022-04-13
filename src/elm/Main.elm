@@ -142,10 +142,6 @@ subscriptions model =
                 CommunitySponsor.subscriptions subModel
                     |> Sub.map GotCommunitySponsorMsg
 
-            CommunityObjectives subModel ->
-                CommunityObjectives.subscriptions subModel
-                    |> Sub.map GotCommunityObjectivesMsg
-
             _ ->
                 Sub.none
         ]

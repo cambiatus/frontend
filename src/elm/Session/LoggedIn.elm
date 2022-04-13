@@ -201,7 +201,7 @@ subscriptions model =
     Sub.batch
         [ Sub.map GotSearchMsg Search.subscriptions
         , Sub.map GotActionMsg (Action.subscriptions model.claimingAction)
-        , Time.every (60 * 1000) GotTimeInternal
+        , Time.every model.updateTimeEvery GotTimeInternal
         , if model.showUserNav then
             Utils.escSubscription (ShowUserNav False)
 
@@ -222,6 +222,7 @@ subscriptions model =
 
 type alias Model =
     { shared : Shared
+    , updateTimeEvery : Float
     , codeOfConductModalStatus : CodeOfConductModalStatus
     , hasAcceptedCodeOfConduct : Bool
     , routeHistory : List Route
@@ -264,6 +265,7 @@ initModel shared maybePrivateKey_ accountName authToken =
             Auth.init shared.pinVisibility maybePrivateKey_
     in
     ( { shared = shared
+      , updateTimeEvery = 60 * 1000
       , codeOfConductModalStatus = CodeOfConductNotShown
       , hasAcceptedCodeOfConduct = True
       , routeHistory = []
@@ -1228,6 +1230,7 @@ codeOfConductUrl language =
 -}
 type External msg
     = UpdatedLoggedIn Model
+    | SetUpdateTimeEvery Float
     | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
     | ExternalBroadcast BroadcastMsg
@@ -1592,6 +1595,9 @@ mapExternal mapFn msg =
         UpdatedLoggedIn model ->
             UpdatedLoggedIn model
 
+        SetUpdateTimeEvery n ->
+            SetUpdateTimeEvery n
+
         ShowInsufficientPermissionsModal ->
             ShowInsufficientPermissionsModal
 
@@ -1675,6 +1681,9 @@ updateExternal externalMsg ({ shared } as model) =
     case externalMsg of
         UpdatedLoggedIn newModel ->
             { defaultResult | model = newModel }
+
+        SetUpdateTimeEvery n ->
+            { defaultResult | model = { model | updateTimeEvery = n } }
 
         ShowInsufficientPermissionsModal ->
             { defaultResult | model = { model | showInsufficientPermissionsModal = True } }
@@ -3296,6 +3305,9 @@ externalMsgToString externalMsg =
     case externalMsg of
         UpdatedLoggedIn _ ->
             [ "UpdatedLoggedIn" ]
+
+        SetUpdateTimeEvery _ ->
+            [ "SetUpdateTimeEvery" ]
 
         ShowInsufficientPermissionsModal ->
             [ "ShowInsufficientPermissionsModal" ]

@@ -1,4 +1,4 @@
-module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, subscriptions, update, view)
+module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action exposing (Action, Msg(..))
 import Browser.Dom
@@ -134,7 +134,6 @@ type Msg
     | ConfirmedClaimActionWithPhotoProof String
     | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
     | GotUint64Name String
-    | GotTime
     | CompletedClaimingAction (Result Encode.Value ())
     | CopiedShareLinkToClipboard
 
@@ -319,11 +318,13 @@ update msg model loggedIn =
                         }
             }
                 |> UR.init
+                |> UR.addExt (LoggedIn.SetUpdateTimeEvery 1000)
                 |> generateProofCodePort
 
         ClickedCloseClaimModal ->
             { model | claimingStatus = NotClaiming }
                 |> UR.init
+                |> UR.addExt (LoggedIn.SetUpdateTimeEvery (60 * 1000))
 
         StartedIntersecting actionCard ->
             case Community.getField loggedIn.selectedCommunity .objectives of
@@ -447,7 +448,7 @@ update msg model loggedIn =
                         |> LoggedIn.withPrivateKey loggedIn
                             [ Permission.Claim ]
                             model
-                            { successMsg = msg, errorMsg = NoOp }
+                            { successMsg = msg, errorMsg = ClickedCloseClaimModal }
 
                 _ ->
                     UR.init model
@@ -572,16 +573,13 @@ update msg model loggedIn =
                 _ ->
                     UR.init model
 
-        GotTime ->
-            UR.init model
-                |> UR.addExt (LoggedIn.ReloadResource LoggedIn.TimeResource)
-
         CompletedClaimingAction (Ok ()) ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     { model | claimingStatus = NotClaiming }
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success (loggedIn.shared.translators.tr "dashboard.check_claim.success" [ ( "symbolCode", Eos.symbolToSymbolCodeString community.symbol ) ]))
+                        |> UR.addExt (LoggedIn.SetUpdateTimeEvery (60 * 1000))
                         |> UR.addCmd
                             (Eos.Account.nameToString loggedIn.accountName
                                 |> Route.ProfileClaims
@@ -591,6 +589,7 @@ update msg model loggedIn =
                 _ ->
                     { model | claimingStatus = NotClaiming }
                         |> UR.init
+                        |> UR.addExt (LoggedIn.SetUpdateTimeEvery (60 * 1000))
                         |> UR.logImpossible msg
                             "Completed claiming action, but community wasn't loaded"
                             (Just loggedIn.accountName)
@@ -606,6 +605,7 @@ update msg model loggedIn =
             { model | claimingStatus = NotClaiming }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "dashboard.check_claim.failure"))
+                |> UR.addExt (LoggedIn.SetUpdateTimeEvery (60 * 1000))
                 |> UR.logJsonValue msg
                     (Just loggedIn.accountName)
                     "Got an error when claiming an action"
@@ -1149,6 +1149,7 @@ viewClaimModal ({ translators } as shared) model =
                                     , classList [ ( "text-red", isTimeOver ) ]
                                     ]
                                     [ text <| t "community.actions.proof.code_period_label"
+                                    , text " "
                                     , span [ class "font-bold" ]
                                         [ case timeLeft of
                                             Nothing ->
@@ -1258,12 +1259,6 @@ receiveBroadcast broadcastMsg =
             Nothing
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    -- We just tell logged in to get the time. This way, we have a single source of truth for time
-    Time.every 1000 (\_ -> GotTime)
-
-
 jsAddressToMsg : List String -> Encode.Value -> Maybe Msg
 jsAddressToMsg addr val =
     let
@@ -1345,9 +1340,6 @@ msgToString msg =
 
         GotUint64Name _ ->
             [ "GotUint64Name" ]
-
-        GotTime ->
-            [ "GotTime" ]
 
         CompletedClaimingAction r ->
             [ "CompletedClaimingAction", UR.resultToString r ]
