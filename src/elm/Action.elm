@@ -42,6 +42,7 @@ import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Markdown exposing (Markdown)
+import Ports
 import Profile
 import Route
 import Session.Shared exposing (Shared, Translators)
@@ -155,9 +156,34 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             List.all (\permission -> List.member permission permissions)
                 necessaryPermissions
 
-        -- TODO - Remove this
-        claimOrAskForPin actionId photoUrl code time m =
-            m |> UR.init
+        claimOrAskForPin :
+            { actionId : Int
+            , proof :
+                Maybe
+                    { photo : String
+                    , code : String
+                    , time : Time.Posix
+                    }
+            }
+            -> Model
+            -> UR.UpdateResult Model Msg ExternalMsg
+        claimOrAskForPin { actionId, proof } m =
+            if isPinConfirmed then
+                m
+                    |> UR.init
+                    |> UR.addPort
+                        (claimActionPort
+                            msg
+                            shared.contracts.community
+                            { communityId = selectedCommunity
+                            , actionId = actionId
+                            , claimer = accName
+                            , proof = proof
+                            }
+                        )
+
+            else
+                m |> UR.init
     in
     case ( msg, model.status ) of
         ( ClaimButtonClicked action, _ ) ->
@@ -174,7 +200,10 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                     , feedback = Nothing
                     , needsPinConfirmation = not isPinConfirmed
                 }
-                    |> claimOrAskForPin action.id "" "" 0
+                    |> claimOrAskForPin
+                        { actionId = action.id
+                        , proof = Nothing
+                        }
 
             else
                 { model | status = NotAsked }
@@ -183,13 +212,13 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
 
         ( ActionClaimed action (Just proofRecord), _ ) ->
             let
-                ( proofCode, time ) =
+                ( code, time ) =
                     case proofRecord.proof of
                         Proof _ (Just { code_, claimTimestamp }) ->
-                            ( Maybe.withDefault "" code_, claimTimestamp )
+                            ( Maybe.withDefault "" code_, Time.millisToPosix <| claimTimestamp * 1000 )
 
                         Proof _ Nothing ->
-                            ( "", 0 )
+                            ( "", Time.millisToPosix 0 )
             in
             if hasPermissions [ Permission.Claim ] then
                 case proofRecord.image of
@@ -199,7 +228,15 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                             , feedback = Nothing
                             , needsPinConfirmation = not isPinConfirmed
                         }
-                            |> claimOrAskForPin action.id image proofCode time
+                            |> claimOrAskForPin
+                                { actionId = action.id
+                                , proof =
+                                    Just
+                                        { photo = image
+                                        , code = code
+                                        , time = time
+                                        }
+                                }
 
                     Nothing ->
                         { model
@@ -750,6 +787,24 @@ updateAction accountName shared action =
         , permissionName = Eos.samplePermission
         }
     , data = encode action
+    }
+
+
+claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
+claimActionPort msg contractsCommunity action =
+    { responseAddress = msg
+    , responseData = Encode.null
+    , data =
+        Eos.encodeTransaction
+            [ { accountName = contractsCommunity
+              , name = "claimaction"
+              , authorization =
+                    { actor = action.claimer
+                    , permissionName = Eos.samplePermission
+                    }
+              , data = encodeClaimAction action
+              }
+            ]
     }
 
 
