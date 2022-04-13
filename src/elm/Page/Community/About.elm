@@ -137,8 +137,10 @@ update msg model loggedIn =
         CopiedShareLinkToClipboard ->
             model
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copiado")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback View.Feedback.Success
+                        (loggedIn.shared.translators.t "copied_to_clipboard")
+                    )
 
 
 
@@ -314,14 +316,18 @@ viewCommunityCard ({ translators } as shared) community =
                             , tabindex -1
                             ]
                         |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                        |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
                     )
                     { onChange = \_ -> NoOp
                     , onBlur = NoOp
-
-                    -- TODO - Create some nice text
                     , value =
-                        Route.addRouteToUrl shared Route.CommunityAbout
-                            |> Url.toString
+                        translators.tr "community.learn_about"
+                            [ ( "community_name", community.name )
+                            , ( "url"
+                              , Route.addRouteToUrl shared Route.CommunityAbout
+                                    |> Url.toString
+                              )
+                            ]
                     , error = text ""
                     , hasError = False
                     , translators = shared.translators

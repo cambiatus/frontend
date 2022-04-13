@@ -257,8 +257,6 @@ update msg model loggedIn =
                         , data =
                             Encode.object
                                 [ ( "name", Encode.string "share" )
-
-                                -- TODO - Maybe we should add some extra text?
                                 , ( "title", Markdown.encode action.description )
                                 , ( "url"
                                   , Route.CommunityObjectives
@@ -618,8 +616,10 @@ update msg model loggedIn =
         CopiedShareLinkToClipboard ->
             model
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success "Copiado")
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback View.Feedback.Success
+                        (loggedIn.shared.translators.t "copied_to_clipboard")
+                    )
 
 
 
@@ -629,9 +629,11 @@ update msg model loggedIn =
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
 view loggedIn model =
     let
+        { t, tr } =
+            loggedIn.shared.translators
+
         title =
-            -- TODO - I18N
-            "Objetivos"
+            t "community.objectives.title"
     in
     { title = title
     , content =
@@ -639,16 +641,16 @@ view loggedIn model =
             RemoteData.Success community ->
                 div [ class "container mx-auto px-4 pt-8 mb-20" ]
                     [ h1 [ class "lg:w-2/3 lg:mx-auto" ]
-                        [ -- TODO - I18N
-                          span [] [ text "Ganhe" ]
+                        [ span [] [ text <| t "community.objectives.earn" ]
                         , text " "
-                        , span [ class "font-bold" ] [ text "Buss" ]
+                        , span [ class "font-bold" ]
+                            [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                         ]
                     , div [ class "mt-4 bg-white rounded relative lg:w-2/3 lg:mx-auto" ]
                         [ p [ class "p-4" ]
-                            -- TODO - I18N
-                            [ text "Complete ações que essa comunidade traçou e ganhe "
-                            , b [] [ text "Buss" ]
+                            [ text <| t "community.objectives.complete_actions"
+                            , text " "
+                            , b [] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                             ]
                         , img
                             [ src "/images/doggo_holding_coins.svg"
@@ -658,10 +660,9 @@ view loggedIn model =
                             []
                         ]
                     , h2 [ class "mt-6 lg:w-2/3 lg:mx-auto" ]
-                        [ -- TODO - I18N
-                          span [] [ text "Objetivos e" ]
+                        [ span [] [ text <| t "community.objectives.objectives_and" ]
                         , text " "
-                        , span [ class "font-bold" ] [ text "Ações" ]
+                        , span [ class "font-bold" ] [ text <| t "community.objectives.actions" ]
                         ]
                     , case community.objectives of
                         RemoteData.Success objectives ->
@@ -705,23 +706,31 @@ view loggedIn model =
                                                 , tabindex -1
                                                 ]
                                             |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                                            |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
                                         )
                                         { onChange = \_ -> NoOp
                                         , onBlur = NoOp
                                         , value =
-                                            -- TODO - Add some better text
                                             case model.sharingAction of
                                                 Nothing ->
                                                     Url.toString loggedIn.shared.url
 
                                                 Just sharingAction ->
-                                                    Route.WithObjectiveSelected
-                                                        { id = sharingAction.objective.id
-                                                        , action = Just sharingAction.id
-                                                        }
-                                                        |> Route.CommunityObjectives
-                                                        |> Route.addRouteToUrl loggedIn.shared
-                                                        |> Url.toString
+                                                    tr
+                                                        "community.objectives.share_action"
+                                                        [ ( "community_name", community.name )
+                                                        , ( "objective_description", Markdown.toRawString sharingAction.objective.description )
+                                                        , ( "action_description", Markdown.toRawString sharingAction.description )
+                                                        , ( "url"
+                                                          , Route.WithObjectiveSelected
+                                                                { id = sharingAction.objective.id
+                                                                , action = Just sharingAction.id
+                                                                }
+                                                                |> Route.CommunityObjectives
+                                                                |> Route.addRouteToUrl loggedIn.shared
+                                                                |> Url.toString
+                                                          )
+                                                        ]
                                         , error = text ""
                                         , hasError = False
                                         , translators = loggedIn.shared.translators
@@ -753,19 +762,16 @@ view loggedIn model =
                                     , class "max-h-40"
                                     ]
                                     []
-
-                                -- TODO - I18N
-                                , p [ class "text-center mt-4" ] [ text "Algo de errado aconteceu ao buscar os objetivos da comunidade" ]
+                                , p [ class "text-center mt-4" ]
+                                    [ text <| t "community.objectives.error_loading" ]
                                 ]
                     , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
-                        -- TODO - I18N
-                        [ p [] [ text "Visite a página da comunidade para saber mais sobre." ]
+                        [ p [] [ text <| t "community.objectives.visit_community_page" ]
                         , a
                             [ Route.href Route.CommunityAbout
                             , class "button button-secondary w-full mt-4"
                             ]
-                            -- TODO - I18N
-                            [ text "Ir para a página da comunidade" ]
+                            [ text <| t "community.objectives.go_to_community_page" ]
                         , div [ class "absolute top-0 left-0 w-full flex justify-center" ]
                             [ img
                                 [ src "/images/success-doggo.svg"
@@ -914,7 +920,7 @@ viewObjective translators model objective =
 
 
 viewAction : Translation.Translators -> Model -> Int -> Action -> Html Msg
-viewAction translators model index action =
+viewAction ({ t } as translators) model index action =
     let
         isHighlighted =
             case model.highlightedAction of
@@ -960,8 +966,7 @@ viewAction translators model index action =
                         ]
                         [ Markdown.view [] action.description ]
                     , span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
-                        -- TODO - I18N
-                        [ text "Recompensa" ]
+                        [ text <| t "community.objectives.reward" ]
                     , div [ class "mt-1 text-green font-bold" ]
                         [ span [ class "text-2xl mr-1" ]
                             [ text
@@ -984,9 +989,7 @@ viewAction translators model index action =
                     , onClick (ClickedShareAction action)
                     ]
                     [ Icons.share "mr-2 flex-shrink-0"
-
-                    -- TODO - I18N
-                    , text "Compartilhar"
+                    , text <| t "share"
                     ]
                 , if isClaimable then
                     button
@@ -998,9 +1001,7 @@ viewAction translators model index action =
 
                           else
                             text ""
-
-                        -- TODO - I18N
-                        , text "Reivindicar"
+                        , text <| t "dashboard.claim"
                         ]
 
                   else
@@ -1018,6 +1019,9 @@ viewClaimModal ({ translators } as shared) model =
 
         Claiming { position, action, proof } ->
             let
+                { t, tr } =
+                    translators
+
                 viewClaimCount attrs =
                     div
                         (class "mt-4 p-2 bg-gray-100 flex items-center justify-center text-gray-900 font-semibold text-sm rounded-sm"
@@ -1029,15 +1033,16 @@ viewClaimModal ({ translators } as shared) model =
                             , class "w-8 mr-2"
                             ]
                             []
-
-                        -- TODO - I18N
-                        , text "Membros reivindicaram esta ação"
+                        , text <| t "community.objectives.claim_count"
                         , text " "
-
-                        -- TODO - I18N
                         , span [ class "text-base ml-1 font-bold" ]
-                            [ text (String.fromInt action.claimCount)
-                            , text " vezes"
+                            [ if action.claimCount == 1 then
+                                text <| t "community.objectives.claim_count_times_singular"
+
+                              else
+                                text <|
+                                    tr "community.objectives.claim_count_times"
+                                        [ ( "count", String.fromInt action.claimCount ) ]
                             ]
                         ]
             in
@@ -1070,8 +1075,7 @@ viewClaimModal ({ translators } as shared) model =
                             , div [ class "md:flex md:justify-between md:w-full" ]
                                 [ div []
                                     [ span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
-                                        -- TODO - I18N
-                                        [ text "Recompensa" ]
+                                        [ text <| t "community.objectives.reward" ]
                                     , div [ class "text-green font-bold" ]
                                         [ span [ class "text-2xl mr-1" ]
                                             [ text
@@ -1122,18 +1126,17 @@ viewClaimModal ({ translators } as shared) model =
                                             minutes < 0
                             in
                             div []
-                                [ -- TODO - I18N
-                                  p [ class "text-lg font-bold text-gray-333 mt-6 mb-4 md:text-center" ] [ text "Esta ação requer uma prova fotográfica" ]
+                                [ p [ class "text-lg font-bold text-gray-333 mt-6 mb-4 md:text-center" ]
+                                    [ text <| t "community.actions.proof.title" ]
                                 , case action.photoProofInstructions of
                                     Just instructions ->
                                         Markdown.view [ class "text-center" ] instructions
 
                                     Nothing ->
-                                        -- TODO - I18N
-                                        p [] [ text "Favor enviar uma foto com a prova de que você reivindicou esta ação." ]
+                                        p [] [ text <| t "community.actions.proof.upload_hint" ]
                                 , div [ class "p-4 mt-4 bg-gray-100 rounded-sm flex flex-col items-center justify-center md:w-1/2 md:mx-auto" ]
-                                    [ -- TODO - I18N
-                                      span [ class "uppercase text-gray-333 font-bold text-sm" ] [ text "Código de verificação" ]
+                                    [ span [ class "uppercase text-gray-333 font-bold text-sm" ]
+                                        [ text <| t "community.actions.form.verification_code" ]
                                     , case proofCode of
                                         GeneratingCode ->
                                             span [ class "bg-gray-333 animate-skeleton-loading h-10 w-44 mt-2" ] []
@@ -1145,10 +1148,7 @@ viewClaimModal ({ translators } as shared) model =
                                     [ class "text-purple-500 text-center mt-4"
                                     , classList [ ( "text-red", isTimeOver ) ]
                                     ]
-                                    -- TODO - I18N
-                                    [ text "o código é válido por "
-
-                                    -- TODO - I18N
+                                    [ text <| t "community.actions.proof.code_period_label"
                                     , span [ class "font-bold" ]
                                         [ case timeLeft of
                                             Nothing ->
@@ -1158,7 +1158,6 @@ viewClaimModal ({ translators } as shared) model =
                                                 (Utils.padInt 2 minutes ++ ":" ++ Utils.padInt 2 seconds)
                                                     |> text
                                         ]
-                                    , text " minutos"
                                     ]
                                 , Form.view []
                                     translators
@@ -1168,11 +1167,9 @@ viewClaimModal ({ translators } as shared) model =
                                                 [ class "button button-secondary w-full"
                                                 , onClick ClickedCloseClaimModal
                                                 ]
-                                                -- TODO - I18N
-                                                [ text "Cancelar" ]
+                                                [ text <| t "menu.cancel" ]
                                             , submitButton [ class "button button-primary w-full" ]
-                                                -- TODO - I18N
-                                                [ text "Reivindicar" ]
+                                                [ text <| t "dashboard.claim" ]
                                             ]
                                         ]
                                     )
@@ -1189,15 +1186,12 @@ viewClaimModal ({ translators } as shared) model =
                                     [ class "button button-secondary w-full"
                                     , onClick ClickedCloseClaimModal
                                     ]
-                                    -- TODO - I18N
-                                    [ text "Cancelar" ]
-
-                                -- TODO - I18N
+                                    [ text <| t "menu.cancel" ]
                                 , button
                                     [ class "button button-primary w-full"
                                     , onClick ConfirmedClaimAction
                                     ]
-                                    [ text "Reivindicar" ]
+                                    [ text <| t "dashboard.claim" ]
                                 ]
                     ]
                 |> View.Modal.withSize View.Modal.Large

@@ -249,12 +249,10 @@ viewSummary { t } hasRead news =
                 [ text <| Markdown.toUnformattedString news.description ]
             , p [ class "sr-only" ]
                 [ if hasRead then
-                    -- TODO - I18N
-                    text "Lido"
+                    text <| t "news.already_read"
 
                   else
-                    -- TODO - I18N
-                    text "Não lido"
+                    text <| t "news.not_read_yet"
                 ]
             ]
         , Icons.arrowDown "-rotate-90 fill-current text-orange-300 ml-auto rounded-full bg-gray-100"
