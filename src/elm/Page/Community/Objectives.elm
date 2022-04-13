@@ -1039,7 +1039,24 @@ viewClaimModal ({ translators } as shared) model =
                 , isVisible = True
                 }
                 |> View.Modal.withBody
-                    [ div [ class "flex" ]
+                    [ case action.image of
+                        Nothing ->
+                            text ""
+
+                        Just "" ->
+                            text ""
+
+                        Just image ->
+                            div [ class "mb-4 relative" ]
+                                [ img
+                                    [ src image
+                                    , alt ""
+                                    , class "max-w-full mx-auto object-scale-down rounded"
+                                    ]
+                                    []
+                                , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
+                                ]
+                    , div [ class "flex" ]
                         [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt position ++ ".") ]
                         , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                             [ Markdown.view [ class "truncate" ] action.description
