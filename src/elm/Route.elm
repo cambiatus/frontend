@@ -52,7 +52,6 @@ type Route
     | Profile Eos.Account.Name
     | ProfileContributions Eos.Account.Name
     | Dashboard
-    | Community
     | CommunityAbout
     | CommunityObjectives SelectedObjective
     | NewCommunity
@@ -136,7 +135,6 @@ parser url =
                 <?> Query.map (\showOthers -> showOthers /= Just "false")
                         (Query.string "showOthers")
             )
-        , Url.map Community (s "community")
         , Url.map CommunityAbout (s "community" </> s "about")
         , Url.map CommunityObjectives
             (s "community"
@@ -481,9 +479,6 @@ routeToString route =
 
                 Dashboard ->
                     ( [ "dashboard" ], [] )
-
-                Community ->
-                    ( [ "community" ], [] )
 
                 CommunityAbout ->
                     ( [ "community", "about" ], [] )

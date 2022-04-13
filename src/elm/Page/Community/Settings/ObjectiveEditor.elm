@@ -857,7 +857,7 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.objectives.create_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.CommunityObjectives Route.WithNoObjectiveSelected))
 
         GotSaveObjectiveResponse (Err v) ->
             let

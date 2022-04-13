@@ -12,7 +12,6 @@ import Json.Encode as Encode
 import Log
 import Page exposing (Session)
 import Page.ComingSoon as ComingSoon
-import Page.Community as CommunityPage
 import Page.Community.About as CommunityAbout
 import Page.Community.Invite as Invite
 import Page.Community.New as CommunityEditor
@@ -170,7 +169,6 @@ type Status
     | NotFound
     | ComingSoon
     | PaymentHistory PaymentHistory.Model
-    | Community CommunityPage.Model
     | CommunityAbout CommunityAbout.Model
     | CommunityObjectives CommunityObjectives.Model
     | CommunityEditor CommunityEditor.Model
@@ -223,7 +221,6 @@ type Msg
     | GotJavascriptData Value
     | GotPageMsg (Page.Msg Msg)
     | GotNotificationMsg Notification.Msg
-    | GotCommunityMsg CommunityPage.Msg
     | GotCommunityAboutMsg CommunityAbout.Msg
     | GotCommunityObjectivesMsg CommunityObjectives.Msg
     | GotCommunityEditorMsg CommunityEditor.Msg
@@ -404,11 +401,6 @@ update msg model =
                 -- an input for the below function
                 >> updateLoggedInUResult Notification GotNotificationMsg model
                 -- provides the above composed function with the LoggedInModel
-                |> withLoggedIn
-
-        ( GotCommunityMsg subMsg, Community subModel ) ->
-            CommunityPage.update subMsg subModel
-                >> updateLoggedInUResult Community GotCommunityMsg model
                 |> withLoggedIn
 
         ( GotCommunityAboutMsg subMsg, CommunityAbout subModel ) ->
@@ -638,10 +630,6 @@ broadcast broadcastMessage status =
                 CommunitySettingsObjectives _ ->
                     CommunitySettingsObjectives.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsObjectivesMsg
-
-                Community _ ->
-                    CommunityPage.receiveBroadcast broadcastMessage
-                        |> Maybe.map GotCommunityMsg
 
                 CommunityAbout _ ->
                     CommunityAbout.receiveBroadcast broadcastMessage
@@ -1037,9 +1025,6 @@ statusToRoute status session =
                 |> Route.PaymentHistory
                 |> Just
 
-        Community _ ->
-            Just Route.Community
-
         CommunityAbout _ ->
             Just Route.CommunityAbout
 
@@ -1430,11 +1415,6 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith Dashboard GotDashboardMsg model
                 |> withLoggedIn Route.Dashboard
 
-        Just Route.Community ->
-            (\l -> CommunityPage.init l)
-                >> updateLoggedInUResult Community GotCommunityMsg model
-                |> withLoggedIn Route.Community
-
         Just Route.CommunityAbout ->
             CommunityAbout.init
                 >> updateLoggedInUResult CommunityAbout GotCommunityAboutMsg model
@@ -1692,9 +1672,6 @@ msgToString msg =
         GotPageMsg subMsg ->
             "GotPageMsg" :: Page.msgToString subMsg
 
-        GotCommunityMsg subMsg ->
-            "GotCommunityMsg" :: CommunityPage.msgToString subMsg
-
         GotCommunityAboutMsg subMsg ->
             "GotCommunityAboutMsg" :: CommunityAbout.msgToString subMsg
 
@@ -1924,9 +1901,6 @@ view model =
 
         Notification subModel ->
             viewLoggedIn subModel LoggedIn.Notification GotNotificationMsg Notification.view
-
-        Community subModel ->
-            viewLoggedIn subModel LoggedIn.Community GotCommunityMsg CommunityPage.view
 
         CommunityAbout subModel ->
             viewLoggedIn subModel LoggedIn.CommunityAbout GotCommunityAboutMsg CommunityAbout.view
