@@ -114,6 +114,7 @@ action action_ =
     noShrink Action.Action
         |> andMap (int action_.id)
         |> andMap (Markdown.shrink action_.description)
+        |> andMap (noShrink action_.image)
         |> andMap (actionObjective action_.objective)
         |> andMap (float action_.reward)
         |> andMap (float action_.verifierReward)
@@ -129,6 +130,7 @@ action action_ =
         |> andMap (bool action_.hasProofCode)
         |> andMap (maybe Markdown.shrink action_.photoProofInstructions)
         |> andMap (maybe int action_.position)
+        |> andMap (int action_.claimCount)
 
 
 

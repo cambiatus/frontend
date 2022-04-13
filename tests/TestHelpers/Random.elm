@@ -283,6 +283,7 @@ action =
     Random.constant Action.Action
         |> with (Random.int 0 Random.maxInt)
         |> with (Markdown.generator string)
+        |> with (Random.constant Nothing)
         |> with actionObjective
         |> with (Random.float 0 1000)
         |> with (Random.float 0 1000)
@@ -298,6 +299,7 @@ action =
         |> with Random.Extra.bool
         |> with (maybe (Markdown.generator string))
         |> with (maybe (Random.int 0 Random.maxInt))
+        |> with (Random.int 0 Random.maxInt)
 
 
 
