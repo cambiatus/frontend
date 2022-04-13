@@ -13,6 +13,9 @@ export default () => (
         this.resizeItems()
       }
 
+      this.querySelectorAll('img').forEach((image) =>
+        image.addEventListener('load', () => this.resizeItems()))
+
       window.addEventListener('resize', this.resizeItems)
     }
 
