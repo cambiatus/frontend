@@ -657,7 +657,7 @@ view loggedIn model =
                         [ p
                             [ class "p-4"
                             ]
-                            [ span [ class "sr-only" ] [ text <| (t "community.objectives.complete_actions" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol) ]
+                            [ span [ class "sr-only" ] [ text <| t "community.objectives.complete_actions" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol ]
                             , span [ ariaHidden True ] [ text <| t "community.objectives.complete_actions" ]
                             , text " "
                             , b [ ariaHidden True ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]

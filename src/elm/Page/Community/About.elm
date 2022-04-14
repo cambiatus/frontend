@@ -542,7 +542,7 @@ viewStatsCard translators { number, description, imgSrc, imgClass } =
             [ class "col-span-2 py-6 text-center"
             ]
             [ p [ class "sr-only" ]
-                [ text <| (translators.t description ++ ": " ++ String.fromInt number)
+                [ text <| translators.t description ++ ": " ++ String.fromInt number
                 ]
             , p
                 [ class "text-xl font-bold text-green"
