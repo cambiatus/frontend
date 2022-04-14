@@ -431,6 +431,7 @@
     "error_loading": "Error loading community",
     "error_saving": "Error saving community",
     "learn_about": "Come learn about the {{community_name}} community! \n\n{{url}}",
+    "share": "Share community",
     "create": {
       "title": "Create community",
       "success": "Successfully saved community",

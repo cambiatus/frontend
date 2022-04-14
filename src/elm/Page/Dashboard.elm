@@ -32,7 +32,7 @@ import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, disabled, id, src, style, tabindex)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -820,6 +820,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
             ]
         , img
             [ class "absolute -top-2 md:top-0 right-2 md:right-4"
+            , alt ""
             , src "/images/success-doggo.svg"
             ]
             []

@@ -435,6 +435,7 @@
     "error_loading": "Error en carregar la comunitat",
     "error_saving": "Error en desar la comunitat",
     "learn_about": "Vine a conèixer la comunitat {{community_name}}! \n\n{{url}}",
+    "share": "Compartir comunitat",
     "create": {
       "title": "Crear comunitat",
       "success": "El perfil s'ha desat correctament",

@@ -7,6 +7,7 @@ import Eos
 import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -205,10 +206,13 @@ view loggedIn model =
                               else
                                 text ""
                             ]
-                        , h2 [ class "mt-6" ]
-                            [ span [] [ text <| t "community.index.our_numbers" ]
+                        , h2
+                            [ class "mt-6"
+                            , ariaLabel (t "community.index.our_numbers" ++ " " ++ t "community.index.numbers")
+                            ]
+                            [ span [ ariaHidden True ] [ text <| t "community.index.our_numbers" ]
                             , text " "
-                            , span [ class "font-bold" ] [ text <| t "community.index.numbers" ]
+                            , span [ class "font-bold", ariaHidden True ] [ text <| t "community.index.numbers" ]
                             ]
                         , div [ class "mt-4 grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4" ]
                             [ case model.tokenInfo of
@@ -303,6 +307,7 @@ viewCommunityCard ({ translators } as shared) community =
             , button
                 [ class "bg-gray-100 p-2 rounded-full ml-auto focus-ring hover:opacity-60 active:opacity-80"
                 , onClick ClickedShareCommunity
+                , ariaLabel <| translators.t "community.share"
                 ]
                 [ Icons.share "" ]
             , if not shared.canShare then
@@ -314,6 +319,7 @@ viewCommunityCard ({ translators } as shared) community =
                         |> Form.Text.withExtraAttrs
                             [ class "absolute opacity-0 left-[-9999em]"
                             , tabindex -1
+                            , ariaHidden True
                             ]
                         |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
                         |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
@@ -418,10 +424,12 @@ viewSupportersCard { t } community =
                     )
     in
     div []
-        [ h2 []
-            [ span [] [ text <| t "community.index.our_supporters" ]
+        [ h2
+            [ ariaLabel (t "community.index.our_supporters" ++ " " ++ t "community.index.supporters")
+            ]
+            [ span [ ariaHidden True ] [ text <| t "community.index.our_supporters" ]
             , text " "
-            , span [ class "font-bold" ] [ text <| t "community.index.supporters" ]
+            , span [ class "font-bold", ariaHidden True ] [ text <| t "community.index.supporters" ]
             ]
         , div [ class "bg-white rounded px-4 pt-4 pb-6 mt-4" ]
             [ p [] [ text <| t "community.index.you_can_support" ]
@@ -466,10 +474,10 @@ viewNewsCard ({ translators } as shared) community =
             translators
     in
     div [ class "mt-4 lg:mt-0" ]
-        [ h2 []
-            [ span [] [ text <| t "community.index.our_messages" ]
+        [ h2 [ ariaLabel (t "community.index.our_messages" ++ " " ++ t "community.index.messages") ]
+            [ span [ ariaHidden True ] [ text <| t "community.index.our_messages" ]
             , text " "
-            , span [ class "font-bold" ] [ text <| t "community.index.messages" ]
+            , span [ class "font-bold", ariaHidden True ] [ text <| t "community.index.messages" ]
             ]
         , div [ class "bg-white rounded px-4 pt-4 pb-6 mt-4 relative" ]
             (img
@@ -490,7 +498,7 @@ viewNewsCard ({ translators } as shared) community =
                                     |> List.filter (Community.News.isPublished shared.now)
                                     |> List.take 3
                                     |> Community.News.viewList shared []
-                                , hr [ class "mb-4 border-gray-100" ] []
+                                , hr [ class "mb-4 border-gray-100", ariaHidden True ] []
                                 , a
                                     [ class "button button-secondary w-full"
                                     , Route.href (Route.News { selectedNews = Nothing, showOthers = True })
@@ -530,13 +538,24 @@ viewStatsCard translators { number, description, imgSrc, imgClass } =
             , class imgClass
             ]
             []
-        , div [ class "col-span-2 py-6 text-center" ]
-            [ p [ class "text-xl font-bold text-green" ]
+        , div
+            [ class "col-span-2 py-6 text-center"
+            ]
+            [ p [ class "sr-only" ]
+                [ text <| (translators.t description ++ ": " ++ String.fromInt number)
+                ]
+            , p
+                [ class "text-xl font-bold text-green"
+                , ariaHidden True
+                ]
                 [ number
                     |> Utils.formatInt (Just translators)
                     |> text
                 ]
-            , p [ class "uppercase text-sm font-bold text-gray-900" ]
+            , p
+                [ class "uppercase text-sm font-bold text-gray-900"
+                , ariaHidden True
+                ]
                 [ text description ]
             ]
         ]

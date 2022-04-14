@@ -9,7 +9,7 @@ module Avatar exposing
 
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html)
-import Html.Attributes exposing (class, src)
+import Html.Attributes exposing (alt, class, src)
 import Icons
 
 
@@ -43,6 +43,7 @@ view (Avatar maybeUrl) cls =
                     [ Html.img
                         [ class ("object-cover rounded-full " ++ cls)
                         , src url
+                        , alt ""
                         ]
                         []
                     ]

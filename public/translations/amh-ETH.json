@@ -393,6 +393,7 @@
     "error_loading": "ማህበረሰብን መጫን ላይ ስህተት",
     "error_saving": "ማህበረሰብን ማዳን ላይ ስህተት",
     "learn_about": "ኑ ስለ {{community_name}} ማህበረሰብ ተማር! \n\n{{url}}",
+    "share": "ማህበረሰቡን ማጋራት",
     "create": {
       "title": "ማህበረሰብ ፍጠር",
       "success": "ማህበረሰብ በትክክል ተቀምጧል",

@@ -439,6 +439,7 @@
     "error_loading": "Erro ao carregar comunidade",
     "error_saving": "Erro ao salvar comunidade",
     "learn_about": "Venha aprender sobre a comunidade {{community_name}}! \n\n{{url}}",
+    "share": "Compartilhar comunidade",
     "create": {
       "title": "Criar comunidade",
       "success": "Comunidade salva com sucesso",
