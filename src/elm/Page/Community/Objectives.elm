@@ -13,7 +13,7 @@ import Form.File
 import Form.Text
 import Html exposing (Html, a, b, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
-import Html.Attributes.Aria exposing (role)
+import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Decode as Decode
@@ -135,7 +135,7 @@ type Msg
     | GotPhotoProofFormMsg (Form.Msg Form.File.Model)
     | GotUint64Name String
     | CompletedClaimingAction (Result Encode.Value ())
-    | CopiedShareLinkToClipboard
+    | CopiedShareLinkToClipboard Int
 
 
 type alias UpdateResult =
@@ -273,7 +273,7 @@ update msg model loggedIn =
 
                     else
                         { responseAddress = msg
-                        , responseData = Encode.null
+                        , responseData = Encode.int action.id
                         , data =
                             Encode.object
                                 [ ( "name", Encode.string "copyToClipboard" )
@@ -613,12 +613,16 @@ update msg model loggedIn =
                     []
                     val
 
-        CopiedShareLinkToClipboard ->
+        CopiedShareLinkToClipboard actionId ->
             model
                 |> UR.init
                 |> UR.addExt
                     (LoggedIn.ShowFeedback View.Feedback.Success
                         (loggedIn.shared.translators.t "copied_to_clipboard")
+                    )
+                |> UR.addCmd
+                    (Browser.Dom.focus (shareActionButtonId actionId)
+                        |> Task.attempt (\_ -> NoOp)
                     )
 
 
@@ -640,17 +644,23 @@ view loggedIn model =
         case loggedIn.selectedCommunity of
             RemoteData.Success community ->
                 div [ class "container mx-auto px-4 pt-8 mb-20" ]
-                    [ h1 [ class "lg:w-2/3 lg:mx-auto" ]
-                        [ span [] [ text <| t "community.objectives.earn" ]
+                    [ h1
+                        [ class "lg:w-2/3 lg:mx-auto"
+                        , ariaLabel (t "community.objectives.earn" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol)
+                        ]
+                        [ span [ ariaHidden True ] [ text <| t "community.objectives.earn" ]
                         , text " "
-                        , span [ class "font-bold" ]
+                        , span [ class "font-bold", ariaHidden True ]
                             [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                         ]
                     , div [ class "mt-4 bg-white rounded relative lg:w-2/3 lg:mx-auto" ]
-                        [ p [ class "p-4" ]
-                            [ text <| t "community.objectives.complete_actions"
+                        [ p
+                            [ class "p-4"
+                            ]
+                            [ span [ class "sr-only" ] [ text <| (t "community.objectives.complete_actions" ++ " " ++ Eos.symbolToSymbolCodeString community.symbol) ]
+                            , span [ ariaHidden True ] [ text <| t "community.objectives.complete_actions" ]
                             , text " "
-                            , b [] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
+                            , b [ ariaHidden True ] [ text (Eos.symbolToSymbolCodeString community.symbol) ]
                             ]
                         , img
                             [ src "/images/doggo_holding_coins.svg"
@@ -659,10 +669,13 @@ view loggedIn model =
                             ]
                             []
                         ]
-                    , h2 [ class "mt-6 lg:w-2/3 lg:mx-auto" ]
-                        [ span [] [ text <| t "community.objectives.objectives_and" ]
+                    , h2
+                        [ class "mt-6 lg:w-2/3 lg:mx-auto"
+                        , ariaLabel (t "community.objectives.objectives_and" ++ " " ++ t "community.objectives.actions")
+                        ]
+                        [ span [ ariaHidden True ] [ text <| t "community.objectives.objectives_and" ]
                         , text " "
-                        , span [ class "font-bold" ] [ text <| t "community.objectives.actions" ]
+                        , span [ class "font-bold", ariaHidden True ] [ text <| t "community.objectives.actions" ]
                         ]
                     , case community.objectives of
                         RemoteData.Success objectives ->
@@ -704,6 +717,7 @@ view loggedIn model =
                                             |> Form.Text.withExtraAttrs
                                                 [ class "absolute opacity-0 left-[-9999em]"
                                                 , tabindex -1
+                                                , ariaHidden True
                                                 ]
                                             |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
                                             |> Form.Text.withInputElement (Form.Text.TextareaInput { submitOnEnter = False })
@@ -828,7 +842,9 @@ viewObjective translators model objective =
                 class ""
             ]
             [ summary
-                [ class "marker-hidden lg:w-2/3 lg:mx-auto"
+                [ class "marker-hidden lg:w-2/3 lg:mx-auto focus-ring rounded"
+                , role "button"
+                , ariaHasPopup "true"
                 , onClick (ClickedToggleObjectiveVisibility objective)
                 ]
                 [ div
@@ -904,13 +920,23 @@ viewObjective translators model objective =
                 ]
             , div [ class "flex justify-center gap-2 lg:hidden" ]
                 (filteredActions
-                    |> List.map
-                        (\action ->
+                    |> List.indexedMap
+                        (\index action ->
                             button
-                                [ class "border border-gray-900 rounded-full w-3 h-3 transition-colors"
-                                , classList [ ( "border-orange-300 bg-orange-300", Just action.id == visibleActionId ) ]
+                                [ class "border border-gray-900 rounded-full w-3 h-3 transition-colors focus-ring"
+                                , classList
+                                    [ ( "border-orange-300 bg-orange-300", Just action.id == visibleActionId )
+                                    , ( "hover:bg-orange-300/50 hover:border-orange-300/50", Just action.id /= visibleActionId )
+                                    ]
                                 , id ("go-to-action-" ++ String.fromInt action.id)
                                 , onClick (ClickedScrollToAction action)
+                                , ariaLabel <|
+                                    translators.tr "community.objectives.go_to_action"
+                                        [ ( "index"
+                                          , String.fromInt (index + 1)
+                                          )
+                                        ]
+                                , role "link"
                                 ]
                                 []
                         )
@@ -958,16 +984,35 @@ viewAction ({ t } as translators) model index action =
                     ]
         , div [ class "px-4 pt-4 pb-6" ]
             [ div [ class "flex" ]
-                [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt (index + 1)), text "." ]
+                [ span
+                    [ class "text-lg text-gray-500 font-bold"
+                    , ariaHidden True
+                    ]
+                    [ text (String.fromInt (index + 1)), text "." ]
                 , div [ class "ml-5 mt-1 min-w-0" ]
                     [ h4
                         [ class "line-clamp-3"
                         , title (Markdown.toRawString action.description)
                         ]
                         [ Markdown.view [] action.description ]
-                    , span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
+                    , span [ class "sr-only" ]
+                        [ text <|
+                            t "community.objectives.reward"
+                                ++ ": "
+                                ++ Eos.assetToString translators
+                                    { amount = action.reward
+                                    , symbol = action.objective.community.symbol
+                                    }
+                        ]
+                    , span
+                        [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
+                        , ariaHidden True
+                        ]
                         [ text <| t "community.objectives.reward" ]
-                    , div [ class "mt-1 text-green font-bold" ]
+                    , div
+                        [ class "mt-1 text-green font-bold"
+                        , ariaHidden True
+                        ]
                         [ span [ class "text-2xl mr-1" ]
                             [ text
                                 (Eos.formatSymbolAmount
@@ -987,6 +1032,7 @@ viewAction ({ t } as translators) model index action =
                 [ button
                     [ class "button button-secondary w-full"
                     , onClick (ClickedShareAction action)
+                    , id (shareActionButtonId action.id)
                     ]
                     [ Icons.share "mr-2 flex-shrink-0"
                     , text <| t "share"
@@ -1242,6 +1288,11 @@ actionCardId action =
     "action-card-" ++ String.fromInt action.id
 
 
+shareActionButtonId : Int -> String
+shareActionButtonId actionId =
+    "share-action-button-" ++ String.fromInt actionId
+
+
 idFromActionCardId : String -> Maybe Int
 idFromActionCardId elementId =
     -- Remove the leading "action-card-"
@@ -1271,11 +1322,25 @@ jsAddressToMsg addr val =
     in
     case addr of
         "ClickedShareAction" :: _ ->
-            case Decode.decodeValue (Decode.field "copied" Decode.bool) val of
-                Ok True ->
-                    Just CopiedShareLinkToClipboard
+            case
+                Decode.decodeValue
+                    (Decode.map2
+                        (\hasCopied actionId ->
+                            if hasCopied then
+                                Just actionId
 
-                Ok False ->
+                            else
+                                Nothing
+                        )
+                        (Decode.field "copied" Decode.bool)
+                        (Decode.field "addressData" Decode.int)
+                    )
+                    val
+            of
+                Ok (Just actionId) ->
+                    Just (CopiedShareLinkToClipboard actionId)
+
+                Ok Nothing ->
                     Just NoOp
 
                 Err _ ->
@@ -1344,5 +1409,5 @@ msgToString msg =
         CompletedClaimingAction r ->
             [ "CompletedClaimingAction", UR.resultToString r ]
 
-        CopiedShareLinkToClipboard ->
+        CopiedShareLinkToClipboard _ ->
             [ "CopiedShareLinkToClipboard" ]

@@ -535,6 +535,7 @@
       "actions": "Accions",
       "visit_community_page": "Visiteu la pàgina de la comunitat per obtenir-ne més informació.",
       "go_to_community_page": "Visiteu la pàgina de la comunitat",
+      "go_to_action": "Passeu a l'acció {{index}}",
       "reward": "Recompensa",
       "claim_count": "Els membres han reclamat aquesta acció",
       "claim_count_times": "{{count}} vegades",

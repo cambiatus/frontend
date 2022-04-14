@@ -493,6 +493,7 @@
       "actions": "ድርጊቶች",
       "visit_community_page": "ስለ እሱ የበለጠ ለማወቅ የማህበረሰብ ገፅን ይጎብኙ።",
       "go_to_community_page": "የማህበረሰብ ገጽን ይጎብኙ",
+      "go_to_action": "ወደ ተግባር ይሂዱ {{index}}",
       "reward": "ሽልማት",
       "claim_count": "አባላት ይህንን እርምጃ",
       "claim_count_times": "{{count}} ጊዜ ጠይቀዋል",

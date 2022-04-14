@@ -535,6 +535,7 @@
       "actions": "Acciónes",
       "visit_community_page": "Visite la página de la comunidad para obtener más información al respecto.",
       "go_to_community_page": "Visitar la página de la comunidad",
+      "go_to_action": "Ir a la acción {{index}}",
       "reward": "Recompensa",
       "claim_count": "Miembros han reclamado esta acción",
       "claim_count_times": "{{count}} veces",
