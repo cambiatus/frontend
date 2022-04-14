@@ -9,6 +9,7 @@ module Action exposing
     , Objective
     , Proof(..)
     , encodeClaimAction
+    , isClaimable
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -938,6 +939,11 @@ isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
+
+
+isClaimable : Action -> Bool
+isClaimable action =
+    action.verificationType == VerificationType.Claimable
 
 
 

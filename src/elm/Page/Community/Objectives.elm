@@ -3,7 +3,6 @@ module Page.Community.Objectives exposing (Model, Msg, init, jsAddressToMsg, msg
 import Action exposing (Action, Msg(..))
 import Browser.Dom
 import Cambiatus.Enum.Permission as Permission
-import Cambiatus.Enum.VerificationType as VerificationType
 import Community
 import Dict exposing (Dict)
 import Eos
@@ -108,8 +107,6 @@ init selectedObjective _ =
                           )
                         ]
         , sharingAction = Nothing
-
-        -- TODO - Open modal when action is selected on url?
         , claimingStatus = NotClaiming
         }
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
@@ -182,9 +179,68 @@ update msg model loggedIn =
                                                 , ( "id", Encode.string (actionCardId highlightedAction) )
                                                 ]
                                         }
+
+                claimingStatus =
+                    case model.highlightedAction of
+                        Nothing ->
+                            NotClaiming
+
+                        Just { objectiveId, actionId } ->
+                            objectives
+                                |> List.Extra.find (\objective -> objective.id == objectiveId)
+                                |> Maybe.andThen
+                                    (\objective ->
+                                        let
+                                            maybePosition =
+                                                List.Extra.findIndex (\action -> action.id == actionId) objective.actions
+
+                                            maybeAction =
+                                                List.Extra.find (\action -> action.id == actionId) objective.actions
+                                        in
+                                        Maybe.map2
+                                            (\position action ->
+                                                Claiming
+                                                    { position = position + 1
+                                                    , action = action
+                                                    , proof =
+                                                        if action.hasProofPhoto then
+                                                            WithProof (Form.init (Form.File.initModel Nothing))
+                                                                GeneratingCode
+
+                                                        else
+                                                            NoProofNecessary
+                                                    }
+                                            )
+                                            maybePosition
+                                            maybeAction
+                                    )
+                                |> Maybe.withDefault NotClaiming
+
+                generateProofCodePort =
+                    case claimingStatus of
+                        Claiming { proof } ->
+                            case proof of
+                                WithProof _ _ ->
+                                    UR.addPort
+                                        { responseAddress = msg
+                                        , responseData = Encode.null
+                                        , data =
+                                            Encode.object
+                                                [ ( "name", Encode.string "accountNameToUint64" )
+                                                , ( "accountName", Eos.Account.encodeName loggedIn.accountName )
+                                                ]
+                                        }
+
+                                NoProofNecessary ->
+                                    identity
+
+                        _ ->
+                            identity
             in
-            UR.init model
+            { model | claimingStatus = claimingStatus }
+                |> UR.init
                 |> scrollActionIntoView
+                |> generateProofCodePort
 
         ClickedToggleObjectiveVisibility objective ->
             { model
@@ -955,14 +1011,6 @@ viewAction ({ t } as translators) model index action =
 
                 Just { actionId } ->
                     actionId == action.id
-
-        isClaimable =
-            case action.verificationType of
-                VerificationType.Claimable ->
-                    True
-
-                VerificationType.Automatic ->
-                    False
     in
     li
         [ class "bg-white rounded self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"
@@ -1027,7 +1075,7 @@ viewAction ({ t } as translators) model index action =
                 ]
             , div
                 [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
-                , classList [ ( "sm:grid-cols-1", not isClaimable ) ]
+                , classList [ ( "sm:grid-cols-1", not (Action.isClaimable action) ) ]
                 ]
                 [ button
                     [ class "button button-secondary w-full"
@@ -1037,7 +1085,7 @@ viewAction ({ t } as translators) model index action =
                     [ Icons.share "mr-2 flex-shrink-0"
                     , text <| t "share"
                     ]
-                , if isClaimable then
+                , if Action.isClaimable action then
                     button
                         [ class "button button-primary w-full sm:col-span-1"
                         , onClick (ClickedClaimAction { position = index + 1, action = action })
@@ -1215,8 +1263,12 @@ viewClaimModal ({ translators } as shared) model =
                                                 , onClick ClickedCloseClaimModal
                                                 ]
                                                 [ text <| t "menu.cancel" ]
-                                            , submitButton [ class "button button-primary w-full" ]
-                                                [ text <| t "dashboard.claim" ]
+                                            , if Action.isClaimable action then
+                                                submitButton [ class "button button-primary w-full" ]
+                                                    [ text <| t "dashboard.claim" ]
+
+                                              else
+                                                text ""
                                             ]
                                         ]
                                     )
@@ -1228,17 +1280,24 @@ viewClaimModal ({ translators } as shared) model =
                                 ]
 
                         NoProofNecessary ->
-                            div [ class "grid md:grid-cols-2 gap-4 my-6" ]
+                            div
+                                [ class "grid gap-4 my-6"
+                                , classList [ ( "md:grid-cols-2", Action.isClaimable action ) ]
+                                ]
                                 [ button
                                     [ class "button button-secondary w-full"
                                     , onClick ClickedCloseClaimModal
                                     ]
                                     [ text <| t "menu.cancel" ]
-                                , button
-                                    [ class "button button-primary w-full"
-                                    , onClick ConfirmedClaimAction
-                                    ]
-                                    [ text <| t "dashboard.claim" ]
+                                , if Action.isClaimable action then
+                                    button
+                                        [ class "button button-primary w-full"
+                                        , onClick ConfirmedClaimAction
+                                        ]
+                                        [ text <| t "dashboard.claim" ]
+
+                                  else
+                                    text ""
                                 ]
                     ]
                 |> View.Modal.withSize View.Modal.Large
@@ -1345,6 +1404,11 @@ jsAddressToMsg addr val =
 
                 Err _ ->
                     Just NoOp
+
+        "CompletedLoadObjectives" :: _ ->
+            Decode.decodeValue (Decode.field "uint64name" Decode.string) val
+                |> Result.map GotUint64Name
+                |> Result.toMaybe
 
         "ClickedClaimAction" :: _ ->
             Decode.decodeValue (Decode.field "uint64name" Decode.string) val
