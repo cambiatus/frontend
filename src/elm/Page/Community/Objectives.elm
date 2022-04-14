@@ -10,7 +10,7 @@ import Eos.Account
 import Form
 import Form.File
 import Form.Text
-import Html exposing (Html, a, b, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
+import Html exposing (Html, a, b, br, button, details, div, h1, h2, h3, h4, img, li, p, span, summary, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHasPopup, ariaHidden, ariaLabel, role)
 import Html.Events exposing (onClick)
@@ -948,6 +948,23 @@ viewObjective translators model objective =
                 ]
                 [ if not isOpen then
                     text ""
+
+                  else if List.isEmpty filteredActions then
+                    div [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6" ]
+                        [ img
+                            [ src "/images/doggo-laying-down.svg"
+                            , alt (translators.t "community.objectives.empty_dog_alt")
+                            ]
+                            []
+                        , p [ class "mt-4 text-black font-bold" ]
+                            [ text <| translators.t "community.objectives.empty_title" ]
+                        , p [ class "text-center mt-4" ]
+                            [ text <| translators.t "community.objectives.empty_line_1"
+                            , br [] []
+                            , br [] []
+                            , text <| translators.tr "community.objectives.empty_line_2" [ ( "symbol", Eos.symbolToSymbolCodeString objective.community.symbol ) ]
+                            ]
+                        ]
 
                   else
                     View.Components.masonryLayout
