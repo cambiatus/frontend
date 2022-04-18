@@ -55,7 +55,7 @@ type alias Model =
             , closedHeight : Maybe Float
             , isClosing : Bool
             }
-    , highlightedAction : Maybe { objectiveId : Int, actionId : Int }
+    , highlightedAction : Maybe { objectiveId : Int, actionId : Maybe Int }
     , sharingAction : Maybe Action
     , claimingStatus : ClaimingStatus
     }
@@ -93,7 +93,7 @@ init selectedObjective _ =
                     Nothing
 
                 Route.WithObjectiveSelected { id, action } ->
-                    Maybe.map (\actionId -> { objectiveId = id, actionId = actionId }) action
+                    Just { objectiveId = id, actionId = action }
         , shownObjectives =
             case selectedObjective of
                 Route.WithNoObjectiveSelected ->
@@ -172,12 +172,40 @@ update msg model loggedIn =
                                     List.Extra.find (\objective -> objective.id == objectiveId) objectives
                                         |> Maybe.andThen
                                             (\foundObjective ->
-                                                List.Extra.find (\action -> action.id == actionId) foundObjective.actions
+                                                List.Extra.find (\action -> Just action.id == actionId) foundObjective.actions
                                             )
+
+                                getHighlightedObjectiveSummaryHeight =
+                                    case List.Extra.find (\objective -> objective.id == objectiveId) objectives of
+                                        Just objective ->
+                                            UR.addCmd
+                                                (Browser.Dom.getElement (objectiveSummaryId objective)
+                                                    |> Task.attempt (GotObjectiveSummaryHeight objective)
+                                                )
+
+                                        Nothing ->
+                                            identity
                             in
                             case maybeAction of
                                 Nothing ->
-                                    identity
+                                    let
+                                        hasObjective =
+                                            List.any (\objective -> objective.id == objectiveId) objectives
+                                    in
+                                    if hasObjective then
+                                        UR.addPort
+                                            { responseAddress = NoOp
+                                            , responseData = Encode.null
+                                            , data =
+                                                Encode.object
+                                                    [ ( "name", Encode.string "scrollIntoView" )
+                                                    , ( "id", Encode.string (objectiveDetailsId { id = objectiveId }) )
+                                                    ]
+                                            }
+                                            >> getHighlightedObjectiveSummaryHeight
+
+                                    else
+                                        identity
 
                                 Just highlightedAction ->
                                     UR.addPort
@@ -189,6 +217,7 @@ update msg model loggedIn =
                                                 , ( "id", Encode.string (actionCardId highlightedAction) )
                                                 ]
                                         }
+                                        >> getHighlightedObjectiveSummaryHeight
 
                 claimingStatus =
                     case model.highlightedAction of
@@ -202,10 +231,10 @@ update msg model loggedIn =
                                     (\objective ->
                                         let
                                             maybePosition =
-                                                List.Extra.findIndex (\action -> action.id == actionId) objective.actions
+                                                List.Extra.findIndex (\action -> Just action.id == actionId) objective.actions
 
                                             maybeAction =
-                                                List.Extra.find (\action -> action.id == actionId) objective.actions
+                                                List.Extra.find (\action -> Just action.id == actionId) objective.actions
                                         in
                                         Maybe.map2
                                             (\position action ->
@@ -967,6 +996,14 @@ viewObjective translators model objective =
                 |> Maybe.map (\{ isClosing } -> not isClosing)
                 |> Maybe.withDefault False
 
+        isHighlighted =
+            case model.highlightedAction of
+                Nothing ->
+                    False
+
+                Just { objectiveId, actionId } ->
+                    objectiveId == objective.id && Maybe.Extra.isNothing actionId
+
         maybeShownObjectivesInfo =
             Dict.get objective.id model.shownObjectives
 
@@ -1039,6 +1076,7 @@ viewObjective translators model objective =
             [ summary
                 [ id (objectiveSummaryId objective)
                 , class "marker-hidden lg:w-2/3 lg:mx-auto focus-ring rounded"
+                , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
                 , role "button"
                 , ariaHasPopup "true"
                 , onClick (ClickedToggleObjectiveVisibility objective)
@@ -1172,7 +1210,7 @@ viewAction ({ t } as translators) model objective index action =
                     False
 
                 Just { actionId } ->
-                    actionId == action.id
+                    actionId == Just action.id
     in
     li
         [ class "bg-white rounded self-start w-full flex-shrink-0 snap-center snap-always mb-6 animate-fade-in-from-above motion-reduce:animate-none"

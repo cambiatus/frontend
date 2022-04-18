@@ -855,7 +855,11 @@ async function handleJavascriptPort (arg) {
       return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
     }
     case 'scrollIntoView': {
-      document.getElementById(arg.data.id).scrollIntoView(true)
+      // We might be creating the element and scrolling to it at the same time.
+      // If we don't use setTimeout, we might try to scroll to the element before it's created, which produces a runtime error
+      setTimeout(() => {
+        document.getElementById(arg.data.id).scrollIntoView(true)
+      }, 0)
 
       return {}
     }

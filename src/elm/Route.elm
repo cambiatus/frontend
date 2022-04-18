@@ -136,20 +136,24 @@ parser url =
                         (Query.string "showOthers")
             )
         , Url.map CommunityAbout (s "community" </> s "about")
-        , Url.map CommunityObjectives
+        , Url.map (CommunityObjectives WithNoObjectiveSelected)
             (s "community"
                 </> s "objectives"
-                <?> Query.map2
-                        (\maybeObjectiveId maybeActionId ->
-                            case maybeObjectiveId of
-                                Nothing ->
-                                    WithNoObjectiveSelected
-
-                                Just objectiveId ->
-                                    WithObjectiveSelected { id = objectiveId, action = maybeActionId }
-                        )
-                        (Query.int "objective")
-                        (Query.int "action")
+            )
+        , Url.map (\objectiveId -> CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Nothing }))
+            (s "community"
+                </> s "objectives"
+                </> int
+            )
+        , Url.map
+            (\objectiveId actionId ->
+                CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Just actionId })
+            )
+            (s "community"
+                </> s "objectives"
+                </> int
+                </> s "action"
+                </> int
             )
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
@@ -484,15 +488,21 @@ routeToString route =
                     ( [ "community", "about" ], [] )
 
                 CommunityObjectives selectedObjective ->
-                    ( [ "community", "objectives" ]
-                    , case selectedObjective of
-                        WithNoObjectiveSelected ->
-                            []
+                    let
+                        params =
+                            case selectedObjective of
+                                WithNoObjectiveSelected ->
+                                    []
 
-                        WithObjectiveSelected { id, action } ->
-                            queryBuilder String.fromInt (Just id) "objective"
-                                ++ queryBuilder String.fromInt action "action"
-                    )
+                                WithObjectiveSelected { id, action } ->
+                                    case action of
+                                        Nothing ->
+                                            [ String.fromInt id ]
+
+                                        Just actionId ->
+                                            [ String.fromInt id, "action", String.fromInt actionId ]
+                    in
+                    ( "community" :: "objectives" :: params, [] )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )
