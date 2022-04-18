@@ -51,6 +51,9 @@ type alias Model =
             , visibleActionHeight : Maybe Float
             , previousVisibleAction : Maybe Int
             , previousVisibleActionHeight : Maybe Float
+            , openHeight : Maybe Float
+            , closedHeight : Maybe Float
+            , isClosing : Bool
             }
     , highlightedAction : Maybe { objectiveId : Int, actionId : Int }
     , sharingAction : Maybe Action
@@ -103,6 +106,9 @@ init selectedObjective _ =
                             , visibleActionHeight = Nothing
                             , previousVisibleAction = Nothing
                             , previousVisibleActionHeight = Nothing
+                            , openHeight = Nothing
+                            , closedHeight = Nothing
+                            , isClosing = False
                             }
                           )
                         ]
@@ -120,6 +126,10 @@ type Msg
     = NoOp
     | CompletedLoadObjectives (List Community.Objective)
     | ClickedToggleObjectiveVisibility Community.Objective
+    | FinishedOpeningActions Community.Objective
+    | FinishedClosingObjective Community.Objective
+    | GotObjectiveDetailsHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
+    | GotObjectiveSummaryHeight Community.Objective (Result Browser.Dom.Error Browser.Dom.Element)
     | GotVisibleActionViewport { objectiveId : ObjectiveId, actionId : Int } (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ClickedScrollToAction Action
     | ClickedShareAction Action
@@ -254,15 +264,84 @@ update msg model loggedIn =
                                         , visibleActionHeight = Nothing
                                         , previousVisibleAction = Nothing
                                         , previousVisibleActionHeight = Nothing
+                                        , openHeight = Nothing
+                                        , closedHeight = Nothing
+                                        , isClosing = False
                                         }
 
-                                Just _ ->
-                                    Nothing
+                                Just value ->
+                                    Just { value | isClosing = True }
                         )
                         model.shownObjectives
                 , highlightedAction = Nothing
             }
                 |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.getElement (objectiveSummaryId objective)
+                        |> Task.attempt (GotObjectiveSummaryHeight objective)
+                    )
+
+        FinishedOpeningActions objective ->
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.getElement (objectiveDetailsId objective)
+                        |> Task.attempt (GotObjectiveDetailsHeight objective)
+                    )
+
+        FinishedClosingObjective objective ->
+            { model | shownObjectives = Dict.remove objective.id model.shownObjectives }
+                |> UR.init
+
+        GotObjectiveDetailsHeight objective (Ok { element }) ->
+            { model
+                | shownObjectives =
+                    Dict.update objective.id
+                        (Maybe.map (\value -> { value | openHeight = Just element.height }))
+                        model.shownObjectives
+            }
+                |> UR.init
+
+        GotObjectiveDetailsHeight _ (Err (Browser.Dom.NotFound id)) ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Couldn't get objective details height"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Objectives", function = "update" }
+                    [ { name = "Error"
+                      , extras =
+                            Dict.fromList
+                                [ ( "type", Encode.string "Browser.Dom.NotFound" )
+                                , ( "id", Encode.string id )
+                                ]
+                      }
+                    ]
+
+        GotObjectiveSummaryHeight objective (Ok { element }) ->
+            { model
+                | shownObjectives =
+                    Dict.update objective.id
+                        (Maybe.map (\value -> { value | closedHeight = Just element.height }))
+                        model.shownObjectives
+            }
+                |> UR.init
+
+        GotObjectiveSummaryHeight _ (Err (Browser.Dom.NotFound id)) ->
+            model
+                |> UR.init
+                |> UR.logImpossible msg
+                    "Couldn't get objective summary height"
+                    (Just loggedIn.accountName)
+                    { moduleName = "Page.Community.Objectives", function = "update" }
+                    [ { name = "Error"
+                      , extras =
+                            Dict.fromList
+                                [ ( "type", Encode.string "Browser.Dom.NotFound" )
+                                , ( "id", Encode.string id )
+                                ]
+                      }
+                    ]
 
         GotVisibleActionViewport { objectiveId, actionId } (Ok { viewport }) ->
             { model
@@ -277,6 +356,9 @@ update msg model loggedIn =
                                             , visibleActionHeight = Just viewport.height
                                             , previousVisibleAction = Nothing
                                             , previousVisibleActionHeight = Nothing
+                                            , openHeight = Nothing
+                                            , closedHeight = Nothing
+                                            , isClosing = False
                                             }
 
                                     Just value ->
@@ -417,6 +499,9 @@ update msg model loggedIn =
                                                         , visibleActionHeight = Nothing
                                                         , previousVisibleAction = Nothing
                                                         , previousVisibleActionHeight = Nothing
+                                                        , openHeight = Nothing
+                                                        , closedHeight = Nothing
+                                                        , isClosing = False
                                                         }
 
                                                 Just value ->
@@ -425,6 +510,9 @@ update msg model loggedIn =
                                                         , visibleActionHeight = Nothing
                                                         , previousVisibleAction = value.visibleAction
                                                         , previousVisibleActionHeight = value.visibleActionHeight
+                                                        , openHeight = value.openHeight
+                                                        , closedHeight = value.closedHeight
+                                                        , isClosing = value.isClosing
                                                         }
                                         )
                                         model.shownObjectives
@@ -456,6 +544,9 @@ update msg model loggedIn =
                                     , visibleActionHeight = value.previousVisibleActionHeight
                                     , previousVisibleAction = Nothing
                                     , previousVisibleActionHeight = Nothing
+                                    , openHeight = value.openHeight
+                                    , closedHeight = value.closedHeight
+                                    , isClosing = value.isClosing
                                     }
                                     currDict
 
@@ -872,7 +963,9 @@ viewObjective translators model objective =
                 objective.actions
 
         isOpen =
-            List.member objective.id (Dict.keys model.shownObjectives)
+            Dict.get objective.id model.shownObjectives
+                |> Maybe.map (\{ isClosing } -> not isClosing)
+                |> Maybe.withDefault False
 
         maybeShownObjectivesInfo =
             Dict.get objective.id model.shownObjectives
@@ -888,17 +981,64 @@ viewObjective translators model objective =
         previousVisibleActionHeight =
             maybeShownObjectivesInfo
                 |> Maybe.andThen .previousVisibleActionHeight
+
+        openHeight =
+            maybeShownObjectivesInfo
+                |> Maybe.andThen .openHeight
+
+        closedHeight =
+            maybeShownObjectivesInfo
+                |> Maybe.andThen .closedHeight
     in
-    li []
-        [ details
-            [ if isOpen then
+    li
+        []
+        [ case ( openHeight, Maybe.Extra.or closedHeight visibleActionHeight ) of
+            ( Just open, Just closed ) ->
+                Html.node "style"
+                    []
+                    [ """
+                    @keyframes shrink-details-{{id}} {
+                        0% { height: calc({{open-height}}px - 16px); }
+                        100% { height: {{closed-height}}px; }
+                    }
+                    """
+                        |> String.replace "{{id}}" (String.fromInt objective.id)
+                        |> String.replace "{{open-height}}" (String.fromFloat open)
+                        |> String.replace "{{closed-height}}" (String.fromFloat closed)
+                        |> text
+                    ]
+
+            _ ->
+                text ""
+        , details
+            [ id (objectiveDetailsId objective)
+            , if isOpen then
                 Html.Attributes.attribute "open" "true"
 
               else
                 class ""
+            , style "animation-duration" "300ms"
+            , style "animation-timing-function" "ease-in-out"
+            , if isOpen then
+                class ""
+
+              else
+                style "animation-name" ("shrink-details-" ++ String.fromInt objective.id)
+            , Html.Events.on "animationend"
+                (Decode.field "animationName" Decode.string
+                    |> Decode.andThen
+                        (\animationName ->
+                            if animationName == "shrink-details-" ++ String.fromInt objective.id then
+                                Decode.succeed (FinishedClosingObjective objective)
+
+                            else
+                                Decode.fail "animationName did not match"
+                        )
+                )
             ]
             [ summary
-                [ class "marker-hidden lg:w-2/3 lg:mx-auto focus-ring rounded"
+                [ id (objectiveSummaryId objective)
+                , class "marker-hidden lg:w-2/3 lg:mx-auto focus-ring rounded"
                 , role "button"
                 , ariaHasPopup "true"
                 , onClick (ClickedToggleObjectiveVisibility objective)
@@ -945,12 +1085,17 @@ viewObjective translators model objective =
                                 |> String.fromInt
                                 |> (\heightString -> "calc(" ++ heightString ++ "px + 24px")
                             )
+                , Html.Events.on "transitionend" (Decode.succeed (FinishedOpeningActions objective))
                 ]
                 [ if not isOpen then
                     text ""
 
                   else if List.isEmpty filteredActions then
-                    div [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6" ]
+                    div
+                        [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6 animate-fade-in-from-above"
+                        , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
+                        , Html.Events.on "animationcancel" (Decode.succeed (FinishedOpeningActions objective))
+                        ]
                         [ img
                             [ src "/images/doggo-laying-down.svg"
                             , alt (translators.t "community.objectives.empty_dog_alt")
@@ -987,7 +1132,7 @@ viewObjective translators model objective =
                         , role "list"
                         ]
                         (List.indexedMap
-                            (viewAction translators model)
+                            (viewAction translators model objective)
                             filteredActions
                         )
                 ]
@@ -1018,8 +1163,8 @@ viewObjective translators model objective =
         ]
 
 
-viewAction : Translation.Translators -> Model -> Int -> Action -> Html Msg
-viewAction ({ t } as translators) model index action =
+viewAction : Translation.Translators -> Model -> Community.Objective -> Int -> Action -> Html Msg
+viewAction ({ t } as translators) model objective index action =
     let
         isHighlighted =
             case model.highlightedAction of
@@ -1034,6 +1179,7 @@ viewAction ({ t } as translators) model index action =
         , classList [ ( "border border-green ring ring-green ring-opacity-30", isHighlighted ) ]
         , style "animation-delay" ("calc(75ms * " ++ String.fromInt index ++ ")")
         , id (actionCardId action)
+        , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
         ]
         [ case action.image of
             Nothing ->
@@ -1354,6 +1500,16 @@ generateProofCode action claimerAccountUint64 time =
         |> String.slice 0 8
 
 
+objectiveDetailsId : { objective | id : Int } -> String
+objectiveDetailsId objective =
+    "objective-details-" ++ String.fromInt objective.id
+
+
+objectiveSummaryId : { objective | id : Int } -> String
+objectiveSummaryId objective =
+    "objective-summary-" ++ String.fromInt objective.id
+
+
 objectiveContainerId : { objective | id : Int } -> String
 objectiveContainerId objective =
     "objective-container-" ++ String.fromInt objective.id
@@ -1453,6 +1609,18 @@ msgToString msg =
 
         ClickedToggleObjectiveVisibility _ ->
             [ "ClickedToggleObjectiveVisibility" ]
+
+        FinishedOpeningActions _ ->
+            [ "FinishedOpeningActions" ]
+
+        FinishedClosingObjective _ ->
+            [ "FinishedClosingObjective" ]
+
+        GotObjectiveDetailsHeight _ _ ->
+            [ "GotObjectiveDetailsHeight" ]
+
+        GotObjectiveSummaryHeight _ _ ->
+            [ "GotObjectiveSummaryHeight" ]
 
         GotVisibleActionViewport _ _ ->
             [ "GotVisibleActionViewport" ]
