@@ -431,6 +431,7 @@
     "error_loading": "Error loading community",
     "error_saving": "Error saving community",
     "learn_about": "Come learn about the {{community_name}} community! \n\n{{url}}",
+    "earn": "Earn {{symbol}}",
     "share": "Share community",
     "create": {
       "title": "Create community",
@@ -483,9 +484,7 @@
       "logo": "{{community}}'s logo",
       "about_title": "About the community",
       "our_numbers": "Our",
-      "numbers": "Numbers",
-      "visit_objectives": "Visit the objectives page to learn how to earn {{symbol}}.",
-      "go_to_objectives": "Go to the objectives page"
+      "numbers": "Numbers"
     },
     "invite": {
       "title": "Invite your friends",

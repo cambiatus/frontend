@@ -265,23 +265,6 @@ view loggedIn model =
                                 , imgClass = "place-self-center"
                                 }
                             ]
-                        , div [ class "bg-white rounded p-4 pb-6 relative mt-24 lg:w-2/3 lg:mx-auto" ]
-                            [ p [] [ text <| tr "community.index.visit_objectives" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ] ]
-                            , a
-                                [ class "button button-secondary w-full mt-4"
-                                , Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected)
-                                ]
-                                [ text <| t "community.index.go_to_objectives"
-                                ]
-                            , div [ class "absolute top-0 left-0 w-full flex justify-center" ]
-                                [ img
-                                    [ src "/images/success-doggo.svg"
-                                    , alt ""
-                                    , class "-translate-y-3/4"
-                                    ]
-                                    []
-                                ]
-                            ]
                         ]
                     ]
 
@@ -411,6 +394,11 @@ viewCommunityCard ({ translators } as shared) community =
                                 ]
                         )
                 )
+            , a
+                [ class "button button-secondary w-full mt-8"
+                , Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected)
+                ]
+                [ text <| translators.tr "community.earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ] ]
             ]
         ]
 

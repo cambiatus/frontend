@@ -435,6 +435,7 @@
     "error_loading": "Error al cargar la comunidad",
     "error_saving": "Error al guardar la comunidad",
     "learn_about": "¡Ven a aprender sobre la comunidad {{community_name}}! \n\n{{url}}",
+    "earn": "Gana {{symbol}}",
     "share": "Compartir comunidad",
     "create": {
       "title": "Crear comunidad",
@@ -487,9 +488,7 @@
       "logo": "Logotipo de {{community}}",
       "about_title": "Acerca de la comunidad",
       "our_numbers": "Nuestros",
-      "numbers": "Numeros",
-      "visit_objectives": "Visite la página de la comunidad para aprender cómo ganar {{symbol}}.",
-      "go_to_objectives": "Visitar la página de objetivos"
+      "numbers": "Numeros"
     },
     "invite": {
       "title": "Invita a un amigo",

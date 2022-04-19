@@ -435,6 +435,7 @@
     "error_loading": "Error en carregar la comunitat",
     "error_saving": "Error en desar la comunitat",
     "learn_about": "Vine a conèixer la comunitat {{community_name}}! \n\n{{url}}",
+    "earn": "Guanya {{symbol}}",
     "share": "Compartir comunitat",
     "create": {
       "title": "Crear comunitat",
@@ -487,9 +488,7 @@
       "logo": "Logotip de {{community}}",
       "about_title": "Sobre la comunitat",
       "our_numbers": "Els nostres",
-      "numbers": "Números",
-      "visit_objectives": "Visiteu la pàgina de la comunitat per saber com guanyar {{symbol}}",
-      "go_to_objectives": "Visita la pàgina d'objectius"
+      "numbers": "Números"
     },
     "invite": {
       "title": "Convida als teus amics",

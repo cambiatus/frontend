@@ -393,6 +393,7 @@
     "error_loading": "ማህበረሰብን መጫን ላይ ስህተት",
     "error_saving": "ማህበረሰብን ማዳን ላይ ስህተት",
     "learn_about": "ኑ ስለ {{community_name}} ማህበረሰብ ተማር! \n\n{{url}}",
+    "earn": "{{symbol}} ያግኙ",
     "share": "ማህበረሰቡን ማጋራት",
     "create": {
       "title": "ማህበረሰብ ፍጠር",
@@ -445,9 +446,7 @@
       "logo": "{{community}} አርማ",
       "about_title": "ስለ ማህበረሰቡ",
       "our_numbers": "የእኛ",
-      "numbers": "ቁጥሮች",
-      "visit_objectives": "{{symbol}} እንዴት ማግኘት እንደሚችሉ ለማወቅ የማህበረሰብ ገጹን ይጎብኙ",
-      "go_to_objectives": "የግብ ገጽን ይጎብኙ"
+      "numbers": "ቁጥሮች"
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",
