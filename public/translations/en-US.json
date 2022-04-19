@@ -483,7 +483,9 @@
       "logo": "{{community}}'s logo",
       "about_title": "About the community",
       "our_numbers": "Our",
-      "numbers": "Numbers"
+      "numbers": "Numbers",
+      "visit_objectives": "Visit the objectives page to learn how to earn {{symbol}}.",
+      "go_to_objectives": "Go to the objectives page"
     },
     "invite": {
       "title": "Invite your friends",

@@ -487,7 +487,9 @@
       "logo": "Logotip de {{community}}",
       "about_title": "Sobre la comunitat",
       "our_numbers": "Els nostres",
-      "numbers": "Números"
+      "numbers": "Números",
+      "visit_objectives": "Visiteu la pàgina de la comunitat per saber com guanyar {{symbol}}",
+      "go_to_objectives": "Visita la pàgina d'objectius"
     },
     "invite": {
       "title": "Convida als teus amics",

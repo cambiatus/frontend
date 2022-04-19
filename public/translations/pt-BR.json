@@ -491,7 +491,9 @@
       "logo": "Logo de {{community}}",
       "about_title": "Sobre a comunidade",
       "our_numbers": "Nossos",
-      "numbers": "Números"
+      "numbers": "Números",
+      "visit_objectives": "Visite a página de objetivos para aprender a ganhar {{symbol}}.",
+      "go_to_objectives": "Visitar página de objetivos"
     },
     "invite": {
       "title": "Convide um amigo",

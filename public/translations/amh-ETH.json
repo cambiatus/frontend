@@ -445,7 +445,9 @@
       "logo": "{{community}} አርማ",
       "about_title": "ስለ ማህበረሰቡ",
       "our_numbers": "የእኛ",
-      "numbers": "ቁጥሮች"
+      "numbers": "ቁጥሮች",
+      "visit_objectives": "{{symbol}} እንዴት ማግኘት እንደሚችሉ ለማወቅ የማህበረሰብ ገጹን ይጎብኙ",
+      "go_to_objectives": "የግብ ገጽን ይጎብኙ"
     },
     "invite": {
       "title": "ጓደኛን ጋብዝ",
