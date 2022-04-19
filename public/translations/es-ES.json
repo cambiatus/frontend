@@ -545,6 +545,8 @@
       "share_action": "Ven a ayudar a {{community_name}} a alcanzar nuestro objetivo de {{objective_description}} completando esta acción: \n\t{{action_description}} \n\n{{url}}",
       "empty_dog_alt": "Un perro tirado en el suelo mirándote",
       "empty_title": "Por ahora, solo un perro",
+      "empty_objectives_line_1": "Esta comunidad aún no tiene objetivos.",
+      "empty_objectives_line_2": "¡Vuelve más tarde cuando tengamos objetivos!",
       "empty_line_1": "No hay acciones vinculadas a este objetivo en este momento.",
       "empty_line_2": "Explora otros objetivos para poder reclamar acciones y ganar {{symbol}}.",
       "create_success": "Objetivo creado con éxito",

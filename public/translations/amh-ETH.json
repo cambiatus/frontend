@@ -503,6 +503,8 @@
       "share_action": "ይህንን ተግባር በማጠናቀቅ {{community_name}} አላማችንን {{objective_description}} ላይ እንዲደርስ እርዱት፡ \n\t{{action_description}} \n\n{{url}}",
       "empty_dog_alt": "መሬት ላይ የተኛ ውሻ አንተን እያየህ",
       "empty_title": "ለጊዜው አንድ ውሻ ብቻ",
+      "empty_objectives_line_1": "ይህ ማህበረሰብ እስካሁን ምንም ግቦች የሉትም።",
+      "empty_objectives_line_2": "ግቦች ሲኖረን በኋላ ይመለሱ!",
       "empty_line_1": "በአሁኑ ጊዜ ከዚህ ዓላማ ጋር የተገናኙ ድርጊቶች የሉም።",
       "empty_line_2": "አክሲዮኖችን ለመጠየቅ እና {{symbol}} ለማግኘት ሌሎች አላማዎችን ያስሱ",
       "create_success": "ዓላማ በትክክል ተፈጥሯል",

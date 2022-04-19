@@ -861,11 +861,26 @@ view loggedIn model =
                                         objectives
                             in
                             div []
-                                [ ul [ class "space-y-4 mt-4" ]
-                                    (List.map
-                                        (viewObjective loggedIn.shared.translators model)
-                                        filteredObjectives
-                                    )
+                                [ if List.isEmpty filteredObjectives then
+                                    div [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6" ]
+                                        [ img [ src "/images/doggo-laying-down.svg", alt (t "community.objectives.empty_dog_alt") ] []
+                                        , p [ class "mt-4 text-black font-bold" ]
+                                            [ text <| t "community.objectives.empty_title"
+                                            ]
+                                        , p [ class "text-center mt-4" ]
+                                            [ text <| t "community.objectives.empty_objectives_line_1"
+                                            , br [] []
+                                            , br [] []
+                                            , text <| t "community.objectives.empty_objectives_line_2"
+                                            ]
+                                        ]
+
+                                  else
+                                    ul [ class "space-y-4 mt-4" ]
+                                        (List.map
+                                            (viewObjective loggedIn.shared.translators model)
+                                            filteredObjectives
+                                        )
                                 , intersectionObserver
                                     { targetSelectors =
                                         filteredObjectives

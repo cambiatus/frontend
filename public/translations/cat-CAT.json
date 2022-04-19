@@ -545,6 +545,8 @@
       "share_action": "Vine a ajudar {{community_name}} a assolir el nostre objectiu a {{objective_description}} completant aquesta acció: \n\t{{action_description}} \n\n{{url}}",
       "empty_dog_alt": "Un gos estirat a terra mirant-te",
       "empty_title": "De moment, només un gos",
+      "empty_objectives_line_1": "Aquesta comunitat encara no té objectius.",
+      "empty_objectives_line_2": "Torna més tard quan tinguem objectius!",
       "empty_line_1": "De moment no hi ha accions vinculades a aquest objectiu.",
       "empty_line_2": "Exploreu altres objectius per poder reclamar accions i guanyar {{symbol}}.",
       "create_success": "Objectiu creat amb èxit",
