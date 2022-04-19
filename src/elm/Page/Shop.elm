@@ -272,7 +272,7 @@ viewEmptyState { t, tr } communitySymbol model =
             , alt ""
             ]
             []
-        , p [ class "font-bold text-black mt-4" ] [ title ]
+        , p [ class "font-bold text-black mt-4 text-center" ] [ title ]
         , p [ class "text-black text-center mt-4" ] description
         , a
             [ class "button button-primary mt-6 md:px-6 w-full md:w-max"
