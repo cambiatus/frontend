@@ -13,7 +13,7 @@ import Community exposing (Balance)
 import Eos
 import Eos.Account
 import Graphql.Http
-import Html exposing (Html, a, div, h1, h2, img, li, p, span, text, ul)
+import Html exposing (Html, a, br, div, h1, h2, img, li, p, span, text, ul)
 import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Http
@@ -25,6 +25,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared as Shared
 import Shop exposing (Filter, Product)
+import Translation
 import UpdateResult as UR
 import View.Components
 
@@ -68,7 +69,7 @@ initModel filter =
 
 type Status
     = Loading
-    | Loaded (List Card)
+    | Loaded Eos.Symbol (List Card)
     | LoadingFailed (Graphql.Http.Error (List Product))
 
 
@@ -157,12 +158,16 @@ view loggedIn model =
                 LoadingFailed e ->
                     Page.fullPageGraphQLError (t "shop.title") e
 
-                Loaded cards ->
+                Loaded symbol cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
                         [ viewFrozenAccountCard
                         , viewHeader loggedIn.shared.translators
                         , viewShopFilter loggedIn model
-                        , viewGrid loggedIn cards
+                        , if List.isEmpty cards then
+                            viewEmptyState loggedIn.shared.translators symbol model
+
+                          else
+                            viewGrid loggedIn cards
                         ]
     in
     { title = title
@@ -235,6 +240,46 @@ viewShopFilter loggedIn model =
 
 
 -- VIEW GRID
+
+
+viewEmptyState : Translation.Translators -> Eos.Symbol -> Model -> Html Msg
+viewEmptyState { t, tr } communitySymbol model =
+    let
+        title =
+            case model.filter of
+                Shop.UserSales ->
+                    text <| t "shop.empty.user_title"
+
+                Shop.All ->
+                    text <| t "shop.empty.all_title"
+
+        description =
+            case model.filter of
+                Shop.UserSales ->
+                    [ text <| tr "shop.empty.you_can_offer" [ ( "symbol", Eos.symbolToSymbolCodeString communitySymbol ) ]
+                    ]
+
+                Shop.All ->
+                    [ text <| t "shop.empty.no_one_is_selling"
+                    , br [] []
+                    , br [] []
+                    , text <| t "shop.empty.offer_something"
+                    ]
+    in
+    div [ class "flex flex-col items-center justify-center my-10" ]
+        [ img
+            [ src "/images/seller_confused.svg"
+            , alt ""
+            ]
+            []
+        , p [ class "font-bold text-black mt-4" ] [ title ]
+        , p [ class "text-black text-center mt-4" ] description
+        , a
+            [ class "button button-primary mt-6 md:px-6 w-full md:w-max"
+            , Route.href Route.NewSale
+            ]
+            [ text <| t "shop.empty.create_new" ]
+        ]
 
 
 viewGrid : LoggedIn.Model -> List Card -> Html Msg
@@ -347,7 +392,7 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedSalesLoad (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    = CompletedSalesLoad Eos.Symbol (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
@@ -356,10 +401,10 @@ type Msg
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        CompletedSalesLoad (RemoteData.Success sales) ->
-            UR.init { model | cards = Loaded (List.map cardFromSale sales) }
+        CompletedSalesLoad symbol (RemoteData.Success sales) ->
+            UR.init { model | cards = Loaded symbol (List.map cardFromSale sales) }
 
-        CompletedSalesLoad (RemoteData.Failure err) ->
+        CompletedSalesLoad _ (RemoteData.Failure err) ->
             UR.init { model | cards = LoadingFailed err }
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -368,7 +413,7 @@ update msg model loggedIn =
                     []
                     err
 
-        CompletedSalesLoad _ ->
+        CompletedSalesLoad _ _ ->
             UR.init model
 
         CompletedLoadCommunity community ->
@@ -376,7 +421,7 @@ update msg model loggedIn =
                 |> UR.addExt
                     (LoggedIn.query loggedIn
                         (Shop.productsQuery model.filter loggedIn.accountName community.symbol)
-                        CompletedSalesLoad
+                        (CompletedSalesLoad community.symbol)
                     )
 
         CompletedLoadBalances res ->
@@ -408,7 +453,7 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedSalesLoad r ->
+        CompletedSalesLoad _ r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
 
         CompletedLoadCommunity _ ->

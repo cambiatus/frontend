@@ -785,6 +785,14 @@
     "no_image": "ምስል የለም",
     "subtract_unit": "አሃድ ቀንስ",
     "add_unit": "ክፍል ጨምር",
+    "empty": {
+      "all_title": "ቅናሾቹ የት አሉ?",
+      "user_title": "በዚህ ማህበረሰብ ውስጥ ምንም ቅናሾች የሉዎትም",
+      "you_can_offer": "{{symbol}} ለማግኘት ምርቶችን፣ ዲጂታል ግብዓቶችን እና አገልግሎቶችን ማቅረብ ይችላሉ።",
+      "no_one_is_selling": "ማንም ሰው በዚህ ማህበረሰብ ውስጥ ምርቶችን ወይም አገልግሎቶችን አይሸጥም።",
+      "offer_something": "ለምን አንድ ነገር አታቀርብም?",
+      "create_new": "አዲስ ቅናሽ ፍጠር"
+    },
     "transfer": {
       "units_label": "መጠኑን ይምረጡ",
       "price": "ዋጋ ({{symbol}})",
