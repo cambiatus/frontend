@@ -4,7 +4,9 @@ export default () => (
   class MasonryLayout extends HTMLElement {
     connectedCallback () {
       this.resizeItems = () => {
-        this.childNodes.forEach((item) => this.resizeItem(item))
+        for (const child of this.children) {
+          this.resizeItem(child)
+        }
       }
 
       if (this.getAttribute('elm-transition-with-parent') === 'true') {
