@@ -193,7 +193,10 @@ view loggedIn model =
                         _ ->
                             defaultCoverPhoto
                     , div [ class "container mx-auto px-4 py-10" ]
-                        [ div [ class "grid lg:grid-cols-3 gap-6" ]
+                        [ div
+                            [ class "grid lg:grid-cols-3 gap-6"
+                            , classList [ ( "lg:grid-cols-6", not (showSupportersCard community) && not (showNewsCard community) ) ]
+                            ]
                             [ viewCommunityCard loggedIn.shared community
                             , if showSupportersCard community then
                                 viewSupportersCard loggedIn.shared.translators community
@@ -297,7 +300,7 @@ viewCommunityCard : Shared -> Community.Model -> Html Msg
 viewCommunityCard ({ translators } as shared) community =
     div
         [ classList
-            [ ( "lg:col-start-2", not (showSupportersCard community) && not (showNewsCard community) )
+            [ ( "lg:col-start-2 lg:col-span-4", not (showSupportersCard community) && not (showNewsCard community) )
             , ( "lg:col-span-2"
               , xor (not <| showSupportersCard community)
                     (not <| showNewsCard community)
