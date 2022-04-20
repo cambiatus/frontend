@@ -1154,7 +1154,7 @@ viewObjective translators model objective =
                             , alt (translators.t "community.objectives.empty_dog_alt")
                             ]
                             []
-                        , p [ class "mt-4 text-black font-bold" ]
+                        , p [ class "mt-4 text-black font-bold text-center" ]
                             [ text <| translators.t "community.objectives.empty_title" ]
                         , p [ class "text-center mt-4" ]
                             [ text <| translators.t "community.objectives.empty_line_1"
