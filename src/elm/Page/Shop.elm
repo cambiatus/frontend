@@ -160,15 +160,25 @@ view loggedIn model =
 
                 Loaded symbol cards ->
                     div [ class "container mx-auto px-4 mt-6" ]
-                        [ viewFrozenAccountCard
-                        , viewHeader loggedIn.shared.translators
-                        , viewShopFilter loggedIn model
-                        , if List.isEmpty cards then
-                            viewEmptyState loggedIn.shared.translators symbol model
+                        (if List.isEmpty cards && model.filter == Shop.All then
+                            [ viewFrozenAccountCard
+                            , viewEmptyState loggedIn.shared.translators symbol model
+                            ]
 
-                          else
-                            viewGrid loggedIn cards
-                        ]
+                         else if List.isEmpty cards && model.filter == Shop.UserSales then
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            , viewEmptyState loggedIn.shared.translators symbol model
+                            ]
+
+                         else
+                            [ viewFrozenAccountCard
+                            , viewHeader loggedIn.shared.translators
+                            , viewShopFilter loggedIn model
+                            , viewGrid loggedIn cards
+                            ]
+                        )
     in
     { title = title
     , content =
