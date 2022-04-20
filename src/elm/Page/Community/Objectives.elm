@@ -1440,7 +1440,7 @@ viewClaimModal ({ translators } as shared) model =
                                     [ text <| t "community.actions.proof.title" ]
                                 , case action.photoProofInstructions of
                                     Just instructions ->
-                                        Markdown.view [ class "text-center" ] instructions
+                                        Markdown.view [] instructions
 
                                     Nothing ->
                                         p [] [ text <| t "community.actions.proof.upload_hint" ]
