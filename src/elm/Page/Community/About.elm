@@ -1,6 +1,7 @@
 module Page.Community.About exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Avatar
+import Browser.Dom
 import Community
 import Community.News
 import Eos
@@ -23,6 +24,7 @@ import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
+import Task
 import Token
 import Translation
 import UpdateResult as UR
@@ -48,6 +50,7 @@ init loggedIn =
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.UploadsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
         |> UR.addExt (LoggedIn.RequestedCommunityField Community.NewsField)
+        |> UR.addCmd (Browser.Dom.setViewport 0 0 |> Task.attempt (\_ -> NoOp))
 
 
 

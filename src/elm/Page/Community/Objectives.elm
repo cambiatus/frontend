@@ -116,6 +116,7 @@ init selectedObjective _ =
         , claimingStatus = NotClaiming
         }
         |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
+        |> UR.addCmd (Browser.Dom.setViewport 0 0 |> Task.attempt (\_ -> NoOp))
 
 
 
