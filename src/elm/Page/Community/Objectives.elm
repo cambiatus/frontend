@@ -1343,16 +1343,18 @@ viewClaimModal ({ translators } as shared) model =
                             , class "w-8 mr-2"
                             ]
                             []
-                        , text <| t "community.objectives.claim_count"
-                        , text " "
-                        , span [ class "text-base ml-1 font-bold" ]
-                            [ if action.claimCount == 1 then
-                                text <| t "community.objectives.claim_count_times_singular"
+                        , p []
+                            [ text <| t "community.objectives.claim_count"
+                            , text " "
+                            , span [ class "text-base ml-1 font-bold" ]
+                                [ if action.claimCount == 1 then
+                                    text <| t "community.objectives.claim_count_times_singular"
 
-                              else
-                                text <|
-                                    tr "community.objectives.claim_count_times"
-                                        [ ( "count", String.fromInt action.claimCount ) ]
+                                  else
+                                    text <|
+                                        tr "community.objectives.claim_count_times"
+                                            [ ( "count", String.fromInt action.claimCount ) ]
+                                ]
                             ]
                         ]
             in
