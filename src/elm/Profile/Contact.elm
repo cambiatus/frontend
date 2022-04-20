@@ -8,6 +8,7 @@ module Profile.Contact exposing
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
+    , getLabel
     , initMultiple
     , initSingle
     , selectionSet
@@ -786,6 +787,16 @@ circularIconWithGrayBg translators class_ (Normalized normalized) =
         , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
         [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
+
+
+getLabel : Translators -> Normalized -> String
+getLabel translators (Normalized normalized) =
+    case normalized.label of
+        Nothing ->
+            contactTypeToString translators normalized.contactType
+
+        Just label ->
+            label
 
 
 ariaLabelForContactType : Translators -> ContactType -> String

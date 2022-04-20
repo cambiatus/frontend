@@ -385,12 +385,17 @@ viewCommunityCard ({ translators } as shared) community =
                             |> text
                         ]
             , Markdown.view [ class "mt-6" ] community.description
-            , ul [ class "flex flex-wrap mt-8 gap-x-6 gap-y-4 items-center justify-center" ]
+            , ul [ class "flex flex-wrap mt-8 gap-6 items-center justify-center" ]
                 (community.contacts
                     |> List.map
                         (\contact ->
-                            li [ class "w-10 h-10" ]
-                                [ Contact.circularIconWithGrayBg translators "" contact
+                            li [ class "flex flex-col items-center" ]
+                                [ div [ class "w-10 h-10" ]
+                                    [ Contact.circularIconWithGrayBg translators "" contact
+                                    ]
+                                , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold" ]
+                                    [ text <| Contact.getLabel translators contact
+                                    ]
                                 ]
                         )
                 )
