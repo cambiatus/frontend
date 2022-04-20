@@ -1253,7 +1253,7 @@ viewAction ({ t } as translators) model objective index action =
                     , ariaHidden True
                     ]
                     [ text (String.fromInt (index + 1)), text "." ]
-                , div [ class "ml-5 mt-1 min-w-0" ]
+                , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                     [ h4
                         [ class "line-clamp-3"
                         , title (Markdown.toRawString action.description)
@@ -1268,27 +1268,33 @@ viewAction ({ t } as translators) model objective index action =
                                     , symbol = action.objective.community.symbol
                                     }
                         ]
-                    , span
-                        [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
-                        , ariaHidden True
-                        ]
-                        [ text <| t "community.objectives.reward" ]
-                    , div
-                        [ class "mt-1 text-green font-bold"
-                        , ariaHidden True
-                        ]
-                        [ span [ class "text-2xl mr-1" ]
-                            [ text
-                                (Eos.formatSymbolAmount
-                                    translators
-                                    action.objective.community.symbol
-                                    action.reward
-                                )
+                    , div [ class "w-full flex justify-between items-center" ]
+                        [ div []
+                            [ span
+                                [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
+                                , ariaHidden True
+                                ]
+                                [ text <| t "community.objectives.reward" ]
+                            , div
+                                [ class "mt-1 text-green font-bold"
+                                , ariaHidden True
+                                ]
+                                [ span [ class "text-2xl mr-1" ]
+                                    [ text
+                                        (Eos.formatSymbolAmount
+                                            translators
+                                            action.objective.community.symbol
+                                            action.reward
+                                        )
+                                    ]
+                                , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                                ]
                             ]
-                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
+                        , viewClaimCount translators [ class "hidden md:flex lg:hidden ml-auto" ] action
                         ]
                     ]
                 ]
+            , viewClaimCount translators [ class "md:hidden lg:flex" ] action
             , div
                 [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
                 , classList [ ( "sm:grid-cols-1", not (Action.isClaimable action) ) ]
@@ -1329,34 +1335,8 @@ viewClaimModal ({ translators } as shared) model =
 
         Claiming { position, action, proof } ->
             let
-                { t, tr } =
+                { t } =
                     translators
-
-                viewClaimCount attrs =
-                    div
-                        (class "mt-4 p-2 bg-gray-100 flex items-center justify-center text-gray-900 font-semibold text-sm rounded-sm"
-                            :: attrs
-                        )
-                        [ img
-                            [ src "/images/doggo_holding_coins.svg"
-                            , alt ""
-                            , class "w-8 mr-2"
-                            ]
-                            []
-                        , p []
-                            [ text <| t "community.objectives.claim_count"
-                            , text " "
-                            , span [ class "text-base ml-1 font-bold" ]
-                                [ if action.claimCount == 1 then
-                                    text <| t "community.objectives.claim_count_times_singular"
-
-                                  else
-                                    text <|
-                                        tr "community.objectives.claim_count_times"
-                                            [ ( "count", String.fromInt action.claimCount ) ]
-                                ]
-                            ]
-                        ]
             in
             View.Modal.initWith
                 { closeMsg = ClickedCloseClaimModal
@@ -1399,11 +1379,11 @@ viewClaimModal ({ translators } as shared) model =
                                         , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
                                         ]
                                     ]
-                                , viewClaimCount [ class "hidden md:flex md:self-end md:mr-8" ]
+                                , viewClaimCount translators [ class "hidden md:flex md:self-end md:mr-8" ] action
                                 ]
                             ]
                         ]
-                    , viewClaimCount [ class "md:hidden" ]
+                    , viewClaimCount translators [ class "md:hidden" ] action
                     , case proof of
                         WithProof formModel proofCode ->
                             let
@@ -1520,6 +1500,34 @@ viewClaimModal ({ translators } as shared) model =
                     ]
                 |> View.Modal.withSize View.Modal.Large
                 |> View.Modal.toHtml
+
+
+viewClaimCount : Translation.Translators -> List (Html.Attribute msg) -> Action -> Html msg
+viewClaimCount { t, tr } attrs action =
+    div
+        (class "mt-4 p-2 bg-gray-100 flex items-center justify-center text-gray-900 font-semibold text-sm rounded-sm"
+            :: attrs
+        )
+        [ img
+            [ src "/images/doggo_holding_coins.svg"
+            , alt ""
+            , class "w-8 mr-2"
+            ]
+            []
+        , p []
+            [ text <| t "community.objectives.claim_count"
+            , text " "
+            , span [ class "text-base ml-1 font-bold" ]
+                [ if action.claimCount == 1 then
+                    text <| t "community.objectives.claim_count_times_singular"
+
+                  else
+                    text <|
+                        tr "community.objectives.claim_count_times"
+                            [ ( "count", String.fromInt action.claimCount ) ]
+                ]
+            ]
+        ]
 
 
 claimWithPhotoForm : Translation.Translators -> Form.Form msg Form.File.Model String
