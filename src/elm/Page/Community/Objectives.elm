@@ -971,7 +971,7 @@ view loggedIn model =
                                     [ text <| t "community.objectives.error_loading" ]
                                 ]
                     , div [ class "bg-white rounded p-4 pb-6 relative mt-18 lg:w-2/3 lg:mx-auto" ]
-                        [ p [] [ text <| t "community.objectives.visit_community_page" ]
+                        [ p [ class "text-center mt-2" ] [ text <| t "community.objectives.visit_community_page" ]
                         , a
                             [ Route.href Route.CommunityAbout
                             , class "button button-secondary w-full mt-4"
