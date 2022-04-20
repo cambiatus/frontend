@@ -1115,14 +1115,7 @@ viewObjective translators model objective =
                     ]
                 ]
             , div
-                [ class "duration-300 ease-in-out origin-top lg:!h-full motion-reduce:transition-none"
-                , classList
-                    [ ( "lg:scale-0", not isOpen )
-                    , ( "lg:scale-1", isOpen )
-                    , ( "transition-all", Maybe.Extra.isJust visibleActionHeight )
-                    , ( "transition-transform", Maybe.Extra.isNothing visibleActionHeight )
-                    ]
-                , case visibleActionHeight of
+                [ case visibleActionHeight of
                     Nothing ->
                         case previousVisibleActionHeight of
                             Nothing ->
@@ -1130,65 +1123,75 @@ viewObjective translators model objective =
 
                             Just height ->
                                 style "height"
-                                    ("calc(" ++ String.fromInt (ceiling height) ++ "px + 24px)")
+                                    ("calc(" ++ String.fromInt (ceiling height) ++ "px + 32px)")
 
                     Just height ->
                         style "height"
                             (max (ceiling height)
                                 (ceiling <| Maybe.withDefault 0 previousVisibleActionHeight)
                                 |> String.fromInt
-                                |> (\heightString -> "calc(" ++ heightString ++ "px + 24px")
+                                |> (\heightString -> "calc(" ++ heightString ++ "px + 32px")
                             )
-                , Html.Events.on "transitionend" (Decode.succeed (FinishedOpeningActions objective))
+                , class "overflow-y-hidden duration-300 ease-in-out origin-top motion-reduce:transition-none"
+                , classList [ ( "transition-all", Maybe.Extra.isJust visibleActionHeight ) ]
                 ]
-                [ if not isOpen then
-                    text ""
-
-                  else if List.isEmpty filteredActions then
-                    div
-                        [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6 animate-fade-in-from-above"
-                        , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
-                        , Html.Events.on "animationcancel" (Decode.succeed (FinishedOpeningActions objective))
+                [ div
+                    [ class "duration-300 ease-in-out origin-top lg:!h-full motion-reduce:transition-none"
+                    , classList
+                        [ ( "lg:scale-0", not isOpen )
+                        , ( "lg:scale-1", isOpen )
+                        , ( "transition-transform", Maybe.Extra.isNothing visibleActionHeight )
                         ]
-                        [ img
-                            [ src "/images/doggo-laying-down.svg"
-                            , alt (translators.t "community.objectives.empty_dog_alt")
-                            ]
-                            []
-                        , p [ class "mt-4 text-black font-bold text-center" ]
-                            [ text <| translators.t "community.objectives.empty_title" ]
-                        , p [ class "text-center mt-4" ]
-                            [ text <| translators.t "community.objectives.empty_line_1"
-                            , br [] []
-                            , br [] []
-                            , text <| translators.tr "community.objectives.empty_line_2" [ ( "symbol", Eos.symbolToSymbolCodeString objective.community.symbol ) ]
-                            ]
-                        ]
+                    ]
+                    [ if not isOpen then
+                        text ""
 
-                  else
-                    View.Components.masonryLayout
-                        [ View.Components.Lg, View.Components.Xl ]
-                        { transitionWithParent =
-                            case model.highlightedAction of
-                                Nothing ->
-                                    True
-
-                                Just { objectiveId } ->
-                                    objectiveId /= objective.id
-                        }
-                        [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x snap-proximity scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4"
-                        , classList
-                            [ ( "lg:grid-cols-1 lg:w-1/2 lg:mx-auto xl:w-1/3", List.length filteredActions == 1 )
-                            , ( "lg:grid-cols-2 xl:grid-cols-2 xl:w-2/3 xl:mx-auto", List.length filteredActions == 2 )
-                            , ( "lg:grid-cols-2 xl:grid-cols-3", List.length filteredActions > 2 )
+                      else if List.isEmpty filteredActions then
+                        div
+                            [ class "lg:w-1/2 xl:w-1/3 lg:mx-auto flex flex-col items-center pt-4 pb-6 animate-fade-in-from-above"
+                            , Html.Events.on "animationend" (Decode.succeed (FinishedOpeningActions objective))
+                            , Html.Events.on "animationcancel" (Decode.succeed (FinishedOpeningActions objective))
                             ]
-                        , id (objectiveContainerId objective)
-                        , role "list"
-                        ]
-                        (List.indexedMap
-                            (viewAction translators model objective)
-                            filteredActions
-                        )
+                            [ img
+                                [ src "/images/doggo-laying-down.svg"
+                                , alt (translators.t "community.objectives.empty_dog_alt")
+                                ]
+                                []
+                            , p [ class "mt-4 text-black font-bold text-center" ]
+                                [ text <| translators.t "community.objectives.empty_title" ]
+                            , p [ class "text-center mt-4" ]
+                                [ text <| translators.t "community.objectives.empty_line_1"
+                                , br [] []
+                                , br [] []
+                                , text <| translators.tr "community.objectives.empty_line_2" [ ( "symbol", Eos.symbolToSymbolCodeString objective.community.symbol ) ]
+                                ]
+                            ]
+
+                      else
+                        View.Components.masonryLayout
+                            [ View.Components.Lg, View.Components.Xl ]
+                            { transitionWithParent =
+                                case model.highlightedAction of
+                                    Nothing ->
+                                        True
+
+                                    Just { objectiveId } ->
+                                        objectiveId /= objective.id
+                            }
+                            [ class "mt-4 mb-2 flex h-full overflow-y-hidden overflow-x-scroll snap-x scrollbar-hidden gap-4 transition-all lg:gap-x-6 lg:overflow-visible lg:-mb-4"
+                            , classList
+                                [ ( "lg:grid-cols-1 lg:w-1/2 lg:mx-auto xl:w-1/3", List.length filteredActions == 1 )
+                                , ( "lg:grid-cols-2 xl:grid-cols-2 xl:w-2/3 xl:mx-auto", List.length filteredActions == 2 )
+                                , ( "lg:grid-cols-2 xl:grid-cols-3", List.length filteredActions > 2 )
+                                ]
+                            , id (objectiveContainerId objective)
+                            , role "list"
+                            ]
+                            (List.indexedMap
+                                (viewAction translators model objective)
+                                filteredActions
+                            )
+                    ]
                 ]
             , div [ class "flex justify-center gap-2 lg:hidden" ]
                 (filteredActions
