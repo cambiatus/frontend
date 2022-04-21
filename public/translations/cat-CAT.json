@@ -853,6 +853,14 @@
     "no_image": "Cap imatge",
     "subtract_unit": "Resta una unitat",
     "add_unit": "Afegir una unitat",
+    "empty": {
+      "all_title": "On són les ofertes?",
+      "user_title": "No tienes ninguna oferta en esta comunidad",
+      "you_can_offer": "Pots oferir productes, recursos digitals i serveis per guanyar {{symbol}}.",
+      "no_one_is_selling": "Ningú ven productes o serveis en aquesta comunitat.",
+      "offer_something": "Per què no ofereixes res?",
+      "create_new": "Crear una nova oferta"
+    },
     "transfer": {
       "units_label": "Trieu la quantitat",
       "price": "Preu ({{symbol}})",

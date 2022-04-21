@@ -850,6 +850,14 @@
     "no_image": "No image",
     "subtract_unit": "Subtract a unit",
     "add_unit": "Add a unit",
+    "empty": {
+      "all_title": "Where are all the offers?",
+      "user_title": "You don't have any offers in this community",
+      "you_can_offer": "You can offer products, digital assets and services to earn {{symbol}}.",
+      "no_one_is_selling": "No one is selling products or services in this community.",
+      "offer_something": "Why don't you offer something?",
+      "create_new": "Create new offer"
+    },
     "transfer": {
       "units_label": "Pick the amount",
       "price": "Price ({{symbol}})",
