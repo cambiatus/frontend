@@ -173,10 +173,22 @@ viewDetails ({ shared } as loggedIn) transfer profileSummaries direction =
                 [ class "pb-6 border-b border-gray-500" ]
             , viewDetail [ class "mt-6" ]
                 (t "transfer_result.date")
-                (View.Components.dateViewer []
-                    identity
-                    shared
-                    (Utils.fromDateTime transfer.blockTime)
+                (p []
+                    [ View.Components.dateViewer []
+                        identity
+                        shared
+                        (Utils.fromDateTime transfer.blockTime)
+                    , View.Components.dateViewer []
+                        (\translations ->
+                            { translations
+                                | today = Just ", {{date}}"
+                                , yesterday = Just ", {{date}}"
+                                , other = ""
+                            }
+                        )
+                        shared
+                        (Utils.fromDateTime transfer.blockTime)
+                    ]
                 )
             , case transfer.memo of
                 Nothing ->
