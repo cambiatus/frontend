@@ -8,6 +8,8 @@ module Action exposing
     , Msg(..)
     , Objective
     , Proof(..)
+    , encodeClaimAction
+    , isClaimable
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -32,6 +34,7 @@ import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Form
 import Form.File
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
 import Html.Attributes exposing (class, classList, disabled, type_)
@@ -91,6 +94,7 @@ type alias ProofCode =
 type alias Action =
     { id : Int
     , description : Markdown
+    , image : Maybe String
     , objective : Objective
     , reward : Float
     , verifierReward : Float
@@ -106,6 +110,7 @@ type alias Action =
     , hasProofCode : Bool
     , photoProofInstructions : Maybe Markdown
     , position : Maybe Int
+    , claimCount : Int
     }
 
 
@@ -152,7 +157,18 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
             List.all (\permission -> List.member permission permissions)
                 necessaryPermissions
 
-        claimOrAskForPin actionId photoUrl code time m =
+        claimOrAskForPin :
+            { actionId : Int
+            , proof :
+                Maybe
+                    { photo : String
+                    , code : String
+                    , time : Time.Posix
+                    }
+            }
+            -> Model
+            -> UR.UpdateResult Model Msg ExternalMsg
+        claimOrAskForPin { actionId, proof } m =
             if isPinConfirmed then
                 m
                     |> UR.init
@@ -162,10 +178,8 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                             shared.contracts.community
                             { communityId = selectedCommunity
                             , actionId = actionId
-                            , maker = accName
-                            , proofPhoto = photoUrl
-                            , proofCode = code
-                            , proofTime = time
+                            , claimer = accName
+                            , proof = proof
                             }
                         )
 
@@ -187,7 +201,10 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                     , feedback = Nothing
                     , needsPinConfirmation = not isPinConfirmed
                 }
-                    |> claimOrAskForPin action.id "" "" 0
+                    |> claimOrAskForPin
+                        { actionId = action.id
+                        , proof = Nothing
+                        }
 
             else
                 { model | status = NotAsked }
@@ -196,13 +213,13 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
 
         ( ActionClaimed action (Just proofRecord), _ ) ->
             let
-                ( proofCode, time ) =
+                ( code, time ) =
                     case proofRecord.proof of
                         Proof _ (Just { code_, claimTimestamp }) ->
-                            ( Maybe.withDefault "" code_, claimTimestamp )
+                            ( Maybe.withDefault "" code_, Time.millisToPosix <| claimTimestamp * 1000 )
 
                         Proof _ Nothing ->
-                            ( "", 0 )
+                            ( "", Time.millisToPosix 0 )
             in
             if hasPermissions [ Permission.Claim ] then
                 case proofRecord.image of
@@ -212,7 +229,15 @@ update isPinConfirmed permissions shared selectedCommunity accName msg model =
                             , feedback = Nothing
                             , needsPinConfirmation = not isPinConfirmed
                         }
-                            |> claimOrAskForPin action.id image proofCode time
+                            |> claimOrAskForPin
+                                { actionId = action.id
+                                , proof =
+                                    Just
+                                        { photo = image
+                                        , code = code
+                                        , time = time
+                                        }
+                                }
 
                     Nothing ->
                         { model
@@ -449,6 +474,7 @@ selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
         |> with (Markdown.selectionSet ActionObject.description)
+        |> with ActionObject.image
         |> with
             (SelectionSet.map
                 (\o ->
@@ -474,6 +500,7 @@ selectionSet =
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
         |> with (Markdown.maybeSelectionSet ActionObject.photoProofInstructions)
         |> with ActionObject.position
+        |> with (ActionObject.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
 
 
 
@@ -773,7 +800,7 @@ claimActionPort msg contractsCommunity action =
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = action.maker
+                    { actor = action.claimer
                     , permissionName = Eos.samplePermission
                     }
               , data = encodeClaimAction action
@@ -785,22 +812,36 @@ claimActionPort msg contractsCommunity action =
 type alias ClaimedAction =
     { communityId : Symbol
     , actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
+    , claimer : Eos.Name
+    , proof :
+        Maybe
+            { photo : String
+            , code : String
+            , time : Time.Posix
+            }
     }
 
 
 encodeClaimAction : ClaimedAction -> Encode.Value
 encodeClaimAction c =
+    let
+        encodeProofItem getter default encoder =
+            c.proof
+                |> Maybe.map getter
+                |> Maybe.withDefault default
+                |> encoder
+    in
     Encode.object
         [ ( "community_id", Eos.encodeSymbol c.communityId )
         , ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
+        , ( "maker", Eos.encodeName c.claimer )
+        , ( "proof_photo", encodeProofItem .photo "" Encode.string )
+        , ( "proof_code", encodeProofItem .code "" Encode.string )
+        , ( "proof_time"
+          , encodeProofItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
+                0
+                Encode.int
+          )
         ]
 
 
@@ -898,6 +939,11 @@ isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
+
+
+isClaimable : Action -> Bool
+isClaimable action =
+    action.verificationType == VerificationType.Claimable
 
 
 

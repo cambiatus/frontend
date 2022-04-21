@@ -1,7 +1,9 @@
 module Route exposing
     ( NewsEditorKind(..)
     , Route(..)
+    , SelectedObjective(..)
     , addEnvironmentToUrl
+    , addRouteToUrl
     , externalHref
     , fromUrl
     , href
@@ -30,6 +32,11 @@ type NewsEditorKind
     | CopyNews Int
 
 
+type SelectedObjective
+    = WithObjectiveSelected { id : Int, action : Maybe Int }
+    | WithNoObjectiveSelected
+
+
 type Route
     = Root
     | ComingSoon
@@ -45,7 +52,8 @@ type Route
     | Profile Eos.Account.Name
     | ProfileContributions Eos.Account.Name
     | Dashboard
-    | Community
+    | CommunityAbout
+    | CommunityObjectives SelectedObjective
     | NewCommunity
     | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
@@ -57,15 +65,15 @@ type Route
     | CommunitySettingsSponsorship
     | CommunitySettingsSponsorshipFiat
     | CommunitySettingsSponsorshipThankYouMessage
+    | CommunitySettingsObjectives
+    | CommunitySettingsNewObjective
+    | CommunitySettingsEditObjective Int
+    | CommunitySettingsNewAction Int
+    | CommunitySettingsEditAction Int Int
     | CommunitySelector (Maybe Route)
     | CommunityThankYou
     | CommunitySponsor
     | CommunitySupporters
-    | Objectives
-    | NewObjective
-    | EditObjective Int
-    | NewAction Int
-    | EditAction Int Int
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
@@ -127,7 +135,26 @@ parser url =
                 <?> Query.map (\showOthers -> showOthers /= Just "false")
                         (Query.string "showOthers")
             )
-        , Url.map Community (s "community")
+        , Url.map CommunityAbout (s "community" </> s "about")
+        , Url.map (CommunityObjectives WithNoObjectiveSelected)
+            (s "community"
+                </> s "objectives"
+            )
+        , Url.map (\objectiveId -> CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Nothing }))
+            (s "community"
+                </> s "objectives"
+                </> int
+            )
+        , Url.map
+            (\objectiveId actionId ->
+                CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Just actionId })
+            )
+            (s "community"
+                </> s "objectives"
+                </> int
+                </> s "action"
+                </> int
+            )
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
@@ -139,6 +166,7 @@ parser url =
         , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
         , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
         , Url.map CommunitySettingsSponsorshipThankYouMessage (s "community" </> s "settings" </> s "sponsorship" </> s "thank-you")
+        , Url.map CommunitySettingsObjectives (s "community" </> s "settings" </> s "objectives")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -149,11 +177,10 @@ parser url =
         , Url.map CommunityThankYou (s "community" </> s "thank-you")
         , Url.map CommunitySponsor (s "community" </> s "sponsor")
         , Url.map CommunitySupporters (s "community" </> s "supporters")
-        , Url.map Objectives (s "community" </> s "objectives")
-        , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
-        , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
-        , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map CommunitySettingsNewObjective (s "community" </> s "settings" </> s "objectives" </> s "new")
+        , Url.map CommunitySettingsEditObjective (s "community" </> s "settings" </> s "objectives" </> int </> s "edit")
+        , Url.map CommunitySettingsNewAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map CommunitySettingsEditAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -249,6 +276,33 @@ addEnvironmentToUrl environment url =
                     ".cambiatus.io"
     in
     { url | host = url.host ++ environmentString }
+
+
+addRouteToUrl :
+    { shared | url : Url.Url }
+    -> Route
+    -> Url.Url
+addRouteToUrl shared route =
+    let
+        protocol =
+            case shared.url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        port_ =
+            case shared.url.port_ of
+                Nothing ->
+                    ""
+
+                Just p ->
+                    ":" ++ String.fromInt p
+    in
+    (protocol ++ shared.url.host ++ port_ ++ routeToString route)
+        |> Url.fromString
+        |> Maybe.withDefault shared.url
 
 
 
@@ -430,8 +484,25 @@ routeToString route =
                 Dashboard ->
                     ( [ "dashboard" ], [] )
 
-                Community ->
-                    ( [ "community" ], [] )
+                CommunityAbout ->
+                    ( [ "community", "about" ], [] )
+
+                CommunityObjectives selectedObjective ->
+                    let
+                        params =
+                            case selectedObjective of
+                                WithNoObjectiveSelected ->
+                                    []
+
+                                WithObjectiveSelected { id, action } ->
+                                    case action of
+                                        Nothing ->
+                                            [ String.fromInt id ]
+
+                                        Just actionId ->
+                                            [ String.fromInt id, "action", String.fromInt actionId ]
+                    in
+                    ( "community" :: "objectives" :: params, [] )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )
@@ -497,22 +568,22 @@ routeToString route =
                                 queryBuilder boolToString (Just showOthers) "showOthers"
                             )
 
-                Objectives ->
-                    ( [ "community", "objectives" ], [] )
+                CommunitySettingsObjectives ->
+                    ( [ "community", "settings", "objectives" ], [] )
 
-                NewObjective ->
-                    ( [ "community", "objectives", "new" ], [] )
+                CommunitySettingsNewObjective ->
+                    ( [ "community", "settings", "objectives", "new" ], [] )
 
-                EditObjective objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
+                CommunitySettingsEditObjective objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "edit" ], [] )
 
-                NewAction objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", "new" ]
+                CommunitySettingsNewAction objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", "new" ]
                     , []
                     )
 
-                EditAction objectiveId actionId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
+                CommunitySettingsEditAction objectiveId actionId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 

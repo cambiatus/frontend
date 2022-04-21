@@ -60,7 +60,7 @@ export default (app, config, addBreadcrumb) => (
           }
           this.appendChild(node)
         }
-      }, 1000 * 3)
+      }, 1000 * 5)
 
       pdfjsLib.getDocument(url).promise.then((pdf) => {
         pdf.getPage(1).then((page) => {

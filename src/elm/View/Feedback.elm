@@ -2,6 +2,7 @@ module View.Feedback exposing (Model(..), Msg, Status(..), update, view)
 
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes exposing (class)
+import Html.Attributes.Aria exposing (role)
 import Html.Events exposing (onClick)
 import Icons
 
@@ -42,6 +43,7 @@ view model =
             in
             div
                 [ class ("w-full sticky top-0 text-white py-2 grid grid-cols-10 z-40 " ++ bgColor)
+                , role "alert"
                 ]
                 [ span
                     [ class "text-center text-white font-bold col-start-2 col-end-10" ]

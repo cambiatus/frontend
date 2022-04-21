@@ -304,6 +304,7 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
+    canShare: Boolean(navigator.share),
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
     pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
@@ -854,7 +855,23 @@ async function handleJavascriptPort (arg) {
       return { uint64name: eos.modules.format.encodeName(arg.data.accountName, false) }
     }
     case 'scrollIntoView': {
-      document.getElementById(arg.data.id).scrollIntoView(true)
+      // We might be creating the element and scrolling to it at the same time.
+      // If we don't use setTimeout, we might try to scroll to the element before it's created, which produces a runtime error
+      setTimeout(() => {
+        document.getElementById(arg.data.id).scrollIntoView(true)
+      }, 0)
+
+      return {}
+    }
+    case 'smoothHorizontalScroll': {
+      const { containerId, targetId } = arg.data
+
+      const targetLeft = document.getElementById(targetId).getBoundingClientRect().left
+      const container = document.getElementById(containerId)
+      container.scrollTo({
+        left: container.scrollLeft + targetLeft,
+        behavior: 'smooth'
+      })
 
       return {}
     }
@@ -1242,8 +1259,14 @@ async function handleJavascriptPort (arg) {
       return { isSubscription: true }
     }
     case 'copyToClipboard': {
-      document.querySelector('#' + arg.data.id).select()
-      document.execCommand('copy')
+      // We might need to want to change the dom before copying contents of the input
+      await new Promise(function (resolve) {
+        window.setTimeout(() => {
+          document.querySelector('#' + arg.data.id).select()
+          document.execCommand('copy')
+          resolve()
+        }, 0)
+      })
 
       return { copied: true }
     }
@@ -1343,6 +1366,16 @@ async function handleJavascriptPort (arg) {
         })
 
         return { notSupported: true }
+      }
+    }
+    case 'share': {
+      const { title, text, url } = arg.data
+
+      try {
+        await navigator.share({ title, text, url })
+        return {}
+      } catch (err) {
+        return { error: err }
       }
     }
     case 'setFavicon': {

@@ -1,8 +1,8 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
-    , dialogBubble
+    , dialogBubble, masonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -16,7 +16,7 @@ state or configuration, such as loading indicators and containers
 
 # Containers
 
-@docs dialogBubble
+@docs dialogBubble, masonryLayout, Breakpoint
 
 
 ## Helper types
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver
 
 -}
 
@@ -89,6 +89,48 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
         , optionalAttr "elm-scroll-selector" scrollSelector
         ]
         elements
+
+
+type Breakpoint
+    = Lg
+    | Xl
+
+
+{-| Create a masonry layout, similar to Pinterest. This uses CSS Grid + some JS
+magic. If you're changing `gap-y` or `auto-rows`, test it very well, since the
+accuracy of this component depends on those properties. If you want vertical
+gutters, give each child element a `mb-*` class and this element a negative bottom margin.
+
+You must provide at least one `Breakpoint` to specify screen sizes this should
+work as a masonry layout.
+
+-}
+masonryLayout :
+    List Breakpoint
+    -> { transitionWithParent : Bool }
+    -> List (Html.Attribute msg)
+    -> List (Html msg)
+    -> Html msg
+masonryLayout breakpoints { transitionWithParent } attrs children =
+    let
+        classesForBreakpoint breakpoint =
+            case breakpoint of
+                Lg ->
+                    -- Tailwind might purge if we do something with List.map instead of explicitly writing these
+                    "lg:gap-y-0 lg:grid lg:auto-rows-[1px]"
+
+                Xl ->
+                    "xl:gap-y-0 xl:grid xl:auto-rows-[1px]"
+    in
+    node "masonry-layout"
+        ((List.map classesForBreakpoint breakpoints
+            |> String.join " "
+            |> class
+         )
+            :: attribute "elm-transition-with-parent" (boolToString transitionWithParent)
+            :: attrs
+        )
+        children
 
 
 
@@ -433,8 +475,57 @@ focusTrap { firstFocusContainer } attrs children =
         children
 
 
+{-| A wrapper around the intersection observer API. Note that targetSelector is
+a `String` that works with the `querySelector` API, so if you want to get an element
+by id you need to use `#` as a prefix.
+-}
+intersectionObserver :
+    { targetSelectors : List String
+    , threshold : Float
+    , breakpointToExclude : Breakpoint
+    , onStartedIntersecting : Maybe (String -> msg)
+    , onStoppedIntersecting : Maybe (String -> msg)
+    }
+    -> Html msg
+intersectionObserver options =
+    let
+        optionalEvent eventName maybeToMsg =
+            case maybeToMsg of
+                Nothing ->
+                    class ""
+
+                Just toMsg ->
+                    on eventName (decodeTargetId toMsg)
+
+        decodeTargetId toMsg =
+            Json.Decode.at [ "detail", "targetId" ] Json.Decode.string
+                |> Json.Decode.map toMsg
+    in
+    node "intersection-observer"
+        [ attribute "elm-target" (String.join " " options.targetSelectors)
+        , attribute "elm-threshold" (String.fromFloat options.threshold)
+        , attribute "elm-max-width" (String.fromInt <| breakpointToPixels options.breakpointToExclude)
+        , optionalEvent "started-intersecting" options.onStartedIntersecting
+        , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
+        ]
+        []
+
+
 
 -- INTERNALS
+
+
+{-| Convert a breakpoint to it's minimum width value in pixels. Should be in sync
+with our tailwind config
+-}
+breakpointToPixels : Breakpoint -> Int
+breakpointToPixels breakpoint =
+    case breakpoint of
+        Lg ->
+            1024
+
+        Xl ->
+            1280
 
 
 boolToString : Bool -> String

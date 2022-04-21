@@ -1,4 +1,4 @@
-module Page.Community.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
+module Page.Community.Settings.ObjectiveEditor exposing (Model, Msg, initEdit, initNew, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
 import Action
 import Cambiatus.Mutation as Mutation
@@ -242,7 +242,7 @@ viewCompletionCelebrationModal { t } model =
                     ]
                 , a
                     [ class "button button-primary w-full mt-8 flex-shrink-0"
-                    , Route.href Route.Objectives
+                    , Route.href Route.CommunitySettingsObjectives
                     ]
                     [ text <| t "community.objectives.editor.celebration.return" ]
                 ]
@@ -493,7 +493,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Closed auth modal, but isn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         ClickedCompleteObjective ->
@@ -513,7 +513,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Requested to complete objective, but isn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         DeniedCompleteObjective ->
@@ -528,7 +528,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Denied to complete objective, but isn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         AcceptedCompleteObjective ->
@@ -568,7 +568,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Accepted to complete objective, but isn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         GotCompleteActionResponse (Ok _) ->
@@ -581,7 +581,7 @@ update msg model loggedIn =
                                 |> UR.logImpossible msg
                                     "Finished completing an action successfully, but there were none left"
                                     (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     []
 
                         { action } :: left ->
@@ -612,7 +612,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Completed an action, but isn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         GotCompleteActionResponse (Err _) ->
@@ -625,7 +625,7 @@ update msg model loggedIn =
                                 |> UR.logImpossible msg
                                     "Finished completing an action with an error, but there were none left"
                                     (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     []
 
                         { tries, action } :: left ->
@@ -660,7 +660,7 @@ update msg model loggedIn =
                                         { username = Just loggedIn.accountName
                                         , message = "Error when trying to complete action with objective"
                                         , tags = []
-                                        , location = { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                        , location = { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                         , contexts =
                                             [ { name = "Details"
                                               , extras =
@@ -716,7 +716,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Completed an action without being authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         GotCompleteObjectiveResponse (RemoteData.Success _) ->
@@ -738,7 +738,7 @@ update msg model loggedIn =
                                 |> UR.logImpossible msg
                                     "Completed objective, but was just creating an objective"
                                     (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     []
 
                 _ ->
@@ -747,7 +747,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Completed objective, but was not authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         GotCompleteObjectiveResponse (RemoteData.Failure err) ->
@@ -767,7 +767,7 @@ update msg model loggedIn =
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
                     "Got an error when completing objective"
-                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                     []
                     err
 
@@ -849,7 +849,7 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Tried saving objective without having the community loaded or without being authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         GotSaveObjectiveResponse (Ok _) ->
@@ -857,7 +857,7 @@ update msg model loggedIn =
                 |> UR.addExt (ShowFeedback Feedback.Success (t "community.objectives.create_success"))
                 -- TODO - This only works sometimes
                 |> UR.addExt (LoggedIn.RequestedReloadCommunityField Community.ObjectivesField)
-                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey Route.Community)
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey (Route.CommunityObjectives Route.WithNoObjectiveSelected))
 
         GotSaveObjectiveResponse (Err v) ->
             let
@@ -874,7 +874,7 @@ update msg model loggedIn =
                                 |> UR.logJsonValue msg
                                     (Just loggedIn.accountName)
                                     "Got an error when creating an objective"
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     []
                                     v
 
@@ -889,7 +889,7 @@ update msg model loggedIn =
                                 |> UR.logJsonValue msg
                                     (Just loggedIn.accountName)
                                     "Got an error when updating an objective"
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     [ { name = "Objective"
                                       , extras = Dict.fromList [ ( "ID", Encode.int objective.id ) ]
                                       }
@@ -902,7 +902,7 @@ update msg model loggedIn =
                                 |> UR.logImpossible msg
                                     "Saved objective without being authorized"
                                     (Just loggedIn.accountName)
-                                    { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                                    { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                                     []
             in
             newModel
@@ -923,13 +923,13 @@ update msg model loggedIn =
                         |> UR.logImpossible msg
                             "Tried updating objective editor form, but wasn't authorized"
                             (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.ObjectiveEditor", function = "update" }
+                            { moduleName = "Page.Community.Settings.ObjectiveEditor", function = "update" }
                             []
 
         ClosedCelebrateObjectiveModal ->
             model
                 |> UR.init
-                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Objectives)
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunitySettingsObjectives)
 
 
 

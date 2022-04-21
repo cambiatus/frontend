@@ -32,7 +32,7 @@ import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (class, classList, disabled, id, src, style, tabindex)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -762,7 +762,7 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
                     (\attrs ->
                         View.Components.disablableLink
                             { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
-                            (Route.href Route.Community :: attrs)
+                            (Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected) :: attrs)
                     )
                     []
                 , listItem Icons.profile
@@ -809,10 +809,18 @@ viewWelcomeCard ({ shared } as loggedIn) community balance =
 
                     _ ->
                         text ""
+                , listItem Icons.globe
+                    False
+                    "w-5 h-5"
+                    (t "dashboard.about_community")
+                    a
+                    [ Route.href Route.CommunityAbout
+                    ]
                 ]
             ]
         , img
             [ class "absolute -top-2 md:top-0 right-2 md:right-4"
+            , alt ""
             , src "/images/success-doggo.svg"
             ]
             []

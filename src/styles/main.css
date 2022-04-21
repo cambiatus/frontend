@@ -440,6 +440,33 @@ https://tailwindcss.com/docs/adding-new-utilities */
   .inline-children > * {
     @apply inline;
   }
+
+  /* Scroll snap utilities are available on tw v3, but not on v2 */
+  .snap-center {
+    scroll-snap-align: center;
+  }
+
+  .snap-always {
+    scroll-snap-stop: always;
+  }
+
+  .snap-x {
+    scroll-snap-type: x mandatory;
+  }
+
+  .scrollbar-hidden {
+    /* Hide scrollbar in mozilla based browsers */
+    overflow: -moz-scrollbars-none;
+    scrollbar-width: none;
+
+    /* Hide scrollbar in IE */
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    width: 0 !important;
+    display: none;
+  }
 }
 
 /* End of extra utilities */

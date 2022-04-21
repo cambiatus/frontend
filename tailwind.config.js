@@ -57,6 +57,7 @@ module.exports = {
     // The first item in each list is the font size, and the second item is the
     // default line height for that font size
     fontSize: {
+      xxs: ['0.5rem', '0.9375rem'], // ['8px', '15px']
       xs: ['0.6875rem', '0.75rem'], // ['11px', '12px']
       sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
       base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
@@ -135,6 +136,7 @@ module.exports = {
         '-10': '-10'
       },
       maxHeight: {
+        '43': '10.75rem',
         '108': '27rem'
       },
       minHeight: {
@@ -154,7 +156,11 @@ module.exports = {
         '-13': '-3.25rem',
         modal: '10rem'
       },
+      height: {
+        '21': '5.25rem'
+      },
       width: {
+        '21': '5.25rem',
         form: '45.625rem',
         '120': '30rem'
       },
@@ -177,7 +183,7 @@ module.exports = {
           }
         },
         'appear-from-above': {
-          '0%': { opacity: 0, transform: 'translate(0, -5px)' },
+          '0%': { opacity: 0, transform: 'translate(0, -20px)' },
           '100%': { opacity: 1, transform: 'translate(0, 0)' }
         },
         'appear-from-above-lg': {
@@ -205,7 +211,7 @@ module.exports = {
       },
       animation: {
         'fade-in': 'appear 50ms linear 400ms both',
-        'fade-in-from-above': 'appear-from-above 75ms ease-out',
+        'fade-in-from-above': 'appear-from-above 150ms ease-out both',
         'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
         'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate',
         'bounce-in': 'bounce-in-keyframes 150ms ease-out',
