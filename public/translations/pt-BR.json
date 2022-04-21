@@ -768,7 +768,8 @@
         "title": "Lembre-se",
         "once_a_day": "Não reivindique a mesma ação mais de uma vez no mesmo dia;",
         "completed_action": "Reivindique apenas ações que você realmente realizou;",
-        "know_good_practices": "Conheça as boas práticas da Comunidade"
+        "know_the": "Conheça as",
+        "good_practices": "boas práticas da Comunidade"
       }
     },
     "contributions": {

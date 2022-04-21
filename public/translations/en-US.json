@@ -761,7 +761,8 @@
         "title": "Remember",
         "once_a_day": "Don't claim the same action more than once in the same day;",
         "completed_action": "Only claim actions you have actually completed;",
-        "know_good_practices": "Know the Community's good practices"
+        "know_the": "Know the",
+        "good_practices": "Community's good practices"
       }
     },
     "contributions": {

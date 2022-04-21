@@ -7,6 +7,7 @@ module Session.LoggedIn exposing
     , Page(..)
     , Resource(..)
     , addFeedback
+    , codeOfConductUrl
     , executeFeedback
     , hasPermissions
     , init

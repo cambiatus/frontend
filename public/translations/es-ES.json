@@ -764,7 +764,8 @@
         "title": "Recuerda si",
         "once_a_day": "No reclame la misma acción más de una vez en el mismo día;",
         "completed_action": "Reclame solo las acciones que realmente realizó;",
-        "know_good_practices": "Conoce las buenas prácticas de la Comunidad"
+        "know_the": "Conoce las",
+        "good_practices": "buenas prácticas de la Comunidad"
       }
     },
     "contributions": {
