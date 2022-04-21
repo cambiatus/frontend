@@ -831,6 +831,14 @@
     "no_image": "Sem imagem",
     "subtract_unit": "Subtrair uma unidade",
     "add_unit": "Adicionar uma unidade",
+    "empty": {
+      "all_title": "Onde estão as ofertas?",
+      "user_title": "Você não tem nenhuma oferta nessa comunidade",
+      "you_can_offer": "Você pode oferecer produtos, recursos digitais e serviços para ganhar {{symbol}}.",
+      "no_one_is_selling": "Ninguém está vendendo produtos ou serviços nessa comunidade.",
+      "offer_something": "Por que você não oferece algo?",
+      "create_new": "Criar nova oferta"
+    },
     "transfer": {
       "units_label": "Escolha a quantidade",
       "price": "Preço ({{symbol}})",
