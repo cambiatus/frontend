@@ -646,7 +646,7 @@ claimWithProofsForm translators =
 
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
 viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) isLoading action =
-    div [ class "bg-white border-t border-gray-300" ]
+    div [ class "bg-white border-t border-gray-300 flex-grow" ]
         [ div [ class "container p-4 mx-auto" ]
             [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
             , action.photoProofInstructions

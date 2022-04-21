@@ -96,7 +96,7 @@ view loggedIn model =
                         Just transfer ->
                             div [ class "flex-grow flex flex-col" ]
                                 [ Page.viewHeader loggedIn (t "transfer_result.title")
-                                , div [ class "relative flex-grow grid items-center" ]
+                                , div [ class "relative flex-grow flex items-center" ]
                                     [ div [ class "bg-purple-500 absolute top-0 bottom-0 left-0 right-1/2 hidden lg:block" ] []
                                     , div [ class "bg-white absolute top-0 bottom-0 left-1/2 right-0 hidden lg:block" ] []
                                     , div
