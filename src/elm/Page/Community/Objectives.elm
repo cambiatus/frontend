@@ -1272,33 +1272,27 @@ viewAction ({ t } as translators) model objective index action =
                                     , symbol = action.objective.community.symbol
                                     }
                         ]
-                    , div [ class "w-full flex justify-between items-center" ]
-                        [ div []
-                            [ span
-                                [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
-                                , ariaHidden True
-                                ]
-                                [ text <| t "community.objectives.reward" ]
-                            , div
-                                [ class "mt-1 text-green font-bold"
-                                , ariaHidden True
-                                ]
-                                [ span [ class "text-2xl mr-1" ]
-                                    [ text
-                                        (Eos.formatSymbolAmount
-                                            translators
-                                            action.objective.community.symbol
-                                            action.reward
-                                        )
-                                    ]
-                                , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
-                                ]
+                    , span
+                        [ class "font-bold text-sm text-gray-900 uppercase block mt-6"
+                        , ariaHidden True
+                        ]
+                        [ text <| t "community.objectives.reward" ]
+                    , div
+                        [ class "mt-1 text-green font-bold"
+                        , ariaHidden True
+                        ]
+                        [ span [ class "text-2xl mr-1" ]
+                            [ text
+                                (Eos.formatSymbolAmount
+                                    translators
+                                    action.objective.community.symbol
+                                    action.reward
+                                )
                             ]
-                        , viewClaimCount translators [ class "hidden md:flex lg:hidden ml-auto" ] action
+                        , text (Eos.symbolToSymbolCodeString action.objective.community.symbol)
                         ]
                     ]
                 ]
-            , viewClaimCount translators [ class "md:hidden lg:flex" ] action
             , div
                 [ class "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-6"
                 , classList [ ( "sm:grid-cols-1", not (Action.isClaimable action) ) ]
