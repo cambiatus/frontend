@@ -23,7 +23,7 @@ import Form.Select
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, button, div, img, li, text, ul)
+import Html exposing (Html, a, button, div, img, li, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Html.Keyed
@@ -173,7 +173,7 @@ viewHeaderAndOptions ({ shared } as loggedIn) maybeClaims model =
 
 
 viewGoodPracticesCard : Shared -> Html msg
-viewGoodPracticesCard { translators } =
+viewGoodPracticesCard { translators, language } =
     let
         text_ =
             translators.t >> text
@@ -184,7 +184,15 @@ viewGoodPracticesCard { translators } =
         , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
             [ li [ class "pl-1" ] [ text_ "profile.claims.good_practices.once_a_day" ]
             , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.completed_action" ]
-            , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.know_good_practices" ]
+            , li [ class "pl-1" ]
+                [ text_ "profile.claims.good_practices.know_the"
+                , text " "
+                , a
+                    [ class "text-orange-300 hover:underline focus-ring rounded-sm"
+                    , Html.Attributes.href (LoggedIn.codeOfConductUrl language)
+                    ]
+                    [ text_ "profile.claims.good_practices.good_practices" ]
+                ]
             ]
         ]
 

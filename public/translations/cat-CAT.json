@@ -764,7 +764,8 @@
         "title": "Recordeu si",
         "once_a_day": "No reivindiqueu la mateixa acció més d'una vegada al mateix dia;",
         "completed_action": "Reclameu només accions realment realitzades;",
-        "know_good_practices": "Obteniu més informació sobre les bones pràctiques de la Comunitat"
+        "know_the": "Obteniu més informació sobre les",
+        "good_practices": "bones pràctiques de la Comunitat"
       }
     },
     "contributions": {
