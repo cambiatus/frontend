@@ -285,7 +285,11 @@ viewPageHeader model shared =
 
 
 type External
-    = LoggedIn Eos.PrivateKey Api.Graphql.SignInResponse
+    = LoggedIn
+        { pin : String
+        , privateKey : Eos.PrivateKey
+        , signInResponse : Api.Graphql.SignInResponse
+        }
     | SetFeedback Feedback.Model
     | UpdatedShared Shared
 

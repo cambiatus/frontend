@@ -51,8 +51,8 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Bool -> Maybe Eos.PrivateKey -> ( Model, Cmd Msg )
-init pinVisibility maybePrivateKey_ =
+init : Maybe String -> Bool -> Maybe Eos.PrivateKey -> ( Model, Cmd Msg )
+init lastKnownPin pinVisibility maybePrivateKey_ =
     let
         status =
             case maybePrivateKey_ of
@@ -63,7 +63,7 @@ init pinVisibility maybePrivateKey_ =
                     WithPrivateKey privateKey
 
         ( pinModel, pinCmd ) =
-            initPinModel pinVisibility status
+            initPinModel lastKnownPin pinVisibility status
     in
     ( { status = status
       , error = Nothing
@@ -84,8 +84,8 @@ type alias Model =
     }
 
 
-initPinModel : Bool -> Status -> ( Pin.Model, Cmd Msg )
-initPinModel pinVisibility status =
+initPinModel : Maybe String -> Bool -> Status -> ( Pin.Model, Cmd Msg )
+initPinModel lastKnownPin pinVisibility status =
     let
         ( pinModel, pinCmd ) =
             Pin.init
@@ -95,6 +95,7 @@ initPinModel pinVisibility status =
                 , submitLabel = "auth.login.continue"
                 , submittingLabel = "auth.login.continue"
                 , pinVisibility = pinVisibility
+                , lastKnownPin = lastKnownPin
                 }
     in
     ( pinModel

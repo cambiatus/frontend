@@ -78,6 +78,7 @@ initPinModel pinVisibility passphrase =
                 , submitLabel = "auth.login.submit"
                 , submittingLabel = "auth.login.submitting"
                 , pinVisibility = pinVisibility
+                , lastKnownPin = Nothing
                 }
     in
     ( { status = InputtingPin
@@ -633,7 +634,14 @@ updateWithPin msg model ({ shared } as guest) =
                             , ( "pin", Encode.string pin )
                             ]
                     }
-                |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
+                |> UR.addExt
+                    (Guest.LoggedIn
+                        { pin = pin
+                        , privateKey = privateKey
+                        , signInResponse = signInResponse
+                        }
+                        |> PinGuestExternal
+                    )
 
         GotSignInResult _ _ (RemoteData.Failure err) ->
             UR.init model

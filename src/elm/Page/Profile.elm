@@ -112,6 +112,7 @@ init loggedIn profileName =
                 , submitLabel = "profile.pin.button"
                 , submittingLabel = "profile.pin.button"
                 , pinVisibility = loggedIn.shared.pinVisibility
+                , lastKnownPin = loggedIn.auth.pinModel.lastKnownPin
                 }
 
         model =

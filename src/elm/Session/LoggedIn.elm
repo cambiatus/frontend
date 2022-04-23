@@ -93,7 +93,7 @@ init : Shared -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg extern
 init shared accountName authToken =
     let
         ( model, cmd ) =
-            initModel shared Nothing accountName authToken
+            initModel shared Nothing Nothing accountName authToken
     in
     ( model
     , Cmd.batch
@@ -170,8 +170,8 @@ sendPreferredLanguage model language =
 
 {-| Initialize logged in user after signing-in.
 -}
-initLogin : Shared -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
-initLogin shared maybePrivateKey_ profile_ authToken =
+initLogin : Shared -> String -> Maybe Eos.PrivateKey -> Profile.Model -> Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
+initLogin shared pin maybePrivateKey_ profile_ authToken =
     let
         loadedProfile =
             Just profile_
@@ -180,7 +180,7 @@ initLogin shared maybePrivateKey_ profile_ authToken =
                 |> Task.perform CompletedLoadProfile
 
         ( model, cmd ) =
-            initModel shared maybePrivateKey_ profile_.account (Just authToken)
+            initModel shared (Just pin) maybePrivateKey_ profile_.account (Just authToken)
     in
     ( model
     , Cmd.batch
@@ -259,11 +259,11 @@ type CodeOfConductModalStatus
     | CodeOfConductShownWithWarning { hasCompletedAnimation : Bool }
 
 
-initModel : Shared -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
-initModel shared maybePrivateKey_ accountName authToken =
+initModel : Shared -> Maybe String -> Maybe Eos.PrivateKey -> Eos.Name -> Maybe Api.Graphql.Token -> ( Model, Cmd (Msg externalMsg) )
+initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
     let
         ( authModel, authCmd ) =
-            Auth.init shared.pinVisibility maybePrivateKey_
+            Auth.init lastKnownPin shared.pinVisibility maybePrivateKey_
     in
     ( { shared = shared
       , updateTimeEvery = 60 * 1000

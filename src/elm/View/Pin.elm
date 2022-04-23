@@ -79,18 +79,19 @@ type alias RequiredOptions =
     , submitLabel : String
     , submittingLabel : String
     , pinVisibility : Bool
+    , lastKnownPin : Maybe String
     }
 
 
 {-| Initializes a `Model` with some initial `RequiredOptions`
 -}
 init : RequiredOptions -> ( Model, Cmd Msg )
-init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility } =
+init { label, id, withConfirmation, submitLabel, submittingLabel, pinVisibility, lastKnownPin } =
     ( { label = label
       , disabled = False
       , id = id
       , form = Form.init { pin = "", confirmation = "" }
-      , lastKnownPin = Nothing
+      , lastKnownPin = lastKnownPin
       , problems = []
       , needsConfirmation = withConfirmation
       , isPinVisible = pinVisibility
