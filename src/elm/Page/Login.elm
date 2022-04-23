@@ -26,7 +26,6 @@ In order to get an auth token from the backend, we use asymmetric cryptography:
 
 import Api.Graphql
 import Browser.Dom as Dom
-import Dict
 import Eos.Account as Eos
 import Form
 import Form.Text
@@ -79,6 +78,7 @@ initPinModel pinVisibility passphrase =
                 , submitLabel = "auth.login.submit"
                 , submittingLabel = "auth.login.submitting"
                 , pinVisibility = pinVisibility
+                , lastKnownPin = Nothing
                 }
     in
     ( { status = InputtingPin
@@ -337,7 +337,7 @@ type ClipboardResponse
     = Denied
     | NotSupported
     | WithContent String
-    | WithError String
+    | WithError
 
 
 type PassphraseExternalMsg
@@ -480,7 +480,7 @@ updateWithPassphrase msg model { shared } =
                     , level = Log.Warning
                     }
 
-        GotClipboardResponse (WithError error) ->
+        GotClipboardResponse WithError ->
             { model | hasPasted = False }
                 |> UR.init
                 |> UR.addExt
@@ -488,19 +488,6 @@ updateWithPassphrase msg model { shared } =
                         |> Guest.SetFeedback
                         |> PassphraseGuestExternal
                     )
-                |> UR.logEvent
-                    { username = Nothing
-                    , message = "Got error when pasting from clipboard"
-                    , tags = [ Log.TypeTag Log.UnknownError ]
-                    , location = { moduleName = "Page.Login", function = "updateWithPassphrase" }
-                    , contexts =
-                        [ { name = "Error"
-                          , extras = Dict.fromList [ ( "message", Encode.string error ) ]
-                          }
-                        ]
-                    , transaction = msg
-                    , level = Log.Warning
-                    }
 
         GotClipboardResponse (WithContent content) ->
             { model
@@ -647,7 +634,14 @@ updateWithPin msg model ({ shared } as guest) =
                             , ( "pin", Encode.string pin )
                             ]
                     }
-                |> UR.addExt (Guest.LoggedIn privateKey signInResponse |> PinGuestExternal)
+                |> UR.addExt
+                    (Guest.LoggedIn
+                        { pin = pin
+                        , privateKey = privateKey
+                        , signInResponse = signInResponse
+                        }
+                        |> PinGuestExternal
+                    )
 
         GotSignInResult _ _ (RemoteData.Failure err) ->
             UR.init model
@@ -744,7 +738,7 @@ jsAddressToMsg addr val =
                     , Decode.field "clipboardContent" Decode.string
                         |> Decode.map WithContent
                     , Decode.field "error" Decode.string
-                        |> Decode.map WithError
+                        |> Decode.map (\_ -> WithError)
                     ]
                     |> Decode.map (GotPassphraseMsg << GotClipboardResponse)
                 )

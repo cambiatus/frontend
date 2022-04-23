@@ -112,6 +112,7 @@ init loggedIn profileName =
                 , submitLabel = "profile.pin.button"
                 , submittingLabel = "profile.pin.button"
                 , pinVisibility = loggedIn.shared.pinVisibility
+                , lastKnownPin = loggedIn.auth.pinModel.lastKnownPin
                 }
 
         model =
@@ -542,7 +543,7 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.Extra.orElse model.pinInputModel.lastKnownPin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
                         |> Maybe.withDefault ""
             in
             { model | downloadingPdfStatus = Downloading }

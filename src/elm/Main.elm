@@ -782,8 +782,11 @@ updateGuestUResult toStatus toMsg model uResult =
 
                 Page.Guest guest ->
                     case commExtMsg of
-                        Guest.LoggedIn privateKey { profile, token } ->
+                        Guest.LoggedIn { pin, privateKey, signInResponse } ->
                             let
+                                { profile, token } =
+                                    signInResponse
+
                                 shared =
                                     guest.shared
 
@@ -811,7 +814,7 @@ updateGuestUResult toStatus toMsg model uResult =
                                     }
 
                                 ( session, cmd ) =
-                                    LoggedIn.initLogin shared (Just privateKey) userWithCommunity token
+                                    LoggedIn.initLogin shared pin (Just privateKey) userWithCommunity token
 
                                 redirectRoute =
                                     case guest.afterLoginRedirect of
