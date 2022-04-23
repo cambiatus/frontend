@@ -271,14 +271,25 @@ async function readClipboardWithPermission () {
     const clipboardContent = await navigator.clipboard.readText()
     return { clipboardContent }
   } catch (err) {
-    logEvent({
-      user: null,
-      message: 'Error when reading clipboard',
-      tags: { 'cambiatus.kind': 'clipboard' },
-      contexts: [{ name: 'Error details', extras: { error: err } }],
-      transaction: 'readClipboardWithPermission',
-      level: 'error'
-    })
+    if (err.name && err.name === 'NotAllowedError') {
+      addBreadcrumb({
+        type: 'info',
+        category: 'readClipboardWithPermission',
+        message: 'User denied permission to read clipboard',
+        data: { error: err },
+        localData: {},
+        level: 'info'
+      })
+    } else {
+      logEvent({
+        user: null,
+        message: 'Error when reading clipboard',
+        tags: { 'cambiatus.kind': 'clipboard' },
+        contexts: [{ name: 'Error details', extras: { error: err } }],
+        transaction: 'readClipboardWithPermission',
+        level: 'error'
+      })
+    }
 
     return { error: err.message }
   }
