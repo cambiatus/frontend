@@ -542,7 +542,7 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.Extra.orElse model.pinInputModel.lastKnownPin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
                         |> Maybe.withDefault ""
             in
             { model | downloadingPdfStatus = Downloading }
