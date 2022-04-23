@@ -261,7 +261,10 @@ function getUserLanguage () {
 }
 
 function canReadClipboard () {
-  return !!navigator.clipboard && !!navigator.clipboard.readText
+  return Boolean(navigator.clipboard) &&
+    Boolean(navigator.clipboard.readText) &&
+    Boolean(navigator.permissions) &&
+    Boolean(navigator.permissions.query)
 }
 
 /** Assumes we already have clipboard permissions */
@@ -1353,7 +1356,7 @@ async function handleJavascriptPort (arg) {
             level: 'info'
           })
 
-          return readClipboardWithPermission()
+          return { notSupported: true }
         }
       } else {
         addBreadcrumb({
