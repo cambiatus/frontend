@@ -86,7 +86,7 @@ cardFromSale p =
     { product = p
     , form = initSaleFrom
     , profileSummary = Profile.Summary.init False
-    , isAvailable = p.units > 0 || not p.trackStock
+    , isAvailable = not (Shop.isOutOfStock p)
     }
 
 

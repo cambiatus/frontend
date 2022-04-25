@@ -311,8 +311,14 @@ initEditingForm product =
         { image = Form.File.initModel product.image
         , title = product.title
         , description = Form.RichText.initModel "description-editor" (Just product.description)
-        , trackUnits = product.trackStock
-        , unitsInStock = String.fromInt product.units
+        , trackUnits = Shop.hasUnitTracking product
+        , unitsInStock =
+            case product.stockTracking of
+                Shop.NoTracking ->
+                    String.fromInt 0
+
+                Shop.UnitTracking { availableUnits } ->
+                    String.fromInt availableUnits
         , price = String.fromFloat product.price
         }
 

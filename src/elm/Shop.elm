@@ -3,7 +3,11 @@ module Shop exposing
     , Product
     , ProductId
     , ProductPreview
+    , StockTracking(..)
     , encodeTransferSale
+    , getAvailableUnits
+    , hasUnitTracking
+    , isOutOfStock
     , productPreviewQuery
     , productQuery
     , productSelectionSet
@@ -37,8 +41,6 @@ type alias Product =
     , price : Float
     , symbol : Symbol
     , image : Maybe String
-    , units : Int
-    , trackStock : Bool
     , stockTracking : StockTracking
     , creator : Profile.Minimal
     }
@@ -108,8 +110,6 @@ productSelectionSet =
             , price = price
             , symbol = symbol
             , image = image
-            , units = 0
-            , trackStock = trackStock
             , stockTracking =
                 if trackStock then
                     case maybeUnits of
@@ -204,3 +204,37 @@ productsQuery filter accName communityId =
                     }
             in
             Query.products identity args productSelectionSet
+
+
+
+-- HELPER FUNCTIONS
+
+
+isOutOfStock : Product -> Bool
+isOutOfStock product =
+    case product.stockTracking of
+        NoTracking ->
+            False
+
+        UnitTracking { availableUnits } ->
+            availableUnits == 0
+
+
+hasUnitTracking : Product -> Bool
+hasUnitTracking product =
+    case product.stockTracking of
+        NoTracking ->
+            False
+
+        UnitTracking _ ->
+            True
+
+
+getAvailableUnits : Product -> Maybe Int
+getAvailableUnits product =
+    case product.stockTracking of
+        NoTracking ->
+            Nothing
+
+        UnitTracking { availableUnits } ->
+            Just availableUnits

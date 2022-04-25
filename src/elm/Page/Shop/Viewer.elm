@@ -367,11 +367,7 @@ updateAsLoggedIn msg model loggedIn =
                         { maxUnits =
                             case model.status of
                                 RemoteData.Success product ->
-                                    if product.trackStock then
-                                        Just product.units
-
-                                    else
-                                        Nothing
+                                    Shop.getAvailableUnits product
 
                                 _ ->
                                     Nothing
@@ -509,8 +505,7 @@ view session model =
                                         ]
                                     )
                                     (createForm guest.shared.translators
-                                        { trackStock = False
-                                        , units = 1
+                                        { stockTracking = Shop.NoTracking
                                         , price = sale.price
                                         , symbol = sale.symbol
                                         }
@@ -575,7 +570,7 @@ view session model =
                                             sale.creator.account == loggedIn.accountName
 
                                         isOutOfStock =
-                                            sale.trackStock && sale.units < 1
+                                            Shop.isOutOfStock sale
 
                                         isDisabled =
                                             isOwner || isOutOfStock
@@ -733,8 +728,7 @@ createForm :
     Shared.Translators
     ->
         { product
-            | trackStock : Bool
-            , units : Int
+            | stockTracking : Shop.StockTracking
             , price : Float
             , symbol : Eos.Symbol
         }
@@ -789,12 +783,13 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
                             >> Form.Validate.int
                             >> Form.Validate.intGreaterThanOrEqualTo 1
                             >> Form.Validate.withCustomError (\translators_ -> translators_.t "shop.transfer.errors.unitTooLow")
-                            >> (if product.trackStock then
-                                    Form.Validate.intLowerThanOrEqualTo product.units
-                                        >> Form.Validate.withCustomError (\translators_ -> translators_.t "shop.transfer.errors.unitTooHigh")
+                            >> (case product.stockTracking of
+                                    Shop.NoTracking ->
+                                        identity
 
-                                else
-                                    identity
+                                    Shop.UnitTracking { availableUnits } ->
+                                        Form.Validate.intLowerThanOrEqualTo availableUnits
+                                            >> Form.Validate.withCustomError (\translators_ -> translators_.t "shop.transfer.errors.unitTooHigh")
                                )
                             >> Form.Validate.validate translators
                     , value = .units

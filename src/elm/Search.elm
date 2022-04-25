@@ -625,7 +625,7 @@ viewOffers translators symbol offers =
                     ]
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
-                    , if offer.units == 0 && offer.trackStock then
+                    , if Shop.isOutOfStock offer then
                         p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]
