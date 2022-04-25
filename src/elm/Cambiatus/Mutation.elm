@@ -225,6 +225,39 @@ preference fillInOptionals object_ =
     Object.selectionForCompositeField "preference" optionalArgs object_ (identity >> Decode.nullable)
 
 
+type alias ProductOptionalArguments =
+    { units : OptionalArgument Int }
+
+
+type alias ProductRequiredArguments =
+    { communityId : String
+    , description : String
+    , images : List String
+    , price : Float
+    , title : String
+    , trackStock : Bool
+    }
+
+
+{-| [Auth required]
+-}
+product :
+    (ProductOptionalArguments -> ProductOptionalArguments)
+    -> ProductRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+product fillInOptionals requiredArgs object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { units = Absent }
+
+        optionalArgs =
+            [ Argument.optional "units" filledInOptionals.units Encode.int ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "product" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "description" requiredArgs.description Encode.string, Argument.required "images" requiredArgs.images (Encode.string |> Encode.list), Argument.required "price" requiredArgs.price Encode.float, Argument.required "title" requiredArgs.title Encode.string, Argument.required "trackStock" requiredArgs.trackStock Encode.bool ]) object_ (identity >> Decode.nullable)
+
+
 type alias ReactToNewsRequiredArguments =
     { newsId : Int
     , reactions : List Cambiatus.Enum.ReactionEnum.ReactionEnum

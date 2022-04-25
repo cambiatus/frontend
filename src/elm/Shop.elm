@@ -6,6 +6,7 @@ module Shop exposing
     , encodeTransferSale
     , productPreviewQuery
     , productQuery
+    , productSelectionSet
     , productsQuery
     )
 
@@ -38,8 +39,14 @@ type alias Product =
     , image : Maybe String
     , units : Int
     , trackStock : Bool
+    , stockTracking : StockTracking
     , creator : Profile.Minimal
     }
+
+
+type StockTracking
+    = NoTracking
+    | UnitTracking { availableUnits : Int }
 
 
 type alias ProductPreview =
@@ -90,9 +97,33 @@ encodeTransferSale t =
 -- PRODUCT GRAPHQL API
 
 
-productSelection : SelectionSet Product Cambiatus.Object.Product
-productSelection =
-    SelectionSet.succeed Product
+productSelectionSet : SelectionSet Product Cambiatus.Object.Product
+productSelectionSet =
+    SelectionSet.succeed
+        (\id title description creatorId price symbol image maybeUnits trackStock creator ->
+            { id = id
+            , title = title
+            , description = description
+            , creatorId = creatorId
+            , price = price
+            , symbol = symbol
+            , image = image
+            , units = 0
+            , trackStock = trackStock
+            , stockTracking =
+                if trackStock then
+                    case maybeUnits of
+                        Nothing ->
+                            NoTracking
+
+                        Just units ->
+                            UnitTracking { availableUnits = units }
+
+                else
+                    NoTracking
+            , creator = creator
+            }
+        )
         |> with Cambiatus.Object.Product.id
         |> with Cambiatus.Object.Product.title
         |> with (Markdown.selectionSet Cambiatus.Object.Product.description)
@@ -146,7 +177,7 @@ productPreviewProfile accountName =
 
 productQuery : Int -> SelectionSet (Maybe Product) RootQuery
 productQuery saleId =
-    Query.product { id = saleId } productSelection
+    Query.product { id = saleId } productSelectionSet
 
 
 productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
@@ -164,7 +195,7 @@ productsQuery filter accName communityId =
                         { filters = Present { account = Eos.nameToString accName, inStock = Absent }
                         }
             in
-            Query.products args { communityId = Eos.symbolToString communityId } productSelection
+            Query.products args { communityId = Eos.symbolToString communityId } productSelectionSet
 
         All ->
             let
@@ -172,4 +203,4 @@ productsQuery filter accName communityId =
                     { communityId = Eos.symbolToString communityId
                     }
             in
-            Query.products identity args productSelection
+            Query.products identity args productSelectionSet

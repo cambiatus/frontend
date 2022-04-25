@@ -78,6 +78,16 @@ image =
     Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
+images : SelectionSet (List String) Cambiatus.Object.Product
+images =
+    Object.selectionForField "(List String)" "images" [] (Decode.string |> Decode.list)
+
+
+insertedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Product
+insertedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "insertedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
+
+
 orders :
     SelectionSet decodesTo Cambiatus.Object.Order
     -> SelectionSet (List decodesTo) Cambiatus.Object.Product
@@ -100,6 +110,11 @@ trackStock =
     Object.selectionForField "Bool" "trackStock" [] Decode.bool
 
 
-units : SelectionSet Int Cambiatus.Object.Product
+units : SelectionSet (Maybe Int) Cambiatus.Object.Product
 units =
-    Object.selectionForField "Int" "units" [] Decode.int
+    Object.selectionForField "(Maybe Int)" "units" [] (Decode.int |> Decode.nullable)
+
+
+updatedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Product
+updatedAt =
+    Object.selectionForField "ScalarCodecs.NaiveDateTime" "updatedAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder)
