@@ -19,7 +19,6 @@ import Action exposing (Action)
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
-import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
 import Eos exposing (Symbol)

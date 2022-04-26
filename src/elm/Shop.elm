@@ -210,7 +210,7 @@ productsQuery filter accName communityId =
 
 
 createProduct :
-    { symbol : Eos.Symbol
+    { symbol : Symbol
     , title : String
     , description : Markdown
     , images : List String
@@ -237,7 +237,7 @@ keep the existing images, you must include them in the `images` field.
 -}
 updateProduct :
     { id : Int
-    , symbol : Eos.Symbol
+    , symbol : Symbol
     , title : String
     , description : Markdown
     , images : List String
@@ -261,7 +261,7 @@ updateProduct options selectionSet =
 
 upsert :
     { id : Maybe Int
-    , symbol : Eos.Symbol
+    , symbol : Symbol
     , title : String
     , description : Markdown
     , images : List String

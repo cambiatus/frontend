@@ -13,7 +13,7 @@ import Api
 import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Object.Product
 import Community exposing (Balance)
-import Eos exposing (Symbol)
+import Eos
 import Eos.Account as Eos
 import Form
 import Form.File
