@@ -727,7 +727,7 @@ viewHeader page ({ shared } as model) profile_ =
                 model.searchModel
                 |> Html.map GotSearchMsg
         , div
-            [ class "flex items-center justify-end space-x-8 my-auto shrink-0"
+            [ class "flex items-center justify-end space-x-8 my-auto flex-shrink-0"
             , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
             ]
             [ a
