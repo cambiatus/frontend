@@ -165,7 +165,8 @@ module.exports = {
         '120': '30rem'
       },
       minWidth: {
-        '30': '7.5rem'
+        '30': '7.5rem',
+        '50': '12.5rem'
       },
       opacity: {
         '10': '0.1',
