@@ -4,6 +4,7 @@ module Shop exposing
     , ProductId
     , ProductPreview
     , StockTracking(..)
+    , createProduct
     , encodeTransferSale
     , getAvailableUnits
     , hasUnitTracking
@@ -12,16 +13,18 @@ module Shop exposing
     , productQuery
     , productSelectionSet
     , productsQuery
+    , updateProduct
     )
 
 import Avatar
+import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Product
 import Cambiatus.Object.ProductPreview
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
@@ -204,6 +207,96 @@ productsQuery filter accName communityId =
                     }
             in
             Query.products identity args productSelectionSet
+
+
+createProduct :
+    { symbol : Eos.Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+createProduct options selectionSet =
+    upsert
+        { id = Nothing
+        , symbol = options.symbol
+        , title = options.title
+        , description = options.description
+        , images = options.images
+        , price = options.price
+        , stockTracking = options.stockTracking
+        }
+        selectionSet
+
+
+{-| Images will be overwritten with whatever is passed in here. If you want to
+keep the existing images, you must include them in the `images` field.
+-}
+updateProduct :
+    { id : Int
+    , symbol : Eos.Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateProduct options selectionSet =
+    upsert
+        { id = Just options.id
+        , symbol = options.symbol
+        , title = options.title
+        , description = options.description
+        , images = options.images
+        , price = options.price
+        , stockTracking = options.stockTracking
+        }
+        selectionSet
+
+
+upsert :
+    { id : Maybe Int
+    , symbol : Eos.Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+upsert { symbol, title, description, images, price, stockTracking } =
+    Mutation.product
+        (\optionals ->
+            { optionals
+                | units =
+                    case stockTracking of
+                        NoTracking ->
+                            Absent
+
+                        UnitTracking { availableUnits } ->
+                            Present availableUnits
+            }
+        )
+        -- TODO - Use id
+        { communityId = Eos.symbolToString symbol
+        , title = title
+        , description = Markdown.toRawString description
+        , images = images
+        , price = price
+        , trackStock =
+            case stockTracking of
+                NoTracking ->
+                    False
+
+                UnitTracking _ ->
+                    True
+        }
 
 
 

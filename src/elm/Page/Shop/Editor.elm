@@ -11,6 +11,7 @@ module Page.Shop.Editor exposing
 
 import Api
 import Cambiatus.Enum.Permission as Permission
+import Cambiatus.Object.Product
 import Community exposing (Balance)
 import Eos exposing (Symbol)
 import Eos.Account as Eos
@@ -21,6 +22,7 @@ import Form.Select
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.SelectionSet
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
@@ -105,14 +107,9 @@ type alias FormOutput =
     { image : Maybe String
     , title : String
     , description : Markdown
-    , unitTracking : UnitTracking
+    , unitTracking : Shop.StockTracking
     , price : Float
     }
-
-
-type UnitTracking
-    = TrackUnits Int
-    | DontTrackUnits
 
 
 createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
@@ -128,10 +125,10 @@ createForm loggedIn =
             , description = description
             , unitTracking =
                 if trackUnits then
-                    TrackUnits unitsInStock
+                    unitsInStock
 
                 else
-                    DontTrackUnits
+                    Shop.NoTracking
             , price = price
             }
         )
@@ -259,6 +256,7 @@ createForm loggedIn =
                                     Form.Validate.succeed
                                         >> Form.Validate.int
                                         >> Form.Validate.intGreaterThanOrEqualTo 0
+                                        >> Form.Validate.map (\units -> Shop.UnitTracking { availableUnits = units })
                                         >> Form.Validate.validate translators
                                 , value = .unitsInStock
                                 , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
@@ -266,7 +264,7 @@ createForm loggedIn =
                                 }
 
                     else
-                        Form.succeed 0
+                        Form.succeed Shop.NoTracking
                 )
             )
 
@@ -507,7 +505,7 @@ type Msg
     | ClickedDelete
     | ClickedDeleteConfirm
     | ClickedDeleteCancel
-    | GotSaveResponse (Result Value String)
+    | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe { id : Int })) (Maybe { id : Int }))
     | GotDeleteResponse (Result Value String)
     | ClosedAuthModal
     | ClickedDecrementStockUnits
@@ -589,41 +587,79 @@ update msg model loggedIn =
             UR.init model
 
         ClickedSave formOutput ->
-            case model of
-                EditingCreate balances form ->
-                    performRequest
-                        (ClickedSave formOutput)
-                        (Creating balances form)
-                        loggedIn
-                        "createsale"
-                        (encodeCreateForm loggedIn formOutput)
-                        |> LoggedIn.withPrivateKey loggedIn
-                            [ Permission.Sell ]
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    case model of
+                        EditingCreate balances form ->
+                            Creating balances form
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.createProduct
+                                            { symbol = community.symbol
+                                            , title = formOutput.title
+                                            , description = formOutput.description
+                                            , images =
+                                                formOutput.image
+                                                    |> Maybe.map List.singleton
+                                                    |> Maybe.withDefault []
+                                            , price = formOutput.price
+                                            , stockTracking = formOutput.unitTracking
+                                            }
+                                            (Cambiatus.Object.Product.id
+                                                |> Graphql.SelectionSet.map (\id -> { id = id })
+                                            )
+                                        )
+                                        GotSaveResponse
+                                    )
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
+                                    model
+                                    { successMsg = msg, errorMsg = ClosedAuthModal }
 
-                EditingUpdate balances sale _ form ->
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            performRequest
-                                (ClickedSave formOutput)
-                                (Saving balances sale form)
-                                loggedIn
-                                "updatesale"
-                                (encodeUpdateForm sale formOutput community.symbol)
+                        EditingUpdate balances sale _ form ->
+                            Saving balances sale form
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.updateProduct
+                                            { id = sale.id
+                                            , symbol = community.symbol
+                                            , title = formOutput.title
+                                            , description = formOutput.description
+                                            , images =
+                                                formOutput.image
+                                                    |> Maybe.map List.singleton
+                                                    |> Maybe.withDefault []
+                                            , price = formOutput.price
+                                            , stockTracking = formOutput.unitTracking
+                                            }
+                                            (Cambiatus.Object.Product.id
+                                                |> Graphql.SelectionSet.map (\id -> { id = id })
+                                            )
+                                        )
+                                        GotSaveResponse
+                                    )
                                 |> LoggedIn.withPrivateKey loggedIn
                                     [ Permission.Sell ]
                                     model
                                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
                         _ ->
-                            UR.init model
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Clicked save shop item, but wasn't editing or creating shop offer"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Shop.Editor", function = "update" }
+                                    []
 
                 _ ->
-                    model
-                        |> UR.init
+                    UR.init model
                         |> UR.logImpossible msg
-                            "Clicked save shop item, but wasn't editing or creating shop offer"
+                            "Clicked save shop item, but community wasn't loaded"
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
@@ -669,13 +705,22 @@ update msg model loggedIn =
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
 
-        GotSaveResponse (Ok _) ->
+        GotSaveResponse (RemoteData.Success maybeId) ->
+            let
+                redirectUrl =
+                    case maybeId of
+                        Nothing ->
+                            Route.Shop Shop.All
+
+                        Just { id } ->
+                            Route.ViewSale id
+            in
             UR.init model
                 |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+                    (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
-        GotSaveResponse (Err error) ->
+        GotSaveResponse (RemoteData.Failure error) ->
             let
                 internalError =
                     loggedIn.shared.translators.t "error.unknown"
@@ -685,7 +730,7 @@ update msg model loggedIn =
                     EditingCreate balances form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
-                        |> UR.logJsonValue msg
+                        |> UR.logGraphqlError msg
                             (Just loggedIn.accountName)
                             "Got an error when creating a shop offer"
                             { moduleName = "Page.Shop.Editor", function = "update" }
@@ -696,7 +741,7 @@ update msg model loggedIn =
                     EditingUpdate balances sale Closed form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
-                        |> UR.logJsonValue msg
+                        |> UR.logGraphqlError msg
                             (Just loggedIn.accountName)
                             "Got an error when editing a shop offer"
                             { moduleName = "Page.Shop.Editor", function = "update" }
@@ -711,6 +756,9 @@ update msg model loggedIn =
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
+
+        GotSaveResponse _ ->
+            UR.init model
 
         GotDeleteResponse (Ok _) ->
             model
@@ -869,127 +917,6 @@ updateForm shared subMsg model =
                     model
 
 
-encodeCreateForm : LoggedIn.Model -> FormOutput -> Value
-encodeCreateForm loggedIn form =
-    let
-        creator =
-            Eos.encodeName loggedIn.accountName
-
-        image =
-            form.image
-                |> Maybe.withDefault ""
-                |> Encode.string
-
-        title =
-            form.title
-                |> Encode.string
-
-        description =
-            form.description
-                |> Markdown.encode
-
-        price =
-            form.price
-
-        quantity =
-            case
-                Maybe.map (\c -> Eos.Asset price c.symbol)
-                    (RemoteData.toMaybe loggedIn.selectedCommunity)
-            of
-                Nothing ->
-                    Encode.string ""
-
-                Just asset ->
-                    Eos.encodeAsset asset
-
-        trackStock =
-            (case form.unitTracking of
-                DontTrackUnits ->
-                    False
-
-                TrackUnits _ ->
-                    True
-            )
-                |> Eos.boolToEosBool
-                |> Eos.encodeEosBool
-
-        units =
-            (case form.unitTracking of
-                DontTrackUnits ->
-                    0
-
-                TrackUnits units_ ->
-                    units_
-            )
-                |> Encode.int
-    in
-    Encode.object
-        [ ( "from", creator )
-        , ( "title", title )
-        , ( "description", description )
-        , ( "quantity", quantity )
-        , ( "image", image )
-        , ( "track_stock", trackStock )
-        , ( "units", units )
-        ]
-
-
-encodeUpdateForm : Product -> FormOutput -> Symbol -> Value
-encodeUpdateForm product form selectedCommunity =
-    let
-        saleId =
-            Encode.int product.id
-
-        image =
-            Maybe.withDefault "" form.image
-                |> Encode.string
-
-        title =
-            form.title
-                |> Encode.string
-
-        description =
-            form.description
-                |> Markdown.encode
-
-        price =
-            form.price
-
-        quantity =
-            Eos.encodeAsset { amount = price, symbol = selectedCommunity }
-
-        trackStock =
-            (case form.unitTracking of
-                DontTrackUnits ->
-                    False
-
-                TrackUnits _ ->
-                    True
-            )
-                |> Eos.boolToEosBool
-                |> Eos.encodeEosBool
-
-        units =
-            (case form.unitTracking of
-                DontTrackUnits ->
-                    0
-
-                TrackUnits units_ ->
-                    units_
-            )
-                |> Encode.int
-    in
-    Encode.object
-        [ ( "sale_id", saleId )
-        , ( "title", title )
-        , ( "description", description )
-        , ( "quantity", quantity )
-        , ( "image", image )
-        , ( "track_stock", trackStock )
-        , ( "units", units )
-        ]
-
-
 encodeDeleteForm : Product -> Value
 encodeDeleteForm product =
     Encode.object
@@ -1000,18 +927,6 @@ encodeDeleteForm product =
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
-        "ClickedSave" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotSaveResponse)
-                |> Result.withDefault Nothing
-
         "ClickedDeleteConfirm" :: [] ->
             Decode.decodeValue
                 (Decode.oneOf
@@ -1050,7 +965,7 @@ msgToString msg =
             [ "ClickedDeleteCancel" ]
 
         GotSaveResponse r ->
-            [ "GotSaveResponse", UR.resultToString r ]
+            [ "GotSaveResponse", UR.remoteDataToString r ]
 
         GotDeleteResponse r ->
             [ "GotDeleteResponse", UR.resultToString r ]
