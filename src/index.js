@@ -119,6 +119,7 @@ const logEvent = (event) => {
       }
       // If the error comes from Elm, this key will be overwritten
       scope.setTag('cambiatus.language', 'javascript')
+      scope.setTag('cambiatus.version', process.env.COMMIT)
       scope.setTags(tags)
       scope.setTransaction(transaction)
       contexts.forEach((context) => {
