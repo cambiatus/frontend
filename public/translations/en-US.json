@@ -1142,6 +1142,10 @@
       "title": "Objectives and Actions",
       "description": ""
     },
+    "contacts": {
+      "title": "Support contacts",
+      "description": "Email, whatsapp, phone number, etc."
+    },
     "team": {
       "title": "Team",
       "description": "Team building"

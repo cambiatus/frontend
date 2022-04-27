@@ -1144,6 +1144,10 @@
       "title": "Objetius i Ações",
       "description": ""
     },
+    "contacts": {
+      "title": "Contactes de suport",
+      "description": "Correu electrònic, whatsapp, número de telèfon, etc."
+    },
     "team": {
       "title": "Temps",
       "description": "Construcció de temps"

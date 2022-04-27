@@ -1145,6 +1145,10 @@
       "title": "Objetivos y acciones",
       "description": ""
     },
+    "contacts": {
+      "title": "Contactos de soporte",
+      "description": "Correo electrónico, whatsapp, número de teléfono, etc."
+    },
     "teams": {
       "title": "Tiempo",
       "description": "Construção de times"

@@ -1103,6 +1103,10 @@
       "title": "ተጠባቂ ዉጤቶች እና ተግባራት",
       "description": ""
     },
+    "contacts": {
+      "title": "የድጋፍ እውቂያዎች",
+      "description": "ኢሜል ፣ WhatsApp ፣ ስልክ ቁጥር ፣ ወዘተ."
+    },
     "team": {
       "title": "ቡድን",
       "description": "ቡድን መመስረት"
