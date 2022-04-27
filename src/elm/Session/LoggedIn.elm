@@ -338,6 +338,7 @@ type Page
     | CommunitySettingsObjectives
     | CommunitySettingsObjectiveEditor
     | CommunitySettingsActionEditor
+    | CommunitySettingsContacts
     | Claim
     | Notification
     | Shop
