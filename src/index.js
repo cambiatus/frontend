@@ -47,6 +47,8 @@ if (env !== 'development') {
       return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
     }
   })
+
+  Sentry.setTag('cambiatus.version', process.env.COMMIT)
 }
 
 /** On production, adds a breadcrumb to sentry. Needs an object like this:
