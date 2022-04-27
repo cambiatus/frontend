@@ -727,7 +727,7 @@ viewHeader page ({ shared } as model) profile_ =
                 model.searchModel
                 |> Html.map GotSearchMsg
         , div
-            [ class "flex items-center justify-end space-x-8 my-auto shrink-0"
+            [ class "flex items-center justify-end space-x-8 my-auto flex-shrink-0"
             , classList [ ( "md:flex-shrink md:w-full", not isSearchOpen ) ]
             ]
             [ a
@@ -752,9 +752,9 @@ viewHeader page ({ shared } as model) profile_ =
 
               else
                 text ""
-            , div [ class "relative z-50" ]
+            , div [ class "relative z-50 lg:min-w-50" ]
                 [ button
-                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
+                    [ class "h-12 z-10 py-2 px-3 relative hidden lg:w-full lg:visible lg:flex lg:items-center lg:bg-white lg:focus-ring lg:focus-visible:ring-orange-300 lg:focus-visible:ring-opacity-50"
                     , classList
                         [ ( "rounded-tr-lg rounded-tl-lg", model.showUserNav )
                         , ( "rounded-lg", not model.showUserNav )
