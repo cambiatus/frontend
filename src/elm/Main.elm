@@ -691,6 +691,10 @@ broadcast broadcastMessage status =
                     CommunitySettingsObjectiveEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsObjectiveEditorMsg
 
+                CommunitySettingsContacts _ ->
+                    CommunitySettingsContacts.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsContactsMsg
+
                 ProfileAddContact _ ->
                     ProfileAddContact.receiveBroadcast broadcastMessage
                         |> Maybe.map GotProfileAddContactMsg
