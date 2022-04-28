@@ -168,6 +168,9 @@ module.exports = {
         '30': '7.5rem',
         '50': '12.5rem'
       },
+      maxWidth: {
+        '27': '6.75rem'
+      },
       opacity: {
         '10': '0.1',
         '60': '0.6'

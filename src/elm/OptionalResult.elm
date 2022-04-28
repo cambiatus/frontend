@@ -1,6 +1,6 @@
 module OptionalResult exposing
     ( OptionalResult(..), fromResult
-    , map, map2, mapError
+    , map, map2, map3, mapError
     )
 
 {-| Combine Result and Maybe into one! You can have an error, a valid (Ok) value,
@@ -9,7 +9,7 @@ functions.
 
 @docs OptionalResult, fromResult
 
-@docs map, map2, mapError
+@docs map, map2, map3, mapError
 
 -}
 
@@ -59,6 +59,32 @@ map2 fn first second =
             OptErr error
 
         ( _, OptErr error ) ->
+            OptErr error
+
+        _ ->
+            OptNothing
+
+
+{-| Apply a function to three `OptOk` values
+-}
+map3 :
+    (a -> b -> c -> d)
+    -> OptionalResult error a
+    -> OptionalResult error b
+    -> OptionalResult error c
+    -> OptionalResult error d
+map3 fn first second third =
+    case ( first, second, third ) of
+        ( OptOk firstOk, OptOk secondOk, OptOk thirdOk ) ->
+            OptOk (fn firstOk secondOk thirdOk)
+
+        ( OptErr error, _, _ ) ->
+            OptErr error
+
+        ( _, OptErr error, _ ) ->
+            OptErr error
+
+        ( _, _, OptErr error ) ->
             OptErr error
 
         _ ->
