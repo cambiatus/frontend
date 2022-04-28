@@ -29,7 +29,7 @@ import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
@@ -306,22 +306,22 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
             { id =
                 case id of
                     Nothing ->
-                        OptionalArgument.Absent
+                        Absent
 
                     Just (Id unwrappedId) ->
-                        OptionalArgument.Present unwrappedId
-            , communityId = OptionalArgument.Present (Eos.symbolToString symbol)
-            , title = OptionalArgument.Present title
-            , description = OptionalArgument.Present (Markdown.toRawString description)
-            , images = OptionalArgument.Present images
-            , price = OptionalArgument.Present price
+                        Present unwrappedId
+            , communityId = Present (Eos.symbolToString symbol)
+            , title = Present title
+            , description = Present (Markdown.toRawString description)
+            , images = Present images
+            , price = Present price
             , trackStock =
                 case stockTracking of
                     NoTracking ->
-                        OptionalArgument.Present False
+                        Present False
 
                     UnitTracking _ ->
-                        OptionalArgument.Present True
+                        Present True
             , units =
                 case stockTracking of
                     NoTracking ->
