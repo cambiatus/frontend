@@ -1,13 +1,17 @@
 module Shop exposing
     ( Filter(..)
+    , Id
     , Product
-    , ProductId
     , ProductPreview
     , StockTracking(..)
     , createProduct
+    , encodeId
     , encodeTransferSale
     , getAvailableUnits
     , hasUnitTracking
+    , idSelectionSet
+    , idToString
+    , idUrlParser
     , isOutOfStock
     , productPreviewQuery
     , productQuery
@@ -30,6 +34,7 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Url.Parser
 
 
 
@@ -37,7 +42,7 @@ import Profile
 
 
 type alias Product =
-    { id : Int
+    { id : Id
     , title : String
     , description : Markdown
     , creatorId : Eos.Name
@@ -49,6 +54,35 @@ type alias Product =
     }
 
 
+
+-- ID
+
+
+type Id
+    = Id Int
+
+
+idToString : Id -> String
+idToString (Id id) =
+    String.fromInt id
+
+
+idUrlParser : Url.Parser.Parser (Id -> a) a
+idUrlParser =
+    Url.Parser.int
+        |> Url.Parser.map Id
+
+
+idSelectionSet : SelectionSet Id Cambiatus.Object.Product
+idSelectionSet =
+    SelectionSet.map Id Cambiatus.Object.Product.id
+
+
+encodeId : Id -> Encode.Value
+encodeId (Id id) =
+    Encode.int id
+
+
 type StockTracking
     = NoTracking
     | UnitTracking { availableUnits : Int }
@@ -58,15 +92,11 @@ type alias ProductPreview =
     { symbol : Symbol
     , creator : Profile.Minimal
     , description : Markdown
-    , id : Int
+    , id : Id
     , image : Maybe String
     , price : Float
     , title : String
     }
-
-
-type alias ProductId =
-    Int
 
 
 type Filter
@@ -79,7 +109,7 @@ type Filter
 
 
 type alias TransferSale =
-    { id : Int
+    { id : Id
     , from : Eos.Name
     , to : Eos.Name
     , quantity : Eos.Asset
@@ -90,7 +120,7 @@ type alias TransferSale =
 encodeTransferSale : TransferSale -> Value
 encodeTransferSale t =
     Encode.object
-        [ ( "sale_id", Encode.int t.id )
+        [ ( "sale_id", encodeId t.id )
         , ( "from", Eos.encodeName t.from )
         , ( "to", Eos.encodeName t.to )
         , ( "quantity", Eos.encodeAsset t.quantity )
@@ -127,7 +157,7 @@ productSelectionSet =
             , creator = creator
             }
         )
-        |> with Cambiatus.Object.Product.id
+        |> with idSelectionSet
         |> with Cambiatus.Object.Product.title
         |> with (Markdown.selectionSet Cambiatus.Object.Product.description)
         |> with (Eos.nameSelectionSet Cambiatus.Object.Product.creatorId)
@@ -148,7 +178,7 @@ productPreviewSelectionSet =
                 |> SelectionSet.map productPreviewProfile
             )
         |> with (Markdown.selectionSet Cambiatus.Object.ProductPreview.description)
-        |> with Cambiatus.Object.ProductPreview.id
+        |> with (SelectionSet.map Id Cambiatus.Object.ProductPreview.id)
         |> with (detectEmptyString Cambiatus.Object.ProductPreview.image)
         |> with Cambiatus.Object.ProductPreview.price
         |> with Cambiatus.Object.ProductPreview.title
@@ -178,13 +208,13 @@ productPreviewProfile accountName =
     }
 
 
-productQuery : Int -> SelectionSet (Maybe Product) RootQuery
-productQuery saleId =
+productQuery : Id -> SelectionSet (Maybe Product) RootQuery
+productQuery (Id saleId) =
     Query.product { id = saleId } productSelectionSet
 
 
-productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
-productPreviewQuery productId =
+productPreviewQuery : Id -> SelectionSet ProductPreview RootQuery
+productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
@@ -236,7 +266,7 @@ createProduct options selectionSet =
 keep the existing images, you must include them in the `images` field.
 -}
 updateProduct :
-    { id : Int
+    { id : Id
     , symbol : Symbol
     , title : String
     , description : Markdown
@@ -260,7 +290,7 @@ updateProduct options selectionSet =
 
 
 upsert :
-    { id : Maybe Int
+    { id : Maybe Id
     , symbol : Symbol
     , title : String
     , description : Markdown
@@ -273,7 +303,13 @@ upsert :
 upsert { id, symbol, title, description, images, price, stockTracking } =
     Mutation.product
         (\_ ->
-            { id = OptionalArgument.fromMaybe id
+            { id =
+                case id of
+                    Nothing ->
+                        OptionalArgument.Absent
+
+                    Just (Id unwrappedId) ->
+                        OptionalArgument.Present unwrappedId
             , communityId = OptionalArgument.Present (Eos.symbolToString symbol)
             , title = OptionalArgument.Present title
             , description = OptionalArgument.Present (Markdown.toRawString description)

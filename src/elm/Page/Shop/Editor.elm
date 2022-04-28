@@ -22,7 +22,6 @@ import Form.Select
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Graphql.SelectionSet
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
@@ -39,7 +38,7 @@ import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
-import Shop exposing (Product, ProductId)
+import Shop exposing (Product)
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -56,7 +55,7 @@ initCreate loggedIn =
     )
 
 
-initUpdate : ProductId -> LoggedIn.Model -> ( Model, Cmd Msg )
+initUpdate : Shop.Id -> LoggedIn.Model -> ( Model, Cmd Msg )
 initUpdate productId loggedIn =
     ( LoadingBalancesUpdate productId
     , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
@@ -78,7 +77,7 @@ type
     | EditingCreate (List Balance) (Form.Model FormInput)
     | Creating (List Balance) (Form.Model FormInput)
       -- Update
-    | LoadingBalancesUpdate ProductId
+    | LoadingBalancesUpdate Shop.Id
     | LoadingSaleUpdate (List Balance)
     | EditingUpdate (List Balance) Product DeleteModalStatus (Form.Model FormInput)
     | Saving (List Balance) Product (Form.Model FormInput)
@@ -505,7 +504,7 @@ type Msg
     | ClickedDelete
     | ClickedDeleteConfirm
     | ClickedDeleteCancel
-    | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe { id : Int })) (Maybe { id : Int }))
+    | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
     | GotDeleteResponse (Result Value String)
     | ClosedAuthModal
     | ClickedDecrementStockUnits
@@ -607,9 +606,7 @@ update msg model loggedIn =
                                             , price = formOutput.price
                                             , stockTracking = formOutput.unitTracking
                                             }
-                                            (Cambiatus.Object.Product.id
-                                                |> Graphql.SelectionSet.map (\id -> { id = id })
-                                            )
+                                            Shop.idSelectionSet
                                         )
                                         GotSaveResponse
                                     )
@@ -636,9 +633,7 @@ update msg model loggedIn =
                                             , price = formOutput.price
                                             , stockTracking = formOutput.unitTracking
                                             }
-                                            (Cambiatus.Object.Product.id
-                                                |> Graphql.SelectionSet.map (\id -> { id = id })
-                                            )
+                                            Shop.idSelectionSet
                                         )
                                         GotSaveResponse
                                     )
@@ -712,7 +707,7 @@ update msg model loggedIn =
                         Nothing ->
                             Route.Shop Shop.All
 
-                        Just { id } ->
+                        Just id ->
                             Route.ViewSale id
             in
             UR.init model
@@ -919,9 +914,7 @@ updateForm shared subMsg model =
 
 encodeDeleteForm : Product -> Value
 encodeDeleteForm product =
-    Encode.object
-        [ ( "sale_id", Encode.int product.id )
-        ]
+    Encode.object [ ( "sale_id", Shop.encodeId product.id ) ]
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg

@@ -52,7 +52,7 @@ import View.Feedback as Feedback
 -- INIT
 
 
-init : Session -> Int -> UpdateResult
+init : Session -> Shop.Id -> UpdateResult
 init session saleId =
     case session of
         Page.LoggedIn ({ shared, accountName } as loggedIn) ->
@@ -109,7 +109,7 @@ type Model
 
 
 type alias GuestModel =
-    { saleId : Int
+    { saleId : Shop.Id
     , productPreview : RemoteData (Graphql.Http.Error ProductPreview) ProductPreview
     , form : Form.Model FormInput
     }
