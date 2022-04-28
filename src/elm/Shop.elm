@@ -5,7 +5,7 @@ module Shop exposing
     , ProductPreview
     , StockTracking(..)
     , createProduct
-    , encodeId
+    , deleteProduct
     , encodeTransferSale
     , getAvailableUnits
     , hasUnitTracking
@@ -78,7 +78,7 @@ idSelectionSet =
     SelectionSet.map Id Cambiatus.Object.Product.id
 
 
-encodeId : Id -> Encode.Value
+encodeId : Id -> Value
 encodeId (Id id) =
     Encode.int id
 
@@ -331,6 +331,14 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
                         Present availableUnits
             }
         )
+
+
+deleteProduct :
+    Id
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+deleteProduct (Id id) =
+    Mutation.deleteProduct { id = id }
 
 
 

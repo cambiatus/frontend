@@ -3,7 +3,6 @@ module Page.Shop.Editor exposing
     , Msg(..)
     , initCreate
     , initUpdate
-    , jsAddressToMsg
     , msgToString
     , update
     , view
@@ -11,10 +10,7 @@ module Page.Shop.Editor exposing
 
 import Api
 import Cambiatus.Enum.Permission as Permission
-import Cambiatus.Object.Product
 import Community exposing (Balance)
-import Eos
-import Eos.Account as Eos
 import Form
 import Form.File
 import Form.RichText
@@ -22,14 +18,13 @@ import Form.Select
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.SelectionSet
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
 import Log
 import Markdown exposing (Markdown)
 import Page
@@ -505,7 +500,7 @@ type Msg
     | ClickedDeleteConfirm
     | ClickedDeleteCancel
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
-    | GotDeleteResponse (Result Value String)
+    | GotDeleteResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | ClosedAuthModal
     | ClickedDecrementStockUnits
     | ClickedIncrementStockUnits
@@ -680,12 +675,13 @@ update msg model loggedIn =
         ClickedDeleteConfirm ->
             case model of
                 EditingUpdate balances sale _ form ->
-                    performRequest
-                        ClickedDeleteConfirm
-                        (Deleting balances sale form)
-                        loggedIn
-                        "deletesale"
-                        (encodeDeleteForm sale)
+                    Deleting balances sale form
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Shop.deleteProduct sale.id (Graphql.SelectionSet.succeed ()))
+                                GotDeleteResponse
+                            )
                         |> LoggedIn.withPrivateKey loggedIn
                             []
                             model
@@ -755,14 +751,14 @@ update msg model loggedIn =
         GotSaveResponse _ ->
             UR.init model
 
-        GotDeleteResponse (Ok _) ->
+        GotDeleteResponse (RemoteData.Success _) ->
             model
                 |> UR.init
                 |> UR.addCmd
                     (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
 
-        GotDeleteResponse (Err error) ->
+        GotDeleteResponse (RemoteData.Failure error) ->
             let
                 internalError =
                     loggedIn.shared.translators.t "error.unknown"
@@ -772,7 +768,7 @@ update msg model loggedIn =
                     EditingUpdate balances sale Closed form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
-                        |> UR.logJsonValue msg
+                        |> UR.logGraphqlError msg
                             (Just loggedIn.accountName)
                             "Got an error when deleting a shop offer"
                             { moduleName = "Page.Shop.Editor", function = "update" }
@@ -787,6 +783,9 @@ update msg model loggedIn =
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Shop.Editor", function = "update" }
                             []
+
+        GotDeleteResponse _ ->
+            UR.init model
 
         ClosedAuthModal ->
             case model of
@@ -805,27 +804,6 @@ update msg model loggedIn =
 
         ClickedIncrementStockUnits ->
             updateFormStockUnits (\price -> price + 1) model
-
-
-performRequest : Msg -> Status -> LoggedIn.Model -> String -> Value -> UpdateResult
-performRequest msg status { shared, accountName } action data =
-    status
-        |> UR.init
-        |> UR.addPort
-            { responseAddress = msg
-            , responseData = Encode.null
-            , data =
-                Eos.encodeTransaction
-                    [ { accountName = shared.contracts.community
-                      , name = action
-                      , authorization =
-                            { actor = accountName
-                            , permissionName = Eos.samplePermission
-                            }
-                      , data = data
-                      }
-                    ]
-            }
 
 
 updateFormStockUnits : (Int -> Int) -> Model -> UpdateResult
@@ -912,30 +890,6 @@ updateForm shared subMsg model =
                     model
 
 
-encodeDeleteForm : Product -> Value
-encodeDeleteForm product =
-    Encode.object [ ( "sale_id", Shop.encodeId product.id ) ]
-
-
-jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
-    case addr of
-        "ClickedDeleteConfirm" :: [] ->
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.succeed (Err Encode.null)
-                    ]
-                )
-                val
-                |> Result.map (Just << GotDeleteResponse)
-                |> Result.withDefault Nothing
-
-        _ ->
-            Nothing
-
-
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
@@ -961,7 +915,7 @@ msgToString msg =
             [ "GotSaveResponse", UR.remoteDataToString r ]
 
         GotDeleteResponse r ->
-            [ "GotDeleteResponse", UR.resultToString r ]
+            [ "GotDeleteResponse", UR.remoteDataToString r ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]
