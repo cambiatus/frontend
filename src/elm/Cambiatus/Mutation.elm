@@ -126,6 +126,20 @@ deleteNews requiredArgs object_ =
     Object.selectionForCompositeField "deleteNews" [ Argument.required "newsId" requiredArgs.newsId Encode.int ] object_ (identity >> Decode.nullable)
 
 
+type alias DeleteProductRequiredArguments =
+    { id : Int }
+
+
+{-| [Auth required] Deletes a product
+-}
+deleteProduct :
+    DeleteProductRequiredArguments
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+deleteProduct requiredArgs object_ =
+    Object.selectionForCompositeField "deleteProduct" [ Argument.required "id" requiredArgs.id Encode.int ] object_ (identity >> Decode.nullable)
+
+
 type alias GenAuthRequiredArguments =
     { account : String }
 
@@ -226,36 +240,33 @@ preference fillInOptionals object_ =
 
 
 type alias ProductOptionalArguments =
-    { units : OptionalArgument Int }
-
-
-type alias ProductRequiredArguments =
-    { communityId : String
-    , description : String
-    , images : List String
-    , price : Float
-    , title : String
-    , trackStock : Bool
+    { communityId : OptionalArgument String
+    , description : OptionalArgument String
+    , id : OptionalArgument Int
+    , images : OptionalArgument (List String)
+    , price : OptionalArgument Float
+    , title : OptionalArgument String
+    , trackStock : OptionalArgument Bool
+    , units : OptionalArgument Int
     }
 
 
-{-| [Auth required]
+{-| [Auth required] Upserts a product
 -}
 product :
     (ProductOptionalArguments -> ProductOptionalArguments)
-    -> ProductRequiredArguments
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-product fillInOptionals requiredArgs object_ =
+product fillInOptionals object_ =
     let
         filledInOptionals =
-            fillInOptionals { units = Absent }
+            fillInOptionals { communityId = Absent, description = Absent, id = Absent, images = Absent, price = Absent, title = Absent, trackStock = Absent, units = Absent }
 
         optionalArgs =
-            [ Argument.optional "units" filledInOptionals.units Encode.int ]
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "description" filledInOptionals.description Encode.string, Argument.optional "id" filledInOptionals.id Encode.int, Argument.optional "images" filledInOptionals.images (Encode.string |> Encode.list), Argument.optional "price" filledInOptionals.price Encode.float, Argument.optional "title" filledInOptionals.title Encode.string, Argument.optional "trackStock" filledInOptionals.trackStock Encode.bool, Argument.optional "units" filledInOptionals.units Encode.int ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "product" (optionalArgs ++ [ Argument.required "communityId" requiredArgs.communityId Encode.string, Argument.required "description" requiredArgs.description Encode.string, Argument.required "images" requiredArgs.images (Encode.string |> Encode.list), Argument.required "price" requiredArgs.price Encode.float, Argument.required "title" requiredArgs.title Encode.string, Argument.required "trackStock" requiredArgs.trackStock Encode.bool ]) object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "product" optionalArgs object_ (identity >> Decode.nullable)
 
 
 type alias ReactToNewsRequiredArguments =

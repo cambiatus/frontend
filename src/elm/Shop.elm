@@ -25,7 +25,7 @@ import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
-import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
@@ -270,33 +270,31 @@ upsert :
     }
     -> SelectionSet decodesTo Cambiatus.Object.Product
     -> SelectionSet (Maybe decodesTo) RootMutation
-upsert { symbol, title, description, images, price, stockTracking } =
+upsert { id, symbol, title, description, images, price, stockTracking } =
     Mutation.product
-        (\optionals ->
-            { optionals
-                | units =
-                    case stockTracking of
-                        NoTracking ->
-                            Absent
+        (\_ ->
+            { id = OptionalArgument.fromMaybe id
+            , communityId = OptionalArgument.Present (Eos.symbolToString symbol)
+            , title = OptionalArgument.Present title
+            , description = OptionalArgument.Present (Markdown.toRawString description)
+            , images = OptionalArgument.Present images
+            , price = OptionalArgument.Present price
+            , trackStock =
+                case stockTracking of
+                    NoTracking ->
+                        OptionalArgument.Present False
 
-                        UnitTracking { availableUnits } ->
-                            Present availableUnits
+                    UnitTracking _ ->
+                        OptionalArgument.Present True
+            , units =
+                case stockTracking of
+                    NoTracking ->
+                        Absent
+
+                    UnitTracking { availableUnits } ->
+                        Present availableUnits
             }
         )
-        -- TODO - Use id
-        { communityId = Eos.symbolToString symbol
-        , title = title
-        , description = Markdown.toRawString description
-        , images = images
-        , price = price
-        , trackStock =
-            case stockTracking of
-                NoTracking ->
-                    False
-
-                UnitTracking _ ->
-                    True
-        }
 
 
 
