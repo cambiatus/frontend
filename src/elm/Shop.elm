@@ -325,7 +325,7 @@ upsert { id, symbol, title, description, images, price, stockTracking } =
             , units =
                 case stockTracking of
                     NoTracking ->
-                        Absent
+                        Present 0
 
                     UnitTracking { availableUnits } ->
                         Present availableUnits
