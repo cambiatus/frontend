@@ -145,15 +145,7 @@ productSelectionSet =
             , symbol = symbol
             , image =
                 images
-                    |> List.filterMap
-                        (\image ->
-                            case image of
-                                "" ->
-                                    Nothing
-
-                                url ->
-                                    Just url
-                        )
+                    |> List.filter (not << String.isEmpty)
                     |> List.head
             , stockTracking =
                 if trackStock then
@@ -183,7 +175,20 @@ productSelectionSet =
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
 productPreviewSelectionSet =
-    SelectionSet.succeed ProductPreview
+    SelectionSet.succeed
+        (\communityId creator description id images price title ->
+            { symbol = communityId
+            , creator = creator
+            , description = description
+            , id = id
+            , image =
+                images
+                    |> List.filter (not << String.isEmpty)
+                    |> List.head
+            , price = price
+            , title = title
+            }
+        )
         |> with (Eos.symbolSelectionSet Cambiatus.Object.ProductPreview.communityId)
         |> with
             (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
@@ -191,22 +196,9 @@ productPreviewSelectionSet =
             )
         |> with (Markdown.selectionSet Cambiatus.Object.ProductPreview.description)
         |> with (SelectionSet.map Id Cambiatus.Object.ProductPreview.id)
-        |> with (detectEmptyString Cambiatus.Object.ProductPreview.image)
+        |> with (Cambiatus.Object.ProductPreview.images Cambiatus.Object.ProductImage.uri)
         |> with Cambiatus.Object.ProductPreview.price
         |> with Cambiatus.Object.ProductPreview.title
-
-
-detectEmptyString : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
-detectEmptyString =
-    SelectionSet.map
-        (\selection ->
-            case selection of
-                Just "" ->
-                    Nothing
-
-                _ ->
-                    selection
-        )
 
 
 productPreviewProfile : Eos.Name -> Profile.Minimal
