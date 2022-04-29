@@ -24,6 +24,7 @@ import Avatar
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Product
+import Cambiatus.Object.ProductImage
 import Cambiatus.Object.ProductPreview
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
@@ -33,6 +34,7 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
+import Maybe.Extra
 import Profile
 import Url.Parser
 
@@ -135,14 +137,26 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol image maybeUnits trackStock creator ->
+        (\id title description creatorId price symbol oldImage images maybeUnits trackStock creator ->
             { id = id
             , title = title
             , description = description
             , creatorId = creatorId
             , price = price
             , symbol = symbol
-            , image = image
+            , image =
+                images
+                    |> List.filterMap
+                        (\image ->
+                            case image of
+                                "" ->
+                                    Nothing
+
+                                url ->
+                                    Just url
+                        )
+                    |> List.head
+                    |> Maybe.Extra.orElse oldImage
             , stockTracking =
                 if trackStock then
                     case maybeUnits of
@@ -164,6 +178,7 @@ productSelectionSet =
         |> with Cambiatus.Object.Product.price
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
         |> with (detectEmptyString Cambiatus.Object.Product.image)
+        |> with (Cambiatus.Object.Product.images Cambiatus.Object.ProductImage.uri)
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)

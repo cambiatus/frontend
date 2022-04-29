@@ -78,9 +78,11 @@ image =
     Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
-images : SelectionSet (List String) Cambiatus.Object.Product
-images =
-    Object.selectionForField "(List String)" "images" [] (Decode.string |> Decode.list)
+images :
+    SelectionSet decodesTo Cambiatus.Object.ProductImage
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Product
+images object_ =
+    Object.selectionForCompositeField "images" [] object_ (identity >> Decode.list)
 
 
 insertedAt : SelectionSet Cambiatus.ScalarCodecs.NaiveDateTime Cambiatus.Object.Product
