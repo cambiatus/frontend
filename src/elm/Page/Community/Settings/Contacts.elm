@@ -3,7 +3,7 @@ module Page.Community.Settings.Contacts exposing (Model, Msg, init, msgToString,
 import Community
 import Form
 import Form.Text
-import Html exposing (Html, button, div, h2, p, text)
+import Html exposing (Html, button, div, h2, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Icons
@@ -12,6 +12,7 @@ import Page
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
 import View.Components
+import View.Modal as Modal
 
 
 
@@ -36,6 +37,7 @@ init loggedIn =
 type alias FormInput =
     { inputs : List ContactFormInput
     , lastId : Int
+    , isContactTypeModalOpen : Bool
     }
 
 
@@ -69,7 +71,10 @@ update msg model loggedIn =
             if community.creator == loggedIn.accountName then
                 Form.init
                     -- TODO - Use community contacts
-                    { lastId = 0, inputs = [] }
+                    { lastId = 0
+                    , inputs = []
+                    , isContactTypeModalOpen = False
+                    }
                     |> Authorized
                     |> UR.init
 
@@ -144,27 +149,53 @@ createForm =
             (Form.arbitrary
                 (button
                     [ class "button button-secondary mb-20"
-                    , onClick
-                        (\values ->
-                            { values
-                                | inputs =
-                                    { id = values.lastId + 1
-
-                                    -- TODO - Make these dynamic
-                                    , contactType = Phone
-                                    , label = "Phone"
-                                    , value = ""
-                                    }
-                                        :: values.inputs
-                                , lastId = values.lastId + 1
-                            }
-                        )
+                    , onClick (\values -> { values | isContactTypeModalOpen = True })
                     ]
                     [ Icons.circledPlus ""
 
                     -- TODO - I18N
                     , text "Add contact"
                     ]
+                )
+            )
+        |> Form.withNoOutput
+            (Form.introspect
+                (\{ isContactTypeModalOpen } ->
+                    Form.arbitrary
+                        (Modal.initWith
+                            { closeMsg = \values -> { values | isContactTypeModalOpen = False }
+                            , isVisible = isContactTypeModalOpen
+                            }
+                            -- TODO - I18N
+                            |> Modal.withHeader "Contact options"
+                            |> Modal.withBody
+                                [ ul []
+                                    [ li []
+                                        [ button
+                                            [ class "flex items-center w-full"
+                                            , onClick
+                                                (\values ->
+                                                    { isContactTypeModalOpen = False
+                                                    , inputs =
+                                                        { id = values.lastId + 1
+                                                        , contactType = Phone
+                                                        , label = "Phone"
+                                                        , value = ""
+                                                        }
+                                                            :: values.inputs
+                                                    , lastId = values.lastId + 1
+                                                    }
+                                                )
+                                            ]
+                                            [ div [ class "w-8 h-8 bg-gray-100 rounded-full mr-2" ] []
+                                            , text "Phone number"
+                                            , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current"
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            |> Modal.toHtml
+                        )
                 )
             )
 
