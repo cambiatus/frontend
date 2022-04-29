@@ -34,7 +34,6 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
-import Maybe.Extra
 import Profile
 import Url.Parser
 
@@ -137,7 +136,7 @@ encodeTransferSale t =
 productSelectionSet : SelectionSet Product Cambiatus.Object.Product
 productSelectionSet =
     SelectionSet.succeed
-        (\id title description creatorId price symbol oldImage images maybeUnits trackStock creator ->
+        (\id title description creatorId price symbol images maybeUnits trackStock creator ->
             { id = id
             , title = title
             , description = description
@@ -156,7 +155,6 @@ productSelectionSet =
                                     Just url
                         )
                     |> List.head
-                    |> Maybe.Extra.orElse oldImage
             , stockTracking =
                 if trackStock then
                     case maybeUnits of
@@ -177,7 +175,6 @@ productSelectionSet =
         |> with (Eos.nameSelectionSet Cambiatus.Object.Product.creatorId)
         |> with Cambiatus.Object.Product.price
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
-        |> with (detectEmptyString Cambiatus.Object.Product.image)
         |> with (Cambiatus.Object.Product.images Cambiatus.Object.ProductImage.uri)
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
