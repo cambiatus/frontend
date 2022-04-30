@@ -4,7 +4,7 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
-    , circularIconWithGrayBg
+    , circularLinkWithGrayBg
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
@@ -767,8 +767,8 @@ contactTypeToIcon class_ isInverted contactType =
             Icons.link class_
 
 
-circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
-circularIconWithGrayBg translators class_ (Normalized normalized) =
+circularLinkWithGrayBg : Translators -> String -> Normalized -> Html msg
+circularLinkWithGrayBg translators class_ (Normalized normalized) =
     let
         defaultClass =
             case normalized.contactType of

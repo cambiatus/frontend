@@ -394,7 +394,7 @@ viewCommunityCard ({ translators } as shared) community =
                         (\contact ->
                             li [ class "flex flex-col items-center" ]
                                 [ div [ class "w-10 h-10" ]
-                                    [ Contact.circularIconWithGrayBg translators "" contact
+                                    [ Contact.circularLinkWithGrayBg translators "" contact
                                     ]
                                 , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold" ]
                                     [ text <| Contact.getLabel translators contact
