@@ -1,15 +1,19 @@
 module Page.Community.Settings.Contacts exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
 import Community
 import Form
 import Form.Text
 import Html exposing (Html, button, div, h2, li, p, text, ul)
 import Html.Attributes exposing (class)
+import Html.Attributes.Aria exposing (ariaHidden)
 import Html.Events exposing (onClick)
 import Icons
 import List.Extra
 import Page
+import Profile.Contact
 import Session.LoggedIn as LoggedIn
+import Translation
 import UpdateResult as UR
 import View.Components
 import View.Modal as Modal
@@ -35,6 +39,7 @@ init loggedIn =
 
 
 type alias FormInput =
+    -- TODO - Should this be a dict?
     { inputs : List ContactFormInput
     , lastId : Int
     , isContactTypeModalOpen : Bool
@@ -46,8 +51,7 @@ type alias FormOutput =
 
 
 type Msg
-    = NoOp
-    | CompletedLoadCommunity Community.Model
+    = CompletedLoadCommunity Community.Model
     | GotFormMsg (Form.Msg FormInput)
     | SubmittedForm FormOutput
     | ClickedRemoveContact Int
@@ -64,9 +68,6 @@ type alias UpdateResult =
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
-        NoOp ->
-            UR.init model
-
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
                 Form.init
@@ -120,28 +121,63 @@ update msg model loggedIn =
                             []
 
 
-createForm : Form.Form Msg FormInput FormOutput
-createForm =
+createForm : Translation.Translators -> Form.Form Msg FormInput FormOutput
+createForm translators =
+    let
+        nestedContactForm : Int -> ContactFormInput -> Form.Form Msg FormInput ContactFormOutput
+        nestedContactForm index contactFormInput =
+            Form.mapValues
+                { value = \_ -> contactFormInput
+                , update =
+                    \newValue parent ->
+                        { parent
+                            | inputs =
+                                List.Extra.setAt index
+                                    newValue
+                                    parent.inputs
+                        }
+                }
+                (contactForm translators)
+
+        createNewContactInput : Int -> ContactType -> ContactFormInput
+        createNewContactInput id contactType =
+            { id = id
+            , contactType = contactType
+            , label = Profile.Contact.contactTypeToString translators contactType
+            , value = ""
+            }
+
+        newContactInputItem contactType =
+            li [ class "py-2" ]
+                [ button
+                    [ class "flex items-center w-full py-2 text-gray-333 hover:text-orange-300 group focus-ring rounded-sm"
+                    , onClick
+                        (\values ->
+                            { isContactTypeModalOpen = False
+                            , inputs =
+                                createNewContactInput (values.lastId + 1) contactType
+                                    :: values.inputs
+                            , lastId = values.lastId + 1
+                            }
+                        )
+                    ]
+                    [ Profile.Contact.circularIconWithGrayBg
+                        [ class "w-8 h-8 mr-2"
+                        , ariaHidden True
+                        ]
+                        translators
+                        contactType
+                    , text <| Profile.Contact.contactTypeToString translators contactType
+                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 group-hover:text-orange-300 fill-current"
+                    ]
+                ]
+    in
     Form.succeed identity
         |> Form.with
             (Form.introspect
                 (\values ->
                     values.inputs
-                        |> List.indexedMap
-                            (\index value ->
-                                Form.mapValues
-                                    { value = \_ -> value
-                                    , update =
-                                        \newValue parent ->
-                                            { parent
-                                                | inputs =
-                                                    List.Extra.setAt index
-                                                        newValue
-                                                        parent.inputs
-                                            }
-                                    }
-                                    contactForm
-                            )
+                        |> List.indexedMap nestedContactForm
                         |> Form.list
                 )
             )
@@ -169,41 +205,13 @@ createForm =
                             -- TODO - I18N
                             |> Modal.withHeader "Contact options"
                             |> Modal.withBody
-                                [ ul []
-                                    [ li []
-                                        [ button
-                                            [ class "flex items-center w-full"
-                                            , onClick
-                                                (\values ->
-                                                    { isContactTypeModalOpen = False
-                                                    , inputs =
-                                                        { id = values.lastId + 1
-                                                        , contactType = Phone
-                                                        , label = "Phone"
-                                                        , value = ""
-                                                        }
-                                                            :: values.inputs
-                                                    , lastId = values.lastId + 1
-                                                    }
-                                                )
-                                            ]
-                                            [ div [ class "w-8 h-8 bg-gray-100 rounded-full mr-2" ] []
-                                            , text "Phone number"
-                                            , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current"
-                                            ]
-                                        ]
-                                    ]
+                                [ ul [ class "divide-y divide-gray-100" ]
+                                    (List.map newContactInputItem ContactType.list)
                                 ]
                             |> Modal.toHtml
                         )
                 )
             )
-
-
-type ContactType
-    = Phone
-    | Whatsapp
-    | Telegram
 
 
 type alias ContactFormInput =
@@ -222,8 +230,17 @@ type ContactFormOutput
         }
 
 
-contactForm : Form.Form Msg ContactFormInput ContactFormOutput
-contactForm =
+contactForm : Translation.Translators -> Form.Form Msg ContactFormInput ContactFormOutput
+contactForm translators =
+    let
+        labelId : Int -> String
+        labelId id =
+            "contact-label-" ++ String.fromInt id
+
+        inputId : Int -> String
+        inputId id =
+            "contact-input-" ++ String.fromInt id
+    in
     Form.succeed
         (\contactType label value _ ->
             ContactFormOutput
@@ -234,16 +251,18 @@ contactForm =
         )
         |> Form.with
             (Form.introspect
-                (\values ->
-                    Form.arbitraryWith values.contactType
+                (\{ id, contactType } ->
+                    Form.arbitraryWith contactType
                         (div [ class "flex items-center mb-4" ]
-                            -- TODO - Use circular icon here
-                            [ div [ class "w-5 h-5 bg-gray-100 rounded-full" ] []
+                            [ Profile.Contact.circularIconWithGrayBg
+                                [ class "w-5 h-5 p-1"
+                                , ariaHidden True
+                                ]
+                                translators
+                                contactType
                             , View.Components.label [ class "mb-0 ml-2" ]
-                                { targetId = "value-input-" ++ String.fromInt values.id
-
-                                -- TODO - Make this dynamic
-                                , labelText = "Phone Number"
+                                { targetId = inputId id
+                                , labelText = Profile.Contact.contactTypeToString translators contactType
                                 }
                             ]
                         )
@@ -255,7 +274,7 @@ contactForm =
                 (\{ id } ->
                     Form.Text.init
                         { label = ""
-                        , id = "label-input-" ++ String.fromInt id
+                        , id = labelId id
                         }
                         |> Form.Text.withContainerAttrs [ class "max-w-27" ]
                         |> Form.textField
@@ -267,13 +286,12 @@ contactForm =
                 )
             )
             (Form.introspect
-                (\{ id } ->
+                (\{ id, contactType } ->
                     Form.Text.init
                         { label = ""
-                        , id = "value-input-" ++ String.fromInt id
+                        , id = inputId id
                         }
-                        -- TODO - Make placeholder dynamic
-                        |> Form.Text.withPlaceholder "+55 11 91234 5678"
+                        |> Form.Text.withPlaceholder (Profile.Contact.contactTypePlaceholder contactType)
                         |> Form.textField
                             -- TODO - Parse phone number
                             { parser = Ok
@@ -286,7 +304,6 @@ contactForm =
             (Form.introspect
                 (\{ id } ->
                     Form.unsafeArbitrary
-                        -- TODO - Add onClick
                         -- TODO - Add aria
                         (button
                             [ class "mb-10"
@@ -322,7 +339,7 @@ view loggedIn model =
                                 [ text "Adicione os contatos que ficarão disponíveis como suporte para os membros da comunidade." ]
 
                             -- TODO - I18N
-                            , h2 [ class "label mt-10" ] [ text "Contact options" ]
+                            , h2 [ class "label mt-10 mb-6" ] [ text "Contact options" ]
                             , Form.view [ class "flex flex-col flex-grow" ]
                                 loggedIn.shared.translators
                                 (\submitButton ->
@@ -331,7 +348,7 @@ view loggedIn model =
                                         [ text "Save" ]
                                     ]
                                 )
-                                createForm
+                                (createForm loggedIn.shared.translators)
                                 formModel
                                 { toMsg = GotFormMsg
                                 , onSubmit = SubmittedForm
@@ -365,9 +382,6 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        NoOp ->
-            [ "NoOp" ]
-
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
