@@ -738,8 +738,8 @@ introspect buildForm =
 
 {-| Join together multiple forms
 -}
-list : List (Form msg values output) -> Form msg values (List output)
-list current =
+list : List (Html.Attribute Never) -> List (Form msg values output) -> Form msg values (List output)
+list groupAttrs current =
     Form
         (\values ->
             let
@@ -774,7 +774,13 @@ list current =
                         OptNothing
                         filledForms
             in
-            { fields = List.concatMap .fields filledForms
+            { fields =
+                [ { state = Group groupAttrs (List.concatMap (.fields >> List.reverse) filledForms)
+                  , error = Nothing
+                  , validationStrategy = ValidateOnBlur
+                  , isRequired = False
+                  }
+                ]
             , result = combinedResult
             }
         )
