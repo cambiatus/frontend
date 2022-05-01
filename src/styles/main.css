@@ -378,6 +378,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
     flex-basis: 0;
   }
 
+  .fill-mode-none {
+    animation-fill-mode: none;
+  }
+
   .truncate-children > :first-child {
     @apply truncate;
   }

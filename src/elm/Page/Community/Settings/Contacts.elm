@@ -1,22 +1,13 @@
 module Page.Community.Settings.Contacts exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
 import Community
+import Contact
 import Form
-import Form.Text
-import Html exposing (Html, button, div, h2, li, p, text, ul)
+import Html exposing (Html, div, h2, p, text)
 import Html.Attributes exposing (class)
-import Html.Attributes.Aria exposing (ariaHidden)
-import Html.Events exposing (onClick)
-import Icons
-import List.Extra
 import Page
-import Profile.Contact
 import Session.LoggedIn as LoggedIn
-import Translation
 import UpdateResult as UR
-import View.Components
-import View.Modal as Modal
 
 
 
@@ -24,7 +15,7 @@ import View.Modal as Modal
 
 
 type Model
-    = Authorized (Form.Model FormInput)
+    = Authorized (Form.Model Contact.FormInput)
     | Loading
     | Unauthorized
 
@@ -38,23 +29,10 @@ init loggedIn =
 -- TYPES
 
 
-type alias FormInput =
-    -- TODO - Should this be a dict?
-    { inputs : List ContactFormInput
-    , lastId : Int
-    , isContactTypeModalOpen : Bool
-    }
-
-
-type alias FormOutput =
-    List ContactFormOutput
-
-
 type Msg
     = CompletedLoadCommunity Community.Model
-    | GotFormMsg (Form.Msg FormInput)
-    | SubmittedForm FormOutput
-    | ClickedRemoveContact Int
+    | GotFormMsg (Form.Msg Contact.FormInput)
+    | SubmittedForm (List Contact.Valid)
 
 
 type alias UpdateResult =
@@ -70,12 +48,9 @@ update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
-                Form.init
-                    -- TODO - Use community contacts
-                    { lastId = 0
-                    , inputs = []
-                    , isContactTypeModalOpen = False
-                    }
+                -- TODO - Use community contacts
+                Contact.initFormInput []
+                    |> Form.init
                     |> Authorized
                     |> UR.init
 
@@ -102,217 +77,6 @@ update msg model loggedIn =
 
         SubmittedForm _ ->
             Debug.todo ""
-
-        ClickedRemoveContact id ->
-            case model of
-                Authorized formInput ->
-                    Form.updateValues
-                        (\values -> { values | inputs = List.filter (\input -> input.id /= id) values.inputs })
-                        formInput
-                        |> Authorized
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg
-                            "Clicked remove contact, but wasn't authorized"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Community.Settings.Contacts", function = "update" }
-                            []
-
-
-createForm : Translation.Translators -> Form.Form Msg FormInput FormOutput
-createForm translators =
-    let
-        nestedContactForm : Int -> ContactFormInput -> Form.Form Msg FormInput ContactFormOutput
-        nestedContactForm index contactFormInput =
-            Form.mapValues
-                { value = \_ -> contactFormInput
-                , update =
-                    \newValue parent ->
-                        { parent
-                            | inputs =
-                                List.Extra.setAt index
-                                    newValue
-                                    parent.inputs
-                        }
-                }
-                (contactForm translators)
-
-        createNewContactInput : Int -> ContactType -> ContactFormInput
-        createNewContactInput id contactType =
-            { id = id
-            , contactType = contactType
-            , label = Profile.Contact.contactTypeToString translators contactType
-            , value = ""
-            }
-
-        newContactInputItem contactType =
-            li [ class "py-2" ]
-                [ button
-                    [ class "flex items-center w-full py-2 text-gray-333 hover:text-orange-300 group focus-ring rounded-sm"
-                    , onClick
-                        (\values ->
-                            { isContactTypeModalOpen = False
-                            , inputs =
-                                createNewContactInput (values.lastId + 1) contactType
-                                    :: values.inputs
-                            , lastId = values.lastId + 1
-                            }
-                        )
-                    ]
-                    [ Profile.Contact.circularIconWithGrayBg
-                        [ class "w-8 h-8 mr-2"
-                        , ariaHidden True
-                        ]
-                        translators
-                        contactType
-                    , text <| Profile.Contact.contactTypeToString translators contactType
-                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 group-hover:text-orange-300 fill-current"
-                    ]
-                ]
-    in
-    Form.succeed identity
-        |> Form.with
-            (Form.introspect
-                (\values ->
-                    values.inputs
-                        |> List.indexedMap nestedContactForm
-                        |> Form.list
-                )
-            )
-        |> Form.withNoOutput
-            (Form.arbitrary
-                (button
-                    [ class "button button-secondary mb-20"
-                    , onClick (\values -> { values | isContactTypeModalOpen = True })
-                    ]
-                    [ Icons.circledPlus ""
-
-                    -- TODO - I18N
-                    , text "Add contact"
-                    ]
-                )
-            )
-        |> Form.withNoOutput
-            (Form.introspect
-                (\{ isContactTypeModalOpen } ->
-                    Form.arbitrary
-                        (Modal.initWith
-                            { closeMsg = \values -> { values | isContactTypeModalOpen = False }
-                            , isVisible = isContactTypeModalOpen
-                            }
-                            -- TODO - I18N
-                            |> Modal.withHeader "Contact options"
-                            |> Modal.withBody
-                                [ ul [ class "divide-y divide-gray-100" ]
-                                    (List.map newContactInputItem ContactType.list)
-                                ]
-                            |> Modal.toHtml
-                        )
-                )
-            )
-
-
-type alias ContactFormInput =
-    { id : Int
-    , contactType : ContactType
-    , label : String
-    , value : String
-    }
-
-
-type ContactFormOutput
-    = ContactFormOutput
-        { contactType : ContactType
-        , label : String
-        , value : String
-        }
-
-
-contactForm : Translation.Translators -> Form.Form Msg ContactFormInput ContactFormOutput
-contactForm translators =
-    let
-        labelId : Int -> String
-        labelId id =
-            "contact-label-" ++ String.fromInt id
-
-        inputId : Int -> String
-        inputId id =
-            "contact-input-" ++ String.fromInt id
-    in
-    Form.succeed
-        (\contactType label value _ ->
-            ContactFormOutput
-                { contactType = contactType
-                , label = label
-                , value = value
-                }
-        )
-        |> Form.with
-            (Form.introspect
-                (\{ id, contactType } ->
-                    Form.arbitraryWith contactType
-                        (div [ class "flex items-center mb-4" ]
-                            [ Profile.Contact.circularIconWithGrayBg
-                                [ class "w-5 h-5 p-1"
-                                , ariaHidden True
-                                ]
-                                translators
-                                contactType
-                            , View.Components.label [ class "mb-0 ml-2" ]
-                                { targetId = inputId id
-                                , labelText = Profile.Contact.contactTypeToString translators contactType
-                                }
-                            ]
-                        )
-                )
-            )
-        |> Form.withGroupOf3
-            [ class "flex gap-2" ]
-            (Form.introspect
-                (\{ id } ->
-                    Form.Text.init
-                        { label = ""
-                        , id = labelId id
-                        }
-                        |> Form.Text.withContainerAttrs [ class "max-w-27" ]
-                        |> Form.textField
-                            { parser = Ok
-                            , value = .label
-                            , update = \newLabel values -> { values | label = newLabel }
-                            , externalError = always Nothing
-                            }
-                )
-            )
-            (Form.introspect
-                (\{ id, contactType } ->
-                    Form.Text.init
-                        { label = ""
-                        , id = inputId id
-                        }
-                        |> Form.Text.withPlaceholder (Profile.Contact.contactTypePlaceholder contactType)
-                        |> Form.textField
-                            -- TODO - Parse phone number
-                            { parser = Ok
-                            , value = .value
-                            , update = \newValue values -> { values | value = newValue }
-                            , externalError = always Nothing
-                            }
-                )
-            )
-            (Form.introspect
-                (\{ id } ->
-                    Form.unsafeArbitrary
-                        -- TODO - Add aria
-                        (button
-                            [ class "mb-10"
-                            , onClick (ClickedRemoveContact id)
-                            ]
-                            [ Icons.circularClose "" ]
-                        )
-                )
-            )
 
 
 
@@ -348,7 +112,7 @@ view loggedIn model =
                                         [ text "Save" ]
                                     ]
                                 )
-                                (createForm loggedIn.shared.translators)
+                                (Contact.form loggedIn.shared.translators)
                                 formModel
                                 { toMsg = GotFormMsg
                                 , onSubmit = SubmittedForm
@@ -390,6 +154,3 @@ msgToString msg =
 
         SubmittedForm _ ->
             [ "SubmittedForm" ]
-
-        ClickedRemoveContact _ ->
-            [ "ClickedRemoveContact" ]
