@@ -366,6 +366,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
     @apply hidden;
   }
 
+  .hide-children-from-2 > :nth-child(n + 2) {
+    @apply hidden;
+  }
+
   .focus-ring {
     @apply focus:outline-none focus-visible:ring ring-green ring-opacity-50 active:ring-0;
   }

@@ -1259,7 +1259,7 @@ viewAction ({ t } as translators) model objective index action =
                     [ text (String.fromInt (index + 1)), text "." ]
                 , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                     [ h4 [ title (Markdown.toRawString action.description) ]
-                        [ Markdown.view [ class "line-clamp-3" ] action.description ]
+                        [ Markdown.view [ class "line-clamp-3 hide-children-from-2" ] action.description ]
                     , span [ class "sr-only" ]
                         [ text <|
                             t "community.objectives.reward"
