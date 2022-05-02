@@ -1373,7 +1373,7 @@ viewClaimModal ({ translators } as shared) model =
                         ]
                         [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt position ++ ".") ]
                         , div [ class "ml-5 mt-1 min-w-0 w-full" ]
-                            [ Markdown.view [ class "truncate" ] action.description
+                            [ Markdown.view [] action.description
                             , div [ class "md:flex md:justify-between md:w-full" ]
                                 [ div []
                                     [ span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
