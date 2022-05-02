@@ -77,8 +77,8 @@ type Route
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
-    | EditSale Int
-    | ViewSale Int
+    | EditSale Shop.Id
+    | ViewSale Shop.Id
     | ViewTransfer Int
     | Invite String
     | Join (Maybe Route)
@@ -195,8 +195,8 @@ parser url =
                         (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
-        , Url.map ViewSale (s "shop" </> int)
-        , Url.map EditSale (s "shop" </> int </> s "edit")
+        , Url.map ViewSale (s "shop" </> Shop.idUrlParser)
+        , Url.map EditSale (s "shop" </> Shop.idUrlParser </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Join
@@ -607,10 +607,10 @@ routeToString route =
                     ( [ "shop", "new", "sell" ], [] )
 
                 EditSale saleId ->
-                    ( [ "shop", String.fromInt saleId, "edit" ], [] )
+                    ( [ "shop", Shop.idToString saleId, "edit" ], [] )
 
                 ViewSale saleId ->
-                    ( [ "shop", String.fromInt saleId ], [] )
+                    ( [ "shop", Shop.idToString saleId ], [] )
 
                 ViewTransfer transferId ->
                     ( [ "transfer", String.fromInt transferId ], [] )

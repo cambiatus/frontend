@@ -19,7 +19,6 @@ import Action exposing (Action)
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
-import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
 import Eos exposing (Symbol)
@@ -42,6 +41,7 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
+import Shop
 import Task
 import Time exposing (Posix)
 import UpdateResult as UR
@@ -86,19 +86,9 @@ type ActiveTab
 
 
 type alias SearchResults =
-    { offers : List Offer
+    { offers : List Shop.Product
     , actions : List Action
     , members : List Profile.Minimal
-    }
-
-
-type alias Offer =
-    { id : Int
-    , title : String
-    , price : Float
-    , image : Maybe String
-    , units : Int
-    , trackStock : Bool
     }
 
 
@@ -124,20 +114,9 @@ sendSearchQuery selectedCommunity queryString =
 searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
 searchResultSelectionSet queryString =
     SelectionSet.succeed SearchResults
-        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
+        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) Shop.productSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
         |> with (Cambiatus.Object.SearchResult.members (\_ -> { query = Present queryString }) Profile.minimalSelectionSet)
-
-
-offersSelectionSet : SelectionSet Offer Cambiatus.Object.Product
-offersSelectionSet =
-    SelectionSet.map6 Offer
-        Cambiatus.Object.Product.id
-        Cambiatus.Object.Product.title
-        Cambiatus.Object.Product.price
-        Cambiatus.Object.Product.image
-        Cambiatus.Object.Product.units
-        Cambiatus.Object.Product.trackStock
 
 
 storeRecentSearches : List String -> Cmd msg
@@ -619,10 +598,10 @@ viewResultsOverview { t, tr } { offers, actions, members } =
         ]
 
 
-viewOffers : Translators -> Symbol -> List Offer -> Html Msg
+viewOffers : Translators -> Symbol -> List Shop.Product -> Html Msg
 viewOffers translators symbol offers =
     let
-        viewOffer : Offer -> Html Msg
+        viewOffer : Shop.Product -> Html Msg
         viewOffer offer =
             let
                 imageUrl =
@@ -645,7 +624,7 @@ viewOffers translators symbol offers =
                     ]
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
-                    , if offer.units == 0 && offer.trackStock then
+                    , if Shop.isOutOfStock offer then
                         p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]

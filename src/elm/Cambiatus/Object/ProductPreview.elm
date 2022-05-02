@@ -51,6 +51,13 @@ image =
     Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
+images :
+    SelectionSet decodesTo Cambiatus.Object.ProductImage
+    -> SelectionSet (List decodesTo) Cambiatus.Object.ProductPreview
+images object_ =
+    Object.selectionForCompositeField "images" [] object_ (identity >> Decode.list)
+
+
 price : SelectionSet Float Cambiatus.Object.ProductPreview
 price =
     Object.selectionForField "Float" "price" [] Decode.float

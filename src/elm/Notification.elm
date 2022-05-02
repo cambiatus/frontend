@@ -28,6 +28,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Shop
 
 
 
@@ -106,7 +107,7 @@ type alias Community =
 
 
 type alias Product =
-    { id : Int
+    { id : Shop.Id
     , title : String
     , image : Maybe String
     , community : Community
@@ -181,7 +182,7 @@ saleHistorySelectionSet =
         |> with
             (Order.product
                 (SelectionSet.succeed Product
-                    |> with Product.id
+                    |> with Shop.idSelectionSet
                     |> with Product.title
                     |> with Product.image
                     |> with (Product.community logoSelectionSet)

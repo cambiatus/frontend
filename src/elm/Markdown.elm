@@ -99,7 +99,8 @@ fromTranslationWithReplacements { tr } key replacements =
 
 
 {-| Extract the raw Markdown string. You should use this as a last resort. You
-can usually use other helpers, such as `encode` and `view`.
+can usually use other helpers, such as `encode` and `view`. A common use case is
+on GraphQL mutations.
 -}
 toRawString : Markdown -> String
 toRawString (Markdown markdown) =
