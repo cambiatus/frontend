@@ -1478,7 +1478,7 @@ viewClaimModal ({ translators } as shared) model =
                             text ""
                     ]
                 |> View.Modal.withFooter
-                    [ div [ class "w-full grid md:grid-cols-2 gap-4 pt-4 md:pt-0" ]
+                    [ div [ class "w-full grid md:grid-cols-2 gap-4" ]
                         [ if Action.isClaimable action then
                             button
                                 [ class "button button-secondary w-full"
@@ -1495,7 +1495,7 @@ viewClaimModal ({ translators } as shared) model =
                             [ text <| t "dashboard.claim" ]
                         ]
                     ]
-                |> View.Modal.withSize View.Modal.Large
+                |> View.Modal.withSize View.Modal.FullScreen
                 |> View.Modal.toHtml
 
 
