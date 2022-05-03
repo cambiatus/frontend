@@ -1220,10 +1220,10 @@ viewFooter ({ shared } as model) =
         [ class "bg-white w-full border-t border-grey-500 relative overflow-hidden"
         , role "contentinfo"
         ]
-        [ div [ class "container mx-auto px-4 py-8 flex flex-col lg:flex-row md:py-4 lg:relative lg:overflow-hidden" ]
-            [ div [ class "flex flex-col lg:flex-row lg:items-center after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 lg:after:w-px lg:after:h-full lg:after:mr-8 lg:after:mt-0 lg:after:ml-auto" ]
+        [ div [ class "container mx-auto px-4 pb-6 pt-12 flex flex-col lg:flex-row lg:py-4 lg:relative lg:overflow-hidden" ]
+            [ div [ class "flex flex-col lg:flex-row lg:items-center lg:flex-grow after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 lg:after:w-px lg:after:h-full lg:after:mr-8 lg:after:mt-0 lg:after:ml-auto" ]
                 [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
-                , div [ class "flex items-center" ]
+                , div [ class "flex items-center lg:flex-shrink-0" ]
                     [ p
                         [ class "text-center flex justify-center items-center"
                         , ariaHidden True
@@ -1250,11 +1250,11 @@ viewFooter ({ shared } as model) =
                 , a
                     [ Html.Attributes.href (codeOfConductUrl shared.language)
                     , Html.Attributes.target "_blank"
-                    , class "text-orange-300 mt-6 hover:underline lg:mt-0 lg:ml-10 lg:mr-11"
+                    , class "text-orange-300 mt-6 hover:underline lg:mt-0 lg:ml-10 lg:mr-4"
                     ]
                     [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
                 ]
-            , div [ class "mt-4 md:mt-0 md:flex md:w-2/5 md:pr-12 lg:pr-0 lg:w-auto" ]
+            , div [ class "mt-4 lg:mt-0 lg:flex-shrink-0" ]
                 [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
                     [ viewContactSupport
                     , p [ class "text-xs mt-6 text-gray-900" ]
