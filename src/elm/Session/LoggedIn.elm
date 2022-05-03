@@ -1229,9 +1229,7 @@ viewFooter ({ shared } as model) =
                         , ariaHidden True
                         ]
                         [ span [] [ text <| t "footer.created_with" ]
-
-                        -- TODO - Make heart smaller
-                        , Icons.heartSolid
+                        , Icons.heartSolid "w-7"
                         , span [] [ text <| t "footer.created_by" ]
                         ]
                     , div [ class "flex items-center ml-8" ]
