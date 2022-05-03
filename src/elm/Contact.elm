@@ -4,13 +4,18 @@ import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
 import Dict exposing (Dict)
 import Form
 import Form.Text
-import Html exposing (Html, button, div, li, p, text, ul)
+import Form.Validate
+import Html exposing (Html, button, div, li, text, ul)
 import Html.Attributes exposing (class, classList)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (on, onClick)
 import Icons
 import Json.Decode as Decode
+import PhoneNumber
+import PhoneNumber.Countries
+import Regex exposing (Regex)
 import Translation
+import Url
 import View.Components
 import View.Modal as Modal
 
@@ -163,9 +168,36 @@ initFormInput valids =
         validToInput (Valid valid) =
             { type_ = valid.type_
             , label = valid.label
+            , value =
+                case valid.type_ of
+                    ContactType.Email ->
+                        valid.value
 
-            -- TODO - Remove unnecessary stuff from `value` (https://, etc.)
-            , value = valid.value
+                    ContactType.Instagram ->
+                        -- 13 == String.length "https://t.me/"
+                        String.dropLeft 13 valid.value
+
+                    ContactType.Link ->
+                        if String.startsWith "http://" valid.value then
+                            -- 7 == String.length "http://"
+                            String.dropLeft 7 valid.value
+
+                        else if String.startsWith "https://" valid.value then
+                            -- 8 == String.length "https://"
+                            String.dropLeft 8 valid.value
+
+                        else
+                            valid.value
+
+                    ContactType.Phone ->
+                        valid.value
+
+                    ContactType.Telegram ->
+                        -- 22 == String.length "https://instagram.com/"
+                        String.dropLeft 22 valid.value
+
+                    ContactType.Whatsapp ->
+                        valid.value
             , deletionStatus = NotDeleted
             }
     in
@@ -209,6 +241,7 @@ form translators =
                 (button
                     [ class "button button-secondary mb-20 mt-10"
                     , onClick openTypeModal
+                    , Html.Attributes.type_ "button"
                     ]
                     [ Icons.circledPlus ""
 
@@ -227,6 +260,7 @@ form translators =
                                 [ button
                                     [ class "flex items-center w-full py-2 text-gray-333 hover:text-orange-300 group focus-ring rounded-sm"
                                     , onClick (addContactType translators contactType)
+                                    , Html.Attributes.type_ "button"
                                     ]
                                     [ circularIconWithGrayBg
                                         [ class "w-8 h-8 mr-2"
@@ -318,8 +352,10 @@ contactForm translators id =
                                 :: slideUpAnimation "h-12" deletionStatus
                             )
                         |> Form.textField
-                            { -- TODO - Don't allow empty strings
-                              parser = Ok
+                            { parser =
+                                Form.Validate.succeed
+                                    >> Form.Validate.stringLongerThan 2
+                                    >> Form.Validate.validate translators
                             , value = .label
                             , update = \newLabel values -> { values | label = newLabel }
                             , externalError = always Nothing
@@ -338,8 +374,30 @@ contactForm translators id =
                                 :: slideUpAnimation "h-12" deletionStatus
                             )
                         |> Form.textField
-                            { -- TODO - Parse according to type_ (add https://, etc)
-                              parser = Ok
+                            { parser =
+                                Form.Validate.succeed
+                                    >> Form.Validate.stringLongerThan 0
+                                    >> (case type_ of
+                                            ContactType.Email ->
+                                                Form.Validate.email
+
+                                            ContactType.Instagram ->
+                                                validateInstagram
+
+                                            ContactType.Link ->
+                                                Form.Validate.url
+                                                    >> Form.Validate.map Url.toString
+
+                                            ContactType.Phone ->
+                                                validatePhone
+
+                                            ContactType.Telegram ->
+                                                validateTelegram
+
+                                            ContactType.Whatsapp ->
+                                                validatePhone
+                                       )
+                                    >> Form.Validate.validate translators
                             , value = .value
                             , update = \newValue values -> { values | value = newValue }
                             , externalError = always Nothing
@@ -352,12 +410,14 @@ contactForm translators id =
                         (button
                             (onClick startDeletingContact
                                 :: on "transitionend" (Decode.succeed finishDeletingContact)
+                                :: Html.Attributes.type_ "button"
                                 :: slideUpAnimation "h-12" deletionStatus
                             )
                             [ Icons.circularClose "" ]
                         )
                 )
             )
+        |> Form.withValidationStrategy Form.ValidateOnSubmit
 
 
 isNotDeleted : DeletionStatus -> Bool
@@ -420,3 +480,62 @@ startDeletingContact values =
 finishDeletingContact : ContactFormInput -> ContactFormInput
 finishDeletingContact values =
     { values | deletionStatus = Deleted }
+
+
+
+-- FORM VALIDATION
+
+
+validatePhone : Form.Validate.Validator String -> Form.Validate.Validator String
+validatePhone =
+    Form.Validate.custom
+        (\phoneNumber ->
+            if
+                PhoneNumber.valid
+                    { defaultCountry = PhoneNumber.Countries.countryBR
+                    , otherCountries = PhoneNumber.Countries.all
+                    , types = PhoneNumber.anyType
+                    }
+                    phoneNumber
+            then
+                Ok phoneNumber
+
+            else
+                Err (\{ t } -> t "contact_form.validation.phone.invalid")
+        )
+
+
+validateTelegram : Form.Validate.Validator String -> Form.Validate.Validator String
+validateTelegram =
+    let
+        regex : Regex
+        regex =
+            Regex.fromString "^[\\w](?!.*?\\.{2})[\\w.]{1,28}[\\w]$"
+                |> Maybe.withDefault Regex.never
+    in
+    Form.Validate.custom
+        (\telegram ->
+            if Regex.contains regex telegram then
+                Ok ("https://t.me/" ++ telegram)
+
+            else
+                Err (\{ t } -> t "contact_form.validation.username.invalid")
+        )
+
+
+validateInstagram : Form.Validate.Validator String -> Form.Validate.Validator String
+validateInstagram =
+    let
+        regex : Regex
+        regex =
+            Regex.fromString "^[\\w](?!.*?\\.{2})[\\w.]{1,28}[\\w]$"
+                |> Maybe.withDefault Regex.never
+    in
+    Form.Validate.custom
+        (\instagram ->
+            if Regex.contains regex instagram then
+                Ok ("https://instagram.com/" ++ instagram)
+
+            else
+                Err (\{ t } -> t "contact_form.validation.username.invalid")
+        )
