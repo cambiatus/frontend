@@ -1,12 +1,14 @@
-module Contact exposing (FormInput, Valid, circularIconWithGrayBg, form, initFormInput, selectionSet, toHref, toLabel)
+module Contact exposing (FormInput, Valid, circularIconWithGrayBg, form, initFormInput, selectionSet, toGraphqlInput, toHref, toLabel)
 
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
+import Cambiatus.InputObject
 import Cambiatus.Object
 import Cambiatus.Object.Contact
 import Dict exposing (Dict)
 import Form
 import Form.Text
 import Form.Validate
+import Graphql.OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, li, text, ul)
 import Html.Attributes exposing (class, classList)
@@ -116,6 +118,14 @@ toLabel (Valid valid) =
     valid.label
 
 
+toGraphqlInput : Valid -> Cambiatus.InputObject.ContactInput
+toGraphqlInput (Valid valid) =
+    { externalId = Graphql.OptionalArgument.Present valid.value
+    , label = Graphql.OptionalArgument.Present valid.label
+    , type_ = Graphql.OptionalArgument.Present valid.type_
+    }
+
+
 typeToString : Translation.Translators -> ContactType -> String
 typeToString translators type_ =
     ContactType.toString type_
@@ -216,8 +226,8 @@ initFormInput valids =
                         valid.value
 
                     ContactType.Instagram ->
-                        -- 13 == String.length "https://t.me/"
-                        String.dropLeft 13 valid.value
+                        -- 22 == String.length "https://instagram.com/"
+                        String.dropLeft 22 valid.value
 
                     ContactType.Link ->
                         if String.startsWith "http://" valid.value then
@@ -235,8 +245,8 @@ initFormInput valids =
                         valid.value
 
                     ContactType.Telegram ->
-                        -- 22 == String.length "https://instagram.com/"
-                        String.dropLeft 22 valid.value
+                        -- 13 == String.length "https://t.me/"
+                        String.dropLeft 13 valid.value
 
                     ContactType.Whatsapp ->
                         valid.value
@@ -448,7 +458,7 @@ contactForm translators id =
             )
             (Form.introspect
                 (\{ deletionStatus } ->
-                    Form.arbitrary
+                    Form.arbitraryWith ()
                         (button
                             (onClick startDeletingContact
                                 :: on "transitionend" (Decode.succeed finishDeletingContact)

@@ -1,13 +1,22 @@
 module Page.Community.Settings.Contacts exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
+import Cambiatus.Mutation
+import Cambiatus.Object.Community
 import Community
 import Contact
+import Eos
 import Form
+import Graphql.Http
+import Graphql.OptionalArgument
+import Graphql.SelectionSet
 import Html exposing (Html, div, h2, p, text)
 import Html.Attributes exposing (class)
 import Page
+import RemoteData exposing (RemoteData)
+import Route
 import Session.LoggedIn as LoggedIn
 import UpdateResult as UR
+import View.Feedback
 
 
 
@@ -33,6 +42,7 @@ type Msg
     = CompletedLoadCommunity Community.Model
     | GotFormMsg (Form.Msg Contact.FormInput)
     | SubmittedForm (List Contact.Valid)
+    | CompletedSubmittingForm (RemoteData (Graphql.Http.Error (Maybe (List Contact.Valid))) (Maybe (List Contact.Valid)))
 
 
 type alias UpdateResult =
@@ -74,8 +84,100 @@ update msg model loggedIn =
                             { moduleName = "Page.Community.Settings.Contacts", function = "update" }
                             []
 
-        SubmittedForm _ ->
-            Debug.todo ""
+        SubmittedForm formOutput ->
+            case model of
+                Authorized formModel ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success { symbol } ->
+                            Authorized (Form.withDisabled True formModel)
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation loggedIn
+                                        (Cambiatus.Mutation.community
+                                            { communityId = Eos.symbolToString symbol
+                                            , input =
+                                                { contacts =
+                                                    formOutput
+                                                        |> List.map Contact.toGraphqlInput
+                                                        |> Graphql.OptionalArgument.Present
+                                                , hasNews = Graphql.OptionalArgument.Absent
+                                                }
+                                            }
+                                            (Cambiatus.Object.Community.contacts Contact.selectionSet
+                                                |> Graphql.SelectionSet.map (List.filterMap identity)
+                                            )
+                                        )
+                                        CompletedSubmittingForm
+                                    )
+
+                        _ ->
+                            UR.init model
+                                |> UR.logImpossible msg
+                                    "Submitted form, but community wasn't loaded"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Community.Settings.Contacts", function = "update" }
+                                    []
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted form, but wasn't authorized"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Contacts", function = "update" }
+                            []
+
+        CompletedSubmittingForm (RemoteData.Success maybeContacts) ->
+            UR.init model
+                |> UR.addExt
+                    (LoggedIn.UpdatedLoggedIn
+                        { loggedIn
+                            | selectedCommunity =
+                                RemoteData.map
+                                    (\community -> { community | contacts = Maybe.withDefault [] maybeContacts })
+                                    loggedIn.selectedCommunity
+                        }
+                    )
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunityAbout)
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback View.Feedback.Success
+                        -- TODO - I18N
+                        "Community contacts saved successfully"
+                    )
+
+        CompletedSubmittingForm (RemoteData.Failure err) ->
+            let
+                newModel =
+                    case model of
+                        Authorized formModel ->
+                            Authorized (Form.withDisabled False formModel)
+
+                        _ ->
+                            model
+            in
+            UR.init newModel
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when saving community contacts"
+                    { moduleName = "Page.Community.Settings.Contacts", function = "update" }
+                    []
+                    err
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback View.Feedback.Failure
+                        -- TODO - I18N
+                        "Something went wrong when saving community contacts"
+                    )
+
+        CompletedSubmittingForm _ ->
+            let
+                newModel =
+                    case model of
+                        Authorized formModel ->
+                            Authorized (Form.withDisabled False formModel)
+
+                        _ ->
+                            model
+            in
+            UR.init newModel
 
 
 
@@ -153,3 +255,6 @@ msgToString msg =
 
         SubmittedForm _ ->
             [ "SubmittedForm" ]
+
+        CompletedSubmittingForm r ->
+            [ "CompletedSubimttingForm", UR.remoteDataToString r ]
