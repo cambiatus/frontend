@@ -395,7 +395,7 @@ viewCommunityCard ({ translators } as shared) community =
                             li [ class "w-10" ]
                                 [ a
                                     [ class "flex flex-col items-center hover:opacity-60"
-                                    , Html.Attributes.href (Contact.toHref contact)
+                                    , href (Contact.toHref contact)
                                     , Html.Attributes.target "blank"
                                     , title (Contact.toLabel contact)
                                     ]

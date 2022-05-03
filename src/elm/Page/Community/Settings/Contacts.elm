@@ -245,4 +245,4 @@ msgToString msg =
             [ "SubmittedForm" ]
 
         CompletedSubmittingForm r ->
-            [ "CompletedSubimttingForm", UR.remoteDataToString r ]
+            [ "CompletedSubmittingForm", UR.remoteDataToString r ]

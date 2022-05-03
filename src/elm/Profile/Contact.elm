@@ -4,13 +4,10 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
-    , circularIconWithGrayBg
     , circularLinkWithGrayBg
-    , contactTypePlaceholder
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
-    , getLabel
     , initMultiple
     , initSingle
     , selectionSet
@@ -735,28 +732,6 @@ contactTypeToString translators contactType =
         |> translators.t
 
 
-contactTypePlaceholder : ContactType -> String
-contactTypePlaceholder contactType =
-    case contactType of
-        Email ->
-            "hola@cambiatus.com"
-
-        Instagram ->
-            "cambiatus"
-
-        Link ->
-            "cambiatus.com"
-
-        Phone ->
-            "+55 11 91234 5678"
-
-        Telegram ->
-            "cambiatus"
-
-        Whatsapp ->
-            "+55 11 91234 5678"
-
-
 contactTypeToIcon : String -> Bool -> ContactType -> Html msg
 contactTypeToIcon class_ isInverted contactType =
     case contactType of
@@ -811,40 +786,6 @@ circularLinkWithGrayBg translators class_ (Normalized normalized) =
         , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
         [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
-
-
-circularIconWithGrayBg : List (Attribute Never) -> Translators -> ContactType -> Html msg
-circularIconWithGrayBg attrs translators contactType =
-    let
-        defaultClass =
-            case contactType of
-                Whatsapp ->
-                    "fill-current text-green "
-
-                Phone ->
-                    "fill-current text-orange-500"
-
-                _ ->
-                    ""
-    in
-    div
-        ((class "p-2 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70 focus-ring"
-            :: ariaLabel (ariaLabelForContactType translators contactType)
-            :: attrs
-         )
-            |> List.map (Html.Attributes.map never)
-        )
-        [ contactTypeToIcon defaultClass True contactType ]
-
-
-getLabel : Translators -> Normalized -> String
-getLabel translators (Normalized normalized) =
-    case normalized.label of
-        Nothing ->
-            contactTypeToString translators normalized.contactType
-
-        Just label ->
-            label
 
 
 ariaLabelForContactType : Translators -> ContactType -> String
