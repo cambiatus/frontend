@@ -4,6 +4,7 @@ import Avatar
 import Browser.Dom
 import Community
 import Community.News
+import Contact
 import Eos
 import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
@@ -19,7 +20,6 @@ import Log
 import Markdown
 import Maybe.Extra
 import Page
-import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -393,11 +393,15 @@ viewCommunityCard ({ translators } as shared) community =
                     |> List.map
                         (\contact ->
                             li [ class "flex flex-col items-center" ]
-                                [ div [ class "w-10 h-10" ]
-                                    [ Contact.circularLinkWithGrayBg translators "" contact
+                                [ a
+                                    [ class "w-10 h-10"
+                                    , Html.Attributes.href (Contact.toHref contact)
+                                    , Html.Attributes.target "blank"
+                                    ]
+                                    [ Contact.circularIconWithGrayBg [] translators contact
                                     ]
                                 , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold" ]
-                                    [ text <| Contact.getLabel translators contact
+                                    [ text <| Contact.toLabel contact
                                     ]
                                 ]
                         )

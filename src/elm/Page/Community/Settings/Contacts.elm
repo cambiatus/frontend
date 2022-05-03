@@ -48,8 +48,7 @@ update msg model loggedIn =
     case msg of
         CompletedLoadCommunity community ->
             if community.creator == loggedIn.accountName then
-                -- TODO - Use community contacts
-                Contact.initFormInput []
+                Contact.initFormInput community.contacts
                     |> Form.init
                     |> Authorized
                     |> UR.init

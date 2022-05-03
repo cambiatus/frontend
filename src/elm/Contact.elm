@@ -1,10 +1,13 @@
-module Contact exposing (FormInput, Valid, form, initFormInput)
+module Contact exposing (FormInput, Valid, circularIconWithGrayBg, form, initFormInput, selectionSet, toHref, toLabel)
 
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType)
+import Cambiatus.Object
+import Cambiatus.Object.Contact
 import Dict exposing (Dict)
 import Form
 import Form.Text
 import Form.Validate
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, button, div, li, text, ul)
 import Html.Attributes exposing (class, classList)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
@@ -24,8 +27,13 @@ import View.Modal as Modal
 -- VIEWS
 
 
-circularIconWithGrayBg : List (Html.Attribute Never) -> Translation.Translators -> ContactType -> Html msg
-circularIconWithGrayBg attrs translators type_ =
+circularIconWithGrayBg : List (Html.Attribute Never) -> Translation.Translators -> Valid -> Html msg
+circularIconWithGrayBg attrs translators (Valid valid) =
+    circularIconWithGrayBgInternal attrs translators valid.type_
+
+
+circularIconWithGrayBgInternal : List (Html.Attribute Never) -> Translation.Translators -> ContactType -> Html msg
+circularIconWithGrayBgInternal attrs translators type_ =
     let
         defaultClass =
             case type_ of
@@ -72,6 +80,40 @@ typeToIconInverted class_ type_ =
 
 
 -- HELPERS
+
+
+{-| Transform a `Valid` contact into a string that can be used as an `href` on
+an anchor tag.
+
+Usually, you will want to pair this with `Html.Attributes.target "blank"`
+
+-}
+toHref : Valid -> String
+toHref (Valid valid) =
+    case valid.type_ of
+        ContactType.Email ->
+            "mailto:" ++ valid.value
+
+        ContactType.Instagram ->
+            valid.value
+
+        ContactType.Link ->
+            valid.value
+
+        ContactType.Phone ->
+            "tel:" ++ valid.value
+
+        ContactType.Telegram ->
+            valid.value
+
+        ContactType.Whatsapp ->
+            "https://api.whatsapp.com/send?phone="
+                ++ String.filter Char.isAlphaNum valid.value
+
+
+toLabel : Valid -> String
+toLabel (Valid valid) =
+    valid.label
 
 
 typeToString : Translation.Translators -> ContactType -> String
@@ -262,7 +304,7 @@ form translators =
                                     , onClick (addContactType translators contactType)
                                     , Html.Attributes.type_ "button"
                                     ]
-                                    [ circularIconWithGrayBg
+                                    [ circularIconWithGrayBgInternal
                                         [ class "w-8 h-8 mr-2"
                                         , ariaHidden True
                                         ]
@@ -324,7 +366,7 @@ contactForm translators id =
                             (class "flex items-end" :: slideUpAnimation "h-14" deletionStatus)
                             [ div
                                 [ class "flex items-center" ]
-                                [ circularIconWithGrayBg
+                                [ circularIconWithGrayBgInternal
                                     [ class "w-5 h-5 mb-2 !p-1"
                                     , ariaHidden True
                                     ]
@@ -539,3 +581,24 @@ validateInstagram =
             else
                 Err (\{ t } -> t "contact_form.validation.username.invalid")
         )
+
+
+
+-- GRAPHQL
+
+
+selectionSet : SelectionSet (Maybe Valid) Cambiatus.Object.Contact
+selectionSet =
+    SelectionSet.succeed
+        (Maybe.map3
+            (\type_ externalId label ->
+                Valid
+                    { type_ = type_
+                    , value = externalId
+                    , label = label
+                    }
+            )
+        )
+        |> SelectionSet.with Cambiatus.Object.Contact.type_
+        |> SelectionSet.with Cambiatus.Object.Contact.externalId
+        |> SelectionSet.with Cambiatus.Object.Contact.label

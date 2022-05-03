@@ -57,6 +57,7 @@ import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
 import Community.News
+import Contact
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -72,7 +73,6 @@ import Json.Encode as Encode exposing (Value)
 import List.Extra
 import Markdown exposing (Markdown)
 import Profile
-import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
@@ -128,7 +128,7 @@ type alias Model =
     , validators : List Eos.Name
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
-    , contacts : List Contact.Normalized
+    , contacts : List Contact.Valid
     }
 
 
