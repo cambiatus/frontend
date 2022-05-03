@@ -1173,6 +1173,8 @@
     "footer": "Podeu afegir-lo més endavant a l'àrea del perfil"
   },
   "contact_form": {
+    "add": "Afegeix contacte",
+    "community_header": "Afegiu els contactes que estaran disponibles com a suport per als membres de la comunitat.",
     "country": "País",
     "contact_type": "Tipus de contacte",
     "error": "S'ha produït un error en afegir el vostre contacte",
@@ -1241,6 +1243,10 @@
       "multiple": {
         "success": "Els vostres contactes s'han desat correctament",
         "failure": "S'ha produït un error en intentar desar els vostres contactes"
+      },
+      "community": {
+        "success": "Els contactes de la comunitat s'han desat correctament",
+        "failure": "S'ha produït un error en intentar desar els contactes de la comunitat"
       },
       "delete": {
         "success": "El contacte s'ha suprimit correctament",
@@ -1421,6 +1427,9 @@
     "created_with": "Creat amb",
     "created_by": "per",
     "created_with_love": "Creat amb amor per Satisfied Vagabonds i Cambiatus",
+    "need_help": "Necessitar ajuda?",
+    "contact_support": "Parleu amb el nostre suport",
+    "choose_contact": "Trieu la manera en què voleu posar-vos en contacte amb la comunitat:",
     "version": "VERSIÓ {{version}}"
   },
   "account_frozen": {

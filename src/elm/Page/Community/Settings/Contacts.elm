@@ -138,11 +138,7 @@ update msg model loggedIn =
                         }
                     )
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.CommunityAbout)
-                |> UR.addExt
-                    (LoggedIn.ShowFeedback View.Feedback.Success
-                        -- TODO - I18N
-                        "Community contacts saved successfully"
-                    )
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Success (loggedIn.shared.translators.t "contact_form.feedback.community.success"))
 
         CompletedSubmittingForm (RemoteData.Failure err) ->
             let
@@ -161,11 +157,7 @@ update msg model loggedIn =
                     { moduleName = "Page.Community.Settings.Contacts", function = "update" }
                     []
                     err
-                |> UR.addExt
-                    (LoggedIn.ShowFeedback View.Feedback.Failure
-                        -- TODO - I18N
-                        "Something went wrong when saving community contacts"
-                    )
+                |> UR.addExt (LoggedIn.ShowFeedback View.Feedback.Failure (loggedIn.shared.translators.t "contact_form.feedback.community.failure"))
 
         CompletedSubmittingForm _ ->
             let
@@ -200,17 +192,13 @@ view loggedIn model =
                         [ Page.viewHeader loggedIn title
                         , div [ class "bg-white flex flex-col flex-grow container mx-auto pt-6 pb-7 px-4 lg:px-6" ]
                             [ p [ class "text-gray-900" ]
-                                -- TODO - I18N
-                                [ text "Adicione os contatos que ficarão disponíveis como suporte para os membros da comunidade." ]
-
-                            -- TODO - I18N
-                            , h2 [ class "label mt-10 mb-6" ] [ text "Contact options" ]
+                                [ text <| t "contact_form.community_header" ]
+                            , h2 [ class "label mt-10" ] [ text <| t "contact_form.options" ]
                             , Form.view [ class "flex flex-col flex-grow" ]
                                 loggedIn.shared.translators
                                 (\submitButton ->
-                                    [ submitButton [ class "button button-primary mt-auto" ]
-                                        -- TODO - I18N
-                                        [ text "Save" ]
+                                    [ submitButton [ class "button button-primary mt-auto w-full md:w-56" ]
+                                        [ text <| t "contact_form.submit_multiple" ]
                                     ]
                                 )
                                 (Contact.form loggedIn.shared.translators)

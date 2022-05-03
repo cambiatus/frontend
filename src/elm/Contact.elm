@@ -291,14 +291,12 @@ form translators =
         |> Form.withNoOutput
             (Form.arbitrary
                 (button
-                    [ class "button button-secondary mb-20 mt-10"
+                    [ class "button button-secondary w-full md:w-56 mb-20 mt-10"
                     , onClick openTypeModal
                     , Html.Attributes.type_ "button"
                     ]
                     [ Icons.circledPlus ""
-
-                    -- TODO - I18N
-                    , text "Add contact"
+                    , text <| translators.t "contact_form.add"
                     ]
                 )
             )
@@ -329,8 +327,7 @@ form translators =
                         { closeMsg = closeTypeModal
                         , isVisible = isTypeModalOpen
                         }
-                        -- TODO - I18N
-                        |> Modal.withHeader "Contact options"
+                        |> Modal.withHeader (translators.t "contact_form.options")
                         |> Modal.withBody
                             [ ul [ class "divide-y divide-gray-100" ]
                                 (List.map newInputItem ContactType.list)

@@ -520,15 +520,17 @@ viewCommunityContactsModal : Model -> Html (Msg pageMsg)
 viewCommunityContactsModal model =
     case model.selectedCommunity of
         RemoteData.Success community ->
+            let
+                { t } =
+                    model.shared.translators
+            in
             Modal.initWith
                 { closeMsg = ClosedCommunityContactsModal
                 , isVisible = model.showCommunityContactsModal
                 }
-                -- TODO - I18N
-                |> Modal.withHeader "Need help?"
+                |> Modal.withHeader (t "footer.need_help")
                 |> Modal.withBody
-                    -- TODO - I18N
-                    [ p [] [ text "Choose how you would like to contact the community:" ]
+                    [ p [] [ text <| t "footer.choose_contact" ]
                     , ul [ class "flex flex-wrap gap-6 items-start justify-center mt-6 mb-10" ]
                         (community.contacts
                             |> List.map
@@ -1206,11 +1208,9 @@ viewFooter ({ shared } as model) =
                                         button (onClick ClickedOpenCommunityContactsModal :: attrs)
                         in
                         div []
-                            [ -- TODO - I18N
-                              p [] [ text "Need help?" ]
+                            [ p [] [ text <| t "footer.need_help" ]
                             , linkContainer [ class "text-orange-300 hover:underline text-left" ]
-                                -- TODO - I18N
-                                [ text "Contact our support" ]
+                                [ text <| t "footer.contact_support" ]
                             ]
 
                 _ ->
