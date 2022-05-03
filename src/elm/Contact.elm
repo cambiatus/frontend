@@ -400,7 +400,7 @@ contactForm translators id =
                         , id = labelId
                         }
                         |> Form.Text.withContainerAttrs
-                            (class "max-w-27 mb-0"
+                            (class "mb-0 max-w-27 md:max-w-xs"
                                 :: slideUpAnimation "h-12" deletionStatus
                             )
                         |> Form.textField
@@ -422,7 +422,7 @@ contactForm translators id =
                         }
                         |> Form.Text.withPlaceholder (typeToPlaceholder type_)
                         |> Form.Text.withContainerAttrs
-                            (class "mb-0"
+                            (class "mb-0 w-full md:w-96"
                                 :: slideUpAnimation "h-12" deletionStatus
                             )
                         |> Form.textField
