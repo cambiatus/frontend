@@ -8,7 +8,7 @@ import Contact
 import Eos
 import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex)
+import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -388,20 +388,21 @@ viewCommunityCard ({ translators } as shared) community =
                             |> text
                         ]
             , Markdown.view [ class "mt-6" ] community.description
-            , ul [ class "flex flex-wrap mt-8 gap-6 items-center justify-center" ]
+            , ul [ class "flex flex-wrap mt-8 gap-6 items-start justify-center" ]
                 (community.contacts
                     |> List.map
                         (\contact ->
-                            li [ class "flex flex-col items-center" ]
+                            li [ class "w-10" ]
                                 [ a
-                                    [ class "w-10 h-10"
+                                    [ class "flex flex-col items-center hover:opacity-60"
                                     , Html.Attributes.href (Contact.toHref contact)
                                     , Html.Attributes.target "blank"
+                                    , title (Contact.toLabel contact)
                                     ]
-                                    [ Contact.circularIconWithGrayBg [] translators contact
-                                    ]
-                                , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold" ]
-                                    [ text <| Contact.toLabel contact
+                                    [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ] translators contact
+                                    , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold line-clamp-2" ]
+                                        [ text <| Contact.toLabel contact
+                                        ]
                                     ]
                                 ]
                         )
