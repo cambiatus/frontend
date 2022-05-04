@@ -11,11 +11,13 @@ module Page.Shop.Editor exposing
 import Api
 import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
+import Eos
 import Form
 import Form.File
 import Form.RichText
 import Form.Select
 import Form.Text
+import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
@@ -130,8 +132,8 @@ type alias FormOutput2 =
     }
 
 
-createForm2 : Translation.Translators -> Form.Form msg FormInput2 FormOutput2
-createForm2 translators =
+createForm2 : Translation.Translators -> Eos.Symbol -> Form.Form msg FormInput2 FormOutput2
+createForm2 translators symbol =
     Form.succeed
         (\mainInformation images priceAndInventory ->
             { name = mainInformation.name
@@ -155,7 +157,7 @@ createForm2 translators =
             { value = .priceAndInventory
             , update = \newPriceAndInventory values -> { values | priceAndInventory = newPriceAndInventory }
             }
-            priceAndInventoryForm
+            (priceAndInventoryForm translators symbol)
 
 
 type alias MainInformationFormInput =
@@ -229,9 +231,69 @@ type alias PriceAndInventoryFormOutput =
     }
 
 
-priceAndInventoryForm : Form.Form msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
-priceAndInventoryForm =
-    Debug.todo ""
+priceAndInventoryForm : Translation.Translators -> Eos.Symbol -> Form.Form msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
+priceAndInventoryForm translators symbol =
+    Form.succeed PriceAndInventoryFormOutput
+        |> Form.with
+            (Form.Text.init
+                { -- TODO - I18N
+                  label = "Price"
+                , id = "product-price-input"
+                }
+                |> Form.Text.withCurrency symbol
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.floatGreaterThan 0
+                            >> Form.Validate.validate translators
+                    , value = .price
+                    , update = \newPrice values -> { values | price = newPrice }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with (stockTrackingForm translators)
+
+
+stockTrackingForm : Translation.Translators -> Form.Form msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
+stockTrackingForm translators =
+    Form.succeed
+        (\availableUnits trackStock ->
+            if trackStock then
+                Shop.UnitTracking { availableUnits = availableUnits }
+
+            else
+                Shop.NoTracking
+        )
+        |> Form.with
+            (Form.Text.init
+                { -- TODO - I18N
+                  label = "Quantity in stock"
+                , id = "product-quantity-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.int
+                            >> Form.Validate.intGreaterThanOrEqualTo 0
+                            >> Form.Validate.validate translators
+                    , value = .unitsInStock
+                    , update = \newUnitsInStock values -> { values | unitsInStock = newUnitsInStock }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Toggle.init
+                { label = text ""
+                , id = "product-track-units-toggle"
+                }
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .trackUnits
+                    , update = \newTrackUnits values -> { values | trackUnits = newTrackUnits }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
