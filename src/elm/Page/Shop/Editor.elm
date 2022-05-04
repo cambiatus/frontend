@@ -34,6 +34,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Product)
+import Translation
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Modal as Modal
@@ -104,6 +105,133 @@ type alias FormOutput =
     , unitTracking : Shop.StockTracking
     , price : Float
     }
+
+
+type Step
+    = MainInformation
+    | Images
+    | PriceAndInventory
+
+
+type alias FormInput2 =
+    { currentStep : Step
+    , mainInformation : MainInformationFormInput
+    , images : ImagesFormInput
+    , priceAndInventory : PriceAndInventoryFormInput
+    }
+
+
+type alias FormOutput2 =
+    { name : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , unitTracking : Shop.StockTracking
+    }
+
+
+createForm2 : Translation.Translators -> Form.Form msg FormInput2 FormOutput2
+createForm2 translators =
+    Form.succeed
+        (\mainInformation images priceAndInventory ->
+            { name = mainInformation.name
+            , description = mainInformation.description
+            , images = images
+            , price = priceAndInventory.price
+            , unitTracking = priceAndInventory.unitTracking
+            }
+        )
+        |> Form.withNesting
+            { value = .mainInformation
+            , update = \newMainInformation values -> { values | mainInformation = newMainInformation }
+            }
+            (mainInformationForm translators)
+        |> Form.withNesting
+            { value = .images
+            , update = \newImages values -> { values | images = newImages }
+            }
+            imagesForm
+        |> Form.withNesting
+            { value = .priceAndInventory
+            , update = \newPriceAndInventory values -> { values | priceAndInventory = newPriceAndInventory }
+            }
+            priceAndInventoryForm
+
+
+type alias MainInformationFormInput =
+    { name : String
+    , description : Form.RichText.Model
+    }
+
+
+type alias MainInformationFormOutput =
+    { name : String, description : Markdown }
+
+
+mainInformationForm : Translation.Translators -> Form.Form msg MainInformationFormInput MainInformationFormOutput
+mainInformationForm translators =
+    Form.succeed MainInformationFormOutput
+        |> Form.with
+            (Form.Text.init
+                { -- TODO - I18N
+                  label = "Name"
+                , id = "product-name-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringShorterThan 255
+                            >> Form.Validate.stringLongerThan 3
+                            >> Form.Validate.validate translators
+                    , value = .name
+                    , update = \newName values -> { values | name = newName }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.RichText.init
+                { -- TODO - I18N
+                  label = "Description"
+                }
+                |> Form.richText
+                    { parser = Ok
+                    , value = .description
+                    , update = \newDescription values -> { values | description = newDescription }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+type alias ImagesFormInput =
+    -- TODO - Should this be a list?
+    List Form.File.Model
+
+
+type alias ImagesFormOutput =
+    List String
+
+
+imagesForm : Form.Form msg ImagesFormInput ImagesFormOutput
+imagesForm =
+    Debug.todo ""
+
+
+type alias PriceAndInventoryFormInput =
+    { price : String
+    , unitsInStock : String
+    , trackUnits : Bool
+    }
+
+
+type alias PriceAndInventoryFormOutput =
+    { price : Float
+    , unitTracking : Shop.StockTracking
+    }
+
+
+priceAndInventoryForm : Form.Form msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
+priceAndInventoryForm =
+    Debug.todo ""
 
 
 createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
