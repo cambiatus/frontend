@@ -251,17 +251,17 @@ body > * {
   @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full flex flex-col;
 
   min-height: 4rem;
-  max-height: 60vh;
+  max-height: 60%;
 }
 
 .modal-content-lg {
-  max-height: 80vh;
+  max-height: 80%;
 }
 
 .modal-content-full {
   @apply overflow-auto;
 
-  max-height: 95vh;
+  max-height: 95%;
 }
 
 .modal-header {
