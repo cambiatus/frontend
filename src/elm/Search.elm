@@ -605,11 +605,9 @@ viewOffers translators symbol offers =
         viewOffer offer =
             let
                 imageUrl =
-                    case offer.image of
+                    -- TODO - We only show one image
+                    case List.head offer.images of
                         Nothing ->
-                            "/icons/shop-placeholder1.svg"
-
-                        Just "" ->
                             "/icons/shop-placeholder1.svg"
 
                         Just url ->

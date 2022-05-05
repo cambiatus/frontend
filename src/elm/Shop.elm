@@ -49,7 +49,7 @@ type alias Product =
     , creatorId : Eos.Name
     , price : Float
     , symbol : Symbol
-    , image : Maybe String
+    , images : List String
     , stockTracking : StockTracking
     , creator : Profile.Minimal
     }
@@ -94,7 +94,7 @@ type alias ProductPreview =
     , creator : Profile.Minimal
     , description : Markdown
     , id : Id
-    , image : Maybe String
+    , images : List String
     , price : Float
     , title : String
     }
@@ -143,10 +143,9 @@ productSelectionSet =
             , creatorId = creatorId
             , price = price
             , symbol = symbol
-            , image =
+            , images =
                 images
                     |> List.filter (not << String.isEmpty)
-                    |> List.head
             , stockTracking =
                 if trackStock then
                     case maybeUnits of
@@ -181,10 +180,9 @@ productPreviewSelectionSet =
             , creator = creator
             , description = description
             , id = id
-            , image =
+            , images =
                 images
                     |> List.filter (not << String.isEmpty)
-                    |> List.head
             , price = price
             , title = title
             }

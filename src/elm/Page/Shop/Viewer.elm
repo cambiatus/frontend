@@ -441,7 +441,7 @@ view session model =
 
         viewContent :
             { product
-                | image : Maybe String
+                | images : List String
                 , title : String
                 , description : Markdown
                 , creator : Profile.Minimal
@@ -470,7 +470,8 @@ view session model =
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
-                        [ viewProductImg translators sale.image
+                        -- TODO - We only show one image
+                        [ viewProductImg translators (List.head sale.images)
                         , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , if isCreator then

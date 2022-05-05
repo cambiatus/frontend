@@ -319,15 +319,16 @@ viewCard loggedIn index card =
             loggedIn.shared.translators
 
         image =
-            Maybe.withDefault
-                ("/icons/shop-placeholder"
-                    ++ (index
-                            |> modBy 3
-                            |> String.fromInt
-                       )
-                    ++ ".svg"
-                )
-                card.product.image
+            -- TODO - We only show one image
+            List.head card.product.images
+                |> Maybe.withDefault
+                    ("/icons/shop-placeholder"
+                        ++ (index
+                                |> modBy 3
+                                |> String.fromInt
+                           )
+                        ++ ".svg"
+                    )
 
         isFree =
             card.product.price == 0

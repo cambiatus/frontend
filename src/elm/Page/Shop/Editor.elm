@@ -490,7 +490,7 @@ initFormData =
             { name = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
-    , images = Form.init []
+    , images = Form.init [ Form.File.initModel Nothing ]
     , priceAndInventory =
         Form.init
             { price = "0"
@@ -508,12 +508,9 @@ initEditingFormData product =
             { name = product.title
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
-
-    -- TODO - Use images instead of image
     , images =
-        product.image
-            |> Form.File.initModel
-            |> List.singleton
+        product.images
+            |> List.map (Just >> Form.File.initModel)
             |> Form.init
     , priceAndInventory =
         Form.init
