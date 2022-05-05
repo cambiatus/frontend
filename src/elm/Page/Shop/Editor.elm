@@ -123,59 +123,14 @@ type Step
     | PriceAndInventory MainInformationFormOutput ImagesFormOutput
 
 
-type alias FormInput2 =
-    { currentStep : Step
-    , mainInformation : MainInformationFormInput
-    , images : ImagesFormInput
-    , priceAndInventory : PriceAndInventoryFormInput
-    }
-
-
-type alias FormOutput2 =
-    { name : String
-    , description : Markdown
-    , images : List String
-    , price : Float
-    , unitTracking : Shop.StockTracking
-    }
-
-
-createForm2 : Translation.Translators -> Eos.Symbol -> Form.Form msg FormInput2 FormOutput2
-createForm2 translators symbol =
-    Form.succeed
-        (\mainInformation images priceAndInventory ->
-            { name = mainInformation.name
-            , description = mainInformation.description
-            , images = images
-            , price = priceAndInventory.price
-            , unitTracking = priceAndInventory.unitTracking
-            }
-        )
-        |> Form.withNesting
-            { value = .mainInformation
-            , update = \newMainInformation values -> { values | mainInformation = newMainInformation }
-            }
-            (mainInformationForm translators)
-        |> Form.withNesting
-            { value = .images
-            , update = \newImages values -> { values | images = newImages }
-            }
-            imagesForm
-        |> Form.withNesting
-            { value = .priceAndInventory
-            , update = \newPriceAndInventory values -> { values | priceAndInventory = newPriceAndInventory }
-            }
-            (priceAndInventoryForm translators symbol)
-
-
 type alias MainInformationFormInput =
-    { name : String
+    { title : String
     , description : Form.RichText.Model
     }
 
 
 type alias MainInformationFormOutput =
-    { name : String, description : Markdown }
+    { title : String, description : Markdown }
 
 
 mainInformationForm : Translation.Translators -> Form.Form msg MainInformationFormInput MainInformationFormOutput
@@ -185,7 +140,7 @@ mainInformationForm translators =
             (Form.Text.init
                 { -- TODO - I18N
                   label = "Name"
-                , id = "product-name-input"
+                , id = "product-title-input"
                 }
                 |> Form.textField
                     { parser =
@@ -193,8 +148,8 @@ mainInformationForm translators =
                             >> Form.Validate.stringShorterThan 255
                             >> Form.Validate.stringLongerThan 3
                             >> Form.Validate.validate translators
-                    , value = .name
-                    , update = \newName values -> { values | name = newName }
+                    , value = .title
+                    , update = \newTitle values -> { values | title = newTitle }
                     , externalError = always Nothing
                     }
             )
@@ -234,7 +189,7 @@ type alias PriceAndInventoryFormInput =
 
 
 type alias PriceAndInventoryFormOutput =
-    { price : Float
+    { price : Eos.Asset
     , unitTracking : Shop.StockTracking
     }
 
@@ -254,6 +209,7 @@ priceAndInventoryForm translators symbol =
                         Form.Validate.succeed
                             >> Form.Validate.maskedFloat translators
                             >> Form.Validate.floatGreaterThan 0
+                            >> Form.Validate.map (\price -> { amount = price, symbol = symbol })
                             >> Form.Validate.validate translators
                     , value = .price
                     , update = \newPrice values -> { values | price = newPrice }
@@ -487,7 +443,7 @@ initFormData : FormData
 initFormData =
     { mainInformation =
         Form.init
-            { name = ""
+            { title = ""
             , description = Form.RichText.initModel "product-description-editor" Nothing
             }
     , images = Form.init [ Form.File.initModel Nothing ]
@@ -505,7 +461,7 @@ initEditingFormData : Product -> FormData
 initEditingFormData product =
     { mainInformation =
         Form.init
-            { name = product.title
+            { title = product.title
             , description = Form.RichText.initModel "product-description-editor" (Just product.description)
             }
     , images =
@@ -770,7 +726,6 @@ type Msg
     | SubmittedMainInformation MainInformationFormOutput
     | SubmittedImages ImagesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
-    | ClickedSave FormOutput
     | ClickedDelete
     | ClickedDeleteConfirm
     | ClickedDeleteCancel
@@ -861,80 +816,6 @@ update msg model loggedIn =
         CompletedSaleLoad _ ->
             UR.init model
 
-        ClickedSave formOutput ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    case model of
-                        EditingCreate balances form ->
-                            Creating balances form
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation
-                                        loggedIn
-                                        (Shop.createProduct
-                                            { symbol = community.symbol
-                                            , title = formOutput.title
-                                            , description = formOutput.description
-                                            , images =
-                                                formOutput.image
-                                                    |> Maybe.map List.singleton
-                                                    |> Maybe.withDefault []
-                                            , price = formOutput.price
-                                            , stockTracking = formOutput.unitTracking
-                                            }
-                                            Shop.idSelectionSet
-                                        )
-                                        GotSaveResponse
-                                    )
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Sell ]
-                                    model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                        EditingUpdate balances sale _ form ->
-                            Saving balances sale form
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation
-                                        loggedIn
-                                        (Shop.updateProduct
-                                            { id = sale.id
-                                            , symbol = community.symbol
-                                            , title = formOutput.title
-                                            , description = formOutput.description
-                                            , images =
-                                                formOutput.image
-                                                    |> Maybe.map List.singleton
-                                                    |> Maybe.withDefault []
-                                            , price = formOutput.price
-                                            , stockTracking = formOutput.unitTracking
-                                            }
-                                            Shop.idSelectionSet
-                                        )
-                                        GotSaveResponse
-                                    )
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Sell ]
-                                    model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                        _ ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
-                                    "Clicked save shop item, but wasn't editing or creating shop offer"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Shop.Editor", function = "update" }
-                                    []
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg
-                            "Clicked save shop item, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
         ClickedDelete ->
             case model of
                 EditingUpdate balances sale _ form ->
@@ -988,8 +869,7 @@ update msg model loggedIn =
                             Route.ViewSale id
             in
             UR.init model
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
         GotSaveResponse (RemoteData.Failure error) ->
@@ -1128,8 +1008,62 @@ update msg model loggedIn =
             in
             case maybeCurrentStep of
                 Just (PriceAndInventory mainInformation images) ->
-                    -- TODO - Save/create the offer
-                    UR.init model
+                    case model of
+                        EditingCreate balances formData ->
+                            Creating balances formData
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.createProduct
+                                            { symbol = priceAndInventory.price.symbol
+                                            , title = mainInformation.title
+                                            , description = mainInformation.description
+                                            , images = images
+                                            , price = priceAndInventory.price.amount
+                                            , stockTracking = priceAndInventory.unitTracking
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
+                                    model
+                                    { successMsg = msg, errorMsg = ClosedAuthModal }
+
+                        EditingUpdate balances sale _ formData ->
+                            Saving balances sale formData
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.updateProduct
+                                            { id = sale.id
+                                            , symbol = priceAndInventory.price.symbol
+                                            , title = mainInformation.title
+                                            , description = mainInformation.description
+                                            , images = images
+                                            , price = priceAndInventory.price.amount
+                                            , stockTracking = priceAndInventory.unitTracking
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
+                                    model
+                                    { successMsg = msg, errorMsg = ClosedAuthModal }
+
+                        _ ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Clicked save shop item, but wasn't editing or creating shop offer"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Shop.Editor", function = "update" }
+                                    []
 
                 _ ->
                     UR.init model
@@ -1298,9 +1232,6 @@ msgToString msg =
 
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
-
-        ClickedSave _ ->
-            [ "ClickedSave" ]
 
         ClickedDelete ->
             [ "ClickedDelete" ]

@@ -231,6 +231,8 @@ viewShopFilter loggedIn model =
             { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
             [ class "w-full md:w-40 button button-primary"
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
+
+            -- TODO - Maybe we should check that the user has permission to sell
             , Route.href Route.NewSale
             ]
             [ text <| t "shop.create_new_offer" ]
