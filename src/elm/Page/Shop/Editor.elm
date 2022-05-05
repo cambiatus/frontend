@@ -15,7 +15,6 @@ import Eos
 import Form
 import Form.File
 import Form.RichText
-import Form.Select
 import Form.Text
 import Form.Toggle
 import Form.Validate
@@ -98,25 +97,6 @@ type DeleteModalStatus
     | Closed
 
 
-type alias FormInput =
-    { image : Form.File.Model
-    , title : String
-    , description : Form.RichText.Model
-    , trackUnits : Bool
-    , unitsInStock : String
-    , price : String
-    }
-
-
-type alias FormOutput =
-    { image : Maybe String
-    , title : String
-    , description : Markdown
-    , unitTracking : Shop.StockTracking
-    , price : Float
-    }
-
-
 type Step
     = MainInformation
     | Images MainInformationFormOutput
@@ -142,6 +122,9 @@ mainInformationForm translators =
                   label = "Name"
                 , id = "product-title-input"
                 }
+                |> Form.Text.withExtraAttrs [ maxlength 255 ]
+                -- TODO - I18N
+                |> Form.Text.withPlaceholder (translators.t "shop.what_label")
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -158,8 +141,12 @@ mainInformationForm translators =
                 { -- TODO - I18N
                   label = "Description"
                 }
+                |> Form.RichText.withPlaceholder (translators.t "shop.description_placeholder")
                 |> Form.richText
-                    { parser = Ok
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.markdownLongerThan 10
+                            >> Form.Validate.validate translators
                     , value = .description
                     , update = \newDescription values -> { values | description = newDescription }
                     , externalError = always Nothing
@@ -194,8 +181,8 @@ type alias PriceAndInventoryFormOutput =
     }
 
 
-priceAndInventoryForm : Translation.Translators -> Eos.Symbol -> Form.Form msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
-priceAndInventoryForm translators symbol =
+priceAndInventoryForm : Translation.Translators -> { isDisabled : Bool } -> Eos.Symbol -> Form.Form Msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
+priceAndInventoryForm translators isDisabled symbol =
     Form.succeed PriceAndInventoryFormOutput
         |> Form.with
             (Form.Text.init
@@ -204,6 +191,7 @@ priceAndInventoryForm translators symbol =
                 , id = "product-price-input"
                 }
                 |> Form.Text.withCurrency symbol
+                |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -216,11 +204,11 @@ priceAndInventoryForm translators symbol =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with (stockTrackingForm translators)
+        |> Form.with (stockTrackingForm translators isDisabled)
 
 
-stockTrackingForm : Translation.Translators -> Form.Form msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
-stockTrackingForm translators =
+stockTrackingForm : Translation.Translators -> { isDisabled : Bool } -> Form.Form Msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
+stockTrackingForm translators { isDisabled } =
     Form.succeed
         (\availableUnits trackStock ->
             if trackStock then
@@ -230,21 +218,60 @@ stockTrackingForm translators =
                 Shop.NoTracking
         )
         |> Form.with
-            (Form.Text.init
-                { -- TODO - I18N
-                  label = "Quantity in stock"
-                , id = "product-quantity-input"
-                }
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> Form.Validate.int
-                            >> Form.Validate.intGreaterThanOrEqualTo 0
-                            >> Form.Validate.validate translators
-                    , value = .unitsInStock
-                    , update = \newUnitsInStock values -> { values | unitsInStock = newUnitsInStock }
-                    , externalError = always Nothing
-                    }
+            (Form.introspect
+                (\{ trackUnits } ->
+                    if trackUnits then
+                        Form.Text.init
+                            { -- TODO - I18N
+                              label = "Quantity in stock"
+                            , id = "product-quantity-input"
+                            }
+                            |> Form.Text.withPlaceholder "0"
+                            |> Form.Text.asNumeric
+                            |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.withExtraAttrs
+                                [ Html.Attributes.min "0"
+                                , class "text-center"
+                                ]
+                            |> Form.Text.withElements
+                                [ button
+                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                                    , classList
+                                        [ ( "bg-white", not isDisabled )
+                                        , ( "bg-gray-500", isDisabled )
+                                        ]
+                                    , type_ "button"
+                                    , ariaLabel <| translators.t "shop.subtract_unit"
+                                    , onClick ClickedDecrementStockUnits
+                                    ]
+                                    [ Icons.minus "fill-current"
+                                    ]
+                                , button
+                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                                    , classList
+                                        [ ( "bg-white", not isDisabled )
+                                        , ( "bg-gray-500", isDisabled )
+                                        ]
+                                    , type_ "button"
+                                    , ariaLabel <| translators.t "shop.add_unit"
+                                    , onClick ClickedIncrementStockUnits
+                                    ]
+                                    [ Icons.plus "fill-current" ]
+                                ]
+                            |> Form.textField
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.int
+                                        >> Form.Validate.intGreaterThanOrEqualTo 0
+                                        >> Form.Validate.validate translators
+                                , value = .unitsInStock
+                                , update = \newUnitsInStock values -> { values | unitsInStock = newUnitsInStock }
+                                , externalError = always Nothing
+                                }
+
+                    else
+                        Form.succeed 0
+                )
             )
         |> Form.with
             (Form.Toggle.init
@@ -258,185 +285,6 @@ stockTrackingForm translators =
                     , externalError = always Nothing
                     }
             )
-
-
-createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
-createForm loggedIn =
-    let
-        ({ t } as translators) =
-            loggedIn.shared.translators
-    in
-    Form.succeed
-        (\maybeImage title description price trackUnits unitsInStock ->
-            { image = maybeImage
-            , title = title
-            , description = description
-            , unitTracking =
-                if trackUnits then
-                    unitsInStock
-
-                else
-                    Shop.NoTracking
-            , price = price
-            }
-        )
-        |> Form.with
-            (Form.introspect
-                (\values ->
-                    Form.File.init { label = t "shop.photo_label", id = "image-uploader" }
-                        |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                        |> Form.File.withContainerAttrs
-                            [ class "mb-10 lg:place-self-center lg:w-2/3"
-                            , classList
-                                [ ( "lg:row-span-5", not values.trackUnits )
-                                , ( "lg:row-span-6", values.trackUnits )
-                                ]
-                            ]
-                        |> Form.File.withAttrs [ class "border border-dashed border-gray-900 rounded" ]
-                        |> Form.file
-                            { translators = translators
-                            , value = .image
-                            , update = \image input -> { input | image = image }
-                            , externalError = always Nothing
-                            }
-                        |> Form.optional
-                )
-            )
-        |> Form.with
-            (Form.Text.init { label = t "shop.what_label", id = "title-input" }
-                |> Form.Text.withExtraAttrs [ maxlength 255 ]
-                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
-                |> Form.Text.withPlaceholder (t "shop.what_label")
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> Form.Validate.stringShorterThan 255
-                            >> Form.Validate.stringLongerThan 3
-                            >> Form.Validate.validate translators
-                    , value = .title
-                    , update = \title input -> { input | title = title }
-                    , externalError = always Nothing
-                    }
-            )
-        |> Form.with
-            (Form.RichText.init { label = t "shop.description_label" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
-                |> Form.RichText.withPlaceholder (t "shop.description_placeholder")
-                |> Form.richText
-                    { parser =
-                        Form.Validate.succeed
-                            >> Form.Validate.markdownLongerThan 10
-                            >> Form.Validate.validate translators
-                    , value = .description
-                    , update = \description input -> { input | description = description }
-                    , externalError = always Nothing
-                    }
-            )
-        |> Form.with
-            (Form.Text.init { label = t "shop.price_label", id = "price-input" }
-                |> (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            Form.Text.withCurrency community.symbol
-
-                        _ ->
-                            identity
-                   )
-                |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
-                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
-                |> Form.textField
-                    { parser =
-                        Form.Validate.succeed
-                            >> Form.Validate.maskedFloat translators
-                            >> Form.Validate.floatGreaterThan 0
-                            >> Form.Validate.validate translators
-                    , value = .price
-                    , update = \price input -> { input | price = price }
-                    , externalError = always Nothing
-                    }
-            )
-        |> Form.with
-            (Form.Select.init
-                { label = t "shop.track_stock_label"
-                , id = "track-stock-select"
-                , optionToString = boolToString
-                }
-                |> Form.Select.withOption False (t "shop.track_stock_no")
-                |> Form.Select.withOption True (t "shop.track_stock_yes")
-                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
-                |> Form.select (boolFromString >> Maybe.withDefault False)
-                    { parser = Ok
-                    , value = .trackUnits
-                    , update = \trackUnits input -> { input | trackUnits = trackUnits }
-                    , externalError = always Nothing
-                    }
-            )
-        |> Form.with
-            (Form.introspect
-                (\values ->
-                    if values.trackUnits then
-                        Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
-                            |> Form.Text.withPlaceholder "0"
-                            |> Form.Text.asNumeric
-                            |> Form.Text.withType Form.Text.Number
-                            |> Form.Text.withExtraAttrs
-                                [ Html.Attributes.min "0"
-                                , class "text-center"
-                                ]
-                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
-                            |> Form.Text.withElements
-                                [ button
-                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
-                                    , type_ "button"
-                                    , ariaLabel <| t "shop.subtract_unit"
-                                    , onClick ClickedDecrementStockUnits
-                                    ]
-                                    [ Icons.minus "fill-current" ]
-                                , button
-                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
-                                    , type_ "button"
-                                    , ariaLabel <| t "shop.add_unit"
-                                    , onClick ClickedIncrementStockUnits
-                                    ]
-                                    [ Icons.plus "fill-current" ]
-                                ]
-                            |> Form.textField
-                                { parser =
-                                    Form.Validate.succeed
-                                        >> Form.Validate.int
-                                        >> Form.Validate.intGreaterThanOrEqualTo 0
-                                        >> Form.Validate.map (\units -> Shop.UnitTracking { availableUnits = units })
-                                        >> Form.Validate.validate translators
-                                , value = .unitsInStock
-                                , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
-                                , externalError = always Nothing
-                                }
-
-                    else
-                        Form.succeed Shop.NoTracking
-                )
-            )
-
-
-boolToString : Bool -> String
-boolToString bool =
-    if bool then
-        "True"
-
-    else
-        "False"
-
-
-boolFromString : String -> Maybe Bool
-boolFromString bool =
-    case bool of
-        "True" ->
-            Just True
-
-        "False" ->
-            Just False
-
-        _ ->
-            Nothing
 
 
 initFormData : FormData
@@ -594,9 +442,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
             Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
                 shared.translators
                 (\submitButton ->
-                    -- TODO - "Delete product" button?
-                    -- TODO - I18N, change message based on step
-                    [ submitButton
+                    -- TODO - Adjust texts and layout
+                    [ if isEdit then
+                        button
+                            [ class "button button-danger w-full"
+                            , disabled isDisabled
+                            , onClick ClickedDelete
+                            , type_ "button"
+                            ]
+                            [ text (t "shop.delete") ]
+
+                      else
+                        text ""
+                    , submitButton
                         [ class "button button-primary"
                         , disabled isDisabled
                         ]
@@ -613,38 +471,6 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
             [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
-
-            -- , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
-            --     shared.translators
-            --     (\submitButton ->
-            --         [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
-            --             [ if isEdit then
-            --                 button
-            --                     [ class "button button-danger w-full"
-            --                     , disabled isDisabled
-            --                     , onClick ClickedDelete
-            --                     , type_ "button"
-            --                     ]
-            --                     [ text (t "shop.delete") ]
-            --               else
-            --                 text ""
-            --             , submitButton
-            --                 [ class "button button-primary w-full"
-            --                 , disabled isDisabled
-            --                 ]
-            --                 [ text actionText ]
-            --             ]
-            --         , if isEdit && deleteModal == Open then
-            --             viewConfirmDeleteModal t
-            --           else
-            --             text ""
-            --         ]
-            --     )
-            --     (createForm loggedIn)
-            --     (Form.withDisabled isDisabled form)
-            --     { toMsg = GotFormMsg
-            --     , onSubmit = ClickedSave
-            --     }
             , case formData.currentStep of
                 MainInformation ->
                     viewForm_ (mainInformationForm shared.translators)
@@ -665,7 +491,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 PriceAndInventory _ _ ->
                     case loggedIn.selectedCommunity of
                         RemoteData.Success community ->
-                            viewForm_ (priceAndInventoryForm shared.translators community.symbol)
+                            viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
                                 formData.priceAndInventory
                                 actionText
                                 PriceAndInventoryMsg
@@ -1258,10 +1084,10 @@ msgToString msg =
             [ "SubmittedMainInformation" ]
 
         SubmittedImages _ ->
-            [ "SubmittedImages " ]
+            [ "SubmittedImages" ]
 
         SubmittedPriceAndInventory _ ->
-            [ "SubmittedPriceAndInventory " ]
+            [ "SubmittedPriceAndInventory" ]
 
         ClickedDecrementStockUnits ->
             [ "ClickedDecrementStockUnits" ]
