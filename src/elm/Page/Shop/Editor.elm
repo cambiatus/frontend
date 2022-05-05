@@ -162,10 +162,44 @@ type alias ImagesFormOutput =
     List String
 
 
-imagesForm : Form.Form msg ImagesFormInput ImagesFormOutput
-imagesForm =
+imagesForm : Translation.Translators -> Form.Form msg ImagesFormInput ImagesFormOutput
+imagesForm translators =
     -- TODO - Use Form.list from community contacts PR
-    Form.succeed []
+    -- TODO - Add new input when done uploading
+    Form.succeed
+        (\maybeFirstImage ->
+            case maybeFirstImage of
+                Nothing ->
+                    []
+
+                Just firstImage ->
+                    [ firstImage ]
+        )
+        |> Form.with
+            (Form.introspect
+                (\images ->
+                    case List.head images of
+                        Just firstImage ->
+                            Form.File.init
+                                { label = "Images"
+                                , id = "image-input-0"
+                                }
+                                |> Form.File.withAttrs
+                                    [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
+                                    ]
+                                |> Form.File.withVariant Form.File.SimplePlus
+                                |> Form.file
+                                    { translators = translators
+                                    , value = \_ -> firstImage
+                                    , update = \newModel _ -> [ newModel ]
+                                    , externalError = always Nothing
+                                    }
+                                |> Form.mapOutput Just
+
+                        Nothing ->
+                            Form.succeed Nothing
+                )
+            )
 
 
 type alias PriceAndInventoryFormInput =
@@ -481,7 +515,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                         SubmittedMainInformation
 
                 Images _ ->
-                    viewForm_ imagesForm
+                    viewForm_ (imagesForm shared.translators)
                         formData.images
                         -- TODO - I18N
                         "Next"
