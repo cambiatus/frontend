@@ -31,26 +31,6 @@ communityId =
     Object.selectionForField "String" "communityId" [] Decode.string
 
 
-createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Product
-createdAt =
-    Object.selectionForField "ScalarCodecs.DateTime" "createdAt" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecDateTime |> .decoder)
-
-
-createdBlock : SelectionSet Int Cambiatus.Object.Product
-createdBlock =
-    Object.selectionForField "Int" "createdBlock" [] Decode.int
-
-
-createdEosAccount : SelectionSet String Cambiatus.Object.Product
-createdEosAccount =
-    Object.selectionForField "String" "createdEosAccount" [] Decode.string
-
-
-createdTx : SelectionSet String Cambiatus.Object.Product
-createdTx =
-    Object.selectionForField "String" "createdTx" [] Decode.string
-
-
 creator :
     SelectionSet decodesTo Cambiatus.Object.User
     -> SelectionSet decodesTo Cambiatus.Object.Product
@@ -71,11 +51,6 @@ description =
 id : SelectionSet Int Cambiatus.Object.Product
 id =
     Object.selectionForField "Int" "id" [] Decode.int
-
-
-image : SelectionSet (Maybe String) Cambiatus.Object.Product
-image =
-    Object.selectionForField "(Maybe String)" "image" [] (Decode.string |> Decode.nullable)
 
 
 images :
