@@ -72,17 +72,25 @@ type
     Status
     -- Create
     = LoadingBalancesCreate
-    | EditingCreate (List Balance) (Form.Model FormInput)
-    | Creating (List Balance) (Form.Model FormInput)
+    | EditingCreate (List Balance) FormData
+    | Creating (List Balance) FormData
       -- Update
     | LoadingBalancesUpdate Shop.Id
     | LoadingSaleUpdate (List Balance)
-    | EditingUpdate (List Balance) Product DeleteModalStatus (Form.Model FormInput)
-    | Saving (List Balance) Product (Form.Model FormInput)
-    | Deleting (List Balance) Product (Form.Model FormInput)
+    | EditingUpdate (List Balance) Product DeleteModalStatus FormData
+    | Saving (List Balance) Product FormData
+    | Deleting (List Balance) Product FormData
       -- Errors
     | LoadBalancesFailed Http.Error
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
+
+
+type alias FormData =
+    { mainInformation : Form.Model MainInformationFormInput
+    , images : Form.Model ImagesFormInput
+    , priceAndInventory : Form.Model PriceAndInventoryFormInput
+    , currentStep : Step
+    }
 
 
 type DeleteModalStatus
@@ -111,8 +119,8 @@ type alias FormOutput =
 
 type Step
     = MainInformation
-    | Images
-    | PriceAndInventory
+    | Images MainInformationFormOutput
+    | PriceAndInventory MainInformationFormOutput ImagesFormOutput
 
 
 type alias FormInput2 =
@@ -205,7 +213,6 @@ mainInformationForm translators =
 
 
 type alias ImagesFormInput =
-    -- TODO - Should this be a list?
     List Form.File.Model
 
 
@@ -215,7 +222,8 @@ type alias ImagesFormOutput =
 
 imagesForm : Form.Form msg ImagesFormInput ImagesFormOutput
 imagesForm =
-    Debug.todo ""
+    -- TODO - Use Form.list from community contacts PR
+    Form.succeed []
 
 
 type alias PriceAndInventoryFormInput =
@@ -475,34 +483,52 @@ boolFromString bool =
             Nothing
 
 
-initForm : Form.Model FormInput
-initForm =
-    Form.init
-        { image = Form.File.initModel Nothing
-        , title = ""
-        , description = Form.RichText.initModel "description-editor" Nothing
-        , trackUnits = False
-        , unitsInStock = "0"
-        , price = "0"
-        }
+initFormData : FormData
+initFormData =
+    { mainInformation =
+        Form.init
+            { name = ""
+            , description = Form.RichText.initModel "product-description-editor" Nothing
+            }
+    , images = Form.init []
+    , priceAndInventory =
+        Form.init
+            { price = "0"
+            , unitsInStock = "0"
+            , trackUnits = False
+            }
+    , currentStep = MainInformation
+    }
 
 
-initEditingForm : Product -> Form.Model FormInput
-initEditingForm product =
-    Form.init
-        { image = Form.File.initModel product.image
-        , title = product.title
-        , description = Form.RichText.initModel "description-editor" (Just product.description)
-        , trackUnits = Shop.hasUnitTracking product
-        , unitsInStock =
-            case product.stockTracking of
-                Shop.NoTracking ->
-                    String.fromInt 0
+initEditingFormData : Product -> FormData
+initEditingFormData product =
+    { mainInformation =
+        Form.init
+            { name = product.title
+            , description = Form.RichText.initModel "product-description-editor" (Just product.description)
+            }
 
-                Shop.UnitTracking { availableUnits } ->
-                    String.fromInt availableUnits
-        , price = String.fromFloat product.price
-        }
+    -- TODO - Use images instead of image
+    , images =
+        product.image
+            |> Form.File.initModel
+            |> List.singleton
+            |> Form.init
+    , priceAndInventory =
+        Form.init
+            { price = String.fromFloat product.price
+            , unitsInStock =
+                case product.stockTracking of
+                    Shop.NoTracking ->
+                        String.fromInt 0
+
+                    Shop.UnitTracking { availableUnits } ->
+                        String.fromInt availableUnits
+            , trackUnits = Shop.hasUnitTracking product
+            }
+    , currentStep = MainInformation
+    }
 
 
 
@@ -556,20 +582,20 @@ view loggedIn model =
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
-                EditingCreate _ form ->
-                    viewForm loggedIn False False Closed form
+                EditingCreate _ formData ->
+                    viewForm loggedIn { isEdit = False, isDisabled = False } Closed formData
 
-                Creating _ form ->
-                    viewForm loggedIn False True Closed form
+                Creating _ formData ->
+                    viewForm loggedIn { isEdit = False, isDisabled = True } Closed formData
 
-                EditingUpdate _ _ confirmDelete form ->
-                    viewForm loggedIn True False confirmDelete form
+                EditingUpdate _ _ confirmDelete formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = False } confirmDelete formData
 
-                Saving _ _ form ->
-                    viewForm loggedIn True True Closed form
+                Saving _ _ formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = True } Closed formData
 
-                Deleting _ _ form ->
-                    viewForm loggedIn True True Closed form
+                Deleting _ _ formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = True } Closed formData
     in
     { title = title
     , content =
@@ -593,8 +619,13 @@ view loggedIn model =
     }
 
 
-viewForm : LoggedIn.Model -> Bool -> Bool -> DeleteModalStatus -> Form.Model FormInput -> Html Msg
-viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
+viewForm :
+    LoggedIn.Model
+    -> { isEdit : Bool, isDisabled : Bool }
+    -> DeleteModalStatus
+    -> FormData
+    -> Html Msg
+viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
     let
         { t } =
             shared.translators
@@ -605,44 +636,98 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
 
             else
                 ( t "menu.create", t "shop.create_offer" )
+
+        viewForm_ formFn formModel submitText toFormMsg onSubmitMsg =
+            Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+                shared.translators
+                (\submitButton ->
+                    -- TODO - "Delete product" button?
+                    -- TODO - I18N, change message based on step
+                    [ submitButton
+                        [ class "button button-primary"
+                        , disabled isDisabled
+                        ]
+                        [ text submitText ]
+                    ]
+                )
+                formFn
+                (Form.withDisabled isDisabled formModel)
+                { toMsg = toFormMsg >> GotFormMsg
+                , onSubmit = onSubmitMsg
+                }
     in
     div [ class "flex flex-col flex-grow mb-10 lg:mb-0" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
             [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
-            , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
-                shared.translators
-                (\submitButton ->
-                    [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
-                        [ if isEdit then
-                            button
-                                [ class "button button-danger w-full"
-                                , disabled isDisabled
-                                , onClick ClickedDelete
-                                , type_ "button"
-                                ]
-                                [ text (t "shop.delete") ]
 
-                          else
-                            text ""
-                        , submitButton
-                            [ class "button button-primary w-full"
-                            , disabled isDisabled
-                            ]
-                            [ text actionText ]
-                        ]
-                    , if isEdit && deleteModal == Open then
-                        viewConfirmDeleteModal t
+            -- , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+            --     shared.translators
+            --     (\submitButton ->
+            --         [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
+            --             [ if isEdit then
+            --                 button
+            --                     [ class "button button-danger w-full"
+            --                     , disabled isDisabled
+            --                     , onClick ClickedDelete
+            --                     , type_ "button"
+            --                     ]
+            --                     [ text (t "shop.delete") ]
+            --               else
+            --                 text ""
+            --             , submitButton
+            --                 [ class "button button-primary w-full"
+            --                 , disabled isDisabled
+            --                 ]
+            --                 [ text actionText ]
+            --             ]
+            --         , if isEdit && deleteModal == Open then
+            --             viewConfirmDeleteModal t
+            --           else
+            --             text ""
+            --         ]
+            --     )
+            --     (createForm loggedIn)
+            --     (Form.withDisabled isDisabled form)
+            --     { toMsg = GotFormMsg
+            --     , onSubmit = ClickedSave
+            --     }
+            , case formData.currentStep of
+                MainInformation ->
+                    viewForm_ (mainInformationForm shared.translators)
+                        formData.mainInformation
+                        -- TODO - I18N
+                        "Next"
+                        MainInformationMsg
+                        SubmittedMainInformation
 
-                      else
-                        text ""
-                    ]
-                )
-                (createForm loggedIn)
-                (Form.withDisabled isDisabled form)
-                { toMsg = GotFormMsg
-                , onSubmit = ClickedSave
-                }
+                Images _ ->
+                    viewForm_ imagesForm
+                        formData.images
+                        -- TODO - I18N
+                        "Next"
+                        ImagesMsg
+                        SubmittedImages
+
+                PriceAndInventory _ _ ->
+                    case loggedIn.selectedCommunity of
+                        RemoteData.Success community ->
+                            viewForm_ (priceAndInventoryForm shared.translators community.symbol)
+                                formData.priceAndInventory
+                                actionText
+                                PriceAndInventoryMsg
+                                SubmittedPriceAndInventory
+
+                        RemoteData.Failure err ->
+                            Page.fullPageGraphQLError pageTitle err
+
+                        _ ->
+                            Page.fullPageLoading shared
+            , if isEdit && deleteModal == Open then
+                viewConfirmDeleteModal t
+
+              else
+                text ""
             ]
         ]
 
@@ -684,7 +769,10 @@ type alias UpdateResult =
 type Msg
     = CompletedBalancesLoad (Result Http.Error (List Balance))
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
-    | GotFormMsg (Form.Msg FormInput)
+    | GotFormMsg FormMsg
+    | SubmittedMainInformation MainInformationFormOutput
+    | SubmittedImages ImagesFormOutput
+    | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | ClickedSave FormOutput
     | ClickedDelete
     | ClickedDeleteConfirm
@@ -694,6 +782,12 @@ type Msg
     | ClosedAuthModal
     | ClickedDecrementStockUnits
     | ClickedIncrementStockUnits
+
+
+type FormMsg
+    = MainInformationMsg (Form.Msg MainInformationFormInput)
+    | ImagesMsg (Form.Msg ImagesFormInput)
+    | PriceAndInventoryMsg (Form.Msg PriceAndInventoryFormInput)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -706,7 +800,7 @@ update msg model loggedIn =
         CompletedBalancesLoad (Ok balances) ->
             case model of
                 LoadingBalancesCreate ->
-                    initForm
+                    initFormData
                         |> EditingCreate balances
                         |> UR.init
 
@@ -744,7 +838,7 @@ update msg model loggedIn =
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
                 ( LoadingSaleUpdate balances, Just sale ) ->
-                    initEditingForm sale
+                    initEditingFormData sale
                         |> EditingUpdate balances sale Closed
                         |> UR.init
 
@@ -989,6 +1083,65 @@ update msg model loggedIn =
         GotFormMsg subMsg ->
             updateForm loggedIn.shared subMsg model
 
+        SubmittedMainInformation formOutput ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just MainInformation ->
+                    model
+                        |> setCurrentStep (Images formOutput)
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted main information, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
+        SubmittedImages formOutput ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just (Images mainInformation) ->
+                    model
+                        |> setCurrentStep (PriceAndInventory mainInformation formOutput)
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted images, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
+        SubmittedPriceAndInventory priceAndInventory ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just (PriceAndInventory mainInformation images) ->
+                    -- TODO - Save/create the offer
+                    UR.init model
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted price and inventory, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
         ClickedDecrementStockUnits ->
             updateFormStockUnits (\price -> price - 1) model
 
@@ -1023,7 +1176,7 @@ updateFormStockUnits updateFn model =
         Nothing ->
             UR.init model
 
-        Just ( form, updateModel ) ->
+        Just ( formData, updateModel ) ->
             Form.updateValues
                 (\values ->
                     case String.toInt values.unitsInStock of
@@ -1038,13 +1191,58 @@ updateFormStockUnits updateFn model =
                         Nothing ->
                             values
                 )
-                form
+                formData.priceAndInventory
+                |> (\priceAndInventory -> { formData | priceAndInventory = priceAndInventory })
                 |> updateModel
                 |> UR.init
 
 
-updateForm : Shared -> Form.Msg FormInput -> Model -> UpdateResult
-updateForm shared subMsg model =
+getFormData : Model -> Maybe FormData
+getFormData model =
+    case model of
+        EditingCreate _ formData ->
+            Just formData
+
+        Creating _ formData ->
+            Just formData
+
+        EditingUpdate _ _ _ formData ->
+            Just formData
+
+        Saving _ _ formData ->
+            Just formData
+
+        Deleting _ _ formData ->
+            Just formData
+
+        _ ->
+            Nothing
+
+
+setCurrentStep : Step -> Model -> Model
+setCurrentStep newStep model =
+    case model of
+        EditingCreate balances formData ->
+            EditingCreate balances { formData | currentStep = newStep }
+
+        Creating balances formData ->
+            Creating balances { formData | currentStep = newStep }
+
+        EditingUpdate balances product deleteModalStatus formData ->
+            EditingUpdate balances product deleteModalStatus { formData | currentStep = newStep }
+
+        Saving balances product formData ->
+            Saving balances product { formData | currentStep = newStep }
+
+        Deleting balances product formData ->
+            Deleting balances product { formData | currentStep = newStep }
+
+        _ ->
+            model
+
+
+updateForm : Shared -> FormMsg -> Model -> UpdateResult
+updateForm shared formMsg model =
     let
         maybeFormInfo =
             case model of
@@ -1070,14 +1268,29 @@ updateForm shared subMsg model =
         Nothing ->
             UR.init model
 
-        Just ( form, updateModel ) ->
-            Form.update shared
-                subMsg
-                form
-                |> UR.fromChild updateModel
-                    GotFormMsg
-                    LoggedIn.addFeedback
-                    model
+        Just ( formData, updateModel ) ->
+            case formMsg of
+                MainInformationMsg subMsg ->
+                    Form.update shared subMsg formData.mainInformation
+                        |> UR.fromChild
+                            (\newMainInformation -> updateModel { formData | mainInformation = newMainInformation })
+                            (GotFormMsg << MainInformationMsg)
+                            LoggedIn.addFeedback
+                            model
+
+                ImagesMsg subMsg ->
+                    Form.update shared subMsg formData.images
+                        |> UR.fromChild (\newImages -> updateModel { formData | images = newImages })
+                            (GotFormMsg << ImagesMsg)
+                            LoggedIn.addFeedback
+                            model
+
+                PriceAndInventoryMsg subMsg ->
+                    Form.update shared subMsg formData.priceAndInventory
+                        |> UR.fromChild (\newPriceAndInventory -> updateModel { formData | priceAndInventory = newPriceAndInventory })
+                            (GotFormMsg << PriceAndInventoryMsg)
+                            LoggedIn.addFeedback
+                            model
 
 
 msgToString : Msg -> List String
@@ -1111,10 +1324,32 @@ msgToString msg =
             [ "ClosedAuthModal" ]
 
         GotFormMsg subMsg ->
-            "GotFormMsg" :: Form.msgToString subMsg
+            "GotFormMsg" :: formMsgToString subMsg
+
+        SubmittedMainInformation _ ->
+            [ "SubmittedMainInformation" ]
+
+        SubmittedImages _ ->
+            [ "SubmittedImages " ]
+
+        SubmittedPriceAndInventory _ ->
+            [ "SubmittedPriceAndInventory " ]
 
         ClickedDecrementStockUnits ->
             [ "ClickedDecrementStockUnits" ]
 
         ClickedIncrementStockUnits ->
             [ "ClickedIncrementStockUnits" ]
+
+
+formMsgToString : FormMsg -> List String
+formMsgToString msg =
+    case msg of
+        MainInformationMsg subMsg ->
+            "MainInformationMsg" :: Form.msgToString subMsg
+
+        ImagesMsg subMsg ->
+            "ImagesMsg" :: Form.msgToString subMsg
+
+        PriceAndInventoryMsg subMsg ->
+            "PriceAndInventoryMsg" :: Form.msgToString subMsg
