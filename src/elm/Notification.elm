@@ -18,6 +18,7 @@ import Cambiatus.Object.Mint as Mint
 import Cambiatus.Object.NotificationHistory as NotificationHistory
 import Cambiatus.Object.Order as Order
 import Cambiatus.Object.Product as Product
+import Cambiatus.Object.ProductImage
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Transfer as Transfer
 import Cambiatus.Query as Query
@@ -184,7 +185,10 @@ saleHistorySelectionSet =
                 (SelectionSet.succeed Product
                     |> with Shop.idSelectionSet
                     |> with Product.title
-                    |> with Product.image
+                    |> with
+                        (Product.images Cambiatus.Object.ProductImage.uri
+                            |> SelectionSet.map List.head
+                        )
                     |> with (Product.community logoSelectionSet)
                 )
             )

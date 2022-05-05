@@ -169,21 +169,7 @@ viewModalDetails options =
         body =
             case options.body of
                 Just b ->
-                    case options.size of
-                        Default ->
-                            div
-                                [ class "modal-body", tabindex -1 ]
-                                b
-
-                        Large ->
-                            div
-                                [ class "modal-body-lg", tabindex -1 ]
-                                b
-
-                        FullScreen ->
-                            div
-                                [ class "modal-body modal-body-full", tabindex -1 ]
-                                b
+                    div [ class "modal-body", tabindex -1 ] b
 
                 Nothing ->
                     text ""
