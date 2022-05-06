@@ -20,7 +20,7 @@ import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
@@ -175,6 +175,11 @@ imagesForm translators =
                 Just firstImage ->
                     [ firstImage ]
         )
+        |> Form.withNoOutput
+            (Form.arbitrary
+                -- TODO - I18N
+                (p [ class "mb-4" ] [ text "Set the product images (Only PNG or JPEG up to 10MB)" ])
+            )
         |> Form.with
             (Form.introspect
                 (\images ->
@@ -194,7 +199,7 @@ imagesForm translators =
                                     , update = \newModel _ -> [ newModel ]
                                     , externalError = always Nothing
                                     }
-                                |> Form.mapOutput Just
+                                |> Form.optional
 
                         Nothing ->
                             Form.succeed Nothing
@@ -251,7 +256,7 @@ stockTrackingForm translators { isDisabled } =
             else
                 Shop.NoTracking
         )
-        |> Form.with
+        |> Form.withGroup [ class "bg-gray-100 rounded-sm p-4" ]
             (Form.introspect
                 (\{ trackUnits } ->
                     if trackUnits then
@@ -307,11 +312,21 @@ stockTrackingForm translators { isDisabled } =
                         Form.succeed 0
                 )
             )
-        |> Form.with
             (Form.Toggle.init
-                { label = text ""
+                { label =
+                    -- TODO - Should these be in `label`? We could use `withGroupOf3` from the community contacts PR
+                    div [ class "text-gray-333 text-base mb-4" ]
+                        [ -- TODO - I18N
+                          span [ class "font-bold" ] [ text "Inventory management" ]
+
+                        -- TODO - I18N
+                        , p [ class "mt-2" ] [ text "If you want to disable your offer when there are no more units in stock, enable this option" ]
+                        ]
                 , id = "product-track-units-toggle"
                 }
+                |> Form.Toggle.withContainerAttrs [ class "flex flex-col" ]
+                |> Form.Toggle.withToggleContainerAttrs [ class "ml-0 pl-0" ]
+                |> Form.Toggle.withToggleSide (Form.Toggle.Right { invert = True })
                 |> Form.toggle
                     { parser = Ok
                     , value = .trackUnits
@@ -473,26 +488,29 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 ( t "menu.create", t "shop.create_offer" )
 
         viewForm_ formFn formModel submitText toFormMsg onSubmitMsg =
-            Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+            Form.view [ class "container mx-auto px-4 flex-grow flex flex-col" ]
                 shared.translators
                 (\submitButton ->
-                    -- TODO - Adjust texts and layout
-                    [ if isEdit then
-                        button
-                            [ class "button button-danger w-full"
-                            , disabled isDisabled
-                            , onClick ClickedDelete
-                            , type_ "button"
-                            ]
-                            [ text (t "shop.delete") ]
+                    [ div [ class "mt-auto" ]
+                        [ div [ class "mt-10" ]
+                            [ if isEdit then
+                                button
+                                    [ class "button button-danger w-full"
+                                    , disabled isDisabled
+                                    , onClick ClickedDelete
+                                    , type_ "button"
+                                    ]
+                                    [ text (t "shop.delete") ]
 
-                      else
-                        text ""
-                    , submitButton
-                        [ class "button button-primary"
-                        , disabled isDisabled
+                              else
+                                text ""
+                            , submitButton
+                                [ class "button button-primary w-full mt-4"
+                                , disabled isDisabled
+                                ]
+                                [ text submitText ]
+                            ]
                         ]
-                        [ text submitText ]
                     ]
                 )
                 formFn
@@ -500,11 +518,28 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 { toMsg = toFormMsg >> GotFormMsg
                 , onSubmit = onSubmitMsg
                 }
+
+        ( stepNumber, stepName ) =
+            -- TODO - I18N
+            case formData.currentStep of
+                MainInformation ->
+                    ( 1, "Main information" )
+
+                Images _ ->
+                    ( 2, "Images" )
+
+                PriceAndInventory _ _ ->
+                    ( 3, "Price and Inventory" )
     in
-    div [ class "flex flex-col flex-grow mb-10 lg:mb-0" ]
+    div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
-        , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
-            [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
+        , div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150" ]
+            [ div [ class "container mx-auto px-4" ]
+                [ h2 [ class "font-bold text-black mb-2" ]
+                    [ text ("Step " ++ String.fromInt stepNumber ++ " of 4") ]
+                , text stepName
+                ]
+            , hr [ class "mt-4 mb-6 border-gray-500" ] []
             , case formData.currentStep of
                 MainInformation ->
                     viewForm_ (mainInformationForm shared.translators)
