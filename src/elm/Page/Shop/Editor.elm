@@ -26,6 +26,7 @@ import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
 import Http
 import Icons
+import List.Extra
 import Log
 import Markdown exposing (Markdown)
 import Page
@@ -162,19 +163,9 @@ type alias ImagesFormOutput =
     List String
 
 
-imagesForm : Translation.Translators -> Form.Form msg ImagesFormInput ImagesFormOutput
+imagesForm : Translation.Translators -> Form.Form Msg ImagesFormInput ImagesFormOutput
 imagesForm translators =
-    -- TODO - Use Form.list from community contacts PR
-    -- TODO - Add new input when done uploading
-    Form.succeed
-        (\maybeFirstImage ->
-            case maybeFirstImage of
-                Nothing ->
-                    []
-
-                Just firstImage ->
-                    [ firstImage ]
-        )
+    Form.succeed (List.filterMap identity)
         |> Form.withNoOutput
             (Form.arbitrary
                 -- TODO - I18N
@@ -183,26 +174,32 @@ imagesForm translators =
         |> Form.with
             (Form.introspect
                 (\images ->
-                    case List.head images of
-                        Just firstImage ->
+                    List.indexedMap
+                        (\index image ->
+                            -- TODO - Add option to remove image
                             Form.File.init
-                                { label = "Images"
-                                , id = "image-input-0"
+                                { label = ""
+                                , id = "product-image-input-" ++ String.fromInt index
                                 }
                                 |> Form.File.withAttrs
                                     [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
                                     ]
                                 |> Form.File.withVariant Form.File.SimplePlus
+                                |> Form.File.withContainerAttrs [ class "animate-bounce-in" ]
                                 |> Form.file
                                     { translators = translators
-                                    , value = \_ -> firstImage
-                                    , update = \newModel _ -> [ newModel ]
+                                    , value = \_ -> image
+                                    , update = \newImage _ -> newImage
                                     , externalError = always Nothing
                                     }
+                                |> Form.mapValues
+                                    { value = \_ -> image
+                                    , update = \newImage -> List.Extra.setAt index newImage
+                                    }
                                 |> Form.optional
-
-                        Nothing ->
-                            Form.succeed Nothing
+                        )
+                        images
+                        |> Form.list [ class "flex flex-wrap gap-x-6 gap-y-4" ]
                 )
             )
 
@@ -1105,8 +1102,37 @@ updateForm shared formMsg model =
                             model
 
                 ImagesMsg subMsg ->
+                    let
+                        updatedForm =
+                            Form.update shared subMsg formData.images
+
+                        oldImages =
+                            Form.getValue identity formData.images
+                                |> List.filter (not << Form.File.isEmpty)
+
+                        newImages =
+                            Form.getValue identity updatedForm.model
+                                |> List.filter (not << Form.File.isEmpty)
+
+                        hasAddedNewImage =
+                            List.length newImages > List.length oldImages
+
+                        addNewImageField values =
+                            values ++ [ Form.File.initModel Nothing ]
+                    in
                     Form.update shared subMsg formData.images
-                        |> UR.fromChild (\newImages -> updateModel { formData | images = newImages })
+                        |> UR.fromChild
+                            (\newImagesForm ->
+                                updateModel
+                                    { formData
+                                        | images =
+                                            if hasAddedNewImage then
+                                                Form.updateValues addNewImageField newImagesForm
+
+                                            else
+                                                newImagesForm
+                                    }
+                            )
                             (GotFormMsg << ImagesMsg)
                             LoggedIn.addFeedback
                             model

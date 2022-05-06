@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
     , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
-    , optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
+    , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
@@ -72,7 +72,7 @@ documentation if you're stuck.
 
 ## Modifiers
 
-@docs optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
+@docs optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
 
 
 ## Fields
@@ -727,6 +727,56 @@ some form depends on other fields
 introspect : (values -> Form msg values output) -> Form msg values output
 introspect buildForm =
     Form (\values -> fill (buildForm values) values)
+
+
+{-| Join together multiple forms
+-}
+list : List (Html.Attribute Never) -> List (Form msg values output) -> Form msg values (List output)
+list groupAttrs current =
+    Form
+        (\values ->
+            let
+                filledForms =
+                    List.map (\f -> fill f values) current
+
+                combinedResult =
+                    List.foldr
+                        (\currFilled currResult ->
+                            case ( currFilled.result, currResult ) of
+                                ( OptOk currOk, OptOk resultOk ) ->
+                                    OptOk (currOk :: resultOk)
+
+                                ( OptErr ( currError, currErrors ), OptErr ( resultError, resultErrors ) ) ->
+                                    OptErr ( currError, currErrors ++ (resultError :: resultErrors) )
+
+                                ( OptErr ( currError, currErrors ), _ ) ->
+                                    OptErr ( currError, currErrors )
+
+                                ( _, OptErr ( resultError, resultErrors ) ) ->
+                                    OptErr ( resultError, resultErrors )
+
+                                ( OptOk currOk, OptNothing ) ->
+                                    OptOk [ currOk ]
+
+                                ( OptNothing, OptOk resultOk ) ->
+                                    OptOk resultOk
+
+                                ( OptNothing, OptNothing ) ->
+                                    OptNothing
+                        )
+                        OptNothing
+                        filledForms
+            in
+            { fields =
+                [ { state = Group groupAttrs (List.concatMap (.fields >> List.reverse) filledForms)
+                  , error = Nothing
+                  , validationStrategy = ValidateOnBlur
+                  , isRequired = False
+                  }
+                ]
+            , result = combinedResult
+            }
+        )
 
 
 {-| Makes a form optional. Turns the result of the form into `Maybe output`. If
