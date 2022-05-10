@@ -20,7 +20,7 @@ import Form.Toggle
 import Form.Validate
 import Graphql.Http
 import Graphql.SelectionSet
-import Html exposing (Html, button, div, h2, hr, p, span, text)
+import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
@@ -489,20 +489,27 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 shared.translators
                 (\submitButton ->
                     [ div [ class "mt-auto" ]
-                        [ div [ class "mt-10" ]
-                            [ if isEdit then
-                                button
-                                    [ class "button button-danger w-full"
-                                    , disabled isDisabled
-                                    , onClick ClickedDelete
-                                    , type_ "button"
-                                    ]
-                                    [ text (t "shop.delete") ]
-
-                              else
-                                text ""
+                        [ div [ class "mt-10 flex gap-x-4" ]
+                            -- TODO - Remove delete button from here
+                            -- [ if isEdit then
+                            --     button
+                            --         [ class "button button-danger w-full"
+                            --         , disabled isDisabled
+                            --         , onClick ClickedDelete
+                            --         , type_ "button"
+                            --         ]
+                            --         [ text (t "shop.delete") ]
+                            --   else
+                            --     text ""
+                            [ a
+                                [ class "button button-secondary w-full"
+                                , Route.href (Route.Shop Shop.All)
+                                ]
+                                [ -- TODO - I18N
+                                  text "Cancel"
+                                ]
                             , submitButton
-                                [ class "button button-primary w-full mt-4"
+                                [ class "button button-primary w-full"
                                 , disabled isDisabled
                                 ]
                                 [ text submitText ]
@@ -542,7 +549,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                     viewForm_ (mainInformationForm shared.translators)
                         formData.mainInformation
                         -- TODO - I18N
-                        "Next"
+                        "Continue"
                         MainInformationMsg
                         SubmittedMainInformation
 
@@ -550,7 +557,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                     viewForm_ (imagesForm shared.translators)
                         formData.images
                         -- TODO - I18N
-                        "Next"
+                        "Continue"
                         ImagesMsg
                         SubmittedImages
 
