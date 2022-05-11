@@ -176,27 +176,44 @@ imagesForm translators =
                 (\images ->
                     List.indexedMap
                         (\index image ->
-                            -- TODO - Add option to remove image
-                            Form.File.init
-                                { label = ""
-                                , id = "product-image-input-" ++ String.fromInt index
-                                }
-                                |> Form.File.withAttrs
-                                    [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
-                                    ]
-                                |> Form.File.withVariant Form.File.SimplePlus
-                                |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
-                                |> Form.file
-                                    { translators = translators
-                                    , value = \_ -> image
-                                    , update = \newImage _ -> newImage
-                                    , externalError = always Nothing
-                                    }
-                                |> Form.mapValues
-                                    { value = \_ -> image
-                                    , update = \newImage -> List.Extra.setAt index newImage
-                                    }
-                                |> Form.optional
+                            Form.succeed (\imageOutput _ -> imageOutput)
+                                |> Form.withGroup [ class "relative" ]
+                                    (Form.File.init
+                                        { label = ""
+                                        , id = "product-image-input-" ++ String.fromInt index
+                                        }
+                                        |> Form.File.withAttrs
+                                            [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
+                                            ]
+                                        |> Form.File.withVariant Form.File.SimplePlus
+                                        |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
+                                        |> Form.file
+                                            { translators = translators
+                                            , value = \_ -> image
+                                            , update = \newImage _ -> newImage
+                                            , externalError = always Nothing
+                                            }
+                                        |> Form.mapValues
+                                            { value = \_ -> image
+                                            , update = \newImage -> List.Extra.setAt index newImage
+                                            }
+                                        |> Form.optional
+                                    )
+                                    (Form.arbitraryWith ()
+                                        (div
+                                            [ class "absolute top-0 right-0"
+                                            , classList [ ( "hidden", Form.File.isEmpty image ) ]
+                                            ]
+                                            [ button
+                                                [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
+                                                , onClick (\values -> values |> List.Extra.removeAt index)
+                                                , type_ "button"
+                                                ]
+                                                [ Icons.circularClose "w-6 h-6"
+                                                ]
+                                            ]
+                                        )
+                                    )
                         )
                         images
                         |> Form.list [ class "flex flex-wrap gap-x-6 gap-y-4" ]

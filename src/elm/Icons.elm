@@ -7,6 +7,7 @@ module Icons exposing
     , calendar
     , cambiatusCoin
     , camera
+    , circularClose
     , clearInput
     , clock
     , close
@@ -67,6 +68,18 @@ close : String -> Svg msg
 close class_ =
     svg [ class class_, width "24", height "24", viewBox "0 0 24 24" ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M13.6299 12.0242L22.2329 3.25164C22.603 2.84787 22.5865 2.22339 22.1956 1.83974C21.8046 1.4561 21.18 1.45137 20.7833 1.82906L12.1938 10.5881L3.25206 1.81551C2.99607 1.54661 2.6138 1.43874 2.25501 1.53415C1.89622 1.62956 1.61802 1.91306 1.5294 2.2736C1.44078 2.63414 1.55584 3.01431 1.82951 3.26519L10.7577 12.0242L1.82951 20.7832C1.45184 21.1799 1.45656 21.8046 1.8402 22.1956C2.22383 22.5865 2.8483 22.603 3.25206 22.2329L12.1938 13.4603L20.7833 22.2194C21.18 22.597 21.8046 22.5923 22.1956 22.2087C22.5865 21.825 22.603 21.2005 22.2329 20.7968L13.6299 12.0242Z" ] [] ]
+
+
+circularClose : String -> Svg msg
+circularClose class_ =
+    svg
+        [ width "18"
+        , height "16"
+        , viewBox "0 0 18 16"
+        , fill "none"
+        , class class_
+        ]
+        [ Svg.path [ d "M5.45632 11.5353C7.57956 13.4879 11.022 13.4879 13.1452 11.5353C15.2685 9.58269 15.2685 6.41687 13.1452 4.46424C11.022 2.51162 7.57956 2.51162 5.45632 4.46424C3.33308 6.41687 3.33308 9.58269 5.45632 11.5353Z", stroke "#DB1B1B", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M11.6075 8.00023L6.9941 8.00023", stroke "#DB1B1B", strokeWidth "1.5", strokeLinecap "round", strokeLinejoin "round" ] [] ]
 
 
 plus : String -> Svg msg
