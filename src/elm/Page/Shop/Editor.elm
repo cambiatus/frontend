@@ -185,7 +185,7 @@ imagesForm translators =
                                     [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
                                     ]
                                 |> Form.File.withVariant Form.File.SimplePlus
-                                |> Form.File.withContainerAttrs [ class "animate-bounce-in" ]
+                                |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
                                 |> Form.file
                                     { translators = translators
                                     , value = \_ -> image
@@ -220,7 +220,7 @@ type alias PriceAndInventoryFormOutput =
 priceAndInventoryForm : Translation.Translators -> { isDisabled : Bool } -> Eos.Symbol -> Form.Form Msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
 priceAndInventoryForm translators isDisabled symbol =
     Form.succeed PriceAndInventoryFormOutput
-        |> Form.with
+        |> Form.withGroup [ class "grid grid-cols-2 gap-8" ]
             (Form.Text.init
                 { -- TODO - I18N
                   label = "Price"
@@ -228,6 +228,7 @@ priceAndInventoryForm translators isDisabled symbol =
                 }
                 |> Form.Text.withCurrency symbol
                 |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
+                |> Form.Text.withContainerAttrs [ class "bg-gray-100 rounded-sm p-4 mb-0 self-start" ]
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -240,7 +241,7 @@ priceAndInventoryForm translators isDisabled symbol =
                     , externalError = always Nothing
                     }
             )
-        |> Form.with (stockTrackingForm translators isDisabled)
+            (stockTrackingForm translators isDisabled)
 
 
 stockTrackingForm : Translation.Translators -> { isDisabled : Bool } -> Form.Form Msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
@@ -361,6 +362,7 @@ initEditingFormData product =
     , images =
         product.images
             |> List.map (Just >> Form.File.initModel)
+            |> (\images -> images ++ [ Form.File.initModel Nothing ])
             |> Form.init
     , priceAndInventory =
         Form.init
@@ -485,7 +487,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 ( t "menu.create", t "shop.create_offer" )
 
         viewForm_ formFn formModel submitText toFormMsg onSubmitMsg =
-            Form.view [ class "container mx-auto px-4 flex-grow flex flex-col" ]
+            Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
                     [ div [ class "mt-auto" ]
@@ -501,18 +503,20 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                             --         [ text (t "shop.delete") ]
                             --   else
                             --     text ""
-                            [ a
-                                [ class "button button-secondary w-full"
-                                , Route.href (Route.Shop Shop.All)
+                            [ div [ class "grid grid-cols-2 w-full gap-6 lg:w-1/2 lg:mx-auto" ]
+                                [ a
+                                    [ class "button button-secondary w-full"
+                                    , Route.href (Route.Shop Shop.All)
+                                    ]
+                                    [ -- TODO - I18N
+                                      text "Cancel"
+                                    ]
+                                , submitButton
+                                    [ class "button button-primary w-full"
+                                    , disabled isDisabled
+                                    ]
+                                    [ text submitText ]
                                 ]
-                                [ -- TODO - I18N
-                                  text "Cancel"
-                                ]
-                            , submitButton
-                                [ class "button button-primary w-full"
-                                , disabled isDisabled
-                                ]
-                                [ text submitText ]
                             ]
                         ]
                     ]
@@ -537,49 +541,51 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
-        , div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150" ]
-            [ div [ class "container mx-auto px-4" ]
-                [ h2 [ class "font-bold text-black mb-2" ]
-                    [ text ("Step " ++ String.fromInt stepNumber ++ " of 4") ]
-                , text stepName
+        , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
+            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:rounded" ]
+                [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
+                    [ h2 [ class "font-bold text-black mb-2" ]
+                        [ text ("Step " ++ String.fromInt stepNumber ++ " of 3") ]
+                    , text stepName
+                    ]
+                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10" ] []
+                , case formData.currentStep of
+                    MainInformation ->
+                        viewForm_ (mainInformationForm shared.translators)
+                            formData.mainInformation
+                            -- TODO - I18N
+                            "Continue"
+                            MainInformationMsg
+                            SubmittedMainInformation
+
+                    Images _ ->
+                        viewForm_ (imagesForm shared.translators)
+                            formData.images
+                            -- TODO - I18N
+                            "Continue"
+                            ImagesMsg
+                            SubmittedImages
+
+                    PriceAndInventory _ _ ->
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                                    formData.priceAndInventory
+                                    actionText
+                                    PriceAndInventoryMsg
+                                    SubmittedPriceAndInventory
+
+                            RemoteData.Failure err ->
+                                Page.fullPageGraphQLError pageTitle err
+
+                            _ ->
+                                Page.fullPageLoading shared
+                , if isEdit && deleteModal == Open then
+                    viewConfirmDeleteModal t
+
+                  else
+                    text ""
                 ]
-            , hr [ class "mt-4 mb-6 border-gray-500" ] []
-            , case formData.currentStep of
-                MainInformation ->
-                    viewForm_ (mainInformationForm shared.translators)
-                        formData.mainInformation
-                        -- TODO - I18N
-                        "Continue"
-                        MainInformationMsg
-                        SubmittedMainInformation
-
-                Images _ ->
-                    viewForm_ (imagesForm shared.translators)
-                        formData.images
-                        -- TODO - I18N
-                        "Continue"
-                        ImagesMsg
-                        SubmittedImages
-
-                PriceAndInventory _ _ ->
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
-                                formData.priceAndInventory
-                                actionText
-                                PriceAndInventoryMsg
-                                SubmittedPriceAndInventory
-
-                        RemoteData.Failure err ->
-                            Page.fullPageGraphQLError pageTitle err
-
-                        _ ->
-                            Page.fullPageLoading shared
-            , if isEdit && deleteModal == Open then
-                viewConfirmDeleteModal t
-
-              else
-                text ""
             ]
         ]
 
