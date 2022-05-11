@@ -199,8 +199,8 @@ type Status
     | ProfileAddContact ProfileAddContact.Model
     | Register (Maybe String) (Maybe Route) Register.Model
     | Shop Shop.Filter Shop.Model
-    | ShopEditor (Maybe Int) ShopEditor.Model
-    | ShopViewer Int ShopViewer.Model
+    | ShopEditor (Maybe Shop.Id) ShopEditor.Model
+    | ShopViewer Shop.Id ShopViewer.Model
     | ViewTransfer Int ViewTransfer.Model
     | Invite Invite.Model
     | Join Join.Model
@@ -1620,10 +1620,6 @@ jsAddressToMsg address val =
         "GotCommunitySettingsObjectiveEditorMsg" :: rAddress ->
             Maybe.map GotCommunitySettingsObjectiveEditorMsg
                 (CommunitySettingsObjectiveEditor.jsAddressToMsg rAddress val)
-
-        "GotShopEditorMsg" :: rAddress ->
-            Maybe.map GotShopEditorMsg
-                (ShopEditor.jsAddressToMsg rAddress val)
 
         "GotShopViewerMsg" :: rAddress ->
             Maybe.map GotShopViewerMsg

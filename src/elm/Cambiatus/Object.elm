@@ -117,6 +117,10 @@ type Product
     = Product
 
 
+type ProductImage
+    = ProductImage
+
+
 type ProductPreview
     = ProductPreview
 

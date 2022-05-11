@@ -1,27 +1,41 @@
 module Shop exposing
     ( Filter(..)
+    , Id
     , Product
-    , ProductId
     , ProductPreview
+    , StockTracking(..)
+    , createProduct
+    , deleteProduct
     , encodeTransferSale
+    , getAvailableUnits
+    , hasUnitTracking
+    , idSelectionSet
+    , idToString
+    , idUrlParser
+    , isOutOfStock
     , productPreviewQuery
     , productQuery
+    , productSelectionSet
     , productsQuery
+    , updateProduct
     )
 
 import Avatar
+import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Product
+import Cambiatus.Object.ProductImage
 import Cambiatus.Object.ProductPreview
 import Cambiatus.Query as Query
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import Graphql.Operation exposing (RootQuery)
+import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Url.Parser
 
 
 
@@ -29,32 +43,61 @@ import Profile
 
 
 type alias Product =
-    { id : Int
+    { id : Id
     , title : String
     , description : Markdown
     , creatorId : Eos.Name
     , price : Float
     , symbol : Symbol
     , image : Maybe String
-    , units : Int
-    , trackStock : Bool
+    , stockTracking : StockTracking
     , creator : Profile.Minimal
     }
+
+
+
+-- ID
+
+
+type Id
+    = Id Int
+
+
+idToString : Id -> String
+idToString (Id id) =
+    String.fromInt id
+
+
+idUrlParser : Url.Parser.Parser (Id -> a) a
+idUrlParser =
+    Url.Parser.int
+        |> Url.Parser.map Id
+
+
+idSelectionSet : SelectionSet Id Cambiatus.Object.Product
+idSelectionSet =
+    SelectionSet.map Id Cambiatus.Object.Product.id
+
+
+encodeId : Id -> Value
+encodeId (Id id) =
+    Encode.int id
+
+
+type StockTracking
+    = NoTracking
+    | UnitTracking { availableUnits : Int }
 
 
 type alias ProductPreview =
     { symbol : Symbol
     , creator : Profile.Minimal
     , description : Markdown
-    , id : Int
+    , id : Id
     , image : Maybe String
     , price : Float
     , title : String
     }
-
-
-type alias ProductId =
-    Int
 
 
 type Filter
@@ -67,7 +110,7 @@ type Filter
 
 
 type alias TransferSale =
-    { id : Int
+    { id : Id
     , from : Eos.Name
     , to : Eos.Name
     , quantity : Eos.Asset
@@ -78,7 +121,7 @@ type alias TransferSale =
 encodeTransferSale : TransferSale -> Value
 encodeTransferSale t =
     Encode.object
-        [ ( "sale_id", Encode.int t.id )
+        [ ( "sale_id", encodeId t.id )
         , ( "from", Eos.encodeName t.from )
         , ( "to", Eos.encodeName t.to )
         , ( "quantity", Eos.encodeAsset t.quantity )
@@ -90,16 +133,41 @@ encodeTransferSale t =
 -- PRODUCT GRAPHQL API
 
 
-productSelection : SelectionSet Product Cambiatus.Object.Product
-productSelection =
-    SelectionSet.succeed Product
-        |> with Cambiatus.Object.Product.id
+productSelectionSet : SelectionSet Product Cambiatus.Object.Product
+productSelectionSet =
+    SelectionSet.succeed
+        (\id title description creatorId price symbol images maybeUnits trackStock creator ->
+            { id = id
+            , title = title
+            , description = description
+            , creatorId = creatorId
+            , price = price
+            , symbol = symbol
+            , image =
+                images
+                    |> List.filter (not << String.isEmpty)
+                    |> List.head
+            , stockTracking =
+                if trackStock then
+                    case maybeUnits of
+                        Nothing ->
+                            NoTracking
+
+                        Just units ->
+                            UnitTracking { availableUnits = units }
+
+                else
+                    NoTracking
+            , creator = creator
+            }
+        )
+        |> with idSelectionSet
         |> with Cambiatus.Object.Product.title
         |> with (Markdown.selectionSet Cambiatus.Object.Product.description)
         |> with (Eos.nameSelectionSet Cambiatus.Object.Product.creatorId)
         |> with Cambiatus.Object.Product.price
         |> with (Eos.symbolSelectionSet Cambiatus.Object.Product.communityId)
-        |> with (detectEmptyString Cambiatus.Object.Product.image)
+        |> with (Cambiatus.Object.Product.images Cambiatus.Object.ProductImage.uri)
         |> with Cambiatus.Object.Product.units
         |> with Cambiatus.Object.Product.trackStock
         |> with (Cambiatus.Object.Product.creator Profile.minimalSelectionSet)
@@ -107,30 +175,30 @@ productSelection =
 
 productPreviewSelectionSet : SelectionSet ProductPreview Cambiatus.Object.ProductPreview
 productPreviewSelectionSet =
-    SelectionSet.succeed ProductPreview
+    SelectionSet.succeed
+        (\communityId creator description id images price title ->
+            { symbol = communityId
+            , creator = creator
+            , description = description
+            , id = id
+            , image =
+                images
+                    |> List.filter (not << String.isEmpty)
+                    |> List.head
+            , price = price
+            , title = title
+            }
+        )
         |> with (Eos.symbolSelectionSet Cambiatus.Object.ProductPreview.communityId)
         |> with
             (Eos.nameSelectionSet Cambiatus.Object.ProductPreview.creatorId
                 |> SelectionSet.map productPreviewProfile
             )
         |> with (Markdown.selectionSet Cambiatus.Object.ProductPreview.description)
-        |> with Cambiatus.Object.ProductPreview.id
-        |> with (detectEmptyString Cambiatus.Object.ProductPreview.image)
+        |> with (SelectionSet.map Id Cambiatus.Object.ProductPreview.id)
+        |> with (Cambiatus.Object.ProductPreview.images Cambiatus.Object.ProductImage.uri)
         |> with Cambiatus.Object.ProductPreview.price
         |> with Cambiatus.Object.ProductPreview.title
-
-
-detectEmptyString : SelectionSet (Maybe String) typeLock -> SelectionSet (Maybe String) typeLock
-detectEmptyString =
-    SelectionSet.map
-        (\selection ->
-            case selection of
-                Just "" ->
-                    Nothing
-
-                _ ->
-                    selection
-        )
 
 
 productPreviewProfile : Eos.Name -> Profile.Minimal
@@ -144,13 +212,13 @@ productPreviewProfile accountName =
     }
 
 
-productQuery : Int -> SelectionSet (Maybe Product) RootQuery
-productQuery saleId =
-    Query.product { id = saleId } productSelection
+productQuery : Id -> SelectionSet (Maybe Product) RootQuery
+productQuery (Id saleId) =
+    Query.product { id = saleId } productSelectionSet
 
 
-productPreviewQuery : Int -> SelectionSet ProductPreview RootQuery
-productPreviewQuery productId =
+productPreviewQuery : Id -> SelectionSet ProductPreview RootQuery
+productPreviewQuery (Id productId) =
     Query.productPreview { id = productId } productPreviewSelectionSet
 
 
@@ -164,7 +232,7 @@ productsQuery filter accName communityId =
                         { filters = Present { account = Eos.nameToString accName, inStock = Absent }
                         }
             in
-            Query.products args { communityId = Eos.symbolToString communityId } productSelection
+            Query.products args { communityId = Eos.symbolToString communityId } productSelectionSet
 
         All ->
             let
@@ -172,4 +240,140 @@ productsQuery filter accName communityId =
                     { communityId = Eos.symbolToString communityId
                     }
             in
-            Query.products identity args productSelection
+            Query.products identity args productSelectionSet
+
+
+createProduct :
+    { symbol : Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+createProduct options selectionSet =
+    upsert
+        { id = Nothing
+        , symbol = options.symbol
+        , title = options.title
+        , description = options.description
+        , images = options.images
+        , price = options.price
+        , stockTracking = options.stockTracking
+        }
+        selectionSet
+
+
+{-| Images will be overwritten with whatever is passed in here. If you want to
+keep the existing images, you must include them in the `images` field.
+-}
+updateProduct :
+    { id : Id
+    , symbol : Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+updateProduct options selectionSet =
+    upsert
+        { id = Just options.id
+        , symbol = options.symbol
+        , title = options.title
+        , description = options.description
+        , images = options.images
+        , price = options.price
+        , stockTracking = options.stockTracking
+        }
+        selectionSet
+
+
+upsert :
+    { id : Maybe Id
+    , symbol : Symbol
+    , title : String
+    , description : Markdown
+    , images : List String
+    , price : Float
+    , stockTracking : StockTracking
+    }
+    -> SelectionSet decodesTo Cambiatus.Object.Product
+    -> SelectionSet (Maybe decodesTo) RootMutation
+upsert { id, symbol, title, description, images, price, stockTracking } =
+    Mutation.product
+        (\_ ->
+            { id =
+                case id of
+                    Nothing ->
+                        Absent
+
+                    Just (Id unwrappedId) ->
+                        Present unwrappedId
+            , communityId = Present (Eos.symbolToString symbol)
+            , title = Present title
+            , description = Present (Markdown.toRawString description)
+            , images = Present images
+            , price = Present price
+            , trackStock =
+                case stockTracking of
+                    NoTracking ->
+                        Present False
+
+                    UnitTracking _ ->
+                        Present True
+            , units =
+                case stockTracking of
+                    NoTracking ->
+                        Present 0
+
+                    UnitTracking { availableUnits } ->
+                        Present availableUnits
+            }
+        )
+
+
+deleteProduct :
+    Id
+    -> SelectionSet decodesTo Cambiatus.Object.DeleteStatus
+    -> SelectionSet (Maybe decodesTo) RootMutation
+deleteProduct (Id id) =
+    Mutation.deleteProduct { id = id }
+
+
+
+-- HELPER FUNCTIONS
+
+
+isOutOfStock : Product -> Bool
+isOutOfStock product =
+    case product.stockTracking of
+        NoTracking ->
+            False
+
+        UnitTracking { availableUnits } ->
+            availableUnits == 0
+
+
+hasUnitTracking : Product -> Bool
+hasUnitTracking product =
+    case product.stockTracking of
+        NoTracking ->
+            False
+
+        UnitTracking _ ->
+            True
+
+
+getAvailableUnits : Product -> Maybe Int
+getAvailableUnits product =
+    case product.stockTracking of
+        NoTracking ->
+            Nothing
+
+        UnitTracking { availableUnits } ->
+            Just availableUnits

@@ -1259,7 +1259,7 @@ viewAction ({ t } as translators) model objective index action =
                     [ text (String.fromInt (index + 1)), text "." ]
                 , div [ class "ml-5 mt-1 min-w-0 w-full" ]
                     [ h4 [ title (Markdown.toRawString action.description) ]
-                        [ Markdown.view [ class "line-clamp-3" ] action.description ]
+                        [ Markdown.view [ class "line-clamp-3 hide-children-from-2" ] action.description ]
                     , span [ class "sr-only" ]
                         [ text <|
                             t "community.objectives.reward"
@@ -1332,6 +1332,18 @@ viewClaimModal ({ translators } as shared) model =
             let
                 { t } =
                     translators
+
+                onClaimClick =
+                    case proof of
+                        WithProof formModel _ ->
+                            Form.parse (claimWithPhotoForm translators)
+                                formModel
+                                { onError = GotPhotoProofFormMsg
+                                , onSuccess = ConfirmedClaimActionWithPhotoProof
+                                }
+
+                        NoProofNecessary ->
+                            ConfirmedClaimAction
             in
             View.Modal.initWith
                 { closeMsg = ClickedCloseClaimModal
@@ -1355,10 +1367,13 @@ viewClaimModal ({ translators } as shared) model =
                                     []
                                 , div [ class "bg-gradient-to-t from-[#01003a14] to-[#01003a00] absolute top-0 left-0 w-full h-full rounded" ] []
                                 ]
-                    , div [ class "flex" ]
+                    , div
+                        [ class "flex"
+                        , classList [ ( "md:mb-6", proof == NoProofNecessary ) ]
+                        ]
                         [ span [ class "text-lg text-gray-500 font-bold" ] [ text (String.fromInt position ++ ".") ]
                         , div [ class "ml-5 mt-1 min-w-0 w-full" ]
-                            [ Markdown.view [ class "truncate" ] action.description
+                            [ Markdown.view [] action.description
                             , div [ class "md:flex md:justify-between md:w-full" ]
                                 [ div []
                                     [ span [ class "font-bold text-sm text-gray-900 uppercase block mt-6" ]
@@ -1378,7 +1393,11 @@ viewClaimModal ({ translators } as shared) model =
                                 ]
                             ]
                         ]
-                    , viewClaimCount translators [ class "md:hidden" ] action
+                    , viewClaimCount translators
+                        [ class "md:hidden"
+                        , classList [ ( "mb-6", proof == NoProofNecessary ) ]
+                        ]
+                        action
                     , case proof of
                         WithProof formModel proofCode ->
                             let
@@ -1447,53 +1466,36 @@ viewClaimModal ({ translators } as shared) model =
                                                     |> text
                                         ]
                                     ]
-                                , Form.view []
+                                , Form.viewWithoutSubmit [ class "mb-6" ]
                                     translators
-                                    (\submitButton ->
-                                        [ div [ class "grid md:grid-cols-2 gap-4 my-6" ]
-                                            [ button
-                                                [ class "button button-secondary w-full"
-                                                , onClick ClickedCloseClaimModal
-                                                ]
-                                                [ text <| t "menu.cancel" ]
-                                            , if Action.isClaimable action then
-                                                submitButton [ class "button button-primary w-full" ]
-                                                    [ text <| t "dashboard.claim" ]
-
-                                              else
-                                                text ""
-                                            ]
-                                        ]
-                                    )
+                                    (\_ -> [])
                                     (claimWithPhotoForm translators)
                                     formModel
-                                    { toMsg = GotPhotoProofFormMsg
-                                    , onSubmit = ConfirmedClaimActionWithPhotoProof
-                                    }
+                                    { toMsg = GotPhotoProofFormMsg }
                                 ]
 
                         NoProofNecessary ->
-                            div
-                                [ class "grid gap-4 my-6"
-                                , classList [ ( "md:grid-cols-2", Action.isClaimable action ) ]
-                                ]
-                                [ button
-                                    [ class "button button-secondary w-full"
-                                    , onClick ClickedCloseClaimModal
-                                    ]
-                                    [ text <| t "menu.cancel" ]
-                                , if Action.isClaimable action then
-                                    button
-                                        [ class "button button-primary w-full"
-                                        , onClick ConfirmedClaimAction
-                                        ]
-                                        [ text <| t "dashboard.claim" ]
-
-                                  else
-                                    text ""
-                                ]
+                            text ""
                     ]
-                |> View.Modal.withSize View.Modal.Large
+                |> View.Modal.withFooter
+                    [ div [ class "w-full grid md:grid-cols-2 gap-4" ]
+                        [ if Action.isClaimable action then
+                            button
+                                [ class "button button-secondary w-full"
+                                , onClick ClickedCloseClaimModal
+                                ]
+                                [ text <| t "menu.cancel" ]
+
+                          else
+                            text ""
+                        , button
+                            [ onClick onClaimClick
+                            , class "button button-primary w-full"
+                            ]
+                            [ text <| t "dashboard.claim" ]
+                        ]
+                    ]
+                |> View.Modal.withSize View.Modal.FullScreen
                 |> View.Modal.toHtml
 
 

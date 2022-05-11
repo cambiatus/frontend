@@ -249,10 +249,19 @@ body > * {
 
 .modal-content {
   @apply bg-white rounded-t-lg absolute left-0 bottom-0 w-full flex flex-col;
+
+  min-height: 4rem;
+  max-height: 60%;
+}
+
+.modal-content-lg {
+  max-height: 80%;
 }
 
 .modal-content-full {
-  @apply rounded-t-none top-0 overflow-auto h-screen;
+  @apply overflow-auto;
+
+  max-height: 95%;
 }
 
 .modal-header {
@@ -261,24 +270,10 @@ body > * {
 
 .modal-body {
   @apply p-4 pt-0 overflow-y-auto flex-grow;
-
-  min-height: 4rem;
-  max-height: 60vh;
-}
-
-.modal-body-lg {
-  @apply p-4 pt-0 overflow-y-auto;
-
-  min-height: 4rem;
-  max-height: 80vh;
-}
-
-.modal-body-full {
-  max-height: 100%;
 }
 
 .modal-footer {
-  @apply flex flex-wrap justify-center items-center p-4 pt-0;
+  @apply flex flex-wrap justify-center items-center bg-gray-100 p-4;
 }
 
 .modal-cancel {
@@ -298,10 +293,6 @@ body > * {
     --tw-translate-x: -50%;
   }
 
-  .modal-content-full {
-    height: unset;
-  }
-
   .modal-content-lg,
   .modal-content-full {
     @apply top-1/2;
@@ -309,19 +300,8 @@ body > * {
     --tw-translate-y: -50%;
   }
 
-  .modal-body-lg {
-    @apply px-4 py-0 overflow-y-auto;
-
-    min-height: 4rem;
-    max-height: 60vh;
-  }
-
-  .modal-body-full {
-    max-height: 80vh;
-  }
-
   .modal-footer {
-    @apply bg-gray-100 rounded-b-lg p-4;
+    @apply rounded-b-lg;
   }
 
   .modal-cancel {
@@ -387,6 +367,10 @@ https://tailwindcss.com/docs/adding-new-utilities */
   }
 
   .truncate-children > :not(:first-child) {
+    @apply hidden;
+  }
+
+  .hide-children-from-2 > :nth-child(n + 2) {
     @apply hidden;
   }
 

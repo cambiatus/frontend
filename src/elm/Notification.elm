@@ -18,6 +18,7 @@ import Cambiatus.Object.Mint as Mint
 import Cambiatus.Object.NotificationHistory as NotificationHistory
 import Cambiatus.Object.Order as Order
 import Cambiatus.Object.Product as Product
+import Cambiatus.Object.ProductImage
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.Transfer as Transfer
 import Cambiatus.Query as Query
@@ -28,6 +29,7 @@ import Eos
 import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Shop
 
 
 
@@ -106,7 +108,7 @@ type alias Community =
 
 
 type alias Product =
-    { id : Int
+    { id : Shop.Id
     , title : String
     , image : Maybe String
     , community : Community
@@ -181,9 +183,12 @@ saleHistorySelectionSet =
         |> with
             (Order.product
                 (SelectionSet.succeed Product
-                    |> with Product.id
+                    |> with Shop.idSelectionSet
                     |> with Product.title
-                    |> with Product.image
+                    |> with
+                        (Product.images Cambiatus.Object.ProductImage.uri
+                            |> SelectionSet.map List.head
+                        )
                     |> with (Product.community logoSelectionSet)
                 )
             )
