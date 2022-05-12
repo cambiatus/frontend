@@ -1,6 +1,7 @@
 module Shop exposing
     ( Filter(..)
     , Id
+    , ImageId
     , Product
     , ProductPreview
     , StockTracking(..)
@@ -18,6 +19,7 @@ module Shop exposing
     , productSelectionSet
     , productsQuery
     , updateProduct
+    , viewImageCarrousel
     )
 
 import Avatar
@@ -32,10 +34,15 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, button, div, img, text, ul)
+import Html.Attributes exposing (alt, class, classList, id, src)
+import Html.Events exposing (onClick)
+import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
 import Url.Parser
+import View.Components
 
 
 
@@ -375,3 +382,145 @@ getAvailableUnits product =
 
         UnitTracking { availableUnits } ->
             Just availableUnits
+
+
+
+-- VIEWS
+
+
+type ImageId
+    = ImageId String
+
+
+{-| This does not treat the case where there are no images. Treat it accordingly!
+-}
+viewImageCarrousel :
+    List (Html.Attribute msg)
+    ->
+        { showArrows : Bool
+        , onScrollToImage : { containerId : String, imageId : String } -> msg
+        , currentIntersecting : Maybe ImageId
+        , onStartedIntersecting : ImageId -> msg
+        , onStoppedIntersecting : ImageId -> msg
+        }
+    -> ( String, List String )
+    -> Html msg
+viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
+    let
+        imageUrls =
+            firstImage :: otherImages
+
+        containerId =
+            "image-carrousel"
+
+        imageId index =
+            "product-image-" ++ String.fromInt index
+
+        indexFromImageId (ImageId imgId) =
+            String.dropLeft (String.length "product-image-") imgId
+                |> String.toInt
+
+        clickedScrollToImage imageIndex =
+            options.onScrollToImage
+                { containerId = containerId
+                , imageId = imageId imageIndex
+                }
+
+        isCurrentIntersecting imageIndex =
+            case options.currentIntersecting of
+                Nothing ->
+                    False
+
+                Just (ImageId currentIntersecting) ->
+                    currentIntersecting == imageId imageIndex
+
+        maybeCurrentIntersectingIndex =
+            options.currentIntersecting
+                |> Maybe.andThen indexFromImageId
+    in
+    -- TODO - Treat case where there is only one image
+    div (class "relative" :: extraAttrs)
+        [ case maybeCurrentIntersectingIndex of
+            Nothing ->
+                text ""
+
+            Just currentIntersectingIndex ->
+                div [ class "absolute left-4 bottom-1/2 translate-y-1/2" ]
+                    [ button
+                        [ class "bg-white/80 rounded-full transition-all origin-left"
+                        , classList
+                            [ ( "hidden", not options.showArrows )
+                            , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == 0 )
+                            ]
+
+                        -- TODO - Probably need aria
+                        , onClick (clickedScrollToImage (currentIntersectingIndex - 1))
+                        ]
+                        [ Icons.arrowDown "rotate-90"
+                        ]
+                    ]
+        , ul
+            [ class "flex h-full min-w-full overflow-x-scroll overflow-y-hidden snap-x scrollbar-hidden gap-x-4 rounded"
+            , id containerId
+            ]
+            (List.indexedMap
+                (\index image ->
+                    div
+                        [ class "bg-gray-100 w-full h-full flex-shrink-0 snap-center snap-always grid place-items-center rounded"
+                        , id (imageId index)
+                        ]
+                        [ img
+                            [ src image
+                            , alt ""
+                            , class "object-cover object-center max-w-full max-h-full"
+                            ]
+                            []
+                        ]
+                )
+                imageUrls
+            )
+        , case maybeCurrentIntersectingIndex of
+            Nothing ->
+                text ""
+
+            Just currentIntersectingIndex ->
+                div [ class "absolute right-4 bottom-1/2 translate-y-1/2" ]
+                    [ button
+                        [ class "bg-white/80 rounded-full transition-all origin-right"
+                        , classList
+                            [ ( "hidden", not options.showArrows )
+                            , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == List.length imageUrls - 1 )
+                            ]
+
+                        -- TODO - Probably need aria
+                        , onClick (clickedScrollToImage (currentIntersectingIndex + 1))
+                        ]
+                        [ Icons.arrowDown "-rotate-90" ]
+                    ]
+        , div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2" ]
+            (List.indexedMap
+                (\index _ ->
+                    -- TODO - Probably need aria
+                    button
+                        [ class "border-2 w-2 h-2 rounded-full transition-colors"
+                        , classList
+                            [ ( "bg-white border-orange-500", isCurrentIntersecting index )
+                            , ( "bg-white/80 border-white/80", not (isCurrentIntersecting index) )
+                            ]
+                        , onClick (clickedScrollToImage index)
+                        ]
+                        []
+                )
+                imageUrls
+            )
+        , View.Components.intersectionObserver
+            { targetSelectors =
+                List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
+            , threshold = 0.01
+
+            -- TODO - We don't want to exclude any breakpoints here!
+            , breakpointToExclude = View.Components.Xl
+            , onStartedIntersecting = Just (ImageId >> options.onStartedIntersecting)
+            , onStoppedIntersecting = Just (ImageId >> options.onStoppedIntersecting)
+            }
+        ]

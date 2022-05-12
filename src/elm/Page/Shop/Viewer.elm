@@ -58,17 +58,21 @@ init session saleId =
         Page.LoggedIn ({ shared, accountName } as loggedIn) ->
             let
                 model =
-                    AsLoggedIn
-                        { status = RemoteData.Loading
-                        , form =
-                            Form.init
-                                { units = "1"
-                                , memo = Form.RichText.initModel "memo-input" Nothing
-                                }
-                        , hasChangedDefaultMemo = False
-                        , balances = []
-                        , isBuyButtonDisabled = False
-                        }
+                    { status =
+                        AsLoggedIn
+                            { status = RemoteData.Loading
+                            , form =
+                                Form.init
+                                    { units = "1"
+                                    , memo = Form.RichText.initModel "memo-input" Nothing
+                                    }
+                            , hasChangedDefaultMemo = False
+                            , balances = []
+                            , isBuyButtonDisabled = False
+                            }
+                    , currentVisibleImage = Nothing
+                    , previousVisibleImage = Nothing
+                    }
             in
             model
                 |> UR.init
@@ -81,15 +85,19 @@ init session saleId =
                 |> UR.map identity identity (Page.LoggedInExternal >> UR.addExt)
 
         Page.Guest guest ->
-            AsGuest
-                { saleId = saleId
-                , productPreview = RemoteData.Loading
-                , form =
-                    Form.init
-                        { units = "1"
-                        , memo = Form.RichText.initModel "memo-input" Nothing
-                        }
-                }
+            { status =
+                AsGuest
+                    { saleId = saleId
+                    , productPreview = RemoteData.Loading
+                    , form =
+                        Form.init
+                            { units = "1"
+                            , memo = Form.RichText.initModel "memo-input" Nothing
+                            }
+                    }
+            , currentVisibleImage = Nothing
+            , previousVisibleImage = Nothing
+            }
                 |> UR.init
                 |> UR.addCmd
                     (Api.Graphql.query guest.shared
@@ -103,7 +111,14 @@ init session saleId =
 -- MODEL
 
 
-type Model
+type alias Model =
+    { status : Status
+    , currentVisibleImage : Maybe Shop.ImageId
+    , previousVisibleImage : Maybe Shop.ImageId
+    }
+
+
+type Status
     = AsGuest GuestModel
     | AsLoggedIn LoggedInModel
 
@@ -129,7 +144,11 @@ type alias LoggedInModel =
 
 
 type Msg
-    = AsGuestMsg GuestMsg
+    = NoOp
+    | ClickedScrollToImage { containerId : String, imageId : String }
+    | ImageStartedIntersecting Shop.ImageId
+    | ImageStoppedIntersecting Shop.ImageId
+    | AsGuestMsg GuestMsg
     | AsLoggedInMsg LoggedInMsg
 
 
@@ -168,14 +187,55 @@ type alias LoggedInUpdateResult =
 
 update : Msg -> Model -> Session -> UpdateResult
 update msg model session =
-    case ( msg, model, session ) of
+    case ( msg, model.status, session ) of
+        ( NoOp, _, _ ) ->
+            UR.init model
+
+        ( ClickedScrollToImage { containerId, imageId }, _, _ ) ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "smoothHorizontalScroll" )
+                            , ( "containerId", Encode.string containerId )
+                            , ( "targetId", Encode.string imageId )
+                            ]
+                    }
+
+        ( ImageStartedIntersecting imageId, _, _ ) ->
+            { model
+                | currentVisibleImage = Just imageId
+                , previousVisibleImage = model.currentVisibleImage
+            }
+                |> UR.init
+
+        ( ImageStoppedIntersecting imageId, _, _ ) ->
+            if Just imageId == model.currentVisibleImage then
+                { model
+                    | currentVisibleImage = model.previousVisibleImage
+                    , previousVisibleImage = Nothing
+                }
+                    |> UR.init
+
+            else if Just imageId == model.previousVisibleImage then
+                { model | previousVisibleImage = Nothing }
+                    |> UR.init
+
+            else
+                model |> UR.init
+
         ( AsGuestMsg subMsg, AsGuest subModel, Page.Guest guest ) ->
             updateAsGuest subMsg subModel guest
-                |> UR.map AsGuest AsGuestMsg (Page.GuestExternal >> UR.addExt)
+                |> UR.map (\guestModel -> { model | status = AsGuest guestModel })
+                    AsGuestMsg
+                    (Page.GuestExternal >> UR.addExt)
 
         ( AsLoggedInMsg subMsg, AsLoggedIn subModel, Page.LoggedIn loggedIn ) ->
             updateAsLoggedIn subMsg subModel loggedIn
-                |> UR.map AsLoggedIn
+                |> UR.map (\loggedInModel -> { model | status = AsLoggedIn loggedInModel })
                     AsLoggedInMsg
                     (LoggedIn.mapExternal AsLoggedInMsg >> Page.LoggedInExternal >> UR.addExt)
 
@@ -422,7 +482,7 @@ view session model =
             t "shop.title"
 
         title =
-            case model of
+            case model.status of
                 AsLoggedIn { status } ->
                     case status of
                         RemoteData.Success sale ->
@@ -446,8 +506,8 @@ view session model =
                 , description : Markdown
                 , creator : Profile.Minimal
             }
-            -> Html msg
-            -> Html msg
+            -> Html Msg
+            -> Html Msg
         viewContent sale formView =
             let
                 isGuest =
@@ -470,8 +530,23 @@ view session model =
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
-                        -- TODO - We only show one image
-                        [ viewProductImg translators (List.head sale.images)
+                        [ case sale.images of
+                            [] ->
+                                div [ class "h-68 w-full bg-gray-100 flex flex-col items-center justify-center rounded" ]
+                                    [ Icons.image ""
+                                    , span [ class "font-bold uppercase text-black text-sm mt-2" ]
+                                        [ text <| t "shop.no_image" ]
+                                    ]
+
+                            firstImage :: otherImages ->
+                                Shop.viewImageCarrousel [ class "h-68" ]
+                                    { showArrows = True
+                                    , onScrollToImage = ClickedScrollToImage
+                                    , currentIntersecting = model.currentVisibleImage
+                                    , onStartedIntersecting = ImageStartedIntersecting
+                                    , onStoppedIntersecting = ImageStoppedIntersecting
+                                    }
+                                    ( firstImage, otherImages )
                         , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , if isCreator then
@@ -487,7 +562,7 @@ view session model =
                 ]
 
         content =
-            case ( model, session ) of
+            case ( model.status, session ) of
                 ( AsGuest model_, Page.Guest guest ) ->
                     case model_.productPreview of
                         RemoteData.Success sale ->
@@ -517,8 +592,8 @@ view session model =
                                     model_.form
                                     { toMsg = GotFormMsgAsGuest
                                     }
+                                    |> Html.map AsGuestMsg
                                 )
-                                |> Html.map AsGuestMsg
 
                         RemoteData.Failure err ->
                             Page.fullPageGraphQLError (t "shop.title") err
@@ -614,9 +689,9 @@ view session model =
                                                 { toMsg = GotFormMsg
                                                 , onSubmit = ClickedTransfer sale
                                                 }
+                                                |> Html.map AsLoggedInMsg
                                             )
                                         ]
-                                        |> Html.map AsLoggedInMsg
 
                 _ ->
                     Page.fullPageError (t "shop.title") Http.Timeout
@@ -624,36 +699,6 @@ view session model =
     { title = title
     , content = content
     }
-
-
-viewProductImg : Shared.Translators -> Maybe String -> Html msg
-viewProductImg { t } maybeImgUrl =
-    let
-        defaultView =
-            div [ class "flex flex-col items-center gap-2" ]
-                [ Icons.image ""
-                , span [ class "font-bold uppercase text-black text-sm" ]
-                    [ text <| t "shop.no_image" ]
-                ]
-
-        image =
-            case maybeImgUrl of
-                Nothing ->
-                    defaultView
-
-                Just "" ->
-                    defaultView
-
-                Just imgUrl ->
-                    img
-                        [ src imgUrl
-                        , class "object-cover object-center rounded max-h-68 max-w-full"
-                        , alt ""
-                        ]
-                        []
-    in
-    div [ class "bg-gray-100 w-full rounded grid place-items-center h-68" ]
-        [ image ]
 
 
 viewContactTheSeller : Shared.Translators -> { isGuest : Bool } -> Profile.Minimal -> Html msg
@@ -875,6 +920,18 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ClickedScrollToImage _ ->
+            [ "ClickedScrollToImage" ]
+
+        ImageStartedIntersecting _ ->
+            [ "ImageStartedIntersecting" ]
+
+        ImageStoppedIntersecting _ ->
+            [ "ImageStoppedIntersecting" ]
+
         AsGuestMsg subMsg ->
             "AsGuestMsg" :: guestMsgToString subMsg
 
