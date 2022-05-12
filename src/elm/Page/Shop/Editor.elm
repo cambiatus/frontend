@@ -9,9 +9,7 @@ module Page.Shop.Editor exposing
     , view
     )
 
-import Api
 import Cambiatus.Enum.Permission as Permission
-import Community exposing (Balance)
 import Eos
 import Form
 import Form.File
@@ -24,14 +22,11 @@ import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import List.Extra
-import Log
 import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
-import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
@@ -46,17 +41,19 @@ import View.Feedback as Feedback
 
 
 initCreate : LoggedIn.Model -> ( Model, Cmd Msg )
-initCreate loggedIn =
-    ( LoadingBalancesCreate
-    , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
-    )
+initCreate _ =
+    ( EditingCreate initFormData, Cmd.none )
 
 
-initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> ( Model, Cmd Msg )
+initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> UpdateResult
 initUpdate productId step loggedIn =
-    ( LoadingBalancesUpdate productId step
-    , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
-    )
+    LoadingSaleUpdate step
+        |> UR.init
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (Shop.productQuery productId)
+                CompletedSaleLoad
+            )
 
 
 
@@ -70,16 +67,13 @@ type alias Model =
 type
     Status
     -- Create
-    = LoadingBalancesCreate
-    | EditingCreate (List Balance) FormData
-    | Creating (List Balance) FormData
+    = EditingCreate FormData
+    | Creating FormData
       -- Update
-    | LoadingBalancesUpdate Shop.Id Route.EditSaleStep
-    | LoadingSaleUpdate (List Balance) Route.EditSaleStep
-    | EditingUpdate (List Balance) Product FormData
-    | Saving (List Balance) Product FormData
+    | LoadingSaleUpdate Route.EditSaleStep
+    | EditingUpdate Product FormData
+    | Saving Product FormData
       -- Errors
-    | LoadBalancesFailed Http.Error
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
 
 
@@ -415,10 +409,10 @@ view loggedIn model =
 
         isEdit =
             case model of
-                EditingUpdate _ _ _ ->
+                EditingUpdate _ _ ->
                     True
 
-                Saving _ _ _ ->
+                Saving _ _ ->
                     True
 
                 _ ->
@@ -433,31 +427,22 @@ view loggedIn model =
 
         content =
             case model of
-                LoadingBalancesCreate ->
+                LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
-
-                LoadingBalancesUpdate _ _ ->
-                    Page.fullPageLoading shared
-
-                LoadingSaleUpdate _ _ ->
-                    Page.fullPageLoading shared
-
-                LoadBalancesFailed error ->
-                    Page.fullPageError (t "shop.title") error
 
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
-                EditingCreate _ formData ->
+                EditingCreate formData ->
                     viewForm loggedIn { isEdit = False, isDisabled = False } formData
 
-                Creating _ formData ->
+                Creating formData ->
                     viewForm loggedIn { isEdit = False, isDisabled = True } formData
 
-                EditingUpdate _ _ formData ->
+                EditingUpdate _ formData ->
                     viewForm loggedIn { isEdit = True, isDisabled = False } formData
 
-                Saving _ _ formData ->
+                Saving _ formData ->
                     viewForm loggedIn { isEdit = True, isDisabled = True } formData
     in
     { title = title
@@ -600,7 +585,6 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | CompletedBalancesLoad (Result Http.Error (List Balance))
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationFormOutput
@@ -627,49 +611,11 @@ update msg model loggedIn =
         NoOp ->
             UR.init model
 
-        CompletedBalancesLoad (Ok balances) ->
-            case model of
-                LoadingBalancesCreate ->
-                    initFormData
-                        |> EditingCreate balances
-                        |> UR.init
-
-                LoadingBalancesUpdate saleId step ->
-                    let
-                        addSaleFetch =
-                            LoggedIn.query loggedIn
-                                (Shop.productQuery saleId)
-                                CompletedSaleLoad
-                                |> UR.addExt
-                    in
-                    LoadingSaleUpdate balances step
-                        |> UR.init
-                        |> addSaleFetch
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Completed loading balances, but user wasn't creating or updating sale"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-        CompletedBalancesLoad (Err error) ->
-            LoadBalancesFailed error
-                |> UR.init
-                |> UR.logHttpError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when loading balances for shop editor"
-                    { moduleName = "Page.Shop.Editor", function = "update" }
-                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
-                    error
-
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
-                ( LoadingSaleUpdate balances step, Just sale ) ->
+                ( LoadingSaleUpdate step, Just sale ) ->
                     initEditingFormData sale step
-                        |> EditingUpdate balances sale
+                        |> EditingUpdate sale
                         |> UR.init
 
                 ( _, _ ) ->
@@ -714,8 +660,8 @@ update msg model loggedIn =
                     loggedIn.shared.translators.t "error.unknown"
             in
             case model of
-                Creating balances form ->
-                    EditingCreate balances form
+                Creating form ->
+                    EditingCreate form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -725,8 +671,8 @@ update msg model loggedIn =
                             []
                             error
 
-                Saving balances sale form ->
-                    EditingUpdate balances sale form
+                Saving sale form ->
+                    EditingUpdate sale form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -800,8 +746,8 @@ update msg model loggedIn =
             case maybeCurrentStep of
                 Just (PriceAndInventory mainInformation images) ->
                     case model of
-                        EditingCreate balances formData ->
-                            Creating balances formData
+                        EditingCreate formData ->
+                            Creating formData
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -823,8 +769,8 @@ update msg model loggedIn =
                                     model
                                     { successMsg = msg, errorMsg = NoOp }
 
-                        EditingUpdate balances sale formData ->
-                            Saving balances sale formData
+                        EditingUpdate sale formData ->
+                            Saving sale formData
                                 |> UR.init
                                 |> UR.addExt
                                     (LoggedIn.mutation
@@ -876,17 +822,17 @@ updateFormStockUnits updateFn model =
     let
         maybeFormInfo =
             case model of
-                EditingCreate balances form ->
-                    Just ( form, EditingCreate balances )
+                EditingCreate form ->
+                    Just ( form, EditingCreate )
 
-                Creating balances form ->
-                    Just ( form, Creating balances )
+                Creating form ->
+                    Just ( form, Creating )
 
-                EditingUpdate balances product form ->
-                    Just ( form, EditingUpdate balances product )
+                EditingUpdate product form ->
+                    Just ( form, EditingUpdate product )
 
-                Saving balances product form ->
-                    Just ( form, Saving balances product )
+                Saving product form ->
+                    Just ( form, Saving product )
 
                 _ ->
                     Nothing
@@ -919,16 +865,16 @@ updateFormStockUnits updateFn model =
 getFormData : Model -> Maybe FormData
 getFormData model =
     case model of
-        EditingCreate _ formData ->
+        EditingCreate formData ->
             Just formData
 
-        Creating _ formData ->
+        Creating formData ->
             Just formData
 
-        EditingUpdate _ _ formData ->
+        EditingUpdate _ formData ->
             Just formData
 
-        Saving _ _ formData ->
+        Saving _ formData ->
             Just formData
 
         _ ->
@@ -938,17 +884,17 @@ getFormData model =
 setCurrentStep : Step -> Model -> Model
 setCurrentStep newStep model =
     case model of
-        EditingCreate balances formData ->
-            EditingCreate balances { formData | currentStep = newStep }
+        EditingCreate formData ->
+            EditingCreate { formData | currentStep = newStep }
 
-        Creating balances formData ->
-            Creating balances { formData | currentStep = newStep }
+        Creating formData ->
+            Creating { formData | currentStep = newStep }
 
-        EditingUpdate balances product formData ->
-            EditingUpdate balances product { formData | currentStep = newStep }
+        EditingUpdate product formData ->
+            EditingUpdate product { formData | currentStep = newStep }
 
-        Saving balances product formData ->
-            Saving balances product { formData | currentStep = newStep }
+        Saving product formData ->
+            Saving product { formData | currentStep = newStep }
 
         _ ->
             model
@@ -959,17 +905,17 @@ updateForm shared formMsg model =
     let
         maybeFormInfo =
             case model of
-                EditingCreate balances form ->
-                    Just ( form, EditingCreate balances )
+                EditingCreate form ->
+                    Just ( form, EditingCreate )
 
-                Creating balances form ->
-                    Just ( form, Creating balances )
+                Creating form ->
+                    Just ( form, Creating )
 
-                EditingUpdate balances product form ->
-                    Just ( form, EditingUpdate balances product )
+                EditingUpdate product form ->
+                    Just ( form, EditingUpdate product )
 
-                Saving balances product form ->
-                    Just ( form, Saving balances product )
+                Saving product form ->
+                    Just ( form, Saving product )
 
                 _ ->
                     Nothing
@@ -1038,9 +984,6 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        CompletedBalancesLoad r ->
-            [ "CompletedBalancesLoad", UR.resultToString r ]
-
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
 
@@ -1082,29 +1025,20 @@ formMsgToString msg =
 getCurrentStep : Model -> Route.EditSaleStep
 getCurrentStep model =
     case model of
-        LoadingBalancesCreate ->
-            Route.SaleMainInformation
-
-        EditingCreate _ formData ->
+        EditingCreate formData ->
             getCurrentStepFromFormData formData
 
-        Creating _ formData ->
+        Creating formData ->
             getCurrentStepFromFormData formData
 
-        LoadingBalancesUpdate _ step ->
+        LoadingSaleUpdate step ->
             step
 
-        LoadingSaleUpdate _ step ->
-            step
-
-        EditingUpdate _ _ formData ->
+        EditingUpdate _ formData ->
             getCurrentStepFromFormData formData
 
-        Saving _ _ formData ->
+        Saving _ formData ->
             getCurrentStepFromFormData formData
-
-        LoadBalancesFailed _ ->
-            Route.SaleMainInformation
 
         LoadSaleFailed _ ->
             Route.SaleMainInformation

@@ -1535,8 +1535,18 @@ changeRouteTo maybeRoute model =
                 |> withLoggedIn Route.NewSale
 
         Just (Route.EditSale saleId saleStep) ->
-            (\l -> ShopEditor.initUpdate saleId saleStep l)
-                >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
+            let
+                newModelCmd l =
+                    case model.status of
+                        ShopEditor _ shopEditorModel ->
+                            -- TODO - Change step
+                            UR.init shopEditorModel
+
+                        _ ->
+                            ShopEditor.initUpdate saleId saleStep l
+            in
+            newModelCmd
+                >> updateLoggedInUResult (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId saleStep)
 
         Just (Route.ViewSale saleId) ->
