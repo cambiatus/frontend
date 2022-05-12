@@ -44,6 +44,7 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Transfer
+import Translation
 import UpdateResult as UR
 import View.Feedback as Feedback
 import View.Modal
@@ -454,6 +455,7 @@ updateAsLoggedIn msg model loggedIn =
         ClickedDelete ->
             case model.status of
                 -- TODO - Mark as deleting so other buttons are disabled?
+                -- TODO - Show a confirmation modal?
                 RemoteData.Success sale ->
                     model
                         |> UR.init
@@ -470,8 +472,7 @@ updateAsLoggedIn msg model loggedIn =
         CompletedDeleteProduct (RemoteData.Success _) ->
             model
                 |> UR.init
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Offer deleted with success")
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         CompletedDeleteProduct (RemoteData.Failure err) ->
@@ -750,7 +751,7 @@ view session model =
                                                 }
                                                 |> Html.map AsLoggedInMsg
                                             )
-                                        , viewEditSaleModal model_ sale
+                                        , viewEditSaleModal translators model_ sale
                                             |> Html.map AsLoggedInMsg
                                         ]
 
@@ -974,8 +975,8 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
             )
 
 
-viewEditSaleModal : LoggedInModel -> Product -> Html LoggedInMsg
-viewEditSaleModal model product =
+viewEditSaleModal : Translation.Translators -> LoggedInModel -> Product -> Html LoggedInMsg
+viewEditSaleModal { t } model product =
     View.Modal.initWith
         { closeMsg = ClosedEditSaleModal
         , isVisible = model.isEditModalVisible
@@ -1009,12 +1010,10 @@ viewEditSaleModal model product =
                     , Icons.arrowDown "-rotate-90 ml-auto"
                     ]
                 , button
-                    -- TODO - Add onClick
                     [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
                     , onClick ClickedDelete
                     ]
-                    -- TODO - I18N
-                    [ text "Delete"
+                    [ text <| t "shop.delete"
                     , Icons.arrowDown "-rotate-90 ml-auto"
                     ]
                 ]

@@ -19,7 +19,6 @@ import Form.Text
 import Form.Toggle
 import Form.Validate
 import Graphql.Http
-import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
@@ -39,7 +38,6 @@ import Shop exposing (Product)
 import Translation
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Modal as Modal
 
 
 
@@ -77,9 +75,8 @@ type
       -- Update
     | LoadingBalancesUpdate Shop.Id
     | LoadingSaleUpdate (List Balance)
-    | EditingUpdate (List Balance) Product DeleteModalStatus FormData
+    | EditingUpdate (List Balance) Product FormData
     | Saving (List Balance) Product FormData
-    | Deleting (List Balance) Product FormData
       -- Errors
     | LoadBalancesFailed Http.Error
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
@@ -91,11 +88,6 @@ type alias FormData =
     , priceAndInventory : Form.Model PriceAndInventoryFormInput
     , currentStep : Step
     }
-
-
-type DeleteModalStatus
-    = Open
-    | Closed
 
 
 type Step
@@ -411,13 +403,10 @@ view loggedIn model =
 
         isEdit =
             case model of
-                EditingUpdate _ _ _ _ ->
+                EditingUpdate _ _ _ ->
                     True
 
                 Saving _ _ _ ->
-                    True
-
-                Deleting _ _ _ ->
                     True
 
                 _ ->
@@ -448,19 +437,16 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") error
 
                 EditingCreate _ formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = False } Closed formData
+                    viewForm loggedIn { isEdit = False, isDisabled = False } formData
 
                 Creating _ formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = True } Closed formData
+                    viewForm loggedIn { isEdit = False, isDisabled = True } formData
 
-                EditingUpdate _ _ confirmDelete formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = False } confirmDelete formData
+                EditingUpdate _ _ formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = False } formData
 
                 Saving _ _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = True } Closed formData
-
-                Deleting _ _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = True } Closed formData
+                    viewForm loggedIn { isEdit = True, isDisabled = True } formData
     in
     { title = title
     , content =
@@ -487,10 +473,9 @@ view loggedIn model =
 viewForm :
     LoggedIn.Model
     -> { isEdit : Bool, isDisabled : Bool }
-    -> DeleteModalStatus
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
+viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
     let
         { t } =
             shared.translators
@@ -519,19 +504,6 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                                     [ -- TODO - I18N
                                       text "Cancel"
                                     ]
-
-                                -- TODO - Remove delete button from here
-                                , if isEdit then
-                                    button
-                                        [ class "button button-danger w-full"
-                                        , disabled isDisabled
-                                        , onClick ClickedDelete
-                                        , type_ "button"
-                                        ]
-                                        [ text (t "shop.delete") ]
-
-                                  else
-                                    text ""
                                 , submitButton
                                     [ class "button button-primary w-full"
                                     , disabled isDisabled
@@ -601,40 +573,9 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
 
                             _ ->
                                 Page.fullPageLoading shared
-                , if isEdit && deleteModal == Open then
-                    viewConfirmDeleteModal t
-
-                  else
-                    text ""
                 ]
             ]
         ]
-
-
-viewConfirmDeleteModal : (String -> String) -> Html Msg
-viewConfirmDeleteModal t =
-    Modal.initWith
-        { closeMsg = ClickedDeleteCancel
-        , isVisible = True
-        }
-        |> Modal.withHeader (t "shop.delete_modal.title")
-        |> Modal.withBody
-            [ text (t "shop.delete_modal.body") ]
-        |> Modal.withFooter
-            [ button
-                [ class "modal-cancel"
-                , onClick ClickedDeleteCancel
-                , type_ "button"
-                ]
-                [ text (t "shop.delete_modal.cancel") ]
-            , button
-                [ class "modal-accept"
-                , onClick ClickedDeleteConfirm
-                , type_ "button"
-                ]
-                [ text (t "shop.delete_modal.confirm") ]
-            ]
-        |> Modal.toHtml
 
 
 
@@ -646,18 +587,14 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedBalancesLoad (Result Http.Error (List Balance))
+    = NoOp
+    | CompletedBalancesLoad (Result Http.Error (List Balance))
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
     | SubmittedMainInformation MainInformationFormOutput
     | SubmittedImages ImagesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
-    | ClickedDelete
-    | ClickedDeleteConfirm
-    | ClickedDeleteCancel
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
-    | GotDeleteResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
-    | ClosedAuthModal
     | ClickedDecrementStockUnits
     | ClickedIncrementStockUnits
 
@@ -675,6 +612,9 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedBalancesLoad (Ok balances) ->
             case model of
                 LoadingBalancesCreate ->
@@ -717,7 +657,7 @@ update msg model loggedIn =
             case ( model, maybeSale ) of
                 ( LoadingSaleUpdate balances, Just sale ) ->
                     initEditingFormData sale
-                        |> EditingUpdate balances sale Closed
+                        |> EditingUpdate balances sale
                         |> UR.init
 
                 ( _, _ ) ->
@@ -741,48 +681,6 @@ update msg model loggedIn =
 
         CompletedSaleLoad _ ->
             UR.init model
-
-        ClickedDelete ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Open form
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-
-        ClickedDeleteCancel ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-
-        ClickedDeleteConfirm ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    Deleting balances sale form
-                        |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.mutation loggedIn
-                                (Shop.deleteProduct sale.id (Graphql.SelectionSet.succeed ()))
-                                GotDeleteResponse
-                            )
-                        |> LoggedIn.withPrivateKey loggedIn
-                            []
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Clicked delete shop item, but wasn't editing or creating shop offer"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
 
         GotSaveResponse (RemoteData.Success maybeId) ->
             let
@@ -816,7 +714,7 @@ update msg model loggedIn =
                             error
 
                 Saving balances sale form ->
-                    EditingUpdate balances sale Closed form
+                    EditingUpdate balances sale form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -837,51 +735,6 @@ update msg model loggedIn =
 
         GotSaveResponse _ ->
             UR.init model
-
-        GotDeleteResponse (RemoteData.Success _) ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
-
-        GotDeleteResponse (RemoteData.Failure error) ->
-            let
-                internalError =
-                    loggedIn.shared.translators.t "error.unknown"
-            in
-            case model of
-                Deleting balances sale form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
-                        |> UR.logGraphqlError msg
-                            (Just loggedIn.accountName)
-                            "Got an error when deleting a shop offer"
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-                            error
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Deleted shop item, but wasn't in the state of Deleting"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-        GotDeleteResponse _ ->
-            UR.init model
-
-        ClosedAuthModal ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
-
-                _ ->
-                    UR.init model
 
         GotFormMsg subMsg ->
             updateForm loggedIn.shared subMsg model
@@ -956,9 +809,9 @@ update msg model loggedIn =
                                 |> LoggedIn.withPrivateKey loggedIn
                                     [ Permission.Sell ]
                                     model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
+                                    { successMsg = msg, errorMsg = NoOp }
 
-                        EditingUpdate balances sale _ formData ->
+                        EditingUpdate balances sale formData ->
                             Saving balances sale formData
                                 |> UR.init
                                 |> UR.addExt
@@ -980,7 +833,7 @@ update msg model loggedIn =
                                 |> LoggedIn.withPrivateKey loggedIn
                                     [ Permission.Sell ]
                                     model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
+                                    { successMsg = msg, errorMsg = NoOp }
 
                         _ ->
                             model
@@ -1017,14 +870,11 @@ updateFormStockUnits updateFn model =
                 Creating balances form ->
                     Just ( form, Creating balances )
 
-                EditingUpdate balances product deleteModalStatus form ->
-                    Just ( form, EditingUpdate balances product deleteModalStatus )
+                EditingUpdate balances product form ->
+                    Just ( form, EditingUpdate balances product )
 
                 Saving balances product form ->
                     Just ( form, Saving balances product )
-
-                Deleting balances product form ->
-                    Just ( form, Deleting balances product )
 
                 _ ->
                     Nothing
@@ -1063,13 +913,10 @@ getFormData model =
         Creating _ formData ->
             Just formData
 
-        EditingUpdate _ _ _ formData ->
+        EditingUpdate _ _ formData ->
             Just formData
 
         Saving _ _ formData ->
-            Just formData
-
-        Deleting _ _ formData ->
             Just formData
 
         _ ->
@@ -1085,14 +932,11 @@ setCurrentStep newStep model =
         Creating balances formData ->
             Creating balances { formData | currentStep = newStep }
 
-        EditingUpdate balances product deleteModalStatus formData ->
-            EditingUpdate balances product deleteModalStatus { formData | currentStep = newStep }
+        EditingUpdate balances product formData ->
+            EditingUpdate balances product { formData | currentStep = newStep }
 
         Saving balances product formData ->
             Saving balances product { formData | currentStep = newStep }
-
-        Deleting balances product formData ->
-            Deleting balances product { formData | currentStep = newStep }
 
         _ ->
             model
@@ -1109,14 +953,11 @@ updateForm shared formMsg model =
                 Creating balances form ->
                     Just ( form, Creating balances )
 
-                EditingUpdate balances product deleteModalStatus form ->
-                    Just ( form, EditingUpdate balances product deleteModalStatus )
+                EditingUpdate balances product form ->
+                    Just ( form, EditingUpdate balances product )
 
                 Saving balances product form ->
                     Just ( form, Saving balances product )
-
-                Deleting balances product form ->
-                    Just ( form, Deleting balances product )
 
                 _ ->
                     Nothing
@@ -1182,29 +1023,17 @@ updateForm shared formMsg model =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedBalancesLoad r ->
             [ "CompletedBalancesLoad", UR.resultToString r ]
 
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
 
-        ClickedDelete ->
-            [ "ClickedDelete" ]
-
-        ClickedDeleteConfirm ->
-            [ "ClickedDeleteConfirm" ]
-
-        ClickedDeleteCancel ->
-            [ "ClickedDeleteCancel" ]
-
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.remoteDataToString r ]
-
-        GotDeleteResponse r ->
-            [ "GotDeleteResponse", UR.remoteDataToString r ]
-
-        ClosedAuthModal ->
-            [ "ClosedAuthModal" ]
 
         GotFormMsg subMsg ->
             "GotFormMsg" :: formMsgToString subMsg
