@@ -44,8 +44,8 @@ import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Transfer
 import UpdateResult as UR
-import View.Components
 import View.Feedback as Feedback
+import View.Modal
 
 
 
@@ -69,6 +69,7 @@ init session saleId =
                             , hasChangedDefaultMemo = False
                             , balances = []
                             , isBuyButtonDisabled = False
+                            , isEditModalVisible = False
                             }
                     , currentVisibleImage = Nothing
                     , previousVisibleImage = Nothing
@@ -136,6 +137,7 @@ type alias LoggedInModel =
     , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
+    , isEditModalVisible : Bool
     }
 
 
@@ -166,6 +168,8 @@ type LoggedInMsg
     | GotFormMsg (Form.Msg FormInput)
     | GotTransferResult (Result (Maybe Value) String)
     | GotFormInteractionMsg FormInteractionMsg
+    | ClickedEditSale
+    | ClosedEditSaleModal
 
 
 type FormInteractionMsg
@@ -436,6 +440,14 @@ updateAsLoggedIn msg model loggedIn =
             }
                 |> UR.init
 
+        ClickedEditSale ->
+            { model | isEditModalVisible = True }
+                |> UR.init
+
+        ClosedEditSaleModal ->
+            { model | isEditModalVisible = False }
+                |> UR.init
+
 
 updateFormInteraction : FormInteractionMsg -> { maxUnits : Maybe Int } -> Form.Model FormInput -> Form.Model FormInput
 updateFormInteraction msg { maxUnits } model =
@@ -664,11 +676,11 @@ view session model =
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
                                                     [ if isOwner then
-                                                        View.Components.disablableLink
-                                                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                                                        button
                                                             [ class "button button-primary w-full"
-                                                            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-                                                            , Route.href (Route.EditSale sale.id)
+                                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                            , onClick ClickedEditSale
+                                                            , type_ "button"
                                                             ]
                                                             [ text <| t "shop.edit" ]
 
@@ -697,6 +709,8 @@ view session model =
                                                 }
                                                 |> Html.map AsLoggedInMsg
                                             )
+                                        , viewEditSaleModal model_ sale
+                                            |> Html.map AsLoggedInMsg
                                         ]
 
                 _ ->
@@ -919,6 +933,53 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
             )
 
 
+viewEditSaleModal : LoggedInModel -> Product -> Html LoggedInMsg
+viewEditSaleModal model product =
+    View.Modal.initWith
+        { closeMsg = ClosedEditSaleModal
+        , isVisible = model.isEditModalVisible
+        }
+        -- TODO - I18N
+        |> View.Modal.withHeader "Edit offer"
+        |> View.Modal.withBody
+            [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
+                [ a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id)
+                    ]
+                    -- TODO - I18N
+                    [ text "Main information"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id)
+                    ]
+                    -- TODO - I18N
+                    [ text "Images"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id)
+                    ]
+                    -- TODO - I18N
+                    [ text "Price and Inventory"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , button
+                    -- TODO - Add onClick
+                    [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
+                    ]
+                    -- TODO - I18N
+                    [ text "Delete"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                ]
+            ]
+        |> View.Modal.toHtml
+
+
 
 -- UTILS
 
@@ -981,6 +1042,12 @@ loggedInMsgToString msg =
 
         GotFormInteractionMsg subMsg ->
             "GotFormInteractionMsg" :: formInteractionMsgToString subMsg
+
+        ClickedEditSale ->
+            [ "ClickedEditSale" ]
+
+        ClosedEditSaleModal ->
+            [ "ClosedEditSaleModal" ]
 
 
 formInteractionMsgToString : FormInteractionMsg -> List String
