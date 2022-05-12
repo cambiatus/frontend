@@ -42,6 +42,7 @@ import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
 import Url.Parser
+import Utils exposing (onClickPreventAll)
 import View.Components
 
 
@@ -398,6 +399,7 @@ viewImageCarrousel :
     List (Html.Attribute msg)
     ->
         { showArrows : Bool
+        , productId : Maybe Id
         , onScrollToImage : { containerId : String, imageId : String } -> msg
         , currentIntersecting : Maybe ImageId
         , onStartedIntersecting : ImageId -> msg
@@ -407,18 +409,37 @@ viewImageCarrousel :
     -> Html msg
 viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
     let
+        maybeProductId =
+            Maybe.map (\(Id opaqueId) -> opaqueId) options.productId
+
         imageUrls =
             firstImage :: otherImages
 
         containerId =
-            "image-carrousel"
+            case maybeProductId of
+                Nothing ->
+                    "image-carrousel"
+
+                Just productId ->
+                    "image-carrousel-" ++ String.fromInt productId
 
         imageId index =
-            "product-image-" ++ String.fromInt index
+            case maybeProductId of
+                Nothing ->
+                    "product-image-" ++ String.fromInt index
+
+                Just productId ->
+                    "product-image-" ++ String.fromInt productId ++ "-" ++ String.fromInt index
 
         indexFromImageId (ImageId imgId) =
-            String.dropLeft (String.length "product-image-") imgId
-                |> String.toInt
+            case maybeProductId of
+                Nothing ->
+                    String.dropLeft (String.length "product-image-") imgId
+                        |> String.toInt
+
+                Just productId ->
+                    String.dropLeft (String.length ("product-image-" ++ String.fromInt productId ++ "-")) imgId
+                        |> String.toInt
 
         clickedScrollToImage imageIndex =
             options.onScrollToImage
@@ -508,9 +529,9 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
                             [ class "border-2 w-2 h-2 rounded-full transition-colors"
                             , classList
                                 [ ( "bg-white border-orange-500", isCurrentIntersecting index )
-                                , ( "bg-white/80 border-white/80", not (isCurrentIntersecting index) )
+                                , ( "bg-white/80 border-gray-400", not (isCurrentIntersecting index) )
                                 ]
-                            , onClick (clickedScrollToImage index)
+                            , onClickPreventAll (clickedScrollToImage index)
                             ]
                             []
                     )

@@ -541,6 +541,7 @@ view session model =
                             firstImage :: otherImages ->
                                 Shop.viewImageCarrousel [ class "h-68" ]
                                     { showArrows = True
+                                    , productId = Nothing
                                     , onScrollToImage = ClickedScrollToImage
                                     , currentIntersecting = model.currentVisibleImage
                                     , onStartedIntersecting = ImageStartedIntersecting
