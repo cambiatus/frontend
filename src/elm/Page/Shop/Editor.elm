@@ -329,7 +329,6 @@ stockTrackingForm translators { isDisabled } =
             )
             (Form.Toggle.init
                 { label =
-                    -- TODO - Should these be in `label`? We could use `withGroupOf3` from the community contacts PR
                     div [ class "text-gray-333 text-base mb-4" ]
                         [ -- TODO - I18N
                           span [ class "font-bold" ] [ text "Inventory management" ]
