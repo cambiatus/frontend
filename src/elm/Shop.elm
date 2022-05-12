@@ -549,7 +549,7 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
             text ""
 
           else
-            div [ class "bg-gradient-to-t from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10" ] []
+            div [ class "bg-gradient-to-t rounded-b from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10" ] []
         , View.Components.intersectionObserver
             { targetSelectors =
                 List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
