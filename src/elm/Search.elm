@@ -30,7 +30,7 @@ import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
+import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
 import Html.Events exposing (onClick, onFocus)
 import Icons
 import Json.Decode as Decode exposing (list, string)
@@ -86,9 +86,16 @@ type ActiveTab
 
 
 type alias SearchResults =
-    { offers : List Shop.Product
+    { offers : List ProductInfo
     , actions : List Action
     , members : List Profile.Minimal
+    }
+
+
+type alias ProductInfo =
+    { product : Shop.Product
+    , currentVisibleImage : Maybe Shop.ImageId
+    , previousVisibleImage : Maybe Shop.ImageId
     }
 
 
@@ -113,7 +120,21 @@ sendSearchQuery selectedCommunity queryString =
 
 searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
 searchResultSelectionSet queryString =
-    SelectionSet.succeed SearchResults
+    SelectionSet.succeed
+        (\products actions members ->
+            { offers =
+                List.map
+                    (\product ->
+                        { product = product
+                        , currentVisibleImage = Nothing
+                        , previousVisibleImage = Nothing
+                        }
+                    )
+                    products
+            , actions = actions
+            , members = members
+            }
+        )
         |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) Shop.productSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
         |> with (Cambiatus.Object.SearchResult.members (\_ -> { query = Present queryString }) Profile.minimalSelectionSet)
@@ -150,6 +171,9 @@ type Msg
     | GotFormMsg (Form.Msg FormInput)
     | ClearSearchIconClicked
     | FoundItemClicked
+    | ClickedScrollToImage { containerId : String, imageId : String }
+    | ImageStartedIntersecting Shop.Id Shop.ImageId
+    | ImageStoppedIntersecting Shop.Id Shop.ImageId
 
 
 type alias UpdateResult =
@@ -303,6 +327,81 @@ update shared symbol model msg =
                 |> UR.addCmd (storeRecentSearches newRecentSearches)
                 |> UR.addExt (sendSearchQuery symbol currentQuery)
 
+        ClickedScrollToImage { containerId, imageId } ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "smoothHorizontalScroll" )
+                            , ( "containerId", Encode.string containerId )
+                            , ( "targetId", Encode.string imageId )
+                            ]
+                    }
+
+        ImageStartedIntersecting productId imageId ->
+            case model.state of
+                ResultsShowed (RemoteData.Success searchResults) activeTab ->
+                    let
+                        newOffers =
+                            searchResults.offers
+                                |> List.updateIf
+                                    (\{ product } -> product.id == productId)
+                                    (\productInfo ->
+                                        { productInfo
+                                            | currentVisibleImage = Just imageId
+                                            , previousVisibleImage = productInfo.currentVisibleImage
+                                        }
+                                    )
+                    in
+                    { model
+                        | state =
+                            ResultsShowed
+                                (RemoteData.Success { searchResults | offers = newOffers })
+                                activeTab
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+
+        ImageStoppedIntersecting productId imageId ->
+            case model.state of
+                ResultsShowed (RemoteData.Success searchResults) activeTab ->
+                    let
+                        newOffers =
+                            searchResults.offers
+                                |> List.updateIf
+                                    (\{ product } -> product.id == productId)
+                                    (\productInfo ->
+                                        if Just imageId == productInfo.currentVisibleImage then
+                                            { productInfo
+                                                | currentVisibleImage = productInfo.previousVisibleImage
+                                                , previousVisibleImage = Nothing
+                                            }
+
+                                        else if Just imageId == productInfo.previousVisibleImage then
+                                            { productInfo | previousVisibleImage = Nothing }
+
+                                        else
+                                            productInfo
+                                    )
+                    in
+                    { model
+                        | state =
+                            ResultsShowed
+                                (RemoteData.Success { searchResults | offers = newOffers })
+                                activeTab
+                    }
+                        |> UR.init
+
+                _ ->
+                    model
+                        |> UR.init
+
 
 
 -- VIEW
@@ -385,7 +484,7 @@ createForm { t } model =
         |> Form.withNoOutput
             (Form.unsafeArbitrary
                 (button
-                    [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline focus:outline-none focus:underline"
+                    [ class "text-orange-300 ml-3 lowercase hover:underline focus:outline-none focus:underline"
                     , classList [ ( "hidden", not isSearchOpen ) ]
                     , onClick CancelClicked
                     , type_ "button"
@@ -598,38 +697,55 @@ viewResultsOverview { t, tr } { offers, actions, members } =
         ]
 
 
-viewOffers : Translators -> Symbol -> List Shop.Product -> Html Msg
+viewOffers : Translators -> Symbol -> List ProductInfo -> Html Msg
 viewOffers translators symbol offers =
     let
-        viewOffer : Shop.Product -> Html Msg
-        viewOffer offer =
+        viewOffer : ProductInfo -> Html Msg
+        viewOffer productInfo =
             let
-                imageUrl =
-                    -- TODO - We only show one image
-                    case List.head offer.images of
-                        Nothing ->
-                            "/icons/shop-placeholder1.svg"
+                images =
+                    case productInfo.product.images of
+                        [] ->
+                            img
+                                [ src "/icons/shop-placeholder1.svg"
+                                , alt ""
+                                , class "h-32"
+                                ]
+                                []
 
-                        Just url ->
-                            url
+                        firstImage :: otherImages ->
+                            Shop.viewImageCarrousel
+                                { containerAttrs = [ class "h-32" ]
+                                , listAttrs = [ class "gap-x-4 rounded-t bg-gray-100" ]
+                                , imageContainerAttrs = [ class "bg-white rounded-t" ]
+                                , imageAttrs = [ class "w-full h-full" ]
+                                }
+                                { showArrows = False
+                                , productId = Just productInfo.product.id
+                                , onScrollToImage = ClickedScrollToImage
+                                , currentIntersecting = productInfo.currentVisibleImage
+                                , onStartedIntersecting = ImageStartedIntersecting productInfo.product.id
+                                , onStoppedIntersecting = ImageStoppedIntersecting productInfo.product.id
+                                }
+                                ( firstImage, otherImages )
             in
             li
                 [ class "flex px-2 w-1/2 sm:w-1/3 md:w-1/4" ]
                 [ a
                     [ class "rounded-md overflow-hidden bg-white flex-grow mb-4 pb-4 cursor-pointer hover:shadow focus:shadow focus:outline-none focus:ring focus:ring-gray-400"
                     , onClick FoundItemClicked
-                    , Route.href (Route.ViewSale offer.id)
+                    , Route.href (Route.ViewSale productInfo.product.id)
                     ]
-                    [ img [ src imageUrl ] []
-                    , h3 [ class "p-3" ] [ text offer.title ]
-                    , if Shop.isOutOfStock offer then
+                    [ images
+                    , h3 [ class "p-3" ] [ text productInfo.product.title ]
+                    , if Shop.isOutOfStock productInfo.product then
                         p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]
 
                       else
                         p [ class "px-3" ]
-                            [ span [ class "text-xl text-green font-semibold" ] [ text <| String.fromFloat offer.price ]
+                            [ span [ class "text-xl text-green font-semibold" ] [ text <| String.fromFloat productInfo.product.price ]
                             , br [] []
                             , span [ class "text-gray-900 text-sm" ]
                                 [ text <| Eos.symbolToSymbolCodeString symbol
