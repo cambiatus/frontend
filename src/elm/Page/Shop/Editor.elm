@@ -509,18 +509,10 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                 (\submitButton ->
                     [ div [ class "mt-auto" ]
                         [ div [ class "mt-10 flex gap-x-4" ]
-                            -- TODO - Remove delete button from here
-                            -- [ if isEdit then
-                            --     button
-                            --         [ class "button button-danger w-full"
-                            --         , disabled isDisabled
-                            --         , onClick ClickedDelete
-                            --         , type_ "button"
-                            --         ]
-                            --         [ text (t "shop.delete") ]
-                            --   else
-                            --     text ""
-                            [ div [ class "grid grid-cols-2 w-full gap-6 lg:w-1/2 lg:mx-auto" ]
+                            [ div
+                                [ class "grid grid-cols-2 w-full gap-6 lg:w-1/2 lg:mx-auto"
+                                , classList [ ( "grid-cols-3", isEdit ) ]
+                                ]
                                 [ a
                                     [ class "button button-secondary w-full"
                                     , Route.href (Route.Shop Shop.All)
@@ -528,6 +520,19 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } deleteModal formData =
                                     [ -- TODO - I18N
                                       text "Cancel"
                                     ]
+
+                                -- TODO - Remove delete button from here
+                                , if isEdit then
+                                    button
+                                        [ class "button button-danger w-full"
+                                        , disabled isDisabled
+                                        , onClick ClickedDelete
+                                        , type_ "button"
+                                        ]
+                                        [ text (t "shop.delete") ]
+
+                                  else
+                                    text ""
                                 , submitButton
                                     [ class "button button-primary w-full"
                                     , disabled isDisabled

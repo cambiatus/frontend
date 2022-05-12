@@ -23,8 +23,8 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, h3, img, span, text)
-import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, href, src, type_)
+import Html exposing (Html, a, button, div, h2, h3, span, text)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, href, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http

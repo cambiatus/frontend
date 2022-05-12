@@ -438,7 +438,8 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
         indexFromImageId (ImageId imgId) =
             case maybeProductId of
                 Nothing ->
-                    String.dropLeft (String.length "product-image-") imgId
+                    -- 14 == String.length "product-image-"
+                    String.dropLeft 14 imgId
                         |> String.toInt
 
                 Just productId ->
