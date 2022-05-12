@@ -517,9 +517,7 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
             { targetSelectors =
                 List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
             , threshold = 0.01
-
-            -- TODO - We don't want to exclude any breakpoints here!
-            , breakpointToExclude = View.Components.Xl
+            , breakpointToExclude = Nothing
             , onStartedIntersecting = Just (ImageId >> options.onStartedIntersecting)
             , onStoppedIntersecting = Just (ImageId >> options.onStoppedIntersecting)
             }
