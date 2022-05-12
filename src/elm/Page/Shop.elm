@@ -306,7 +306,6 @@ viewCard loggedIn index card =
         images =
             case card.product.images of
                 [] ->
-                    -- TODO
                     img
                         [ class "h-32 rounded-t object-cover"
                         , alt ""
@@ -322,9 +321,12 @@ viewCard loggedIn index card =
                         []
 
                 firstImage :: otherImages ->
-                    -- TODO - Change background of images
-                    -- TODO - Should we do object-cover how we used to?
-                    Shop.viewImageCarrousel [ class "h-32" ]
+                    Shop.viewImageCarrousel
+                        { containerAttrs = [ class "h-32" ]
+                        , listAttrs = [ class "gap-x-4 rounded-t bg-gray-100" ]
+                        , imageContainerAttrs = [ class "bg-white rounded-t" ]
+                        , imageAttrs = [ class "w-full h-full" ]
+                        }
                         { showArrows = False
                         , productId = Just card.product.id
                         , onScrollToImage = ClickedScrollToImage
@@ -485,7 +487,7 @@ update msg model loggedIn =
                                 (\card ->
                                     { card
                                         | currentVisibleImage = Just imageId
-                                        , previousVisibleImage = card.previousVisibleImage
+                                        , previousVisibleImage = card.currentVisibleImage
                                     }
                                 )
                                 cards

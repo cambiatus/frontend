@@ -539,7 +539,12 @@ view session model =
                                     ]
 
                             firstImage :: otherImages ->
-                                Shop.viewImageCarrousel [ class "h-68" ]
+                                Shop.viewImageCarrousel
+                                    { containerAttrs = [ class "h-68" ]
+                                    , listAttrs = [ class "gap-x-4 rounded" ]
+                                    , imageContainerAttrs = [ class "bg-gray-100 rounded" ]
+                                    , imageAttrs = []
+                                    }
                                     { showArrows = True
                                     , productId = Nothing
                                     , onScrollToImage = ClickedScrollToImage

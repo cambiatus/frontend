@@ -396,7 +396,11 @@ type ImageId
 {-| This does not treat the case where there are no images. Treat it accordingly!
 -}
 viewImageCarrousel :
-    List (Html.Attribute msg)
+    { containerAttrs : List (Html.Attribute msg)
+    , listAttrs : List (Html.Attribute msg)
+    , imageContainerAttrs : List (Html.Attribute msg)
+    , imageAttrs : List (Html.Attribute msg)
+    }
     ->
         { showArrows : Bool
         , productId : Maybe Id
@@ -407,7 +411,7 @@ viewImageCarrousel :
         }
     -> ( String, List String )
     -> Html msg
-viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
+viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs } options ( firstImage, otherImages ) =
     let
         maybeProductId =
             Maybe.map (\(Id opaqueId) -> opaqueId) options.productId
@@ -459,7 +463,7 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
             options.currentIntersecting
                 |> Maybe.andThen indexFromImageId
     in
-    div (class "relative" :: extraAttrs)
+    div (class "relative" :: containerAttrs)
         [ case maybeCurrentIntersectingIndex of
             Nothing ->
                 text ""
@@ -480,20 +484,23 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
                         ]
                     ]
         , ul
-            [ class "flex h-full min-w-full overflow-x-scroll overflow-y-hidden snap-x scrollbar-hidden gap-x-4 rounded"
-            , id containerId
-            ]
+            (class "flex h-full min-w-full overflow-x-scroll overflow-y-hidden snap-x scrollbar-hidden"
+                :: id containerId
+                :: listAttrs
+            )
             (List.indexedMap
                 (\index image ->
                     div
-                        [ class "bg-gray-100 w-full h-full flex-shrink-0 snap-center snap-always grid place-items-center rounded"
-                        , id (imageId index)
-                        ]
+                        (class "w-full h-full flex-shrink-0 snap-center snap-always grid place-items-center"
+                            :: id (imageId index)
+                            :: imageContainerAttrs
+                        )
                         [ img
-                            [ src image
-                            , alt ""
-                            , class "object-cover object-center max-w-full max-h-full"
-                            ]
+                            (src image
+                                :: alt ""
+                                :: class "object-cover object-center max-w-full max-h-full"
+                                :: imageAttrs
+                            )
                             []
                         ]
                 )
