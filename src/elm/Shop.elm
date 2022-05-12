@@ -438,7 +438,6 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
             options.currentIntersecting
                 |> Maybe.andThen indexFromImageId
     in
-    -- TODO - Treat case where there is only one image
     div (class "relative" :: extraAttrs)
         [ case maybeCurrentIntersectingIndex of
             Nothing ->
@@ -497,22 +496,26 @@ viewImageCarrousel extraAttrs options ( firstImage, otherImages ) =
                         ]
                         [ Icons.arrowDown "-rotate-90" ]
                     ]
-        , div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2" ]
-            (List.indexedMap
-                (\index _ ->
-                    -- TODO - Probably need aria
-                    button
-                        [ class "border-2 w-2 h-2 rounded-full transition-colors"
-                        , classList
-                            [ ( "bg-white border-orange-500", isCurrentIntersecting index )
-                            , ( "bg-white/80 border-white/80", not (isCurrentIntersecting index) )
+        , if List.length imageUrls == 1 then
+            text ""
+
+          else
+            div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2" ]
+                (List.indexedMap
+                    (\index _ ->
+                        -- TODO - Probably need aria
+                        button
+                            [ class "border-2 w-2 h-2 rounded-full transition-colors"
+                            , classList
+                                [ ( "bg-white border-orange-500", isCurrentIntersecting index )
+                                , ( "bg-white/80 border-white/80", not (isCurrentIntersecting index) )
+                                ]
+                            , onClick (clickedScrollToImage index)
                             ]
-                        , onClick (clickedScrollToImage index)
-                        ]
-                        []
+                            []
+                    )
+                    imageUrls
                 )
-                imageUrls
-            )
         , View.Components.intersectionObserver
             { targetSelectors =
                 List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
