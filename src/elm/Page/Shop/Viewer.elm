@@ -23,6 +23,7 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
+import Graphql.SelectionSet
 import Html exposing (Html, a, button, div, h2, h3, span, text)
 import Html.Attributes exposing (autocomplete, class, classList, disabled, href, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
@@ -170,6 +171,8 @@ type LoggedInMsg
     | GotFormInteractionMsg FormInteractionMsg
     | ClickedEditSale
     | ClosedEditSaleModal
+    | ClickedDelete
+    | CompletedDeleteProduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type FormInteractionMsg
@@ -447,6 +450,44 @@ updateAsLoggedIn msg model loggedIn =
         ClosedEditSaleModal ->
             { model | isEditModalVisible = False }
                 |> UR.init
+
+        ClickedDelete ->
+            case model.status of
+                -- TODO - Mark as deleting so other buttons are disabled?
+                RemoteData.Success sale ->
+                    model
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Shop.deleteProduct sale.id Graphql.SelectionSet.empty)
+                                CompletedDeleteProduct
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+
+        CompletedDeleteProduct (RemoteData.Success _) ->
+            model
+                |> UR.init
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success "Offer deleted with success")
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+
+        CompletedDeleteProduct (RemoteData.Failure err) ->
+            { model | isEditModalVisible = False }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when deleting product"
+                    { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
+                    []
+                    err
+                -- TODO - I18N
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when deleting your offer")
+
+        CompletedDeleteProduct _ ->
+            UR.init model
 
 
 updateFormInteraction : FormInteractionMsg -> { maxUnits : Maybe Int } -> Form.Model FormInput -> Form.Model FormInput
@@ -970,6 +1011,7 @@ viewEditSaleModal model product =
                 , button
                     -- TODO - Add onClick
                     [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
+                    , onClick ClickedDelete
                     ]
                     -- TODO - I18N
                     [ text "Delete"
@@ -1048,6 +1090,12 @@ loggedInMsgToString msg =
 
         ClosedEditSaleModal ->
             [ "ClosedEditSaleModal" ]
+
+        ClickedDelete ->
+            [ "ClickedDelete" ]
+
+        CompletedDeleteProduct r ->
+            [ "CompletedDeleteProduct", UR.remoteDataToString r ]
 
 
 formInteractionMsgToString : FormInteractionMsg -> List String
