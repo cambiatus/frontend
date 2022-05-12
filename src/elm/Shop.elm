@@ -529,7 +529,7 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
             text ""
 
           else
-            div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2" ]
+            div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10" ]
                 (List.indexedMap
                     (\index _ ->
                         -- TODO - Probably need aria
@@ -537,7 +537,7 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
                             [ class "border-2 w-2 h-2 rounded-full transition-colors"
                             , classList
                                 [ ( "bg-white border-orange-500", isCurrentIntersecting index )
-                                , ( "bg-white/80 border-gray-400", not (isCurrentIntersecting index) )
+                                , ( "bg-white border-white", not (isCurrentIntersecting index) )
                                 ]
                             , onClickPreventAll (clickedScrollToImage index)
                             ]
@@ -545,6 +545,11 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
                     )
                     imageUrls
                 )
+        , if List.length imageUrls == 1 then
+            text ""
+
+          else
+            div [ class "bg-gradient-to-t from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10" ] []
         , View.Components.intersectionObserver
             { targetSelectors =
                 List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
