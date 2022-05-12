@@ -1,6 +1,7 @@
 module Page.Shop.Editor exposing
     ( Model
     , Msg(..)
+    , getCurrentStep
     , initCreate
     , initUpdate
     , msgToString
@@ -51,9 +52,9 @@ initCreate loggedIn =
     )
 
 
-initUpdate : Shop.Id -> LoggedIn.Model -> ( Model, Cmd Msg )
-initUpdate productId loggedIn =
-    ( LoadingBalancesUpdate productId
+initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> ( Model, Cmd Msg )
+initUpdate productId step loggedIn =
+    ( LoadingBalancesUpdate productId step
     , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
     )
 
@@ -73,8 +74,8 @@ type
     | EditingCreate (List Balance) FormData
     | Creating (List Balance) FormData
       -- Update
-    | LoadingBalancesUpdate Shop.Id
-    | LoadingSaleUpdate (List Balance)
+    | LoadingBalancesUpdate Shop.Id Route.EditSaleStep
+    | LoadingSaleUpdate (List Balance) Route.EditSaleStep
     | EditingUpdate (List Balance) Product FormData
     | Saving (List Balance) Product FormData
       -- Errors
@@ -360,8 +361,8 @@ initFormData =
     }
 
 
-initEditingFormData : Product -> FormData
-initEditingFormData product =
+initEditingFormData : Product -> Route.EditSaleStep -> FormData
+initEditingFormData product step =
     { mainInformation =
         Form.init
             { title = product.title
@@ -384,7 +385,18 @@ initEditingFormData product =
                         String.fromInt availableUnits
             , trackUnits = Shop.hasUnitTracking product
             }
-    , currentStep = MainInformation
+    , currentStep =
+        case step of
+            Route.SaleMainInformation ->
+                MainInformation
+
+            Route.SaleImages ->
+                Images { title = product.title, description = product.description }
+
+            Route.SalePriceAndInventory ->
+                PriceAndInventory
+                    { title = product.title, description = product.description }
+                    product.images
     }
 
 
@@ -424,10 +436,10 @@ view loggedIn model =
                 LoadingBalancesCreate ->
                     Page.fullPageLoading shared
 
-                LoadingBalancesUpdate _ ->
+                LoadingBalancesUpdate _ _ ->
                     Page.fullPageLoading shared
 
-                LoadingSaleUpdate _ ->
+                LoadingSaleUpdate _ _ ->
                     Page.fullPageLoading shared
 
                 LoadBalancesFailed error ->
@@ -622,7 +634,7 @@ update msg model loggedIn =
                         |> EditingCreate balances
                         |> UR.init
 
-                LoadingBalancesUpdate saleId ->
+                LoadingBalancesUpdate saleId step ->
                     let
                         addSaleFetch =
                             LoggedIn.query loggedIn
@@ -630,7 +642,7 @@ update msg model loggedIn =
                                 CompletedSaleLoad
                                 |> UR.addExt
                     in
-                    LoadingSaleUpdate balances
+                    LoadingSaleUpdate balances step
                         |> UR.init
                         |> addSaleFetch
 
@@ -655,8 +667,8 @@ update msg model loggedIn =
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
-                ( LoadingSaleUpdate balances, Just sale ) ->
-                    initEditingFormData sale
+                ( LoadingSaleUpdate balances step, Just sale ) ->
+                    initEditingFormData sale step
                         |> EditingUpdate balances sale
                         |> UR.init
 
@@ -1065,3 +1077,47 @@ formMsgToString msg =
 
         PriceAndInventoryMsg subMsg ->
             "PriceAndInventoryMsg" :: Form.msgToString subMsg
+
+
+getCurrentStep : Model -> Route.EditSaleStep
+getCurrentStep model =
+    case model of
+        LoadingBalancesCreate ->
+            Route.SaleMainInformation
+
+        EditingCreate _ formData ->
+            getCurrentStepFromFormData formData
+
+        Creating _ formData ->
+            getCurrentStepFromFormData formData
+
+        LoadingBalancesUpdate _ step ->
+            step
+
+        LoadingSaleUpdate _ step ->
+            step
+
+        EditingUpdate _ _ formData ->
+            getCurrentStepFromFormData formData
+
+        Saving _ _ formData ->
+            getCurrentStepFromFormData formData
+
+        LoadBalancesFailed _ ->
+            Route.SaleMainInformation
+
+        LoadSaleFailed _ ->
+            Route.SaleMainInformation
+
+
+getCurrentStepFromFormData : FormData -> Route.EditSaleStep
+getCurrentStepFromFormData formData =
+    case formData.currentStep of
+        MainInformation ->
+            Route.SaleMainInformation
+
+        Images _ ->
+            Route.SaleImages
+
+        PriceAndInventory _ _ ->
+            Route.SalePriceAndInventory

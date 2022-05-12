@@ -1139,13 +1139,13 @@ statusToRoute status session =
         Shop filter _ ->
             Just (Route.Shop filter)
 
-        ShopEditor maybeSaleId _ ->
+        ShopEditor maybeSaleId subModel ->
             case maybeSaleId of
                 Nothing ->
                     Just Route.NewSale
 
                 Just saleId ->
-                    Just (Route.EditSale saleId)
+                    Just (Route.EditSale saleId (ShopEditor.getCurrentStep subModel))
 
         ShopViewer saleId _ ->
             Just (Route.ViewSale saleId)
@@ -1534,10 +1534,10 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
                 |> withLoggedIn Route.NewSale
 
-        Just (Route.EditSale saleId) ->
-            (\l -> ShopEditor.initUpdate saleId l)
+        Just (Route.EditSale saleId saleStep) ->
+            (\l -> ShopEditor.initUpdate saleId saleStep l)
                 >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
-                |> withLoggedIn (Route.EditSale saleId)
+                |> withLoggedIn (Route.EditSale saleId saleStep)
 
         Just (Route.ViewSale saleId) ->
             (\s -> ShopViewer.init s saleId)

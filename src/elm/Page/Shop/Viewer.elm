@@ -987,7 +987,7 @@ viewEditSaleModal { t } model product =
             [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
                 [ a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id)
+                    , Route.href (Route.EditSale product.id Route.SaleMainInformation)
                     ]
                     -- TODO - I18N
                     [ text "Main information"
@@ -995,7 +995,7 @@ viewEditSaleModal { t } model product =
                     ]
                 , a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id)
+                    , Route.href (Route.EditSale product.id Route.SaleImages)
                     ]
                     -- TODO - I18N
                     [ text "Images"
@@ -1003,7 +1003,7 @@ viewEditSaleModal { t } model product =
                     ]
                 , a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
-                    , Route.href (Route.EditSale product.id)
+                    , Route.href (Route.EditSale product.id Route.SalePriceAndInventory)
                     ]
                     -- TODO - I18N
                     [ text "Price and Inventory"
