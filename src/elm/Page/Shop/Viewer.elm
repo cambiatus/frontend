@@ -72,6 +72,7 @@ init session saleId =
                             , balances = []
                             , isBuyButtonDisabled = False
                             , isEditModalVisible = False
+                            , confirmDeleteModalStatus = Closed
                             }
                     , currentVisibleImage = Nothing
                     , previousVisibleImage = Nothing
@@ -140,7 +141,14 @@ type alias LoggedInModel =
     , balances : List Balance
     , isBuyButtonDisabled : Bool
     , isEditModalVisible : Bool
+    , confirmDeleteModalStatus : DeleteConfirmModalStatus
     }
+
+
+type DeleteConfirmModalStatus
+    = Closed
+    | Open
+    | Deleting
 
 
 
@@ -173,6 +181,8 @@ type LoggedInMsg
     | ClickedEditSale
     | ClosedEditSaleModal
     | ClickedDelete
+    | ClosedConfirmDeleteModal
+    | ClickedConfirmDelete
     | CompletedDeleteProduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
@@ -453,11 +463,17 @@ updateAsLoggedIn msg model loggedIn =
                 |> UR.init
 
         ClickedDelete ->
+            { model | confirmDeleteModalStatus = Open }
+                |> UR.init
+
+        ClosedConfirmDeleteModal ->
+            { model | confirmDeleteModalStatus = Closed }
+                |> UR.init
+
+        ClickedConfirmDelete ->
             case model.status of
-                -- TODO - Mark as deleting so other buttons are disabled?
-                -- TODO - Show a confirmation modal?
                 RemoteData.Success sale ->
-                    model
+                    { model | confirmDeleteModalStatus = Deleting }
                         |> UR.init
                         |> UR.addExt
                             (LoggedIn.mutation loggedIn
@@ -470,13 +486,16 @@ updateAsLoggedIn msg model loggedIn =
                         |> UR.init
 
         CompletedDeleteProduct (RemoteData.Success _) ->
-            model
+            { model | confirmDeleteModalStatus = Closed }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop Shop.All))
 
         CompletedDeleteProduct (RemoteData.Failure err) ->
-            { model | isEditModalVisible = False }
+            { model
+                | isEditModalVisible = False
+                , confirmDeleteModalStatus = Closed
+            }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -753,6 +772,8 @@ view session model =
                                             )
                                         , viewEditSaleModal translators model_ sale
                                             |> Html.map AsLoggedInMsg
+                                        , viewConfirmDeleteModal translators model_
+                                            |> Html.map AsLoggedInMsg
                                         ]
 
                 _ ->
@@ -1021,6 +1042,42 @@ viewEditSaleModal { t } model product =
         |> View.Modal.toHtml
 
 
+viewConfirmDeleteModal : Translation.Translators -> LoggedInModel -> Html LoggedInMsg
+viewConfirmDeleteModal { t } model =
+    View.Modal.initWith
+        { closeMsg = ClosedConfirmDeleteModal
+        , isVisible =
+            case model.confirmDeleteModalStatus of
+                Closed ->
+                    False
+
+                Open ->
+                    True
+
+                Deleting ->
+                    True
+        }
+        |> View.Modal.withHeader (t "shop.delete_modal.title")
+        |> View.Modal.withBody
+            [ text <| t "shop.delete_modal.body"
+            ]
+        |> View.Modal.withFooter
+            [ button
+                [ class "button button-secondary"
+                , onClick ClosedConfirmDeleteModal
+                , disabled (model.confirmDeleteModalStatus == Deleting)
+                ]
+                [ text <| t "shop.delete_modal.cancel" ]
+            , button
+                [ class "button button-primary ml-4"
+                , onClick ClickedConfirmDelete
+                , disabled (model.confirmDeleteModalStatus == Deleting)
+                ]
+                [ text <| t "shop.delete_modal.confirm" ]
+            ]
+        |> View.Modal.toHtml
+
+
 
 -- UTILS
 
@@ -1092,6 +1149,12 @@ loggedInMsgToString msg =
 
         ClickedDelete ->
             [ "ClickedDelete" ]
+
+        ClosedConfirmDeleteModal ->
+            [ "ClosedConfirmDeleteModal" ]
+
+        ClickedConfirmDelete ->
+            [ "ClickedConfirmDelete" ]
 
         CompletedDeleteProduct r ->
             [ "CompletedDeleteProduct", UR.remoteDataToString r ]
