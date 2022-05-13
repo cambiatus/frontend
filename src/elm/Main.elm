@@ -1142,7 +1142,7 @@ statusToRoute status session =
         ShopEditor maybeSaleId subModel ->
             case maybeSaleId of
                 Nothing ->
-                    Just Route.NewSale
+                    Just (Route.NewSale (ShopEditor.getCurrentStep subModel))
 
                 Just saleId ->
                     Just (Route.EditSale saleId (ShopEditor.getCurrentStep subModel))
@@ -1529,23 +1529,35 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
 
-        Just Route.NewSale ->
-            ShopEditor.initCreate
-                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
-                |> withLoggedIn Route.NewSale
-
-        Just (Route.EditSale saleId saleStep) ->
+        Just (Route.NewSale step) ->
             let
                 newModelCmd l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            -- TODO - Change step
-                            UR.init shopEditorModel
+                            ( ShopEditor.maybeGoBackOneStep step shopEditorModel
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ShopEditor.initCreate l
+            in
+            newModelCmd
+                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
+                |> withLoggedIn (Route.NewSale step)
+
+        Just (Route.EditSale saleId saleStep) ->
+            let
+                newUpdateResult l =
+                    case model.status of
+                        ShopEditor _ shopEditorModel ->
+                            shopEditorModel
+                                |> ShopEditor.maybeGoBackOneStep saleStep
+                                |> UR.init
 
                         _ ->
                             ShopEditor.initUpdate saleId saleStep l
             in
-            newModelCmd
+            newUpdateResult
                 >> updateLoggedInUResult (ShopEditor (Just saleId)) GotShopEditorMsg model
                 |> withLoggedIn (Route.EditSale saleId saleStep)
 

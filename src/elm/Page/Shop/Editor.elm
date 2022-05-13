@@ -4,6 +4,7 @@ module Page.Shop.Editor exposing
     , getCurrentStep
     , initCreate
     , initUpdate
+    , maybeGoBackOneStep
     , msgToString
     , update
     , view
@@ -708,6 +709,7 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (Images formOutput)
                         |> UR.init
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
 
                 _ ->
                     UR.init model
@@ -728,6 +730,7 @@ update msg model loggedIn =
                     model
                         |> setCurrentStep (PriceAndInventory mainInformation formOutput)
                         |> UR.init
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
 
                 _ ->
                     UR.init model
@@ -898,6 +901,63 @@ setCurrentStep newStep model =
 
         _ ->
             model
+
+
+maybeGoBackOneStep : Route.EditSaleStep -> Model -> Model
+maybeGoBackOneStep step model =
+    let
+        maybeNewStep =
+            getFormData model
+                |> Maybe.map
+                    (\formData ->
+                        case ( formData.currentStep, step ) of
+                            ( Images _, Route.SaleMainInformation ) ->
+                                MainInformation
+
+                            ( PriceAndInventory mainInformationOutput _, Route.SaleImages ) ->
+                                Images mainInformationOutput
+
+                            _ ->
+                                formData.currentStep
+                    )
+    in
+    case maybeNewStep of
+        Nothing ->
+            model
+
+        Just newStep ->
+            setCurrentStep newStep model
+
+
+setCurrentStepInUrl : Shared -> Model -> Route.EditSaleStep -> Cmd msg
+setCurrentStepInUrl shared model step =
+    let
+        maybeRoute =
+            case model of
+                EditingCreate _ ->
+                    Just (Route.NewSale step)
+
+                Creating _ ->
+                    Just (Route.NewSale step)
+
+                LoadingSaleUpdate _ ->
+                    Nothing
+
+                EditingUpdate product _ ->
+                    Just (Route.EditSale product.id step)
+
+                Saving product _ ->
+                    Just (Route.EditSale product.id step)
+
+                LoadSaleFailed _ ->
+                    Nothing
+    in
+    case maybeRoute of
+        Nothing ->
+            Cmd.none
+
+        Just route ->
+            Route.replaceUrl shared.navKey route
 
 
 updateForm : Shared -> FormMsg -> Model -> UpdateResult

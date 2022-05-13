@@ -216,7 +216,7 @@ viewShopFilter loggedIn model =
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
 
             -- TODO - Maybe we should check that the user has permission to sell
-            , Route.href Route.NewSale
+            , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.create_new_offer" ]
         , a
@@ -271,7 +271,7 @@ viewEmptyState { t, tr } communitySymbol model =
         , p [ class "text-black text-center mt-4" ] description
         , a
             [ class "button button-primary mt-6 md:px-6 w-full md:w-max"
-            , Route.href Route.NewSale
+            , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.empty.create_new" ]
         ]
