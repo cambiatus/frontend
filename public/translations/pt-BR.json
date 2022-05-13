@@ -854,6 +854,11 @@
     "no_image": "Sem imagem",
     "subtract_unit": "Subtrair uma unidade",
     "add_unit": "Adicionar uma unidade",
+    "carrousel": {
+      "previous": "Ir para imagem anterior",
+      "next": "Ir para próxima imagem",
+      "index": "Ir para imagem {{index}}"
+    },
     "steps": {
       "main_information": {
         "title": "Informações principais",

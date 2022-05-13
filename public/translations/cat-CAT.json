@@ -850,6 +850,11 @@
     "no_image": "Cap imatge",
     "subtract_unit": "Resta una unitat",
     "add_unit": "Afegir una unitat",
+    "carrousel": {
+      "previous": "Vés a la imatge anterior",
+      "next": "Vés a la imatge següent",
+      "index": "Vés a la imatge {{index}}"
+    },
     "steps": {
       "main_information": {
         "title": "Informació principal",

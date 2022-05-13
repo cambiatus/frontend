@@ -36,11 +36,13 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, button, div, img, text, ul)
 import Html.Attributes exposing (alt, class, classList, id, src)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Translation
 import Url.Parser
 import Utils exposing (onClickPreventAll)
 import View.Components
@@ -396,11 +398,13 @@ type ImageId
 {-| This does not treat the case where there are no images. Treat it accordingly!
 -}
 viewImageCarrousel :
-    { containerAttrs : List (Html.Attribute msg)
-    , listAttrs : List (Html.Attribute msg)
-    , imageContainerAttrs : List (Html.Attribute msg)
-    , imageAttrs : List (Html.Attribute msg)
-    }
+    Translation.Translators
+    ->
+        { containerAttrs : List (Html.Attribute msg)
+        , listAttrs : List (Html.Attribute msg)
+        , imageContainerAttrs : List (Html.Attribute msg)
+        , imageAttrs : List (Html.Attribute msg)
+        }
     ->
         { showArrows : Bool
         , productId : Maybe Id
@@ -411,7 +415,7 @@ viewImageCarrousel :
         }
     -> ( String, List String )
     -> Html msg
-viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs } options ( firstImage, otherImages ) =
+viewImageCarrousel { t, tr } { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs } options ( firstImage, otherImages ) =
     let
         maybeProductId =
             Maybe.map (\(Id opaqueId) -> opaqueId) options.productId
@@ -477,9 +481,9 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
                             [ ( "hidden", not options.showArrows )
                             , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == 0 )
                             ]
-
-                        -- TODO - Probably need aria
                         , onClick (clickedScrollToImage (currentIntersectingIndex - 1))
+                        , ariaLabel <| t "shop.carrousel.previous"
+                        , ariaHidden (currentIntersectingIndex == 0)
                         ]
                         [ Icons.arrowDown "rotate-90"
                         ]
@@ -519,9 +523,9 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
                             [ ( "hidden", not options.showArrows )
                             , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == List.length imageUrls - 1 )
                             ]
-
-                        -- TODO - Probably need aria
                         , onClick (clickedScrollToImage (currentIntersectingIndex + 1))
+                        , ariaLabel <| t "shop.carrousel.next"
+                        , ariaHidden (currentIntersectingIndex == List.length imageUrls - 1)
                         ]
                         [ Icons.arrowDown "-rotate-90" ]
                     ]
@@ -532,7 +536,6 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
             div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10" ]
                 (List.indexedMap
                     (\index _ ->
-                        -- TODO - Probably need aria
                         button
                             [ class "border-2 w-2 h-2 rounded-full transition-colors"
                             , classList
@@ -540,6 +543,7 @@ viewImageCarrousel { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs 
                                 , ( "bg-white border-white", not (isCurrentIntersecting index) )
                                 ]
                             , onClickPreventAll (clickedScrollToImage index)
+                            , ariaLabel <| tr "shop.carrousel.index" [ ( "index", String.fromInt (index + 1) ) ]
                             ]
                             []
                     )

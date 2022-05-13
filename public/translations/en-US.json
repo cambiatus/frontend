@@ -847,6 +847,11 @@
     "no_image": "No image",
     "subtract_unit": "Subtract a unit",
     "add_unit": "Add a unit",
+    "carrousel": {
+      "previous": "Go to previous image",
+      "next": "Go to next image",
+      "index": "Go to image {{index}}"
+    },
     "steps": {
       "main_information": {
         "title": "Main information",

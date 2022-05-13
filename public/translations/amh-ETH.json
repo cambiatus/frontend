@@ -808,6 +808,11 @@
     "no_image": "ምስል የለም",
     "subtract_unit": "አሃድ ቀንስ",
     "add_unit": "ክፍል ጨምር",
+    "carrousel": {
+      "previous": "ወደ ቀዳሚው ምስል ይሂዱ",
+      "next": "ወደ ቀጣዩ ምስል ይሂዱ",
+      "index": "ወደ ምስል {{index}} ይሂዱ"
+    },
     "steps": {
       "main_information": {
         "title": "ዋና መረጃ",

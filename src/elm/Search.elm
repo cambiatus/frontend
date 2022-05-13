@@ -715,6 +715,7 @@ viewOffers translators symbol offers =
 
                         firstImage :: otherImages ->
                             Shop.viewImageCarrousel
+                                translators
                                 { containerAttrs = [ class "h-32" ]
                                 , listAttrs = [ class "gap-x-4 rounded-t bg-gray-100" ]
                                 , imageContainerAttrs = [ class "bg-white rounded-t" ]

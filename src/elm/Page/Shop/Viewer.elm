@@ -612,6 +612,7 @@ view session model =
 
                             firstImage :: otherImages ->
                                 Shop.viewImageCarrousel
+                                    translators
                                     { containerAttrs = [ class "h-68" ]
                                     , listAttrs = [ class "gap-x-4 rounded" ]
                                     , imageContainerAttrs = [ class "bg-gray-100 rounded" ]
