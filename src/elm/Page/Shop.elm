@@ -9,6 +9,7 @@ module Page.Shop exposing
     )
 
 import Api
+import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
 import Eos.Account
@@ -208,14 +209,21 @@ viewShopFilter loggedIn model =
 
                 Shop.UserSales ->
                     Shop.All
+
+        canSell =
+            case loggedIn.profile of
+                RemoteData.Success profile ->
+                    LoggedIn.hasPermissions profile [ Permission.Sell ]
+
+                _ ->
+                    False
     in
     div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
         [ View.Components.disablableLink
-            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct || not canSell
+            }
             [ class "w-full md:w-40 button button-primary"
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-
-            -- TODO - Maybe we should check that the user has permission to sell
             , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.create_new_offer" ]
