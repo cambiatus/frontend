@@ -103,17 +103,15 @@ type alias MainInformationFormOutput =
 
 
 mainInformationForm : Translation.Translators -> Form.Form msg MainInformationFormInput MainInformationFormOutput
-mainInformationForm translators =
+mainInformationForm ({ t } as translators) =
     Form.succeed MainInformationFormOutput
         |> Form.with
             (Form.Text.init
-                { -- TODO - I18N
-                  label = "Name"
+                { label = t "shop.steps.main_information.name_label"
                 , id = "product-title-input"
                 }
                 |> Form.Text.withExtraAttrs [ maxlength 255 ]
-                -- TODO - I18N
-                |> Form.Text.withPlaceholder (translators.t "shop.what_label")
+                |> Form.Text.withPlaceholder (t "shop.steps.main_information.name_placeholder")
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -127,10 +125,9 @@ mainInformationForm translators =
             )
         |> Form.with
             (Form.RichText.init
-                { -- TODO - I18N
-                  label = "Description"
+                { label = t "shop.steps.main_information.description_label"
                 }
-                |> Form.RichText.withPlaceholder (translators.t "shop.description_placeholder")
+                |> Form.RichText.withPlaceholder (t "shop.steps.main_information.description_placeholder")
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
@@ -156,8 +153,7 @@ imagesForm translators =
     Form.succeed (List.filterMap identity)
         |> Form.withNoOutput
             (Form.arbitrary
-                -- TODO - I18N
-                (p [ class "mb-4" ] [ text "Set the product images (Only PNG or JPEG up to 10MB)" ])
+                (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
             )
         |> Form.with
             (Form.introspect
@@ -227,8 +223,7 @@ priceAndInventoryForm translators isDisabled symbol =
     Form.succeed PriceAndInventoryFormOutput
         |> Form.withGroup [ class "grid grid-cols-2 gap-8" ]
             (Form.Text.init
-                { -- TODO - I18N
-                  label = "Price"
+                { label = translators.t "shop.steps.price_and_inventory.price_label"
                 , id = "product-price-input"
                 }
                 |> Form.Text.withCurrency symbol
@@ -264,8 +259,7 @@ stockTrackingForm translators { isDisabled } =
                 (\{ trackUnits } ->
                     if trackUnits then
                         Form.Text.init
-                            { -- TODO - I18N
-                              label = "Quantity in stock"
+                            { label = translators.t "shop.steps.price_and_inventory.quantity_label"
                             , id = "product-quantity-input"
                             }
                             |> Form.Text.withPlaceholder "0"
@@ -318,11 +312,8 @@ stockTrackingForm translators { isDisabled } =
             (Form.Toggle.init
                 { label =
                     div [ class "text-gray-333 text-base mb-4" ]
-                        [ -- TODO - I18N
-                          span [ class "font-bold" ] [ text "Inventory management" ]
-
-                        -- TODO - I18N
-                        , p [ class "mt-2" ] [ text "If you want to disable your offer when there are no more units in stock, enable this option" ]
+                        [ span [ class "font-bold" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management" ]
+                        , p [ class "mt-2" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management_description" ]
                         ]
                 , id = "product-track-units-toggle"
                 }
@@ -499,9 +490,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                                     [ class "button button-secondary w-full"
                                     , Route.href (Route.Shop Shop.All)
                                     ]
-                                    [ -- TODO - I18N
-                                      text "Cancel"
-                                    ]
+                                    [ text <| t "menu.cancel" ]
                                 , submitButton
                                     [ class "button button-primary w-full"
                                     , disabled isDisabled
@@ -519,16 +508,15 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                 }
 
         ( stepNumber, stepName ) =
-            -- TODO - I18N
             case formData.currentStep of
                 MainInformation ->
-                    ( 1, "Main information" )
+                    ( 1, t "shop.steps.main_information.title" )
 
                 Images _ ->
-                    ( 2, "Images" )
+                    ( 2, t "shop.steps.images.title" )
 
                 PriceAndInventory _ _ ->
-                    ( 3, "Price and Inventory" )
+                    ( 3, t "shop.steps.price_and_inventory.title" )
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
@@ -544,16 +532,14 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
                             formData.mainInformation
-                            -- TODO - I18N
-                            "Continue"
+                            (t "shop.steps.continue")
                             MainInformationMsg
                             SubmittedMainInformation
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
                             formData.images
-                            -- TODO - I18N
-                            "Continue"
+                            (t "shop.steps.continue")
                             ImagesMsg
                             SubmittedImages
 

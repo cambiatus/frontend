@@ -830,18 +830,14 @@
     "edit_offer": "Editar oferta",
     "create_offer_success": "Oferta criada com sucesso!",
     "delete_offer_success": "Oferta removida com sucesso",
+    "delete_offer_failure": "Algo de errado aconteceu ao remover sua oferta",
     "unauthorized": "Você não tem autorização para editar essa venda",
-    "photo_label": "Imagem do produto",
-    "what_label": "Nome do produto",
-    "description_label": "Descreva o produto",
-    "description_placeholder": "Descreva completamente seu produto. Isso ajudará nas vendas",
     "which_community_label": "Em qual comunidade voce deseja vender?",
     "choose_community_label": "Escolha uma comunidade",
     "track_stock_label": "Deseja controlar estoque pelo app?",
     "choose_track_stock_label": "Escolha entre o rastreamento ou não",
     "track_stock_no": "No",
     "track_stock_yes": "Sim",
-    "price_label": "Preço do produto",
     "units_available": "Quantidade disponível",
     "out_of_stock": "fora de estoque",
     "offer_action": "{{accountName}} está VENDENDO",
@@ -858,6 +854,27 @@
     "no_image": "Sem imagem",
     "subtract_unit": "Subtrair uma unidade",
     "add_unit": "Adicionar uma unidade",
+    "steps": {
+      "main_information": {
+        "title": "Informações principais",
+        "name_label": "Nome",
+        "name_placeholder": "Nome do produto",
+        "description_label": "Descrição",
+        "description_placeholder": "Descreva completamente seu produto. Isso ajudará nas vendas"
+      },
+      "images": {
+        "title": "Imagens",
+        "guidance": "Adicione imagens do produto. Você pode adicionar mais imagens mais tarde"
+      },
+      "price_and_inventory": {
+        "title": "Preço e Inventário",
+        "price_label": "Preço",
+        "quantity_label": "Quantidade em estoque",
+        "inventory_management": "Gerenciamento de inventário",
+        "inventory_management_description": "Se você quer desabilitar sua oferta quando não tiver mais unidades em estoque, habilite esta opção"
+      },
+      "continue": "Continuar"
+    },
     "empty": {
       "all_title": "Onde estão as ofertas?",
       "user_title": "Você não tem nenhuma oferta nessa comunidade",

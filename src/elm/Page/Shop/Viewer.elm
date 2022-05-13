@@ -503,8 +503,7 @@ updateAsLoggedIn msg model loggedIn =
                     { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
                     []
                     err
-                -- TODO - I18N
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure "Something went wrong when deleting your offer")
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "shop.delete_offer_failure"))
 
         CompletedDeleteProduct _ ->
             UR.init model
@@ -1002,32 +1001,28 @@ viewEditSaleModal { t } model product =
         { closeMsg = ClosedEditSaleModal
         , isVisible = model.isEditModalVisible
         }
-        -- TODO - I18N
-        |> View.Modal.withHeader "Edit offer"
+        |> View.Modal.withHeader (t "shop.edit_offer")
         |> View.Modal.withBody
             [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
                 [ a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
                     , Route.href (Route.EditSale product.id Route.SaleMainInformation)
                     ]
-                    -- TODO - I18N
-                    [ text "Main information"
+                    [ text <| t "shop.steps.main_information.title"
                     , Icons.arrowDown "-rotate-90 ml-auto"
                     ]
                 , a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
                     , Route.href (Route.EditSale product.id Route.SaleImages)
                     ]
-                    -- TODO - I18N
-                    [ text "Images"
+                    [ text <| t "shop.steps.images.title"
                     , Icons.arrowDown "-rotate-90 ml-auto"
                     ]
                 , a
                     [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
                     , Route.href (Route.EditSale product.id Route.SalePriceAndInventory)
                     ]
-                    -- TODO - I18N
-                    [ text "Price and Inventory"
+                    [ text <| t "shop.steps.price_and_inventory.title"
                     , Icons.arrowDown "-rotate-90 ml-auto"
                     ]
                 , button
