@@ -1,22 +1,19 @@
 module Page.Join exposing (Model, Msg, init, msgToString, receiveBroadcast, update, view)
 
-import Api.Graphql
-import Auth
 import Community
-import Graphql.Http
 import Html exposing (Html, a, button, div, span, text)
 import Html.Attributes exposing (class, classList, href)
 import Html.Events exposing (onClick)
+import Markdown exposing (Markdown)
 import Page
-import RemoteData exposing (RemoteData)
+import RemoteData
 import Route
 import Session.Guest as Guest
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import Utils
 import View.Components
-import View.Feedback as Feedback
-import View.MarkdownEditor
 
 
 
@@ -46,7 +43,7 @@ init session maybeRedirect =
 type Msg
     = ClickedJoinCommunity
     | CompletedLoadCommunity Community.Model
-    | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse))
+    | SignedIn
 
 
 type alias UpdateResult =
@@ -63,14 +60,9 @@ update session msg model =
                         |> UR.addCmd
                             (Route.pushUrl guest.shared.navKey (Route.Register Nothing model.maybeRedirect))
 
-                Page.LoggedIn loggedIn ->
+                Page.LoggedIn _ ->
                     UR.init model
-                        |> UR.addCmd
-                            (Api.Graphql.mutation loggedIn.shared
-                                (Just loggedIn.authToken)
-                                (Auth.signIn loggedIn.accountName loggedIn.shared Nothing)
-                                (CompletedSignIn loggedIn)
-                            )
+                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
 
         CompletedLoadCommunity community ->
             case session of
@@ -101,70 +93,67 @@ update session msg model =
                     UR.init model
                         |> addAction
 
-        CompletedSignIn loggedIn (RemoteData.Success (Just { token, user })) ->
-            let
-                addCommunity =
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            let
-                                communityInfo =
-                                    { symbol = community.symbol
-                                    , name = community.name
-                                    , logo = community.logo
-                                    , subdomain = community.subdomain
-                                    , hasShop = community.hasShop
-                                    , hasActions = community.hasObjectives
-                                    , hasKyc = community.hasKyc
-                                    }
+        SignedIn ->
+            case session of
+                Page.Guest _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Signed in, but is still guest"
+                            Nothing
+                            { moduleName = "Page.Join"
+                            , function = "update"
+                            }
+                            []
 
-                                minimalProfile =
-                                    { name = user.name
-                                    , account = user.account
-                                    , avatar = user.avatar
-                                    , email = user.email
-                                    , bio = user.bio
-                                    , contacts = user.contacts
-                                    }
-                            in
-                            UR.addExt
-                                (LoggedIn.CommunityLoaded { community | members = minimalProfile :: community.members }
-                                    |> LoggedIn.ExternalBroadcast
-                                )
-                                >> UR.addExt
-                                    (LoggedIn.ProfileLoaded { user | communities = communityInfo :: user.communities }
-                                        |> LoggedIn.ExternalBroadcast
-                                    )
+                Page.LoggedIn loggedIn ->
+                    let
+                        addCommunity =
+                            case ( loggedIn.selectedCommunity, loggedIn.profile ) of
+                                ( RemoteData.Success community, RemoteData.Success profile ) ->
+                                    let
+                                        communityInfo =
+                                            { symbol = community.symbol
+                                            , name = community.name
+                                            , logo = community.logo
+                                            , subdomain = community.subdomain
+                                            , hasShop = community.hasShop
+                                            , hasActions = community.hasObjectives
+                                            , hasKyc = community.hasKyc
+                                            }
 
-                        _ ->
-                            UR.logImpossible msg
-                                "Completed sign in, but community is not loaded"
-                                (Just loggedIn.accountName)
-                                { moduleName = "Page.Join", function = "update" }
-                                []
-            in
-            model
-                |> UR.init
-                |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
-                |> addCommunity
-                |> UR.addCmd
-                    (model.maybeRedirect
-                        |> Maybe.withDefault Route.Dashboard
-                        |> Route.replaceUrl loggedIn.shared.navKey
-                    )
+                                        minimalProfile =
+                                            { name = profile.name
+                                            , account = profile.account
+                                            , avatar = profile.avatar
+                                            , email = profile.email
+                                            , bio = profile.bio
+                                            , contacts = profile.contacts
+                                            }
+                                    in
+                                    UR.addExt
+                                        (LoggedIn.CommunityLoaded { community | members = minimalProfile :: community.members }
+                                            |> LoggedIn.ExternalBroadcast
+                                        )
+                                        >> UR.addExt
+                                            (LoggedIn.ProfileLoaded { profile | communities = communityInfo :: profile.communities }
+                                                |> LoggedIn.ExternalBroadcast
+                                            )
 
-        CompletedSignIn loggedIn (RemoteData.Failure error) ->
-            model
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    Nothing
-                    "Got an error when trying to sign in"
-                    { moduleName = "Page.Join", function = "update" }
-                    []
-                    error
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "auth.failed"))
-
-        CompletedSignIn _ _ ->
-            UR.init model
+                                _ ->
+                                    UR.logImpossible msg
+                                        "Completed sign in, but community or profile weren't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.Join", function = "update" }
+                                        []
+                    in
+                    model
+                        |> UR.init
+                        |> addCommunity
+                        |> UR.addCmd
+                            (model.maybeRedirect
+                                |> Maybe.withDefault Route.Dashboard
+                                |> Route.replaceUrl loggedIn.shared.navKey
+                            )
 
 
 
@@ -215,7 +204,7 @@ type alias GenericCommunity community =
     { community
         | name : String
         , hasAutoInvite : Bool
-        , description : String
+        , description : Markdown
         , uploads : List String
         , memberCount : Int
         , website : Maybe String
@@ -225,14 +214,13 @@ type alias GenericCommunity community =
 view_ : Bool -> Shared -> GenericCommunity community -> Model -> Html Msg
 view_ isGuest ({ translators } as shared) community model =
     div
-        [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 md:p-0"
+        [ class "bg-purple-500 flex-grow flex flex-col md:justify-center items-center p-4 lg:p-0"
         , classList [ ( "w-1/2", not isGuest ) ]
         ]
-        [ div [ class "bg-white rounded-b md:rounded md:w-4/5 lg:w-7/12" ]
+        [ div [ class "bg-white rounded-b md:rounded lg:w-4/5 xl:w-7/12" ]
             [ Community.communityPreviewImage False shared community
             , div [ class "p-4" ]
-                (View.MarkdownEditor.viewReadOnly [ class "text-gray-900 text-sm block mb-7" ]
-                    community.description
+                (Markdown.view [ class "text-gray-333 block mb-7" ] community.description
                     :: (if community.hasAutoInvite then
                             [ button
                                 [ class "button button-primary w-full cursor-pointer"
@@ -247,7 +235,7 @@ view_ isGuest ({ translators } as shared) community model =
                             ]
 
                         else
-                            [ span [ class "block text-center text-sm" ]
+                            [ span [ class "block text-center text-black font-bold" ]
                                 [ text (translators.t "community.join.only_invited") ]
                             , a
                                 [ class "button button-primary w-full mt-4"
@@ -347,5 +335,5 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
-        CompletedSignIn _ r ->
-            [ "CompletedSignIn", UR.remoteDataToString r ]
+        SignedIn ->
+            [ "SignedIn" ]

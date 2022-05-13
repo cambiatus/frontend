@@ -10,10 +10,11 @@ module Page.Dashboard exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
+import Avatar
 import Browser.Dom
 import Cambiatus.Enum.Direction
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Enum.TransferDirectionValue as TransferDirectionValue exposing (TransferDirectionValue)
 import Cambiatus.InputObject
 import Cambiatus.Query
@@ -21,32 +22,35 @@ import Cambiatus.Scalar
 import Claim
 import Community exposing (Balance)
 import Date
-import DatePicker
 import Eos
 import Eos.Account as Eos
-import Eos.EosError as EosError
+import Form
+import Form.DatePicker
+import Form.Select
+import Form.Text
+import Form.UserPicker
 import Graphql.Http
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
-import Html exposing (Html, a, button, div, img, p, span, text)
-import Html.Attributes exposing (class, classList, src, tabindex)
+import Html exposing (Html, a, br, button, div, h1, h2, hr, img, li, p, span, strong, text, ul)
+import Html.Attributes exposing (alt, class, classList, disabled, id, src, style, tabindex)
 import Html.Events exposing (onClick)
 import Http
 import Icons
-import Json.Decode as Decode exposing (Value)
+import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
+import Ports
 import Profile
 import Profile.Contact as Contact
 import Profile.Summary
 import RemoteData exposing (RemoteData)
 import Route
-import Select
 import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
 import Shop
-import Simple.Fuzzy
 import Task
 import Time
 import Transfer exposing (QueryTransfers, Transfer)
@@ -55,9 +59,6 @@ import Url
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.Form
-import View.Form.Input as Input
-import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -67,11 +68,12 @@ import View.Modal as Modal
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
 init loggedIn =
-    ( initModel loggedIn.shared
-    , Cmd.batch
-        [ LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        , LoggedIn.maybeInitWith CompletedLoadProfile .profile loggedIn
-        ]
+    let
+        model =
+            initModel loggedIn.shared
+    in
+    ( model
+    , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
     )
 
 
@@ -81,56 +83,68 @@ init loggedIn =
 
 type alias Model =
     { balance : RemoteData Http.Error (Maybe Balance)
-    , analysis : GraphqlStatus (Maybe Claim.Paginated) (List ClaimStatus)
-    , analysisFilter : Direction
-    , profileSummaries : List Claim.ClaimProfileSummaries
+    , analysis : GraphqlStatus (Maybe Claim.Paginated) { claims : List Claim.Model, count : Int }
     , lastSocket : String
     , transfers : GraphqlStatus (Maybe QueryTransfers) (List ( Transfer, Profile.Summary.Model ))
     , transfersFilters : TransfersFilters
-    , transfersFiltersBeingEdited :
-        { datePicker : DatePicker.DatePicker
-        , otherAccountInput : String
-        , otherAccountState : Select.State
-        , otherAccountProfileSummary : Profile.Summary.Model
-        , filters : TransfersFilters
-        }
     , showTransferFiltersModal : Bool
+    , transferFiltersForm : Form.Model TransferFiltersFormInput
     , contactModel : Contact.Model
     , showContactModal : Bool
     , inviteModalStatus : InviteModalStatus
     , claimModalStatus : Claim.ModalStatus
     , copied : Bool
+    , showModalRequestingSponsor : Bool
     }
+
+
+hasModalsOpen : Model -> Bool
+hasModalsOpen model =
+    let
+        isShowingInviteModal =
+            case model.inviteModalStatus of
+                InviteModalClosed ->
+                    False
+
+                _ ->
+                    True
+
+        isShowingClaimModal =
+            case model.claimModalStatus of
+                Claim.Closed ->
+                    False
+
+                _ ->
+                    True
+    in
+    model.showTransferFiltersModal
+        || model.showContactModal
+        || model.showModalRequestingSponsor
+        || isShowingInviteModal
+        || isShowingClaimModal
 
 
 initModel : Shared -> Model
 initModel shared =
     { balance = RemoteData.NotAsked
     , analysis = LoadingGraphql Nothing
-    , analysisFilter = initAnalysisFilter
-    , profileSummaries = []
     , lastSocket = ""
     , transfers = LoadingGraphql Nothing
     , transfersFilters = initTransfersFilters
-    , transfersFiltersBeingEdited =
-        { datePicker = DatePicker.initFromDate (Date.fromPosix shared.timezone shared.now)
-        , otherAccountInput = ""
-        , otherAccountState = Select.newState "other-account-select"
-        , otherAccountProfileSummary = Profile.Summary.init False
-        , filters = initTransfersFilters
-        }
     , showTransferFiltersModal = False
+    , transferFiltersForm =
+        Form.init
+            { date = Form.DatePicker.initModel (Date.fromPosix shared.timezone shared.now)
+            , direction = Nothing
+            , user = Form.UserPicker.initSingle { id = "transfer-filters-user-picker" }
+            }
     , contactModel = Contact.initSingle
     , showContactModal = False
     , inviteModalStatus = InviteModalClosed
     , claimModalStatus = Claim.Closed
     , copied = False
+    , showModalRequestingSponsor = False
     }
-
-
-initAnalysisFilter : Direction
-initAnalysisFilter =
-    DESC
 
 
 initTransfersFilters : TransfersFilters
@@ -151,14 +165,7 @@ type alias TransfersFilters =
 type GraphqlStatus err a
     = LoadingGraphql (Maybe a)
     | LoadedGraphql a (Maybe Api.Relay.PageInfo)
-    | FailedGraphql (Graphql.Http.Error err)
-
-
-type ClaimStatus
-    = ClaimLoaded Claim.Model
-    | ClaimLoading Claim.Model
-    | ClaimVoted Claim.Model
-    | ClaimVoteFailed Claim.Model
+    | FailedGraphql
 
 
 type InviteModalStatus
@@ -168,36 +175,15 @@ type InviteModalStatus
     | InviteModalLoaded String
 
 
-type Direction
-    = ASC
-    | DESC
-
-
 
 -- VIEW
 
 
 view : LoggedIn.Model -> Model -> { title : String, content : Html Msg }
-view ({ shared, accountName } as loggedIn) model =
+view ({ shared } as loggedIn) model =
     let
         t =
             shared.translators.t
-
-        isCommunityAdmin =
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    community.creator == accountName
-
-                _ ->
-                    False
-
-        areObjectivesEnabled =
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    community.hasObjectives
-
-                _ ->
-                    False
 
         content =
             case ( model.balance, loggedIn.selectedCommunity ) of
@@ -211,29 +197,32 @@ view ({ shared, accountName } as loggedIn) model =
                     Page.fullPageError (t "dashboard.sorry") e
 
                 ( RemoteData.Success (Just balance), RemoteData.Success community ) ->
+                    let
+                        isValidator =
+                            List.any ((==) loggedIn.accountName) community.validators
+                    in
                     div []
-                        [ div [ class "container mx-auto px-4" ]
-                            [ viewHeader loggedIn community isCommunityAdmin
-                            , div
-                                [ class "grid mb-10 md:grid-cols-2 md:gap-6" ]
-                                [ div [ class "w-full" ]
-                                    [ viewBalance shared balance
-                                    , div [ class "mt-6 flex space-x-6" ]
-                                        [ viewMyClaimsCard loggedIn
-                                        , viewMyOffersCard loggedIn
-                                        ]
-                                    ]
-                                , viewTransfers loggedIn model False
-                                ]
-                            , if areObjectivesEnabled && List.any (\account -> account == loggedIn.accountName) community.validators then
-                                viewAnalysisList loggedIn model
+                        [ div [ class "container mx-auto my-8 px-4 lg:grid lg:grid-cols-3 lg:gap-7" ]
+                            [ if not loggedIn.hasAcceptedCodeOfConduct then
+                                LoggedIn.viewFrozenAccountCard shared.translators
+                                    { onClick = ClickedAcceptCodeOfConduct
+                                    , isHorizontal = False
+                                    }
+                                    [ class "mb-6 lg:mb-0 self-start" ]
 
                               else
                                 text ""
+                            , viewWelcomeCard loggedIn community balance
+                            , if community.hasObjectives && isValidator && loggedIn.hasAcceptedCodeOfConduct then
+                                viewActionsForAnalysisCard loggedIn model
+
+                              else
+                                text ""
+                            , viewTimelineCard loggedIn (community.hasObjectives && isValidator) model
                             ]
-                        , viewTransfers loggedIn model True
                         , viewInvitationModal loggedIn model
                         , addContactModal shared model
+                        , viewModalRequestingSponsor shared community model
                         , viewTransferFilters loggedIn community.members model
                         ]
 
@@ -245,25 +234,43 @@ view ({ shared, accountName } as loggedIn) model =
     }
 
 
-viewHeader : LoggedIn.Model -> Community.Model -> Bool -> Html Msg
-viewHeader loggedIn community isCommunityAdmin =
-    div [ class "flex inline-block text-gray-900 font-light mt-6 mb-5 md:text-heading" ]
-        [ div []
-            [ text (loggedIn.shared.translators.t "menu.my_communities")
-            , span [ class "text-indigo-500 font-medium" ]
-                [ text community.name
+viewNewTag : Shared -> Html msg
+viewNewTag shared =
+    p [ class "flex items-center bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+        [ text <| shared.translators.t "contact_modal.new" ]
+
+
+viewModalRequestingSponsor : Shared -> Community.Model -> Model -> Html Msg
+viewModalRequestingSponsor shared community model =
+    let
+        text_ =
+            shared.translators.t >> text
+    in
+    Modal.initWith
+        { closeMsg = ClosedModalRequestingSponsor
+        , isVisible = model.showModalRequestingSponsor
+        }
+        |> Modal.withHeaderElement (viewNewTag shared)
+        |> Modal.withBody
+            [ div [ class "flex flex-col items-center h-full" ]
+                [ h1 [ class "text-center text-heading font-bold" ]
+                    [ text_ "sponsorship.dashboard_modal.title" ]
+                , img [ class "mt-4", src "/images/sponsor-community.svg" ] []
+                , div [ class "w-full mt-7 mx-auto md:w-5/6 lg:w-2/3" ]
+                    [ p [ class "text-center mb-6" ]
+                        [ text_ "sponsorship.dashboard_modal.subtitle" ]
+                    , p [ class "text-center mb-6" ]
+                        [ text_ "sponsorship.dashboard_modal.explanation" ]
+                    , a
+                        [ class "button button-primary w-full md:mt-8 mb-6"
+                        , Route.href Route.CommunitySponsor
+                        ]
+                        [ text (shared.translators.tr "sponsorship.dashboard_modal.sponsor" [ ( "community_name", community.name ) ]) ]
+                    ]
                 ]
             ]
-        , if isCommunityAdmin then
-            a
-                [ Route.href Route.CommunitySettings
-                , class "ml-auto"
-                ]
-                [ Icons.settings ]
-
-          else
-            text ""
-        ]
+        |> Modal.withSize Modal.Large
+        |> Modal.toHtml
 
 
 addContactModal : Shared -> Model -> Html Msg
@@ -274,10 +281,10 @@ addContactModal shared ({ contactModel } as model) =
                 |> text
 
         header =
-            div [ class "mt-4" ]
-                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-caption uppercase" ]
+            div []
+                [ p [ class "inline bg-purple-100 text-white rounded-full py-0.5 px-2 text-sm uppercase" ]
                     [ text_ "contact_modal.new" ]
-                , p [ class "text-heading font-bold mt-2" ]
+                , p [ class "text-lg font-bold mt-2" ]
                     [ text_ "contact_modal.title" ]
                 ]
 
@@ -289,11 +296,11 @@ addContactModal shared ({ contactModel } as model) =
         { closeMsg = ClosedAddContactModal
         , isVisible = model.showContactModal
         }
+        |> Modal.withHeaderElement header
         |> Modal.withBody
-            [ header
-            , img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
+            [ img [ class "mx-auto mt-10", src "/images/girl-with-phone.svg" ] []
             , form
-            , p [ class "text-caption text-center uppercase my-4" ]
+            , p [ class "text-sm text-center uppercase my-4" ]
                 [ text_ "contact_modal.footer" ]
             ]
         |> Modal.withSize Modal.FullScreen
@@ -352,23 +359,29 @@ viewInvitationModal { shared } model =
                     [ p [ class "text-center text-red" ] [ text err ] ]
 
                 InviteModalLoaded invitationId ->
-                    [ div [ class "mt-3 input-label" ]
+                    [ div [ class "mt-3 label" ]
                         [ text_ "community.invite.label" ]
-                    , p [ class "py-2 md:text-heading text-black" ]
+                    , p [ class "py-2 md:text-lg text-black" ]
                         [ text (url invitationId) ]
-                    , Input.init
-                        { label = ""
-                        , id = "invitation-id"
-                        , onInput = \_ -> NoOp
-                        , disabled = False
+                    , Form.Text.view
+                        (Form.Text.init
+                            { label = ""
+                            , id = "invitation-id"
+                            }
+                            |> Form.Text.withExtraAttrs
+                                [ class "absolute opacity-0 left-[-9999em]"
+                                , tabindex -1
+                                ]
+                            |> Form.Text.withContainerAttrs [ class "mb-0 overflow-hidden" ]
+                        )
+                        { onChange = \_ -> NoOp
+                        , onBlur = NoOp
                         , value = url invitationId
-                        , placeholder = Nothing
-                        , problems = Nothing
+                        , error = text ""
+                        , hasError = False
                         , translators = shared.translators
+                        , isRequired = False
                         }
-                        |> Input.withAttrs [ class "absolute opacity-0 left-[-9999em]" ]
-                        |> Input.withContainerAttrs [ class "mb-0 overflow-hidden" ]
-                        |> Input.toHtml
                     ]
 
         footer =
@@ -380,6 +393,7 @@ viewInvitationModal { shared } model =
                             , ( "button-success", model.copied )
                             ]
                         , class "button w-full md:w-48 select-all"
+                        , id "copy-invite-button"
                         , onClick (CopyToClipboard "invitation-id")
                         ]
                         [ if model.copied then
@@ -411,226 +425,62 @@ viewInvitationModal { shared } model =
         |> Modal.toHtml
 
 
-viewAnalysisList : LoggedIn.Model -> Model -> Html Msg
-viewAnalysisList loggedIn model =
-    let
-        text_ s =
-            text <| loggedIn.shared.translators.t s
-
-        isVoted : List ClaimStatus -> Bool
-        isVoted claims =
-            List.all
-                (\c ->
-                    case c of
-                        ClaimVoted _ ->
-                            True
-
-                        _ ->
-                            False
-                )
-                claims
-    in
-    case model.analysis of
-        LoadingGraphql _ ->
-            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageLoading loggedIn.shared ]
-
-        LoadedGraphql claims _ ->
-            div [ class "w-full flex mb-10 md:mb-40" ]
-                [ div
-                    [ class "w-full" ]
-                    [ div [ class "flex justify-between text-gray-600 text-heading font-light flex mt-4 mb-4" ]
-                        [ div [ class "flex flex-wrap mr-4" ]
-                            [ div [ class "text-indigo-500 mr-2 font-medium" ]
-                                [ text_ "dashboard.analysis.title.1"
-                                ]
-                            , text_ "dashboard.analysis.title.2"
-                            ]
-                        , div [ class "flex xs-max:flex-col xs-max:space-x-0 justify-between space-x-4" ]
-                            [ button
-                                [ class "w-full button button-secondary"
-                                , onClick ToggleAnalysisSorting
-                                ]
-                                [ Icons.sortDirection ""
-                                ]
-                            , a
-                                [ class "button button-secondary font-medium "
-                                , Route.href Route.Analysis
-                                ]
-                                [ text_ "dashboard.analysis.all" ]
-                            ]
-                        ]
-                    , if isVoted claims then
-                        div [ class "flex flex-col w-full items-center justify-center px-3 py-12 my-2 rounded-lg bg-white" ]
-                            [ img [ src "/images/not_found.svg", class "object-contain h-32 mb-3" ] []
-                            , p [ class "flex text-body text-gray-600" ]
-                                [ p [ class "font-bold" ] [ text_ "dashboard.analysis.empty.1" ]
-                                , text_ "dashboard.analysis.empty.2"
-                                ]
-                            , p [ class "text-body text-gray-600" ] [ text_ "dashboard.analysis.empty.3" ]
-                            ]
-
-                      else
-                        let
-                            pendingClaims =
-                                List.map3 (viewAnalysis loggedIn)
-                                    model.profileSummaries
-                                    (List.range 0 (List.length claims))
-                                    claims
-                        in
-                        div [ class "flex flex-wrap -mx-2" ] <|
-                            List.append pendingClaims
-                                [ viewVoteConfirmationModal loggedIn model ]
-                    ]
-                ]
-
-        FailedGraphql err ->
-            div [ class "md:mb-40 md:mt-10" ] [ Page.fullPageGraphQLError "Failed load" err ]
-
-
-viewVoteConfirmationModal : LoggedIn.Model -> Model -> Html Msg
-viewVoteConfirmationModal loggedIn { claimModalStatus } =
-    let
-        viewVoteModal claimId isApproving isLoading =
-            Claim.viewVoteClaimModal
-                loggedIn.shared.translators
-                { voteMsg = VoteClaim
-                , closeMsg = ClaimMsg 0 Claim.CloseClaimModals
-                , claimId = claimId
-                , isApproving = isApproving
-                , isInProgress = isLoading
-                }
-    in
-    case claimModalStatus of
-        Claim.VoteConfirmationModal claimId vote ->
-            viewVoteModal claimId vote False
-
-        Claim.Loading claimId vote ->
-            viewVoteModal claimId vote True
-
-        Claim.PhotoModal claim ->
-            Claim.viewPhotoModal loggedIn claim
-                |> Html.map (ClaimMsg 0)
-
-        Claim.Closed ->
-            text ""
-
-
-viewAnalysis : LoggedIn.Model -> Claim.ClaimProfileSummaries -> Int -> ClaimStatus -> Html Msg
-viewAnalysis loggedIn profileSummaries claimIndex claimStatus =
-    case claimStatus of
-        ClaimLoaded claim ->
-            Claim.viewClaimCard loggedIn profileSummaries claim
-                |> Html.map (ClaimMsg claimIndex)
-
-        ClaimLoading _ ->
-            div [ class "w-full md:w-1/2 lg:w-1/3 xl:w-1/4 px-2 mb-4" ]
-                [ div [ class "rounded-lg bg-white h-56 my-2 pt-8" ]
-                    [ Page.fullPageLoading loggedIn.shared ]
-                ]
-
-        ClaimVoted _ ->
-            text ""
-
-        ClaimVoteFailed claim ->
-            Claim.viewClaimCard loggedIn profileSummaries claim
-                |> Html.map (ClaimMsg claimIndex)
-
-
-viewTransfers : LoggedIn.Model -> Model -> Bool -> Html Msg
-viewTransfers loggedIn model isMobile =
-    let
-        t =
-            loggedIn.shared.translators.t
-
-        outerContainer children =
-            if isMobile then
-                div [ class "w-full bg-white md:hidden" ]
-                    [ div [ class "container mx-auto" ]
-                        children
-                    ]
-
-            else
-                div [ class "w-full bg-white hidden md:flex md:flex-col md:rounded" ]
-                    children
-    in
-    outerContainer
-        [ div [ class "flex justify-between items-center p-4 pb-0" ]
-            [ p [ class "text-heading" ]
-                [ span [ class "text-gray-900 font-light" ] [ text <| t "transfer.transfers_latest" ]
-                , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text <| t "transfer.transfers" ]
-                ]
-            , button
-                [ class "flex text-heading lowercase text-indigo-500 rounded ring-offset-2 focus:outline-none focus:ring"
-                , onClick ClickedOpenTransferFilters
-                ]
-                [ text <| t "all_analysis.filter.title"
-                , Icons.arrowDown "fill-current"
-                ]
-            ]
-        , case model.transfers of
-            LoadingGraphql Nothing ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text <| t "menu.loading" ]
-                    ]
-
-            FailedGraphql _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.loading_error") ]
-                    ]
-
-            LoadedGraphql [] _ ->
-                Page.viewCardEmpty
-                    [ div [ class "text-gray-900 text-sm" ]
-                        [ text (t "transfer.no_transfers_yet") ]
-                    ]
-
-            LoadingGraphql (Just transfers) ->
-                viewTransferList loggedIn transfers Nothing { isLoading = True, isMobile = isMobile }
-
-            LoadedGraphql transfers maybePageInfo ->
-                viewTransferList loggedIn transfers maybePageInfo { isLoading = False, isMobile = isMobile }
-        ]
-
-
 viewTransferList :
     LoggedIn.Model
+    -> Model
     -> List ( Transfer, Profile.Summary.Model )
     -> Maybe Api.Relay.PageInfo
-    -> { isLoading : Bool, isMobile : Bool }
+    -> Bool
     -> Html Msg
-viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
+viewTransferList loggedIn model transfers maybePageInfo isLoading =
     let
         addLoading transfers_ =
             if isLoading then
                 transfers_
-                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "" ]
+                    ++ [ View.Components.loadingLogoAnimated loggedIn.shared.translators "mb-8" ]
 
             else
                 transfers_
-    in
-    View.Components.infiniteList
-        { onRequestedItems =
-            maybePageInfo
-                |> Maybe.andThen
-                    (\pageInfo ->
-                        if pageInfo.hasNextPage then
-                            Just RequestedMoreTransfers
 
-                        else
-                            Nothing
+        infiniteList isMobile_ =
+            View.Components.infiniteList
+                { onRequestedItems =
+                    maybePageInfo
+                        |> Maybe.andThen
+                            (\pageInfo ->
+                                if pageInfo.hasNextPage then
+                                    Just RequestedMoreTransfers
+
+                                else
+                                    Nothing
+                            )
+                , distanceToRequest = 800
+                , elementToTrack =
+                    if isMobile_ then
+                        View.Components.TrackWindow
+
+                    else
+                        View.Components.TrackSelf
+                }
+
+        container attrs children =
+            div []
+                [ infiniteList True
+                    (class "md:hidden" :: attrs)
+                    children
+                , infiniteList False
+                    (class "hidden md:block"
+                        :: style "height" "max(60vh, 400px)"
+                        :: attrs
                     )
-        , distanceToRequest = 1000
-        , elementToTrack =
-            if isMobile then
-                View.Components.TrackWindow
-
-            else
-                View.Components.TrackSelf
-        }
-        [ class "pb-6 divide-y flex-grow w-full flex-basis-0 md:px-4" ]
+                    children
+                ]
+    in
+    container
+        [ tabindex -1
+        , class "w-full"
+        , classList [ ( "md:overflow-y-hidden", hasModalsOpen model ) ]
+        ]
         (transfers
             |> List.groupWhile
                 (\( t1, _ ) ( t2, _ ) ->
@@ -640,73 +490,170 @@ viewTransferList loggedIn transfers maybePageInfo { isLoading, isMobile } =
                 )
             |> List.map
                 (\( ( t1, _ ) as first, rest ) ->
-                    div []
-                        [ div [ class "mt-4 mx-4" ]
-                            [ View.Components.dateViewer
-                                [ class "uppercase text-caption text-black tracking-wider" ]
-                                identity
-                                loggedIn.shared
-                                (Utils.fromDateTime t1.blockTime)
-                            ]
-                        , div [ class "divide-y" ]
-                            (List.map
+                    div [ class "pb-6 first:pt-4 last:pb-2" ]
+                        (([ div [ class "uppercase text-sm font-bold px-6" ]
+                                [ View.Components.dateViewer [ class "text-black" ]
+                                    identity
+                                    loggedIn.shared
+                                    (Utils.fromDateTime t1.blockTime)
+                                , text " "
+                                , View.Components.dateViewer [ class "text-gray-333" ]
+                                    (\translations ->
+                                        { translations
+                                            | today = Just "{{date}}"
+                                            , yesterday = Just "{{date}}"
+                                            , other = ""
+                                        }
+                                    )
+                                    loggedIn.shared
+                                    (Utils.fromDateTime t1.blockTime)
+                                ]
+                          ]
+                            :: List.map
                                 (\( transfer, profileSummary ) ->
-                                    Transfer.view loggedIn
-                                        transfer
-                                        profileSummary
-                                        (GotTransferCardProfileSummaryMsg transfer.id)
-                                        (ClickedTransferCard transfer.id)
-                                        []
+                                    [ viewTransfer loggedIn transfer profileSummary
+                                    , hr [ class "mx-6 border-gray-100" ] []
+                                    ]
                                 )
                                 (first :: rest)
-                            )
-                        ]
+                         )
+                            |> List.concat
+                        )
                 )
             |> addLoading
         )
 
 
-datePickerSettings : Shared -> DatePicker.Settings
-datePickerSettings shared =
+viewTransfer : LoggedIn.Model -> Transfer -> Profile.Summary.Model -> Html Msg
+viewTransfer loggedIn transfer profileSummary =
     let
-        defaultSettings =
-            DatePicker.defaultSettings
+        { t } =
+            loggedIn.shared.translators
+
+        ( otherProfile, isFromUser ) =
+            if transfer.from.account == loggedIn.accountName then
+                ( transfer.to, True )
+
+            else
+                ( transfer.from, False )
+
+        addRelativeSelector =
+            if loggedIn.hasSeenDashboard then
+                identity
+
+            else
+                Profile.Summary.withRelativeSelector "#transfer-list-container"
     in
-    { defaultSettings
-        | changeYear = DatePicker.off
-        , placeholder = shared.translators.t "payment_history.pick_date"
-        , inputClassList = [ ( "input w-full", True ) ]
-        , containerClassList = [ ( "relative-table w-full", True ) ]
-        , dateFormatter = Date.format "E, d MMM y"
-        , inputId = Just "transfers-filters-date-input"
+    button
+        [ class "flex w-full px-6 py-4 focus-ring ring-inset focus-visible:rounded-sm hover:bg-gray-200"
+        , onClick (ClickedTransferCard transfer.id)
+        ]
+        [ profileSummary
+            |> Profile.Summary.withoutName
+            |> Profile.Summary.withImageSize "w-8 h-8"
+            |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
+            |> addRelativeSelector
+            |> Profile.Summary.withScrollSelector "#transfer-list-container"
+            |> Profile.Summary.view loggedIn.shared.translators
+                loggedIn.accountName
+                otherProfile
+            |> Html.map (GotTransferCardProfileSummaryMsg transfer.id)
+        , div [ class "ml-4 text-left" ]
+            [ p [ class "mb-1" ]
+                [ if isFromUser then
+                    text <| t "transfer.sent_to"
+
+                  else
+                    text <| t "transfer.received_from"
+                , text " "
+                , strong []
+                    [ otherProfile.name
+                        |> Maybe.withDefault (Eos.nameToString otherProfile.account)
+                        |> text
+                    ]
+                ]
+            , p [ class "text-green" ]
+                [ strong []
+                    [ { amount = transfer.value
+                      , symbol = transfer.community.symbol
+                      }
+                        |> Eos.assetToString loggedIn.shared.translators
+                        |> text
+                    ]
+                ]
+            ]
+        ]
+
+
+type alias TransferFiltersFormInput =
+    { date : Form.DatePicker.Model
+    , direction : Maybe TransferDirectionValue
+    , user : Form.UserPicker.SinglePickerModel
     }
 
 
-selectConfiguration : Shared -> Select.Config Msg Profile.Minimal
-selectConfiguration shared =
+transferFiltersForm : LoggedIn.Model -> List Profile.Minimal -> Form.Form msg TransferFiltersFormInput TransfersFilters
+transferFiltersForm loggedIn users =
     let
-        toLabel =
-            .account >> Eos.nameToString
-
-        filter minChars query items =
-            if String.length query < minChars then
-                Nothing
-
-            else
-                items
-                    |> Simple.Fuzzy.filter toLabel query
-                    |> Just
+        { t } =
+            loggedIn.shared.translators
     in
-    Profile.selectConfig
-        (Select.newConfig
-            { onSelect = SelectedTransfersFiltersOtherAccount
-            , toLabel = toLabel
-            , filter = filter 2
-            }
-            |> Select.withMenuClass "max-h-44 overflow-y-auto !relative"
-        )
-        shared
-        False
+    Form.succeed TransfersFilters
+        |> Form.with
+            (Form.DatePicker.init { label = t "payment_history.pick_date", id = "transfer-filters-date-picker" }
+                |> Form.DatePicker.withContainerAttrs [ class "mb-10" ]
+                |> Form.DatePicker.withAbsolutePositioning False
+                |> Form.datePicker
+                    { parser = Ok
+                    , value = .date
+                    , update = \date input -> { input | date = date }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Select.init
+                { label = t "transfer.direction.title"
+                , id = "transfer-filters-direction-select"
+                , optionToString =
+                    Maybe.map TransferDirectionValue.toString >> Maybe.withDefault "BOTH"
+                }
+                |> Form.Select.withOption Nothing (t "transfer.direction.both")
+                |> Form.Select.withOption (Just TransferDirectionValue.Sending) (t "transfer.direction.sending")
+                |> Form.Select.withOption (Just TransferDirectionValue.Receiving) (t "transfer.direction.receiving")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.select TransferDirectionValue.fromString
+                    { parser = Ok
+                    , value = .direction
+                    , update = \direction input -> { input | direction = direction }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            ((\{ direction } ->
+                let
+                    directionText =
+                        case direction of
+                            Nothing ->
+                                "transfer.direction.other_user"
+
+                            Just TransferDirectionValue.Receiving ->
+                                "transfer.direction.user_who_sent"
+
+                            Just TransferDirectionValue.Sending ->
+                                "transfer.direction.user_who_received"
+                in
+                Form.UserPicker.init { label = t directionText, currentUser = loggedIn.accountName, profiles = users }
+                    |> Form.UserPicker.withMenuClass "max-h-44 overflow-y-auto !relative"
+                    |> Form.UserPicker.withModalSelectors True
+                    |> Form.userPicker
+                        { parser = Ok
+                        , value = .user
+                        , update = \user input -> { input | user = user }
+                        , externalError = always Nothing
+                        }
+             )
+                |> Form.introspect
+            )
 
 
 viewTransferFilters : LoggedIn.Model -> List Profile.Minimal -> Model -> Html Msg
@@ -714,17 +661,6 @@ viewTransferFilters ({ shared } as loggedIn) users model =
     let
         { t } =
             shared.translators
-
-        directionText =
-            case model.transfersFiltersBeingEdited.filters.direction of
-                Nothing ->
-                    "transfer.direction.other_user"
-
-                Just TransferDirectionValue.Receiving ->
-                    "transfer.direction.user_who_sent"
-
-                Just TransferDirectionValue.Sending ->
-                    "transfer.direction.user_who_received"
     in
     Modal.initWith
         { closeMsg = ClosedTransfersFilters
@@ -732,178 +668,302 @@ viewTransferFilters ({ shared } as loggedIn) users model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ span [ class "input-label" ] [ text (t "payment_history.pick_date") ]
-            , div [ class "flex space-x-4" ]
-                [ div [ class "relative w-full" ]
-                    [ DatePicker.view model.transfersFiltersBeingEdited.filters.date
-                        (datePickerSettings shared)
-                        model.transfersFiltersBeingEdited.datePicker
-                        |> Html.map TransfersFiltersDatePickerMsg
-                    , img
-                        [ class "absolute right-0 top-0 h-12 cursor-pointer"
-                        , src "/icons/calendar.svg"
-                        , tabindex -1
-                        , onClick ClickedTransfersFiltersCalendar
-                        ]
-                        []
+            [ Form.view []
+                shared.translators
+                (\submitButton ->
+                    [ submitButton [ class "button button-primary w-full" ]
+                        [ text (t "all_analysis.filter.apply") ]
                     ]
-                , button
-                    [ class "h-12"
-                    , onClick ClickedClearTransfersFiltersDate
-                    ]
-                    [ Icons.trash "" ]
-                ]
-            , Select.init
-                { id = "direction-selector"
-                , label = t "transfer.direction.title"
-                , onInput = SelectedTransfersDirection
-                , firstOption = { value = Nothing, label = t "transfer.direction.both" }
-                , value = model.transfersFiltersBeingEdited.filters.direction
-                , valueToString =
-                    Maybe.map TransferDirectionValue.toString
-                        >> Maybe.withDefault "BOTH"
-                , disabled = False
-                , problems = Nothing
+                )
+                (transferFiltersForm loggedIn users)
+                model.transferFiltersForm
+                { toMsg = GotTransfersFiltersFormMsg
+                , onSubmit = SubmittedTransfersFiltersForm
                 }
-                |> Select.withOption
-                    { value = Just TransferDirectionValue.Sending
-                    , label = t "transfer.direction.sending"
-                    }
-                |> Select.withOption
-                    { value = Just TransferDirectionValue.Receiving
-                    , label = t "transfer.direction.receiving"
-                    }
-                |> Select.withContainerAttrs [ class "mt-10" ]
-                |> Select.toHtml
-            , View.Form.label "other-account-select" (t directionText)
-            , model.transfersFiltersBeingEdited.filters.otherAccount
-                |> Maybe.map List.singleton
-                |> Maybe.withDefault []
-                |> Select.view (selectConfiguration shared)
-                    model.transfersFiltersBeingEdited.otherAccountState
-                    users
-                |> Html.map TransfersFiltersOtherAccountSelectMsg
-            , case model.transfersFiltersBeingEdited.filters.otherAccount of
-                Nothing ->
-                    text ""
-
-                Just otherAccount ->
-                    div [ class "flex mt-4 items-start" ]
-                        [ div [ class "flex flex-col items-center" ]
-                            [ model.transfersFiltersBeingEdited.otherAccountProfileSummary
-                                |> Profile.Summary.withRelativeSelector ".modal-content"
-                                |> Profile.Summary.withScrollSelector ".modal-body"
-                                |> Profile.Summary.withPreventScrolling View.Components.PreventScrollAlways
-                                |> Profile.Summary.view shared
-                                    loggedIn.accountName
-                                    otherAccount
-                                |> Html.map GotTransfersFiltersProfileSummaryMsg
-                            , button
-                                [ class "mt-2"
-                                , onClick ClickedClearTransfersFiltersUser
-                                ]
-                                [ Icons.trash "" ]
-                            ]
-                        ]
-            , button
-                [ class "button button-primary w-full mt-10"
-                , onClick ClickedApplyTransfersFilters
-                ]
-                [ text (t "all_analysis.filter.apply") ]
             ]
         |> Modal.toHtml
 
 
-viewBalance : Shared -> Balance -> Html Msg
-viewBalance shared balance =
+viewWelcomeCard : LoggedIn.Model -> Community.Model -> Balance -> Html Msg
+viewWelcomeCard ({ shared } as loggedIn) community balance =
     let
+        { t, tr } =
+            shared.translators
+
         text_ =
-            text << shared.translators.t
+            text << t
+
+        listItem :
+            (String -> Html Msg)
+            -> Bool
+            -> String
+            -> String
+            -> (List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg)
+            -> List (Html.Attribute Msg)
+            -> Html Msg
+        listItem icon isDisabled iconSize description element attrs =
+            li []
+                [ element
+                    (class "py-2 flex items-center w-full"
+                        :: classList
+                            [ ( "group hover:text-orange-300 focus-visible:text-orange-300 focus-ring focus:ring-orange-300 focus:ring-opacity-50 focus:ring-offset-4 rounded-sm", not isDisabled )
+                            , ( "text-gray-900", isDisabled )
+                            ]
+                        :: attrs
+                    )
+                    [ icon (iconSize ++ " mr-4 text-gray-500 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300")
+                    , text description
+                    , Icons.arrowDown "-rotate-90 ml-auto text-gray-900 fill-current group-hover:text-orange-300 group-focus-visible:text-orange-300"
+                    ]
+                ]
     in
-    div [ class "bg-white rounded p-4 md:p-6" ]
-        [ p [ class "input-label" ] [ text_ "account.my_wallet.balances.current" ]
-        , p [ class "text-indigo-500 mt-3" ]
-            [ span [ class "font-bold text-3xl" ]
-                [ text <| Eos.formatSymbolAmount balance.asset.symbol balance.asset.amount ]
+    div
+        [ class "relative"
+        , classList [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ]
+        ]
+        [ h1 [ class "text-gray-333 mb-4 md:mb-7" ]
+            [ text_ "menu.my_communities"
+            , strong [] [ text community.name ]
+            ]
+        , div
+            [ class "bg-white rounded flex flex-col pt-4 pb-2"
+            ]
+            [ div [ class "flex flex-col px-4 pb-6 border-b border-gray-100" ]
+                [ span [ class "text-green text-xl font-bold text-center" ]
+                    [ text (Eos.formatSymbolAmount shared.translators balance.asset.symbol balance.asset.amount) ]
+                , span [ class "text-gray-900 text-sm font-bold uppercase text-center" ]
+                    [ text (tr "dashboard.your_balance" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ]) ]
+                , div [ class "flex space-x-4 mt-4" ]
+                    [ View.Components.disablableLink
+                        { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                        [ class "button button-primary w-full"
+                        , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
+                        , Route.href (Route.Transfer Nothing)
+                        ]
+                        [ text_ "dashboard.transfer" ]
+                    , case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                        Just _ ->
+                            button
+                                [ class "button button-secondary w-full"
+                                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                , onClick ClickedSupportUsButton
+                                ]
+                                [ text_ "community.index.support_us" ]
+
+                        _ ->
+                            text ""
+                    ]
+                ]
+            , ul [ class "px-4 pt-2 divide-y divide-y-gray-100" ]
+                [ listItem Icons.cambiatusCoin
+                    (not loggedIn.hasAcceptedCodeOfConduct)
+                    "w-5"
+                    (tr "dashboard.how_to_earn" [ ( "symbol", Eos.symbolToSymbolCodeString community.symbol ) ])
+                    (\attrs ->
+                        View.Components.disablableLink
+                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                            (Route.href (Route.CommunityObjectives Route.WithNoObjectiveSelected) :: attrs)
+                    )
+                    []
+                , listItem Icons.profile
+                    (not loggedIn.hasAcceptedCodeOfConduct)
+                    "w-5 h-5"
+                    (t "dashboard.invite")
+                    button
+                    [ onClick CreateInvite
+                    , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                    , classList [ ( "cursor-default", not loggedIn.hasAcceptedCodeOfConduct ) ]
+                    ]
+                , if community.hasObjectives then
+                    listItem Icons.flagWithoutBackground
+                        False
+                        "h-5"
+                        (t "dashboard.my_claims")
+                        a
+                        [ Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName)) ]
+
+                  else
+                    text ""
+                , if community.hasShop then
+                    listItem Icons.shop
+                        False
+                        "w-5 h-5"
+                        (t "dashboard.my_offers")
+                        a
+                        [ Route.href (Route.Shop Shop.UserSales) ]
+
+                  else
+                    text ""
+                , case loggedIn.contributionCount of
+                    RemoteData.Success contributionCount ->
+                        if contributionCount > 0 then
+                            listItem Icons.heartStroke
+                                False
+                                "w-5 h-5"
+                                (t "dashboard.my_contributions")
+                                a
+                                [ Route.href (Route.ProfileContributions loggedIn.accountName) ]
+
+                        else
+                            text ""
+
+                    _ ->
+                        text ""
+                , listItem Icons.globe
+                    False
+                    "w-5 h-5"
+                    (t "dashboard.about_community")
+                    a
+                    [ Route.href Route.CommunityAbout
+                    ]
+                ]
+            ]
+        , img
+            [ class "absolute -top-2 md:top-0 right-2 md:right-4"
+            , alt ""
+            , src "/images/success-doggo.svg"
+            ]
+            []
+        ]
+
+
+viewActionsForAnalysisCard : LoggedIn.Model -> Model -> Html Msg
+viewActionsForAnalysisCard loggedIn model =
+    let
+        { t } =
+            loggedIn.shared.translators
+
+        text_ =
+            text << t
+    in
+    div [ classList [ ( "md:animate-fade-in-from-above-lg md:animation-delay-150 md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard ) ] ]
+        [ h2 [ class "text-gray-333 mt-6 mb-4 md:mb-7 lg:mt-0" ]
+            [ strong [] [ text_ "dashboard.analysis.title.1" ]
             , text " "
-            , span [] [ text <| Eos.symbolToSymbolCodeString balance.asset.symbol ]
+            , text_ "dashboard.analysis.title.2"
             ]
-        , a
-            [ class "button button-primary w-full mt-6"
-            , Route.href (Route.Transfer Nothing)
-            ]
-            [ text_ "dashboard.transfer" ]
-        , div [ class "flex flex-col divide-y divide-y-gray-500 mt-2 md:mt-6" ]
-            [ a
-                [ class "w-full flex items-center justify-between text-gray-900 py-5"
-                , Route.href Route.Community
-                ]
-                [ text <| shared.translators.tr "dashboard.explore" [ ( "symbol", Eos.symbolToSymbolCodeString balance.asset.symbol ) ]
-                , Icons.arrowDown "-rotate-90"
-                ]
-            , button
-                [ class "w-full flex items-center justify-between text-gray-900 py-5"
-                , onClick CreateInvite
-                ]
-                [ text_ "dashboard.invite"
-                , Icons.arrowDown "-rotate-90"
-                ]
+        , div [ class "bg-white rounded py-6" ]
+            [ case model.analysis of
+                LoadingGraphql _ ->
+                    View.Components.loadingLogoAnimated loggedIn.shared.translators "-mt-8"
+
+                FailedGraphql ->
+                    div [ class "px-6" ]
+                        [ img [ class "w-2/3 mx-auto", src "/images/error.svg" ] []
+                        , p [ class "text-center mt-4" ]
+                            [ text_ "dashboard.analysis.error_fetching" ]
+                        ]
+
+                LoadedGraphql ({ claims } as analysis) _ ->
+                    let
+                        compareAvatars first second =
+                            case ( Avatar.toMaybeString first, Avatar.toMaybeString second ) of
+                                ( Just x, Just y ) ->
+                                    -- Prioritize showing different avatars
+                                    if x == y then
+                                        LT
+
+                                    else
+                                        EQ
+
+                                ( Just _, Nothing ) ->
+                                    LT
+
+                                ( Nothing, Just _ ) ->
+                                    GT
+
+                                ( Nothing, Nothing ) ->
+                                    EQ
+                    in
+                    if analysis.count > 0 then
+                        div [ class "w-2/3 mx-auto" ]
+                            [ div [ class "flex justify-center space-x-2 mb-4" ]
+                                (claims
+                                    |> List.map (.claimer >> .avatar)
+                                    |> List.sortWith compareAvatars
+                                    |> List.take 5
+                                    |> List.map (\avatar -> Avatar.view avatar "w-7 h-7")
+                                )
+                            , Markdown.view [ class "mb-4 text-center" ]
+                                (Markdown.fromTranslationWithReplacements loggedIn.shared.translators
+                                    "dashboard.analysis.count"
+                                    [ ( "amount", String.fromInt analysis.count ) ]
+                                )
+                            , a
+                                [ class "button button-primary w-full"
+                                , Route.href Route.Analysis
+                                ]
+                                [ text_ "dashboard.analysis.analyze_now" ]
+                            ]
+
+                    else
+                        div [ class "py-4" ]
+                            [ img
+                                [ class "mx-auto"
+                                , src "/images/empty-analysis.svg"
+                                ]
+                                []
+                            , p [ class "mt-5 text-center text-gray-333" ]
+                                [ strong [] [ text_ "dashboard.analysis.empty.1" ]
+                                , br [] []
+                                , text_ "dashboard.analysis.empty.2"
+                                ]
+                            ]
             ]
         ]
 
 
-viewMyClaimsCard : LoggedIn.Model -> Html Msg
-viewMyClaimsCard loggedIn =
+viewTimelineCard : LoggedIn.Model -> Bool -> Model -> Html Msg
+viewTimelineCard loggedIn isValidator model =
     let
-        { t } =
+        translators =
             loggedIn.shared.translators
+
+        text_ =
+            text << translators.t
     in
-    case RemoteData.map .hasObjectives loggedIn.selectedCommunity of
-        RemoteData.Success True ->
-            a
-                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
-                , Route.href (Route.ProfileClaims (Eos.nameToString loggedIn.accountName))
+    div
+        [ classList
+            [ ( "md:animate-fade-in-from-above-lg md:motion-reduce:animate-none", not loggedIn.hasSeenDashboard )
+            , ( "md:animation-delay-300", not loggedIn.hasSeenDashboard && isValidator )
+            , ( "md:animation-delay-150", not loggedIn.hasSeenDashboard && not isValidator )
+            ]
+        , id "transfer-list-container"
+        ]
+        [ div [ class "flex justify-between items-center mt-6 mb-4 lg:mt-0" ]
+            [ h2 [ class "text-gray-333" ]
+                [ text_ "transfer.transfers_latest"
+                , text " "
+                , strong [] [ text_ "transfer.transfers" ]
                 ]
-                [ div []
-                    [ Icons.claims "w-8 h-8"
-                    , p [ class "text-gray-600 mt-5" ]
-                        [ text <| t "dashboard.my_claims.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_claims.2" ]
-                        ]
-                    ]
-                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
-                    [ text <| t "dashboard.my_claims.go" ]
+            , button
+                [ class "button button-secondary w-auto h-auto pl-4 flex"
+                , onClick ClickedOpenTransferFilters
                 ]
-
-        _ ->
-            text ""
-
-
-viewMyOffersCard : LoggedIn.Model -> Html Msg
-viewMyOffersCard loggedIn =
-    let
-        { t } =
-            loggedIn.shared.translators
-    in
-    case RemoteData.map .hasShop loggedIn.selectedCommunity of
-        RemoteData.Success True ->
-            a
-                [ class "w-full rounded bg-white px-6 py-10 flex flex-col justify-between hover:shadow"
-                , Route.href (Route.Shop Shop.UserSales)
+                [ text_ "all_analysis.filter.title"
+                , Icons.arrowDown "fill-current"
                 ]
-                [ div []
-                    [ Icons.shop "w-8 h-8 fill-current"
-                    , p [ class "text-gray-600 mt-5" ]
-                        [ text <| t "dashboard.my_offers.1"
-                        , span [ class "font-bold" ] [ text <| t "dashboard.my_offers.2" ]
-                        ]
-                    ]
-                , div [ class "button button-primary w-full mt-6 lg:mt-12" ]
-                    [ text <| t "dashboard.my_offers.go" ]
-                ]
+            ]
+        , div [ class "bg-white rounded md:overflow-hidden" ]
+            [ case model.transfers of
+                LoadingGraphql Nothing ->
+                    View.Components.loadingLogoAnimated translators "px-6 mb-8"
 
-        _ ->
-            text ""
+                FailedGraphql ->
+                    p [ class "text-gray-900 text-sm py-20 px-6 text-center" ]
+                        [ text_ "transfer.loading_error" ]
+
+                LoadedGraphql [] _ ->
+                    p [ class "text-gray-900 text-sm py-20 px-6 text-center" ]
+                        [ text_ "transfer.no_transfers_yet" ]
+
+                LoadingGraphql (Just transfers) ->
+                    viewTransferList loggedIn model transfers Nothing True
+
+                LoadedGraphql transfers maybePageInfo ->
+                    viewTransferList loggedIn model transfers maybePageInfo False
+            ]
+        ]
 
 
 
@@ -916,29 +976,18 @@ type alias UpdateResult =
 
 type Msg
     = NoOp
-    | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
-    | CompletedLoadProfile Profile.Model
     | CompletedLoadBalance (Result Http.Error (Maybe Balance))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
     | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe Claim.Paginated)) (Maybe Claim.Paginated))
-    | ClaimMsg Int Claim.Msg
-    | VoteClaim Claim.ClaimId Bool
-    | GotVoteResult Claim.ClaimId (Result (Maybe Value) String)
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | RequestedMoreTransfers
     | ClickedOpenTransferFilters
     | ClosedTransfersFilters
-    | SelectedTransfersDirection (Maybe TransferDirectionValue)
-    | TransfersFiltersDatePickerMsg DatePicker.Msg
-    | ClickedTransfersFiltersCalendar
-    | ClickedClearTransfersFiltersDate
-    | GotTransfersFiltersProfileSummaryMsg Profile.Summary.Msg
-    | ClickedClearTransfersFiltersUser
-    | TransfersFiltersOtherAccountSelectMsg (Select.Msg Profile.Minimal)
-    | SelectedTransfersFiltersOtherAccount (Maybe Profile.Minimal)
-    | ClickedApplyTransfersFilters
+    | GotTransfersFiltersFormMsg (Form.Msg TransferFiltersFormInput)
+    | SubmittedTransfersFiltersForm TransfersFilters
     | ClickedTransferCard Int
+    | ClickedSupportUsButton
     | CreateInvite
     | GotContactMsg Contact.Msg
     | ClosedAddContactModal
@@ -946,7 +995,8 @@ type Msg
     | CompletedInviteCreation (Result Http.Error String)
     | CopyToClipboard String
     | CopiedToClipboard
-    | ToggleAnalysisSorting
+    | ClosedModalRequestingSponsor
+    | ClickedAcceptCodeOfConduct
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -955,31 +1005,38 @@ update msg model ({ shared, accountName } as loggedIn) =
         NoOp ->
             UR.init model
 
-        ClosedAuthModal ->
-            { model | claimModalStatus = Claim.Closed }
-                |> UR.init
-
         CompletedLoadCommunity community ->
+            let
+                hasContributionConfiguration =
+                    case community.contributionConfiguration |> Maybe.andThen .paypalAccount of
+                        Just _ ->
+                            True
+
+                        Nothing ->
+                            False
+
+                markSponsorModalAsSeen =
+                    if hasContributionConfiguration then
+                        UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = { shared | hasSeenSponsorModal = True } })
+                            >> UR.addCmd (Ports.storeHasSeenSponsorModal True)
+
+                    else
+                        identity
+
+                showModalRequestingSponsor =
+                    hasContributionConfiguration && not shared.hasSeenSponsorModal
+            in
             UR.init
                 { model
                     | balance = RemoteData.Loading
                     , analysis = LoadingGraphql Nothing
+                    , showModalRequestingSponsor = showModalRequestingSponsor
+                    , showContactModal = not showModalRequestingSponsor && shouldShowContactModal loggedIn model
                 }
                 |> UR.addCmd (fetchBalance shared accountName community)
-                |> UR.addCmd (fetchAvailableAnalysis loggedIn Nothing model.analysisFilter community)
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing model)
-
-        CompletedLoadProfile profile ->
-            let
-                addContactLimitDate =
-                    -- 01/01/2022
-                    1641006000000
-
-                showContactModalFromDate =
-                    addContactLimitDate - Time.posixToMillis shared.now > 0
-            in
-            { model | showContactModal = showContactModalFromDate && List.isEmpty profile.contacts }
-                |> UR.init
+                |> UR.addExt (fetchAvailableAnalysis loggedIn Nothing community)
+                |> UR.addExt (fetchTransfers loggedIn community Nothing model)
+                |> markSponsorModalAsSeen
 
         CompletedLoadBalance (Ok balance) ->
             UR.init { model | balance = RemoteData.Success balance }
@@ -995,29 +1052,19 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         ClaimsLoaded (RemoteData.Success claims) ->
             let
-                wrappedClaims =
-                    List.map ClaimLoaded (Claim.paginatedToList claims)
-
-                initProfileSummaries cs =
-                    List.map (unwrapClaimStatus >> Claim.initClaimProfileSummaries) cs
+                analysis =
+                    { claims = Claim.paginatedToList claims
+                    , count =
+                        claims
+                            |> Maybe.andThen .count
+                            |> Maybe.withDefault 0
+                    }
             in
-            case model.analysis of
-                LoadedGraphql existingClaims _ ->
-                    { model
-                        | analysis = LoadedGraphql (existingClaims ++ wrappedClaims) (Claim.paginatedPageInfo claims)
-                        , profileSummaries = initProfileSummaries (existingClaims ++ wrappedClaims)
-                    }
-                        |> UR.init
-
-                _ ->
-                    { model
-                        | analysis = LoadedGraphql wrappedClaims (Claim.paginatedPageInfo claims)
-                        , profileSummaries = initProfileSummaries wrappedClaims
-                    }
-                        |> UR.init
+            { model | analysis = LoadedGraphql analysis (Claim.paginatedPageInfo claims) }
+                |> UR.init
 
         ClaimsLoaded (RemoteData.Failure err) ->
-            { model | analysis = FailedGraphql err }
+            { model | analysis = FailedGraphql }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -1058,7 +1105,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         CompletedLoadUserTransfers (RemoteData.Failure err) ->
-            { model | transfers = FailedGraphql err }
+            { model | transfers = FailedGraphql }
                 |> UR.init
                 |> UR.logGraphqlError msg
                     (Just loggedIn.accountName)
@@ -1069,124 +1116,6 @@ update msg model ({ shared, accountName } as loggedIn) =
 
         CompletedLoadUserTransfers _ ->
             UR.init model
-
-        ClaimMsg claimIndex m ->
-            let
-                updatedProfileSummaries =
-                    case m of
-                        Claim.GotExternalMsg subMsg ->
-                            List.updateAt claimIndex (Claim.updateProfileSummaries subMsg) model.profileSummaries
-
-                        _ ->
-                            model.profileSummaries
-            in
-            { model | profileSummaries = updatedProfileSummaries }
-                |> Claim.updateClaimModalStatus m
-                |> UR.init
-
-        VoteClaim claimId vote ->
-            case model.analysis of
-                LoadedGraphql claims pageInfo ->
-                    let
-                        newClaims =
-                            setClaimStatus claims claimId ClaimLoading
-
-                        newModel =
-                            { model
-                                | analysis = LoadedGraphql newClaims pageInfo
-                                , claimModalStatus = Claim.Closed
-                            }
-                    in
-                    UR.init newModel
-                        |> UR.addPort
-                            { responseAddress = msg
-                            , responseData = Encode.null
-                            , data =
-                                Eos.encodeTransaction
-                                    [ { accountName = loggedIn.shared.contracts.community
-                                      , name = "verifyclaim"
-                                      , authorization =
-                                            { actor = loggedIn.accountName
-                                            , permissionName = Eos.samplePermission
-                                            }
-                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
-                                      }
-                                    ]
-                            }
-                        |> LoggedIn.withAuthentication loggedIn
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                _ ->
-                    model
-                        |> UR.init
-
-        GotVoteResult claimId (Ok _) ->
-            case model.analysis of
-                LoadedGraphql claims pageInfo ->
-                    let
-                        maybeClaim : Maybe Claim.Model
-                        maybeClaim =
-                            findClaim claims claimId
-
-                        message val =
-                            [ ( "value", val ) ]
-                                |> loggedIn.shared.translators.tr "claim.reward"
-                    in
-                    case maybeClaim of
-                        Just claim ->
-                            let
-                                value =
-                                    String.fromFloat claim.action.verifierReward
-                                        ++ " "
-                                        ++ Eos.symbolToSymbolCodeString claim.action.objective.community.symbol
-
-                                cmd =
-                                    case ( pageInfo, loggedIn.selectedCommunity ) of
-                                        ( Just page, RemoteData.Success community ) ->
-                                            if page.hasNextPage then
-                                                fetchAvailableAnalysis loggedIn page.endCursor model.analysisFilter community
-
-                                            else
-                                                Cmd.none
-
-                                        ( _, _ ) ->
-                                            Cmd.none
-                            in
-                            { model
-                                | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoted) pageInfo
-                            }
-                                |> UR.init
-                                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd cmd
-
-                        Nothing ->
-                            model
-                                |> UR.init
-
-                _ ->
-                    model |> UR.init
-
-        GotVoteResult claimId (Err eosErrorString) ->
-            let
-                errorMessage =
-                    EosError.parseClaimError loggedIn.shared.translators eosErrorString
-            in
-            case model.analysis of
-                LoadedGraphql claims pageInfo ->
-                    let
-                        updateShowClaimModal profileSummary =
-                            { profileSummary | showClaimModal = False }
-                    in
-                    { model
-                        | analysis = LoadedGraphql (setClaimStatus claims claimId ClaimVoteFailed) pageInfo
-                        , profileSummaries = List.map updateShowClaimModal model.profileSummaries
-                    }
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
-
-                _ ->
-                    model |> UR.init
 
         GotTransferCardProfileSummaryMsg transferId subMsg ->
             let
@@ -1212,7 +1141,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     }
                         |> UR.init
 
-                FailedGraphql _ ->
+                FailedGraphql ->
                     model
                         |> UR.init
 
@@ -1226,7 +1155,7 @@ update msg model ({ shared, accountName } as loggedIn) =
                     in
                     { model | transfers = LoadingGraphql (Just transfers) }
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor model)
+                        |> UR.addExt (fetchTransfers loggedIn community maybeCursor model)
 
                 _ ->
                     model
@@ -1237,175 +1166,35 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
 
         ClosedTransfersFilters ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | showTransferFiltersModal = False
-                , transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | otherAccountInput =
-                            Maybe.map (.account >> Eos.nameToString) model.transfersFilters.otherAccount
-                                |> Maybe.withDefault ""
-                        , filters = model.transfersFilters
-                    }
-            }
+            { model | showTransferFiltersModal = False }
                 |> UR.init
 
-        SelectedTransfersDirection maybeDirection ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
+        GotTransfersFiltersFormMsg subMsg ->
+            Form.update shared subMsg model.transferFiltersForm
+                |> UR.fromChild (\newForm -> { model | transferFiltersForm = newForm })
+                    GotTransfersFiltersFormMsg
+                    LoggedIn.addFeedback
+                    model
 
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | direction = maybeDirection }
-                    }
-            }
-                |> UR.init
-
-        TransfersFiltersDatePickerMsg subMsg ->
-            let
-                ( newDatePicker, datePickerEvent ) =
-                    DatePicker.update (datePickerSettings shared)
-                        subMsg
-                        model.transfersFiltersBeingEdited.datePicker
-
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-
-                newDate =
-                    case datePickerEvent of
-                        DatePicker.Picked pickedDate ->
-                            Just pickedDate
-
-                        _ ->
-                            oldFilters.date
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | datePicker = newDatePicker
-                        , filters = { oldFilters | date = newDate }
-                    }
-            }
-                |> UR.init
-
-        ClickedTransfersFiltersCalendar ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Browser.Dom.focus "transfers-filters-date-input"
-                        |> Task.attempt (\_ -> NoOp)
-                    )
-
-        ClickedClearTransfersFiltersDate ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | date = Nothing }
-                    }
-            }
-                |> UR.init
-
-        GotTransfersFiltersProfileSummaryMsg subMsg ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | otherAccountProfileSummary =
-                            Profile.Summary.update subMsg oldFiltersBeingEdited.otherAccountProfileSummary
-                    }
-            }
-                |> UR.init
-
-        ClickedClearTransfersFiltersUser ->
-            let
-                oldFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldFiltersBeingEdited
-                        | filters = { oldFilters | otherAccount = Nothing }
-                        , otherAccountInput = ""
-                    }
-            }
-                |> UR.init
-
-        TransfersFiltersOtherAccountSelectMsg subMsg ->
-            let
-                ( updated, cmd ) =
-                    Select.update (selectConfiguration loggedIn.shared)
-                        subMsg
-                        model.transfersFiltersBeingEdited.otherAccountState
-
-                oldTransfersFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldTransfersFiltersBeingEdited
-                        | otherAccountState = updated
-                    }
-            }
-                |> UR.init
-                |> UR.addCmd cmd
-
-        SelectedTransfersFiltersOtherAccount maybeMinimalProfile ->
-            let
-                oldTransfersFiltersBeingEdited =
-                    model.transfersFiltersBeingEdited
-
-                oldFilters =
-                    oldTransfersFiltersBeingEdited.filters
-            in
-            { model
-                | transfersFiltersBeingEdited =
-                    { oldTransfersFiltersBeingEdited
-                        | filters =
-                            { oldFilters
-                                | otherAccount = maybeMinimalProfile
-                            }
-                    }
-            }
-                |> UR.init
-
-        ClickedApplyTransfersFilters ->
+        SubmittedTransfersFiltersForm formOutput ->
             case loggedIn.selectedCommunity of
                 RemoteData.Success community ->
                     let
                         newModel =
                             { model
-                                | transfersFilters = model.transfersFiltersBeingEdited.filters
+                                | transfersFilters = formOutput
                                 , showTransferFiltersModal = False
                                 , transfers = LoadingGraphql Nothing
                             }
                     in
                     newModel
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community Nothing newModel)
+                        |> UR.addExt
+                            (fetchTransfers loggedIn
+                                community
+                                Nothing
+                                newModel
+                            )
 
                 _ ->
                     model
@@ -1421,20 +1210,41 @@ update msg model ({ shared, accountName } as loggedIn) =
                 |> UR.init
                 |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.ViewTransfer transferId))
 
+        ClickedSupportUsButton ->
+            { model | showModalRequestingSponsor = True }
+                |> UR.init
+
         CreateInvite ->
-            case model.balance of
-                RemoteData.Success (Just b) ->
-                    UR.init
-                        { model | inviteModalStatus = InviteModalLoading }
-                        |> UR.addCmd
-                            (CompletedInviteCreation
-                                |> Api.communityInvite loggedIn.shared b.asset.symbol loggedIn.accountName
-                            )
+            case loggedIn.profile of
+                RemoteData.Success profile ->
+                    if LoggedIn.hasPermissions profile [ Permission.Invite ] then
+                        case model.balance of
+                            RemoteData.Success (Just b) ->
+                                UR.init
+                                    { model | inviteModalStatus = InviteModalLoading }
+                                    |> UR.addCmd
+                                        (CompletedInviteCreation
+                                            |> Api.communityInvite loggedIn.shared b.asset.symbol loggedIn.accountName
+                                        )
+
+                            _ ->
+                                UR.init model
+                                    |> UR.logImpossible msg
+                                        "Created invitation, but balance wasn't loaded"
+                                        (Just loggedIn.accountName)
+                                        { moduleName = "Page.Dashboard", function = "update" }
+                                        []
+
+                    else
+                        model
+                            |> UR.init
+                            |> UR.addExt LoggedIn.ShowInsufficientPermissionsModal
 
                 _ ->
-                    UR.init model
+                    model
+                        |> UR.init
                         |> UR.logImpossible msg
-                            "Created invitation, but balance wasn't loaded"
+                            "Tried creating invitation, but profile wasn't loaded"
                             (Just loggedIn.accountName)
                             { moduleName = "Page.Dashboard", function = "update" }
                             []
@@ -1443,40 +1253,32 @@ update msg model ({ shared, accountName } as loggedIn) =
             case LoggedIn.profile loggedIn of
                 Just userProfile ->
                     let
-                        ( contactModel, cmd, contactResponse ) =
-                            Contact.update subMsg
-                                model.contactModel
-                                loggedIn.shared
-                                loggedIn.authToken
-                                userProfile.contacts
-
-                        addContactResponse model_ =
-                            case contactResponse of
-                                Contact.NotAsked ->
-                                    model_
-                                        |> UR.init
-
-                                Contact.WithError errorMessage ->
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
-
-                                Contact.WithContacts successMessage contacts _ ->
-                                    let
-                                        newProfile =
-                                            { userProfile | contacts = contacts }
-                                    in
-                                    { model_ | showContactModal = False }
-                                        |> UR.init
-                                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
-                                        |> UR.addExt
-                                            (LoggedIn.ProfileLoaded newProfile
+                        handleExtMsg extMsg =
+                            case extMsg of
+                                Contact.GotContacts successMessage contacts _ ->
+                                    UR.mapModel (\model_ -> { model_ | showContactModal = False })
+                                        >> UR.addExt (LoggedIn.ShowFeedback Feedback.Success successMessage)
+                                        >> UR.addExt
+                                            ({ userProfile | contacts = contacts }
+                                                |> LoggedIn.ProfileLoaded
                                                 |> LoggedIn.ExternalBroadcast
                                             )
+
+                                Contact.GotContactsError errorMessage ->
+                                    UR.mapModel (\model_ -> { model_ | showContactModal = False })
+                                        >> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
+
+                                Contact.GotMutationRequest selectionSet responseMsg ->
+                                    UR.addExt (LoggedIn.mutation loggedIn selectionSet (responseMsg >> GotContactMsg))
                     in
-                    { model | contactModel = contactModel }
-                        |> addContactResponse
-                        |> UR.addCmd (Cmd.map GotContactMsg cmd)
+                    Contact.update subMsg
+                        model.contactModel
+                        loggedIn.shared.translators
+                        userProfile.contacts
+                        |> UR.fromChild (\newContactModel -> { model | contactModel = newContactModel })
+                            GotContactMsg
+                            handleExtMsg
+                            model
 
                 Nothing ->
                     model |> UR.init
@@ -1495,6 +1297,10 @@ update msg model ({ shared, accountName } as loggedIn) =
         CompletedInviteCreation (Ok invitationId) ->
             { model | inviteModalStatus = InviteModalLoaded invitationId }
                 |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.focus "copy-invite-button"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         CompletedInviteCreation (Err httpError) ->
             UR.init
@@ -1523,35 +1329,42 @@ update msg model ({ shared, accountName } as loggedIn) =
             { model | copied = True }
                 |> UR.init
 
-        ToggleAnalysisSorting ->
+        ClosedModalRequestingSponsor ->
             let
                 newModel =
-                    { model
-                        | analysisFilter =
-                            case model.analysisFilter of
-                                ASC ->
-                                    DESC
-
-                                DESC ->
-                                    ASC
-                        , analysis = LoadingGraphql Nothing
-                    }
-
-                fetchCmd =
-                    case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            fetchAvailableAnalysis loggedIn Nothing newModel.analysisFilter community
-
-                        _ ->
-                            Cmd.none
+                    { model | showModalRequestingSponsor = False }
             in
-            newModel
+            { newModel | showContactModal = shouldShowContactModal loggedIn newModel }
                 |> UR.init
-                |> UR.addCmd fetchCmd
+
+        ClickedAcceptCodeOfConduct ->
+            model
+                |> UR.init
+                |> UR.addExt LoggedIn.ShowCodeOfConductModal
 
 
 
 -- HELPERS
+
+
+shouldShowContactModal : LoggedIn.Model -> Model -> Bool
+shouldShowContactModal loggedIn model =
+    case loggedIn.profile of
+        RemoteData.Success profile ->
+            let
+                addContactLimitDate =
+                    -- 28/01/2022
+                    1643374799000
+
+                showContactModalFromDate =
+                    addContactLimitDate - Time.posixToMillis loggedIn.shared.now > 0
+            in
+            showContactModalFromDate
+                && List.isEmpty profile.contacts
+                && not model.showModalRequestingSponsor
+
+        _ ->
+            False
 
 
 fetchBalance : Shared -> Eos.Name -> Community.Model -> Cmd Msg
@@ -1575,10 +1388,9 @@ fetchBalance shared accountName community =
         )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> Cmd Msg
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Model -> LoggedIn.External Msg
 fetchTransfers loggedIn community maybeCursor model =
-    Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+    LoggedIn.query loggedIn
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->
@@ -1612,8 +1424,8 @@ fetchTransfers loggedIn community maybeCursor model =
         CompletedLoadUserTransfers
 
 
-fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Direction -> Community.Model -> Cmd Msg
-fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
+fetchAvailableAnalysis : LoggedIn.Model -> Maybe String -> Community.Model -> LoggedIn.External Msg
+fetchAvailableAnalysis loggedIn maybeCursor community =
     let
         arg =
             { communityId = Eos.symbolToString community.symbol
@@ -1628,7 +1440,7 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
                                 Present 1
 
                             Nothing ->
-                                Present 4
+                                Present 5
                     , after =
                         case maybeCursor of
                             Nothing ->
@@ -1643,70 +1455,19 @@ fetchAvailableAnalysis { shared, authToken } maybeCursor direction community =
                         (\claimsFilter ->
                             { claimsFilter
                                 | direction =
-                                    case direction of
-                                        ASC ->
-                                            Present Cambiatus.Enum.Direction.Asc
-
-                                        DESC ->
-                                            Present Cambiatus.Enum.Direction.Desc
+                                    Present Cambiatus.Enum.Direction.Desc
                             }
                         )
                             |> Cambiatus.InputObject.buildClaimsFilter
                             |> Present
                 }
     in
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.pendingClaims optionalArguments arg Claim.claimPaginatedSelectionSet)
+    LoggedIn.query loggedIn
+        (Cambiatus.Query.pendingClaims optionalArguments
+            arg
+            (Claim.claimPaginatedSelectionSet loggedIn.shared.now)
+        )
         ClaimsLoaded
-
-
-setClaimStatus : List ClaimStatus -> Claim.ClaimId -> (Claim.Model -> ClaimStatus) -> List ClaimStatus
-setClaimStatus claims claimId status =
-    claims
-        |> List.map
-            (\c ->
-                case c of
-                    ClaimLoaded c_ ->
-                        if c_.id == claimId then
-                            status c_
-
-                        else
-                            c
-
-                    ClaimLoading c_ ->
-                        if c_.id == claimId then
-                            status c_
-
-                        else
-                            c
-
-                    _ ->
-                        c
-            )
-
-
-findClaim : List ClaimStatus -> Claim.ClaimId -> Maybe Claim.Model
-findClaim claims claimId =
-    claims
-        |> List.map unwrapClaimStatus
-        |> List.find (\c -> c.id == claimId)
-
-
-unwrapClaimStatus : ClaimStatus -> Claim.Model
-unwrapClaimStatus claimStatus =
-    case claimStatus of
-        ClaimLoaded claim ->
-            claim
-
-        ClaimLoading claim ->
-            claim
-
-        ClaimVoted claim ->
-            claim
-
-        ClaimVoteFailed claim ->
-            claim
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -1715,34 +1476,13 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
-        LoggedIn.ProfileLoaded profile ->
-            Just (CompletedLoadProfile profile)
-
         _ ->
             Nothing
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
-jsAddressToMsg addr val =
+jsAddressToMsg addr _ =
     case addr of
-        "VoteClaim" :: claimId :: _ ->
-            let
-                id =
-                    String.toInt claimId
-                        |> Maybe.withDefault 0
-            in
-            Decode.decodeValue
-                (Decode.oneOf
-                    [ Decode.field "transactionId" Decode.string
-                        |> Decode.map Ok
-                    , Decode.field "error" (Decode.nullable Decode.value)
-                        |> Decode.map Err
-                    ]
-                )
-                val
-                |> Result.map (Just << GotVoteResult id)
-                |> Result.withDefault Nothing
-
         "CopiedToClipboard" :: _ ->
             Just CopiedToClipboard
 
@@ -1756,14 +1496,8 @@ msgToString msg =
         NoOp ->
             [ "NoOp" ]
 
-        ClosedAuthModal ->
-            [ "ClosedAuthModal" ]
-
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
-
-        CompletedLoadProfile _ ->
-            [ "CompletedLoadProfile" ]
 
         CompletedLoadBalance result ->
             [ "CompletedLoadBalance", UR.resultToString result ]
@@ -1773,15 +1507,6 @@ msgToString msg =
 
         ClaimsLoaded result ->
             [ "ClaimsLoaded", UR.remoteDataToString result ]
-
-        ClaimMsg _ _ ->
-            [ "ClaimMsg" ]
-
-        VoteClaim claimId _ ->
-            [ "VoteClaim", String.fromInt claimId ]
-
-        GotVoteResult _ result ->
-            [ "GotVoteResult", UR.resultToString result ]
 
         GotTransferCardProfileSummaryMsg _ _ ->
             [ "GotTransferCardProfileSummaryMsg" ]
@@ -1795,35 +1520,17 @@ msgToString msg =
         ClosedTransfersFilters ->
             [ "ClosedTransfersFilters" ]
 
-        SelectedTransfersDirection _ ->
-            [ "SelectedTransfersDirection" ]
+        GotTransfersFiltersFormMsg subMsg ->
+            "GotTransfersFiltersFormMsg" :: Form.msgToString subMsg
 
-        TransfersFiltersDatePickerMsg _ ->
-            [ "TransfersFiltersDatePickerMsg" ]
-
-        ClickedTransfersFiltersCalendar ->
-            [ "ClickedTransfersFiltersCalendar" ]
-
-        ClickedClearTransfersFiltersDate ->
-            [ "ClickedClearTransfersFiltersDate" ]
-
-        GotTransfersFiltersProfileSummaryMsg subMsg ->
-            "GotTransfersFiltersProfileSummaryMsg" :: Profile.Summary.msgToString subMsg
-
-        ClickedClearTransfersFiltersUser ->
-            [ "ClickedClearTransfersFiltersUser" ]
-
-        TransfersFiltersOtherAccountSelectMsg _ ->
-            [ "TransfersFiltersOtherAccountSelectMsg" ]
-
-        SelectedTransfersFiltersOtherAccount _ ->
-            [ "SelectedTransfersFiltersOtherAccount" ]
-
-        ClickedApplyTransfersFilters ->
-            [ "ClickedApplyTransfersFilters" ]
+        SubmittedTransfersFiltersForm _ ->
+            [ "SubmittedTransfersFiltersForm" ]
 
         ClickedTransferCard _ ->
             [ "ClickedTransferCard" ]
+
+        ClickedSupportUsButton ->
+            [ "ClickedSupportUsButton" ]
 
         CreateInvite ->
             [ "CreateInvite" ]
@@ -1846,5 +1553,8 @@ msgToString msg =
         CopiedToClipboard ->
             [ "CopiedToClipboard" ]
 
-        ToggleAnalysisSorting ->
-            [ "ToggleAnalysisSorting" ]
+        ClosedModalRequestingSponsor ->
+            [ "ClosedModalRequestingSponsor" ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]

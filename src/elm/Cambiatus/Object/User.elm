@@ -4,6 +4,8 @@
 
 module Cambiatus.Object.User exposing (..)
 
+import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.Language
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -56,10 +58,20 @@ chatUserId =
     Object.selectionForField "(Maybe String)" "chatUserId" [] (Decode.string |> Decode.nullable)
 
 
+claimNotification : SelectionSet Bool Cambiatus.Object.User
+claimNotification =
+    Object.selectionForField "Bool" "claimNotification" [] Decode.bool
+
+
 type alias ClaimsOptionalArguments =
     { communityId : OptionalArgument String }
 
 
+{-|
+
+  - communityId - Optional community filter, filling this will get only claims from this community
+
+-}
 claims :
     (ClaimsOptionalArguments -> ClaimsOptionalArguments)
     -> SelectionSet decodesTo Cambiatus.Object.Claim
@@ -90,6 +102,52 @@ contacts object_ =
     Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
 
 
+type alias ContributionCountOptionalArguments =
+    { communityId : OptionalArgument String }
+
+
+{-|
+
+  - communityId - Optional community filter, filling this will get only contributions from this community
+
+-}
+contributionCount :
+    (ContributionCountOptionalArguments -> ContributionCountOptionalArguments)
+    -> SelectionSet Int Cambiatus.Object.User
+contributionCount fillInOptionals =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForField "Int" "contributionCount" optionalArgs Decode.int
+
+
+type alias ContributionsOptionalArguments =
+    { communityId : OptionalArgument String
+    , status : OptionalArgument Cambiatus.Enum.ContributionStatusType.ContributionStatusType
+    }
+
+
+contributions :
+    (ContributionsOptionalArguments -> ContributionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
+contributions fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { communityId = Absent, status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "communityId" filledInOptionals.communityId Encode.string, Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
+
+
 createdAt : SelectionSet (Maybe String) Cambiatus.Object.User
 createdAt =
     Object.selectionForField "(Maybe String)" "createdAt" [] (Decode.string |> Decode.nullable)
@@ -103,6 +161,11 @@ createdBlock =
 createdEosAccount : SelectionSet (Maybe String) Cambiatus.Object.User
 createdEosAccount =
     Object.selectionForField "(Maybe String)" "createdEosAccount" [] (Decode.string |> Decode.nullable)
+
+
+digest : SelectionSet Bool Cambiatus.Object.User
+digest =
+    Object.selectionForField "Bool" "digest" [] Decode.bool
 
 
 email : SelectionSet (Maybe String) Cambiatus.Object.User
@@ -136,6 +199,16 @@ kyc object_ =
     Object.selectionForCompositeField "kyc" [] object_ (identity >> Decode.nullable)
 
 
+language : SelectionSet (Maybe Cambiatus.Enum.Language.Language) Cambiatus.Object.User
+language =
+    Object.selectionForField "(Maybe Enum.Language.Language)" "language" [] (Cambiatus.Enum.Language.decoder |> Decode.nullable)
+
+
+latestAcceptedTerms : SelectionSet (Maybe Cambiatus.ScalarCodecs.NaiveDateTime) Cambiatus.Object.User
+latestAcceptedTerms =
+    Object.selectionForField "(Maybe ScalarCodecs.NaiveDateTime)" "latestAcceptedTerms" [] (Cambiatus.ScalarCodecs.codecs |> Cambiatus.Scalar.unwrapCodecs |> .codecNaiveDateTime |> .decoder |> Decode.nullable)
+
+
 location : SelectionSet (Maybe String) Cambiatus.Object.User
 location =
     Object.selectionForField "(Maybe String)" "location" [] (Decode.string |> Decode.nullable)
@@ -158,6 +231,18 @@ products :
     -> SelectionSet (List (Maybe decodesTo)) Cambiatus.Object.User
 products object_ =
     Object.selectionForCompositeField "products" [] object_ (identity >> Decode.nullable >> Decode.list)
+
+
+roles :
+    SelectionSet decodesTo Cambiatus.Object.Role
+    -> SelectionSet (List decodesTo) Cambiatus.Object.User
+roles object_ =
+    Object.selectionForCompositeField "roles" [] object_ (identity >> Decode.list)
+
+
+transferNotification : SelectionSet Bool Cambiatus.Object.User
+transferNotification =
+    Object.selectionForField "Bool" "transferNotification" [] Decode.bool
 
 
 type alias TransfersOptionalArguments =

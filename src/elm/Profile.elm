@@ -1,29 +1,36 @@
 module Profile exposing
     ( Basic
     , CommunityInfo
+    , Contribution
     , DeleteKycAndAddressResult
     , Minimal
     , Model
     , ProfileForm
+    , contributionCountQuery
+    , contributionsQuery
     , deleteKycAndAddressMutation
     , minimalSelectionSet
     , mutation
     , profileToForm
     , query
-    , selectConfig
-    , selectFilter
     , selectionSet
     , upsertKycMutation
+    , userContactSelectionSet
     , viewEmpty
-    , viewProfileName
     , viewProfileNameTag
     )
 
 import Avatar exposing (Avatar)
+import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.CurrencyType
+import Cambiatus.Enum.Language
+import Cambiatus.Enum.Permission exposing (Permission)
 import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
-import Cambiatus.Object.DeleteKycAddress
+import Cambiatus.Object.Contribution
+import Cambiatus.Object.DeleteStatus
+import Cambiatus.Object.Role
 import Cambiatus.Object.Subdomain as Subdomain
 import Cambiatus.Object.User as User
 import Cambiatus.Query
@@ -34,14 +41,16 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
-import Html exposing (Html, div, p, span, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, div, p, text)
+import Html.Attributes exposing (class, classList)
+import Iso8601
 import Kyc exposing (ProfileKyc)
+import Markdown exposing (Markdown)
 import Profile.Address as Address exposing (Address)
 import Profile.Contact as Contact
-import Select
-import Session.Shared exposing (Shared)
-import Simple.Fuzzy
+import Time
+import Translation
+import Utils
 
 
 type alias Basic a =
@@ -50,7 +59,7 @@ type alias Basic a =
         , account : Eos.Name
         , avatar : Avatar
         , email : Maybe String
-        , bio : Maybe String
+        , bio : Maybe Markdown
         , contacts : List Contact.Normalized
     }
 
@@ -60,8 +69,15 @@ type alias Minimal =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , contacts : List Contact.Normalized
+    }
+
+
+type alias Role =
+    { color : Maybe String
+    , name : String
+    , permissions : List Permission
     }
 
 
@@ -70,14 +86,20 @@ type alias Model =
     , account : Eos.Name
     , avatar : Avatar
     , email : Maybe String
-    , bio : Maybe String
+    , bio : Maybe Markdown
     , localization : Maybe String
     , contacts : List Contact.Normalized
     , interests : List String
     , communities : List CommunityInfo
+    , roles : List Role
     , analysisCount : Int
     , kyc : Maybe ProfileKyc
     , address : Maybe Address
+    , claimNotification : Bool
+    , digest : Bool
+    , transferNotification : Bool
+    , preferredLanguage : Maybe Translation.Language
+    , latestAcceptedTerms : Maybe Time.Posix
     }
 
 
@@ -98,6 +120,14 @@ userContactSelectionSet =
         |> SelectionSet.map (List.filterMap identity)
 
 
+roleSelectionSet : SelectionSet Role Cambiatus.Object.Role
+roleSelectionSet =
+    SelectionSet.succeed Role
+        |> with Cambiatus.Object.Role.color
+        |> with Cambiatus.Object.Role.name
+        |> with Cambiatus.Object.Role.permissions
+
+
 selectionSet : SelectionSet Model Cambiatus.Object.User
 selectionSet =
     SelectionSet.succeed Model
@@ -105,7 +135,7 @@ selectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with User.location
         |> with userContactSelectionSet
         |> with
@@ -116,9 +146,40 @@ selectionSet =
                     )
             )
         |> with (User.communities communityInfoSelectionSet)
+        |> with (User.roles roleSelectionSet)
         |> with User.analysisCount
         |> with (User.kyc Kyc.selectionSet)
         |> with (User.address Address.selectionSet)
+        |> with User.claimNotification
+        |> with User.digest
+        |> with User.transferNotification
+        |> with languageSelectionSet
+        |> with
+            (User.latestAcceptedTerms
+                |> SelectionSet.map (Maybe.map Utils.fromNaiveDateTime)
+            )
+
+
+languageSelectionSet : SelectionSet (Maybe Translation.Language) Cambiatus.Object.User
+languageSelectionSet =
+    User.language
+        |> SelectionSet.map
+            (Maybe.map
+                (\language ->
+                    case language of
+                        Cambiatus.Enum.Language.Amheth ->
+                            Translation.Amharic
+
+                        Cambiatus.Enum.Language.Enus ->
+                            Translation.English
+
+                        Cambiatus.Enum.Language.Eses ->
+                            Translation.Spanish
+
+                        Cambiatus.Enum.Language.Ptbr ->
+                            Translation.Portuguese
+                )
+            )
 
 
 minimalSelectionSet : SelectionSet Minimal Cambiatus.Object.User
@@ -128,7 +189,7 @@ minimalSelectionSet =
         |> with (Eos.nameSelectionSet User.account)
         |> with (Avatar.selectionSet User.avatar)
         |> with User.email
-        |> with User.bio
+        |> with (Markdown.maybeSelectionSet User.bio)
         |> with userContactSelectionSet
 
 
@@ -168,21 +229,80 @@ mutation form =
             Maybe.map Present form.avatar
                 |> Maybe.withDefault Absent
 
-        contactInput { contactType, contact } =
-            { type_ = Present contactType, externalId = Present contact }
+        contactInput { contactType, contact, label } =
+            { type_ = Present contactType
+            , externalId = Present contact
+            , label = Graphql.OptionalArgument.fromMaybe label
+            }
     in
-    Cambiatus.Mutation.updateUser
+    Cambiatus.Mutation.user
         { input =
             { name = Present form.name
             , email = Present form.email
-            , bio = Present form.bio
+            , claimNotification = Absent
+            , bio = Present (Markdown.toRawString form.bio)
             , contacts = Present (List.map (Contact.unwrap >> contactInput) form.contacts)
+            , digest = Absent
             , interests = Present interestString
             , location = Present form.localization
             , avatar = avatarInput
+            , transferNotification = Absent
             }
         }
         selectionSet
+
+
+
+-- CONTRIBUTION
+
+
+type alias Contribution =
+    { amount : Float
+    , insertedAt : Time.Posix
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    , status : Cambiatus.Enum.ContributionStatusType.ContributionStatusType
+    }
+
+
+contributionSelectionSet : Symbol -> SelectionSet (List Contribution) Cambiatus.Object.User
+contributionSelectionSet symbol =
+    let
+        selectionSet_ =
+            SelectionSet.succeed Contribution
+                |> with Cambiatus.Object.Contribution.amount
+                |> with
+                    (Cambiatus.Object.Contribution.insertedAt
+                        |> SelectionSet.map
+                            (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
+                                Iso8601.toTime naiveDateTime
+                                    |> Result.withDefault (Time.millisToPosix 0)
+                            )
+                    )
+                |> with Cambiatus.Object.Contribution.currency
+                |> with Cambiatus.Object.Contribution.status
+    in
+    User.contributions
+        (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
+        selectionSet_
+
+
+contributionsQuery : Symbol -> Eos.Name -> SelectionSet (Maybe (List Contribution)) RootQuery
+contributionsQuery symbol account =
+    Cambiatus.Query.user { account = Eos.nameToString account }
+        (contributionSelectionSet symbol)
+
+
+contributionCountSelectionSet : Symbol -> SelectionSet Int Cambiatus.Object.User
+contributionCountSelectionSet symbol =
+    User.contributionCount
+        (\optionals -> { optionals | communityId = Present (Eos.symbolToString symbol) })
+
+
+contributionCountQuery : Symbol -> Eos.Name -> SelectionSet (Maybe Int) RootQuery
+contributionCountQuery symbol account =
+    Cambiatus.Query.user
+        { account = Eos.nameToString account }
+        (contributionCountSelectionSet symbol)
 
 
 
@@ -214,11 +334,11 @@ type alias DeleteKycResult =
 
 
 deleteKycMutation : Eos.Name -> SelectionSet (Maybe DeleteKycResult) RootMutation
-deleteKycMutation account =
+deleteKycMutation _ =
     Cambiatus.Mutation.deleteKyc
         (SelectionSet.succeed DeleteKycResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 
@@ -229,11 +349,11 @@ type alias DeleteAddressResult =
 
 
 deleteAddressMutation : Eos.Name -> SelectionSet (Maybe DeleteAddressResult) RootMutation
-deleteAddressMutation account =
+deleteAddressMutation _ =
     Cambiatus.Mutation.deleteAddress
         (SelectionSet.succeed DeleteAddressResult
-            |> with Cambiatus.Object.DeleteKycAddress.status
-            |> with Cambiatus.Object.DeleteKycAddress.reason
+            |> with Cambiatus.Object.DeleteStatus.status
+            |> with Cambiatus.Object.DeleteStatus.reason
         )
 
 
@@ -257,7 +377,7 @@ deleteKycAndAddressMutation accountName =
 type alias ProfileForm =
     { name : String
     , email : String
-    , bio : String
+    , bio : Markdown
     , localization : String
     , avatar : Maybe String
     , contacts : List Contact.Normalized
@@ -271,7 +391,7 @@ profileToForm : Model -> ProfileForm
 profileToForm { name, email, bio, localization, avatar, interests, contacts } =
     { name = Maybe.withDefault "" name
     , email = Maybe.withDefault "" email
-    , bio = Maybe.withDefault "" bio
+    , bio = Maybe.withDefault Markdown.empty bio
     , localization = Maybe.withDefault "" localization
     , avatar = Avatar.toMaybeString avatar
     , contacts = contacts
@@ -285,18 +405,24 @@ profileToForm { name, email, bio, localization, avatar, interests, contacts } =
 -- View profile
 
 
-viewProfileNameTag : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileNameTag shared loggedInAccount profile =
-    div [ class "flex items-center bg-black rounded-label p-1" ]
-        [ p [ class "mx-2 pt-caption uppercase font-bold text-white text-caption text-center" ]
-            [ viewProfileName shared loggedInAccount profile ]
+viewProfileNameTag :
+    Translation.Translators
+    -> { showBg : Bool }
+    -> Eos.Name
+    -> { profile | account : Eos.Name, name : Maybe String }
+    -> Html msg
+viewProfileNameTag shared { showBg } loggedInAccount profile =
+    p
+        [ class "py-1 px-3 uppercase font-bold text-xs text-center truncate"
+        , classList [ ( "bg-black text-white rounded-label", showBg ) ]
         ]
+        [ viewProfileName shared loggedInAccount profile ]
 
 
-viewProfileName : Shared -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
-viewProfileName shared loggedInAccount profile =
+viewProfileName : Translation.Translators -> Eos.Name -> { profile | account : Eos.Name, name : Maybe String } -> Html msg
+viewProfileName translators loggedInAccount profile =
     if profile.account == loggedInAccount then
-        text (shared.translators.t "transfer_result.you")
+        text (translators.t "transfer_result.you")
 
     else
         case profile.name of
@@ -307,53 +433,11 @@ viewProfileName shared loggedInAccount profile =
                 Eos.viewName profile.account
 
 
-viewEmpty : Shared -> Html msg
-viewEmpty shared =
+viewEmpty : Translation.Translators -> Html msg
+viewEmpty translators =
     div
         []
         [ p
-            [ class "uppercase text-gray-900 text-caption" ]
-            [ text (shared.translators.t "profile.no_one") ]
-        ]
-
-
-
--- Autocomplete select
-
-
-selectConfig : Select.Config msg (Basic p) -> Shared -> Bool -> Select.Config msg (Basic p)
-selectConfig select shared isDisabled =
-    select
-        |> Select.withInputClass "form-input h-12 w-full placeholder-gray-900"
-        |> Select.withClear False
-        |> Select.withMultiInputItemContainerClass "hidden h-0"
-        |> Select.withNotFound (shared.translators.t "community.actions.form.verifier_not_found")
-        |> Select.withNotFoundClass "text-red border-solid border-gray-100 border rounded z-30 bg-white w-select"
-        |> Select.withNotFoundStyles [ ( "padding", "0 2rem" ) ]
-        |> Select.withDisabled isDisabled
-        |> Select.withHighlightedItemClass "autocomplete-item-highlight"
-        |> Select.withPrompt (shared.translators.t "community.actions.form.verifier_placeholder")
-        |> Select.withItemHtml (viewAutoCompleteItem shared)
-        |> Select.withMenuClass "w-full border-t-none border-solid border-gray-100 border rounded-sm z-30 bg-indigo-500 px-4 py-1"
-
-
-selectFilter : Int -> (a -> String) -> String -> List a -> Maybe (List a)
-selectFilter minChars toLabel q items =
-    if String.length q > minChars then
-        Just <| Simple.Fuzzy.filter toLabel q items
-
-    else
-        Nothing
-
-
-viewAutoCompleteItem : Shared -> Basic p -> Html Never
-viewAutoCompleteItem _ { avatar, name, account } =
-    div [ class "flex flex-row items-center z-30" ]
-        [ div [ class "pt-4 pr-4 pb-4 pl-4" ] [ Avatar.view avatar "h-10 w-10" ]
-        , div [ class "flex flex-col border-dotted border-b border-gray-500 pb-1 w-full" ]
-            [ span [ class "text-white text-body font-bold leading-loose" ]
-                [ text <| Maybe.withDefault "" name ]
-            , span [ class "font-light text-white" ]
-                [ text (Eos.nameToString account) ]
-            ]
+            [ class "uppercase text-gray-900 text-sm" ]
+            [ text (translators.t "profile.no_one") ]
         ]

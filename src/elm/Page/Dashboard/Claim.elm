@@ -1,7 +1,7 @@
 module Page.Dashboard.Claim exposing (Model, Msg, init, jsAddressToMsg, msgToString, update, view)
 
 import Action
-import Api.Graphql
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Query
 import Claim
 import Dict
@@ -9,18 +9,19 @@ import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
 import Graphql.Http
-import Html exposing (Html, button, div, h3, label, p, span, strong, text)
-import Html.Attributes exposing (class, classList)
+import Html exposing (Html, button, div, h3, p, span, strong, text)
+import Html.Attributes exposing (class, classList, disabled)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode as Encode
 import List.Extra as List
 import Log
+import Markdown
 import Page
 import Profile
 import Profile.Summary
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External)
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared, Translators)
 import Strftime
 import String.Extra
@@ -28,18 +29,21 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 
 
 
 -- INIT
 
 
-init : LoggedIn.Model -> Claim.ClaimId -> ( Model, Cmd Msg )
-init { shared, authToken } claimId =
-    ( initModel claimId
-    , fetchClaim claimId shared authToken
-    )
+init : LoggedIn.Model -> Claim.ClaimId -> UpdateResult
+init loggedIn claimId =
+    let
+        model =
+            initModel claimId
+    in
+    model
+        |> UR.init
+        |> UR.addExt (fetchClaim claimId loggedIn)
 
 
 
@@ -96,7 +100,7 @@ view ({ shared } as loggedIn) model =
             case model.statusClaim of
                 Loaded claim _ ->
                     claim.action.description
-                        |> View.MarkdownEditor.removeFormatting
+                        |> Markdown.toUnformattedString
                         |> String.Extra.softEllipsis 20
 
                 _ ->
@@ -112,7 +116,10 @@ view ({ shared } as loggedIn) model =
                         div [ class "bg-gray-100" ]
                             [ Page.viewHeader loggedIn title
                             , div [ class "mt-10 mb-8 flex items-center justify-center" ]
-                                [ Profile.Summary.view shared loggedIn.accountName claim.claimer profileSummaries.claimer
+                                [ Profile.Summary.view shared.translators
+                                    loggedIn.accountName
+                                    claim.claimer
+                                    profileSummaries.claimer
                                     |> Html.map (GotProfileSummaryMsg ClaimerSummary)
                                 ]
                             , div [ class "mx-auto container px-4" ]
@@ -131,7 +138,7 @@ view ({ shared } as loggedIn) model =
                                         Claim.isVotable claim loggedIn.accountName shared.now
                                             && not model.isValidated
                                     then
-                                        viewVoteButtons shared.translators claim.id model.claimModalStatus
+                                        viewVoteButtons loggedIn claim.id model.claimModalStatus
 
                                     else
                                         text ""
@@ -170,7 +177,7 @@ viewProofs { t } claim =
             case claim.proofCode of
                 Just proofCode ->
                     div [ class "ml-4" ]
-                        [ label [ class "input-label block" ]
+                        [ p [ class "label" ]
                             [ text (t "community.actions.form.verification_code") ]
                         , strong [ class "text-lg block" ] [ text proofCode ]
                         ]
@@ -196,13 +203,16 @@ viewProofs { t } claim =
             text ""
 
 
-viewVoteButtons : Translators -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
-viewVoteButtons ({ t } as translators) claimId modalStatus =
+viewVoteButtons : LoggedIn.Model -> Claim.ClaimId -> Claim.ModalStatus -> Html Msg
+viewVoteButtons loggedIn claimId modalStatus =
     let
+        { t } =
+            loggedIn.shared.translators
+
         viewVoteModal : Bool -> Bool -> Html Msg
         viewVoteModal isApproving isInProgress =
             Claim.viewVoteClaimModal
-                translators
+                loggedIn.shared.translators
                 { voteMsg = VoteClaim
                 , closeMsg = ClaimMsg Claim.CloseClaimModals
                 , claimId = claimId
@@ -217,11 +227,13 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
             [ button
                 [ class "button button-secondary text-red"
                 , onClick (ClaimMsg <| Claim.OpenVoteModal claimId False)
+                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                 ]
                 [ text <| t "dashboard.reject" ]
             , button
                 [ class "button button-primary"
                 , onClick (ClaimMsg <| Claim.OpenVoteModal claimId True)
+                , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                 ]
                 [ text <| t "dashboard.verify" ]
             ]
@@ -238,18 +250,22 @@ viewVoteButtons ({ t } as translators) claimId modalStatus =
 
 
 viewTitle : Shared -> Model -> Claim.Model -> Html msg
-viewTitle shared model claim =
+viewTitle shared _ claim =
     let
         text_ s =
             text (shared.translators.t s)
     in
-    div [ class "text-heading font-bold text-center mb-4" ]
+    div [ class "text-lg font-bold text-center mb-4" ]
         [ case claim.status of
             Claim.Approved ->
                 div [ class "inline-block" ]
                     [ text_ "claim.title_approved.1"
                     , span [ class "text-green ml-1" ] [ text_ "claim.title_approved.2" ]
                     ]
+
+            Claim.Cancelled _ ->
+                div [ class "inline-block" ]
+                    [ text_ "claim.title_action_completed" ]
 
             Claim.Rejected ->
                 div [ class "inline-block" ]
@@ -258,13 +274,7 @@ viewTitle shared model claim =
                     ]
 
             Claim.Pending ->
-                if claim.action.isCompleted then
-                    div
-                        [ class "inline-block" ]
-                        [ text_ "claim.title_action_completed"
-                        ]
-
-                else if Action.isClosed claim.action shared.now then
+                if Action.isClosed claim.action shared.now then
                     div
                         [ class "inline-block" ]
                         [ text_ "claim.title_action_closed"
@@ -280,7 +290,7 @@ viewTitle shared model claim =
 
 
 viewDetails : LoggedIn.Model -> Model -> Claim.Model -> Html msg
-viewDetails { shared } model claim =
+viewDetails { shared } _ claim =
     let
         text_ s =
             text (shared.translators.t s)
@@ -303,11 +313,8 @@ viewDetails { shared } model claim =
     div []
         [ Claim.viewVotingProgress shared completionStatus
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.action" ]
-            , View.MarkdownEditor.viewReadOnly [ class "mb-2 pt-2" ]
-                claim.action.description
+            [ p [ class "label" ] [ text_ "claim.action" ]
+            , Markdown.view [ class "mb-2" ] claim.action.description
             , if claim.action.isCompleted then
                 div [ class "flex mb-2" ]
                     [ div [ class "tag bg-green" ] [ text_ "community.actions.completed" ]
@@ -327,9 +334,8 @@ viewDetails { shared } model claim =
             [ div
                 [ class "flex justify-between lg:justify-start" ]
                 [ div [ class "mr-6" ]
-                    [ p [ class "text-caption uppercase text-green" ]
-                        [ text_ "claim.date" ]
-                    , p [ class "pt-2" ]
+                    [ p [ class "label" ] [ text_ "claim.date" ]
+                    , p []
                         [ text
                             (claim.createdAt
                                 |> Utils.fromDateTime
@@ -338,13 +344,8 @@ viewDetails { shared } model claim =
                         ]
                     ]
                 , div []
-                    [ p
-                        [ class "text-caption uppercase text-green" ]
-                        [ text_ "claim.claimer_reward" ]
-                    , p
-                        [ class "pt-2"
-                        , classList [ ( "text-red line-through", isRejected ) ]
-                        ]
+                    [ p [ class "label" ] [ text_ "claim.claimer_reward" ]
+                    , p [ classList [ ( "text-red line-through", isRejected ) ] ]
                         [ text
                             (String.fromFloat claim.action.reward
                                 ++ " "
@@ -355,18 +356,12 @@ viewDetails { shared } model claim =
                 ]
             ]
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.objective" ]
-            , View.MarkdownEditor.viewReadOnly [ class "pt-2" ]
-                claim.action.objective.description
+            [ p [ class "label" ] [ text_ "claim.objective" ]
+            , Markdown.view [] claim.action.objective.description
             ]
         , div [ class "mb-8" ]
-            [ p
-                [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.your_reward" ]
-            , p
-                [ class "pt-2" ]
+            [ p [ class "label" ] [ text_ "claim.your_reward" ]
+            , p []
                 [ text
                     (String.fromFloat claim.action.verifierReward
                         ++ " "
@@ -385,80 +380,70 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
     in
     div []
         [ div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.approved_by" ]
-            , div []
-                [ if List.isEmpty claim.checks then
-                    div [ class "flex mb-10" ]
-                        [ div [ class "pt-2" ] [ Profile.viewEmpty shared ]
-                        ]
+            [ p [ class "label" ] [ text_ "claim.approved_by" ]
+            , if List.isEmpty claim.checks then
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared.translators ]
 
-                  else
-                    div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.map3
-                            (\profileSummary index c ->
-                                if c.isApproved then
-                                    div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
-                                            |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                        ]
+              else
+                div [ class "flex flex-wrap -mx-2" ]
+                    (List.map3
+                        (\profileSummary index c ->
+                            if c.isApproved then
+                                div [ class "px-2" ]
+                                    [ Profile.Summary.view shared.translators
+                                        loggedIn.accountName
+                                        c.validator
+                                        profileSummary
+                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
+                                    ]
 
-                                else
-                                    text ""
-                            )
-                            profileSummaries.voter
-                            (List.range 0 (List.length profileSummaries.voter))
-                            claim.checks
+                            else
+                                text ""
                         )
-                ]
+                        profileSummaries.voter
+                        (List.range 0 (List.length profileSummaries.voter))
+                        claim.checks
+                    )
             ]
         , div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.disapproved_by" ]
-            , div [ class "flex mb-10 " ]
-                [ if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
-                    div [ class "pt-2" ] [ Profile.viewEmpty shared ]
+            [ p [ class "label" ] [ text_ "claim.disapproved_by" ]
+            , if List.filter (\check -> check.isApproved == False) claim.checks |> List.isEmpty then
+                div [ class "flex mb-10" ] [ Profile.viewEmpty shared.translators ]
 
-                  else
-                    div [ class "flex flex-wrap -mx-2 pt-2" ]
-                        (List.map3
-                            (\profileSummary index c ->
-                                if not c.isApproved then
-                                    div [ class "px-2" ]
-                                        [ Profile.Summary.view shared loggedIn.accountName c.validator profileSummary
-                                            |> Html.map (GotProfileSummaryMsg (VoterSummary index))
-                                        ]
+              else
+                div [ class "flex flex-wrap mb-10 -mx-2 pt-2" ]
+                    (List.map3
+                        (\profileSummary index c ->
+                            if not c.isApproved then
+                                div [ class "px-2" ]
+                                    [ Profile.Summary.view shared.translators loggedIn.accountName c.validator profileSummary
+                                        |> Html.map (GotProfileSummaryMsg (VoterSummary index))
+                                    ]
 
-                                else
-                                    text ""
-                            )
-                            profileSummaries.voter
-                            (List.range 0 (List.length profileSummaries.voter))
-                            claim.checks
+                            else
+                                text ""
                         )
-                ]
+                        profileSummaries.voter
+                        (List.range 0 (List.length profileSummaries.voter))
+                        claim.checks
+                    )
             ]
         , div [ class "mb-8" ]
-            [ p [ class "text-caption uppercase text-green" ]
-                [ text_ "claim.pending" ]
-            , div [ class "pt-2" ]
-                [ if List.length claim.checks == claim.action.verifications then
-                    div [ class "flex" ]
-                        [ Profile.viewEmpty shared
-                        ]
+            [ p [ class "label" ] [ text_ "claim.pending" ]
+            , if List.length claim.checks == claim.action.verifications then
+                div [ class "flex" ] [ Profile.viewEmpty shared.translators ]
 
-                  else
-                    div [ class "flex flex-row flex-wrap space-x-6" ]
-                        (pendingValidators claim
-                            |> List.map3
-                                (\profileSummary index v ->
-                                    Profile.Summary.view shared loggedIn.accountName v profileSummary
-                                        |> Html.map (GotProfileSummaryMsg (PendingSummary index))
-                                )
-                                profileSummaries.pending
-                                (List.range 0 (List.length profileSummaries.pending))
-                        )
-                ]
+              else
+                div [ class "flex flex-row flex-wrap space-x-6" ]
+                    (pendingValidators claim
+                        |> List.map3
+                            (\profileSummary index v ->
+                                Profile.Summary.view shared.translators loggedIn.accountName v profileSummary
+                                    |> Html.map (GotProfileSummaryMsg (PendingSummary index))
+                            )
+                            profileSummaries.pending
+                            (List.range 0 (List.length profileSummaries.pending))
+                    )
             ]
         ]
 
@@ -468,7 +453,7 @@ viewVoters ({ shared } as loggedIn) profileSummaries claim =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
@@ -548,7 +533,7 @@ update msg model loggedIn =
 
         VoteClaim claimId vote ->
             case model.statusClaim of
-                Loaded _ _ ->
+                Loaded claim _ ->
                     let
                         newModel =
                             { model
@@ -567,7 +552,11 @@ update msg model loggedIn =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
-                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      , data =
+                                            Claim.encodeVerification claimId
+                                                loggedIn.accountName
+                                                vote
+                                                claim.action.objective.community.symbol
                                       }
                                     ]
                             }
@@ -582,7 +571,8 @@ update msg model loggedIn =
                                     ]
                             , level = Log.Info
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
+                            [ Permission.Verify ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -676,12 +666,11 @@ update msg model loggedIn =
 -- HELPERS
 
 
-fetchClaim : Claim.ClaimId -> Shared -> String -> Cmd Msg
-fetchClaim claimId shared authToken =
-    Api.Graphql.query
-        shared
-        (Just authToken)
-        (Cambiatus.Query.claim { input = { id = claimId } } Claim.selectionSet)
+fetchClaim : Claim.ClaimId -> LoggedIn.Model -> LoggedIn.External Msg
+fetchClaim claimId loggedIn =
+    LoggedIn.query
+        loggedIn
+        (Cambiatus.Query.claim { id = claimId } (Claim.selectionSet loggedIn.shared.now))
         ClaimLoaded
 
 

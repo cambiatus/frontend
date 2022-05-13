@@ -10,9 +10,11 @@ module Page.Profile exposing
     )
 
 import Api
-import Api.Graphql
 import Api.Relay
 import Avatar
+import Cambiatus.Enum.ContactType as ContactType
+import Cambiatus.Enum.CurrencyType
+import Cambiatus.Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Claim
 import Cambiatus.Object.Network
@@ -24,12 +26,13 @@ import Community
 import Eos
 import Eos.Account as Eos
 import Eos.Explorer
+import Form.Toggle
 import Graphql.Http
 import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument as OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, href, id, target)
+import Html.Attributes exposing (class, classList, href, id, tabindex, target)
 import Html.Events exposing (onClick)
 import Http
 import Icons
@@ -38,6 +41,8 @@ import Json.Encode as Encode
 import Kyc
 import List.Extra as List
 import Log
+import Markdown
+import Maybe.Extra
 import Page exposing (Session(..))
 import Profile
 import Profile.Address
@@ -53,7 +58,6 @@ import UpdateResult as UR
 import Utils
 import View.Components
 import View.Feedback as Feedback
-import View.MarkdownEditor
 import View.Modal as Modal
 import View.Pin as Pin
 
@@ -67,6 +71,7 @@ type alias Model =
     , profile : RemoteData (QueryError (Graphql.Http.Error (Maybe Profile.Model))) Profile.Model
     , balance : RemoteData (QueryError Http.Error) Community.Balance
     , graphqlInfo : RemoteData (QueryError (Graphql.Http.Error (Maybe GraphqlInfo))) GraphqlInfo
+    , contributionInfo : Maybe ContributionInfo
     , transfersStatus : TransfersStatus
     , isDeleteKycModalVisible : Bool
     , downloadingPdfStatus : DownloadStatus
@@ -80,31 +85,26 @@ type alias Model =
 -- INIT
 
 
-init : LoggedIn.Model -> Eos.Name -> ( Model, Cmd Msg )
+init : LoggedIn.Model -> Eos.Name -> UpdateResult
 init loggedIn profileName =
     let
         fetchProfile =
             if loggedIn.accountName == profileName then
-                LoggedIn.maybeInitWith
-                    (Just >> RemoteData.Success >> CompletedLoadProfile)
-                    .profile
-                    loggedIn
+                UR.addCmd
+                    (LoggedIn.maybeInitWith
+                        (Just >> RemoteData.Success >> CompletedLoadProfile)
+                        .profile
+                        loggedIn
+                    )
 
             else
-                Api.Graphql.query loggedIn.shared
-                    (Just loggedIn.authToken)
-                    (Profile.query profileName)
-                    CompletedLoadProfile
-    in
-    ( { profileName = profileName
-      , profile = RemoteData.Loading
-      , balance = RemoteData.Loading
-      , graphqlInfo = RemoteData.Loading
-      , transfersStatus = Loading []
-      , isDeleteKycModalVisible = False
-      , downloadingPdfStatus = NotDownloading
-      , isNewPinModalVisible = False
-      , pinInputModel =
+                UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Profile.query profileName)
+                        CompletedLoadProfile
+                    )
+
+        ( pinModel, pinCmd ) =
             Pin.init
                 { label = "profile.newPin"
                 , id = "new-pin-input"
@@ -112,14 +112,29 @@ init loggedIn profileName =
                 , submitLabel = "profile.pin.button"
                 , submittingLabel = "profile.pin.button"
                 , pinVisibility = loggedIn.shared.pinVisibility
+                , lastKnownPin = loggedIn.auth.pinModel.lastKnownPin
                 }
-      , currentPin = Nothing
-      }
-    , Cmd.batch
-        [ fetchProfile
-        , LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn
-        ]
-    )
+
+        model =
+            { profileName = profileName
+            , profile = RemoteData.Loading
+            , balance = RemoteData.Loading
+            , graphqlInfo = RemoteData.Loading
+            , contributionInfo = Nothing
+            , transfersStatus = Loading []
+            , isDeleteKycModalVisible = False
+            , downloadingPdfStatus = NotDownloading
+            , isNewPinModalVisible = False
+            , pinInputModel = pinModel
+            , currentPin = Nothing
+            }
+    in
+    model
+        |> UR.init
+        |> fetchProfile
+        |> UR.addCmd (Cmd.map GotPinMsg pinCmd)
+        |> UR.addCmd (LoggedIn.maybeInitWith CompletedLoadCommunity .selectedCommunity loggedIn)
+        |> UR.addExt (LoggedIn.RequestedCommunityField Community.ContributionsField)
 
 
 
@@ -142,6 +157,12 @@ type alias GraphqlInfo =
     , totalClaims : Int
     , totalProducts : Int
     , createdDate : Maybe Time.Posix
+    }
+
+
+type alias ContributionInfo =
+    { amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
     }
 
 
@@ -178,9 +199,14 @@ type Msg
     = Ignored
     | CompletedLoadProfile (RemoteData (Graphql.Http.Error (Maybe Profile.Model)) (Maybe Profile.Model))
     | CompletedLoadCommunity Community.Model
+    | CompletedLoadContributions (List Community.Contribution)
     | CompletedLoadBalance (Result (QueryError Http.Error) Community.Balance)
     | CompletedLoadGraphqlInfo (RemoteData (Graphql.Http.Error (Maybe GraphqlInfo)) (Maybe GraphqlInfo))
     | CompletedLoadUserTransfers (RemoteData (Graphql.Http.Error (Maybe QueryTransfers)) (Maybe QueryTransfers))
+    | ToggledClaimNotification Bool
+    | ToggledTransferNotification Bool
+    | ToggledDigest Bool
+    | CompletedSettingNotificationPreferences (Maybe NotificationPreferences) (RemoteData (Graphql.Http.Error (Maybe NotificationPreferences)) (Maybe NotificationPreferences))
     | ToggleDeleteKycModal
     | DeleteKycAccepted
     | DeleteKycAndAddressCompleted (RemoteData (Graphql.Http.Error DeleteKycAndAddressResult) DeleteKycAndAddressResult)
@@ -191,7 +217,7 @@ type Msg
     | ClickedCloseNewPinModal
     | GotPinMsg Pin.Msg
     | SubmittedNewPin String
-    | PinChanged
+    | PinChanged String
     | GotTransferCardProfileSummaryMsg Int Profile.Summary.Msg
     | ClickedTransferCard Int
     | RequestedMoreTransfers
@@ -264,13 +290,33 @@ update msg model loggedIn =
             model
                 |> UR.init
                 |> UR.addCmd fetchBalance
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
                         (graphqlInfoQuery model.profileName community.symbol)
                         CompletedLoadGraphqlInfo
                     )
-                |> UR.addCmd (fetchTransfers loggedIn community Nothing)
+                |> UR.addExt (fetchTransfers loggedIn community Nothing)
+
+        CompletedLoadContributions contributions ->
+            let
+                userContributions =
+                    contributions
+                        |> List.filter (\contribution -> contribution.user.account == loggedIn.accountName)
+
+                contributionInfo : Maybe ContributionInfo
+                contributionInfo =
+                    case userContributions of
+                        [] ->
+                            Nothing
+
+                        first :: rest ->
+                            Just
+                                { amount = List.map .amount (first :: rest) |> List.sum
+                                , currency = first.currency
+                                }
+            in
+            { model | contributionInfo = contributionInfo }
+                |> UR.init
 
         CompletedLoadBalance (Ok balance) ->
             { model
@@ -398,6 +444,62 @@ update msg model loggedIn =
         CompletedLoadUserTransfers RemoteData.NotAsked ->
             UR.init model
 
+        ToggledClaimNotification newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | claimNotification = newValue })
+                (\optionals -> { optionals | claimNotification = OptionalArgument.Present newValue })
+
+        ToggledTransferNotification newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | transferNotification = newValue })
+                (\optionals -> { optionals | transferNotification = OptionalArgument.Present newValue })
+
+        ToggledDigest newValue ->
+            actOnNotificationPreferenceToggle loggedIn
+                model
+                (\profile -> { profile | digest = newValue })
+                (\optionals -> { optionals | digest = OptionalArgument.Present newValue })
+
+        CompletedSettingNotificationPreferences maybeOriginalPreferences (RemoteData.Failure err) ->
+            let
+                revertPreferences profileRemoteData =
+                    case maybeOriginalPreferences of
+                        Nothing ->
+                            profileRemoteData
+
+                        Just preferences ->
+                            case profileRemoteData of
+                                RemoteData.Success profile ->
+                                    { profile
+                                        | claimNotification = preferences.claim
+                                        , transferNotification = preferences.transfer
+                                        , digest = preferences.digest
+                                    }
+                                        |> RemoteData.Success
+
+                                _ ->
+                                    profileRemoteData
+            in
+            { model | profile = revertPreferences model.profile }
+                |> UR.init
+                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = revertPreferences loggedIn.profile })
+                |> UR.addExt
+                    (LoggedIn.ShowFeedback Feedback.Failure
+                        (loggedIn.shared.translators.t "profile.preferences.error")
+                    )
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when setting notification preferences"
+                    { moduleName = "Page.Profile", function = "update" }
+                    []
+                    err
+
+        CompletedSettingNotificationPreferences _ _ ->
+            -- We already do an optimistic update on the UI, so no need to do anything else
+            UR.init model
+
         ToggleDeleteKycModal ->
             { model | isDeleteKycModalVisible = not model.isDeleteKycModalVisible }
                 |> UR.init
@@ -405,9 +507,8 @@ update msg model loggedIn =
         DeleteKycAccepted ->
             { model | isDeleteKycModalVisible = False }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
+                |> UR.addExt
+                    (LoggedIn.mutation loggedIn
                         (Profile.deleteKycAndAddressMutation loggedIn.accountName)
                         DeleteKycAndAddressCompleted
                     )
@@ -442,7 +543,8 @@ update msg model loggedIn =
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             { model | downloadingPdfStatus = Downloading }
                 |> UR.init
@@ -455,7 +557,8 @@ update msg model loggedIn =
                             , ( "pin", Encode.string currentPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -484,7 +587,8 @@ update msg model loggedIn =
                 , pinInputModel = { oldPinInputModel | isPinVisible = loggedIn.auth.pinModel.isPinVisible }
             }
                 |> UR.init
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
@@ -493,28 +597,39 @@ update msg model loggedIn =
                 |> UR.init
 
         GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinInputModel
+            Pin.update loggedIn.shared subMsg model.pinInputModel
+                |> UR.fromChild (\pinModel -> { model | pinInputModel = pinModel })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (LoggedIn.executeFeedback feedback) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction newPinModel submitStatus loggedIn.shared SubmittedNewPin
-            in
-            { model | pinInputModel = newPinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinInputModel
+                                            pin
+                                            loggedIn.shared
+                                            SubmittedNewPin
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | shared = newShared })
+                    )
+                    model
 
         SubmittedNewPin newPin ->
             let
                 currentPin =
                     model.currentPin
-                        |> Maybe.withDefault loggedIn.auth.pinModel.pin
+                        |> Maybe.Extra.orElse loggedIn.auth.pinModel.lastKnownPin
+                        |> Maybe.withDefault ""
             in
             model
                 |> UR.init
                 |> UR.addPort
-                    { responseAddress = PinChanged
+                    { responseAddress = PinChanged newPin
                     , responseData = Encode.null
                     , data =
                         Encode.object
@@ -523,14 +638,15 @@ update msg model loggedIn =
                             , ( "newPin", Encode.string newPin )
                             ]
                     }
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = Ignored }
 
-        PinChanged ->
+        PinChanged newPin ->
             { model
                 | isNewPinModalVisible = False
-                , currentPin = Just model.pinInputModel.pin
+                , currentPin = Just newPin
             }
                 |> UR.init
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "profile.pin.successMsg"))
@@ -571,11 +687,61 @@ update msg model loggedIn =
                     in
                     { model | transfersStatus = Loading transfers }
                         |> UR.init
-                        |> UR.addCmd (fetchTransfers loggedIn community maybeCursor)
+                        |> UR.addExt (fetchTransfers loggedIn community maybeCursor)
 
                 _ ->
                     model
                         |> UR.init
+
+
+actOnNotificationPreferenceToggle :
+    LoggedIn.Model
+    -> Model
+    -> (Profile.Model -> Profile.Model)
+    -> (Cambiatus.Mutation.PreferenceOptionalArguments -> Cambiatus.Mutation.PreferenceOptionalArguments)
+    -> UpdateResult
+actOnNotificationPreferenceToggle loggedIn model updateProfile fillMutationArgs =
+    let
+        updatedProfile profileRemoteData =
+            case profileRemoteData of
+                RemoteData.Success profile ->
+                    RemoteData.Success (updateProfile profile)
+
+                _ ->
+                    profileRemoteData
+
+        originalPreferences =
+            let
+                profile =
+                    case loggedIn.profile of
+                        RemoteData.Success profile_ ->
+                            RemoteData.Success profile_
+
+                        _ ->
+                            model.profile
+            in
+            case profile of
+                RemoteData.Success validProfile ->
+                    Just
+                        { claim = validProfile.claimNotification
+                        , transfer = validProfile.transferNotification
+                        , digest = validProfile.digest
+                        }
+
+                _ ->
+                    Nothing
+    in
+    { model | profile = updatedProfile model.profile }
+        |> UR.init
+        |> UR.addExt
+            (LoggedIn.mutation loggedIn
+                (Cambiatus.Mutation.preference
+                    fillMutationArgs
+                    notificationsSelectionSet
+                )
+                (CompletedSettingNotificationPreferences originalPreferences)
+            )
+        |> UR.addExt (LoggedIn.UpdatedLoggedIn { loggedIn | profile = updatedProfile loggedIn.profile })
 
 
 
@@ -767,14 +933,17 @@ viewProfile loggedIn profile =
                     [ Avatar.view profile.avatar "w-20 h-20 mr-6 xs-max:w-16 xs-max:h-16 xs-max:mr-3"
                     , div [ class "flex flex-grow items-center justify-between" ]
                         [ ul [ class "text-sm text-gray-900" ]
-                            [ li [ class "font-medium text-body-black text-2xl xs-max:text-xl" ]
+                            [ li [ class "font-semibold text-body-black text-2xl xs-max:text-xl" ]
                                 [ text (Maybe.withDefault "" profile.name) ]
                             , li [] [ a [ href <| "mailto:" ++ email ] [ text email ] ]
                             , li [] [ text (Eos.nameToString profile.account) ]
                             ]
                         ]
                     , if isProfileOwner then
-                        a [ class "ml-2", Route.href Route.ProfileEditor ]
+                        a
+                            [ class "ml-2 fill-current text-orange-300 hover:text-orange-100"
+                            , Route.href Route.ProfileEditor
+                            ]
                             [ Icons.edit "" ]
 
                       else
@@ -785,8 +954,7 @@ viewProfile loggedIn profile =
                         text ""
 
                     Just bio ->
-                        View.MarkdownEditor.viewReadOnly [ class "text-sm text-gray-900" ]
-                            bio
+                        Markdown.view [ class "text-sm text-gray-900" ] bio
                 ]
                 :: (if isProfileOwner then
                         [ blockExplorerButton ]
@@ -794,7 +962,7 @@ viewProfile loggedIn profile =
                     else
                         [ a
                             [ class "button button-primary w-full mt-4"
-                            , Route.href (Route.Transfer (Just (Eos.nameToString profile.account)))
+                            , Route.href (Route.Transfer (Just profile.account))
                             ]
                             [ text_ "transfer.title" ]
                         , blockExplorerButton
@@ -804,13 +972,23 @@ viewProfile loggedIn profile =
                                     let
                                         { contactType } =
                                             Contact.unwrap contact
+
+                                        contactClass =
+                                            case contactType of
+                                                ContactType.Whatsapp ->
+                                                    "fill-current text-green"
+
+                                                _ ->
+                                                    ""
                                     in
                                     a
                                         [ class ("button-secondary uppercase bg-gray-100 py-2 flex items-center justify-center border-none hover:bg-gray-200 " ++ Contact.contactTypeTextColor contactType)
                                         , Contact.toHref contact
                                         , target "_blank"
                                         ]
-                                        [ Contact.contactTypeToIcon "mr-2 w-6 h-6" True contactType
+                                        [ Contact.contactTypeToIcon ("mr-2 w-6 h-6 " ++ contactClass)
+                                            True
+                                            contactType
                                         , text (Contact.contactTypeToString loggedIn.shared.translators contactType)
                                         ]
                                 )
@@ -843,6 +1021,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
         [ div
             [ class "md:flex-basis-0 md:flex-grow-1 md:overflow-y-auto"
             , id "transfer-scroll-container"
+            , tabindex -1
             ]
             [ div [ class "w-full bg-white md:bg-gray-100" ]
                 [ div [ class "px-4" ]
@@ -896,7 +1075,7 @@ viewDetails loggedIn profile balance graphqlInfo model =
               else
                 text ""
             , if isProfileOwner || isCommunityAdmin then
-                viewHistory loggedIn.shared balance graphqlInfo
+                viewHistory loggedIn.shared balance graphqlInfo model.contributionInfo
 
               else
                 text ""
@@ -919,11 +1098,33 @@ viewDetailsItem label content verticalAlign =
                 , ( "items-center", verticalAlign == Center )
                 ]
             ]
-            [ span [ class "text-sm leading-6 mr-4" ]
+            [ span [ class "text-sm mr-4" ]
                 [ label ]
-            , span [ class "text-indigo-500 font-medium text-sm text-right" ]
+            , span [ class "text-indigo-500 font-semibold text-sm text-right" ]
                 [ content ]
             ]
+        ]
+
+
+viewDetailsToggle :
+    Translators
+    -> { label : String, id : String, onToggle : Bool -> Msg, value : Bool }
+    -> Html Msg
+viewDetailsToggle translators { label, id, onToggle, value } =
+    li [ class "py-4" ]
+        [ Form.Toggle.init { label = text label, id = id }
+            |> Form.Toggle.withContainerAttrs [ class "text-sm" ]
+            |> (\options ->
+                    Form.Toggle.view options
+                        { onToggle = onToggle
+                        , onBlur = Ignored
+                        , value = value
+                        , error = text ""
+                        , hasError = False
+                        , isRequired = False
+                        , translators = translators
+                        }
+               )
         ]
 
 
@@ -986,10 +1187,10 @@ viewSettings loggedIn profile =
             text << loggedIn.shared.translators.t
 
         kycLabel =
-            span [ class "flex items-center" ]
+            span [ class "flex items-center mb-2" ]
                 [ text_ "community.kyc.dataTitle"
                 , span [ class "icon-tooltip ml-1" ]
-                    [ Icons.question "inline-block"
+                    [ Icons.question "inline-block text-orange-300"
                     , p [ class "icon-tooltip-content" ]
                         [ text_ "community.kyc.info" ]
                     ]
@@ -1043,12 +1244,30 @@ viewSettings loggedIn profile =
                                 viewDetailsItem
                                     (div []
                                         [ kycLabel
-                                        , span [ class "uppercase text-red pt-2 text-xs" ]
+                                        , span [ class "uppercase text-red pt-2 text-sm" ]
                                             [ text_ "community.kyc.delete.warning" ]
                                         ]
                                     )
                                     kycButton
                                     Top
+                        , viewDetailsToggle loggedIn.shared.translators
+                            { label = loggedIn.shared.translators.t "profile.preferences.claim_notification"
+                            , id = "claim-notification-toggle"
+                            , onToggle = ToggledClaimNotification
+                            , value = profile.claimNotification
+                            }
+                        , viewDetailsToggle loggedIn.shared.translators
+                            { label = loggedIn.shared.translators.t "profile.preferences.transfer_notification"
+                            , id = "transfer-notification-toggle"
+                            , onToggle = ToggledTransferNotification
+                            , value = profile.transferNotification
+                            }
+                        , viewDetailsToggle loggedIn.shared.translators
+                            { label = loggedIn.shared.translators.t "profile.preferences.digest"
+                            , id = "monthly-digest-toggle"
+                            , onToggle = ToggledDigest
+                            , value = profile.digest
+                            }
                         ]
                     ]
                 ]
@@ -1100,10 +1319,10 @@ viewLatestTransactions loggedIn model =
     in
     div [ class "p-4 bg-white max-w-screen md:px-3 md:bg-transparent" ]
         [ div [ class "container mx-auto w-full" ]
-            [ p [ class "text-heading" ]
+            [ p [ class "text-lg" ]
                 [ span [ class "text-gray-900 font-light" ] [ text_ "transfer.transfers_latest" ]
                 , text " "
-                , span [ class "text-indigo-500 font-medium" ] [ text_ "transfer.transfers" ]
+                , span [ class "text-indigo-500 font-semibold" ] [ text_ "transfer.transfers" ]
                 ]
             , case model.transfersStatus of
                 FailedLoading ->
@@ -1139,7 +1358,7 @@ viewTransactionList loggedIn transfers =
                 div []
                     [ div [ class "mt-4" ]
                         [ View.Components.dateViewer
-                            [ class "uppercase text-caption text-black tracking-wider" ]
+                            [ class "uppercase text-sm text-black tracking-wide" ]
                             identity
                             loggedIn.shared
                             (Utils.fromDateTime t1.blockTime)
@@ -1163,8 +1382,8 @@ viewTransactionList loggedIn transfers =
             )
 
 
-viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Html msg
-viewHistory shared balance graphqlInfo =
+viewHistory : Shared -> Community.Balance -> GraphqlInfo -> Maybe ContributionInfo -> Html msg
+viewHistory shared balance graphqlInfo maybeContributionInfo =
     let
         { t } =
             shared.translators
@@ -1173,13 +1392,13 @@ viewHistory shared balance graphqlInfo =
             text << t
 
         viewHistoryItem title number translation =
-            li [ class "flex items-center py-4 text-sm leading-6" ]
+            li [ class "flex items-center py-4 text-sm" ]
                 [ div [ class "flex items-center" ]
                     title
                 , div [ class "ml-auto" ]
                     [ span [ class "mr-1 text-indigo-500 font-bold" ]
                         [ number ]
-                    , span [ class "text-caption text-gray-900 uppercase" ]
+                    , span [ class "text-sm text-gray-900 uppercase" ]
                         [ translation ]
                     ]
                 ]
@@ -1192,7 +1411,7 @@ viewHistory shared balance graphqlInfo =
                 ]
                 (span [ class "text-3xl mr-1" ]
                     [ balance.asset.amount
-                        |> Eos.formatSymbolAmount balance.asset.symbol
+                        |> Eos.formatSymbolAmount shared.translators balance.asset.symbol
                         |> text
                     ]
                 )
@@ -1200,6 +1419,18 @@ viewHistory shared balance graphqlInfo =
                     |> Eos.symbolToSymbolCodeString
                     |> text
                 )
+            , case maybeContributionInfo of
+                Nothing ->
+                    text ""
+
+                Just contributionInfo ->
+                    viewHistoryItem [ text_ "dashboard.my_contributions" ]
+                        (Utils.formatFloat (Just shared.translators) 2 contributionInfo.amount
+                            |> text
+                        )
+                        (Community.currencyTranslationKey contributionInfo
+                            |> text_
+                        )
             , viewHistoryItem [ text_ "profile.history.transfers_number" ]
                 (graphqlInfo.totalTransfers
                     |> String.fromInt
@@ -1322,10 +1553,9 @@ networkSelectionSet =
             )
 
 
-fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> Cmd Msg
+fetchTransfers : LoggedIn.Model -> Community.Model -> Maybe String -> LoggedIn.External Msg
 fetchTransfers loggedIn community maybeCursor =
-    Api.Graphql.query loggedIn.shared
-        (Just loggedIn.authToken)
+    LoggedIn.query loggedIn
         (Transfer.transfersUserQuery
             loggedIn.accountName
             (\args ->
@@ -1344,6 +1574,21 @@ fetchTransfers loggedIn community maybeCursor =
         CompletedLoadUserTransfers
 
 
+type alias NotificationPreferences =
+    { claim : Bool
+    , transfer : Bool
+    , digest : Bool
+    }
+
+
+notificationsSelectionSet : SelectionSet NotificationPreferences Cambiatus.Object.User
+notificationsSelectionSet =
+    SelectionSet.succeed NotificationPreferences
+        |> SelectionSet.with User.claimNotification
+        |> SelectionSet.with User.transferNotification
+        |> SelectionSet.with User.digest
+
+
 
 -- UTILS
 
@@ -1360,6 +1605,9 @@ receiveBroadcast broadcastMsg =
         LoggedIn.CommunityLoaded community ->
             Just (CompletedLoadCommunity community)
 
+        LoggedIn.CommunityFieldLoaded _ (Community.ContributionsValue contributions) ->
+            Just (CompletedLoadContributions contributions)
+
         _ ->
             Nothing
 
@@ -1372,8 +1620,8 @@ jsAddressToMsg addr val =
                 |> Result.map DownloadPdfProcessed
                 |> Result.toMaybe
 
-        "PinChanged" :: [] ->
-            Just PinChanged
+        "PinChanged" :: newPin :: [] ->
+            Just (PinChanged newPin)
 
         _ ->
             Nothing
@@ -1391,6 +1639,9 @@ msgToString msg =
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
+        CompletedLoadContributions _ ->
+            [ "CompletedLoadContributions" ]
+
         CompletedLoadBalance r ->
             [ "CompletedLoadBalance", UR.resultToString r ]
 
@@ -1399,6 +1650,18 @@ msgToString msg =
 
         CompletedLoadUserTransfers r ->
             [ "CompletedLoadUserTransfers", UR.remoteDataToString r ]
+
+        ToggledClaimNotification _ ->
+            [ "ToggledClaimNotification" ]
+
+        ToggledTransferNotification _ ->
+            [ "ToggledTransferNotification" ]
+
+        ToggledDigest _ ->
+            [ "ToggledDigest" ]
+
+        CompletedSettingNotificationPreferences _ r ->
+            [ "CompletedSettingNotificationPreferences", UR.remoteDataToString r ]
 
         ToggleDeleteKycModal ->
             [ "ToggleDeleteKycModal" ]
@@ -1430,8 +1693,8 @@ msgToString msg =
         SubmittedNewPin _ ->
             [ "SubmittedNewPin" ]
 
-        PinChanged ->
-            [ "PinChanged" ]
+        PinChanged newPin ->
+            [ "PinChanged", newPin ]
 
         GotTransferCardProfileSummaryMsg _ subMsg ->
             "GotTransferCardProfileSummaryMsg" :: Profile.Summary.msgToString subMsg

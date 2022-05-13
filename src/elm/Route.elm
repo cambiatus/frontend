@@ -1,6 +1,9 @@
 module Route exposing
-    ( Route(..)
-    , communityFullDomain
+    ( NewsEditorKind(..)
+    , Route(..)
+    , SelectedObjective(..)
+    , addEnvironmentToUrl
+    , addRouteToUrl
     , externalHref
     , fromUrl
     , href
@@ -10,6 +13,7 @@ module Route exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account
 import Html exposing (Attribute)
@@ -20,6 +24,17 @@ import Url exposing (Url)
 import Url.Builder exposing (QueryParameter)
 import Url.Parser as Url exposing ((</>), (<?>), Parser, int, oneOf, s, string, top)
 import Url.Parser.Query as Query
+
+
+type NewsEditorKind
+    = CreateNews
+    | EditNews Int
+    | CopyNews Int
+
+
+type SelectedObjective
+    = WithObjectiveSelected { id : Int, action : Maybe Int }
+    | WithNoObjectiveSelected
 
 
 type Route
@@ -35,29 +50,40 @@ type Route
     | ProfileAddContact
     | PaymentHistory Eos.Account.Name
     | Profile Eos.Account.Name
+    | ProfileContributions Eos.Account.Name
     | Dashboard
-    | Community
+    | CommunityAbout
+    | CommunityObjectives SelectedObjective
     | NewCommunity
+    | News { selectedNews : Maybe Int, showOthers : Bool }
     | CommunitySettings
     | CommunitySettingsFeatures
     | CommunitySettingsInfo
+    | CommunitySettingsNews
+    | CommunitySettingsNewsEditor NewsEditorKind
     | CommunitySettingsCurrency
     | CommunitySettingsMultisig
+    | CommunitySettingsSponsorship
+    | CommunitySettingsSponsorshipFiat
+    | CommunitySettingsSponsorshipThankYouMessage
+    | CommunitySettingsObjectives
+    | CommunitySettingsNewObjective
+    | CommunitySettingsEditObjective Int
+    | CommunitySettingsNewAction Int
+    | CommunitySettingsEditAction Int Int
     | CommunitySelector (Maybe Route)
-    | Objectives
-    | NewObjective
-    | EditObjective Int
-    | NewAction Int
-    | EditAction Int Int
+    | CommunityThankYou
+    | CommunitySponsor
+    | CommunitySupporters
     | Claim Int Int Int
     | Shop Shop.Filter
     | NewSale
-    | EditSale String
-    | ViewSale Int
+    | EditSale Shop.Id
+    | ViewSale Shop.Id
     | ViewTransfer Int
     | Invite String
     | Join (Maybe Route)
-    | Transfer (Maybe String)
+    | Transfer (Maybe Eos.Account.Name)
     | Analysis
 
 
@@ -97,17 +123,52 @@ parser url =
         , Url.map ProfileAddKyc (s "profile" </> s "add-kyc")
         , Url.map ProfileAddContact (s "profile" </> s "add-contact")
         , Url.map Profile (s "profile" </> (string |> Url.map Eos.Account.stringToName))
+        , Url.map ProfileContributions (s "profile" </> (string |> Url.map Eos.Account.stringToName) </> s "contributions")
         , Url.map ProfileClaims (s "profile" </> string </> s "claims")
         , Url.map PaymentHistory (s "payments" </> (string |> Url.map Eos.Account.stringToName))
         , Url.map Notification (s "notification")
         , Url.map Dashboard (s "dashboard")
         , Url.map NewCommunity (s "community" </> s "new")
-        , Url.map Community (s "community")
+        , Url.map (News { selectedNews = Nothing, showOthers = True }) (s "news")
+        , Url.map (\newsId showOthers -> News { selectedNews = Just newsId, showOthers = showOthers })
+            (s "news"
+                </> int
+                <?> Query.map (\showOthers -> showOthers /= Just "false")
+                        (Query.string "showOthers")
+            )
+        , Url.map CommunityAbout (s "community" </> s "about")
+        , Url.map (CommunityObjectives WithNoObjectiveSelected)
+            (s "community"
+                </> s "objectives"
+            )
+        , Url.map (\objectiveId -> CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Nothing }))
+            (s "community"
+                </> s "objectives"
+                </> int
+            )
+        , Url.map
+            (\objectiveId actionId ->
+                CommunityObjectives (WithObjectiveSelected { id = objectiveId, action = Just actionId })
+            )
+            (s "community"
+                </> s "objectives"
+                </> int
+                </> s "action"
+                </> int
+            )
         , Url.map CommunitySettings (s "community" </> s "settings")
         , Url.map CommunitySettingsFeatures (s "community" </> s "settings" </> s "features")
         , Url.map CommunitySettingsInfo (s "community" </> s "settings" </> s "info")
+        , Url.map CommunitySettingsNews (s "community" </> s "settings" </> s "news")
+        , Url.map (CommunitySettingsNewsEditor CreateNews) (s "community" </> s "settings" </> s "news" </> s "new")
+        , Url.map (EditNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "edit" </> int)
+        , Url.map (CopyNews >> CommunitySettingsNewsEditor) (s "community" </> s "settings" </> s "news" </> s "copy" </> int)
         , Url.map CommunitySettingsCurrency (s "community" </> s "settings" </> s "currency")
         , Url.map CommunitySettingsMultisig (s "community" </> s "settings" </> s "multisig")
+        , Url.map CommunitySettingsSponsorship (s "community" </> s "settings" </> s "sponsorship")
+        , Url.map CommunitySettingsSponsorshipFiat (s "community" </> s "settings" </> s "sponsorship" </> s "fiat")
+        , Url.map CommunitySettingsSponsorshipThankYouMessage (s "community" </> s "settings" </> s "sponsorship" </> s "thank-you")
+        , Url.map CommunitySettingsObjectives (s "community" </> s "settings" </> s "objectives")
         , Url.map CommunitySelector
             (s "community"
                 </> s "selector"
@@ -115,11 +176,13 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Objectives (s "community" </> s "objectives")
-        , Url.map NewObjective (s "community" </> s "objectives" </> s "new")
-        , Url.map EditObjective (s "community" </> s "objectives" </> int </> s "edit")
-        , Url.map NewAction (s "community" </> s "objectives" </> int </> s "action" </> s "new")
-        , Url.map EditAction (s "community" </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map CommunityThankYou (s "community" </> s "thank-you")
+        , Url.map CommunitySponsor (s "community" </> s "sponsor")
+        , Url.map CommunitySupporters (s "community" </> s "supporters")
+        , Url.map CommunitySettingsNewObjective (s "community" </> s "settings" </> s "objectives" </> s "new")
+        , Url.map CommunitySettingsEditObjective (s "community" </> s "settings" </> s "objectives" </> int </> s "edit")
+        , Url.map CommunitySettingsNewAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> s "new")
+        , Url.map CommunitySettingsEditAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> int </> s "edit")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -134,8 +197,8 @@ parser url =
                         (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
         , Url.map NewSale (s "shop" </> s "new" </> s "sell")
-        , Url.map ViewSale (s "shop" </> int)
-        , Url.map EditSale (s "shop" </> string </> s "edit")
+        , Url.map ViewSale (s "shop" </> Shop.idUrlParser)
+        , Url.map EditSale (s "shop" </> Shop.idUrlParser </> s "edit")
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Join
@@ -144,7 +207,13 @@ parser url =
                         (parseRedirect url)
                         (Query.string "redirect")
             )
-        , Url.map Transfer (s "community" </> s "transfer" <?> Query.string "to")
+        , Url.map Transfer
+            (s "community"
+                </> s "transfer"
+                <?> (Query.string "to"
+                        |> Query.map (Maybe.map Eos.Account.stringToName)
+                    )
+            )
         , Url.map Analysis (s "dashboard" </> s "analysis")
         ]
 
@@ -191,26 +260,51 @@ externalHref shared community route =
         |> Attr.href
 
 
-communityFullDomain : Shared -> String -> String
-communityFullDomain shared subdomain =
+addEnvironmentToUrl : Environment -> Url.Url -> Url.Url
+addEnvironmentToUrl environment url =
     let
-        communityUrl =
-            externalCommunityLink shared subdomain Root
-    in
-    { communityUrl
-        | host = String.replace "localhost" "cambiatus.io" communityUrl.host
-        , port_ = Nothing
-    }
-        |> Url.toString
-        |> String.replace "http://" ""
-        |> String.replace "https://" ""
-        |> (\domain ->
-                if String.endsWith "/" domain then
-                    String.dropRight 1 domain
+        environmentString =
+            case environment of
+                Environment.Development ->
+                    ".staging.cambiatus.io"
 
-                else
-                    domain
-           )
+                Environment.Staging ->
+                    ".staging.cambiatus.io"
+
+                Environment.Demo ->
+                    ".demo.cambiatus.io"
+
+                Environment.Production ->
+                    ".cambiatus.io"
+    in
+    { url | host = url.host ++ environmentString }
+
+
+addRouteToUrl :
+    { shared | url : Url.Url }
+    -> Route
+    -> Url.Url
+addRouteToUrl shared route =
+    let
+        protocol =
+            case shared.url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        port_ =
+            case shared.url.port_ of
+                Nothing ->
+                    ""
+
+                Just p ->
+                    ":" ++ String.fromInt p
+    in
+    (protocol ++ shared.url.host ++ port_ ++ routeToString route)
+        |> Url.fromString
+        |> Maybe.withDefault shared.url
 
 
 
@@ -314,6 +408,15 @@ shopFilterToString filter =
             "user"
 
 
+boolToString : Bool -> String
+boolToString bool =
+    if bool then
+        "true"
+
+    else
+        "false"
+
+
 queryBuilder : (a -> String) -> Maybe a -> String -> List QueryParameter
 queryBuilder fn maybeRedirect queryParam =
     Maybe.map fn maybeRedirect
@@ -377,11 +480,31 @@ routeToString route =
                 Profile accountName ->
                     ( [ "profile", Eos.Account.nameToString accountName ], [] )
 
+                ProfileContributions accountName ->
+                    ( [ "profile", Eos.Account.nameToString accountName, "contributions" ], [] )
+
                 Dashboard ->
                     ( [ "dashboard" ], [] )
 
-                Community ->
-                    ( [ "community" ], [] )
+                CommunityAbout ->
+                    ( [ "community", "about" ], [] )
+
+                CommunityObjectives selectedObjective ->
+                    let
+                        params =
+                            case selectedObjective of
+                                WithNoObjectiveSelected ->
+                                    []
+
+                                WithObjectiveSelected { id, action } ->
+                                    case action of
+                                        Nothing ->
+                                            [ String.fromInt id ]
+
+                                        Just actionId ->
+                                            [ String.fromInt id, "action", String.fromInt actionId ]
+                    in
+                    ( "community" :: "objectives" :: params, [] )
 
                 CommunitySettings ->
                     ( [ "community", "settings" ], [] )
@@ -392,36 +515,80 @@ routeToString route =
                 CommunitySettingsInfo ->
                     ( [ "community", "settings", "info" ], [] )
 
+                CommunitySettingsNews ->
+                    ( [ "community", "settings", "news" ], [] )
+
+                CommunitySettingsNewsEditor CreateNews ->
+                    ( [ "community", "settings", "news", "new" ], [] )
+
+                CommunitySettingsNewsEditor (EditNews newsId) ->
+                    ( [ "community", "settings", "news", "edit", String.fromInt newsId ], [] )
+
+                CommunitySettingsNewsEditor (CopyNews newsId) ->
+                    ( [ "community", "settings", "news", "copy", String.fromInt newsId ], [] )
+
                 CommunitySettingsCurrency ->
                     ( [ "community", "settings", "currency" ], [] )
 
                 CommunitySettingsMultisig ->
                     ( [ "community", "settings", "multisig" ], [] )
 
+                CommunitySettingsSponsorship ->
+                    ( [ "community", "settings", "sponsorship" ], [] )
+
+                CommunitySettingsSponsorshipFiat ->
+                    ( [ "community", "settings", "sponsorship", "fiat" ], [] )
+
+                CommunitySettingsSponsorshipThankYouMessage ->
+                    ( [ "community", "settings", "sponsorship", "thank-you" ], [] )
+
                 CommunitySelector maybeRedirect ->
                     ( [ "community", "selector" ]
                     , queryBuilder routeToString maybeRedirect "redirect"
                     )
 
+                CommunityThankYou ->
+                    ( [ "community", "thank-you" ], [] )
+
+                CommunitySponsor ->
+                    ( [ "community", "sponsor" ], [] )
+
+                CommunitySupporters ->
+                    ( [ "community", "supporters" ], [] )
+
                 NewCommunity ->
                     ( [ "community", "new" ], [] )
 
-                Objectives ->
-                    ( [ "community", "objectives" ], [] )
+                News { selectedNews, showOthers } ->
+                    case selectedNews of
+                        Nothing ->
+                            ( [ "news" ], [] )
 
-                NewObjective ->
-                    ( [ "community", "objectives", "new" ], [] )
+                        Just newsId ->
+                            ( [ "news", String.fromInt newsId ]
+                            , if showOthers then
+                                []
 
-                EditObjective objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "edit" ], [] )
+                              else
+                                queryBuilder boolToString (Just showOthers) "showOthers"
+                            )
 
-                NewAction objectiveId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", "new" ]
+                CommunitySettingsObjectives ->
+                    ( [ "community", "settings", "objectives" ], [] )
+
+                CommunitySettingsNewObjective ->
+                    ( [ "community", "settings", "objectives", "new" ], [] )
+
+                CommunitySettingsEditObjective objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "edit" ], [] )
+
+                CommunitySettingsNewAction objectiveId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", "new" ]
                     , []
                     )
 
-                EditAction objectiveId actionId ->
-                    ( [ "community", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
+                CommunitySettingsEditAction objectiveId actionId ->
+                    ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
 
@@ -445,10 +612,10 @@ routeToString route =
                     ( [ "shop", "new", "sell" ], [] )
 
                 EditSale saleId ->
-                    ( [ "shop", saleId, "edit" ], [] )
+                    ( [ "shop", Shop.idToString saleId, "edit" ], [] )
 
                 ViewSale saleId ->
-                    ( [ "shop", String.fromInt saleId ], [] )
+                    ( [ "shop", Shop.idToString saleId ], [] )
 
                 ViewTransfer transferId ->
                     ( [ "transfer", String.fromInt transferId ], [] )
@@ -465,7 +632,12 @@ routeToString route =
                     ( [ "community"
                       , "transfer"
                       ]
-                    , [ Url.Builder.string "to" (Maybe.withDefault "" maybeTo) ]
+                    , [ Url.Builder.string "to"
+                            (maybeTo
+                                |> Maybe.map Eos.Account.nameToString
+                                |> Maybe.withDefault ""
+                            )
+                      ]
                     )
 
                 Analysis ->

@@ -1,8 +1,8 @@
 module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
-    , dialogBubble
-    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..)
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap
+    , dialogBubble, masonryLayout, Breakpoint(..)
+    , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -16,7 +16,7 @@ state or configuration, such as loading indicators and containers
 
 # Containers
 
-@docs dialogBubble
+@docs dialogBubble, masonryLayout, Breakpoint
 
 
 ## Helper types
@@ -26,23 +26,22 @@ state or configuration, such as loading indicators and containers
 
 # Elements
 
-@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack
+@docs tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack, label, disablableLink
 
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver
 
 -}
 
 import Html exposing (Html, div, img, node, p, span, text)
-import Html.Attributes exposing (attribute, class, src)
+import Html.Attributes exposing (attribute, class, for, src)
 import Html.Events exposing (on)
 import Icons
 import Json.Decode
-import Session.Shared exposing (Shared, Translators)
 import Time
-import Translation
+import Translation exposing (Translators)
 import Utils
 
 
@@ -59,7 +58,7 @@ loadingLogoWithCustomText : Translators -> String -> String -> Html msg
 loadingLogoWithCustomText { t } customTextKey class_ =
     div [ class ("w-full text-center " ++ class_) ]
         [ img [ class "h-16 mx-auto mt-8", src "/images/loading.svg" ] []
-        , p [ class "font-bold text-2xl" ] [ text <| t "loading.title" ]
+        , p [ class "font-bold text-xl" ] [ text <| t "loading.title" ]
         , p [ class "text-sm" ] [ text <| t customTextKey ]
         ]
 
@@ -92,16 +91,58 @@ dialogBubble { class_, relativeSelector, scrollSelector } elements =
         elements
 
 
+type Breakpoint
+    = Lg
+    | Xl
+
+
+{-| Create a masonry layout, similar to Pinterest. This uses CSS Grid + some JS
+magic. If you're changing `gap-y` or `auto-rows`, test it very well, since the
+accuracy of this component depends on those properties. If you want vertical
+gutters, give each child element a `mb-*` class and this element a negative bottom margin.
+
+You must provide at least one `Breakpoint` to specify screen sizes this should
+work as a masonry layout.
+
+-}
+masonryLayout :
+    List Breakpoint
+    -> { transitionWithParent : Bool }
+    -> List (Html.Attribute msg)
+    -> List (Html msg)
+    -> Html msg
+masonryLayout breakpoints { transitionWithParent } attrs children =
+    let
+        classesForBreakpoint breakpoint =
+            case breakpoint of
+                Lg ->
+                    -- Tailwind might purge if we do something with List.map instead of explicitly writing these
+                    "lg:gap-y-0 lg:grid lg:auto-rows-[1px]"
+
+                Xl ->
+                    "xl:gap-y-0 xl:grid xl:auto-rows-[1px]"
+    in
+    node "masonry-layout"
+        ((List.map classesForBreakpoint breakpoints
+            |> String.join " "
+            |> class
+         )
+            :: attribute "elm-transition-with-parent" (boolToString transitionWithParent)
+            :: attrs
+        )
+        children
+
+
 
 -- ELEMENTS
 
 
-tooltip : Translators -> String -> Html msg
-tooltip { t } tooltipMessage =
-    span [ class "icon-tooltip ml-1" ]
-        [ Icons.question "inline-block"
-        , div [ class "icon-tooltip-content" ]
-            [ text (t tooltipMessage) ]
+tooltip : { message : String, iconClass : String } -> Html msg
+tooltip { message, iconClass } =
+    span [ class "icon-tooltip ml-1 z-10" ]
+        [ Icons.question ("inline-block " ++ iconClass)
+        , p [ class "icon-tooltip-content" ]
+            [ text message ]
         ]
 
 
@@ -134,8 +175,8 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
 
 
 type alias DateTranslations =
-    { today : String
-    , yesterday : String
+    { today : Maybe String
+    , yesterday : Maybe String
     , other : String
     }
 
@@ -161,7 +202,13 @@ string so we can replace it on JS
 dateViewer :
     List (Html.Attribute msg)
     -> (DateTranslations -> DateTranslations)
-    -> Shared
+    ->
+        { shared
+            | now : Time.Posix
+            , timezone : Time.Zone
+            , translators : Translators
+            , language : Translation.Language
+        }
     -> Time.Posix
     -> Html msg
 dateViewer attrs fillInTranslations shared time =
@@ -171,23 +218,38 @@ dateViewer attrs fillInTranslations shared time =
 
         translations =
             fillInTranslations
-                { today = shared.translators.t "dates.today"
-                , yesterday = shared.translators.t "dates.yesterday"
+                { today = Just (shared.translators.t "dates.today")
+                , yesterday = Just (shared.translators.t "dates.yesterday")
                 , other = "{{date}}"
                 }
+
+        translationString =
+            if Utils.areSameDay shared.timezone shared.now time then
+                translations.today
+                    |> Maybe.withDefault translations.other
+
+            else if Utils.areSameDay shared.timezone shared.now yesterday then
+                translations.yesterday
+                    |> Maybe.withDefault translations.other
+
+            else
+                translations.other
     in
-    if Utils.areSameDay shared.timezone shared.now time then
-        span attrs [ text translations.today ]
-
-    else if Utils.areSameDay shared.timezone shared.now yesterday then
-        span attrs [ text translations.yesterday ]
-
-    else
+    if String.contains "{{date}}" translationString then
         dateFormatter attrs
             { language = shared.language
             , date = time
-            , translationString = translations.other
+            , translationString = translationString
             }
+
+    else if Utils.areSameDay shared.timezone shared.now time then
+        span attrs [ text (Maybe.withDefault translations.other translations.today) ]
+
+    else if Utils.areSameDay shared.timezone shared.now yesterday then
+        span attrs [ text (Maybe.withDefault translations.other translations.yesterday) ]
+
+    else
+        text ""
 
 
 type ElementToTrack
@@ -240,6 +302,35 @@ infiniteList options attrs children =
         children
 
 
+{-| A label element that enforces the label has an id to point to
+-}
+label : List (Html.Attribute msg) -> { targetId : String, labelText : String } -> Html msg
+label attrs { targetId, labelText } =
+    Html.label (class "label" :: for targetId :: attrs)
+        [ text labelText
+        ]
+
+
+{-| An element that acts as a link when it's not disabled, or as regular text when it is disabled.
+No styling is done, so you need to do it yourself wherever you're using this component, usually with `classList`:
+
+    disablableLink { isDisabled = isDisabled }
+        [ Route.href Route.Transfer
+        , class "button button-primary"
+        , classList [ ( "button-disabled", isDisabled ) ]
+        ]
+        [ text "Transfer to a friend " ]
+
+-}
+disablableLink : { isDisabled : Bool } -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+disablableLink { isDisabled } =
+    if isDisabled then
+        span
+
+    else
+        Html.a
+
+
 
 -- HELPERS
 
@@ -271,6 +362,12 @@ type PreventScroll
 
 type Key
     = Escape
+    | Enter
+    | Space
+    | ArrowUp
+    | ArrowDown
+    | ArrowLeft
+    | ArrowRight
 
 
 {-| A node that attaches an event listener on the document to listen for keys.
@@ -279,31 +376,77 @@ subscriptions (because it would add a lot of complexity). Can be useful in
 "stateless" components, such as modals.
 -}
 keyListener :
-    { onKeyDown : { acceptedKeys : List Key, toMsg : Key -> msg, stopPropagation : Bool } }
+    { acceptedKeys : List Key
+    , toMsg : Key -> msg
+    , stopPropagation : Bool
+    , preventDefault : Bool
+    }
     -> Html msg
-keyListener { onKeyDown } =
+keyListener { acceptedKeys, toMsg, stopPropagation, preventDefault } =
     let
         keyFromString : String -> Maybe Key
         keyFromString rawKey =
-            case rawKey of
-                "Esc" ->
+            case String.toLower rawKey of
+                "esc" ->
                     Just Escape
 
-                "Escape" ->
+                "escape" ->
                     Just Escape
+
+                " " ->
+                    Just Space
+
+                "enter" ->
+                    Just Enter
+
+                "arrowup" ->
+                    Just ArrowUp
+
+                "arrowdown" ->
+                    Just ArrowDown
+
+                "arrowleft" ->
+                    Just ArrowLeft
+
+                "arrowright" ->
+                    Just ArrowRight
 
                 _ ->
                     Nothing
 
+        keyToString : Key -> List String
+        keyToString key =
+            case key of
+                Escape ->
+                    [ "esc", "escape" ]
+
+                Space ->
+                    [ " " ]
+
+                Enter ->
+                    [ "enter" ]
+
+                ArrowUp ->
+                    [ "arrowup" ]
+
+                ArrowDown ->
+                    [ "arrowdown" ]
+
+                ArrowLeft ->
+                    [ "arrowleft" ]
+
+                ArrowRight ->
+                    [ "arrowright" ]
+
         keyDecoder : List Key -> (Key -> msg) -> Json.Decode.Decoder msg
-        keyDecoder acceptedKeys toMsg =
+        keyDecoder acceptedKeys_ toMsg_ =
             Json.Decode.at [ "detail", "key" ] Json.Decode.string
                 |> Json.Decode.andThen
                     (\rawKey ->
                         case keyFromString rawKey of
                             Just key ->
-                                if List.member key acceptedKeys then
-                                    Json.Decode.succeed (toMsg key)
+                                if List.member key acceptedKeys_ then
+                                    Json.Decode.succeed (toMsg_ key)
 
                                 else
                                     Json.Decode.fail "This key is not being listened to"
@@ -313,8 +456,14 @@ keyListener { onKeyDown } =
                     )
     in
     node "key-listener"
-        [ on "listener-keydown" (keyDecoder onKeyDown.acceptedKeys onKeyDown.toMsg)
-        , attribute "keydown-stop-propagation" (boolToString onKeyDown.stopPropagation)
+        [ on "listener-keydown" (keyDecoder acceptedKeys toMsg)
+        , attribute "keydown-stop-propagation" (boolToString stopPropagation)
+        , attribute "keydown-prevent-default" (boolToString preventDefault)
+        , attribute "accepted-keys"
+            (acceptedKeys
+                |> List.concatMap keyToString
+                |> String.join ","
+            )
         ]
         []
 
@@ -326,8 +475,57 @@ focusTrap { firstFocusContainer } attrs children =
         children
 
 
+{-| A wrapper around the intersection observer API. Note that targetSelector is
+a `String` that works with the `querySelector` API, so if you want to get an element
+by id you need to use `#` as a prefix.
+-}
+intersectionObserver :
+    { targetSelectors : List String
+    , threshold : Float
+    , breakpointToExclude : Breakpoint
+    , onStartedIntersecting : Maybe (String -> msg)
+    , onStoppedIntersecting : Maybe (String -> msg)
+    }
+    -> Html msg
+intersectionObserver options =
+    let
+        optionalEvent eventName maybeToMsg =
+            case maybeToMsg of
+                Nothing ->
+                    class ""
+
+                Just toMsg ->
+                    on eventName (decodeTargetId toMsg)
+
+        decodeTargetId toMsg =
+            Json.Decode.at [ "detail", "targetId" ] Json.Decode.string
+                |> Json.Decode.map toMsg
+    in
+    node "intersection-observer"
+        [ attribute "elm-target" (String.join " " options.targetSelectors)
+        , attribute "elm-threshold" (String.fromFloat options.threshold)
+        , attribute "elm-max-width" (String.fromInt <| breakpointToPixels options.breakpointToExclude)
+        , optionalEvent "started-intersecting" options.onStartedIntersecting
+        , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
+        ]
+        []
+
+
 
 -- INTERNALS
+
+
+{-| Convert a breakpoint to it's minimum width value in pixels. Should be in sync
+with our tailwind config
+-}
+breakpointToPixels : Breakpoint -> Int
+breakpointToPixels breakpoint =
+    case breakpoint of
+        Lg ->
+            1024
+
+        Xl ->
+            1280
 
 
 boolToString : Bool -> String

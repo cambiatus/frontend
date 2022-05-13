@@ -9,14 +9,18 @@ import Json.Decode as Decode exposing (Decoder)
 
 {-|
 
+  - Email - Email, must be a valid address
   - Instagram - An Instagram account. Must have full URL like <https://instagram.com/${username}>
+  - Link - Links Any URL
   - Phone - A regular phone number
   - Telegram - An username or phone number for Telegram. Must be <https://t.me/${username}> or <https://telegram.org/${username}>
   - Whatsapp - A phone number used in Whatsapp. Regular international phone number
 
 -}
 type ContactType
-    = Instagram
+    = Email
+    | Instagram
+    | Link
     | Phone
     | Telegram
     | Whatsapp
@@ -24,7 +28,7 @@ type ContactType
 
 list : List ContactType
 list =
-    [ Instagram, Phone, Telegram, Whatsapp ]
+    [ Email, Instagram, Link, Phone, Telegram, Whatsapp ]
 
 
 decoder : Decoder ContactType
@@ -33,8 +37,14 @@ decoder =
         |> Decode.andThen
             (\string ->
                 case string of
+                    "EMAIL" ->
+                        Decode.succeed Email
+
                     "INSTAGRAM" ->
                         Decode.succeed Instagram
+
+                    "LINK" ->
+                        Decode.succeed Link
 
                     "PHONE" ->
                         Decode.succeed Phone
@@ -55,8 +65,14 @@ decoder =
 toString : ContactType -> String
 toString enum =
     case enum of
+        Email ->
+            "EMAIL"
+
         Instagram ->
             "INSTAGRAM"
+
+        Link ->
+            "LINK"
 
         Phone ->
             "PHONE"
@@ -82,8 +98,14 @@ This can be useful for generating Strings to use for <select> menus to check whi
 fromString : String -> Maybe ContactType
 fromString enumString =
     case enumString of
+        "EMAIL" ->
+            Just Email
+
         "INSTAGRAM" ->
             Just Instagram
+
+        "LINK" ->
+            Just Link
 
         "PHONE" ->
             Just Phone

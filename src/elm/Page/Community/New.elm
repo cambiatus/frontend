@@ -4,46 +4,39 @@ module Page.Community.New exposing
     , init
     , jsAddressToMsg
     , msgToString
-    , subscriptions
     , update
     , view
     )
 
-import Api
-import Api.Graphql
-import Browser.Events as Events
 import Community
 import Dict
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
-import File exposing (File)
+import Form
+import Form.File
+import Form.RichText
+import Form.Text
+import Form.Toggle
+import Form.Validate
 import Graphql.Document
 import Graphql.Http
-import Html exposing (Html, button, div, label, span, text)
-import Html.Attributes exposing (class, classList, disabled, for, maxlength, minlength, required, type_)
-import Html.Events exposing (onClick, onSubmit)
-import Http
-import Icons
+import Html exposing (Html, div, span, text)
+import Html.Attributes exposing (class, classList, disabled)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
-import List.Extra as List
 import Log
+import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Shared)
-import Task
+import Session.Shared as Shared
 import Token
 import UpdateResult as UR
-import Utils exposing (decodeEnterKeyDown)
+import Url
 import View.Components
 import View.Feedback as Feedback
-import View.Form
-import View.Form.FileUploader as FileUploader
-import View.Form.Input as Input
-import View.Form.Toggle as Toggle
-import View.MarkdownEditor as MarkdownEditor
 
 
 
@@ -58,89 +51,248 @@ init _ =
 
 
 
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.map PressedEnter (Events.onKeyDown decodeEnterKeyDown)
-        |> MarkdownEditor.withSubscription model.description GotDescriptionEditorMsg
-
-
-
 -- MODEL
 
 
 type alias Model =
-    { name : String
-    , description : MarkdownEditor.Model
-    , subdomain : String
-    , symbol : String
-    , logoSelected : Int
-    , logoList : List LogoStatus
-    , inviterReward : String
-    , invitedReward : String
-    , minimumBalance : String
-    , website : String
-    , hasAutoInvite : Bool
-    , isDisabled : Bool
-    , errors : List Error
+    { isDisabled : Bool
+    , form : Form.Model FormInput
     }
 
 
 initModel : Model
 initModel =
-    { name = ""
-    , description = MarkdownEditor.init "description-editor"
-    , subdomain = ""
-    , symbol = ""
-    , logoSelected = 0
-    , logoList = defaultLogos
-    , inviterReward = "0"
-    , invitedReward = "10"
-    , minimumBalance = "-100"
-    , website = ""
-    , hasAutoInvite = False
-    , isDisabled = False
-    , errors = []
+    { isDisabled = False
+    , form =
+        Form.init
+            { description = Form.RichText.initModel "description-editor" Nothing
+            , name = ""
+            , url = ""
+            , symbol = ""
+            , invitedReward = "10"
+            , inviterReward = "0"
+            , minimumBalance = "-100"
+            , website = ""
+            , requireInvitation = True
+            , logo = Form.File.initModelWithChoices defaultLogos
+            }
     }
 
 
-type alias Error =
-    ( FormField, FormError )
-
-
-type FormField
-    = Description
-    | CurrencyName
-    | SymbolField
-    | InvitedReward
-    | InviterReward
-    | MinimumBalance
-    | Logo
-
-
-defaultLogos : List LogoStatus
+defaultLogos : List String
 defaultLogos =
-    [ Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_1.png"
-    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_2.png"
-    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_3.png"
-    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_4.png"
-    , Uploaded "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_5.png"
+    [ "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_1.png"
+    , "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_2.png"
+    , "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_3.png"
+    , "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_4.png"
+    , "https://cambiatus-uploads.s3.amazonaws.com/cambiatus-uploads/community_5.png"
     ]
 
 
-type LogoStatus
-    = Uploading
-    | Uploaded String
+type alias FormInput =
+    { description : Form.RichText.Model
+    , name : String
+    , url : String
+    , symbol : String
+    , invitedReward : String
+    , inviterReward : String
+    , minimumBalance : String
+    , website : String
+    , requireInvitation : Bool
+    , logo : Form.File.Model
+    }
 
 
-type FormError
-    = ChooseLogo
-    | WaitForLogoUpload
-    | InvalidSymbol
-    | EmptyRequired
-    | InvalidNumber
+type alias FormOutput =
+    { description : Markdown
+    , name : String
+    , url : Url.Url
+    , symbol : Eos.Symbol
+    , invitedReward : Float
+    , inviterReward : Float
+    , minimumBalance : Float
+    , website : Maybe String
+    , requireInvitation : Bool
+    , logo : String
+    }
+
+
+createForm : Shared.Translators -> Environment -> { isDisabled : Bool } -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) environment { isDisabled } =
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.RichText.init { label = t "community.create.labels.description" }
+                |> Form.RichText.withEditorContainerAttrs [ class "mb-10" ]
+                |> Form.richText
+                    { parser = Ok
+                    , value = .description
+                    , update = \description input -> { input | description = description }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "community.create.labels.currency_name"
+                , id = "currency-name-input"
+                }
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLongerThan 1
+                            >> Form.Validate.validate translators
+                    , value = .name
+                    , update = \name input -> { input | name = name }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "settings.community_info.url.title"
+                , id = "subdomain-input"
+                }
+                |> Form.Text.withElements
+                    [ span
+                        [ class "absolute inset-y-0 right-4 flex items-center bg-white pl-1 my-2"
+                        , classList [ ( "bg-gray-500", isDisabled ) ]
+                        ]
+                        [ text ".cambiatus.io" ]
+                    ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.map String.toLower
+                            >> Form.Validate.url
+                            >> Form.Validate.map (Route.addEnvironmentToUrl environment)
+                            >> Form.Validate.validate translators
+                    , value = .url
+                    , update = \url input -> { input | url = url }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withGroup
+            [ class "grid grid-cols-2 gap-4" ]
+            (Form.Text.init
+                { label = t "community.create.labels.currency_symbol"
+                , id = "community-symbol-input"
+                }
+                |> Form.Text.withPlaceholder ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
+                |> Form.Text.withMask { mask = "#," ++ String.concat (List.repeat Eos.maxSymbolLength "#"), replace = '#' }
+                |> Form.Text.withExtraAttrs [ class "uppercase" ]
+                |> Form.textField
+                    { parser =
+                        Eos.symbolFromString
+                            >> Result.fromMaybe (t "error.invalidSymbol")
+                    , value = .symbol
+                    , update = \symbol input -> { input | symbol = symbol }
+                    , externalError = always Nothing
+                    }
+            )
+            (Form.Text.init
+                { label = t "community.create.labels.invited_reward"
+                , id = "invited-reward-input"
+                }
+                |> Form.Text.asNumeric
+                |> Form.Text.withType Form.Text.Number
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.validate translators
+                    , value = .invitedReward
+                    , update = \invitedReward input -> { input | invitedReward = invitedReward }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withGroup
+            [ class "grid grid-cols-2 gap-4" ]
+            (Form.Text.init
+                { label = t "community.create.labels.inviter_reward"
+                , id = "inviter-reward-input"
+                }
+                |> Form.Text.asNumeric
+                |> Form.Text.withType Form.Text.Number
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.validate translators
+                    , value = .inviterReward
+                    , update = \inviterReward input -> { input | inviterReward = inviterReward }
+                    , externalError = always Nothing
+                    }
+            )
+            (Form.Text.init
+                { label = t "community.create.labels.min_balance"
+                , id = "minimum-balance-input"
+                }
+                |> Form.Text.asNumeric
+                |> Form.Text.withType Form.Text.Number
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.maskedFloat translators
+                            >> Form.Validate.validate translators
+                    , value = .minimumBalance
+                    , update = \minimumBalance input -> { input | minimumBalance = minimumBalance }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "settings.community_info.fields.website"
+                , id = "website-input"
+                }
+                |> Form.Text.withPlaceholder "cambiatus.com"
+                |> Form.textField
+                    { parser = Ok
+                    , value = .website
+                    , update = \website input -> { input | website = website }
+                    , externalError = always Nothing
+                    }
+                |> Form.optional
+            )
+        |> Form.with (requireInvitationToggle translators)
+        |> Form.with
+            (Form.File.init
+                { label = ""
+                , id = "logo-input"
+                }
+                |> Form.File.withContainerAttrs [ class "w-full mt-10" ]
+                |> Form.file
+                    { translators = translators
+                    , value = .logo
+                    , update = \logo input -> { input | logo = logo }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+requireInvitationToggle : Shared.Translators -> Form.Form msg { b | requireInvitation : Bool } Bool
+requireInvitationToggle { t } =
+    Form.succeed (\_ requiresInvitation -> requiresInvitation)
+        |> Form.withGroup [ class "border rounded-md px-3 py-2" ]
+            (View.Components.label []
+                { targetId = "require-invitation-toggle"
+                , labelText = t "settings.community_info.invitation.title"
+                }
+                |> Form.arbitraryWith ()
+            )
+            (Form.Toggle.init
+                { label = text <| t "settings.community_info.fields.invitation"
+                , id = "require-invitation-toggle"
+                }
+                |> Form.Toggle.withTooltip
+                    { message = t "settings.community_info.invitation.description"
+                    , iconClass = "text-orange-300"
+                    }
+                |> Form.Toggle.withContainerAttrs []
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .requireInvitation
+                    , update = \requireInvitation input -> { input | requireInvitation = requireInvitation }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 
@@ -157,493 +309,23 @@ view ({ shared } as loggedIn) model =
     , content =
         div [ class "bg-white pb-10" ]
             [ Page.viewHeader loggedIn (t "community.create.title")
-            , Html.form
-                [ class "container mx-auto px-4"
-                , onSubmit SubmittedForm
-                ]
-                [ div [ class "mt-10 mb-14" ]
-                    [ viewDescription shared model.isDisabled model.description model.errors
-                    , viewCurrencyName shared model.isDisabled model.name model.errors
-                    , viewSubdomain shared model.isDisabled model.subdomain model.errors
-                    , div [ class "flex flex-row mt-4" ]
-                        [ div [ class "w-1/2 pr-2" ]
-                            [ viewSymbol shared model.isDisabled model.symbol model.errors
-                            , viewInviterReward shared model.isDisabled model.inviterReward model.errors
-                            ]
-                        , div [ class "w-1/2 pl-2" ]
-                            [ viewInvitedReward shared model.isDisabled model.invitedReward model.errors
-                            , viewMinimumBalance shared model.isDisabled model.minimumBalance model.errors
-                            ]
+            , Form.view [ class "container mx-auto px-4 mt-10" ]
+                shared.translators
+                (\submitButton ->
+                    [ submitButton
+                        [ class "button button-primary w-full mt-10"
+                        , disabled (not loggedIn.hasAcceptedCodeOfConduct)
                         ]
-                    , viewWebsite shared model.isDisabled model.website model.errors
-                    , viewAutoInvite shared model.isDisabled model.hasAutoInvite model.errors
-                    , viewLogo shared model.isDisabled model.logoSelected model.logoList
+                        [ text <| t "community.create.submit" ]
                     ]
-                , button
-                    [ class "button button-primary w-full"
-                    , disabled (model.isDisabled || not (isLogoUploaded model))
-                    ]
-                    [ text (t "community.create.submit") ]
-                ]
+                )
+                (createForm shared.translators shared.environment { isDisabled = model.isDisabled })
+                model.form
+                { toMsg = GotFormMsg
+                , onSubmit = SubmittedForm
+                }
             ]
     }
-
-
-isLogoUploaded : Model -> Bool
-isLogoUploaded model =
-    case List.getAt model.logoSelected model.logoList of
-        Just Uploading ->
-            False
-
-        Just (Uploaded _) ->
-            True
-
-        Nothing ->
-            False
-
-
-viewDescription : Shared -> Bool -> MarkdownEditor.Model -> List Error -> Html Msg
-viewDescription ({ translators } as shared) isDisabled defVal errors =
-    div []
-        [ span [ class "input-label" ] [ text (translators.t "community.create.labels.description") ]
-        , MarkdownEditor.view
-            { translators = translators
-            , placeholder = Nothing
-            , label = translators.t "community.create.tooltips.description"
-            , problem = getFieldProblems shared Description errors |> List.head
-            , disabled = isDisabled
-            }
-            []
-            defVal
-            |> Html.map GotDescriptionEditorMsg
-        ]
-
-
-viewCurrencyName : Shared -> Bool -> String -> List Error -> Html Msg
-viewCurrencyName ({ translators } as shared) isDisabled defVal errors =
-    Input.init
-        { label = translators.t "community.create.labels.currency_name"
-        , id = "comm-currency-name"
-        , onInput = EnteredName
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Nothing
-        , problems = Just (getFieldProblems shared CurrencyName errors)
-        , translators = translators
-        }
-        |> Input.withAttrs [ maxlength 255, required True ]
-        |> Input.toHtml
-
-
-viewSubdomain : Shared -> Bool -> String -> List Error -> Html Msg
-viewSubdomain { translators } isDisabled defVal _ =
-    Input.init
-        { label = translators.t "settings.community_info.url.title"
-        , id = "comm-subdomain"
-        , onInput = EnteredSubdomain
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Nothing
-        , problems = Nothing
-        , translators = translators
-        }
-        |> Input.withElements
-            [ span
-                [ class "absolute inset-y-0 right-1 flex items-center bg-white pl-1 my-2"
-                , classList
-                    [ ( "hidden", String.isEmpty defVal )
-                    , ( "bg-gray-500", isDisabled )
-                    ]
-                ]
-                [ text ".cambiatus.io" ]
-            ]
-        |> Input.withAttrs [ required True ]
-        |> Input.toHtml
-
-
-viewWebsite : Shared -> Bool -> String -> List Error -> Html Msg
-viewWebsite { translators } isDisabled defVal _ =
-    Input.init
-        { label = translators.t "settings.community_info.fields.website"
-        , id = "comm-website"
-        , onInput = EnteredWebsite
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Just "cambiatus.com"
-        , problems = Nothing
-        , translators = translators
-        }
-        |> Input.toHtml
-
-
-viewAutoInvite : Shared -> Bool -> Bool -> List Error -> Html Msg
-viewAutoInvite { translators } isDisabled defVal _ =
-    div [ class "flex flex-col" ]
-        [ View.Form.label "comm-autoinvite-title" (translators.t "settings.community_info.invitation.title")
-        , Toggle.init
-            { label = text (translators.t "settings.community_info.fields.invitation")
-            , id = "comm-autoinvite"
-            , onToggle = ToggledAutoInvite
-            , disabled = isDisabled
-            , value = not defVal
-            }
-            |> Toggle.withAttrs [ class "mb-10" ]
-            |> Toggle.withTooltip "settings.community_info.invitation.description"
-            |> Toggle.toHtml translators
-        ]
-
-
-viewSymbol : Shared -> Bool -> String -> List Error -> Html Msg
-viewSymbol ({ translators } as shared) isDisabled defVal errors =
-    Input.init
-        { label = translators.t "community.create.labels.currency_symbol"
-        , id = "comm-currency-symbol"
-        , onInput = EnteredSymbol
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Just ("_, " ++ String.join " " (List.repeat Eos.maxSymbolLength "_"))
-        , problems = Just (getFieldProblems shared SymbolField errors)
-        , translators = translators
-        }
-        |> Input.withAttrs [ minlength (2 + Eos.minSymbolLength), maxlength (2 + Eos.maxSymbolLength), required True ]
-        |> Input.toHtml
-
-
-viewLogo : Shared -> Bool -> Int -> List LogoStatus -> Html Msg
-viewLogo shared isDisabled selected logos =
-    let
-        t =
-            shared.translators.t
-
-        id_ =
-            "community-editor-logo-upload"
-
-        activeClass =
-            "border border-gray-900 shadow-lg"
-
-        itemClass =
-            String.words activeClass
-                |> List.map (\word -> String.join " " [ "hover:" ++ word, "focus:" ++ word ])
-                |> String.join " "
-                |> String.append "p-4 border border-white focus:outline-none rounded-md w-full h-full flex items-center justify-center "
-
-        item index logoStatus =
-            button
-                [ class itemClass
-                , classList [ ( activeClass, index == selected ) ]
-                , type_ "button"
-                , disabled isDisabled
-                , onClick (ClickedLogo index)
-                ]
-                [ case logoStatus of
-                    Uploading ->
-                        div [ class "w-16 h-16" ]
-                            [ View.Components.loadingLogoAnimatedFluid ]
-
-                    Uploaded url ->
-                        div
-                            [ class "w-16 h-16 bg-contain bg-center bg-no-repeat"
-                            , Community.logoBackground (Just url)
-                            ]
-                            []
-                ]
-    in
-    div [ class "grid gap-4 xs-max:grid-cols-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7" ]
-        (List.indexedMap item logos
-            ++ [ FileUploader.init
-                    { label = ""
-                    , id = id_
-                    , onFileInput = EnteredLogo (List.length logos)
-                    , status = RemoteData.NotAsked
-                    }
-                    |> FileUploader.withAttrs [ class "hidden", disabled isDisabled ]
-                    |> FileUploader.toHtml shared.translators
-               , label
-                    [ for id_
-                    , class ("flex-col text-center cursor-pointer " ++ itemClass)
-                    , classList [ ( "disabled", isDisabled ) ]
-                    ]
-                    [ div [ class "bg-gradient-to-bl from-orange-300 to-orange-500 rounded-full p-2 mb-1 w-12 h-12 flex items-center justify-center" ]
-                        [ Icons.imageMultiple "text-white fill-current w-8 h-8" ]
-                    , text (t "community.create.labels.upload_icon")
-                    ]
-               ]
-        )
-
-
-viewInviterReward : Shared -> Bool -> String -> List Error -> Html Msg
-viewInviterReward ({ translators } as shared) isDisabled defVal errors =
-    Input.init
-        { label = translators.t "community.create.labels.inviter_reward"
-        , id = "comm-inviter-reward"
-        , onInput = EnteredInviterReward
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Nothing
-        , problems = Just (getFieldProblems shared InviterReward errors)
-        , translators = translators
-        }
-        |> Input.withAttrs [ maxlength 255, required True ]
-        |> Input.asNumeric
-        |> Input.withType Input.Number
-        |> Input.toHtml
-
-
-viewInvitedReward : Shared -> Bool -> String -> List Error -> Html Msg
-viewInvitedReward ({ translators } as shared) isDisabled defVal errors =
-    Input.init
-        { label = translators.t "community.create.labels.invited_reward"
-        , id = "comm-invited-reward"
-        , onInput = EnteredInvitedReward
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Nothing
-        , problems = Just (getFieldProblems shared InvitedReward errors)
-        , translators = translators
-        }
-        |> Input.withAttrs [ maxlength 255, required True ]
-        |> Input.asNumeric
-        |> Input.withType Input.Number
-        |> Input.toHtml
-
-
-viewMinimumBalance : Shared -> Bool -> String -> List Error -> Html Msg
-viewMinimumBalance ({ translators } as shared) isDisabled defVal errors =
-    Input.init
-        { label = translators.t "community.create.labels.min_balance"
-        , id = "min-balance"
-        , onInput = EnteredMinimumBalance
-        , disabled = isDisabled
-        , value = defVal
-        , placeholder = Nothing
-        , problems = Just (getFieldProblems shared MinimumBalance errors)
-        , translators = translators
-        }
-        |> Input.withAttrs [ maxlength 255, required True ]
-        |> Input.asNumeric
-        |> Input.withType Input.Number
-        |> Input.toHtml
-
-
-
--- VALIDATING
-
-
-validateField : (Model -> Result Error a) -> FormField -> Model -> Model
-validateField validation field model =
-    let
-        errorsWithoutField =
-            List.filter (\( errorField, _ ) -> errorField /= field) model.errors
-    in
-    case validation model of
-        Ok _ ->
-            { model | errors = errorsWithoutField }
-
-        Err error ->
-            { model | errors = error :: errorsWithoutField }
-
-
-validateName : Model -> Result Error String
-validateName model =
-    if String.isEmpty model.name then
-        Err ( CurrencyName, EmptyRequired )
-
-    else
-        Ok model.name
-
-
-validateSymbol : Model -> Result Error Eos.Symbol
-validateSymbol model =
-    if String.isEmpty model.symbol then
-        Err ( SymbolField, EmptyRequired )
-
-    else
-        case Eos.symbolFromString model.symbol of
-            Nothing ->
-                Err ( SymbolField, InvalidSymbol )
-
-            Just symbol ->
-                Ok symbol
-
-
-validateInviterReward : Model -> Result Error Float
-validateInviterReward model =
-    if String.isEmpty model.inviterReward then
-        Err ( InviterReward, EmptyRequired )
-
-    else
-        case String.toFloat model.inviterReward of
-            Nothing ->
-                Err ( InviterReward, InvalidNumber )
-
-            Just inviterReward ->
-                Ok inviterReward
-
-
-validateInvitedReward : Model -> Result Error Float
-validateInvitedReward model =
-    if String.isEmpty model.invitedReward then
-        Err ( InvitedReward, EmptyRequired )
-
-    else
-        case String.toFloat model.invitedReward of
-            Nothing ->
-                Err ( InvitedReward, InvalidNumber )
-
-            Just invitedReward ->
-                Ok invitedReward
-
-
-validateMinimumBalance : Model -> Result Error Float
-validateMinimumBalance model =
-    if String.isEmpty model.minimumBalance then
-        Err ( MinimumBalance, EmptyRequired )
-
-    else
-        case String.toFloat model.minimumBalance of
-            Nothing ->
-                Err ( MinimumBalance, InvalidNumber )
-
-            Just minimumBalance ->
-                Ok minimumBalance
-
-
-validateLogoUrl : Model -> Result Error String
-validateLogoUrl model =
-    case List.getAt model.logoSelected model.logoList of
-        Just (Uploaded logoUrl) ->
-            Ok logoUrl
-
-        Just Uploading ->
-            Err ( Logo, WaitForLogoUpload )
-
-        Nothing ->
-            Err ( Logo, ChooseLogo )
-
-
-{-| Assumes `Model.subdomain` is available
--}
-validateModel : Shared -> Eos.Name -> Model -> Result Model ( Community.CreateCommunityData, Token.CreateTokenData )
-validateModel shared accountName model =
-    let
-        nameValidation =
-            validateName model
-
-        symbolValidation =
-            validateSymbol model
-
-        logoValidation =
-            validateLogoUrl model
-
-        inviterRewardValidation =
-            validateInviterReward model
-
-        invitedRewardValidation =
-            validateInvitedReward model
-
-        minimumBalanceValidation =
-            validateMinimumBalance model
-
-        createCommunityData =
-            Result.map5
-                (\symbol logoUrl name inviterReward invitedReward ->
-                    Community.createCommunityData
-                        { accountName = accountName
-                        , symbol = symbol
-                        , logoUrl = logoUrl
-                        , name = name
-                        , description = model.description.contents
-                        , subdomain = Route.communityFullDomain shared model.subdomain
-                        , inviterReward = inviterReward
-                        , invitedReward = invitedReward
-                        , hasShop = True
-                        , hasObjectives = True
-                        , hasKyc = False
-                        , hasAutoInvite = model.hasAutoInvite
-                        , website =
-                            if String.startsWith "https://" model.website || String.startsWith "http://" model.website then
-                                model.website
-
-                            else
-                                "http://" ++ model.website
-                        }
-                )
-                symbolValidation
-                logoValidation
-                nameValidation
-                inviterRewardValidation
-                invitedRewardValidation
-
-        createTokenData =
-            Result.map2
-                (\symbol minimumBalance ->
-                    let
-                        asset amount =
-                            { amount = amount
-                            , symbol = symbol
-                            }
-                    in
-                    { creator = accountName
-                    , maxSupply = asset 21000000.0
-                    , minBalance = asset minimumBalance
-                    , tokenType = Token.Mcc
-                    }
-                )
-                symbolValidation
-                minimumBalanceValidation
-    in
-    case Result.map2 Tuple.pair createCommunityData createTokenData of
-        Ok valid ->
-            Ok valid
-
-        Err _ ->
-            let
-                turnToString =
-                    Result.map (\_ -> "")
-
-                errors =
-                    [ nameValidation, turnToString symbolValidation, logoValidation, turnToString inviterRewardValidation, turnToString invitedRewardValidation, turnToString minimumBalanceValidation ]
-                        |> List.filterMap
-                            (\r ->
-                                case r of
-                                    Err err ->
-                                        Just err
-
-                                    Ok _ ->
-                                        Nothing
-                            )
-            in
-            Err { model | errors = errors }
-
-
-getFieldProblems : Shared -> FormField -> List Error -> List String
-getFieldProblems shared formField errors =
-    errors
-        |> List.filter (\( field, _ ) -> field == formField)
-        |> List.map (Tuple.second >> errorToString shared)
-
-
-errorToString : Shared -> FormError -> String
-errorToString shared error =
-    let
-        t =
-            shared.translators.t
-    in
-    case error of
-        ChooseLogo ->
-            t "error.chooseOrUploadLogo"
-
-        WaitForLogoUpload ->
-            t "error.waitForLogoUpload"
-
-        InvalidSymbol ->
-            t "error.invalidSymbol"
-
-        EmptyRequired ->
-            t "error.required"
-
-        InvalidNumber ->
-            t "error.validator.text.only_numbers"
 
 
 
@@ -655,24 +337,12 @@ type alias UpdateResult =
 
 
 type Msg
-    = EnteredName String
-    | GotDescriptionEditorMsg MarkdownEditor.Msg
-    | EnteredSubdomain String
-    | EnteredSymbol String
-    | EnteredInviterReward String
-    | EnteredInvitedReward String
-    | EnteredMinimumBalance String
-    | EnteredWebsite String
-    | ToggledAutoInvite Bool
-    | ClickedLogo Int
-    | EnteredLogo Int (List File)
-    | CompletedLogoUpload Int (Result Http.Error String)
-    | SubmittedForm
-    | GotDomainAvailableResponse (RemoteData (Graphql.Http.Error Bool) Bool)
+    = GotFormMsg (Form.Msg FormInput)
+    | SubmittedForm FormOutput
+    | GotDomainAvailableResponse FormOutput (RemoteData (Graphql.Http.Error Bool) Bool)
     | StartedCreatingCommunity Community.CreateCommunityData Token.CreateTokenData
-    | GotCreateCommunityResponse (Result Value ( Eos.Symbol, String ))
+    | GotCreateCommunityResponse (Result Value Eos.Symbol)
     | Redirect Community.CreateCommunityData
-    | PressedEnter Bool
     | ClosedAuthModal
 
 
@@ -683,143 +353,83 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        EnteredName name ->
-            { model | name = name }
-                |> validateField validateName CurrencyName
-                |> UR.init
-
-        GotDescriptionEditorMsg subMsg ->
-            let
-                ( descriptionInput, descriptionCmd ) =
-                    MarkdownEditor.update subMsg model.description
-            in
-            { model | description = descriptionInput }
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotDescriptionEditorMsg descriptionCmd)
-
-        EnteredSubdomain subdomain ->
-            { model | subdomain = subdomain }
-                |> UR.init
-
-        EnteredInviterReward inviterReward ->
-            { model | inviterReward = inviterReward }
-                |> validateField validateInviterReward InviterReward
-                |> UR.init
-
-        EnteredInvitedReward invitedReward ->
-            { model | invitedReward = invitedReward }
-                |> validateField validateInvitedReward InvitedReward
-                |> UR.init
-
-        EnteredMinimumBalance minimumBalance ->
-            { model | minimumBalance = minimumBalance }
-                |> validateField validateMinimumBalance MinimumBalance
-                |> UR.init
-
-        EnteredWebsite website ->
-            { model | website = website }
-                |> UR.init
-
-        ToggledAutoInvite hasAutoInvite ->
-            { model | hasAutoInvite = not hasAutoInvite }
-                |> UR.init
-
-        EnteredSymbol symbol ->
-            { model | symbol = symbol }
-                |> validateField validateSymbol SymbolField
-                |> UR.init
-
-        ClickedLogo index ->
-            let
-                newModel =
-                    { model | logoSelected = index }
-            in
-            { newModel | isDisabled = not (isLogoUploaded newModel) }
-                |> UR.init
-
-        EnteredLogo index (file :: _) ->
-            { model | logoSelected = index, logoList = model.logoList ++ [ Uploading ] }
-                |> UR.init
-                |> UR.addCmd (Api.uploadImage loggedIn.shared file (CompletedLogoUpload index))
-
-        EnteredLogo _ [] ->
-            UR.init model
-
-        CompletedLogoUpload index (Err err) ->
-            { model | logoList = List.removeAt index model.logoList, logoSelected = 0, isDisabled = False }
-                |> UR.init
-                |> UR.logHttpError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when uploading logo for a new community"
-                    { moduleName = "Page.Community.New", function = "update" }
-                    []
-                    err
-                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "settings.community_info.errors.logo_upload"))
-
-        CompletedLogoUpload index (Ok url) ->
-            let
-                newModel =
-                    { model | logoList = List.updateAt index (\_ -> Uploaded url) model.logoList }
-            in
-            { newModel
-                | isDisabled = not (isLogoUploaded newModel)
-            }
-                |> UR.init
-
-        SubmittedForm ->
+        SubmittedForm formOutput ->
             { model | isDisabled = True }
                 |> UR.init
-                |> UR.addCmd
-                    (Api.Graphql.query loggedIn.shared
-                        (Just loggedIn.authToken)
-                        (Community.domainAvailableQuery (Route.communityFullDomain loggedIn.shared model.subdomain))
-                        GotDomainAvailableResponse
+                |> UR.addExt
+                    (LoggedIn.query loggedIn
+                        (Community.domainAvailableQuery formOutput.url.host)
+                        (GotDomainAvailableResponse formOutput)
                     )
 
-        GotDomainAvailableResponse (RemoteData.Success True) ->
-            case validateModel loggedIn.shared loggedIn.accountName model of
-                Ok ( createCommunityData, createTokenData ) ->
-                    let
-                        subscriptionDoc =
-                            Community.newCommunitySubscription createCommunityData.cmmAsset.symbol
-                                |> Graphql.Document.serializeSubscription
-                    in
-                    { model | isDisabled = True }
-                        |> UR.init
-                        |> UR.addPort
-                            { responseAddress = GotDomainAvailableResponse (RemoteData.Success True)
-                            , responseData =
-                                Encode.object
-                                    [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
-                                    , ( "createTokenData", Token.encodeCreateTokenData createTokenData )
-                                    ]
-                            , data =
-                                Encode.object
-                                    [ ( "name", Encode.string "subscribeToNewCommunity" )
-                                    , ( "subscription", Encode.string subscriptionDoc )
-                                    ]
-                            }
-                        |> LoggedIn.withAuthentication loggedIn
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
-                        |> UR.addBreadcrumb
-                            { type_ = Log.DebugBreadcrumb
-                            , category = msg
-                            , message = "Checked that domain is available"
-                            , data =
-                                Dict.fromList
-                                    [ ( "domain"
-                                      , Route.communityFullDomain loggedIn.shared model.subdomain
-                                            |> Encode.string
-                                      )
-                                    ]
-                            , level = Log.DebugLevel
-                            }
+        GotDomainAvailableResponse formOutput (RemoteData.Success True) ->
+            let
+                createCommunityData =
+                    Community.createCommunityData
+                        { accountName = loggedIn.accountName
+                        , symbol = formOutput.symbol
+                        , logoUrl = formOutput.logo
+                        , name = formOutput.name
+                        , description = formOutput.description
+                        , subdomain = formOutput.url.host
+                        , inviterReward = formOutput.inviterReward
+                        , invitedReward = formOutput.invitedReward
+                        , hasShop = True
+                        , hasObjectives = True
+                        , hasKyc = False
+                        , hasAutoInvite = not formOutput.requireInvitation
+                        , website =
+                            case formOutput.website of
+                                Nothing ->
+                                    ""
 
-                Err withError ->
-                    UR.init withError
+                                Just website ->
+                                    if String.startsWith "https://" website || String.startsWith "http://" website then
+                                        website
 
-        GotDomainAvailableResponse (RemoteData.Success False) ->
+                                    else
+                                        "http://" ++ website
+                        }
+
+                createTokenData =
+                    { creator = loggedIn.accountName
+                    , maxSupply = { amount = 21000000.0, symbol = formOutput.symbol }
+                    , minBalance = { amount = formOutput.minimumBalance, symbol = formOutput.symbol }
+                    , tokenType = Token.Mcc
+                    }
+
+                subscriptionDoc =
+                    Community.newCommunitySubscription createCommunityData.cmmAsset.symbol
+                        |> Graphql.Document.serializeSubscription
+            in
+            { model | isDisabled = True }
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = GotDomainAvailableResponse formOutput (RemoteData.Success True)
+                    , responseData =
+                        Encode.object
+                            [ ( "createCommunityData", Community.encodeCreateCommunityData createCommunityData )
+                            , ( "createTokenData", Token.encodeCreateTokenData createTokenData )
+                            ]
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "subscribeToNewCommunity" )
+                            , ( "subscription", Encode.string subscriptionDoc )
+                            ]
+                    }
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
+                    model
+                    { successMsg = msg, errorMsg = ClosedAuthModal }
+                |> UR.addBreadcrumb
+                    { type_ = Log.DebugBreadcrumb
+                    , category = msg
+                    , message = "Checked that domain is available"
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
+                    , level = Log.DebugLevel
+                    }
+
+        GotDomainAvailableResponse formOutput (RemoteData.Success False) ->
             { model | isDisabled = False }
                 |> UR.init
                 |> UR.addExt
@@ -830,17 +440,11 @@ update msg model loggedIn =
                     { type_ = Log.DebugBreadcrumb
                     , category = msg
                     , message = "Tried domain that is unavailable"
-                    , data =
-                        Dict.fromList
-                            [ ( "domain"
-                              , Route.communityFullDomain loggedIn.shared model.subdomain
-                                    |> Encode.string
-                              )
-                            ]
+                    , data = Dict.fromList [ ( "domain", Encode.string formOutput.url.host ) ]
                     , level = Log.DebugLevel
                     }
 
-        GotDomainAvailableResponse (RemoteData.Failure err) ->
+        GotDomainAvailableResponse formOutput (RemoteData.Failure err) ->
             { model | isDisabled = False }
                 |> UR.init
                 |> UR.logGraphqlError msg
@@ -848,22 +452,16 @@ update msg model loggedIn =
                     "Got an error when checking if community domain is available"
                     { moduleName = "Page.Community.New", function = "update" }
                     [ { name = "Domain"
-                      , extras =
-                            Dict.fromList
-                                [ ( "tried"
-                                  , Route.communityFullDomain loggedIn.shared model.subdomain
-                                        |> Encode.string
-                                  )
-                                ]
+                      , extras = Dict.fromList [ ( "tried", Encode.string formOutput.url.host ) ]
                       }
                     ]
                     err
                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (loggedIn.shared.translators.t "error.unknown"))
 
-        GotDomainAvailableResponse RemoteData.NotAsked ->
+        GotDomainAvailableResponse _ RemoteData.NotAsked ->
             UR.init model
 
-        GotDomainAvailableResponse RemoteData.Loading ->
+        GotDomainAvailableResponse _ RemoteData.Loading ->
             UR.init model
 
         StartedCreatingCommunity createCommunityData createTokenData ->
@@ -896,10 +494,11 @@ update msg model loggedIn =
                             ]
                     }
 
-        GotCreateCommunityResponse (Ok ( symbol, subdomain )) ->
+        GotCreateCommunityResponse (Ok _) ->
             model
                 |> UR.init
-                |> UR.addExt (LoggedIn.CreatedCommunity symbol subdomain)
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (loggedIn.shared.translators.t "community.create.created"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey Route.Dashboard)
 
         GotCreateCommunityResponse (Err val) ->
             { model | isDisabled = False }
@@ -927,20 +526,16 @@ update msg model loggedIn =
             UR.init model
                 |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
 
-        PressedEnter isEnter ->
-            if isEnter then
-                UR.init model
-                    |> UR.addCmd
-                        (Task.succeed SubmittedForm
-                            |> Task.perform identity
-                        )
-
-            else
-                UR.init model
-
         ClosedAuthModal ->
             { model | isDisabled = False }
                 |> UR.init
+
+        GotFormMsg subMsg ->
+            Form.update loggedIn.shared subMsg model.form
+                |> UR.fromChild (\newForm -> { model | form = newForm })
+                    GotFormMsg
+                    LoggedIn.addFeedback
+                    model
 
 
 jsAddressToMsg : List String -> Value -> Maybe Msg
@@ -973,14 +568,9 @@ jsAddressToMsg addr val =
 
         "StartedCreatingCommunity" :: [] ->
             Decode.decodeValue
-                (Decode.map2 (\_ s -> s)
+                (Decode.map2 (\_ symbol -> symbol)
                     (Decode.field "transactionId" Decode.string)
-                    (Decode.field "addressData"
-                        (Decode.map2 Tuple.pair
-                            (Decode.field "symbol" Eos.symbolDecoder)
-                            (Decode.field "subdomain" Decode.string)
-                        )
-                    )
+                    (Decode.at [ "addressData", "symbol" ] Eos.symbolDecoder)
                 )
                 val
                 |> Result.mapError (\_ -> val)
@@ -994,46 +584,13 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        EnteredName _ ->
-            [ "EnteredName" ]
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg
 
-        GotDescriptionEditorMsg subMsg ->
-            "GotDescriptionEditorMsg" :: MarkdownEditor.msgToString subMsg
-
-        EnteredSubdomain _ ->
-            [ "EnteredSubdomain" ]
-
-        EnteredSymbol _ ->
-            [ "EnteredSymbol" ]
-
-        EnteredInvitedReward _ ->
-            [ "EnteredInvitedReward" ]
-
-        EnteredInviterReward _ ->
-            [ "EnteredInviterReward" ]
-
-        EnteredMinimumBalance _ ->
-            [ "EnteredMinimumBalance" ]
-
-        EnteredWebsite _ ->
-            [ "EnteredWebsite" ]
-
-        ToggledAutoInvite _ ->
-            [ "ToggledAutoInvite" ]
-
-        ClickedLogo _ ->
-            [ "ClickedLogo" ]
-
-        EnteredLogo _ _ ->
-            [ "EnteredLogo" ]
-
-        CompletedLogoUpload _ r ->
-            [ "CompletedLogoUpload", UR.resultToString r ]
-
-        SubmittedForm ->
+        SubmittedForm _ ->
             [ "SubmittedForm" ]
 
-        GotDomainAvailableResponse r ->
+        GotDomainAvailableResponse _ r ->
             [ "GotDomainAvailableResponse", UR.remoteDataToString r ]
 
         StartedCreatingCommunity _ _ ->
@@ -1044,9 +601,6 @@ msgToString msg =
 
         Redirect _ ->
             [ "Redirect" ]
-
-        PressedEnter _ ->
-            [ "PressedEnter" ]
 
         ClosedAuthModal ->
             [ "ClosedAuthModal" ]

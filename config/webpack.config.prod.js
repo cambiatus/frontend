@@ -10,6 +10,7 @@ const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin')
 const paths = require('../config/paths')
 const getClientEnvironment = require('./env')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const GitHashWebpackPlugin = require('git-hash-webpack-plugin')
 
 // Webpack uses `publicPath` to determine where the app is being served from.
 // It requires a trailing slash, or the file assets will get an incorrect path.
@@ -304,7 +305,10 @@ module.exports = {
     // Copy our service worker file to the ROOT of the build folder
     new CopyWebpackPlugin([
       { from: 'public/', to: '' }
-    ])
+    ]),
+    // Inject the current git commit hash as `process.env.COMMIT`. We use this
+    // to display version information
+    new GitHashWebpackPlugin({ webpack, len: 8 })
   ],
   // Some libraries import Node modules but don't use them in the browser.
   // Tell Webpack to provide empty mocks for them so importing them works.

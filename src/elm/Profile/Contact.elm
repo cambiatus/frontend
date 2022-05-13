@@ -1,12 +1,14 @@
 module Profile.Contact exposing
-    ( ContactResponse(..)
+    ( External(..)
     , Model
     , Msg
     , Normalized
     , circularIcon
+    , circularIconWithGrayBg
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
+    , getLabel
     , initMultiple
     , initSingle
     , selectionSet
@@ -16,7 +18,6 @@ module Profile.Contact exposing
     , view
     )
 
-import Api.Graphql
 import Browser.Dom
 import Cambiatus.Enum.ContactType as ContactType exposing (ContactType(..))
 import Cambiatus.Mutation
@@ -24,28 +25,30 @@ import Cambiatus.Object
 import Cambiatus.Object.Contact
 import Cambiatus.Object.User as User
 import Eos.Account as Eos
+import Form.Select
+import Form.Text
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Attribute, Html, a, button, div, img, p, text)
 import Html.Attributes exposing (class, classList, disabled, href, src, style, tabindex, type_)
+import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick, onSubmit)
 import Icons
 import Json.Decode
 import List.Extra as LE
-import Mask
+import Maybe.Extra
 import PhoneNumber exposing (Country)
 import PhoneNumber.Countries as Countries
 import Regex exposing (Regex)
 import RemoteData exposing (RemoteData)
-import Session.Shared exposing (Shared, Translators)
 import Task
+import Translation exposing (Translators)
+import UpdateResult as UR
+import Url
 import Validate
 import View.Components
-import View.Form
-import View.Form.Input as Input
-import View.Form.Select as Select
 import View.Modal as Modal
 
 
@@ -99,6 +102,7 @@ type alias Basic =
     { supportedCountry : SupportedCountry
     , contactType : ContactType
     , contact : String
+    , label : Maybe String
     , errors : Maybe (List String)
     , showFlags : Bool
     , focusedFlag : Maybe SupportedCountry
@@ -109,6 +113,7 @@ initBasic : ContactType -> Basic
 initBasic contactType =
     { supportedCountry = defaultCountry
     , contactType = contactType
+    , label = Nothing
     , contact = ""
     , errors = Nothing
     , showFlags = False
@@ -142,6 +147,12 @@ initBasicWith ((Normalized { contactType }) as normalized) =
                     newPhoneContact
                         -- 22 == String.length "https://instagram.com/"
                         |> String.dropLeft 22
+
+                Email ->
+                    newPhoneContact
+
+                Link ->
+                    newPhoneContact
     in
     { initial
         | contact = newContact
@@ -179,6 +190,7 @@ countryFromNormalized (Normalized { contactType, contact }) =
 type alias Contact =
     { contactType : ContactType
     , contact : String
+    , label : Maybe String
     }
 
 
@@ -204,12 +216,6 @@ type alias UpdatedData =
     RemoteData (Graphql.Http.Error (Maybe Profile)) (Maybe Profile)
 
 
-type ContactResponse
-    = NotAsked
-    | WithContacts String (List Normalized) Bool
-    | WithError String
-
-
 
 -- UPDATE
 
@@ -230,8 +236,23 @@ type Msg
     | PressedDownArrowOnFlagSelect ContactType
 
 
-update : Msg -> Model -> Shared -> String -> List Normalized -> ( Model, Cmd Msg, ContactResponse )
-update msg model ({ translators } as shared) authToken profileContacts =
+type External
+    = GotContacts String (List Normalized) Bool
+    | GotContactsError String
+    | GotMutationRequest (SelectionSet (Maybe Profile) RootMutation) (UpdatedData -> Msg)
+
+
+type alias UpdateResult =
+    UR.UpdateResult Model Msg External
+
+
+update :
+    Msg
+    -> Model
+    -> Translators
+    -> List Normalized
+    -> UpdateResult
+update msg model translators profileContacts =
     let
         toggleFlags ({ showFlags } as contact) =
             { contact
@@ -303,41 +324,37 @@ update msg model ({ translators } as shared) authToken profileContacts =
     in
     case msg of
         NoOp ->
-            ( model, Cmd.none, NotAsked )
+            UR.init model
 
         SelectedCountry contactType country ->
-            ( updateKind contactType (setCountry country)
-            , flagSelectorId contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setCountry country)
+                |> UR.init
+                |> UR.addCmd
+                    (flagSelectorId contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         ClickedToggleContactFlags contactType ->
-            ( updateKind contactType toggleFlags
-            , flagSelectorId contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType toggleFlags
+                |> UR.init
+                |> UR.addCmd
+                    (flagSelectorId contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         EnteredContactText contactType newContact ->
-            ( updateKind contactType (setContact newContact)
-            , Cmd.none
-            , NotAsked
-            )
+            updateKind contactType (setContact newContact)
+                |> UR.init
 
         ClosedDeleteModal ->
-            ( { model | contactTypeToDelete = Nothing }
-            , Cmd.none
-            , NotAsked
-            )
+            { model | contactTypeToDelete = Nothing }
+                |> UR.init
 
         ClickedDeleteContact contactType ->
-            ( { model | contactTypeToDelete = Just contactType }
-            , Cmd.none
-            , NotAsked
-            )
+            { model | contactTypeToDelete = Just contactType }
+                |> UR.init
 
         ConfirmedDeleteContact contactTypeToDelete ->
             let
@@ -355,21 +372,17 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         (\(Normalized { contactType }) -> contactType /= contactTypeToDelete)
                         profileContacts
             in
-            ( { withoutContact
+            { withoutContact
                 | contactTypeToDelete = Nothing
                 , state = RemoteData.Loading
-              }
-            , Api.Graphql.mutation shared
-                (Just authToken)
-                (mutation newContacts)
-                CompletedDeleteContact
-            , NotAsked
-            )
+            }
+                |> UR.init
+                |> UR.addExt (GotMutationRequest (mutation newContacts) CompletedDeleteContact)
 
         EnteredContactOption option ->
             case model.kind of
                 Single contact ->
-                    ( { model
+                    { model
                         | kind =
                             Single
                                 { contact
@@ -377,36 +390,26 @@ update msg model ({ translators } as shared) authToken profileContacts =
                                     , errors = Nothing
                                     , contact = ""
                                 }
-                      }
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    }
+                        |> UR.init
 
                 Multiple _ ->
-                    ( model
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    model
+                        |> UR.init
 
         ClickedSubmit ->
             case submit translators model.kind of
                 Err withError ->
-                    ( { model | kind = withError }
-                    , Cmd.none
-                    , NotAsked
-                    )
+                    { model | kind = withError }
+                        |> UR.init
 
                 Ok normalized ->
-                    ( { model
+                    { model
                         | state = RemoteData.Loading
                         , kind = removeErrors model.kind
-                      }
-                    , Api.Graphql.mutation shared
-                        (Just authToken)
-                        (mutation normalized)
-                        CompletedUpdateContact
-                    , NotAsked
-                    )
+                    }
+                        |> UR.init
+                        |> UR.addExt (GotMutationRequest (mutation normalized) CompletedUpdateContact)
 
         CompletedUpdateContact result ->
             let
@@ -421,25 +424,27 @@ update msg model ({ translators } as shared) authToken profileContacts =
                             "failure"
                         ]
                         |> translators.t
+
+                addContactResponse =
+                    case result of
+                        RemoteData.Success (Just profile) ->
+                            UR.addExt (GotContacts (feedbackString True) profile.contacts True)
+
+                        RemoteData.Success Nothing ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.Failure _ ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.NotAsked ->
+                            identity
+
+                        RemoteData.Loading ->
+                            identity
             in
-            ( { model | state = result }
-            , Cmd.none
-            , case result of
-                RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts True
-
-                RemoteData.Success Nothing ->
-                    WithError (feedbackString False)
-
-                RemoteData.Failure _ ->
-                    WithError (feedbackString False)
-
-                RemoteData.NotAsked ->
-                    NotAsked
-
-                RemoteData.Loading ->
-                    NotAsked
-            )
+            { model | state = result }
+                |> UR.init
+                |> addContactResponse
 
         CompletedDeleteContact result ->
             let
@@ -453,25 +458,27 @@ update msg model ({ translators } as shared) authToken profileContacts =
                             "failure"
                         ]
                         |> translators.t
+
+                addContactResponse =
+                    case result of
+                        RemoteData.Success (Just profile) ->
+                            UR.addExt (GotContacts (feedbackString True) profile.contacts False)
+
+                        RemoteData.Success Nothing ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.Failure _ ->
+                            UR.addExt (GotContactsError (feedbackString False))
+
+                        RemoteData.NotAsked ->
+                            identity
+
+                        RemoteData.Loading ->
+                            identity
             in
-            ( { model | state = RemoteData.NotAsked }
-            , Cmd.none
-            , case result of
-                RemoteData.Success (Just profile) ->
-                    WithContacts (feedbackString True) profile.contacts False
-
-                RemoteData.Success Nothing ->
-                    WithError (feedbackString False)
-
-                RemoteData.Failure _ ->
-                    WithError (feedbackString False)
-
-                RemoteData.NotAsked ->
-                    NotAsked
-
-                RemoteData.Loading ->
-                    NotAsked
-            )
+            { model | state = RemoteData.NotAsked }
+                |> UR.init
+                |> addContactResponse
 
         PressedUpArrowOnFlagSelect contactType ->
             let
@@ -494,12 +501,13 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         |> Maybe.andThen (\index -> LE.getAt index countries)
                         |> Maybe.withDefault defaultCountry
             in
-            ( updateKind contactType (setFocusedFlag nextCountry)
-            , flagId nextCountry contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setFocusedFlag nextCountry)
+                |> UR.init
+                |> UR.addCmd
+                    (flagId nextCountry contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         PressedDownArrowOnFlagSelect contactType ->
             let
@@ -522,12 +530,13 @@ update msg model ({ translators } as shared) authToken profileContacts =
                         |> Maybe.andThen (\index -> LE.getAt index countries)
                         |> Maybe.withDefault defaultCountry
             in
-            ( updateKind contactType (setFocusedFlag nextCountry)
-            , flagId nextCountry contactType
-                |> Browser.Dom.focus
-                |> Task.attempt (\_ -> NoOp)
-            , NotAsked
-            )
+            updateKind contactType (setFocusedFlag nextCountry)
+                |> UR.init
+                |> UR.addCmd
+                    (flagId nextCountry contactType
+                        |> Browser.Dom.focus
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
 
 updateIfContactType : ContactType -> (Basic -> Basic) -> List Basic -> List Basic
@@ -550,24 +559,7 @@ submit translators kind =
 
 submitSingle : Translators -> Basic -> Result Basic Normalized
 submitSingle translators basic =
-    let
-        removeMask : Basic -> Basic
-        removeMask basic_ =
-            case basic_.contactType of
-                Phone ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Whatsapp ->
-                    { basic_ | contact = Mask.remove (phoneMask basic_) basic_.contact }
-
-                Instagram ->
-                    basic_
-
-                Telegram ->
-                    basic_
-    in
     basic
-        |> removeMask
         |> Validate.validate (validator basic.contactType translators)
         |> Result.mapError (\errors -> addErrors errors basic)
         |> Result.map (\valid -> normalize basic.supportedCountry valid)
@@ -611,11 +603,24 @@ view translators model =
         submitText =
             (case model.kind of
                 Single contact ->
-                    if usesPhone contact.contactType then
-                        "contact_form.phone.submit"
+                    case contact.contactType of
+                        Instagram ->
+                            "contact_form.username.submit"
 
-                    else
-                        "contact_form.username.submit"
+                        Telegram ->
+                            "contact_form.username.submit"
+
+                        Link ->
+                            "contact_form.link.submit"
+
+                        Email ->
+                            "contact_form.email.submit"
+
+                        Whatsapp ->
+                            "contact_form.phone.submit"
+
+                        Phone ->
+                            "contact_form.phone.submit"
 
                 Multiple _ ->
                     "contact_form.submit_multiple"
@@ -705,7 +710,7 @@ view translators model =
 viewInputWithBackground : Translators -> Basic -> Html Msg
 viewInputWithBackground translators basic =
     div [ class "bg-gray-100 p-4 pb-0 rounded mb-4" ]
-        [ div [ class "font-menu font-medium flex items-center mb-4 justify-between" ]
+        [ div [ class "font-menu font-semibold flex items-center mb-4 justify-between" ]
             [ div [ class "flex items-center" ]
                 [ contactTypeToIcon "mr-2" False basic.contactType
                 , text (contactTypeToString translators basic.contactType)
@@ -732,13 +737,21 @@ contactTypeToIcon : String -> Bool -> ContactType -> Html msg
 contactTypeToIcon class_ isInverted contactType =
     case contactType of
         Phone ->
-            Icons.phone class_
+            if isInverted then
+                Icons.phoneInverted class_
+
+            else
+                Icons.phone class_
 
         Instagram ->
             Icons.instagram class_
 
         Telegram ->
-            Icons.telegram class_
+            if isInverted then
+                Icons.telegramInverted class_
+
+            else
+                Icons.telegram class_
 
         Whatsapp ->
             if isInverted then
@@ -747,27 +760,96 @@ contactTypeToIcon class_ isInverted contactType =
             else
                 Icons.whatsapp class_
 
+        Email ->
+            Icons.mail class_
+
+        Link ->
+            Icons.link class_
+
+
+circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
+circularIconWithGrayBg translators class_ (Normalized normalized) =
+    let
+        defaultClass =
+            case normalized.contactType of
+                Whatsapp ->
+                    "fill-current text-green "
+
+                Phone ->
+                    "fill-current text-orange-500"
+
+                _ ->
+                    ""
+    in
+    a
+        [ toHref (Normalized normalized)
+        , class "w-10 h-10 flex-shrink-0 bg-gray-100 rounded-full flex items-center justify-center hover:opacity-70 focus-ring"
+        , ariaLabel (ariaLabelForContactType translators normalized.contactType)
+        ]
+        [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
+
+
+getLabel : Translators -> Normalized -> String
+getLabel translators (Normalized normalized) =
+    case normalized.label of
+        Nothing ->
+            contactTypeToString translators normalized.contactType
+
+        Just label ->
+            label
+
+
+ariaLabelForContactType : Translators -> ContactType -> String
+ariaLabelForContactType { t } contactType =
+    case contactType of
+        Phone ->
+            t "contact_form.reach_out.phone"
+
+        Instagram ->
+            t "contact_form.reach_out.instagram"
+
+        Telegram ->
+            t "contact_form.reach_out.telegram"
+
+        Whatsapp ->
+            t "contact_form.reach_out.whatsapp"
+
+        Email ->
+            t "contact_form.reach_out.email"
+
+        Link ->
+            t "contact_form.reach_out.link"
+
 
 circularIcon : String -> Normalized -> Html msg
 circularIcon class_ (Normalized normalized) =
     let
-        bgColor =
+        ( bgColor, textColor ) =
             case normalized.contactType of
                 Phone ->
-                    "bg-orange-300"
+                    ( "bg-orange-300", "fill-current text-white" )
 
                 Instagram ->
-                    "bg-instagram"
+                    ( "bg-instagram", "" )
 
                 Telegram ->
-                    "bg-telegram"
+                    ( "bg-telegram", "" )
 
                 Whatsapp ->
-                    "bg-whatsapp"
+                    ( "bg-whatsapp", "" )
+
+                Email ->
+                    ( "bg-gray-500", "fill-current text-orange-300" )
+
+                Link ->
+                    ( "bg-gray-500", "" )
     in
     case normalized.contactType of
         Telegram ->
-            a [ toHref (Normalized normalized) ]
+            a
+                [ toHref (Normalized normalized)
+                , class "hover:opacity-80"
+                ]
                 [ contactTypeToIcon class_ False normalized.contactType
                 ]
 
@@ -775,7 +857,8 @@ circularIcon class_ (Normalized normalized) =
             a
                 [ class
                     (String.join " "
-                        [ "p-2 rounded-full flex items-center justify-center"
+                        [ "p-2 rounded-full flex items-center justify-center hover:opacity-80"
+                        , textColor
                         , bgColor
                         , class_
                         ]
@@ -805,6 +888,12 @@ toHref (Normalized { contactType, contact }) =
                        )
                 )
 
+        Email ->
+            href ("mailto:" ++ contact)
+
+        Link ->
+            href contact
+
 
 contactTypeTextColor : ContactType -> String
 contactTypeTextColor contactType =
@@ -821,6 +910,12 @@ contactTypeTextColor contactType =
         Whatsapp ->
             "text-whatsapp"
 
+        Email ->
+            "text-orange-300"
+
+        Link ->
+            "text-orange-300"
+
 
 viewInput : Translators -> Basic -> Html Msg
 viewInput translators basic =
@@ -829,35 +924,35 @@ viewInput translators basic =
             [ viewFlagsSelect translators basic, viewPhoneInput translators basic ]
 
          else
-            [ viewProfileInput translators basic ]
+            [ viewTextInput translators basic ]
         )
 
 
 viewContactTypeSelect : Translators -> ContactType -> Html Msg
-viewContactTypeSelect translators contactType =
-    case ContactType.list of
-        [] ->
-            text ""
-
-        first :: rest ->
-            let
-                makeOption contactType_ =
-                    { value = contactType_
-                    , label = contactTypeToString translators contactType_
+viewContactTypeSelect ({ t } as translators) contactType =
+    let
+        makeOption contactType_ =
+            { option = contactType_
+            , label = contactTypeToString translators contactType_
+            }
+    in
+    Form.Select.init
+        { label = t "contact_form.contact_type"
+        , id = "contact-type"
+        , optionToString = ContactType.toString
+        }
+        |> Form.Select.withOptions (List.map makeOption ContactType.list)
+        |> Form.Select.withContainerAttrs [ class "mb-10" ]
+        |> (\options ->
+                Form.Select.view options
+                    { onSelect = EnteredContactOption
+                    , onBlur = NoOp
+                    , value = contactType
+                    , error = text ""
+                    , hasError = False
+                    , isRequired = False
                     }
-            in
-            Select.init
-                { id = "contact_type"
-                , label = translators.t "contact_form.contact_type"
-                , onInput = EnteredContactOption
-                , firstOption = makeOption first
-                , value = contactType
-                , valueToString = ContactType.toString
-                , disabled = False
-                , problems = Nothing
-                }
-                |> Select.withOptions (List.map makeOption rest)
-                |> Select.toHtml
+           )
 
 
 flagId : SupportedCountry -> ContactType -> String
@@ -933,9 +1028,12 @@ viewFlagsSelect { t } basic =
 
           else
             text ""
-        , View.Form.label (flagSelectorId basic.contactType) (t "contact_form.country")
+        , View.Components.label []
+            { targetId = flagSelectorId basic.contactType
+            , labelText = t "contact_form.country"
+            }
         , button
-            [ class "form-select select relative"
+            [ class "form-select relative"
             , classList [ ( "border-none mx-px", basic.showFlags ) ]
             , onClick (ClickedToggleContactFlags basic.contactType)
             , Html.Attributes.id (flagSelectorId basic.contactType)
@@ -984,7 +1082,7 @@ viewFlagsSelect { t } basic =
             [ flag False "" basic.supportedCountry
             , if basic.showFlags then
                 div
-                    [ class "absolute form-input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
+                    [ class "absolute input -mx-px inset-x-0 top-0 space-y-4 z-50 h-44 overflow-auto"
                     , tabindex -1
                     ]
                     (countryOptions basic.supportedCountry
@@ -999,25 +1097,38 @@ viewFlagsSelect { t } basic =
 
 viewPhoneInput : Translators -> Basic -> Html Msg
 viewPhoneInput ({ t, tr } as translators) basic =
-    div [ class "w-full" ]
-        [ Input.init
-            { label = t "contact_form.phone.label"
-            , id = ContactType.toString basic.contactType ++ "_input"
-            , onInput = EnteredContactText basic.contactType
-            , disabled = False
-            , value = basic.contact
-            , placeholder =
-                Just
-                    (tr "contact_form.phone.placeholder"
-                        [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
-                    )
-            , problems = basic.errors
-            , translators = translators
-            }
-            |> Input.withMask (phoneMask basic)
-            |> Input.withType Input.Telephone
-            |> Input.toHtml
-        ]
+    Form.Text.init
+        { label = t "contact_form.phone.label"
+        , id = ContactType.toString basic.contactType ++ "-input"
+        }
+        |> Form.Text.withPlaceholder
+            (tr "contact_form.phone.placeholder"
+                [ ( "example_number", basic.supportedCountry.phonePlaceholder ) ]
+            )
+        |> Form.Text.withMask (phoneMask basic)
+        |> Form.Text.withType Form.Text.Telephone
+        |> Form.Text.withAllowedChars Char.isDigit
+        |> Form.Text.withContainerAttrs [ class "w-full" ]
+        |> (\options ->
+                Form.Text.view options
+                    { onChange = EnteredContactText basic.contactType
+                    , onBlur = NoOp
+                    , value = basic.contact
+                    , error =
+                        case basic.errors of
+                            Just (firstError :: _) ->
+                                p [ class "form-error" ] [ text firstError ]
+
+                            Just [] ->
+                                text ""
+
+                            Nothing ->
+                                text ""
+                    , hasError = Maybe.Extra.isJust basic.errors
+                    , translators = translators
+                    , isRequired = False
+                    }
+           )
 
 
 phoneMask : Basic -> { mask : String, replace : Char }
@@ -1036,21 +1147,55 @@ phoneMask basic =
     }
 
 
-viewProfileInput : Translators -> Basic -> Html Msg
-viewProfileInput ({ t } as translators) basic =
-    div [ class "w-full" ]
-        [ Input.init
-            { label = t "contact_form.username.label"
-            , id = ContactType.toString basic.contactType ++ "_input"
-            , onInput = EnteredContactText basic.contactType
-            , disabled = False
-            , value = basic.contact
-            , placeholder = Just (t "contact_form.username.placeholder")
-            , problems = basic.errors
-            , translators = translators
-            }
-            |> Input.toHtml
-        ]
+viewTextInput : Translators -> Basic -> Html Msg
+viewTextInput ({ t } as translators) basic =
+    let
+        contactKey =
+            case basic.contactType of
+                Instagram ->
+                    "username"
+
+                Telegram ->
+                    "username"
+
+                Link ->
+                    "link"
+
+                Email ->
+                    "email"
+
+                Whatsapp ->
+                    "phone"
+
+                Phone ->
+                    "phone"
+    in
+    Form.Text.init
+        { label = t ("contact_form." ++ contactKey ++ ".label")
+        , id = ContactType.toString basic.contactType ++ "-input"
+        }
+        |> Form.Text.withPlaceholder (t ("contact_form." ++ contactKey ++ ".placeholder"))
+        |> Form.Text.withContainerAttrs [ class "w-full" ]
+        |> (\options ->
+                Form.Text.view options
+                    { onChange = EnteredContactText basic.contactType
+                    , onBlur = NoOp
+                    , value = basic.contact
+                    , error =
+                        case basic.errors of
+                            Just (firstError :: _) ->
+                                p [ class "form-error" ] [ text firstError ]
+
+                            Just [] ->
+                                text ""
+
+                            Nothing ->
+                                text ""
+                    , hasError = Maybe.Extra.isJust basic.errors
+                    , translators = translators
+                    , isRequired = False
+                    }
+           )
 
 
 
@@ -1105,7 +1250,7 @@ isMultiple kind =
 normalize : SupportedCountry -> Validate.Valid Basic -> Normalized
 normalize { country } validatedContact =
     let
-        { contactType, contact } =
+        { contactType, contact, label } =
             Validate.fromValid validatedContact
     in
     Normalized
@@ -1123,6 +1268,13 @@ normalize { country } validatedContact =
 
                 Whatsapp ->
                     String.join " " [ "+" ++ country.countryCode, contact ]
+
+                Email ->
+                    contact
+
+                Link ->
+                    contact
+        , label = label
         }
 
 
@@ -1157,7 +1309,7 @@ validateRegex regex error =
 validatePhone : String -> Validate.Validator String Basic
 validatePhone error =
     Validate.fromErrors
-        (\({ supportedCountry, contact } as basic) ->
+        (\{ supportedCountry, contact } ->
             if
                 PhoneNumber.valid
                     { defaultCountry = supportedCountry.country
@@ -1189,6 +1341,34 @@ validator contactType translators =
 
                 Telegram ->
                     ( validateRegex telegramRegex, "username" )
+
+                Email ->
+                    ( \error -> Validate.ifInvalidEmail .contact (\_ -> error), "email" )
+
+                Link ->
+                    ( \error ->
+                        Validate.fromErrors
+                            (\{ contact } ->
+                                let
+                                    withProtocol =
+                                        if String.isEmpty contact then
+                                            ""
+
+                                        else if String.startsWith "https://" contact || String.startsWith "http://" contact then
+                                            contact
+
+                                        else
+                                            "http://" ++ contact
+                                in
+                                case Url.fromString withProtocol of
+                                    Nothing ->
+                                        [ error ]
+
+                                    Just _ ->
+                                        []
+                            )
+                    , "link"
+                    )
 
         baseTranslation =
             "contact_form.validation"
@@ -1268,16 +1448,22 @@ supportedCountries =
 selectionSet : SelectionSet (Maybe Normalized) Cambiatus.Object.Contact
 selectionSet =
     SelectionSet.succeed
-        (\maybeType maybeExternalId ->
+        (\maybeType maybeExternalId label ->
             case ( maybeType, maybeExternalId ) of
                 ( Just type_, Just externalId ) ->
-                    Contact type_ externalId |> Normalized |> Just
+                    Normalized
+                        { contactType = type_
+                        , contact = externalId
+                        , label = label
+                        }
+                        |> Just
 
                 _ ->
                     Nothing
         )
         |> with Cambiatus.Object.Contact.type_
         |> with Cambiatus.Object.Contact.externalId
+        |> with Cambiatus.Object.Contact.label
 
 
 profileSelectionSet : SelectionSet Profile Cambiatus.Object.User
@@ -1293,18 +1479,24 @@ profileSelectionSet =
 mutation : List Normalized -> SelectionSet (Maybe Profile) RootMutation
 mutation contacts =
     let
-        contactInput (Normalized { contactType, contact }) =
-            { type_ = Present contactType, externalId = Present contact }
+        contactInput (Normalized { contactType, contact, label }) =
+            { type_ = Present contactType
+            , externalId = Present contact
+            , label = Graphql.OptionalArgument.fromMaybe label
+            }
     in
-    Cambiatus.Mutation.updateUser
+    Cambiatus.Mutation.user
         { input =
             { avatar = Absent
             , bio = Absent
+            , claimNotification = Absent
             , contacts = Present (List.map contactInput contacts)
+            , digest = Absent
             , email = Absent
             , interests = Absent
             , location = Absent
             , name = Absent
+            , transferNotification = Absent
             }
         }
         profileSelectionSet

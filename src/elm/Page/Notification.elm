@@ -1,6 +1,5 @@
 module Page.Notification exposing (Model, Msg(..), init, msgToString, update, view)
 
-import Api.Graphql
 import Cambiatus.Scalar exposing (DateTime)
 import Eos
 import Eos.Account as Eos
@@ -27,15 +26,14 @@ import View.Components
 -- INIT
 
 
-init : LoggedIn.Model -> ( Model, Cmd Msg )
-init ({ shared, authToken } as loggedIn) =
-    ( initModel
-    , Api.Graphql.query
-        shared
-        (Just authToken)
-        (Notification.notificationHistoryQuery loggedIn.accountName)
-        CompletedLoadNotificationHistory
-    )
+init : LoggedIn.Model -> UpdateResult
+init loggedIn =
+    UR.init initModel
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (Notification.notificationHistoryQuery loggedIn.accountName)
+                CompletedLoadNotificationHistory
+            )
 
 
 
@@ -109,15 +107,15 @@ viewNotification loggedIn notification =
     in
     case notification.payload of
         Transfer data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationTransfer loggedIn.shared notification data ]
 
         Mint data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationMint loggedIn.shared notification data ]
 
         SaleHistory data ->
-            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100 first-hover:rounded-t-lg last-hover:rounded-b-lg" ++ isReadIndicator) ]
+            div [ class ("border-b last:border-b-0 border-gray-500 hover:bg-gray-100" ++ isReadIndicator) ]
                 [ viewNotificationSaleHistory loggedIn notification data ]
 
 
@@ -174,9 +172,9 @@ viewNotificationTransfer shared history notification =
             ]
         , div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ class "text-black" ]
                 [ text description ]
-            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+            , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                 identity
                 shared
                 (Utils.fromDateTime history.insertedAt)
@@ -222,9 +220,9 @@ viewNotificationMint shared history notification =
             ]
         , div [ class "flex-col flex-grow-1 pl-4" ]
             [ p
-                [ class "font-sans text-black text-sm leading-relaxed" ]
+                [ class "text-black" ]
                 [ text description ]
-            , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+            , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
                 identity
                 shared
                 (Utils.fromDateTime history.insertedAt)
@@ -291,9 +289,9 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
     in
     [ div [ class "flex-col flex-grow-1 pl-4" ]
         [ p
-            [ class "font-sans text-black text-sm leading-relaxed" ]
+            [ class "text-black" ]
             [ text description ]
-        , View.Components.dateViewer [ class "font-normal font-sans text-gray-900 text-caption uppercase block" ]
+        , View.Components.dateViewer [ class "text-gray-900 text-sm uppercase" ]
             identity
             shared
             (Utils.fromDateTime date)
@@ -370,9 +368,8 @@ update msg model loggedIn =
 
         MarkAsRead notificationId data ->
             let
-                cmd =
-                    Api.Graphql.mutation loggedIn.shared
-                        (Just loggedIn.authToken)
+                markAsRead =
+                    LoggedIn.mutation loggedIn
                         (Notification.markAsReadMutation notificationId)
                         CompletedReading
 
@@ -392,7 +389,7 @@ update msg model loggedIn =
                 T transfer ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
                         |> UR.addCmd
                             (Route.ViewTransfer transfer.id
                                 |> redirectCmd transfer.community
@@ -401,12 +398,12 @@ update msg model loggedIn =
                 M ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
 
                 S sale ->
                     model
                         |> UR.init
-                        |> UR.addCmd cmd
+                        |> UR.addExt markAsRead
                         |> UR.addCmd
                             (Route.ViewSale sale.product.id
                                 |> redirectCmd sale.product.community

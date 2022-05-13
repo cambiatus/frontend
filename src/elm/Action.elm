@@ -3,10 +3,13 @@ module Action exposing
     , ActionFeedback(..)
     , ClaimingActionStatus(..)
     , Community
+    , ExternalMsg(..)
     , Model
     , Msg(..)
     , Objective
     , Proof(..)
+    , encodeClaimAction
+    , isClaimable
     , isClosed
     , isPastDeadline
     , jsAddressToMsg
@@ -20,27 +23,28 @@ module Action exposing
     , viewSearchActions
     )
 
+import Cambiatus.Enum.Permission as Permission exposing (Permission)
 import Cambiatus.Enum.VerificationType as VerificationType exposing (VerificationType)
 import Cambiatus.Object
 import Cambiatus.Object.Action as ActionObject
 import Cambiatus.Object.Community
 import Cambiatus.Object.Objective
 import Cambiatus.Scalar exposing (DateTime)
-import Dict
 import Eos exposing (Symbol)
 import Eos.Account as Eos
-import File exposing (File)
+import Form
+import Form.File
+import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, br, button, div, i, li, p, span, text, ul)
-import Html.Attributes exposing (class, classList, disabled)
+import Html.Attributes exposing (class, classList, disabled, type_)
 import Html.Events exposing (onClick)
-import Http
 import Icons
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Markdown exposing (Markdown)
 import Ports
 import Profile
-import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
 import Sha256 exposing (sha256)
@@ -48,8 +52,7 @@ import Task
 import Time
 import UpdateResult as UR
 import Utils
-import View.Form.FileUploader as FileUploader
-import View.MarkdownEditor as MarkdownEditor
+import View.Feedback as Feedback
 import View.Modal as Modal
 
 
@@ -66,7 +69,7 @@ type alias Model =
 
 type ClaimingActionStatus
     = ConfirmationOpen Action
-    | ClaimInProgress Action (Maybe Proof)
+    | ClaimInProgress Action (Maybe { proof : Proof, image : Maybe String })
     | PhotoUploaderShowed Action Proof
     | NotAsked
 
@@ -77,7 +80,7 @@ type ActionFeedback
 
 
 type Proof
-    = Proof (RemoteData Http.Error String) (Maybe ProofCode)
+    = Proof (Form.Model Form.File.Model) (Maybe ProofCode)
 
 
 type alias ProofCode =
@@ -90,7 +93,8 @@ type alias ProofCode =
 
 type alias Action =
     { id : Int
-    , description : String
+    , description : Markdown
+    , image : Maybe String
     , objective : Objective
     , reward : Float
     , verifierReward : Float
@@ -104,8 +108,9 @@ type alias Action =
     , isCompleted : Bool
     , hasProofPhoto : Bool
     , hasProofCode : Bool
-    , photoProofInstructions : Maybe String
+    , photoProofInstructions : Maybe Markdown
     , position : Maybe Int
+    , claimCount : Int
     }
 
 
@@ -118,33 +123,52 @@ type Msg
       -- General Claim Messages
     | ClaimButtonClicked Action
     | ClaimConfirmationClosed
-    | ActionClaimed Action (Maybe Proof)
+    | ActionClaimed Action (Maybe { proof : Proof, image : Maybe String })
     | GotActionClaimedResponse (Result Encode.Value String)
       -- Claim with Proof Messages
     | AgreedToClaimWithProof Action
     | GotProofTime Time.Posix
     | AskedForUint64Name
     | GotUint64Name (Result Encode.Value String)
+    | GotFormMsg (Form.Msg Form.File.Model)
     | Tick Time.Posix
-    | PhotoAdded (List File)
-    | PhotoUploaded (Result Http.Error String)
+
+
+type ExternalMsg
+    = SentFeedback Feedback.Model
+    | ShowInsufficientPermissions
 
 
 update :
     Bool
+    -> List Permission
     -> Shared
-    -> (File -> (Result Http.Error String -> Msg) -> Cmd Msg)
     -> Symbol
     -> Eos.Name
     -> Msg
     -> Model
-    -> UR.UpdateResult Model Msg extMsg
-update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
+    -> UR.UpdateResult Model Msg ExternalMsg
+update isPinConfirmed permissions shared selectedCommunity accName msg model =
     let
         { t, tr } =
             shared.translators
 
-        claimOrAskForPin actionId photoUrl code time m =
+        hasPermissions necessaryPermissions =
+            List.all (\permission -> List.member permission permissions)
+                necessaryPermissions
+
+        claimOrAskForPin :
+            { actionId : Int
+            , proof :
+                Maybe
+                    { photo : String
+                    , code : String
+                    , time : Time.Posix
+                    }
+            }
+            -> Model
+            -> UR.UpdateResult Model Msg ExternalMsg
+        claimOrAskForPin { actionId, proof } m =
             if isPinConfirmed then
                 m
                     |> UR.init
@@ -152,11 +176,10 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         (claimActionPort
                             msg
                             shared.contracts.community
-                            { actionId = actionId
-                            , maker = accName
-                            , proofPhoto = photoUrl
-                            , proofCode = code
-                            , proofTime = time
+                            { communityId = selectedCommunity
+                            , actionId = actionId
+                            , claimer = accName
+                            , proof = proof
                             }
                         )
 
@@ -172,42 +195,67 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                 |> UR.init
 
         ( ActionClaimed action Nothing, _ ) ->
-            { model
-                | status = ClaimInProgress action Nothing
-                , feedback = Nothing
-                , needsPinConfirmation = not isPinConfirmed
-            }
-                |> claimOrAskForPin action.id "" "" 0
+            if hasPermissions [ Permission.Claim ] then
+                { model
+                    | status = ClaimInProgress action Nothing
+                    , feedback = Nothing
+                    , needsPinConfirmation = not isPinConfirmed
+                }
+                    |> claimOrAskForPin
+                        { actionId = action.id
+                        , proof = Nothing
+                        }
 
-        -- Valid: photo uploaded
-        ( ActionClaimed action ((Just (Proof (RemoteData.Success url) maybeProofCode)) as proof), _ ) ->
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
+
+        ( ActionClaimed action (Just proofRecord), _ ) ->
             let
-                ( proofCode, time ) =
-                    case maybeProofCode of
-                        Just { code_, claimTimestamp } ->
-                            ( Maybe.withDefault "" code_, claimTimestamp )
+                ( code, time ) =
+                    case proofRecord.proof of
+                        Proof _ (Just { code_, claimTimestamp }) ->
+                            ( Maybe.withDefault "" code_, Time.millisToPosix <| claimTimestamp * 1000 )
 
-                        Nothing ->
-                            ( "", 0 )
+                        Proof _ Nothing ->
+                            ( "", Time.millisToPosix 0 )
             in
-            { model
-                | status = ClaimInProgress action proof
-                , feedback = Nothing
-                , needsPinConfirmation = not isPinConfirmed
-            }
-                |> claimOrAskForPin action.id url proofCode time
+            if hasPermissions [ Permission.Claim ] then
+                case proofRecord.image of
+                    Just image ->
+                        { model
+                            | status = ClaimInProgress action (Just proofRecord)
+                            , feedback = Nothing
+                            , needsPinConfirmation = not isPinConfirmed
+                        }
+                            |> claimOrAskForPin
+                                { actionId = action.id
+                                , proof =
+                                    Just
+                                        { photo = image
+                                        , code = code
+                                        , time = time
+                                        }
+                                }
 
-        -- Invalid: no photo presented
-        ( ActionClaimed _ (Just _), _ ) ->
-            { model
-                | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
-                , needsPinConfirmation = False
-            }
-                |> UR.init
+                    Nothing ->
+                        { model
+                            | feedback = Failure (t "community.actions.proof.no_upload_error") |> Just
+                            , needsPinConfirmation = False
+                        }
+                            |> UR.init
+
+            else
+                { model | status = NotAsked }
+                    |> UR.init
+                    |> UR.addExt ShowInsufficientPermissions
 
         ( AgreedToClaimWithProof action, _ ) ->
             { model
-                | status = PhotoUploaderShowed action (Proof RemoteData.NotAsked Nothing)
+                | status =
+                    Proof (Form.init (Form.File.initModel Nothing)) Nothing
+                        |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -269,7 +317,9 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                         }
             in
             { model
-                | status = PhotoUploaderShowed action (Proof RemoteData.NotAsked initProofCodeParts)
+                | status =
+                    Proof (Form.init (Form.File.initModel Nothing)) initProofCodeParts
+                        |> PhotoUploaderShowed action
                 , feedback = Nothing
                 , needsPinConfirmation = False
             }
@@ -315,6 +365,43 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
                     []
                     err
 
+        ( GotFormMsg subMsg, ClaimInProgress action (Just proofRecord) ) ->
+            let
+                formModel =
+                    case proofRecord.proof of
+                        Proof formModel_ _ ->
+                            formModel_
+            in
+            Form.update shared subMsg formModel
+                |> UR.fromChild
+                    (\newForm ->
+                        { model
+                            | status =
+                                ClaimInProgress action
+                                    (Just
+                                        { proofRecord
+                                            | proof =
+                                                case proofRecord.proof of
+                                                    Proof _ proofCode ->
+                                                        Proof newForm proofCode
+                                        }
+                                    )
+                        }
+                    )
+                    GotFormMsg
+                    (SentFeedback >> UR.addExt)
+                    model
+
+        ( GotFormMsg subMsg, PhotoUploaderShowed action (Proof formModel proofCode) ) ->
+            Form.update shared subMsg formModel
+                |> UR.fromChild
+                    (\newForm ->
+                        { model | status = PhotoUploaderShowed action (Proof newForm proofCode) }
+                    )
+                    GotFormMsg
+                    (SentFeedback >> UR.addExt)
+                    model
+
         ( Tick timer, PhotoUploaderShowed action (Proof photoStatus (Just proofCode)) ) ->
             let
                 secondsAfterClaim =
@@ -344,44 +431,6 @@ update isPinConfirmed shared uploadFile selectedCommunity accName msg model =
             )
                 |> UR.init
 
-        ( PhotoAdded (file :: _), PhotoUploaderShowed action (Proof _ proofCode) ) ->
-            { model
-                | status = PhotoUploaderShowed action (Proof RemoteData.Loading proofCode)
-                , feedback = Nothing
-                , needsPinConfirmation = False
-            }
-                |> UR.init
-                |> UR.addCmd (uploadFile file PhotoUploaded)
-
-        ( PhotoUploaded (Ok url), PhotoUploaderShowed action (Proof _ proofCode) ) ->
-            { model
-                | status = PhotoUploaderShowed action (Proof (RemoteData.Success url) proofCode)
-                , feedback = Nothing
-                , needsPinConfirmation = False
-            }
-                |> UR.init
-
-        ( PhotoUploaded (Err error), PhotoUploaderShowed action (Proof _ proofCode) ) ->
-            { model
-                | status = PhotoUploaderShowed action (Proof (RemoteData.Failure error) proofCode)
-                , feedback = Just <| Failure (t "error.invalid_image_file")
-                , needsPinConfirmation = False
-            }
-                |> UR.init
-                |> UR.logHttpError msg
-                    (Just accName)
-                    "Error uploading photo for proof of action"
-                    { moduleName = "Action", function = "update" }
-                    [ { name = "Action"
-                      , extras =
-                            Dict.fromList
-                                [ ( "id", Encode.int action.id )
-                                , ( "symbol", Eos.encodeSymbol selectedCommunity )
-                                ]
-                      }
-                    ]
-                    error
-
         _ ->
             { model
                 | needsPinConfirmation = False
@@ -405,7 +454,7 @@ communitySelectionSet =
 
 type alias Objective =
     { id : Int
-    , description : String
+    , description : Markdown
     , community : Community
     , isCompleted : Bool
     }
@@ -415,7 +464,7 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Cambiatus.Object.Objective.id
-        |> with Cambiatus.Object.Objective.description
+        |> with (Markdown.selectionSet Cambiatus.Object.Objective.description)
         |> with (Cambiatus.Object.Objective.community communitySelectionSet)
         |> with Cambiatus.Object.Objective.isCompleted
 
@@ -424,7 +473,8 @@ selectionSet : SelectionSet Action Cambiatus.Object.Action
 selectionSet =
     SelectionSet.succeed Action
         |> with ActionObject.id
-        |> with ActionObject.description
+        |> with (Markdown.selectionSet ActionObject.description)
+        |> with ActionObject.image
         |> with
             (SelectionSet.map
                 (\o ->
@@ -448,8 +498,9 @@ selectionSet =
         |> with ActionObject.isCompleted
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofPhoto)
         |> with (SelectionSet.map (Maybe.withDefault False) ActionObject.hasProofCode)
-        |> with ActionObject.photoProofInstructions
+        |> with (Markdown.maybeSelectionSet ActionObject.photoProofInstructions)
         |> with ActionObject.position
+        |> with (ActionObject.claimCount (\optionals -> { optionals | status = OptionalArgument.Absent }))
 
 
 
@@ -559,12 +610,12 @@ viewSearchActions ({ t } as translators) today actions =
                 li [ class "relative mb-10 w-full sm:px-2 sm:w-1/2 lg:w-1/3" ]
                     [ i [ class "absolute top-0 left-0 right-0 -mt-6" ] [ Icons.flag "w-full fill-current text-green" ]
                     , div [ class "px-4 pt-8 pb-4 text-sm font-light bg-purple-500 rounded-lg text-white" ]
-                        [ p [ class "mb-8" ] [ text action.description ]
+                        [ Markdown.view [ class "mb-8" ] action.description
                         , div [ class "flex justify-between" ]
                             [ p []
                                 [ text (t "menu.search.gain")
                                 , br [] []
-                                , span [ class "text-green font-medium" ] [ text <| String.fromFloat action.reward ]
+                                , span [ class "text-green font-semibold" ] [ text <| String.fromFloat action.reward ]
                                 , text " "
                                 , text <| Eos.symbolToSymbolCodeString action.objective.community.symbol
                                 ]
@@ -577,17 +628,30 @@ viewSearchActions ({ t } as translators) today actions =
         (List.map viewAction actions)
 
 
+claimWithProofsForm : Translators -> Form.Form msg Form.File.Model String
+claimWithProofsForm translators =
+    Form.File.init
+        { label = translators.t "community.actions.proof.upload"
+        , id = "proof-photo-uploader"
+        }
+        |> Form.File.withContainerAttrs [ class "mb-4 md:w-2/3" ]
+        |> Form.File.withFileTypes [ Form.File.Image, Form.File.PDF ]
+        |> Form.file
+            { translators = translators
+            , value = identity
+            , update = \newValue _ -> newValue
+            , externalError = always Nothing
+            }
+
+
 viewClaimWithProofs : Proof -> Translators -> Bool -> Action -> Html Msg
 viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translators) isLoading action =
-    let
-        isUploadingInProgress =
-            RemoteData.isLoading photoStatus
-    in
-    div [ class "bg-white border-t border-gray-300" ]
+    div [ class "bg-white border-t border-gray-300 flex-grow" ]
         [ div [ class "container p-4 mx-auto" ]
-            [ div [ class "heading-bold leading-7 font-bold" ] [ text <| t "community.actions.proof.title" ]
-            , MarkdownEditor.viewReadOnly [ class "mb-4" ]
-                (Maybe.withDefault "" action.photoProofInstructions)
+            [ div [ class "text-lg font-bold my-3" ] [ text <| t "community.actions.proof.title" ]
+            , action.photoProofInstructions
+                |> Maybe.withDefault Markdown.empty
+                |> Markdown.view [ class "mb-4" ]
             , case proofCode of
                 Just { code_, secondsAfterClaim, availabilityPeriod } ->
                     case code_ of
@@ -603,43 +667,32 @@ viewClaimWithProofs ((Proof photoStatus proofCode) as proof) ({ t } as translato
 
                 _ ->
                     text ""
-            , FileUploader.init
-                { label = "community.actions.proof.upload"
-                , id = "proof_photo_uploader"
-                , onFileInput = PhotoAdded
-                , status = photoStatus
+            , Form.view []
+                translators
+                (\submitButton ->
+                    [ div [ class "md:flex" ]
+                        [ button
+                            [ class "modal-cancel"
+                            , type_ "button"
+                            , onClick ClaimConfirmationClosed
+                            , disabled isLoading
+                            ]
+                            [ text (t "menu.cancel") ]
+                        , submitButton
+                            [ class "modal-accept"
+                            , disabled isLoading
+                            ]
+                            [ text (t "menu.send") ]
+                        ]
+                    ]
+                )
+                (claimWithProofsForm translators)
+                photoStatus
+                { toMsg = GotFormMsg
+                , onSubmit =
+                    \image ->
+                        ActionClaimed action (Just { proof = proof, image = Just image })
                 }
-                |> FileUploader.withAttrs [ class "mb-4 md:w-2/3" ]
-                |> FileUploader.withFileTypes [ FileUploader.Image, FileUploader.PDF ]
-                |> FileUploader.toHtml translators
-            , div [ class "md:flex" ]
-                [ button
-                    [ class "modal-cancel"
-                    , onClick
-                        (if isUploadingInProgress then
-                            NoOp
-
-                         else
-                            ClaimConfirmationClosed
-                        )
-                    , classList [ ( "button-disabled", isUploadingInProgress || isLoading ) ]
-                    , disabled (isUploadingInProgress || isLoading)
-                    ]
-                    [ text (t "menu.cancel") ]
-                , button
-                    [ class "modal-accept"
-                    , classList [ ( "button-disabled", isUploadingInProgress || isLoading ) ]
-                    , onClick
-                        (if isUploadingInProgress then
-                            NoOp
-
-                         else
-                            ActionClaimed action (Just proof)
-                        )
-                    , disabled (isUploadingInProgress || isLoading)
-                    ]
-                    [ text (t "menu.send") ]
-                ]
             ]
         ]
 
@@ -667,11 +720,11 @@ viewProofCode { t } proofCode secondsAfterClaim proofCodeValiditySeconds =
             toString timerMinutes ++ ":" ++ toString timerSeconds
     in
     div [ class "mb-4" ]
-        [ span [ class "input-label block mb-1" ]
+        [ span [ class "label block" ]
             [ text (t "community.actions.form.verification_code") ]
         , div [ class "text-2xl text-black font-bold inline-block align-middle mr-2" ]
             [ text proofCode ]
-        , span [ class "whitespace-nowrap text-body rounded-full bg-lightred px-3 py-1 text-white" ]
+        , span [ class "whitespace-nowrap rounded-full bg-lightred px-3 py-1 text-white" ]
             [ text (t "community.actions.proof.code_period_label")
             , text " "
             , text timer
@@ -691,9 +744,10 @@ encode action =
             { symbol = action.objective.community.symbol, amount = amount }
     in
     Encode.object
-        [ ( "action_id", Encode.int action.id )
+        [ ( "community_id", Eos.encodeSymbol action.objective.community.symbol )
+        , ( "action_id", Encode.int action.id )
         , ( "objective_id", Encode.int action.objective.id )
-        , ( "description", Encode.string action.description )
+        , ( "description", Markdown.encode action.description )
         , ( "reward", Eos.encodeAsset (makeAsset action.reward) )
         , ( "verifier_reward", Eos.encodeAsset (makeAsset action.verifierReward) )
         , ( "deadline"
@@ -720,7 +774,8 @@ encode action =
         , ( "creator", Eos.encodeName action.creator )
         , ( "has_proof_photo", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofPhoto) )
         , ( "has_proof_code", Eos.encodeEosBool (Eos.boolToEosBool action.hasProofCode) )
-        , ( "photo_proof_instructions", Encode.string (action.photoProofInstructions |> Maybe.withDefault "") )
+        , ( "photo_proof_instructions", Markdown.encode (Maybe.withDefault Markdown.empty action.photoProofInstructions) )
+        , ( "image", Encode.string "" )
         ]
 
 
@@ -737,7 +792,7 @@ updateAction accountName shared action =
 
 
 claimActionPort : msg -> String -> ClaimedAction -> Ports.JavascriptOutModel msg
-claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode, proofTime } =
+claimActionPort msg contractsCommunity action =
     { responseAddress = msg
     , responseData = Encode.null
     , data =
@@ -745,39 +800,48 @@ claimActionPort msg contractsCommunity { actionId, maker, proofPhoto, proofCode,
             [ { accountName = contractsCommunity
               , name = "claimaction"
               , authorization =
-                    { actor = maker
+                    { actor = action.claimer
                     , permissionName = Eos.samplePermission
                     }
-              , data =
-                    { actionId = actionId
-                    , maker = maker
-                    , proofPhoto = proofPhoto
-                    , proofCode = proofCode
-                    , proofTime = proofTime
-                    }
-                        |> encodeClaimAction
+              , data = encodeClaimAction action
               }
             ]
     }
 
 
 type alias ClaimedAction =
-    { actionId : Int
-    , maker : Eos.Name
-    , proofPhoto : String
-    , proofCode : String
-    , proofTime : Int
+    { communityId : Symbol
+    , actionId : Int
+    , claimer : Eos.Name
+    , proof :
+        Maybe
+            { photo : String
+            , code : String
+            , time : Time.Posix
+            }
     }
 
 
 encodeClaimAction : ClaimedAction -> Encode.Value
 encodeClaimAction c =
+    let
+        encodeProofItem getter default encoder =
+            c.proof
+                |> Maybe.map getter
+                |> Maybe.withDefault default
+                |> encoder
+    in
     Encode.object
-        [ ( "action_id", Encode.int c.actionId )
-        , ( "maker", Eos.encodeName c.maker )
-        , ( "proof_photo", Encode.string c.proofPhoto )
-        , ( "proof_code", Encode.string c.proofCode )
-        , ( "proof_time", Encode.int c.proofTime )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "action_id", Encode.int c.actionId )
+        , ( "maker", Eos.encodeName c.claimer )
+        , ( "proof_photo", encodeProofItem .photo "" Encode.string )
+        , ( "proof_code", encodeProofItem .code "" Encode.string )
+        , ( "proof_time"
+          , encodeProofItem (.time >> Time.posixToMillis >> (\time -> time // 1000))
+                0
+                Encode.int
+          )
         ]
 
 
@@ -837,17 +901,14 @@ msgToString msg =
         GotProofTime _ ->
             [ "GotProofTime" ]
 
-        PhotoAdded _ ->
-            [ "PhotoAdded" ]
-
-        PhotoUploaded r ->
-            [ "PhotoUploaded", UR.resultToString r ]
-
         AskedForUint64Name ->
             [ "AskedForUint64Name" ]
 
         GotUint64Name n ->
             [ "GotUint64Name", UR.resultToString n ]
+
+        GotFormMsg subMsg ->
+            "GotFormMsg" :: Form.msgToString subMsg
 
 
 
@@ -878,6 +939,11 @@ isClosed : Action -> Time.Posix -> Bool
 isClosed action now =
     isPastDeadline action now
         || (action.usages > 0 && action.usagesLeft == 0)
+
+
+isClaimable : Action -> Bool
+isClaimable action =
+    action.verificationType == VerificationType.Claimable
 
 
 

@@ -79,8 +79,8 @@ type EventType
     | GraphqlErrorType
     | UnknownError
     | JsonValue
-    | MarkdownError
     | UnsupportedFeature
+    | PaypalError
 
 
 {-| Defines the possible tags. Tags are used to search for events on Sentry.
@@ -648,11 +648,11 @@ encodeTag tag =
                         JsonValue ->
                             "json value"
 
-                        MarkdownError ->
-                            "markdown error"
-
                         UnsupportedFeature ->
                             "unsupported feature"
+
+                        PaypalError ->
+                            "paypal error"
             in
             ( "cambiatus.type", Encode.string value )
 

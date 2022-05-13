@@ -7,6 +7,7 @@ module Transfer exposing
     , Transfer
     , createdTxToString
     , encodeEosActionData
+    , encodeEosActionWithMarkdown
     , getTransfers
     , transferConnectionSelectionSet
     , transferQuery
@@ -35,10 +36,10 @@ import Html exposing (Html, a, div, p, span, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode exposing (Value)
+import Markdown exposing (Markdown)
 import Profile
 import Profile.Summary
 import Session.LoggedIn as LoggedIn
-import View.MarkdownEditor
 
 
 type alias Transfer =
@@ -46,7 +47,7 @@ type alias Transfer =
     , to : Profile.Model
     , from : Profile.Model
     , value : Float
-    , memo : Maybe String
+    , memo : Maybe Markdown
     , communityId : CommunityId
     , community : Cmm
     , blockTime : DateTime
@@ -90,7 +91,7 @@ type alias EosActionData =
     { from : Eos.Name
     , to : Eos.Name
     , value : Eos.Asset
-    , memo : String
+    , memo : Markdown
     }
 
 
@@ -100,7 +101,25 @@ encodeEosActionData data =
         [ ( "from", Eos.encodeName data.from )
         , ( "to", Eos.encodeName data.to )
         , ( "quantity", Eos.encodeAsset data.value )
-        , ( "memo", Encode.string data.memo )
+        , ( "memo", Markdown.encode data.memo )
+        ]
+
+
+type alias EosActionDataWithMarkdown =
+    { from : Eos.Name
+    , to : Eos.Name
+    , value : Eos.Asset
+    , memo : Markdown
+    }
+
+
+encodeEosActionWithMarkdown : EosActionDataWithMarkdown -> Value
+encodeEosActionWithMarkdown data =
+    Encode.object
+        [ ( "from", Eos.encodeName data.from )
+        , ( "to", Eos.encodeName data.to )
+        , ( "quantity", Eos.encodeAsset data.value )
+        , ( "memo", Markdown.encode data.memo )
         ]
 
 
@@ -115,7 +134,7 @@ transferItemSelectionSet =
         |> with (Cambiatus.Object.Transfer.to Profile.selectionSet)
         |> with (Cambiatus.Object.Transfer.from Profile.selectionSet)
         |> with Cambiatus.Object.Transfer.amount
-        |> with Cambiatus.Object.Transfer.memo
+        |> with (Markdown.maybeSelectionSet Cambiatus.Object.Transfer.memo)
         |> with
             (Cambiatus.Object.Transfer.community
                 Cambiatus.Object.Community.name
@@ -215,13 +234,13 @@ transferQuery tID =
     Cambiatus.Query.transfer args transferItemSelectionSet
 
 
-transferSucceedSubscription : Eos.Symbol -> String -> String -> SelectionSet Transfer Graphql.Operation.RootSubscription
-transferSucceedSubscription symbol fromAccount toAccount =
+transferSucceedSubscription : Eos.Symbol -> { from : Eos.Name, to : Eos.Name } -> SelectionSet Transfer Graphql.Operation.RootSubscription
+transferSucceedSubscription symbol { from, to } =
     let
         args =
             { input =
-                { from = fromAccount
-                , to = toAccount
+                { from = Eos.nameToString from
+                , to = Eos.nameToString to
                 , symbol = symbolToString symbol |> String.toUpper
                 }
             }
@@ -276,7 +295,7 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
         [ profileSummary
             |> Profile.Summary.withoutName
             |> Profile.Summary.withImageSize "w-14 h-14"
-            |> Profile.Summary.view loggedIn.shared loggedIn.accountName otherProfile
+            |> Profile.Summary.view loggedIn.shared.translators loggedIn.accountName otherProfile
             |> Html.map profileSummaryToMsg
         , div [ class "ml-4 w-full overflow-ellipsis overflow-hidden" ]
             [ p
@@ -305,16 +324,20 @@ view loggedIn transfer profileSummary profileSummaryToMsg onClickMsg attrs =
                     , ( "text-indigo-500", not isFromUser )
                     ]
                 ]
-                [ span [ class "font-bold text-heading" ] [ text <| Eos.formatSymbolAmount transfer.community.symbol transfer.value ]
+                [ span [ class "font-bold text-lg" ]
+                    [ text <|
+                        Eos.formatSymbolAmount loggedIn.shared.translators
+                            transfer.community.symbol
+                            transfer.value
+                    ]
                 , text " "
-                , span [ class "text-caption" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
+                , span [ class "text-sm" ] [ text <| Eos.symbolToSymbolCodeString transfer.community.symbol ]
                 ]
             , case transfer.memo of
                 Nothing ->
                     text ""
 
                 Just memo ->
-                    View.MarkdownEditor.viewReadOnly [ class "text-xs text-gray-900 break-all" ]
-                        (t memo)
+                    Markdown.view [ class "text-sm text-gray-900 break-all" ] memo
             ]
         ]

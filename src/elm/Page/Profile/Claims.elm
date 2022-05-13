@@ -9,7 +9,7 @@ module Page.Profile.Claims exposing
     , view
     )
 
-import Api.Graphql
+import Cambiatus.Enum.Permission as Permission
 import Cambiatus.Object
 import Cambiatus.Object.User as Profile
 import Cambiatus.Query
@@ -19,10 +19,11 @@ import Dict
 import Eos
 import Eos.Account as Eos
 import Eos.EosError as EosError
+import Form.Select
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
-import Html exposing (Html, button, div, img, li, text, ul)
+import Html exposing (Html, a, button, div, img, li, text, ul)
 import Html.Attributes exposing (class, classList, src)
 import Html.Events exposing (onClick)
 import Html.Keyed
@@ -33,11 +34,11 @@ import List.Extra as List
 import Log
 import Page
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
+import Session.LoggedIn as LoggedIn
 import Session.Shared exposing (Shared)
+import Time
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form.Select as Select
 import View.Modal as Modal
 import View.TabSelector
 
@@ -143,18 +144,26 @@ view loggedIn model =
         div []
             (Page.viewHeader loggedIn pageTitle
                 :: viewFiltersModal loggedIn.shared model
-                :: viewHeaderAndOptions loggedIn.shared maybeClaims model
+                :: viewHeaderAndOptions loggedIn maybeClaims model
                 ++ content
             )
     }
 
 
-viewHeaderAndOptions : Shared -> Maybe (List Claim.Model) -> Model -> List (Html Msg)
-viewHeaderAndOptions shared maybeClaims model =
+viewHeaderAndOptions : LoggedIn.Model -> Maybe (List Claim.Model) -> Model -> List (Html Msg)
+viewHeaderAndOptions ({ shared } as loggedIn) maybeClaims model =
     [ div
         [ class "bg-white pt-5 md:pt-6 pb-6" ]
         [ div [ class "container mx-auto px-4 flex flex-col items-center" ]
-            [ viewGoodPracticesCard shared
+            [ if not loggedIn.hasAcceptedCodeOfConduct then
+                LoggedIn.viewFrozenAccountCard shared.translators
+                    { onClick = ClickedAcceptCodeOfConduct
+                    , isHorizontal = True
+                    }
+                    [ class "shadow-lg" ]
+
+              else
+                viewGoodPracticesCard shared
             , viewTabSelector shared maybeClaims model
             ]
         ]
@@ -164,18 +173,26 @@ viewHeaderAndOptions shared maybeClaims model =
 
 
 viewGoodPracticesCard : Shared -> Html msg
-viewGoodPracticesCard { translators } =
+viewGoodPracticesCard { translators, language } =
     let
         text_ =
             translators.t >> text
     in
     div [ class "rounded shadow-lg w-full md:w-3/4 lg:w-2/3 bg-white" ]
-        [ div [ class "flex items-center bg-yellow text-black font-medium p-2 rounded-t" ]
+        [ div [ class "flex items-center bg-yellow text-black font-semibold p-2 rounded-t" ]
             [ Icons.lamp "mr-2", text_ "profile.claims.good_practices.title" ]
         , ul [ class "list-disc p-4 pl-8 pb-4 md:pb-11 space-y-4" ]
             [ li [ class "pl-1" ] [ text_ "profile.claims.good_practices.once_a_day" ]
             , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.completed_action" ]
-            , li [ class "pl-1" ] [ text_ "profile.claims.good_practices.know_good_practices" ]
+            , li [ class "pl-1" ]
+                [ text_ "profile.claims.good_practices.know_the"
+                , text " "
+                , a
+                    [ class "text-orange-300 hover:underline focus-ring rounded-sm"
+                    , Html.Attributes.href (LoggedIn.codeOfConductUrl language)
+                    ]
+                    [ text_ "profile.claims.good_practices.good_practices" ]
+                ]
             ]
         ]
 
@@ -267,22 +284,26 @@ viewFiltersModal shared model =
         }
         |> Modal.withHeader (t "all_analysis.filter.title")
         |> Modal.withBody
-            [ Select.init
-                { id = "status_filter_select"
-                , label = t "all_analysis.filter.status.label"
-                , onInput = SelectedStatusFilter
-                , firstOption = { value = All, label = t "all_analysis.all" }
-                , value = model.editingStatusFilter
-                , valueToString = statusFilterToString
-                , disabled = False
-                , problems = Nothing
+            [ Form.Select.init
+                { label = t "all_analysis.filter.status.label"
+                , id = "status-filter-select"
+                , optionToString = statusFilterToString
                 }
-                |> Select.withOptions
-                    [ { value = Approved, label = t "all_analysis.approved" }
-                    , { value = Disapproved, label = t "all_analysis.disapproved" }
-                    , { value = Completed, label = t "community.actions.completed" }
-                    ]
-                |> Select.toHtml
+                |> Form.Select.withOption All (t "all_analysis.all")
+                |> Form.Select.withOption Approved (t "all_analysis.approved")
+                |> Form.Select.withOption Disapproved (t "all_analysis.disapproved")
+                |> Form.Select.withOption Completed (t "community.actions.completed")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> (\options ->
+                        Form.Select.view options
+                            { onSelect = SelectedStatusFilter
+                            , onBlur = NoOp
+                            , value = model.editingStatusFilter
+                            , error = text ""
+                            , hasError = False
+                            , isRequired = False
+                            }
+                   )
             , button
                 [ class "button button-primary w-full"
                 , onClick ClickedApplyFilters
@@ -406,11 +427,12 @@ type alias ProfileClaims =
 
 
 type alias UpdateResult =
-    UR.UpdateResult Model Msg (External Msg)
+    UR.UpdateResult Model Msg (LoggedIn.External Msg)
 
 
 type Msg
-    = ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
+    = NoOp
+    | ClaimsLoaded (RemoteData (Graphql.Http.Error (Maybe ProfileClaims)) (Maybe ProfileClaims))
     | ClosedAuthModal
     | CompletedLoadCommunity Community.Model
     | ClaimMsg Int Claim.Msg
@@ -422,11 +444,15 @@ type Msg
     | ToggledSorting
     | SelectedStatusFilter StatusFilter
     | ClickedApplyFilters
+    | ClickedAcceptCodeOfConduct
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         ClaimsLoaded (RemoteData.Success results) ->
             case results of
                 Just claims ->
@@ -454,7 +480,11 @@ update msg model loggedIn =
 
         CompletedLoadCommunity community ->
             UR.init model
-                |> UR.addCmd (profileClaimQuery loggedIn model.accountString community.symbol)
+                |> UR.addExt
+                    (profileClaimQuery loggedIn
+                        model.accountString
+                        community.symbol
+                    )
 
         ClaimMsg claimIndex m ->
             let
@@ -476,8 +506,8 @@ update msg model loggedIn =
                 |> UR.init
 
         VoteClaim claimId vote ->
-            case model.status of
-                Loaded _ _ ->
+            case ( model.status, loggedIn.selectedCommunity ) of
+                ( Loaded _ _, RemoteData.Success community ) ->
                     let
                         newModel =
                             { model
@@ -496,11 +526,16 @@ update msg model loggedIn =
                                             { actor = loggedIn.accountName
                                             , permissionName = Eos.samplePermission
                                             }
-                                      , data = Claim.encodeVerification claimId loggedIn.accountName vote
+                                      , data =
+                                            Claim.encodeVerification claimId
+                                                loggedIn.accountName
+                                                vote
+                                                community.symbol
                                       }
                                     ]
                             }
-                        |> LoggedIn.withAuthentication loggedIn
+                        |> LoggedIn.withPrivateKey loggedIn
+                            [ Permission.Verify ]
                             model
                             { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -527,7 +562,7 @@ update msg model loggedIn =
                                     claim.action.objective.community.symbol
 
                                 value =
-                                    Eos.assetToString
+                                    Eos.assetToString loggedIn.shared.translators
                                         { amount = claim.action.verifierReward
                                         , symbol = symbol
                                         }
@@ -538,7 +573,11 @@ update msg model loggedIn =
                             }
                                 |> UR.init
                                 |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (message value))
-                                |> UR.addCmd (profileClaimQuery loggedIn model.accountString symbol)
+                                |> UR.addExt
+                                    (profileClaimQuery loggedIn
+                                        model.accountString
+                                        symbol
+                                    )
 
                         Nothing ->
                             model
@@ -563,7 +602,7 @@ update msg model loggedIn =
                         , claimModalStatus = Claim.Closed
                     }
                         |> UR.init
-                        |> UR.addExt (ShowFeedback Feedback.Failure errorMessage)
+                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure errorMessage)
 
                 _ ->
                     model |> UR.init
@@ -635,18 +674,24 @@ update msg model loggedIn =
             }
                 |> UR.init
 
+        ClickedAcceptCodeOfConduct ->
+            model
+                |> UR.init
+                |> UR.addExt LoggedIn.ShowCodeOfConductModal
 
-profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> Cmd Msg
-profileClaimQuery { shared, authToken } accountName symbol =
-    Api.Graphql.query shared
-        (Just authToken)
-        (Cambiatus.Query.user { account = accountName } (selectionSet symbol))
+
+profileClaimQuery : LoggedIn.Model -> String -> Eos.Symbol -> LoggedIn.External Msg
+profileClaimQuery loggedIn accountName symbol =
+    LoggedIn.query loggedIn
+        (Cambiatus.Query.user { account = accountName } (selectionSet loggedIn.shared.now symbol))
         ClaimsLoaded
 
 
-selectionSet : Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
-selectionSet communityId =
-    Profile.claims (\_ -> { communityId = Present (Eos.symbolToString communityId) }) Claim.selectionSet
+selectionSet : Time.Posix -> Eos.Symbol -> SelectionSet ProfileClaims Cambiatus.Object.User
+selectionSet now communityId =
+    Profile.claims
+        (\_ -> { communityId = Present (Eos.symbolToString communityId) })
+        (Claim.selectionSet now)
 
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
@@ -687,6 +732,9 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         ClaimsLoaded r ->
             [ "ClaimsLoaded", UR.remoteDataToString r ]
 
@@ -722,3 +770,6 @@ msgToString msg =
 
         ClickedApplyFilters ->
             [ "ClickedApplyFilters" ]
+
+        ClickedAcceptCodeOfConduct ->
+            [ "ClickedAcceptCodeOfConduct" ]

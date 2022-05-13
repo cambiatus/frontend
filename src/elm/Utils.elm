@@ -1,27 +1,30 @@
 module Utils exposing
     ( areSameDay
-    , decodeEnterKeyDown
     , decodeTimestamp
-    , errorToString
     , escSubscription
     , formatFloat
+    , formatInt
     , fromDateTime
     , fromMaybeDateTime
+    , fromNaiveDateTime
     , onClickNoBubble
     , onClickPreventAll
+    , onSubmitPreventAll
+    , padInt
     , posixFromDate
     , previousDay
+    , spawnMessage
     )
 
 import Browser.Events
-import Cambiatus.Scalar exposing (DateTime(..))
+import Cambiatus.Scalar exposing (DateTime(..), NaiveDateTime(..))
 import Date
-import Graphql.Http
-import Graphql.Http.GraphqlError
 import Html
 import Html.Events
 import Iso8601
 import Json.Decode as Decode
+import Mask
+import Task
 import Time exposing (Posix)
 import Time.Extra
 
@@ -55,6 +58,12 @@ posixFromDate timezone date =
         }
 
 
+fromNaiveDateTime : NaiveDateTime -> Posix
+fromNaiveDateTime (NaiveDateTime dateTime) =
+    Iso8601.toTime dateTime
+        |> Result.withDefault (Time.millisToPosix 0)
+
+
 areSameDay : Time.Zone -> Posix -> Posix -> Bool
 areSameDay timezone first second =
     Date.fromPosix timezone first == Date.fromPosix timezone second
@@ -73,67 +82,43 @@ previousDay time =
 {-| Format a float to separate thousands, and use `,` as a separator for
 decimals
 -}
-formatFloat : Float -> Int -> Bool -> String
-formatFloat number decimalCases useSeparator =
+formatFloat : Maybe { translators | t : String -> String } -> Int -> Float -> String
+formatFloat maybeTranslators decimalCases number =
+    Mask.float (Mask.Precisely decimalCases)
+        (case maybeTranslators of
+            Just { t } ->
+                { decimalSeparator = t "decimal_separator"
+                , thousandsSeparator = t "thousands_separator"
+                }
+
+            Nothing ->
+                { decimalSeparator = "."
+                , thousandsSeparator = ""
+                }
+        )
+        number
+
+
+{-| Format an Int to separate thousands.
+-}
+formatInt : Maybe { translators | t : String -> String } -> Int -> String
+formatInt maybeTranslators number =
+    formatFloat maybeTranslators 0 (toFloat number)
+
+
+{-| Pad an Int with zeros to a given length
+-}
+padInt : Int -> Int -> String
+padInt totalLength number =
     let
-        addThousandsSeparator : String -> String
-        addThousandsSeparator floatWithoutSeparator =
-            if not useSeparator then
-                floatWithoutSeparator
+        currentLength =
+            String.fromInt number
+                |> String.length
 
-            else
-                let
-                    sign =
-                        String.filter (not << Char.isDigit) floatWithoutSeparator
-                in
-                floatWithoutSeparator
-                    |> String.filter Char.isDigit
-                    |> String.foldr
-                        (\currChar ( currCount, currString ) ->
-                            if currCount == 3 then
-                                ( 1, currChar :: '.' :: currString )
-
-                            else
-                                ( currCount + 1, currChar :: currString )
-                        )
-                        ( 0, [] )
-                    |> Tuple.second
-                    |> String.fromList
-                    |> (\withThousands -> sign ++ withThousands)
-
-        newSeparator =
-            if useSeparator then
-                ","
-
-            else
-                "."
+        missingLength =
+            totalLength - currentLength
     in
-    case String.fromFloat number |> String.split "." of
-        [] ->
-            String.fromFloat number
-
-        [ withoutSeparator ] ->
-            if decimalCases <= 0 then
-                addThousandsSeparator withoutSeparator
-
-            else
-                addThousandsSeparator withoutSeparator
-                    ++ newSeparator
-                    ++ String.repeat decimalCases "0"
-
-        beforeSeparator :: afterSeparator :: _ ->
-            if decimalCases <= 0 then
-                addThousandsSeparator beforeSeparator
-
-            else
-                let
-                    paddedSeparator =
-                        String.left decimalCases afterSeparator
-                            ++ String.repeat
-                                (max 0 (decimalCases - String.length afterSeparator))
-                                "0"
-                in
-                String.join newSeparator [ addThousandsSeparator beforeSeparator, paddedSeparator ]
+    String.repeat missingLength "0" ++ String.fromInt number
 
 
 escSubscription : msg -> Sub msg
@@ -157,16 +142,6 @@ decodeTimestamp =
         |> Decode.map Time.millisToPosix
 
 
-decodeEnterKeyDown : Decode.Decoder Bool
-decodeEnterKeyDown =
-    let
-        isEnter code =
-            code == "Enter"
-    in
-    Decode.field "key" Decode.string
-        |> Decode.map isEnter
-
-
 {-| Click event listener that stops propagation, but doesn't prevent default
 -}
 onClickNoBubble : msg -> Html.Attribute msg
@@ -183,8 +158,20 @@ onClickNoBubble message =
 {-| Click event listener that stops propagation and prevents default
 -}
 onClickPreventAll : msg -> Html.Attribute msg
-onClickPreventAll message =
-    Html.Events.custom "click"
+onClickPreventAll =
+    preventAll "click"
+
+
+{-| Submit event listener that stops propagation and prevents default
+-}
+onSubmitPreventAll : msg -> Html.Attribute msg
+onSubmitPreventAll =
+    preventAll "submit"
+
+
+preventAll : String -> msg -> Html.Attribute msg
+preventAll eventName message =
+    Html.Events.custom eventName
         (Decode.succeed
             { message = message
             , stopPropagation = True
@@ -193,18 +180,7 @@ onClickPreventAll message =
         )
 
 
-errorToString : Graphql.Http.Error parsedData -> String
-errorToString errorData =
-    case errorData of
-        Graphql.Http.GraphqlError _ graphqlErrors ->
-            graphqlErrors
-                |> List.map graphqlErrorToString
-                |> String.join "\n"
-
-        Graphql.Http.HttpError _ ->
-            "Http Error"
-
-
-graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
-graphqlErrorToString error =
-    error.message
+spawnMessage : msg -> Cmd msg
+spawnMessage msg =
+    Task.succeed msg
+        |> Task.perform identity

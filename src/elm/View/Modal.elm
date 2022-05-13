@@ -2,9 +2,11 @@ module View.Modal exposing
     ( ModalSize(..)
     , initWith
     , toHtml
+    , withAttrs
     , withBody
     , withFooter
     , withHeader
+    , withHeaderElement
     , withPreventScrolling
     , withSize
     )
@@ -33,7 +35,7 @@ and call `toHtml` at the end of the pipeline:
 import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (class, tabindex)
 import Icons
-import Utils exposing (onClickNoBubble)
+import Utils exposing (onClickNoBubble, onClickPreventAll)
 import View.Components
 
 
@@ -44,13 +46,14 @@ import View.Components
 {-| All possible options for the modal dialog.
 -}
 type alias Options msg =
-    { header : Maybe String
+    { header : Maybe (Html msg)
     , body : Maybe (List (Html msg))
     , footer : Maybe (List (Html msg))
     , isVisible : Bool
     , preventScrolling : View.Components.PreventScroll
     , closeMsg : msg
     , size : ModalSize
+    , attrs : List (Html.Attribute msg)
     }
 
 
@@ -88,6 +91,7 @@ initWith reqOpts =
         , body = Nothing
         , footer = Nothing
         , size = Default
+        , attrs = []
         }
 
 
@@ -97,6 +101,11 @@ initWith reqOpts =
 
 withHeader : String -> Modal msg -> Modal msg
 withHeader header (Modal options) =
+    Modal { options | header = Just (h3 [] [ text header ]) }
+
+
+withHeaderElement : Html msg -> Modal msg -> Modal msg
+withHeaderElement header (Modal options) =
     Modal { options | header = Just header }
 
 
@@ -120,6 +129,11 @@ withSize size (Modal options) =
     Modal { options | size = size }
 
 
+withAttrs : List (Html.Attribute msg) -> Modal msg -> Modal msg
+withAttrs attrs (Modal options) =
+    Modal { options | attrs = attrs ++ options.attrs }
+
+
 
 -- VIEW
 
@@ -139,9 +153,8 @@ viewModalDetails options =
         header =
             div [ class "modal-header" ]
                 [ case options.header of
-                    Just headerText ->
-                        h3 []
-                            [ text headerText ]
+                    Just headerElement ->
+                        headerElement
 
                     Nothing ->
                         text ""
@@ -156,21 +169,7 @@ viewModalDetails options =
         body =
             case options.body of
                 Just b ->
-                    case options.size of
-                        Default ->
-                            div
-                                [ class "modal-body", tabindex -1 ]
-                                b
-
-                        Large ->
-                            div
-                                [ class "modal-body-lg", tabindex -1 ]
-                                b
-
-                        FullScreen ->
-                            div
-                                [ class "modal-body modal-body-full", tabindex -1 ]
-                                b
+                    div [ class "modal-body", tabindex -1 ] b
 
                 Nothing ->
                     text ""
@@ -198,20 +197,19 @@ viewModalDetails options =
     div [ class "modal fade-in" ]
         [ View.Components.bgNoScroll
             [ class "modal-bg"
-            , onClickNoBubble options.closeMsg
+            , onClickPreventAll options.closeMsg
             ]
             options.preventScrolling
         , View.Components.focusTrap { firstFocusContainer = Just ".modal-body, .modal-body-lg, .modal-footer" }
-            [ class content ]
+            (class content :: options.attrs)
             [ header
             , body
             , footer
             ]
         , View.Components.keyListener
-            { onKeyDown =
-                { acceptedKeys = [ View.Components.Escape ]
-                , toMsg = \_ -> options.closeMsg
-                , stopPropagation = True
-                }
+            { acceptedKeys = [ View.Components.Escape ]
+            , toMsg = \_ -> options.closeMsg
+            , stopPropagation = True
+            , preventDefault = False
             }
         ]

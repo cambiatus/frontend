@@ -54,39 +54,29 @@ module.exports = {
       lg: '1024px',
       xl: '1280px'
     },
-    // Needed after updating to tailwind 2.0
+    // The first item in each list is the font size, and the second item is the
+    // default line height for that font size
     fontSize: {
-      caption: '0.625rem',
-      xs: '0.75rem',
-      sm: '0.875rem',
-      menu: '0.9125rem',
-      body: '0.9rem',
-      base: '1rem',
-      lg: '1.125rem',
-      xl: '1.25rem',
-      heading: '1.375rem',
-      '2xl': '1.5rem',
-      '3xl': '1.875rem',
-      '4xl': '2.25rem',
-      '5xl': '3rem',
-      '6xl': '4rem'
+      xxs: ['0.5rem', '0.9375rem'], // ['8px', '15px']
+      xs: ['0.6875rem', '0.75rem'], // ['11px', '12px']
+      sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
+      base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
+      lg: ['1.375rem', '1.875rem'], // ['22px', '30px']
+      xl: ['1.875rem', '2.5625rem'], // ['30px', '41px']
+      '2xl': ['2.375rem', '3.25rem'], // ['38px', '52px']
+      '3xl': ['2.875rem', '3.9375rem'], // ['46px', '63px']
+      '4xl': ['3.375rem', '4.625rem'] // ['54px', '74px']
     },
     // Customizing BorderRadius sizes
     borderRadius: {
       'none': '0',
-      DEFAULT: '0.4rem',
+      sm: '0.25rem',
       label: '0.313rem',
       'md': '0.375rem',
+      DEFAULT: '0.4rem',
       'lg': '1.25rem',
       'full': '9999px',
       'large': '12px'
-    },
-    // Overwriting since the current font family only have these weights
-    fontWeight: {
-      light: 300,
-      normal: 400,
-      medium: 600,
-      bold: 700
     },
     // transform keys
     rotate: {
@@ -109,7 +99,8 @@ module.exports = {
         'whatsapp': '#25d366'
       },
       boxShadow: {
-        outline: '0 0 0 3px rgb(250, 177, 92, 0.75)'
+        outline: '0 0 0 3px rgb(250, 177, 92, 0.75)',
+        'form-control': 'inset 0 0 0 var(--shadow-size) white'
       },
       flexGrow: {
         '1': 1,
@@ -126,12 +117,15 @@ module.exports = {
         sans: ['Nunito', 'sans-serif']
       },
       spacing: {
+        '3px': '3px',
         heading: '1.375rem',
         '7': '1.75rem',
         '9': '2.25rem',
         '14': '3.5rem',
+        '18': '4.5rem',
         '29': '7.25rem',
         '44': '11rem',
+        '68': '17rem',
         '72': '18rem',
         '80': '20rem',
         select: '18.75rem',
@@ -142,9 +136,11 @@ module.exports = {
         '-10': '-10'
       },
       maxHeight: {
+        '43': '10.75rem',
         '108': '27rem'
       },
       minHeight: {
+        '25': '6.25rem',
         '36': '9rem',
         '48': '12rem'
       },
@@ -157,18 +153,20 @@ module.exports = {
         super: '2.5rem'
       },
       inset: {
-        '1': '1rem',
-        '-1': '-0.25rem',
-        '1/2': '50%',
-        modal: '10rem',
-        'full': '100%'
+        '-13': '-3.25rem',
+        modal: '10rem'
+      },
+      height: {
+        '21': '5.25rem'
       },
       width: {
+        '21': '5.25rem',
         form: '45.625rem',
         '120': '30rem'
       },
       minWidth: {
-        '30': '7.5rem'
+        '30': '7.5rem',
+        '50': '12.5rem'
       },
       opacity: {
         '10': '0.1',
@@ -184,10 +182,41 @@ module.exports = {
             opacity: '1',
             'pointer-events': 'auto'
           }
+        },
+        'appear-from-above': {
+          '0%': { opacity: 0, transform: 'translate(0, -20px)' },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
+        'appear-from-above-lg': {
+          '0%': { opacity: 0, transform: 'translate(0, -100px)' },
+          '50%': { opacity: 0 },
+          '100%': { opacity: 1, transform: 'translate(0, 0)' }
+        },
+        'skeleton-loading-keyframes': {
+          '0%': {
+            'background-color': '#e0e0e0'
+          },
+          '100%': {
+            'background-color': '#eeeeee'
+          }
+        },
+        'bounce-in-keyframes': {
+          '0%': { opacity: 0, transform: 'scale(0)' },
+          '85%': { opacity: 1, transform: 'scale(1.05)' },
+          '100%': { opacity: 1, transform: 'scale(1)' }
+        },
+        'scale-down-keyframes': {
+          '0%': { transform: 'scaleX(1)' },
+          '100%': { transform: 'scaleX(0)' }
         }
       },
       animation: {
-        'fade-in': 'appear 50ms linear 400ms both'
+        'fade-in': 'appear 50ms linear 400ms both',
+        'fade-in-from-above': 'appear-from-above 150ms ease-out both',
+        'fade-in-from-above-lg': 'appear-from-above-lg 600ms ease-in-out both',
+        'skeleton-loading': 'skeleton-loading-keyframes 1s ease-out infinite alternate',
+        'bounce-in': 'bounce-in-keyframes 150ms ease-out',
+        'scale-down': 'scale-down-keyframes 1500ms linear both'
       }
     }
   },
@@ -213,24 +242,7 @@ module.exports = {
       '3d': false // defaults to false
     }),
     require('@tailwindcss/forms'),
-    // Pseudo-class to support hover on the parent's first child
-    function ({ addVariant, e }) {
-      addVariant('first-hover', ({ modifySelectors, separator }) => {
-        modifySelectors(({ className }) => {
-          return `.${e(
-            `first-hover${separator}${className}`
-          )}:first-child:hover`
-        })
-      })
-    },
-    // Pseudo-class to support hover on the parent's last child
-    function ({ addVariant, e }) {
-      addVariant('last-hover', ({ modifySelectors, separator }) => {
-        modifySelectors(({ className }) => {
-          return `.${e(`last-hover${separator}${className}`)}:last-child:hover`
-        })
-      })
-    },
+    require('@tailwindcss/line-clamp'),
     // class support for rotation
     function ({ addUtilities, config }) {
       const rotateUtilities = _.map(config('theme.rotate'), (value, key) => {
@@ -247,7 +259,12 @@ module.exports = {
   ],
   purge: [
     './src/**/*.elm',
-    './src/index.js'
+    './src/customElements/*.js',
+    './src/index.js',
+    './src/styles/main.css',
+    // We need these next ones for elm-book
+    '../src/**/*.elm',
+    '../src/customElements/*.js'
   ],
   mode: 'jit'
 }

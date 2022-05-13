@@ -1,21 +1,25 @@
 module Page.Community.Settings.Features exposing (Model, Msg, init, jsAddressToMsg, msgToString, receiveBroadcast, update, view)
 
+import Cambiatus.Mutation
 import Community
 import Dict
 import Eos
 import Eos.Account
+import Form.Toggle
+import Graphql.OptionalArgument exposing (OptionalArgument(..))
+import Graphql.SelectionSet
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import Log
+import Maybe.Extra
 import Page
 import Ports
 import RemoteData
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import UpdateResult as UR
 import View.Feedback as Feedback
-import View.Form.Toggle
 
 
 init : LoggedIn.Model -> ( Model, Cmd Msg )
@@ -31,6 +35,7 @@ initModel =
     , hasShop = False
     , hasObjectives = False
     , hasKyc = False
+    , hasNews = False
     }
 
 
@@ -39,6 +44,7 @@ type alias Model =
     , hasShop : Bool
     , hasObjectives : Bool
     , hasKyc : Bool
+    , hasNews : Bool
     }
 
 
@@ -54,11 +60,14 @@ type Feature
 
 
 type Msg
-    = CompletedLoadCommunity Community.Model
+    = NoOp
+    | CompletedLoadCommunity Community.Model
     | ClosedAuthModal
     | ToggleShop Bool
     | ToggleObjectives Bool
     | ToggleKyc
+    | ToggleSponsorship
+    | ToggleNews Bool
     | SaveSuccess
 
 
@@ -90,38 +99,78 @@ view loggedIn model =
                     Page.fullPageLoading loggedIn.shared
 
                 ( RemoteData.Success community, Authorized ) ->
+                    let
+                        addTooltip maybeTooltip =
+                            case maybeTooltip of
+                                Nothing ->
+                                    identity
+
+                                Just tooltip ->
+                                    Form.Toggle.withTooltip tooltip
+
+                        viewToggle { label, id, action, disabled, value, tooltip } =
+                            Form.Toggle.init { label = text <| t label, id = id }
+                                |> Form.Toggle.withDisabled (disabled || not loggedIn.hasAcceptedCodeOfConduct)
+                                |> Form.Toggle.withContainerAttrs [ class "py-6" ]
+                                |> addTooltip tooltip
+                                |> (\options ->
+                                        Form.Toggle.view options
+                                            { onToggle = action
+                                            , onBlur = NoOp
+                                            , value = value
+                                            , error = text ""
+                                            , hasError = False
+                                            , isRequired = False
+                                            , translators = loggedIn.shared.translators
+                                            }
+                                   )
+                    in
                     div [ class "bg-white flex flex-col items-center" ]
                         [ Page.viewHeader loggedIn title
                         , div
                             [ class "container divide-y px-4"
                             ]
-                            ([ View.Form.Toggle.init
-                                { label = text (t "community.objectives.title_plural")
-                                , id = "actions-toggle"
-                                , onToggle = ToggleObjectives
-                                , disabled = False
-                                , value = community.hasObjectives
-                                }
-                             , View.Form.Toggle.init
-                                { label = text (t "menu.shop")
-                                , id = "shop-toggle"
-                                , onToggle = ToggleShop
-                                , disabled = False
-                                , value = community.hasShop
-                                }
-                             , View.Form.Toggle.init
-                                { label = text (t "community.kyc.title")
-                                , id = "kyc-toggle"
-                                , onToggle = \_ -> ToggleKyc
-                                , disabled = True
-                                , value = community.hasKyc
-                                }
-                                |> View.Form.Toggle.withTooltip "community.kyc.info"
+                            ([ { label = "community.objectives.title_plural"
+                               , id = "actions-toggle"
+                               , action = ToggleObjectives
+                               , disabled = False
+                               , value = model.hasObjectives
+                               , tooltip = Nothing
+                               }
+                             , { label = "menu.shop"
+                               , id = "shop-toggle"
+                               , action = ToggleShop
+                               , disabled = False
+                               , value = model.hasShop
+                               , tooltip = Nothing
+                               }
+                             , { label = "community.kyc.title"
+                               , id = "kyc-toggle"
+                               , action = \_ -> ToggleKyc
+                               , disabled = True
+                               , value = model.hasKyc
+                               , tooltip =
+                                    Just
+                                        { message = t "community.kyc.info"
+                                        , iconClass = "text-orange-300"
+                                        }
+                               }
+                             , { label = "sponsorship.title"
+                               , id = "sponsorship-toggle"
+                               , action = \_ -> ToggleSponsorship
+                               , disabled = True
+                               , value = Maybe.Extra.isJust community.contributionConfiguration
+                               , tooltip = Nothing
+                               }
+                             , { label = "news.title"
+                               , id = "news-toggle"
+                               , action = ToggleNews
+                               , disabled = False
+                               , value = model.hasNews
+                               , tooltip = Nothing
+                               }
                              ]
-                                |> List.map
-                                    (View.Form.Toggle.withAttrs [ class "py-6" ]
-                                        >> View.Form.Toggle.toHtml loggedIn.shared.translators
-                                    )
+                                |> List.map viewToggle
                             )
                         ]
 
@@ -144,6 +193,9 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedLoadCommunity community ->
             let
                 newStatus =
@@ -159,6 +211,7 @@ update msg model loggedIn =
                     , hasShop = community.hasShop
                     , hasObjectives = community.hasObjectives
                     , hasKyc = community.hasKyc
+                    , hasNews = community.hasNews
                 }
 
         ClosedAuthModal ->
@@ -168,7 +221,8 @@ update msg model loggedIn =
             { model | hasShop = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Shop model.status state
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
@@ -176,13 +230,43 @@ update msg model loggedIn =
             { model | hasObjectives = state }
                 |> UR.init
                 |> saveFeaturePort loggedIn Objectives model.status state
-                |> LoggedIn.withAuthentication loggedIn
+                |> LoggedIn.withPrivateKey loggedIn
+                    []
                     model
                     { successMsg = msg, errorMsg = ClosedAuthModal }
 
         ToggleKyc ->
             model
                 |> UR.init
+
+        ToggleSponsorship ->
+            model
+                |> UR.init
+
+        ToggleNews newsValue ->
+            case loggedIn.selectedCommunity of
+                RemoteData.Success community ->
+                    { model | hasNews = newsValue }
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Cambiatus.Mutation.community
+                                    { communityId = Eos.symbolToString community.symbol
+                                    , input = { hasNews = Present newsValue, contacts = Absent }
+                                    }
+                                    Graphql.SelectionSet.empty
+                                )
+                                (\_ -> SaveSuccess)
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Tried toggling community news feature, but community wasn't loaded"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Community.Settings.Features", function = "update" }
+                            [ Log.contextFromCommunity loggedIn.selectedCommunity ]
 
         SaveSuccess ->
             let
@@ -223,6 +307,7 @@ updateCommunity community model =
         | hasShop = model.hasShop
         , hasObjectives = model.hasObjectives
         , hasKyc = model.hasKyc
+        , hasNews = model.hasNews
     }
 
 
@@ -322,6 +407,9 @@ jsAddressToMsg addr _ =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedLoadCommunity _ ->
             [ "CompletedLoadCommunity" ]
 
@@ -336,6 +424,12 @@ msgToString msg =
 
         ToggleKyc ->
             [ "ToggleKyc" ]
+
+        ToggleSponsorship ->
+            [ "ToggleSponsorship" ]
+
+        ToggleNews _ ->
+            [ "ToggleNews" ]
 
         SaveSuccess ->
             [ "SaveSuccess" ]

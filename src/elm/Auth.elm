@@ -2,13 +2,12 @@ module Auth exposing
     ( ExternalMsg(..)
     , Model
     , Msg
-    , SignInResponse
     , hasPrivateKey
     , init
     , jsAddressToMsg
     , maybePrivateKey
     , msgToString
-    , signIn
+    , removePrivateKey
     , update
     , view
     )
@@ -27,28 +26,24 @@ If we need to prove the user is authenticated (and haven't done so in this sessi
 we can request the user to type in the PIN they created when signing in the last time,
 so we can retrieve their Private Key from localStorage.
 
+This module concerns mostly with authenticating with Private Key. That means it
+handles authentication for EOS, not for our Graphql API. That is mainly dealt with
+in the `LoggedIn` and `Api.Graphql` modules, but since that depends on the user's private key, this
+is also related to it.
+
 -}
 
-import Api.Graphql
-import Cambiatus.Mutation
-import Cambiatus.Object.Session
 import Dict
 import Eos.Account as Eos
-import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
-import Graphql.OptionalArgument as OptionalArgument
-import Graphql.SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, p, text)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as DecodePipeline
 import Json.Encode as Encode exposing (Value)
 import Log
-import Ports
-import Profile
-import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import UpdateResult as UR
+import View.Feedback as Feedback
 import View.Pin as Pin
 
 
@@ -56,8 +51,8 @@ import View.Pin as Pin
 -- INIT
 
 
-init : Bool -> Maybe Eos.PrivateKey -> Model
-init pinVisibility maybePrivateKey_ =
+init : Maybe String -> Bool -> Maybe Eos.PrivateKey -> ( Model, Cmd Msg )
+init lastKnownPin pinVisibility maybePrivateKey_ =
     let
         status =
             case maybePrivateKey_ of
@@ -66,11 +61,16 @@ init pinVisibility maybePrivateKey_ =
 
                 Just privateKey ->
                     WithPrivateKey privateKey
+
+        ( pinModel, pinCmd ) =
+            initPinModel lastKnownPin pinVisibility status
     in
-    { status = status
-    , error = Nothing
-    , pinModel = initPinModel pinVisibility status
-    }
+    ( { status = status
+      , error = Nothing
+      , pinModel = pinModel
+      }
+    , pinCmd
+    )
 
 
 
@@ -84,16 +84,21 @@ type alias Model =
     }
 
 
-initPinModel : Bool -> Status -> Pin.Model
-initPinModel pinVisibility status =
-    Pin.init
-        { label = "auth.pinPopup.label"
-        , id = "pinPopup"
-        , withConfirmation = False
-        , submitLabel = "auth.login.continue"
-        , submittingLabel = "auth.login.continue"
-        , pinVisibility = pinVisibility
-        }
+initPinModel : Maybe String -> Bool -> Status -> ( Pin.Model, Cmd Msg )
+initPinModel lastKnownPin pinVisibility status =
+    let
+        ( pinModel, pinCmd ) =
+            Pin.init
+                { label = "auth.pinPopup.label"
+                , id = "pinPopup"
+                , withConfirmation = False
+                , submitLabel = "auth.login.continue"
+                , submittingLabel = "auth.login.continue"
+                , pinVisibility = pinVisibility
+                , lastKnownPin = lastKnownPin
+                }
+    in
+    ( pinModel
         |> Pin.withDisabled
             (case status of
                 WithoutPrivateKey ->
@@ -102,6 +107,8 @@ initPinModel pinVisibility status =
                 WithPrivateKey _ ->
                     True
             )
+    , Cmd.map GotPinMsg pinCmd
+    )
 
 
 {-| Represents the state of the user's authentication. A user can be:
@@ -127,6 +134,11 @@ hasPrivateKey model =
 
         WithoutPrivateKey ->
             False
+
+
+removePrivateKey : Model -> Model
+removePrivateKey model =
+    { model | status = WithoutPrivateKey }
 
 
 maybePrivateKey : Model -> Maybe Eos.PrivateKey
@@ -168,92 +180,42 @@ type alias UpdateResult =
 
 
 type Msg
-    = Ignored
-    | GotPinMsg Pin.Msg
+    = GotPinMsg Pin.Msg
     | SubmittedPin String
-    | GotSubmittedPinResponse (Result String ( Eos.Name, Eos.PrivateKey ))
-    | CompletedSignIn Status (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
-
-
-type alias SignInResponse =
-    { user : Profile.Model
-    , token : String
-    }
+    | GotPrivateKey (Result String ( Eos.Name, Eos.PrivateKey ))
 
 
 type ExternalMsg
-    = CompletedAuth SignInResponse Model
+    = CompletedAuth Eos.Name Model
     | UpdatedShared Shared
+    | SetFeedback Feedback.Model
 
 
 update : Msg -> Shared -> Model -> UpdateResult
 update msg shared model =
     case msg of
-        Ignored ->
-            UR.init model
-
         GotPinMsg subMsg ->
-            let
-                ( newPinModel, submitStatus ) =
-                    Pin.update subMsg model.pinModel
+            Pin.update shared subMsg model.pinModel
+                |> UR.fromChild (\pinModel -> { model | pinModel = pinModel })
+                    GotPinMsg
+                    (\ext ur ->
+                        case ext of
+                            Pin.SendFeedback feedback ->
+                                UR.addExt (SetFeedback feedback) ur
 
-                ( newShared, submitCmd ) =
-                    Pin.postSubmitAction newPinModel submitStatus shared SubmittedPin
-            in
-            { model | pinModel = newPinModel }
-                |> UR.init
-                |> UR.addCmd submitCmd
-                |> UR.addExt (UpdatedShared newShared)
-
-        CompletedSignIn status (RemoteData.Success (Just ({ token } as signInResponse))) ->
-            let
-                newModel =
-                    { model
-                        | status = status
-                        , pinModel = Pin.withDisabled False model.pinModel
-                    }
-            in
-            newModel
-                |> UR.init
-                |> UR.addCmd (Ports.storeAuthToken token)
-                |> UR.addExt (CompletedAuth signInResponse newModel)
-
-        CompletedSignIn _ (RemoteData.Success Nothing) ->
-            model
-                |> authFailed "error.unknown"
-                |> UR.logEvent
-                    { username = Nothing
-                    , message = "Could not sign in for unknown reason"
-                    , tags = [ Log.TypeTag Log.UnknownError ]
-                    , location =
-                        { moduleName = "Auth"
-                        , function = "update"
-                        }
-                    , contexts = []
-                    , transaction = msg
-                    , level = Log.Error
-                    }
-
-        CompletedSignIn _ (RemoteData.Failure err) ->
-            model
-                |> authFailed "auth.failed"
-                |> UR.logGraphqlError msg
-                    Nothing
-                    "Got an error when signing in"
-                    { moduleName = "Auth", function = "update" }
-                    []
-                    err
-                |> UR.addPort
-                    { responseAddress = Ignored
-                    , responseData = Encode.null
-                    , data = Encode.object [ ( "name", Encode.string "logout" ) ]
-                    }
-
-        CompletedSignIn _ RemoteData.NotAsked ->
-            UR.init model
-
-        CompletedSignIn _ RemoteData.Loading ->
-            UR.init model
+                            Pin.SubmitPin pin ->
+                                let
+                                    ( newShared, submitCmd ) =
+                                        Pin.postSubmitAction ur.model.pinModel
+                                            pin
+                                            shared
+                                            SubmittedPin
+                                in
+                                ur
+                                    |> UR.addCmd submitCmd
+                                    |> UR.addExt (UpdatedShared newShared)
+                    )
+                    model
 
         SubmittedPin pin ->
             { model | pinModel = Pin.withDisabled True model.pinModel }
@@ -268,18 +230,32 @@ update msg shared model =
                             ]
                     }
 
-        GotSubmittedPinResponse (Ok ( accountName, privateKey )) ->
-            UR.init model
-                |> UR.addCmd
-                    (Api.Graphql.mutation shared
-                        Nothing
-                        (signIn accountName shared Nothing)
-                        (CompletedSignIn (WithPrivateKey privateKey))
-                    )
+        GotPrivateKey (Ok ( accountName, privateKey )) ->
+            let
+                newModel =
+                    { model
+                        | status = WithPrivateKey privateKey
+                        , pinModel =
+                            model.pinModel
+                                |> Pin.withDisabled False
+                                |> Pin.withIsSubmitting False
+                    }
+            in
+            newModel
+                |> UR.init
+                |> UR.addExt (CompletedAuth accountName newModel)
 
-        GotSubmittedPinResponse (Err err) ->
-            model
-                |> authFailed err
+        GotPrivateKey (Err err) ->
+            { model
+                | status = WithoutPrivateKey
+                , error = Nothing
+                , pinModel =
+                    model.pinModel
+                        |> Pin.withProblem Pin.Pin err
+                        |> Pin.withDisabled False
+                        |> Pin.withIsSubmitting False
+            }
+                |> UR.init
                 |> UR.logEvent
                     { username = Nothing
                     , message = "Got an error when submitting PIN"
@@ -298,31 +274,6 @@ update msg shared model =
                     }
 
 
-signIn : Eos.Name -> Shared -> Maybe String -> SelectionSet (Maybe SignInResponse) RootMutation
-signIn accountName shared maybeInvitationId =
-    Cambiatus.Mutation.signIn
-        (\opts -> { opts | invitationId = OptionalArgument.fromMaybe maybeInvitationId })
-        { account = Eos.nameToString accountName
-        , password = shared.graphqlSecret
-        }
-        (Graphql.SelectionSet.succeed SignInResponse
-            |> with (Cambiatus.Object.Session.user Profile.selectionSet)
-            |> with Cambiatus.Object.Session.token
-        )
-
-
-authFailed : String -> Model -> UpdateResult
-authFailed error model =
-    { model
-        | status = WithoutPrivateKey
-        , error = Nothing
-        , pinModel =
-            initPinModel model.pinModel.isPinVisible model.status
-                |> Pin.withProblem Pin.Pin error
-    }
-        |> UR.init
-
-
 jsAddressToMsg : List String -> Value -> Maybe Msg
 jsAddressToMsg addr val =
     case addr of
@@ -332,9 +283,9 @@ jsAddressToMsg addr val =
                     [ Decode.succeed Tuple.pair
                         |> DecodePipeline.required "accountName" Eos.nameDecoder
                         |> DecodePipeline.required "privateKey" Eos.privateKeyDecoder
-                        |> Decode.map (Ok >> GotSubmittedPinResponse)
+                        |> Decode.map (Ok >> GotPrivateKey)
                     , Decode.field "error" Decode.string
-                        |> Decode.map (Err >> GotSubmittedPinResponse)
+                        |> Decode.map (Err >> GotPrivateKey)
                     ]
                 )
                 val
@@ -347,17 +298,11 @@ jsAddressToMsg addr val =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        Ignored ->
-            [ "Ignored" ]
-
-        CompletedSignIn _ _ ->
-            [ "CompletedSignIn" ]
-
         SubmittedPin _ ->
             [ "SubmittedPin" ]
 
-        GotSubmittedPinResponse r ->
-            [ "GotSubmittedPinResponse", UR.resultToString r ]
+        GotPrivateKey r ->
+            [ "GotPrivateKey", UR.resultToString r ]
 
         GotPinMsg subMsg ->
             "GotPinMsg" :: Pin.msgToString subMsg

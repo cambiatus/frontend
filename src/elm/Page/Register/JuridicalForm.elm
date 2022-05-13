@@ -1,76 +1,377 @@
-module Page.Register.JuridicalForm exposing (CompanyType(..), Field(..), Model, Msg(..), companyTypeToString, init, update, validator, view)
+module Page.Register.JuridicalForm exposing (FormInput, FormOutput, companyTypeToString, decoder, encode, form, init)
 
 import Address
 import Cambiatus.Scalar exposing (Id(..))
-import Html exposing (Html)
-import Html.Attributes exposing (autocomplete, classList)
-import Kyc.CostaRica.Phone as KycPhone
-import Page.Register.Common exposing (..)
+import Eos.Account
+import Form
+import Form.Select
+import Form.Text
+import Form.Validate
+import Html.Attributes exposing (class)
+import Json.Decode as Decode
+import Json.Decode.Pipeline
+import Json.Encode as Encode
+import List.Extra
+import Maybe.Extra
+import Page.Register.Common as Common
 import Session.Shared exposing (Translators)
-import Validate exposing (Validator)
-import View.Form.Input
+import Set exposing (Set)
 
 
+type alias FormInput =
+    { companyType : CompanyType
+    , document : String
+    , name : String
+    , email : String
+    , phoneNumber : String
+    , state : Maybe { id : String, name : String }
+    , city : Maybe { id : String, name : String }
+    , district : Maybe { id : String, name : String }
+    , account : String
+    , street : String
+    , zip : String
+    , number : String
+    , country : Address.Country
+    }
 
---- MODEL
 
-
-type alias Model =
+type alias FormOutput =
     { companyType : CompanyType
     , document : String
     , name : String
     , email : String
     , phone : String
-    , state : ( String, String )
-    , city : ( String, String )
-    , district : ( String, String )
-    , account : String
+    , account : Eos.Account.Name
+    , state : { id : String, name : String }
+    , city : { id : String, name : String }
+    , district : { id : String, name : String }
     , street : String
-    , zip : String
     , number : String
-    , problems : List ( Field, String, ProblemEvent )
-    , country : Address.Country
-    , states : List Address.State
-    , cities : List Address.City
-    , districts : List Address.Neighborhood
+    , zip : String
     }
 
 
-type Field
-    = CompanyType
-    | Document
-    | Name
-    | Email
-    | Phone
-    | State
-    | City
-    | District
-    | Account
-    | Street
-    | Zip
-    | Number
+encode : FormOutput -> Encode.Value
+encode output =
+    let
+        encodeIdAndName { id, name } =
+            Encode.object
+                [ ( "id", Encode.string id )
+                , ( "name", Encode.string name )
+                ]
+    in
+    Encode.object
+        [ ( "companyType", Encode.string <| companyTypeToString output.companyType )
+        , ( "document", Encode.string output.document )
+        , ( "name", Encode.string output.name )
+        , ( "email", Encode.string output.email )
+        , ( "phone", Encode.string output.phone )
+        , ( "account", Eos.Account.encodeName output.account )
+        , ( "state", encodeIdAndName output.state )
+        , ( "city", encodeIdAndName output.city )
+        , ( "district", encodeIdAndName output.district )
+        , ( "street", Encode.string output.street )
+        , ( "number", Encode.string output.number )
+        , ( "zip", Encode.string output.zip )
+        ]
 
 
-init : { a | account : Maybe String, email : Maybe String, phone : Maybe String, country : Address.Country } -> Translators -> Model
-init options translators =
-    { companyType = MIPYME
-    , document = ""
-    , name = ""
-    , email = Maybe.withDefault "" options.email
-    , phone = Maybe.withDefault "" options.phone
-    , state = ( "", "" )
-    , city = ( "", "" )
-    , district = ( "", "" )
-    , account = Maybe.withDefault "" options.account
-    , street = ""
-    , zip = ""
-    , number = ""
-    , problems = []
-    , country = options.country
-    , states = options.country.states ++ [ Address.State (Id "") (translators.t "register.form.select.state") [] ]
-    , cities = []
-    , districts = []
-    }
+decoder : Decode.Decoder FormOutput
+decoder =
+    let
+        decodeIdAndName =
+            Decode.map2 (\id name -> { id = id, name = name })
+                Decode.string
+                Decode.string
+    in
+    Decode.succeed FormOutput
+        |> Json.Decode.Pipeline.required "companyType"
+            (Decode.string
+                |> Decode.andThen
+                    (\companyType ->
+                        case companyTypeFromString companyType of
+                            Nothing ->
+                                Decode.fail "Invalid company type"
+
+                            Just type_ ->
+                                Decode.succeed type_
+                    )
+            )
+        |> Json.Decode.Pipeline.required "document" Decode.string
+        |> Json.Decode.Pipeline.required "name" Decode.string
+        |> Json.Decode.Pipeline.required "email" Decode.string
+        |> Json.Decode.Pipeline.required "phone" Decode.string
+        |> Json.Decode.Pipeline.required "account" Eos.Account.nameDecoder
+        |> Json.Decode.Pipeline.required "state" decodeIdAndName
+        |> Json.Decode.Pipeline.required "city" decodeIdAndName
+        |> Json.Decode.Pipeline.required "district" decodeIdAndName
+        |> Json.Decode.Pipeline.required "street" Decode.string
+        |> Json.Decode.Pipeline.required "number" Decode.string
+        |> Json.Decode.Pipeline.required "zip" Decode.string
+
+
+form : Translators -> { unavailableAccounts : Set String } -> Form.Form msg FormInput FormOutput
+form ({ t } as translators) unavailableAccounts =
+    let
+        unwrapId (Id id) =
+            id
+    in
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Select.init
+                { label = t "register.form.company_type"
+                , id = "company-type-select"
+                , optionToString = companyTypeToString
+                }
+                |> Form.Select.withOption MIPYME (t "register.form.company.mipyme.label")
+                |> Form.Select.withOption Corporation (t "register.form.company.gran_empresa.label")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.select (companyTypeFromString >> Maybe.withDefault MIPYME)
+                    { parser = Ok
+                    , value = .companyType
+                    , update = \companyType input -> { input | companyType = companyType }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            ((\{ companyType } ->
+                Form.Text.init
+                    { label = t ("register.form.company." ++ companyTypeToString companyType ++ ".label")
+                    , id = "document-input"
+                    }
+                    |> Form.Text.withPlaceholder (t ("register.form.company." ++ companyTypeToString companyType ++ ".placeholder"))
+                    |> Form.Text.withCounter (Form.Text.CountLetters 10)
+                    |> Form.textField
+                        { parser = Ok
+                        , value = .document
+                        , update = \document input -> { input | document = document }
+                        , externalError = always Nothing
+                        }
+             )
+                |> Form.introspect
+            )
+        |> Form.with
+            (Form.Text.init { label = t "register.form.company_name", id = "company-name-input" }
+                |> Form.Text.withPlaceholder (t "register.form.name_example")
+                |> Form.textField
+                    { parser = Ok
+                    , value = .name
+                    , update = \name input -> { input | name = name }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with (Common.emailField translators)
+        |> Form.with (Common.phoneNumberField translators)
+        |> Form.with (Common.accountNameField translators unavailableAccounts)
+        |> Form.with
+            ((\{ country } ->
+                Form.Select.init
+                    { label = t "register.form.state"
+                    , id = "state-select"
+                    , optionToString =
+                        Maybe.map nameAndIdToString
+                            >> Maybe.withDefault ""
+                    }
+                    |> Form.Select.withOption Nothing (t "register.form.select.state")
+                    |> Form.Select.withOptions
+                        (country.states
+                            |> List.map
+                                (\state ->
+                                    { option =
+                                        Just
+                                            { id = unwrapId state.id
+                                            , name = state.name
+                                            }
+                                    , label = state.name
+                                    }
+                                )
+                        )
+                    |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                    |> Form.select nameAndIdFromString
+                        { parser =
+                            Form.Validate.succeed
+                                >> Form.Validate.required
+                                >> Form.Validate.validate translators
+                        , value = .state
+                        , update = \state input -> { input | state = state }
+                        , externalError = always Nothing
+                        }
+             )
+                |> Form.introspect
+            )
+        |> Form.with
+            ((\{ state, country } ->
+                case state of
+                    Nothing ->
+                        Form.fail
+
+                    Just validState ->
+                        case List.Extra.find (\{ id } -> unwrapId id == validState.id) country.states of
+                            Nothing ->
+                                Form.fail
+
+                            Just stateFromCountry ->
+                                Form.Select.init
+                                    { label = t "register.form.city"
+                                    , id = "city-select"
+                                    , optionToString =
+                                        Maybe.map nameAndIdToString
+                                            >> Maybe.withDefault ""
+                                    }
+                                    |> Form.Select.withOption Nothing (t "register.form.select.city")
+                                    |> Form.Select.withOptions
+                                        (List.map
+                                            (\city ->
+                                                { option = Just { id = unwrapId city.id, name = city.name }
+                                                , label = city.name
+                                                }
+                                            )
+                                            stateFromCountry.cities
+                                        )
+                                    |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                                    |> Form.select nameAndIdFromString
+                                        { parser =
+                                            Form.Validate.succeed
+                                                >> Form.Validate.required
+                                                >> Form.Validate.validate translators
+                                        , value = .city
+                                        , update = \city input -> { input | city = city }
+                                        , externalError = always Nothing
+                                        }
+             )
+                |> Form.introspect
+            )
+        |> Form.with
+            ((\{ city, state, country } ->
+                let
+                    availableDistricts =
+                        Maybe.Extra.andThen2
+                            (\validState validCity ->
+                                List.Extra.find (\{ id } -> unwrapId id == validState.id)
+                                    country.states
+                                    |> Maybe.andThen
+                                        (\{ cities } ->
+                                            List.Extra.find
+                                                (\{ id } -> unwrapId id == validCity.id)
+                                                cities
+                                        )
+                                    |> Maybe.map .neighborhoods
+                            )
+                            state
+                            city
+                in
+                case availableDistricts of
+                    Nothing ->
+                        Form.fail
+
+                    Just districts ->
+                        Form.Select.init
+                            { label = t "register.form.district"
+                            , id = "district-select"
+                            , optionToString =
+                                Maybe.map nameAndIdToString
+                                    >> Maybe.withDefault ""
+                            }
+                            |> Form.Select.withOption Nothing (t "register.form.select.district")
+                            |> Form.Select.withOptions
+                                (List.map
+                                    (\district ->
+                                        { option = Just { id = unwrapId district.id, name = district.name }
+                                        , label = district.name
+                                        }
+                                    )
+                                    districts
+                                )
+                            |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                            |> Form.select nameAndIdFromString
+                                { parser =
+                                    Form.Validate.succeed
+                                        >> Form.Validate.required
+                                        >> Form.Validate.validate translators
+                                , value = .district
+                                , update = \district input -> { input | district = district }
+                                , externalError = always Nothing
+                                }
+             )
+                |> Form.introspect
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "register.form.street.label"
+                , id = "street-input"
+                }
+                |> Form.textField
+                    { parser = Ok
+                    , value = .street
+                    , update = \street input -> { input | street = street }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "register.form.number.label"
+                , id = "address-number-input"
+                }
+                |> Form.textField
+                    { parser = Ok
+                    , value = .number
+                    , update = \number input -> { input | number = number }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "register.form.zip.label"
+                , id = "zip-input"
+                }
+                |> Form.Text.withCounter (Form.Text.CountLetters 5)
+                |> Form.textField
+                    { parser =
+                        \zip ->
+                            if List.member zip costaRicaZipcodes then
+                                Ok zip
+
+                            else
+                                Err <| t "error.zipcode"
+                    , value = .zip
+                    , update = \zip input -> { input | zip = zip }
+                    , externalError = always Nothing
+                    }
+            )
+
+
+nameAndIdToString : { id : String, name : String } -> String
+nameAndIdToString { id, name } =
+    id ++ ";" ++ name
+
+
+nameAndIdFromString : String -> Maybe { id : String, name : String }
+nameAndIdFromString nameAndId =
+    case String.split ";" nameAndId of
+        [ id, name ] ->
+            Just { id = id, name = name }
+
+        _ ->
+            Nothing
+
+
+init : Address.Country -> Form.Model FormInput
+init country =
+    Form.init
+        { companyType = MIPYME
+        , document = ""
+        , name = ""
+        , email = ""
+        , phoneNumber = ""
+        , state = Nothing
+        , city = Nothing
+        , district = Nothing
+        , account = ""
+        , street = ""
+        , zip = ""
+        , number = ""
+        , country = country
+        }
 
 
 type CompanyType
@@ -88,319 +389,17 @@ companyTypeToString type_ =
             "gran_empresa"
 
 
+companyTypeFromString : String -> Maybe CompanyType
+companyTypeFromString type_ =
+    case type_ of
+        "mipyme" ->
+            Just MIPYME
 
---- MSG
+        "gran_empresa" ->
+            Just Corporation
 
-
-type Msg
-    = EnteredDocument String
-    | EnteredType CompanyType
-    | EnteredName String
-    | EnteredEmail String
-    | EnteredPhone String
-    | EnteredState String
-    | EnteredCity String
-    | EnteredDistrict String
-    | EnteredAccount String
-    | EnteredStreet String
-    | EnteredZip String
-    | EnteredNumber String
-
-
-
---- VIEW
-
-
-view : Translators -> Model -> Html Msg
-view translators model =
-    let
-        formTranslationString =
-            "register.form"
-
-        companyTranslationString =
-            formTranslationString ++ ".company." ++ companyTypeToString model.companyType
-    in
-    Html.div []
-        [ viewSelectField
-            { id = "company_type_select"
-            , label = translators.t "register.form.company_type"
-            , onInput = EnteredType
-            , options =
-                [ { value = MIPYME, label = translators.t "register.form.company.mipyme.label" }
-                , { value = Corporation, label = translators.t "register.form.company.gran_empresa.label" }
-                ]
-            , value = model.companyType
-            , valueToString = companyTypeToString
-            , enabled = True
-            , problems = fieldProblems CompanyType model.problems
-            }
-        , View.Form.Input.init
-            { id = "document"
-            , label = translators.t (companyTranslationString ++ ".label")
-            , onInput = EnteredDocument
-            , disabled = False
-            , value = model.document
-            , placeholder = Just (translators.t (companyTranslationString ++ ".placeholder"))
-            , problems = fieldProblems Document model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.withCounter
-                (companyTranslationString
-                    ++ ".maximum"
-                    |> translators.t
-                    |> String.toInt
-                    |> Maybe.withDefault 10
-                )
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "name"
-            , label = "Company Name"
-            , disabled = False
-            , onInput = EnteredName
-            , placeholder = Just "Ex.: Cambiatus"
-            , problems = fieldProblems Name model.problems
-            , translators = translators
-            , value = model.name
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "email"
-            , label = translators.t (formTranslationString ++ ".email.label")
-            , onInput = EnteredEmail
-            , disabled = False
-            , value = model.email
-            , placeholder = Just (translators.t (formTranslationString ++ ".email.placeholder"))
-            , problems = fieldProblems Email model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "phone"
-            , label = translators.t (formTranslationString ++ ".phone.label")
-            , onInput = EnteredPhone
-            , disabled = False
-            , value = model.phone
-            , placeholder = Just (translators.t (formTranslationString ++ ".phone.placeholder"))
-            , problems = fieldProblems Phone model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.withCounter 8
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "account"
-            , label = translators.t (formTranslationString ++ ".account.label")
-            , onInput = EnteredAccount
-            , disabled = False
-            , value = model.account
-            , placeholder = Just (translators.t (formTranslationString ++ ".account.placeholder"))
-            , problems = fieldProblems Account model.problems
-            , translators = translators
-            }
-            |> (let
-                    hasErrors =
-                        List.any (\( f, _, evt ) -> f == Account && evt == OnInput) model.problems
-                in
-                View.Form.Input.withAttrs
-                    [ autocomplete False
-                    , classList
-                        [ ( "shake-invalid", hasErrors )
-                        , ( "field-with-error", hasErrors )
-                        ]
-                    ]
-               )
-            |> View.Form.Input.withCounter 12
-            |> View.Form.Input.toHtml
-        , viewSelectField
-            { id = "state_select"
-            , label = translators.t "register.form.state"
-            , onInput = EnteredState
-            , options = List.map (\state -> { value = state.name, label = state.name }) model.states
-            , value = model.state |> Tuple.first
-            , valueToString = identity
-            , enabled = True
-            , problems = fieldProblems State model.problems
-            }
-        , viewSelectField
-            { id = "city_select"
-            , label = translators.t "register.form.city"
-            , onInput = EnteredCity
-            , options = List.map (\city -> { value = city.name, label = city.name }) model.cities
-            , value = model.city |> Tuple.first
-            , valueToString = identity
-            , enabled = model.state /= ( "", "" )
-            , problems = fieldProblems City model.problems
-            }
-        , viewSelectField
-            { id = "discrict_select"
-            , label = translators.t "register.form.district"
-            , onInput = EnteredDistrict
-            , options = List.map (\district -> { value = district.name, label = district.name }) model.districts
-            , value = model.district |> Tuple.first
-            , valueToString = identity
-            , enabled = model.city /= ( "", "" )
-            , problems = fieldProblems District model.problems
-            }
-        , View.Form.Input.init
-            { id = "street"
-            , label = translators.t (formTranslationString ++ ".street.label")
-            , onInput = EnteredStreet
-            , disabled = False
-            , value = model.street
-            , placeholder = Just (translators.t (formTranslationString ++ ".street.placeholder"))
-            , problems = fieldProblems Street model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "number"
-            , label = translators.t (formTranslationString ++ ".number.label")
-            , onInput = EnteredNumber
-            , disabled = False
-            , value = model.number
-            , placeholder = Just (translators.t (formTranslationString ++ ".number.placeholder"))
-            , problems = fieldProblems Number model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.toHtml
-        , View.Form.Input.init
-            { id = "zip"
-            , label = translators.t (formTranslationString ++ ".zip.label")
-            , onInput = EnteredZip
-            , disabled = False
-            , value = model.zip
-            , placeholder = Just (translators.t (formTranslationString ++ ".zip.placeholder"))
-            , problems = fieldProblems Zip model.problems
-            , translators = translators
-            }
-            |> View.Form.Input.withCounter 5
-            |> View.Form.Input.toHtml
-        ]
-
-
-
---- UPDATE
-
-
-update : Translators -> Msg -> Model -> Model
-update translators msg form =
-    case msg of
-        EnteredDocument document ->
-            { form
-                | document =
-                    if String.length document <= 10 && not (containsLetters document) then
-                        document
-
-                    else
-                        form.document
-            }
-
-        EnteredType type_ ->
-            { form | companyType = type_ }
-
-        EnteredName str ->
-            { form | name = str }
-
-        EnteredEmail str ->
-            { form | email = str }
-
-        EnteredPhone phone ->
-            { form
-                | phone =
-                    if String.length phone <= 8 && not (containsLetters phone) then
-                        phone
-
-                    else
-                        form.phone
-            }
-
-        EnteredState str ->
-            { form
-                | state = findId str form.country.states
-                , cities = getCities form.country.states str translators
-                , city = ( "", "" )
-                , district = ( "", "" )
-            }
-
-        EnteredCity str ->
-            { form
-                | city = findId str form.cities
-                , districts = getDistricts form.cities str translators
-                , district = ( "", "" )
-            }
-
-        EnteredDistrict str ->
-            { form | district = findId str form.districts }
-
-        EnteredAccount account ->
-            let
-                formProblemsWithoutAccount =
-                    form.problems
-                        |> List.filter (\( field, _, _ ) -> field /= Account)
-
-                ( preparedAccountName, errorMsg ) =
-                    validateAccountName translators account form.account
-            in
-            { form
-                | account = preparedAccountName
-                , problems =
-                    case errorMsg of
-                        Nothing ->
-                            formProblemsWithoutAccount
-
-                        Just e ->
-                            formProblemsWithoutAccount ++ [ ( Account, e, OnInput ) ]
-            }
-
-        EnteredStreet str ->
-            { form | street = str }
-
-        EnteredZip str ->
-            { form
-                | zip =
-                    if String.length str <= 5 && not (containsLetters str) then
-                        str
-
-                    else
-                        form.zip
-            }
-
-        EnteredNumber str ->
-            { form | number = str }
-
-
-validator : Translators -> Validator ( Field, String, ProblemEvent ) Model
-validator { t, tr } =
-    let
-        ifInvalidPhoneNumber subjectToString error =
-            Validate.ifFalse (\subject -> KycPhone.isValid (subjectToString subject)) error
-    in
-    Validate.all
-        [ Validate.ifBlank .name ( Name, t "error.required", OnSubmit )
-        , Validate.ifBlank .document ( Document, t "error.required", OnSubmit )
-        , Validate.ifBlank .number ( Number, t "error.required", OnSubmit )
-        , Validate.ifBlank .street ( Street, t "error.required", OnSubmit )
-        , ifEmptyTuple .state ( State, t "error.required", OnSubmit )
-        , ifEmptyTuple .city ( City, t "error.required", OnSubmit )
-        , ifEmptyTuple .district ( District, t "error.required", OnSubmit )
-        , Validate.firstError
-            [ Validate.ifBlank .zip ( Zip, t "error.required", OnSubmit )
-            , Validate.ifFalse (\f -> List.member f.zip costaRicaZipcodes) ( Zip, t "error.zipcode", OnSubmit )
-            ]
-        , Validate.firstError
-            [ Validate.ifBlank .email ( Email, t "error.required", OnSubmit )
-            , Validate.ifInvalidEmail .email (\_ -> ( Email, t "error.email", OnSubmit ))
-            ]
-        , Validate.firstError
-            [ Validate.ifBlank .account ( Account, t "error.required", OnSubmit )
-            , Validate.ifTrue (\f -> String.length f.account < 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
-            , Validate.ifTrue (\f -> String.length f.account > 12) ( Account, tr "error.validator.text.exactly" [ ( "base", "12" ) ], OnSubmit )
-            , Validate.ifFalse (\f -> String.all Char.isAlphaNum f.account) ( Account, t "error.invalidChar", OnSubmit )
-            ]
-        , Validate.firstError
-            [ Validate.ifBlank .phone ( Phone, t "error.required", OnSubmit )
-            , ifInvalidPhoneNumber .phone ( Phone, t "error.phone", OnSubmit )
-            ]
-        ]
+        _ ->
+            Nothing
 
 
 costaRicaZipcodes : List String

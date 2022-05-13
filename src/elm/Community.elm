@@ -1,6 +1,8 @@
 module Community exposing
     ( Balance
     , CommunityPreview
+    , Contribution
+    , ContributionConfiguration
     , CreateCommunityData
     , CreateCommunityDataInput
     , Field(..)
@@ -16,22 +18,20 @@ module Community exposing
     , communityPreviewSymbolQuery
     , createCommunityData
     , createCommunityDataDecoder
-    , decodeBalance
+    , currencyTranslationKey
     , domainAvailableQuery
     , encodeCreateCommunityData
     , encodeCreateObjectiveAction
     , encodeUpdateData
     , encodeUpdateObjectiveAction
+    , fieldSelectionSet
+    , fieldsSelectionSet
     , getField
     , inviteQuery
     , isFieldLoading
-    , isNonExistingCommunityError
-    , logoBackground
     , maybeFieldValue
     , mergeFields
     , newCommunitySubscription
-    , queryForField
-    , queryForFields
     , setFieldAsLoading
     , setFieldValue
     , subdomainQuery
@@ -39,11 +39,14 @@ module Community exposing
     )
 
 import Action exposing (Action)
-import Api.Graphql
+import Cambiatus.Enum.ContributionStatusType
+import Cambiatus.Enum.CurrencyType
 import Cambiatus.Mutation as Mutation
 import Cambiatus.Object
 import Cambiatus.Object.Community as Community
 import Cambiatus.Object.CommunityPreview as CommunityPreview
+import Cambiatus.Object.Contribution
+import Cambiatus.Object.ContributionConfig
 import Cambiatus.Object.Exists
 import Cambiatus.Object.Invite as Invite
 import Cambiatus.Object.Objective as Objective
@@ -53,6 +56,7 @@ import Cambiatus.Object.User as Profile
 import Cambiatus.Query as Query
 import Cambiatus.Scalar exposing (DateTime(..))
 import Cambiatus.Subscription as Subscription
+import Community.News
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -61,15 +65,17 @@ import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (class, classList, src)
+import Iso8601
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode as Encode exposing (Value)
 import List.Extra
+import Markdown exposing (Markdown)
 import Profile
+import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Session.Shared exposing (Shared)
 import Time exposing (Posix)
-import Utils
 
 
 
@@ -93,7 +99,7 @@ type alias Metadata =
 
 type alias Model =
     { name : String
-    , description : String
+    , description : Markdown
     , symbol : Eos.Symbol
     , logo : String
     , subdomain : String
@@ -109,14 +115,20 @@ type alias Model =
     , productCount : Int
     , orderCount : Int
     , members : List Profile.Minimal
+    , contributions : RemoteData (Graphql.Http.Error (List Contribution)) (List Contribution)
+    , contributionConfiguration : Maybe ContributionConfiguration
+    , news : RemoteData (Graphql.Http.Error (List Community.News.Model)) (List Community.News.Model)
+    , highlightedNews : Maybe Community.News.Model
     , objectives : RemoteData (Graphql.Http.Error (List Objective)) (List Objective)
     , hasObjectives : Bool
     , hasShop : Bool
     , hasKyc : Bool
     , hasAutoInvite : Bool
+    , hasNews : Bool
     , validators : List Eos.Name
     , uploads : RemoteData (Graphql.Http.Error (List String)) (List String)
     , website : Maybe String
+    , contacts : List Contact.Normalized
     }
 
 
@@ -151,8 +163,11 @@ variants they can use to do so:
 
 -}
 type Field
-    = ObjectivesField
+    = ContributionsField
+    | ObjectivesField
     | UploadsField
+    | MembersField
+    | NewsField
 
 
 {-| `FieldValue` is useful to wrap results of queries for fields that aren't
@@ -161,8 +176,11 @@ constructor's name should be the name of the field followed by `Value`, and
 should hold the actual value of that field (e.g. `ObjectivesValue (List Objetive)`).
 -}
 type FieldValue
-    = ObjectivesValue (List Objective)
+    = ContributionsValue (List Contribution)
+    | ObjectivesValue (List Objective)
     | UploadsValue (List String)
+    | MembersValue (List Profile.Minimal)
+    | NewsValue (List Community.News.Model)
 
 
 {-| When we want to extract a field that is not loaded by default with the
@@ -192,36 +210,68 @@ getField remoteDataModel accessor =
 setFieldValue : FieldValue -> Model -> Model
 setFieldValue fieldValue model =
     case fieldValue of
+        ContributionsValue contributions ->
+            { model | contributions = RemoteData.Success contributions }
+
         ObjectivesValue objectives ->
             { model | objectives = RemoteData.Success objectives }
 
         UploadsValue uploads ->
             { model | uploads = RemoteData.Success uploads }
 
+        MembersValue members ->
+            { model | members = members }
+
+        NewsValue news ->
+            { model | news = RemoteData.Success news }
+
 
 setFieldAsLoading : Field -> Model -> Model
 setFieldAsLoading field model =
     case field of
+        ContributionsField ->
+            { model | contributions = RemoteData.Loading }
+
         ObjectivesField ->
             { model | objectives = RemoteData.Loading }
 
         UploadsField ->
             { model | uploads = RemoteData.Loading }
 
+        MembersField ->
+            model
+
+        NewsField ->
+            { model | news = RemoteData.Loading }
+
 
 isFieldLoading : Field -> Model -> Bool
 isFieldLoading field model =
     case field of
+        ContributionsField ->
+            RemoteData.isLoading model.contributions
+
         ObjectivesField ->
             RemoteData.isLoading model.objectives
 
         UploadsField ->
             RemoteData.isLoading model.uploads
 
+        MembersField ->
+            False
+
+        NewsField ->
+            RemoteData.isLoading model.news
+
 
 maybeFieldValue : Field -> Model -> Maybe FieldValue
 maybeFieldValue field model =
     case field of
+        ContributionsField ->
+            model.contributions
+                |> RemoteData.toMaybe
+                |> Maybe.map ContributionsValue
+
         ObjectivesField ->
             model.objectives
                 |> RemoteData.toMaybe
@@ -231,6 +281,14 @@ maybeFieldValue field model =
             model.uploads
                 |> RemoteData.toMaybe
                 |> Maybe.map UploadsValue
+
+        MembersField ->
+            Just (MembersValue model.members)
+
+        NewsField ->
+            model.news
+                |> RemoteData.toMaybe
+                |> Maybe.map NewsValue
 
 
 mergeFields : RemoteData x Model -> Model -> Model
@@ -265,7 +323,7 @@ communitySelectionSet : SelectionSet Model Cambiatus.Object.Community
 communitySelectionSet =
     SelectionSet.succeed Model
         |> with Community.name
-        |> with Community.description
+        |> with (Markdown.selectionSet Community.description)
         |> with (Eos.symbolSelectionSet Community.symbol)
         |> with Community.logo
         |> with (Community.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
@@ -282,13 +340,22 @@ communitySelectionSet =
         |> with Community.orderCount
         |> with (Community.members Profile.minimalSelectionSet)
         |> SelectionSet.hardcoded RemoteData.NotAsked
+        |> with (Community.contributionConfiguration contributionConfigurationSelectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
+        |> with (Community.highlightedNews Community.News.selectionSet)
+        |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.hasObjectives
         |> with Community.hasShop
         |> with Community.hasKyc
         |> with Community.autoInvite
+        |> with Community.hasNews
         |> with (Community.validators (Eos.nameSelectionSet Profile.account))
         |> SelectionSet.hardcoded RemoteData.NotAsked
         |> with Community.website
+        |> with
+            (Community.contacts Contact.selectionSet
+                |> SelectionSet.map (List.filterMap identity)
+            )
 
 
 
@@ -318,6 +385,12 @@ newCommunitySubscription symbol =
 selectionSetForField : Field -> SelectionSet FieldValue Cambiatus.Object.Community
 selectionSetForField field =
     case field of
+        ContributionsField ->
+            Community.contributions
+                (\optionals -> { optionals | status = Present Cambiatus.Enum.ContributionStatusType.Created })
+                contributionSelectionSet
+                |> SelectionSet.map ContributionsValue
+
         ObjectivesField ->
             Community.objectives objectiveSelectionSet
                 |> SelectionSet.map ObjectivesValue
@@ -326,42 +399,30 @@ selectionSetForField field =
             Community.uploads Upload.url
                 |> SelectionSet.map UploadsValue
 
+        MembersField ->
+            Community.members Profile.minimalSelectionSet
+                |> SelectionSet.map MembersValue
 
-queryForField :
-    Eos.Symbol
-    -> Shared
-    -> String
-    -> Field
-    -> (RemoteData (Graphql.Http.Error (Maybe FieldValue)) (Maybe FieldValue) -> msg)
-    -> Cmd msg
-queryForField symbol shared authToken field toMsg =
-    Api.Graphql.query shared
-        (Just authToken)
-        (field
-            |> selectionSetForField
-            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
-        )
-        toMsg
+        NewsField ->
+            Community.news Community.News.selectionSet
+                |> SelectionSet.map NewsValue
 
 
-queryForFields :
-    Eos.Symbol
-    -> Shared
-    -> String
-    -> List Field
-    -> (RemoteData (Graphql.Http.Error (List FieldValue)) (List FieldValue) -> msg)
-    -> Cmd msg
-queryForFields symbol shared authToken fields toMsg =
-    Api.Graphql.query shared
-        (Just authToken)
-        (fields
-            |> List.Extra.unique
-            |> List.map selectionSetForField
-            |> SelectionSet.list
-            |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
-            |> SelectionSet.withDefault []
-        )
-        toMsg
+fieldSelectionSet : Eos.Symbol -> Field -> SelectionSet (Maybe FieldValue) RootQuery
+fieldSelectionSet symbol field =
+    field
+        |> selectionSetForField
+        |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+
+
+fieldsSelectionSet : Eos.Symbol -> List Field -> SelectionSet (List FieldValue) RootQuery
+fieldsSelectionSet symbol fields =
+    fields
+        |> List.Extra.unique
+        |> List.map selectionSetForField
+        |> SelectionSet.list
+        |> Query.community (\optionals -> { optionals | symbol = Present <| Eos.symbolToString symbol })
+        |> SelectionSet.withDefault []
 
 
 symbolQuery : Eos.Symbol -> SelectionSet (Maybe Model) RootQuery
@@ -372,30 +433,6 @@ symbolQuery symbol =
 subdomainQuery : String -> SelectionSet (Maybe Model) RootQuery
 subdomainQuery subdomain =
     Query.community (\optionals -> { optionals | subdomain = Present subdomain }) communitySelectionSet
-
-
-logoUrl : Maybe String -> String
-logoUrl maybeUrl =
-    let
-        logoPlaceholder =
-            "/icons/community_placeholder.png"
-    in
-    case maybeUrl of
-        Nothing ->
-            logoPlaceholder
-
-        Just url ->
-            if String.isEmpty (String.trim url) then
-                logoPlaceholder
-
-            else
-                url
-
-
-logoBackground : Maybe String -> Html.Attribute msg
-logoBackground maybeUrl =
-    Html.Attributes.style "background-image"
-        ("url(" ++ logoUrl maybeUrl ++ ")")
 
 
 addPhotosMutation : Eos.Symbol -> List String -> SelectionSet (Maybe Model) RootMutation
@@ -410,7 +447,7 @@ addPhotosMutation symbol photos =
 
 type alias Objective =
     { id : Int
-    , description : String
+    , description : Markdown
     , creator : Eos.Name
     , actions : List Action
     , community : Metadata
@@ -422,7 +459,7 @@ objectiveSelectionSet : SelectionSet Objective Cambiatus.Object.Objective
 objectiveSelectionSet =
     SelectionSet.succeed Objective
         |> with Objective.id
-        |> with Objective.description
+        |> with (Markdown.selectionSet Objective.description)
         |> with (Eos.nameSelectionSet Objective.creatorId)
         |> with (Objective.actions identity Action.selectionSet)
         |> with (Objective.community communitiesSelectionSet)
@@ -430,8 +467,8 @@ objectiveSelectionSet =
 
 
 type alias CreateObjectiveAction =
-    { asset : Eos.Asset
-    , description : String
+    { communityId : Eos.Symbol
+    , description : Markdown
     , creator : Eos.Name
     }
 
@@ -439,15 +476,17 @@ type alias CreateObjectiveAction =
 encodeCreateObjectiveAction : CreateObjectiveAction -> Value
 encodeCreateObjectiveAction c =
     Encode.object
-        [ ( "cmm_asset", Eos.encodeAsset c.asset )
-        , ( "description", Encode.string c.description )
-        , ( "creator", Eos.encodeName c.creator )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "objective_id", Encode.int 0 )
+        , ( "description", Markdown.encode c.description )
+        , ( "editor", Eos.encodeName c.creator )
         ]
 
 
 type alias UpdateObjectiveAction =
-    { objectiveId : Int
-    , description : String
+    { communityId : Eos.Symbol
+    , objectiveId : Int
+    , description : Markdown
     , editor : Eos.Name
     }
 
@@ -455,10 +494,88 @@ type alias UpdateObjectiveAction =
 encodeUpdateObjectiveAction : UpdateObjectiveAction -> Value
 encodeUpdateObjectiveAction c =
     Encode.object
-        [ ( "objective_id", Encode.int c.objectiveId )
-        , ( "description", Encode.string c.description )
+        [ ( "community_id", Eos.encodeSymbol c.communityId )
+        , ( "objective_id", Encode.int c.objectiveId )
+        , ( "description", Markdown.encode c.description )
         , ( "editor", Eos.encodeName c.editor )
         ]
+
+
+
+-- CONTRIBUTION
+
+
+type alias Contribution =
+    { user : Profile.Minimal
+    , amount : Float
+    , currency : Cambiatus.Enum.CurrencyType.CurrencyType
+    , id : String
+    , insertedAt : Posix
+    }
+
+
+type alias ContributionConfiguration =
+    { acceptedCurrencies : List Cambiatus.Enum.CurrencyType.CurrencyType
+    , paypalAccount : Maybe String
+    , thankYouDescription : Maybe Markdown
+    , thankYouTitle : Maybe String
+    }
+
+
+contributionSelectionSet : SelectionSet Contribution Cambiatus.Object.Contribution
+contributionSelectionSet =
+    SelectionSet.succeed Contribution
+        |> with (Cambiatus.Object.Contribution.user Profile.minimalSelectionSet)
+        |> with Cambiatus.Object.Contribution.amount
+        |> with Cambiatus.Object.Contribution.currency
+        |> with Cambiatus.Object.Contribution.id
+        |> with
+            (Cambiatus.Object.Contribution.insertedAt
+                |> SelectionSet.map
+                    (\(Cambiatus.Scalar.NaiveDateTime naiveDateTime) ->
+                        Iso8601.toTime naiveDateTime
+                            |> Result.withDefault (Time.millisToPosix 0)
+                    )
+            )
+
+
+contributionConfigurationSelectionSet : SelectionSet ContributionConfiguration Cambiatus.Object.ContributionConfig
+contributionConfigurationSelectionSet =
+    SelectionSet.succeed ContributionConfiguration
+        |> with Cambiatus.Object.ContributionConfig.acceptedCurrencies
+        |> with Cambiatus.Object.ContributionConfig.paypalAccount
+        |> with (Markdown.maybeSelectionSet Cambiatus.Object.ContributionConfig.thankYouDescription)
+        |> with Cambiatus.Object.ContributionConfig.thankYouTitle
+
+
+currencyTranslationKey : { contribution | amount : Float, currency : Cambiatus.Enum.CurrencyType.CurrencyType } -> String
+currencyTranslationKey { amount, currency } =
+    let
+        baseTranslation =
+            case currency of
+                Cambiatus.Enum.CurrencyType.Brl ->
+                    "currency.brl"
+
+                Cambiatus.Enum.CurrencyType.Btc ->
+                    "currency.btc"
+
+                Cambiatus.Enum.CurrencyType.Crc ->
+                    "currency.crc"
+
+                Cambiatus.Enum.CurrencyType.Eos ->
+                    "currency.eos"
+
+                Cambiatus.Enum.CurrencyType.Eth ->
+                    "currency.eth"
+
+                Cambiatus.Enum.CurrencyType.Usd ->
+                    "currency.usd"
+    in
+    if amount == 1 then
+        baseTranslation ++ "_singular"
+
+    else
+        baseTranslation ++ "_plural"
 
 
 
@@ -471,13 +588,6 @@ type alias Balance =
     }
 
 
-decodeBalance : Decoder Balance
-decodeBalance =
-    Decode.succeed Balance
-        |> required "balance" Eos.decodeAsset
-        |> required "last_activity" Utils.decodeTimestamp
-
-
 
 -- CREATE COMMUNITY
 
@@ -487,7 +597,7 @@ type alias CreateCommunityData =
     , creator : Eos.Name
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -504,7 +614,7 @@ type alias CreateCommunityDataInput =
     , symbol : Eos.Symbol
     , logoUrl : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Float
     , invitedReward : Float
@@ -550,7 +660,7 @@ encodeCreateCommunityData c =
         , ( "creator", Eos.encodeName c.creator )
         , ( "logo", Encode.string c.logoUrl )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
@@ -569,7 +679,7 @@ createCommunityDataDecoder =
         |> required "creator" Eos.nameDecoder
         |> required "logo" Decode.string
         |> required "name" Decode.string
-        |> required "description" Decode.string
+        |> required "description" Markdown.decoder
         |> required "subdomain" Decode.string
         |> required "inviter_reward" Eos.decodeAsset
         |> required "invited_reward" Eos.decodeAsset
@@ -584,7 +694,7 @@ type alias UpdateCommunityData =
     { asset : Eos.Asset
     , logo : String
     , name : String
-    , description : String
+    , description : Markdown
     , subdomain : String
     , inviterReward : Eos.Asset
     , invitedReward : Eos.Asset
@@ -602,7 +712,7 @@ encodeUpdateData c =
         [ ( "logo", Encode.string c.logo )
         , ( "cmm_asset", Eos.encodeAsset c.asset )
         , ( "name", Encode.string c.name )
-        , ( "description", Encode.string c.description )
+        , ( "description", Markdown.encode c.description )
         , ( "subdomain", Encode.string c.subdomain )
         , ( "inviter_reward", Eos.encodeAsset c.inviterReward )
         , ( "invited_reward", Eos.encodeAsset c.invitedReward )
@@ -654,7 +764,7 @@ inviteQuery invitationId =
 
 type alias CommunityPreview =
     { name : String
-    , description : String
+    , description : Markdown
     , logo : String
     , symbol : Eos.Symbol
     , subdomain : String
@@ -672,7 +782,7 @@ communityPreviewSelectionSet : SelectionSet CommunityPreview Cambiatus.Object.Co
 communityPreviewSelectionSet =
     SelectionSet.succeed CommunityPreview
         |> with CommunityPreview.name
-        |> with CommunityPreview.description
+        |> with (Markdown.selectionSet CommunityPreview.description)
         |> with CommunityPreview.logo
         |> with (Eos.symbolSelectionSet CommunityPreview.symbol)
         |> with (CommunityPreview.subdomain Subdomain.name |> SelectionSet.map (Maybe.withDefault ""))
@@ -723,7 +833,7 @@ communityPreviewImage isLeftSide { translators } community =
                 [ class "w-full opacity-60"
                 , classList
                     [ ( "h-screen object-cover", isLeftSide )
-                    , ( "max-h-108", not isLeftSide )
+                    , ( "min-h-25 max-h-108", not isLeftSide )
                     ]
                 , src
                     (List.head community.uploads
@@ -733,8 +843,8 @@ communityPreviewImage isLeftSide { translators } community =
                 []
             ]
         , div [ class "absolute inset-0 flex flex-col items-center justify-center text-white uppercase px-5" ]
-            [ span [ class "font-medium text-xl" ] [ text community.name ]
-            , span [ class "text-xs mt-2" ]
+            [ span [ class "font-bold text-lg" ] [ text community.name ]
+            , span [ class "font-bold text-sm mt-4" ]
                 [ text
                     (translators.tr "community.join.member_count"
                         [ ( "member_count", String.fromInt community.memberCount ) ]
@@ -742,10 +852,3 @@ communityPreviewImage isLeftSide { translators } community =
                 ]
             ]
         ]
-
-
-isNonExistingCommunityError : Graphql.Http.Error community -> Bool
-isNonExistingCommunityError error =
-    Utils.errorToString error
-        |> String.toLower
-        |> String.contains "no community found using the domain"

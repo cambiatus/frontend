@@ -9,7 +9,6 @@ module Page.Community.Invite exposing
     )
 
 import Api.Graphql
-import Auth exposing (SignInResponse)
 import Community exposing (Invite)
 import Dict
 import Eos exposing (symbolToString)
@@ -18,7 +17,6 @@ import Graphql.Http
 import Html exposing (Html, button, div, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import Http
 import Log
 import Page exposing (Session(..), toShared)
 import Profile exposing (Model)
@@ -28,6 +26,7 @@ import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Translators)
 import UpdateResult as UR
+import Utils
 import View.Feedback as Feedback
 import View.Modal as Modal
 
@@ -47,7 +46,6 @@ type PageStatus
     | JoinConfirmation Invite
     | AlreadyMemberNotice Invite
     | KycInfo Invite
-    | Error Http.Error
 
 
 type ModalStatus
@@ -179,9 +177,6 @@ view session model =
                         [ viewHeader
                         , viewContent shared.translators invite inner
                         ]
-
-                Error e ->
-                    Page.fullPageError (t "") e
     in
     { title = title
     , content = content
@@ -248,14 +243,14 @@ viewContent { t } { creator, community } innerContent =
             ]
         , div [ class "px-4" ]
             [ div [ class "mt-6" ]
-                [ div [ class "text-heading text-center" ]
-                    [ span [ class "font-medium" ]
+                [ div [ class "text-lg text-center" ]
+                    [ span [ class "font-semibold" ]
                         [ text inviter
                         ]
                     , text " "
                     , text (t "community.invitation.title")
                     , text " "
-                    , span [ class "font-medium" ]
+                    , span [ class "font-semibold" ]
                         [ text community.name ]
                     ]
                 ]
@@ -313,7 +308,7 @@ type Msg
     | CloseConfirmationModal
     | InvitationRejected
     | InvitationAccepted InvitationId Invite
-    | CompletedSignIn LoggedIn.Model (RemoteData (Graphql.Http.Error (Maybe SignInResponse)) (Maybe SignInResponse))
+    | SignedIn
     | FormMsg KycForm.Msg
 
 
@@ -322,64 +317,52 @@ update session msg model =
     case msg of
         FormMsg kycFormMsg ->
             case session of
-                LoggedIn ({ accountName, shared } as loggedIn) ->
+                LoggedIn ({ shared } as loggedIn) ->
                     let
-                        newForm =
+                        formUpdateResult =
                             case model.kycForm of
                                 Just f ->
                                     KycForm.update
-                                        shared.translators
+                                        shared
                                         f
                                         kycFormMsg
 
                                 Nothing ->
                                     KycForm.update
-                                        shared.translators
+                                        shared
                                         KycForm.init
                                         kycFormMsg
 
                         newModel =
-                            { model | kycForm = Just newForm }
+                            formUpdateResult
+                                |> UR.fromChild (\newForm -> { model | kycForm = Just newForm })
+                                    FormMsg
+                                    LoggedIn.addFeedback
+                                    model
                     in
                     case kycFormMsg of
-                        KycForm.Submitted _ ->
-                            let
-                                isFormValid =
-                                    List.isEmpty newForm.validationErrors
-                            in
-                            if isFormValid then
-                                newModel
-                                    |> UR.init
-                                    |> UR.addCmd
-                                        (KycForm.saveKycData loggedIn
-                                            newForm
-                                            |> Cmd.map FormMsg
-                                        )
+                        KycForm.Submitted formOutput ->
+                            newModel
+                                |> UR.addExt
+                                    (KycForm.saveKycData loggedIn formOutput
+                                        |> LoggedIn.mapExternal FormMsg
+                                    )
 
-                            else
-                                newModel
-                                    |> UR.init
-
-                        KycForm.Saved _ ->
-                            case newForm.serverError of
-                                Just error ->
+                        KycForm.Saved result ->
+                            case result of
+                                RemoteData.Failure _ ->
                                     newModel
-                                        |> UR.init
-                                        |> UR.addExt (ShowFeedback Feedback.Failure error)
-
-                                Nothing ->
-                                    model
-                                        |> UR.init
-                                        |> UR.addCmd
-                                            (Api.Graphql.mutation shared
-                                                Nothing
-                                                (Auth.signIn accountName shared (Just model.invitationId))
-                                                (CompletedSignIn loggedIn)
+                                        |> UR.addExt
+                                            (ShowFeedback Feedback.Failure
+                                                (shared.translators.t "error.unknown")
                                             )
 
+                                _ ->
+                                    newModel
+                                        |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
+
                         _ ->
-                            { model | kycForm = Just newForm }
-                                |> UR.init
+                            newModel
 
                 Guest _ ->
                     model
@@ -521,16 +504,11 @@ update session msg model =
                         }
             in
             case session of
-                LoggedIn ({ shared, accountName } as loggedIn) ->
+                LoggedIn _ ->
                     if allowedToJoinCommunity then
                         model
                             |> UR.init
-                            |> UR.addCmd
-                                (Api.Graphql.mutation shared
-                                    Nothing
-                                    (Auth.signIn accountName shared (Just model.invitationId))
-                                    (CompletedSignIn loggedIn)
-                                )
+                            |> UR.addExt (LoggedIn.RequiredAuthToken { callbackCmd = \_ -> Utils.spawnMessage SignedIn })
                             |> addBreadcrumb
 
                     else
@@ -547,8 +525,17 @@ update session msg model =
                             )
                         |> addBreadcrumb
 
-        CompletedSignIn loggedIn (RemoteData.Success (Just { user, token })) ->
+        SignedIn ->
             case getInvite model of
+                Nothing ->
+                    model
+                        |> UR.init
+                        |> UR.logImpossible msg
+                            "Completed signin in, but invite was unavailable"
+                            (Page.maybeAccountName session)
+                            { moduleName = "Page.Community.Invite", function = "update" }
+                            []
+
                 Just { community } ->
                     let
                         communityInfo =
@@ -576,7 +563,6 @@ update session msg model =
                     in
                     model
                         |> UR.init
-                        |> UR.addExt ({ loggedIn | authToken = token } |> LoggedIn.UpdatedLoggedIn)
                         |> UR.addExt (LoggedIn.AddedCommunity communityInfo)
                         |> UR.addCmd (Route.pushUrl navKey redirectRoute)
                         |> UR.addBreadcrumb
@@ -586,29 +572,6 @@ update session msg model =
                             , data = Dict.empty
                             , level = Log.Info
                             }
-
-                Nothing ->
-                    model
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ProfileLoaded user |> LoggedIn.ExternalBroadcast)
-                        |> UR.logImpossible msg
-                            "Completed signin in, but invite was unavailable"
-                            (Page.maybeAccountName session)
-                            { moduleName = "Page.Community.Invite", function = "update" }
-                            []
-
-        CompletedSignIn _ (RemoteData.Failure error) ->
-            { model | pageStatus = Error Http.NetworkError }
-                |> UR.init
-                |> UR.logGraphqlError msg
-                    (Page.maybeAccountName session)
-                    "Got an error when signing in"
-                    { moduleName = "Page.Community.Invite", function = "update" }
-                    []
-                    error
-
-        CompletedSignIn _ _ ->
-            UR.init model
 
 
 getInvite : Model -> Maybe Invite
@@ -665,5 +628,5 @@ msgToString msg =
         FormMsg _ ->
             [ "FormMsg" ]
 
-        CompletedSignIn _ r ->
-            [ "CompletedSignIn", UR.remoteDataToString r ]
+        SignedIn ->
+            [ "SignedIn" ]

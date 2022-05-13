@@ -4,6 +4,7 @@
 
 module Cambiatus.Object.Community exposing (..)
 
+import Cambiatus.Enum.ContributionStatusType
 import Cambiatus.InputObject
 import Cambiatus.Interface
 import Cambiatus.Object
@@ -32,6 +33,42 @@ autoInvite =
 claimCount : SelectionSet Int Cambiatus.Object.Community
 claimCount =
     Object.selectionForField "Int" "claimCount" [] Decode.int
+
+
+contacts :
+    SelectionSet decodesTo Cambiatus.Object.Contact
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+contacts object_ =
+    Object.selectionForCompositeField "contacts" [] object_ (identity >> Decode.list)
+
+
+contributionConfiguration :
+    SelectionSet decodesTo Cambiatus.Object.ContributionConfig
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+contributionConfiguration object_ =
+    Object.selectionForCompositeField "contributionConfiguration" [] object_ (identity >> Decode.nullable)
+
+
+type alias ContributionsOptionalArguments =
+    { status : OptionalArgument Cambiatus.Enum.ContributionStatusType.ContributionStatusType }
+
+
+{-| List of contributions this community received
+-}
+contributions :
+    (ContributionsOptionalArguments -> ContributionsOptionalArguments)
+    -> SelectionSet decodesTo Cambiatus.Object.Contribution
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+contributions fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { status = Absent }
+
+        optionalArgs =
+            [ Argument.optional "status" filledInOptionals.status (Encode.enum Cambiatus.Enum.ContributionStatusType.toString) ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "contributions" optionalArgs object_ (identity >> Decode.list)
 
 
 createdAt : SelectionSet Cambiatus.ScalarCodecs.DateTime Cambiatus.Object.Community
@@ -69,6 +106,11 @@ hasKyc =
     Object.selectionForField "Bool" "hasKyc" [] Decode.bool
 
 
+hasNews : SelectionSet Bool Cambiatus.Object.Community
+hasNews =
+    Object.selectionForField "Bool" "hasNews" [] Decode.bool
+
+
 hasObjectives : SelectionSet Bool Cambiatus.Object.Community
 hasObjectives =
     Object.selectionForField "Bool" "hasObjectives" [] Decode.bool
@@ -77,6 +119,13 @@ hasObjectives =
 hasShop : SelectionSet Bool Cambiatus.Object.Community
 hasShop =
     Object.selectionForField "Bool" "hasShop" [] Decode.bool
+
+
+highlightedNews :
+    SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (Maybe decodesTo) Cambiatus.Object.Community
+highlightedNews object_ =
+    Object.selectionForCompositeField "highlightedNews" [] object_ (identity >> Decode.nullable)
 
 
 invitedReward : SelectionSet Float Cambiatus.Object.Community
@@ -133,6 +182,13 @@ name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
+news :
+    SelectionSet decodesTo Cambiatus.Object.News
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+news object_ =
+    Object.selectionForCompositeField "news" [] object_ (identity >> Decode.list)
+
+
 objectives :
     SelectionSet decodesTo Cambiatus.Object.Objective
     -> SelectionSet (List decodesTo) Cambiatus.Object.Community
@@ -155,6 +211,13 @@ orders object_ =
 productCount : SelectionSet Int Cambiatus.Object.Community
 productCount =
     Object.selectionForField "Int" "productCount" [] Decode.int
+
+
+rewards :
+    SelectionSet decodesTo Cambiatus.Object.Reward
+    -> SelectionSet (List decodesTo) Cambiatus.Object.Community
+rewards object_ =
+    Object.selectionForCompositeField "rewards" [] object_ (identity >> Decode.list)
 
 
 subdomain :

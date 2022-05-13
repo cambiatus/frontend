@@ -1,11 +1,7 @@
 module Session.Shared exposing
-    ( Environment(..)
-    , Shared
+    ( Shared
     , TranslationStatus(..)
     , Translators
-    , communityDomain
-    , decimalSeparators
-    , environmentFromUrl
     , init
     , langFlag
     , loadTranslation
@@ -18,6 +14,7 @@ module Session.Shared exposing
     )
 
 import Browser.Navigation as Nav
+import Environment exposing (Environment)
 import Eos
 import Eos.Account as Eos
 import Flags exposing (Endpoints, Flags)
@@ -36,11 +33,12 @@ import Url exposing (Url)
 type alias Shared =
     { navKey : Nav.Key
     , language : Translation.Language
+    , version : String
     , translations : Translations
     , translators : Translators
     , translationsStatus : TranslationStatus
     , environment : Environment
-    , maybeAccount : Maybe ( Eos.Name, Bool )
+    , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -49,11 +47,12 @@ type alias Shared =
     , allowCommunityCreation : Bool
     , url : Url
     , contracts : { token : String, community : String }
-    , graphqlSecret : String
     , canReadClipboard : Bool
+    , canShare : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
+    , hasSeenSponsorModal : Bool
     }
 
 
@@ -61,7 +60,7 @@ init : Flags -> Nav.Key -> Url -> ( Shared, Cmd msg )
 init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communityContract } as flags) navKey url =
     let
         environment =
-            environmentFromUrl url
+            Environment.fromUrl url
     in
     ( { navKey = navKey
       , language =
@@ -76,6 +75,7 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
                     flags.language
                         |> Translation.languageFromLocale
                         |> Maybe.withDefault Translation.defaultLanguage
+      , version = flags.version
       , translations = initialTranslations
       , translators = makeTranslators initialTranslations
       , translationsStatus = LoadingTranslation
@@ -89,14 +89,15 @@ init ({ maybeAccount, endpoints, allowCommunityCreation, tokenContract, communit
       , allowCommunityCreation = allowCommunityCreation
       , url = url
       , contracts = { token = tokenContract, community = communityContract }
-      , graphqlSecret = flags.graphqlSecret
       , canReadClipboard = flags.canReadClipboard
+      , canShare = flags.canShare
       , useSubdomain = flags.useSubdomain
       , selectedCommunity = flags.selectedCommunity
       , pinVisibility = flags.pinVisibility
+      , hasSeenSponsorModal = flags.hasSeenSponsorModal
       }
     , case environment of
-        Production ->
+        Environment.Production ->
             Ports.addPlausibleScript { domain = url.host, src = "https://plausible.io/js/plausible.js" }
 
         _ ->
@@ -119,9 +120,7 @@ type TranslationStatus
 {-| Contains functions with bounded dictionaries for translating plain strings and strings with placeholders.
 -}
 type alias Translators =
-    { t : String -> String
-    , tr : String -> I18Next.Replacements -> String
-    }
+    Translation.Translators
 
 
 makeTranslators : Translations -> Translators
@@ -143,109 +142,6 @@ makeTranslators translations =
 translationStatus : Shared -> TranslationStatus
 translationStatus shared =
     shared.translationsStatus
-
-
-decimalSeparators : Translators -> { decimalSeparator : String, thousandsSeparator : String }
-decimalSeparators { t } =
-    { decimalSeparator = t "decimal_separator"
-    , thousandsSeparator = t "thousands_separator"
-    }
-
-
-
--- ENVIRONMENT
-
-
-type Environment
-    = Development
-    | Staging
-    | Demo
-    | Production
-
-
-environmentFromUrl : Url -> Environment
-environmentFromUrl url =
-    if String.endsWith ".localhost" url.host then
-        Development
-
-    else if String.endsWith ".staging.cambiatus.io" url.host then
-        Staging
-
-    else if String.endsWith ".demo.cambiatus.io" url.host then
-        Demo
-
-    else if String.endsWith ".cambiatus.io" url.host then
-        Production
-
-    else
-        Staging
-
-
-{-| Get the community subdomain and the current environment, based on current
-url. Example possible outputs:
-
-    [ "cambiatus", "staging" ] -- Cambiatus community in the staging environment
-
-    [ "cambiatus", "demo" ] -- Cambiatus community in the demo environment
-
-    [ "cambiatus" ] -- Cambiatus community in the prod environment
-
--}
-communitySubdomainParts : Url -> Environment -> List String
-communitySubdomainParts url environment =
-    let
-        allParts =
-            url.host |> String.split "."
-
-        isStaging =
-            case environmentFromUrl url of
-                Development ->
-                    True
-
-                Staging ->
-                    True
-
-                _ ->
-                    False
-
-        addStaging parts =
-            if isStaging then
-                parts ++ [ "staging" ]
-
-            else
-                parts
-    in
-    case allParts of
-        [] ->
-            addStaging [ "cambiatus" ]
-
-        [ subdomain ] ->
-            addStaging [ subdomain ]
-
-        subdomain :: "localhost" :: _ ->
-            [ subdomain, "staging" ]
-
-        subdomain :: "cambiatus" :: _ ->
-            [ subdomain ]
-
-        subdomain :: env :: _ ->
-            [ subdomain, env ]
-
-
-{-| Returns the full `subdomain` of a community based on the current url
-
-Note: it takes an extensible record just so we can test it. The reason we can't
-pass in the entire `Shared` is because we can't create one without a `Nav.Key`
-(as stated in an [issue](https://github.com/elm-explorations/test/issues/24) on
-the `elm-explorations/test` repo)
-
--}
-communityDomain : { shared | url : Url, environment : Environment } -> String
-communityDomain shared =
-    String.join "."
-        (communitySubdomainParts shared.url shared.environment
-            ++ [ "cambiatus", "io" ]
-        )
 
 
 
@@ -306,7 +202,7 @@ viewLanguageItems shared toMsg =
         |> List.map
             (\lang ->
                 button
-                    [ class "flex px-4 py-2 text-gray justify-between items-center text-xs uppercase"
+                    [ class "flex px-4 py-2 text-gray justify-between items-center text-sm uppercase focus-ring rounded-sm hover:text-indigo-500 focus-visible:text-indigo-500"
                     , onClick (toMsg lang)
                     ]
                     [ langFlag lang
@@ -336,7 +232,7 @@ langFlag language =
                     "/icons/flag-ethiopia.svg"
     in
     img
-        [ class "object-cover rounded-full w-6 h-6 lang-flag mr-2"
+        [ class "object-cover rounded-full w-6 h-6 mr-2"
         , src iconLink
         ]
         []

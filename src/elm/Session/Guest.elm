@@ -6,7 +6,6 @@ module Session.Guest exposing
     , Page(..)
     , addAfterLoginRedirect
     , init
-    , initLoggingIn
     , invalidCommunityRedirectUrl
     , maybeInitWith
     , msgToString
@@ -16,10 +15,10 @@ module Session.Guest exposing
     )
 
 import Api.Graphql
-import Auth
 import Browser.Navigation
 import Community
 import Dict
+import Environment
 import Eos
 import Eos.Account as Eos
 import Graphql.Http
@@ -53,27 +52,12 @@ init shared =
     ( initModel shared, fetchCommunity shared )
 
 
-initLoggingIn : Shared -> Eos.Name -> (RemoteData (Graphql.Http.Error (Maybe Auth.SignInResponse)) (Maybe Auth.SignInResponse) -> msg) -> ( Model, Cmd Msg, Cmd msg )
-initLoggingIn shared accountName signInMessage =
-    let
-        ( model, cmd ) =
-            init shared
-    in
-    ( { model | isLoggingIn = True }
-    , cmd
-    , Api.Graphql.mutation shared
-        Nothing
-        (Auth.signIn accountName shared Nothing)
-        signInMessage
-    )
-
-
 fetchCommunity : Shared -> Cmd Msg
 fetchCommunity shared =
     if shared.useSubdomain then
         Api.Graphql.query shared
             Nothing
-            (Community.communityPreviewQuery (Shared.communityDomain shared))
+            (Community.communityPreviewQuery (Environment.communityDomain shared.url))
             CompletedLoadCommunityPreview
 
     else
@@ -104,7 +88,6 @@ type alias Model =
     , afterLoginRedirect : Maybe Route
     , maybeInvitation : Maybe String
     , community : RemoteData (Graphql.Http.Error (Maybe Community.CommunityPreview)) Community.CommunityPreview
-    , isLoggingIn : Bool
     , feedback : Feedback.Model
     }
 
@@ -116,7 +99,6 @@ initModel shared =
     , afterLoginRedirect = Nothing
     , maybeInvitation = Nothing
     , community = RemoteData.Loading
-    , isLoggingIn = False
     , feedback = Feedback.Hidden
     }
 
@@ -231,17 +213,6 @@ loginLeftCol =
 viewPageHeader : Model -> Shared -> Html Msg
 viewPageHeader model shared =
     let
-        imageElement url =
-            img
-                [ class "h-6"
-                , src url
-                ]
-                []
-
-        loadingSpinner =
-            div [ class "full-spinner-container h-full" ]
-                [ div [ class "spinner spinner--delay" ] [] ]
-
         logo =
             case model.community of
                 RemoteData.Loading ->
@@ -257,20 +228,19 @@ viewPageHeader model shared =
                     shared.logo
     in
     header
-        [ class "flex items-center justify-between pl-4 md:pl-6 py-3 bg-white" ]
+        [ class "flex items-center justify-between pl-4 py-4 md:pl-6 bg-white" ]
         [ a [ Route.href (Route.Login model.maybeInvitation model.afterLoginRedirect) ]
-            [ case model.community of
-                RemoteData.Loading ->
-                    loadingSpinner
+            [ if String.isEmpty logo then
+                text ""
 
-                _ ->
-                    imageElement logo
+              else
+                img [ class "h-10", src logo ] []
             ]
         , div [ class "relative z-50" ]
             [ button
                 [ type_ "button"
                 , tabindex -1
-                , class "flex block relative z-20 items-center px-4 py-2 bg-white text-xs focus:outline-none"
+                , class "flex block relative z-20 items-center px-4 py-2 bg-white text-sm focus:outline-none"
                 , classList
                     [ ( "rounded-tr-lg rounded-tl-lg justify-between lang-menu-open"
                       , model.showLanguageNav
@@ -315,7 +285,11 @@ viewPageHeader model shared =
 
 
 type External
-    = LoggedIn Eos.PrivateKey Auth.SignInResponse
+    = LoggedIn
+        { pin : String
+        , privateKey : Eos.PrivateKey
+        , signInResponse : Api.Graphql.SignInResponse
+        }
     | SetFeedback Feedback.Model
     | UpdatedShared Shared
 
@@ -401,6 +375,15 @@ update msg ({ shared } as model) =
                             , ( "name", Encode.string communityPreview.name )
                             ]
                     , level = Log.Info
+                    }
+                |> UR.addPort
+                    { responseAddress = msg
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "setFavicon" )
+                            , ( "favicon", Encode.string communityPreview.logo )
+                            ]
                     }
 
         CompletedLoadCommunityPreview (RemoteData.Success Nothing) ->

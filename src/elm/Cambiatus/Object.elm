@@ -45,12 +45,20 @@ type Contact
     = Contact
 
 
+type Contribution
+    = Contribution
+
+
+type ContributionConfig
+    = ContributionConfig
+
+
 type Country
     = Country
 
 
-type DeleteKycAddress
-    = DeleteKycAddress
+type DeleteStatus
+    = DeleteStatus
 
 
 type Exists
@@ -77,6 +85,18 @@ type Network
     = Network
 
 
+type News
+    = News
+
+
+type NewsReceipt
+    = NewsReceipt
+
+
+type NewsVersion
+    = NewsVersion
+
+
 type NotificationHistory
     = NotificationHistory
 
@@ -97,12 +117,32 @@ type Product
     = Product
 
 
+type ProductImage
+    = ProductImage
+
+
 type ProductPreview
     = ProductPreview
 
 
 type PushSubscription
     = PushSubscription
+
+
+type ReactionType
+    = ReactionType
+
+
+type Request
+    = Request
+
+
+type Reward
+    = Reward
+
+
+type Role
+    = Role
 
 
 type SearchResult

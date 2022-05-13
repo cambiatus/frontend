@@ -3,10 +3,7 @@ import * as Sentry from '@sentry/browser'
 import * as Eos from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import ecc from 'eosjs-ecc'
-import * as pdfjsLib from 'pdfjs-dist/es5/build/pdf'
 import pdfMake from 'pdfmake/build/pdfmake'
-import Quill from 'quill'
-import QuillDelta from 'quill-delta'
 import sjcl from 'sjcl'
 import { Elm } from './elm/Main.elm'
 import configuration from './scripts/config.js'
@@ -15,704 +12,7 @@ import mnemonic from './scripts/mnemonic.js'
 import pdfDefinition from './scripts/pdfDefinition'
 import './styles/main.css'
 import pdfFonts from './vfs_fonts'
-
-// If you're updating `pdfjs-dist`, make sure to
-// `cp ./node_modules/pdfjs-dist/es5/build/pdf.worker.min.js ./public`
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
-
-// =========================================
-// Custom elements
-// =========================================
-/* global HTMLElement, CustomEvent */
-
-window.customElements.define('masked-input-helper',
-  class MaskedInputHelper extends HTMLElement {
-    static get observedAttributes () { return ['decimal-separator'] }
-
-    attributeChangedCallback (name, oldValue, newValue) {
-      if (name === 'decimal-separator') {
-        this._decimalSeparator = newValue
-      }
-    }
-
-    connectedCallback () {
-      this.className = 'hidden'
-
-      const targetElement = document.getElementById(this.getAttribute('target-id'))
-      if (!targetElement) throw new Error('Couldn\'t find target element for masked-input-helper')
-
-      const maskType = this.getAttribute('mask-type')
-      let previousSelectionStart = targetElement.selectionStart || 0
-      let previousSelectionEnd = targetElement.selectionEnd || 0
-      let previousValue = targetElement.value || ''
-
-      this.inputListener = (e) => {
-        window.setTimeout(() => {
-          const newSelectionStart = targetElement.selectionStart || 0
-          const isAtEnd = maskType === 'string' ? previousSelectionStart === previousValue.length : false
-          const isDeletingNumber = e.data === null && maskType === 'number'
-          const isChangingMask = Math.abs(previousSelectionStart - newSelectionStart) > 1
-
-          if (maskType === 'number') {
-            if (e.data === this._decimalSeparator) {
-              if (targetElement.value.indexOf(this._decimalSeparator) === -1) return
-
-              const newSelectionStart = targetElement.value.indexOf(this._decimalSeparator) + 2
-              previousSelectionStart = newSelectionStart
-              previousSelectionEnd = newSelectionStart
-              previousValue = targetElement.value
-              targetElement.setSelectionRange(newSelectionStart, newSelectionStart)
-              return
-            }
-
-            if (previousSelectionStart === previousValue.indexOf(this._decimalSeparator) + 1 && !isDeletingNumber) {
-              previousValue = targetElement.value
-              previousSelectionStart = targetElement.value.indexOf(this._decimalSeparator)
-              previousSelectionEnd = previousSelectionStart
-
-              targetElement.setSelectionRange(previousSelectionStart, previousSelectionStart)
-              return
-            }
-          }
-
-          if (Math.abs(previousSelectionStart - previousSelectionEnd) > 0) {
-            const newSelectionIndex = Math.max(previousSelectionStart, previousSelectionEnd) + 1
-            targetElement.setSelectionRange(newSelectionIndex, newSelectionIndex)
-
-            previousValue = targetElement.value
-            previousSelectionStart = newSelectionIndex
-            previousSelectionEnd = newSelectionIndex
-            return
-          }
-
-          if ((isDeletingNumber || isChangingMask) && !isAtEnd) {
-            const sumFactor = e.data !== null && targetElement.value.length >= previousValue.length
-              ? +1
-              : maskType === 'number' ? 0 : -1
-            const newIndex = this.firstIndexAfter(targetElement.value, previousSelectionStart, e.data) + sumFactor
-            targetElement.setSelectionRange(newIndex, newIndex)
-
-            previousValue = targetElement.value
-            previousSelectionStart = newIndex
-            previousSelectionEnd = newIndex
-            return
-          }
-
-          previousSelectionStart = newSelectionStart
-          previousValue = targetElement.value
-        }, 0)
-      }
-
-      this.keyDownListener = (e) => {
-        let originalSelectionStart = targetElement.selectionStart
-        if (Math.abs(targetElement.selectionStart - previousSelectionStart) < 2 || e.ctrlKey) {
-          window.setTimeout(() => {
-            if (Math.abs(targetElement.selectionStart - originalSelectionStart) < 2 || e.ctrlKey) {
-              previousSelectionStart = targetElement.selectionStart
-              previousSelectionEnd = targetElement.selectionEnd
-            }
-          }, 0)
-        }
-      }
-
-      this.clickListener = () => {
-        previousSelectionStart = targetElement.selectionStart
-        previousSelectionEnd = targetElement.selectionEnd
-      }
-
-      targetElement.addEventListener('input', this.inputListener)
-      targetElement.addEventListener('keydown', this.keyDownListener)
-      targetElement.addEventListener('click', this.clickListener)
-    }
-
-    disconnectedCallback () {
-      const targetElement = document.getElementById(this.getAttribute('target-id'))
-
-      if (!targetElement) return
-
-      targetElement.removeEventListener('input', this.inputListener)
-      targetElement.removeEventListener('keydown', this.keyDownListener)
-      targetElement.removeEventListener('click', this.clickListener)
-    }
-
-    firstIndexAfter (stringValue, baseIndex, element) {
-      for (let index = 0; index < stringValue.length; index++) {
-        if (stringValue[index] === element && index >= baseIndex) {
-          return index
-        }
-      }
-
-      return baseIndex
-    }
-  }
-)
-
-window.customElements.define('focus-trap',
-  class FocusTrap extends HTMLElement {
-    constructor () {
-      super()
-
-      this._previouslyFocusedElement = document.activeElement
-
-      this._keydownListener = (e) => {
-        const isTab = e.key === 'Tab' || e.keyCode === 9
-
-        if (!isTab) {
-          return
-        }
-
-        const focusables = this.focusables(this)
-        const firstFocusable = focusables[0]
-        const lastFocusable = focusables[focusables.length - 1]
-
-        if (e.shiftKey && document.activeElement === firstFocusable) {
-          e.preventDefault()
-          lastFocusable.focus()
-        } else if (!e.shiftKey && document.activeElement === lastFocusable) {
-          e.preventDefault()
-          firstFocusable.focus()
-        }
-      }
-    }
-
-    connectedCallback () {
-      let elementToFocus = this.focusables(this)[0]
-      const firstFocusableContainers = this.querySelectorAll(this.getAttribute('first-focus-container'))
-      for (const container of firstFocusableContainers) {
-        const focusables = this.focusables(container)
-        if (focusables.length > 0) {
-          elementToFocus = focusables[0]
-          break
-        }
-      }
-
-      if (elementToFocus) {
-        elementToFocus.focus()
-      }
-
-      document.addEventListener('keydown', this._keydownListener)
-    }
-
-    disconnectedCallback () {
-      this._previouslyFocusedElement.focus()
-      document.removeEventListener('keydown', this._keydownListener)
-    }
-
-    focusables (parent) {
-      const tabbableElements = [
-        'a[href]',
-        'button',
-        'textarea',
-        'input[type="text"]',
-        'input[type="radio"]',
-        'input[type="checkbox"]',
-        'select',
-        '[contenteditable="true"]'
-      ].map((selector) => `${selector}:not([disabled]):not([tabindex="-1"])`)
-
-      return parent.querySelectorAll(tabbableElements.join(', '))
-    }
-  }
-)
-
-window.customElements.define('key-listener',
-  class KeyListener extends HTMLElement {
-    static get observedAttributes () { return ['keydown-stop-propagation'] }
-
-    constructor () {
-      super()
-
-      this._keydownListener = (e) => {
-        if (this._keydownStopPropagation) {
-          e.stopPropagation()
-        }
-        this.dispatchEvent(new CustomEvent('listener-keydown', { detail: { key: e.key } }))
-      }
-    }
-
-    attributeChangedCallback (name, oldValue, newValue) {
-      if (name === 'keydown-stop-propagation') {
-        this._keydownStopPropagation = newValue === 'true'
-      }
-    }
-
-    connectedCallback () {
-      document.addEventListener('keydown', this._keydownListener)
-    }
-
-    disconnectedCallback () {
-      document.removeEventListener('keydown', this._keydownListener)
-    }
-  }
-)
-
-window.customElements.define('markdown-editor',
-  class MarkdownEditor extends HTMLElement {
-    static get observedAttributes () { return ['elm-edit-text', 'elm-remove-text', 'elm-disabled'] }
-
-    constructor () {
-      super()
-
-      this._quillContainer = document.createElement('div')
-      this._parentContainer = document.createElement('div')
-      this._parentContainer.className = 'border border-gray-500 rounded-md focus-within:ring focus-within:ring-offset-0 focus-within:ring-blue-600 focus-within:ring-opacity-50 focus-within:border-blue-600'
-
-      this._parentContainer.appendChild(this._quillContainer)
-      this._quill = new Quill(this._quillContainer,
-        {
-          modules: {
-            toolbar: [
-              [{ 'header': 1 }, { 'header': 2 }],
-              ['bold', 'italic', 'strike'],
-              ['link'],
-              [{ 'list': 'ordered' }, { 'list': 'bullet' }]
-            ]
-          },
-          formats: ['header', 'bold', 'code', 'italic', 'link', 'strike', 'list'],
-          placeholder: this.getAttribute('elm-placeholder'),
-          theme: 'snow'
-        }
-      )
-
-      app.ports.setMarkdown.subscribe((data) => { this.setMarkdownListener(data) })
-
-      this._quill.on('text-change', (delta, oldDelta, source) => {
-        const contents = this._quill.getContents()
-        this.dispatchEvent(new CustomEvent('text-change', { detail: contents }))
-      })
-
-      const toolbar = this._quill.getModule('toolbar')
-      toolbar.addHandler('link', () => { this.linkHandler() })
-    }
-
-    connectedCallback () {
-      // If we dont include the timeout, we get some annoying bugs in
-      // development where the text is cleared, and hot reloading bugs out and
-      // crashes the app
-      window.setTimeout(() => {
-        this.dispatchEvent(new CustomEvent('component-loaded', {}))
-      }, 0)
-      this.appendChild(this._parentContainer)
-
-      // Remove default click handler and add our custom one
-      const oldEditButton = this.querySelector('.ql-tooltip a.ql-action')
-      const editButton = oldEditButton.cloneNode(true)
-      oldEditButton.parentNode.replaceChild(editButton, oldEditButton)
-      editButton.addEventListener('click', (e) => {
-        this.querySelector('.ql-tooltip').classList.add('ql-hidden')
-        this.linkHandler()
-      })
-
-      const editor = this.querySelector('.ql-editor')
-      if (editor) {
-        editor.addEventListener('focus', () => { this.dispatchEvent(new CustomEvent('focus', {})) })
-        editor.addEventListener('blur', () => { this.dispatchEvent(new CustomEvent('blur', {})) })
-      }
-
-      this.setTooltipTexts()
-      this.setDisabled()
-    }
-
-    attributeChangedCallback (name) {
-      if (name === 'elm-disabled') {
-        this.setDisabled()
-      } else {
-        this.setTooltipTexts()
-      }
-    }
-
-    setTooltipTexts () {
-      const actionButton = this.querySelector('.ql-tooltip a.ql-action')
-      if (actionButton) {
-        actionButton.setAttribute('data-edit-text', this.getAttribute('elm-edit-text'))
-      }
-
-      const removeButton = this.querySelector('.ql-tooltip a.ql-remove')
-      if (removeButton) {
-        removeButton.setAttribute('data-remove-text', this.getAttribute('elm-remove-text'))
-      }
-    }
-
-    setDisabled () {
-      const isDisabled = this.getAttribute('elm-disabled') === 'true'
-
-      if (isDisabled) {
-        this._quill.disable()
-      } else {
-        this._quill.enable()
-      }
-    }
-
-    linkHandler () {
-      let range = this._quill.getSelection(true)
-      const isLink = this._quill.getFormat(range).link !== undefined
-      if (range.length === 0 && isLink) {
-        range = this.getFormattedRange(range.index)
-      }
-      const text = this._quill.getText(range)
-      const currentFormat = this._quill.getFormat(range)
-      this.dispatchEvent(new CustomEvent('clicked-include-link',
-        {
-          detail: {
-            label: text,
-            url: currentFormat.link || ''
-          }
-        }
-      ))
-
-      const markdownLinkPortHandler = (link) => {
-        if (link.id === this.id) {
-          this._quill.updateContents(new QuillDelta()
-            .retain(range.index)
-            .delete(range.length)
-            .insert(link.label, { ...currentFormat, link: link.url })
-          )
-          app.ports.markdownLink.unsubscribe(markdownLinkPortHandler)
-        }
-      }
-      app.ports.markdownLink.subscribe(markdownLinkPortHandler)
-    }
-
-    /** Gets the range from the formatting that the `index` position is affected
-    by. Useful when the user has their caret in the middle of a link, but isn't
-    actually selecting it (selection length is 0)
-    */
-    getFormattedRange (index) {
-      let currentIndex = 0
-      for (const content of this._quill.getContents().ops) {
-        const initialIndex = currentIndex
-        const finalIndex = initialIndex + content.insert.length - 1
-        currentIndex = finalIndex + 1
-        if (initialIndex <= index && index <= finalIndex) {
-          return { index: initialIndex, length: finalIndex - initialIndex + 1 }
-        }
-      }
-      return { index: 0, length: 0 }
-    }
-
-    setMarkdownListener (data) {
-      if (data.id === this.id) {
-        this._quill.setContents(data.content)
-      }
-    }
-  }
-)
-
-window.customElements.define('infinite-list',
-  class InfiniteList extends HTMLElement {
-    static get observedAttributes () { return ['elm-distance-to-request', 'elm-element-to-track'] }
-
-    connectedCallback () {
-      this.listenToScroll()
-
-      window.addEventListener('resize', () => { this.listenToScroll() })
-    }
-
-    attributeChangedCallback () {
-      this.listenToScroll()
-    }
-
-    listenToScroll () {
-      if (this._scrollInterval) {
-        clearInterval(this._scrollInterval)
-      }
-
-      let scrolling = false
-      const isHidden = this.getBoundingClientRect().width === 0 && this.getBoundingClientRect().height === 0
-      if (isHidden) {
-        return
-      }
-
-      const whatToTrack = this.getAttribute('elm-element-to-track')
-      if (!whatToTrack) {
-        return
-      }
-
-      let elementToTrack
-      let elementToListen
-      if (whatToTrack === 'track-window') {
-        elementToTrack = this
-        elementToListen = window
-      } else if (whatToTrack === 'track-self') {
-        elementToTrack = this
-        elementToListen = this
-      } else {
-        elementToTrack = document.querySelector(whatToTrack)
-        elementToListen = elementToTrack
-      }
-
-      if (!elementToTrack) {
-        return
-      }
-
-      elementToListen.addEventListener('scroll', () => { scrolling = true })
-      const distanceToRequest = this.getAttribute('elm-distance-to-request') || 0
-      this._scrollInterval = setInterval(() => {
-        if (scrolling) {
-          scrolling = false
-          if (elementToTrack.scrollTop >= elementToTrack.scrollHeight - distanceToRequest - elementToTrack.getBoundingClientRect().height) {
-            this.dispatchEvent(new CustomEvent('requested-items', {}))
-          }
-        }
-      }, 300)
-    }
-  }
-)
-
-window.customElements.define('date-formatter',
-  class DateFormatter extends HTMLElement {
-    static get observedAttributes () { return ['elm-locale', 'elm-date'] }
-
-    constructor () {
-      super()
-
-      const shadow = this.attachShadow({ mode: 'open' })
-      const textContainer = document.createElement('span')
-      this._textContainer = textContainer
-      shadow.appendChild(textContainer)
-    }
-
-    connectedCallback () {
-      this.setDateText()
-    }
-
-    attributeChangedCallback () {
-      this.setDateText()
-    }
-
-    setDateText () {
-      const locale = this.getAttribute('elm-locale')
-      const date = new Date(parseInt(this.getAttribute('elm-date')))
-      const dayString = date.toLocaleDateString(locale, { day: 'numeric' })
-      const monthString = date.toLocaleDateString(locale, { month: 'short' })
-        .replace(/[.]/g, '')
-      const yearString = date.toLocaleDateString(locale, { year: 'numeric' })
-
-      const translationString = this.getAttribute('elm-translation') === null ? '{{date}}' : this.getAttribute('elm-translation')
-      const translatedString = translationString.replace(/{{date}}/, `${dayString} ${monthString} ${yearString}`)
-      this._textContainer.textContent = translatedString
-    }
-  }
-)
-
-window.customElements.define('pdf-viewer',
-  class PdfViewer extends HTMLElement {
-    connectedCallback () {
-      if (this.hasChildNodes()) return
-
-      const url = this.getAttribute('elm-url')
-      const childClass = this.getAttribute('elm-child-class')
-
-      const loadingImg = document.createElement('img')
-      loadingImg.src = '/images/loading.svg'
-      this.appendChild(loadingImg)
-
-      let setContent = (node) => {
-        this.removeChild(loadingImg)
-        this.appendChild(node)
-      }
-
-      if (this.getAttribute('elm-loading-title') && this.getAttribute('elm-loading-subtitle')) {
-        loadingImg.className = 'h-16 mt-8'
-
-        const loadingTitle = document.createElement('p')
-        loadingTitle.className = 'font-bold text-2xl'
-        loadingTitle.textContent = this.getAttribute('elm-loading-title')
-        this.appendChild(loadingTitle)
-
-        const loadingSubtitle = document.createElement('p')
-        loadingSubtitle.className = 'text-sm'
-        loadingSubtitle.textContent = this.getAttribute('elm-loading-subtitle')
-        this.appendChild(loadingSubtitle)
-
-        setContent = (node) => {
-          this.removeChild(loadingImg)
-          this.removeChild(loadingTitle)
-          this.removeChild(loadingSubtitle)
-          this.appendChild(node)
-        }
-      } else {
-        loadingImg.className = 'p-4'
-      }
-
-      const notFoundTimeout = window.setTimeout(() => {
-        const notFoundImg = document.createElement('img')
-        notFoundImg.src = '/icons/pdf.svg'
-        setContent(notFoundImg)
-        const bgColor = 'bg-purple-500'
-        this.classList.add(bgColor)
-
-        setContent = (node) => {
-          this.removeChild(notFoundImg)
-          if (this.classList.contains(bgColor)) {
-            this.classList.remove(bgColor)
-          }
-          this.appendChild(node)
-        }
-      }, 1000 * 3)
-
-      pdfjsLib.getDocument(url).promise.then((pdf) => {
-        pdf.getPage(1).then((page) => {
-          const canvas = document.createElement('canvas')
-          canvas.className = childClass
-
-          const width = this.clientWidth
-          const height = this.clientHeight
-          const unscaledViewport = page.getViewport({ scale: 1 })
-          const scale = Math.min((height / unscaledViewport.height), (width / unscaledViewport.width))
-
-          const viewport = page.getViewport({ scale })
-          const canvasContext = canvas.getContext('2d')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
-
-          const renderContext = { canvasContext, viewport }
-
-          const renderTask = page.render(renderContext)
-          renderTask.promise.then(() => {
-            window.clearTimeout(notFoundTimeout)
-            setContent(canvas)
-          })
-        })
-      }).catch((e) => {
-        const invalidPDFError = 'Invalid PDF structure.'
-        if (e.message === invalidPDFError) {
-          const img = document.createElement('img')
-          img.src = url
-          img.className = childClass
-          window.clearTimeout(notFoundTimeout)
-          setContent(img)
-        } else {
-          addBreadcrumb({
-            type: 'error',
-            category: 'pdf-viewer',
-            message: 'Got an error when trying to display a PDF',
-            data: { error: e },
-            localData: {},
-            level: 'warning'
-          })
-        }
-      })
-    }
-  }
-)
-
-window.customElements.define('dialog-bubble',
-  class DialogBubble extends HTMLElement {
-    constructor () {
-      super()
-
-      this._defaultClasses = 'absolute transform cursor-auto z-50 p-6 bg-white flex rounded shadow-2xl'
-      this._defaultPointClasses = 'absolute transform -z-10'
-
-      window.addEventListener('resize', () => { this.setPosition() }, { passive: true })
-    }
-
-    connectedCallback () {
-      this.className = `${this.getAttribute('elm-class')} ${this._defaultClasses}`
-      const point = document.createElement('div')
-      const pointElement = document.createElement('div')
-      pointElement.className = 'w-8 h-8 bg-white transform -rotate-45 rounded-sm'
-
-      const relativeSelector = this.getAttribute('elm-relative-selector')
-      this._relativeElement = relativeSelector ? document.querySelector(relativeSelector) : null
-
-      const scrollSelector = this.getAttribute('elm-scroll-selector')
-      this._scrollSelector = scrollSelector ? document.querySelector(scrollSelector) : null
-
-      if (this._scrollSelector !== null) {
-        this._scrollSelector.addEventListener('scroll', () => { this.setPosition() }, { passive: true })
-      } else {
-        window.addEventListener('scroll', () => { this.setPosition() })
-      }
-
-      point.appendChild(pointElement)
-
-      point.className = this._defaultPointClasses
-      this.appendChild(point)
-
-      this._point = point
-
-      this._sibling = this.previousSibling || this.nextSibling
-
-      this.setPosition()
-    }
-
-    setPosition () {
-      if (!this._sibling) return
-
-      const relativeTop = this._relativeElement ? this._relativeElement.getBoundingClientRect().top : -window.scrollY
-      const relativeLeft = this._relativeElement ? this._relativeElement.getBoundingClientRect().left : -window.scrollX
-
-      const siblingRect = this._sibling.getBoundingClientRect()
-      const siblingTop = siblingRect.top
-      const siblingLeft = siblingRect.left
-      const targetTop = siblingRect.top - relativeTop
-      const targetLeft = siblingRect.left - relativeLeft
-      const thisRect = this.getBoundingClientRect()
-
-      let pointPositionClasses = ''
-      let top = siblingTop
-      let left = siblingLeft
-      if (siblingLeft <= thisRect.width / 2) {
-        // Go to the right
-        top = targetTop - thisRect.height / 2 + siblingRect.height / 2
-        left = targetLeft + siblingRect.width
-        pointPositionClasses = '-left-1 top-1/2 -translate-y-1/2'
-      } else if (siblingLeft + siblingRect.width + thisRect.width / 2 >= window.innerWidth) {
-        // Go to the left
-        top = targetTop - thisRect.height / 2 + siblingRect.height / 2
-        left = targetLeft - thisRect.width
-        pointPositionClasses = '-right-1 top-1/2 -translate-y-1/2'
-      } else if (siblingTop <= thisRect.height) {
-        // Go down
-        top = targetTop + siblingRect.height
-        left = targetLeft + siblingRect.width / 2 - thisRect.width / 2
-        pointPositionClasses = '-top-1 right-1/2 translate-x-1/2'
-      } else {
-        // Go up
-        top = targetTop - thisRect.height
-        left = targetLeft + siblingRect.width / 2 - thisRect.width / 2
-        pointPositionClasses = '-bottom-1 right-1/2 translate-x-1/2'
-      }
-
-      this.style.top = `${top}px`
-      this.style.left = `${left}px`
-
-      this._point.className = `${this._defaultPointClasses} ${pointPositionClasses}`
-    }
-  }
-)
-
-window.customElements.define('bg-no-scroll',
-  class BgNoScroll extends HTMLElement {
-    constructor () {
-      super()
-      this._classesHandledByOthers = []
-    }
-    connectedCallback () {
-      this._preventScrollingClasses = this.getAttribute('elm-prevent-scroll-class').split(' ')
-      this._preventScrollingClasses.forEach((class_) => {
-        if (document.body.classList.contains(class_)) {
-          this._classesHandledByOthers.push(class_)
-          return
-        }
-
-        document.body.classList.add(class_)
-      })
-    }
-
-    disconnectedCallback () {
-      this._preventScrollingClasses.forEach((class_) => {
-        if (this._classesHandledByOthers.includes(class_) || !document.body.classList.contains(class_)) {
-          return
-        }
-
-        document.body.classList.remove(class_)
-      })
-    }
-  }
-)
+import { register as registerCustomElements } from './customElements/index'
 
 // =========================================
 // App startup
@@ -721,29 +21,36 @@ window.customElements.define('bg-no-scroll',
 let eos = null
 const USER_KEY = 'bespiral.user'
 const LANGUAGE_KEY = 'bespiral.language'
-const PUSH_PREF = 'bespiral.push.pref'
 const AUTH_TOKEN = 'bespiral.auth_token'
 const RECENT_SEARCHES = 'bespiral.recent_search'
 const SELECTED_COMMUNITY_KEY = 'bespiral.selected_community'
 const PIN_VISIBILITY_KEY = 'bespiral.pin_visibility'
+const HAS_SEEN_SPONSOR_MODAL_KEY = 'bespiral.has_seen_sponsor_modal'
 const env = process.env.NODE_ENV || 'development'
-const graphqlSecret = process.env.GRAPHQL_SECRET || ''
 const useSubdomain = process.env.USE_SUBDOMAIN === undefined ? true : process.env.USE_SUBDOMAIN !== 'false'
 const config = configuration[env]
 
-// Init Sentry as soon as possible so it starts recording events and breadcrumbs
-// automatically
-Sentry.init({
-  dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
-  environment: env,
-  beforeBreadcrumb (breadcrumb, hint) {
-    // We have a limited amount of breadcrumbs, and these aren't super useful
-    // to us, so we just don't include them
-    const unusedCategories = ['ui.click', 'ui.input']
+// =========================================
+// App startup
+// =========================================
 
-    return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
-  }
-})
+if (env !== 'development') {
+  // Init Sentry as soon as possible so it starts recording events and breadcrumbs
+  // automatically
+  Sentry.init({
+    dsn: 'https://535b151f7b8c48f8a7307b9bc83ebeba@sentry.io/1480468',
+    environment: env,
+    beforeBreadcrumb (breadcrumb, hint) {
+      // We have a limited amount of breadcrumbs, and these aren't super useful
+      // to us, so we just don't include them
+      const unusedCategories = ['ui.click', 'ui.input']
+
+      return unusedCategories.includes(breadcrumb.category) ? null : breadcrumb
+    }
+  })
+
+  Sentry.setTag('cambiatus.version', process.env.COMMIT)
+}
 
 /** On production, adds a breadcrumb to sentry. Needs an object like this:
   { type: 'default' | 'debug' | 'error' | 'info' | 'query',
@@ -889,7 +196,7 @@ const setItem = (key, value) => {
   }
 }
 
-const storedKeys = [USER_KEY, LANGUAGE_KEY, PUSH_PREF, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
+const storedKeys = [USER_KEY, LANGUAGE_KEY, AUTH_TOKEN, RECENT_SEARCHES, SELECTED_COMMUNITY_KEY]
 
 if (useSubdomain) {
   storedKeys.forEach((key) => {
@@ -957,7 +264,8 @@ function getUserLanguage () {
 }
 
 function canReadClipboard () {
-  return !!navigator.clipboard && !!navigator.clipboard.readText
+  return Boolean(navigator.clipboard) &&
+    Boolean(navigator.clipboard.readText)
 }
 
 /** Assumes we already have clipboard permissions */
@@ -966,14 +274,25 @@ async function readClipboardWithPermission () {
     const clipboardContent = await navigator.clipboard.readText()
     return { clipboardContent }
   } catch (err) {
-    logEvent({
-      user: null,
-      message: 'Error when reading clipboard',
-      tags: { 'cambiatus.kind': 'clipboard' },
-      contexts: [{ name: 'Error details', extras: { error: err } }],
-      transaction: 'readClipboardWithPermission',
-      level: 'error'
-    })
+    if (err.name && err.name === 'NotAllowedError') {
+      addBreadcrumb({
+        type: 'info',
+        category: 'readClipboardWithPermission',
+        message: 'User denied permission to read clipboard',
+        data: { error: err },
+        localData: {},
+        level: 'info'
+      })
+    } else {
+      logEvent({
+        user: null,
+        message: 'Error when reading clipboard',
+        tags: { 'cambiatus.kind': 'clipboard' },
+        contexts: [{ name: 'Error details', extras: { error: err } }],
+        transaction: 'readClipboardWithPermission',
+        level: 'error'
+      })
+    }
 
     return { error: err.message }
   }
@@ -983,16 +302,15 @@ function flags () {
   const user = JSON.parse(getItem(USER_KEY))
   const accountName = (user && user.accountName) || null
 
-  if (accountName !== null) {
+  if (env !== 'development' && accountName !== null) {
     Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
   }
 
   return {
-    graphqlSecret: graphqlSecret,
     endpoints: config.endpoints,
     language: getUserLanguage(),
+    version: process.env.COMMIT,
     accountName: accountName,
-    isPinAvailable: !!(user && user.encryptedKey),
     authToken: getItem(AUTH_TOKEN),
     logo: config.logo,
     logoMobile: config.logoMobile,
@@ -1001,9 +319,11 @@ function flags () {
     tokenContract: config.tokenContract,
     communityContract: config.communityContract,
     canReadClipboard: canReadClipboard(),
+    canShare: Boolean(navigator.share),
     useSubdomain: useSubdomain,
     selectedCommunity: getItem(SELECTED_COMMUNITY_KEY),
-    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false
+    pinVisibility: JSON.parse(getItem(PIN_VISIBILITY_KEY)) || false,
+    hasSeenSponsorModal: JSON.parse(getItem(HAS_SEEN_SPONSOR_MODAL_KEY)) || false
   }
 }
 
@@ -1016,6 +336,17 @@ addBreadcrumb({
   type: 'debug',
   category: 'elm.start',
   message: 'Started Elm app',
+  data: { flags: flags() },
+  localData: {},
+  level: 'info'
+})
+
+registerCustomElements(app, config, addBreadcrumb)
+
+addBreadcrumb({
+  type: 'debug',
+  category: 'elm.start',
+  message: 'Defined custom elements',
   data: { flags: flags() },
   localData: {},
   level: 'info'
@@ -1117,6 +448,18 @@ app.ports.storePinVisibility.subscribe(pinVisibility => {
   })
 })
 
+app.ports.storeHasSeenSponsorModal.subscribe(hasSeenSponsorModal => {
+  setItem(HAS_SEEN_SPONSOR_MODAL_KEY, hasSeenSponsorModal)
+  addBreadcrumb({
+    type: 'info',
+    category: 'storeHasSeenSponsorModal',
+    message: 'Stored whether or not the user has seen the sponsor modal',
+    data: { hasSeenSponsorModal },
+    localData: {},
+    level: 'debug'
+  })
+})
+
 app.ports.addPlausibleScriptPort.subscribe(({ domain, src }) => {
   const plausibleScript = document.createElement('script')
   plausibleScript.setAttribute('src', src)
@@ -1166,7 +509,9 @@ function logout () {
     localData: {},
     level: 'info'
   })
-  Sentry.configureScope((scope) => { scope.setUser(null) })
+  if (env !== 'development') {
+    Sentry.configureScope((scope) => { scope.setUser(null) })
+  }
 }
 
 function downloadPdf (accountName, passphrase) {
@@ -1249,6 +594,42 @@ app.ports.javascriptOutPort.subscribe(async (arg) => {
   }
 })
 
+// All notifiers for GraphQL subscriptions through absinthe socket
+let newCommunitySubscription = null
+let transferSubscription = null
+let notificationSubscription = null
+let highlightedNewsSubscription = null
+
+let absintheSocket = AbsintheSocket.create(new PhoenixSocket(config.endpoints.socket))
+
+app.ports.createAbsintheSocket.subscribe((token) => {
+  const oldAbsintheSocket = absintheSocket
+
+  absintheSocket = AbsintheSocket.create(new PhoenixSocket(`${config.endpoints.socket}/websocket?Authorization=Bearer ${token}&vsn=2.0.0`))
+
+  const resubscribe = (subscription) => {
+    if (subscription === null) {
+      return
+    }
+
+    const { notifier, handlers, operation } = subscription
+
+    AbsintheSocket.cancel(oldAbsintheSocket, notifier)
+
+    const newNotifier = AbsintheSocket.send(absintheSocket, {
+      operation: operation,
+      variables: {}
+    })
+
+    AbsintheSocket.observe(absintheSocket, newNotifier, handlers)
+  }
+
+  resubscribe(newCommunitySubscription)
+  resubscribe(transferSubscription)
+  resubscribe(notificationSubscription)
+  resubscribe(highlightedNewsSubscription)
+})
+
 async function handleJavascriptPort (arg) {
   switch (arg.data.name) {
     case 'checkAccountAvailability': {
@@ -1283,8 +664,8 @@ async function handleJavascriptPort (arg) {
         }
       }
     }
-    case 'login': {
-      const passphrase = arg.data.passphrase
+    case 'getAccountFrom12Words': {
+      const { passphrase } = arg.data
       const privateKey = ecc.seedPrivate(mnemonic.toSeedHex(passphrase))
 
       if (!ecc.isValidPrivate(privateKey)) {
@@ -1305,46 +686,53 @@ async function handleJavascriptPort (arg) {
           if (!accounts || !accounts.account_names || accounts.account_names.length === 0) {
             return { error: 'error.accountNotFound' }
           } else {
-            const accountName = accounts.account_names[0]
-
-            logout()
-
-            storePin(
-              {
-                accountName,
-                privateKey,
-                passphrase
-              },
-              arg.data.pin
-            )
-
-            // Save credentials to EOS
-            eos.signatureProvider = new JsSignatureProvider([privateKey])
-            Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
-            addBreadcrumb({
-              type: 'debug',
-              category: 'login',
-              message: 'Saved credentials to EOS',
-              data: {},
-              localData: { accountName },
-              level: 'debug'
-            })
-
+            const [accountName] = accounts.account_names
             return { accountName, privateKey }
           }
         } catch (err) {
           logEvent({
             user: null,
-            message: 'Login port error',
+            message: 'Get account from key port error',
             tags: { 'cambiatus.kind': 'auth' },
             contexts: [{ name: 'Error details', extras: { error: err } }],
-            transaction: 'login',
+            transaction: 'getAccountFromKey',
             level: 'error'
           })
 
           return { error: 'error.unknown' }
         }
       }
+    }
+    case 'signString': {
+      const { input, privateKey } = arg.data
+
+      const signed = ecc.sign(input, privateKey)
+
+      return { signed }
+    }
+    case 'login': {
+      const { privateKey, passphrase, accountName, pin } = arg.data
+
+      logout()
+
+      storePin({ accountName, passphrase, privateKey }, pin)
+
+      // Save credentials to EOS
+      eos.signatureProvider = new JsSignatureProvider([privateKey])
+      if (env !== 'development') {
+        Sentry.configureScope((scope) => { scope.setUser({ username: accountName }) })
+      }
+
+      addBreadcrumb({
+        type: 'debug',
+        category: 'login',
+        message: 'Saved credentials to EOS',
+        data: {},
+        localData: { accountName },
+        level: 'debug'
+      })
+
+      return {}
     }
     case 'changePin': {
       const userStorage = JSON.parse(getItem(USER_KEY))
@@ -1528,29 +916,37 @@ async function handleJavascriptPort (arg) {
       return { uint64name }
     }
     case 'scrollIntoView': {
-      document.getElementById(arg.data.id).scrollIntoView(true)
+      // We might be creating the element and scrolling to it at the same time.
+      // If we don't use setTimeout, we might try to scroll to the element before it's created, which produces a runtime error
+      setTimeout(() => {
+        document.getElementById(arg.data.id).scrollIntoView(true)
+      }, 0)
+
+      return {}
+    }
+    case 'smoothHorizontalScroll': {
+      const { containerId, targetId } = arg.data
+
+      const targetLeft = document.getElementById(targetId).getBoundingClientRect().left
+      const container = document.getElementById(containerId)
+      container.scrollTo({
+        left: container.scrollLeft + targetLeft,
+        behavior: 'smooth'
+      })
 
       return {}
     }
     case 'subscribeToNewCommunity': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (newCommunitySubscription && newCommunitySubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, newCommunitySubscription.notifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
-
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
+      // Create new notifier
+      const notifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
       const onStart = data => {
         addBreadcrumb({
@@ -1603,7 +999,7 @@ async function handleJavascriptPort (arg) {
         })
       }
 
-      let onResult = data => {
+      const onResult = data => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToNewCommunity',
@@ -1621,39 +1017,37 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
-      })
+      const handlers = {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      }
+
+      newCommunitySubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToTransfer': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (transferSubscription && transferSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, transferSubscription.notifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
+      // Create new notifier
+      const notifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
-
-      let onStart = data => {
+      const onStart = data => {
         addBreadcrumb({
           type: 'info',
           category: 'subscribeToTransfer',
@@ -1723,37 +1117,35 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
-      })
+      const handlers = {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      }
+
+      transferSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'subscribeToUnreadCount': {
-      let notifiers = []
+      // Cancel existing notifier
+      if (notificationSubscription && notificationSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, notificationSubscription.notifier)
+      }
 
-      // Open a socket connection
-      const socketConn = new PhoenixSocket(config.endpoints.socket)
-
-      // Build a graphql Socket
-      const abSocket = AbsintheSocket.create(socketConn)
-
-      // Remove existing notifiers if any
-      notifiers.map(notifier => AbsintheSocket.cancel(abSocket, notifier))
-
-      // Create new notifiers
-      notifiers = [arg.data.subscription].map(operation =>
-        AbsintheSocket.send(abSocket, {
-          operation,
-          variables: {}
-        })
-      )
+      // Create new notifier
+      const notifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
+      })
 
       const onStart = data => {
         addBreadcrumb({
@@ -1817,23 +1209,127 @@ async function handleJavascriptPort (arg) {
         app.ports.javascriptInPort.send(response)
       }
 
-      notifiers.map(notifier => {
-        AbsintheSocket.observe(abSocket, notifier, {
-          onAbort,
-          onError,
-          onCancel,
-          onStart,
-          onResult
-        })
+      const handlers = {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      }
+
+      notificationSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
+
+      return { isSubscription: true }
+    }
+    case 'subscribeToHighlightedNewsChanged': {
+      // Cancel existing notifier
+      if (highlightedNewsSubscription && highlightedNewsSubscription.notifier) {
+        AbsintheSocket.cancel(absintheSocket, highlightedNewsSubscription.notifier)
+      }
+
+      // Create new notifier
+      const notifier = AbsintheSocket.send(absintheSocket, {
+        operation: arg.data.subscription,
+        variables: {}
       })
+
+      const onStart = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Started listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onAbort = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Aborted listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onCancel = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Cancelled listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+      }
+
+      const onError = data => {
+        addBreadcrumb({
+          type: 'error',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Error listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'error'
+        })
+      }
+
+      const onResult = data => {
+        addBreadcrumb({
+          type: 'info',
+          category: 'subscribeToHighlightedNewsChanged',
+          message: 'Got a result when listening for highlighted news changes',
+          data: {},
+          localData: { data },
+          level: 'info'
+        })
+
+        const response = {
+          address: arg.responseAddress,
+          addressData: arg.responseData,
+          meta: data
+        }
+        app.ports.javascriptInPort.send(response)
+      }
+
+      const handlers = {
+        onAbort,
+        onError,
+        onCancel,
+        onStart,
+        onResult
+      }
+
+      highlightedNewsSubscription = {
+        notifier,
+        handlers,
+        operation: arg.data.subscription
+      }
+
+      AbsintheSocket.observe(absintheSocket, notifier, handlers)
 
       return { isSubscription: true }
     }
     case 'copyToClipboard': {
-      document.querySelector('#' + arg.data.id).select()
-      document.execCommand('copy')
+      // We might need to want to change the dom before copying contents of the input
+      await new Promise(function (resolve) {
+        window.setTimeout(() => {
+          document.querySelector('#' + arg.data.id).select()
+          document.execCommand('copy')
+          resolve()
+        }, 0)
+      })
 
-      return {}
+      return { copied: true }
     }
     case 'readClipboard': {
       if (canReadClipboard()) {
@@ -1943,6 +1439,25 @@ async function handleJavascriptPort (arg) {
       )
 
       return { deserializedProposals }
+    }
+    case 'share': {
+      const { title, text, url } = arg.data
+
+      try {
+        await navigator.share({ title, text, url })
+        return {}
+      } catch (err) {
+        return { error: err }
+      }
+    }
+    case 'setFavicon': {
+      const { favicon } = arg.data
+      document.head.querySelectorAll('link[rel*=icon]')
+        .forEach((icon) => {
+          icon.href = favicon
+        })
+
+      return {}
     }
     default: {
       return { error: `No treatment found for Elm port ${arg.data.name}` }

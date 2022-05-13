@@ -5,15 +5,17 @@ module Flags exposing
     , default
     )
 
+import Api.Graphql
 import Eos
 import Eos.Account as Eos
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as DecodePipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (required)
 
 
 type alias Flags =
     { language : String
-    , maybeAccount : Maybe ( Eos.Name, Bool )
+    , version : String
+    , maybeAccount : Maybe Eos.Name
     , endpoints : Endpoints
     , logo : String
     , logoMobile : String
@@ -21,18 +23,20 @@ type alias Flags =
     , allowCommunityCreation : Bool
     , tokenContract : String
     , communityContract : String
-    , graphqlSecret : String
-    , authToken : Maybe String
+    , authToken : Maybe Api.Graphql.Token
     , canReadClipboard : Bool
+    , canShare : Bool
     , useSubdomain : Bool
     , selectedCommunity : Maybe Eos.Symbol
     , pinVisibility : Bool
+    , hasSeenSponsorModal : Bool
     }
 
 
 default : Flags
 default =
     { language = "en-US"
+    , version = "1.0.0"
     , maybeAccount = Nothing
     , endpoints = defaultEndpoints
     , logo = "/images/logo-cambiatus.png"
@@ -41,12 +45,13 @@ default =
     , allowCommunityCreation = True
     , tokenContract = "bes.token"
     , communityContract = "bes.cmm"
-    , graphqlSecret = ""
     , authToken = Nothing
     , canReadClipboard = False
+    , canShare = False
     , useSubdomain = True
     , selectedCommunity = Nothing
     , pinVisibility = False
+    , hasSeenSponsorModal = False
     }
 
 
@@ -54,14 +59,8 @@ decode : Decoder Flags
 decode =
     Decode.succeed Flags
         |> required "language" Decode.string
-        |> DecodePipeline.custom
-            (Decode.succeed
-                (Maybe.map2 (\acc auth -> ( acc, auth )))
-                |> optional "accountName" (Decode.nullable Eos.nameDecoder) Nothing
-                |> optional "isPinAvailable"
-                    (Decode.nullable Decode.bool)
-                    Nothing
-            )
+        |> required "version" Decode.string
+        |> required "accountName" (Decode.nullable Eos.nameDecoder)
         |> required "endpoints" decodeEndpoints
         |> required "logo" Decode.string
         |> required "logoMobile" Decode.string
@@ -69,12 +68,13 @@ decode =
         |> required "allowCommunityCreation" Decode.bool
         |> required "tokenContract" Decode.string
         |> required "communityContract" Decode.string
-        |> required "graphqlSecret" Decode.string
-        |> required "authToken" (Decode.nullable Decode.string)
+        |> required "authToken" (Decode.nullable Api.Graphql.tokenDecoder)
         |> required "canReadClipboard" Decode.bool
+        |> required "canShare" Decode.bool
         |> required "useSubdomain" Decode.bool
         |> required "selectedCommunity" (Decode.nullable Eos.symbolDecoder)
         |> required "pinVisibility" Decode.bool
+        |> required "hasSeenSponsorModal" Decode.bool
 
 
 type alias Endpoints =

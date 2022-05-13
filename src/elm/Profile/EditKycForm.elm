@@ -7,11 +7,13 @@ module Profile.EditKycForm exposing
     , view
     )
 
-import Api.Graphql
+import Form
+import Form.Select
+import Form.Text
+import Form.Validate
 import Graphql.Http
-import Html exposing (Html, button, div, form, p, text)
+import Html exposing (Html, text)
 import Html.Attributes exposing (class, maxlength)
-import Html.Events exposing (onSubmit)
 import Kyc exposing (ProfileKyc)
 import Kyc.CostaRica.CedulaDeIdentidad as CedulaDeIdentidad
 import Kyc.CostaRica.Dimex as Dimex
@@ -19,18 +21,15 @@ import Kyc.CostaRica.Nite as Nite
 import Kyc.CostaRica.Phone as Phone
 import Profile
 import RemoteData exposing (RemoteData)
-import Session.LoggedIn as LoggedIn exposing (External(..))
-import Session.Shared exposing (Translators)
-import Validate exposing (Validator, ifBlank, validate)
-import View.Form.Input as Input
-import View.Form.Select as Select
+import Session.LoggedIn as LoggedIn
+import Session.Shared exposing (Shared, Translators)
+import UpdateResult as UR
+import View.Feedback
 
 
 type Msg
-    = DocumentTypeChanged CostaRicaDoc
-    | DocumentNumberEntered String
-    | PhoneNumberEntered String
-    | Submitted Model
+    = GotFormMsg (Form.Msg FormInput)
+    | Submitted FormOutput
     | Saved (RemoteData (Graphql.Http.Error (Maybe ProfileKyc)) (Maybe ProfileKyc))
 
 
@@ -40,90 +39,138 @@ type CostaRicaDoc
     | NiteDoc
 
 
-type alias Doc =
-    { docType : CostaRicaDoc
-    , isValid : String -> Bool
-    , title : String
-    , value : String
-    , maxLength : Int
-    , placeholderText : String
-    }
-
-
-type KycFormField
-    = DocumentNumber
-    | PhoneNumber
-
-
 type alias Model =
-    { document : Doc
-    , documentNumber : String
+    { form : Form.Model FormInput }
+
+
+type alias FormInput =
+    { documentType : CostaRicaDoc
+    , document : String
     , phoneNumber : String
-    , validationErrors : List ( KycFormField, String )
-    , serverError : Maybe String
     }
 
 
-kycValidator : Translators -> (String -> Bool) -> Validator ( KycFormField, String ) Model
-kycValidator { t } documentValidator =
-    let
-        ifInvalidNumber subjectToString error =
-            Validate.ifFalse (\subject -> documentValidator (subjectToString subject)) error
+type alias FormOutput =
+    { documentType : CostaRicaDoc
+    , document : String
+    , phoneNumber : String
+    }
 
-        ifInvalidPhoneNumber subjectToString error =
-            Validate.ifFalse (\subject -> Phone.isValid (subjectToString subject)) error
-    in
-    Validate.all
-        [ Validate.firstError
-            [ ifBlank .documentNumber ( DocumentNumber, t "error.required" )
-            , ifInvalidNumber .documentNumber ( DocumentNumber, t "register.form.document.errorInvalid" )
-            ]
-        , Validate.firstError
-            [ ifBlank .phoneNumber ( PhoneNumber, t "error.required" )
-            , ifInvalidPhoneNumber .phoneNumber ( PhoneNumber, t "error.phone" )
-            ]
-        ]
+
+createForm : Translators -> Form.Form msg FormInput FormOutput
+createForm ({ t } as translators) =
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Select.init
+                { label = t "register.form.document.type"
+                , id = "document-type-select"
+                , optionToString = docToString
+                }
+                |> Form.Select.withOption CedulaDoc (t "register.form.document.cedula_de_identidad.label")
+                |> Form.Select.withOption DimexDoc (t "register.form.document.dimex.label")
+                |> Form.Select.withOption NiteDoc (t "register.form.document.nite.label")
+                |> Form.Select.withContainerAttrs [ class "mb-10" ]
+                |> Form.select (docFromString >> Maybe.withDefault CedulaDoc)
+                    { parser = Ok
+                    , value = .documentType
+                    , update = \documentType input -> { input | documentType = documentType }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.with
+            ((\{ documentType } ->
+                let
+                    { label, placeholder, maxLength, isValid } =
+                        case documentType of
+                            CedulaDoc ->
+                                { label = t "register.form.document.cedula_de_identidad.label"
+                                , placeholder = t "register.form.document.cedula_de_identidad.placeholder"
+                                , maxLength = 9
+                                , isValid = CedulaDeIdentidad.isValid
+                                }
+
+                            DimexDoc ->
+                                { label = t "register.form.document.dimex.label"
+                                , placeholder = t "register.form.document.dimex.placeholder"
+                                , maxLength = 12
+                                , isValid = Dimex.isValid
+                                }
+
+                            NiteDoc ->
+                                { label = t "register.form.document.nite.label"
+                                , placeholder = t "register.form.document.nite.placeholder"
+                                , maxLength = 10
+                                , isValid = Nite.isValid
+                                }
+                in
+                Form.Text.init
+                    { label = label
+                    , id = "document.input"
+                    }
+                    |> Form.Text.withPlaceholder placeholder
+                    |> Form.Text.asNumeric
+                    |> Form.Text.withExtraAttrs [ maxlength maxLength ]
+                    |> Form.textField
+                        { parser =
+                            Form.Validate.succeed
+                                >> Form.Validate.stringLongerThan 0
+                                >> Form.Validate.custom
+                                    (\stringInput ->
+                                        if isValid stringInput then
+                                            Ok stringInput
+
+                                        else
+                                            Err (\translators_ -> translators_.t "register.form.document.errorInvalid")
+                                    )
+                                >> Form.Validate.validate translators
+                        , value = .document
+                        , update = \document input -> { input | document = String.filter Char.isDigit document }
+                        , externalError = always Nothing
+                        }
+             )
+                |> Form.introspect
+            )
+        |> Form.with
+            (Form.Text.init
+                { label = t "register.form.phone.label"
+                , id = "phone_number_field"
+                }
+                |> Form.Text.withPlaceholder (t "register.form.phone.placeholder")
+                |> Form.Text.withType Form.Text.Telephone
+                |> Form.Text.asNumeric
+                |> Form.Text.withExtraAttrs [ maxlength 8 ]
+                |> Form.textField
+                    { parser =
+                        Form.Validate.succeed
+                            >> Form.Validate.stringLengthExactly 8
+                            >> Form.Validate.custom
+                                (\stringPhone ->
+                                    if Phone.isValid stringPhone then
+                                        Ok stringPhone
+
+                                    else
+                                        Err
+                                            (\translators_ ->
+                                                translators_.t "error.phone"
+                                            )
+                                )
+                            >> Form.Validate.validate translators
+                    , value = .phoneNumber
+                    , update = \phoneNumber input -> { input | phoneNumber = String.filter Char.isDigit phoneNumber }
+                    , externalError = always Nothing
+                    }
+            )
 
 
 init : Model
 init =
-    { document = initDoc CedulaDoc
-    , documentNumber = ""
-    , phoneNumber = ""
-    , validationErrors = []
-    , serverError = Nothing
+    { form =
+        Form.init
+            { documentType = CedulaDoc
+            , document = ""
+            , phoneNumber = ""
+            }
     }
-
-
-initDoc : CostaRicaDoc -> Doc
-initDoc docType =
-    case docType of
-        DimexDoc ->
-            { docType = DimexDoc
-            , isValid = Dimex.isValid
-            , title = "register.form.document.dimex.label"
-            , value = "dimex"
-            , maxLength = 12
-            , placeholderText = "register.form.document.dimex.placeholder"
-            }
-
-        NiteDoc ->
-            { docType = NiteDoc
-            , isValid = Nite.isValid
-            , title = "register.form.document.nite.label"
-            , value = "nite"
-            , maxLength = 10
-            , placeholderText = "register.form.document.nite.placeholder"
-            }
-
-        CedulaDoc ->
-            { docType = CedulaDoc
-            , isValid = CedulaDeIdentidad.isValid
-            , title = "register.form.document.cedula_de_identidad.label"
-            , value = "cedula_de_identidad"
-            , maxLength = 9
-            , placeholderText = "register.form.document.cedula_de_identidad.placeholder"
-            }
 
 
 docToString : CostaRicaDoc -> String
@@ -139,166 +186,73 @@ docToString docType =
             "cedula_de_identidad"
 
 
+docFromString : String -> Maybe CostaRicaDoc
+docFromString docType =
+    case docType of
+        "DIMEX" ->
+            Just DimexDoc
+
+        "NITE" ->
+            Just NiteDoc
+
+        "cedula_de_identidad" ->
+            Just CedulaDoc
+
+        _ ->
+            Nothing
+
+
 view : Translators -> Model -> Html Msg
 view ({ t } as translators) model =
-    let
-        { document, documentNumber, phoneNumber, validationErrors } =
-            model
-
-        { docType, placeholderText, maxLength, title } =
-            document
-
-        isFieldError field ( fieldWithError, _ ) =
-            fieldWithError == field
-
-        problemsForField field =
-            List.filter (isFieldError field) validationErrors
-                |> List.map Tuple.second
-    in
-    div [ class "md:max-w-sm md:mx-auto py-6" ]
-        [ form
-            [ onSubmit (Submitted model) ]
-            [ Select.init
-                { id = "document_type_select"
-                , label = t "register.form.document.type"
-                , onInput = DocumentTypeChanged
-                , firstOption = { value = CedulaDoc, label = t "register.form.document.cedula_de_identidad.label" }
-                , value = docType
-                , valueToString = docToString
-                , disabled = False
-                , problems = Nothing
-                }
-                |> Select.withOptions
-                    [ { value = DimexDoc, label = t "register.form.document.dimex.label" }
-                    , { value = NiteDoc, label = t "register.form.document.nite.label" }
-                    ]
-                |> Select.toHtml
-            , Input.init
-                { label = t title
-                , id = "document_number_field"
-                , onInput = DocumentNumberEntered
-                , disabled = False
-                , value = documentNumber
-                , placeholder = Just (t placeholderText)
-                , problems = Just (problemsForField DocumentNumber)
-                , translators = translators
-                }
-                |> Input.asNumeric
-                |> Input.withAttrs [ maxlength maxLength ]
-                |> Input.toHtml
-            , Input.init
-                { label = t "register.form.phone.label"
-                , id = "phone_number_field"
-                , onInput = PhoneNumberEntered
-                , disabled = False
-                , value = phoneNumber
-                , placeholder = Just (t "register.form.phone.placeholder")
-                , problems = Just (problemsForField PhoneNumber)
-                , translators = translators
-                }
-                |> Input.withType Input.Telephone
-                |> Input.asNumeric
-                |> Input.withAttrs [ maxlength 8 ]
-                |> Input.toHtml
-            , div []
-                [ button
-                    [ class "button w-full button-primary" ]
-                    [ text (t "profile.edit.submit") ]
-                ]
+    Form.view [ class "md:max-w-sm md:mx-auto py-6" ]
+        translators
+        (\submitButton ->
+            [ submitButton [ class "button button-primary w-full" ]
+                [ text <| t "profile.edit.submit" ]
             ]
-        ]
+        )
+        (createForm translators)
+        model.form
+        { toMsg = GotFormMsg
+        , onSubmit = Submitted
+        }
 
 
-update : Translators -> Model -> Msg -> Model
-update translators model msg =
-    let
-        { t } =
-            translators
-    in
+type alias UpdateResult =
+    UR.UpdateResult Model Msg View.Feedback.Model
+
+
+update : Shared -> Model -> Msg -> UpdateResult
+update shared model msg =
     case msg of
-        DocumentTypeChanged doc ->
-            { model
-                | document = initDoc doc
-                , documentNumber = ""
-                , validationErrors = []
-            }
+        GotFormMsg subMsg ->
+            Form.update shared subMsg model.form
+                |> UR.fromChild (\newForm -> { model | form = newForm })
+                    GotFormMsg
+                    UR.addExt
+                    model
 
-        DocumentNumberEntered n ->
-            let
-                trim : Int -> String -> String -> String
-                trim desiredLength oldNum newNum =
-                    let
-                        corrected =
-                            if String.all Char.isDigit newNum then
-                                newNum
-
-                            else
-                                oldNum
-                    in
-                    if String.length corrected > desiredLength then
-                        String.slice 0 desiredLength corrected
-
-                    else
-                        corrected
-
-                trimmedNumber =
-                    if String.startsWith "0" n then
-                        model.documentNumber
-
-                    else
-                        trim model.document.maxLength model.documentNumber n
-            in
-            { model | documentNumber = trimmedNumber }
-
-        PhoneNumberEntered p ->
-            { model | phoneNumber = p }
-
-        Submitted m ->
-            let
-                formValidator =
-                    kycValidator translators m.document.isValid
-
-                errors =
-                    case validate formValidator m of
-                        Ok _ ->
-                            []
-
-                        Err errs ->
-                            errs
-            in
-            { m | validationErrors = errors }
-
-        Saved (RemoteData.Success _) ->
-            model
-
-        Saved (RemoteData.Failure _) ->
-            let
-                errorForm =
-                    { model | serverError = Just (t "error.unknown") }
-            in
-            errorForm
+        Submitted _ ->
+            model |> UR.init
 
         Saved _ ->
-            model
+            model |> UR.init
 
 
-modelToProfileKyc : Model -> ProfileKyc
-modelToProfileKyc model =
-    { documentType = model.document.value
-    , document = model.documentNumber
-    , userType = "natural"
-    , phone = model.phoneNumber
-    , isVerified = False
-    }
-
-
-saveKycData : LoggedIn.Model -> Model -> Cmd Msg
-saveKycData { shared, authToken } model =
+saveKycData : LoggedIn.Model -> FormOutput -> LoggedIn.External Msg
+saveKycData loggedIn formOutput =
     let
         data =
-            modelToProfileKyc model
+            { documentType =
+                formOutput.documentType
+                    |> docToString
+                    |> String.toLower
+            , document = formOutput.document
+            , userType = "natural"
+            , phone = formOutput.phoneNumber
+            , isVerified = False
+            }
     in
-    Api.Graphql.mutation shared
-        (Just authToken)
+    LoggedIn.mutation loggedIn
         (Profile.upsertKycMutation data)
         Saved

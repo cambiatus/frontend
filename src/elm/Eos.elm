@@ -99,16 +99,16 @@ type alias Asset =
     }
 
 
-assetToString : Asset -> String
-assetToString asset =
-    formatSymbolAmount asset.symbol asset.amount
+assetToString : { translators | t : String -> String } -> Asset -> String
+assetToString translators asset =
+    formatSymbolAmount translators asset.symbol asset.amount
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
 
 
 encodeAsset : Asset -> Value
 encodeAsset asset =
-    Utils.formatFloat asset.amount (getSymbolPrecision asset.symbol) False
+    Utils.formatFloat Nothing (getSymbolPrecision asset.symbol) asset.amount
         ++ " "
         ++ symbolToSymbolCodeString asset.symbol
         |> Encode.string
@@ -228,9 +228,9 @@ symbolToString (Symbol symbol precision) =
         |> String.concat
 
 
-formatSymbolAmount : Symbol -> Float -> String
-formatSymbolAmount (Symbol _ precision) amount =
-    Utils.formatFloat amount precision True
+formatSymbolAmount : { translators | t : String -> String } -> Symbol -> Float -> String
+formatSymbolAmount translators (Symbol _ precision) amount =
+    Utils.formatFloat (Just translators) precision amount
 
 
 symbolToSymbolCodeString : Symbol -> String

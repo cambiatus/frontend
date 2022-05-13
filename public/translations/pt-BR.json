@@ -3,9 +3,13 @@
   "back": "Voltar",
   "decimal_separator": ",",
   "thousands_separator": ".",
+  "copied_to_clipboard": "Copiado para a área de transferência",
+  "share": "Compartilhar",
   "dates": {
     "today": "Hoje",
-    "yesterday": "Ontem"
+    "yesterday": "Ontem",
+    "select": "Selecionar uma data",
+    "clear": "Limpar data"
   },
   "loading": {
     "title": "Aguarde um instante",
@@ -13,7 +17,7 @@
   },
   "menu": {
     "title": "Menu",
-    "welcome_to": "Bem vindo a {{community_name}}",
+    "welcome_to": "Bem vindo de volta,",
     "my_communities": "Bem vindo a ",
     "dashboard": "Painel",
     "news": "Novidades",
@@ -128,6 +132,8 @@
     "unavailablePin": "PIN está indisponível",
     "phone": "Por favor insira um número de telefone válido",
     "invalid_image_file": "Erro ao fazer upload de imagem",
+    "file_upload": "Erro ao fazer upload do arquivo",
+    "wait_file_upload": "Por favor espere o upload do arquivo",
     "zipcode": "CEP inválido",
     "contracts": {
       "transfer": {
@@ -181,6 +187,7 @@
     "account_instr": "Apenas letras de a-z e números de 1-5",
     "pin_instr": "6 números",
     "failed": "Falha na autenticação",
+    "failed_generating_phrase": "Algo de errado aconteceu ao iniciar sua autenticação",
     "login": {
       "modalFormTitle": "Insira seu PIN",
       "enterPinToContinue": "Por favor, insira seu PIN de segurança atual para continuar.",
@@ -197,7 +204,7 @@
       "wordsMode": {
         "input": {
           "description": "Digite suas 12 palavras que você copiou e colou no registro.",
-          "label": "Suas 12 palavras (você salvou ao criar sua conta)",
+          "label": "Suas 12 palavras",
           "placeholder": "Digite suas 12 palavras aqui",
           "tooltip": "Você também pode usar sua CHAVE PRIVADA",
           "toggle": "Eu quero usar a chave privada",
@@ -314,6 +321,8 @@
       "checkingAvailability": "Checando disponibilidade da conta",
       "button": "Criar",
       "company_type": "Tipo de Empresa",
+      "company_name": "Nome da Empresa",
+      "name_example": "Ex.: Cambiatus",
       "company": {
         "mipyme": {
           "name": "MIPYME",
@@ -349,8 +358,7 @@
       "title": "Opa. Algo de errado aconteceu enquanto criavamos sua conta"
     },
     "account_created": {
-      "greet": "Ei",
-      "last_step": "esse é o último passo e o mais importante",
+      "greet": "Ei {{name}},",
       "copy": "copie",
       "i_saved_words": "Copiei e colei em um local seguro as 12 palavras que Cambiatus pediu",
       "words_copied": "foram copiadas para a área de transferência",
@@ -430,9 +438,13 @@
     "not_found": "Comunidade não encontrada",
     "error_loading": "Erro ao carregar comunidade",
     "error_saving": "Erro ao salvar comunidade",
+    "learn_about": "Venha aprender sobre a comunidade {{community_name}}! \n\n{{url}}",
+    "earn": "Ganhe {{symbol}}",
+    "share": "Compartilhar comunidade",
     "create": {
       "title": "Criar comunidade",
       "success": "Comunidade salva com sucesso",
+      "created": "Comunidade criada com sucesso! Podemos demorar um pouco para processar, então tente acessá-la em alguns segundos",
       "labels": {
         "title": "Titulo",
         "symbol": "Simbolo",
@@ -468,7 +480,19 @@
       "claims": "Reivindicações",
       "products": "Vendas na loja",
       "orders": "Compras na loja",
-      "transfers": "Transações"
+      "transfers": "Transações",
+      "our_supporters": "Nossos",
+      "supporters": "Apoiadores",
+      "our_messages": "Nossos",
+      "messages": "Comunicados",
+      "support_us": "Nos apoie",
+      "see_supporters": "Veja os últimos membros que nos apoiaram.",
+      "see_all_supporters": "Ver todos os apoiadores",
+      "you_can_support": "Você pode contribuir financeiramente para o crescimento desta comunidade.",
+      "logo": "Logo de {{community}}",
+      "about_title": "Sobre a comunidade",
+      "our_numbers": "Nossos",
+      "numbers": "Números"
     },
     "invite": {
       "title": "Convide um amigo",
@@ -509,7 +533,25 @@
       "max_supply": "Maxima emissao de moedas"
     },
     "objectives": {
-      "title": "Objetivo",
+      "title": "Objetivos",
+      "earn": "Ganhe",
+      "complete_actions": "Complete ações que a comunidade traçou e ganhe",
+      "objectives_and": "Objetivos e",
+      "actions": "Ações",
+      "visit_community_page": "Visite a página da comunidade para aprender mais sobre ela.",
+      "go_to_community_page": "Visitar página da comunidade",
+      "go_to_action": "Ir para a ação {{index}}",
+      "reward": "Recompensa",
+      "claim_count": "Membros reivindicaram esta ação",
+      "claim_count_times": "{{count}} vezes",
+      "claim_count_times_singular": "uma vez",
+      "share_action": "Venha ajudar {{community_name}} a alcançar nosso objetivo de {{objective_description}} completando esta ação: \n\t{{action_description}} \n\n{{url}}",
+      "empty_dog_alt": "Um cachorro deitado no chão, olhando para você",
+      "empty_title": "Por enquanto, só um cachorro",
+      "empty_objectives_line_1": "Essa comunidade ainda não possui objetivos.",
+      "empty_objectives_line_2": "Volte mais tarde quando tivermos objetivos!",
+      "empty_line_1": "Não existem ações ligadas a esse objetivo no momento.",
+      "empty_line_2": "Explore outros objetivos para poder reivindicar ações e ganhar {{symbol}}.",
       "create_success": "Objetivo criado com sucesso",
       "title_plural": "Objetivos e Ações",
       "subtitle": "{{objectives}} objetivos e {{actions}} ações",
@@ -528,12 +570,18 @@
         "error_marking_as_complete": "Algo de errado aconteceu ao completar seu objetivo",
         "completed_progress": "{{progress}} de {{total}} ações completadas",
         "completion_text": "Todas as ações relacionadas a esse objetivo serão completadas",
-        "completed_success": "Objetivo completado com sucesso",
         "modal": {
           "title": "Marcar objetivo como completo",
           "body": "Não é possível reverter após completar um objetivo. Ações deste objetivo também serão marcadas como completas, e não estarão mais disponíveis para análise. Tem certeza que deseja completar esse objetivo?",
           "confirm": "Sim",
           "cancel": "Não"
+        },
+        "celebration": {
+          "title": "Parabéns",
+          "completed": "Essa comunidade completou um objetivo!",
+          "special_moment": "Estamos felizes por sermos parte deste momento especial.",
+          "cheers": "Um brinde ao futuro!",
+          "return": "Retornar aos objetivos"
         }
       },
       "disabled": {
@@ -603,11 +651,13 @@
         "no": "Não",
         "yes": "Sim",
         "automatic": "Automático,",
-        "automatic_detail": " recompensa o usuário imediatamente quando feita a reivindicação",
+        "automatic_detail": " ação não reivindicável e portanto, sem a revisão e aprovação de outros membros",
+        "automatic_tooltip": "Caso seja preciso conectar algum aplicativo externo através de API, a pessoa que administra a comunidade pode entrar em contato conosco para realizar essa configuração.",
         "manual": "Manual,",
         "manual_detail": " recompensa o usuário somente após revisão e aprovação de outros membros",
         "verifier_placeholder": "Digite o nome de usuário",
         "verifier_not_found": "Nenhum usuário encontrado",
+        "unselect_user": "Desselecionar {{username}}",
         "usages_placeholder": "Digite um número",
         "date_label": "Escolha a data",
         "quantity_label": "Escolha a quantidade de usos",
@@ -660,6 +710,10 @@
         "canRemove": "Você sempre pode remover essas informações de seu perfil se decidir fazer isso.",
         "success": "Seus dados KYC foram salvos com sucesso."
       }
+    },
+    "thank_you": {
+      "title": "Obrigado!",
+      "all_supporters": "Ver a lista de todos os apoiadores"
     }
   },
   "profile": {
@@ -669,6 +723,10 @@
     "edit_success": "Perfil salvo com sucesso",
     "locations": "Localização",
     "interests": "Interesses",
+    "summary": {
+      "user_summary": "{{user}}: Abrir resumo do perfil",
+      "your_summary": "Você: Abrir resumo do perfil"
+    },
     "12words": {
       "title": "Minhas 12 palavras",
       "button": "Baixar"
@@ -694,6 +752,12 @@
     "actions": {
       "edit": "Editar",
       "viewPrivatekey": "Ver chave privada"
+    },
+    "preferences": {
+      "claim_notification": "Notificação de reivindicação",
+      "transfer_notification": "Notificação de transferência",
+      "digest": "Notícias mensais sobre a comunidade",
+      "error": "Algo deu errado ao salvar suas preferências"
     },
     "edit": {
       "avatar_section": "Avatar",
@@ -730,52 +794,88 @@
         "title": "Lembre-se",
         "once_a_day": "Não reivindique a mesma ação mais de uma vez no mesmo dia;",
         "completed_action": "Reivindique apenas ações que você realmente realizou;",
-        "know_good_practices": "Conheça as boas práticas da Comunidade"
+        "know_the": "Conheça as",
+        "good_practices": "boas práticas da Comunidade"
       }
+    },
+    "contributions": {
+      "profile_contributions": "Contribuições de {{profile_name}}",
+      "not_allowed_title": "Você não pode ver as contribuições de outras pessoas",
+      "not_allowed": "Apenas administradores da comunidade podem ver as contribuições de outras pessoas",
+      "no_contributions": "Nenhuma contribuição ainda",
+      "pending": "Pendente",
+      "approved": "Aprovada",
+      "failed": "Fracassada"
     }
   },
   "shop": {
     "filter": "Filtro",
-    "units_label": "Quantidade em estoque",
+    "units_label": "Quantas unidades você possui em estoque?",
     "title": "Ofertas",
+    "headline": "Ofertas criadas com  💚",
+    "headline_no_emoji": "Ofertas criadas com amor",
     "subtitle": "Compre e vende em sua comunidade",
     "description": "Aqui você pode usar suas moedas para comprar serviços e produtos ou receber vendendo seus próprios produtos e serviços",
     "all_offers": "Todas as ofertas",
     "my_communities_offers": "Ofertas de minhas comunidades",
     "my_offers": "Minhas ofertas",
+    "see_mine": "Ver as minhas",
+    "see_all": "Ver todas",
     "rate_sale": "Clasificación",
     "messages": "Mensagens",
     "no_answer_yet": "Sem resposta",
     "message_placeholder": "Digite sua mensagem aqui ou envie diretamente por Whatsapp ou chat.",
     "create_offer": "Criar oferta",
+    "create_new_offer": "Criar nova",
     "edit_offer": "Editar oferta",
     "create_offer_success": "Oferta criada com sucesso!",
     "delete_offer_success": "Oferta removida com sucesso",
     "unauthorized": "Você não tem autorização para editar essa venda",
-    "photo_label": "Enviar imagem",
-    "what_label": "O que voce esta vendendo?",
-    "description_label": "Descreva o que esta vendendo",
+    "photo_label": "Imagem do produto",
+    "what_label": "Nome do produto",
+    "description_label": "Descreva o produto",
+    "description_placeholder": "Descreva completamente seu produto. Isso ajudará nas vendas",
     "which_community_label": "Em qual comunidade voce deseja vender?",
     "choose_community_label": "Escolha uma comunidade",
-    "track_stock_label": "Você quer rastrear unidades?",
+    "track_stock_label": "Deseja controlar estoque pelo app?",
     "choose_track_stock_label": "Escolha entre o rastreamento ou não",
     "track_stock_no": "No",
     "track_stock_yes": "Sim",
-    "price_label": "Preço de venda",
+    "price_label": "Preço do produto",
     "units_available": "Quantidade disponível",
     "out_of_stock": "fora de estoque",
     "offer_action": "{{accountName}} está VENDENDO",
     "buy_action": "{{accountName}} COMPRANDO",
     "buy": "Comprar",
-    "edit": "Editar minha oferta",
+    "edit": "Editar",
     "sold_by": "Vendido por",
+    "by_user": "Por {{user}}",
+    "by_you": "Por você",
+    "free": "Grátis",
+    "sold_out": "Esgotado",
+    "total_price": "Preço total: {{amount}} {{symbol}}",
+    "enjoy": "Aproveite",
+    "no_image": "Sem imagem",
+    "subtract_unit": "Subtrair uma unidade",
+    "add_unit": "Adicionar uma unidade",
+    "empty": {
+      "all_title": "Onde estão as ofertas?",
+      "user_title": "Você não tem nenhuma oferta nessa comunidade",
+      "you_can_offer": "Você pode oferecer produtos, recursos digitais e serviços para ganhar {{symbol}}.",
+      "no_one_is_selling": "Ninguém está vendendo produtos ou serviços nessa comunidade.",
+      "offer_something": "Por que você não oferece algo?",
+      "create_new": "Criar nova oferta"
+    },
     "transfer": {
-      "units_label": "Quantas unidades você quer?",
-      "quantity_label": "Valor",
-      "memo_label": "Comentários (opcional)",
+      "units_label": "Escolha a quantidade",
+      "price": "Preço ({{symbol}})",
+      "balance": "Você possui {{asset}}",
+      "memo_label": "Comentário (opcional)",
       "default_memo": "Obrigado pela ajuda!",
       "submit": "Comprar",
       "success": "Compra bem sucedida!",
+      "contact_seller": "Fale com o vendedor",
+      "visit_seller": "Visite o perfil de {{seller}}",
       "errors": {
         "unitEmpty": "Unidade não pode estar vazia",
         "unitTooLow": "A unidade é muito baixa, deve ser pelo menos 1",
@@ -796,8 +896,11 @@
   },
   "dashboard": {
     "back": "Voltar",
-    "transfer": "Transferir para um amigo",
-    "explore": "Como ganhar {{symbol}}",
+    "transfer": "Transferir",
+    "your_balance": "Seu saldo em {{symbol}}",
+    "how_to_earn": "Como ganhar {{symbol}}",
+    "my_contributions": "Minhas contribuições",
+    "about_community": "Sobre a comunidade",
     "invite": "Convide seus amigos",
     "sorry": "Desculpe!",
     "action_rejected": "Sua ação foi rejeitada",
@@ -808,7 +911,7 @@
     "scan": "Escanear",
     "or_choose_list": "Ou escolha da lista",
     "choose_one_option": "Escolha uma das opções",
-    "next": "Próximo",
+    "continue": "Continuar",
     "your_action": "Sua ação:",
     "add_comment": "Adicionar um comentário",
     "claim": "Reivindicar",
@@ -823,27 +926,20 @@
     "reject": "Reprovar",
     "verify": "Aprovar",
     "closed": "fechados",
-    "my_claims": {
-      "1": "Minhas ",
-      "2": "Reivindicações",
-      "go": "ir"
-    },
-    "my_offers": {
-      "1": "Minhas ",
-      "2": "Ofertas",
-      "go": "Ir"
-    },
+    "my_claims": "Minhas reivindicações",
+    "my_offers": "Minhas ofertas",
     "analysis": {
       "title": {
         "1": "Ações",
         "2": "para análise"
       },
       "empty": {
-        "1": "Wooow",
-        "2": ", bom trabalho.",
-        "3": "Você finalizou tudo"
+        "1": "Parabéns",
+        "2": "Não existem ações para análise"
       },
-      "all": "Todas"
+      "analyze_now": "Analisar agora",
+      "count": "Você tem **{{amount}} ações** para análise",
+      "error_fetching": "Algo de errado aconteceu ao buscar as ações para análise"
     },
     "activities": {
       "title": "Atividades para sua análise",
@@ -888,25 +984,32 @@
   },
   "claim": {
     "title_under_review": {
-      "1": "Esta reinvindicação está",
+      "1": "Reivindicação",
       "2": "em análise",
       "3": ", outros membros ainda precisam votar"
     },
+    "title_cancelled": {
+      "1": "Reivindicação",
+      "2": "cancelada"
+    },
     "title_approved": {
-      "1": "Esta reinvindicação foi",
+      "1": "Reivindicação",
       "2": "aprovada"
     },
     "title_rejected": {
-      "1": "Esta reinvindicação foi",
+      "1": "Reivindicação",
       "2": "rejeitada"
     },
+    "cancelled_voting_bar": "votos pendentes",
     "title_action_completed": "Esta reinvidicação está pendente, no entanto, como a ação foi concluída, não é possível votar",
     "title_action_closed": "Esta reinvidicação está pendente, no entanto, como a ação foi encerrada, não é possível votar",
+    "opened_today": "Aberto hoje",
     "day_ago": "Aberto {{day_count}} dia atrás",
     "days_ago": "Aberto {{day_count}} dias atrás",
     "vote": "voto",
     "votes": "votos",
     "pending": "Pendente",
+    "cancelled": "Cancelado",
     "disapproved": "Reprovado",
     "approved": "Aprovado",
     "disapproved_by": "Reprovado por",
@@ -929,6 +1032,15 @@
     "approve": "Aprovar",
     "no_results_found": "Nenhum resultado encontrado",
     "voteTitle": "Você aprova ou desaprova esta ação?",
+    "attention": "Atenção: ",
+    "cancelled_texts": {
+      "cancelled_claim": "Reivindicação cancelada",
+      "was_cancelled": "Essa reivindicação foi cancelada",
+      "deadline_reached": "A ação correspondente foi concluída pois atingiu a data específica",
+      "usages_reached": "A ação correspondente foi concluída pois atingiu a quantidade máxima de uso",
+      "action_completed": "A ação correspondente foi concluída pela equipe administrativa da comunidade",
+      "not_available": "Portanto, a reivindicação não está mais disponível para votação"
+    },
     "modal": {
       "title": "Sob análise",
       "message_disapprove": "Você realmente deseja reprovar esta reivindicação?",
@@ -1042,7 +1154,7 @@
     },
     "features": {
       "title": "Recursos",
-      "description": "Ações, loja",
+      "description": "Objetivos, Ações, Loja, Patrocínio, Comunicados",
       "enabled": "Habilitado",
       "disabled": "Desabilitado"
     }
@@ -1071,7 +1183,17 @@
       "phone": "Telefone",
       "instagram": "Instagram",
       "telegram": "Telegram",
-      "whatsapp": "Whatsapp"
+      "whatsapp": "Whatsapp",
+      "email": "Email",
+      "link": "Link"
+    },
+    "reach_out": {
+      "phone": "Contate pelo telefone",
+      "instagram": "Contate pelo Instagram",
+      "telegram": "Contate pelo Telegram",
+      "whatsapp": "Contate pelo Whatsapp",
+      "email": "Contate por email",
+      "link": "Veja esse link"
     },
     "phone": {
       "label": "Número de Telefone (com DDD)",
@@ -1083,6 +1205,16 @@
       "placeholder": "Ex.: cambiatus",
       "submit": "Adicionar Perfil"
     },
+    "link": {
+      "label": "Link",
+      "placeholder": "Ex.: https://cambiatus.com",
+      "submit": "Adicionar Link"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "Ex.: cambiatus@cambiatus.com",
+      "submit": "Adicionar Email"
+    },
     "validation": {
       "phone": {
         "blank": "Por favor insira seu número de telefone",
@@ -1091,6 +1223,14 @@
       "username": {
         "blank": "Por favor insira seu perfil",
         "invalid": "Por favor insira um perfil válido"
+      },
+      "email": {
+        "blank": "Por favor insira seu email",
+        "invalid": "Por favor insira um email válido"
+      },
+      "link": {
+        "blank": "Por favor insira um link",
+        "invalid": "Por favor insira um link válido"
       }
     },
     "feedback": {
@@ -1114,6 +1254,120 @@
       "accept": "Sim"
     }
   },
+  "sponsorship": {
+    "title": "Patrocínio",
+    "no_support": "Sua comunidade não tem suporte a patrocínios ainda",
+    "no_support_subtitle": "Fale com o time administrador da comunidade para ativar essa funcionalidade",
+    "description": "Permitir aos usuários patrocinarem a comunidade",
+    "sponsor": "Patrocinar",
+    "enter_amount": "Digite o valor que deseja contribuir",
+    "select_currency": "Selecione a moeda que deseja usar",
+    "amount_too_small": "O valor deve ser ao menos {{minimum}} {{currency}}",
+    "amount_too_big": "O valor deve ser no máximo {{maximum}} {{currency}}",
+    "invalid_amount": "Valor inválido",
+    "unknown_error": "Houve um erro ao processar seu pagamento",
+    "load_error": "Houve um problema ao conectar com o PayPal, por favor tente novamente mais tarde",
+    "contribution_error": "Algo de errado aconteceu ao preparar sua contribuição",
+    "guidance": "Orientação",
+    "guidance_description": "Para ativar essa funcionalidade, peça ajuda no seu canal de suporte no Slack da Cambiatus",
+    "cards": {
+      "fiat": {
+        "title": "Tipos de moedas aceitas",
+        "description": "Permitir que a comunidade aceite USD ou outras moedas fiduciárias via PayPal",
+        "toggle_label": "Moedas fiduciárias",
+        "settings": "Configurações"
+      },
+      "crypto": {
+        "title": "Outras moedas aceitas",
+        "description": "Permitir que a comunidade aceite criptomoedas",
+        "toggle_label": "Criptomoedas"
+      },
+      "message": {
+        "title": "Mensagem de \"obrigado\"",
+        "description": "Configurar a mensagem de \"obrigado\" para combinar com sua comunidade",
+        "button_label": "Configurar mensagem"
+      }
+    },
+    "fiat": {
+      "title": "Dinheiro fiduciário",
+      "paypal_account": "Conta PayPal da comunidade",
+      "paypal_example": "exemplo@gmail.com",
+      "how_to_change": "Se você precisa atualizar esta conta, entre em contato conosco através do canal de suporte no Slack"
+    },
+    "thank_you_message": {
+      "title": "Título da mensagem",
+      "default_title": "Obrigado por patrocinar {{community}}!",
+      "message": "Mensagem",
+      "default_message": "Sua contribuição está ajudando sua comunidade a ser ainda mais impactante, você é demais!"
+    },
+    "dashboard_modal": {
+      "title": "Patrocine sua Comunidade",
+      "subtitle": "Agora você pode patrocinar esta comunidade.",
+      "explanation": "Faça sua contribuição clicando no botão abaixo. Você será redirecionado ao PayPal para completar sua transação.",
+      "sponsor": "Patrocinar {{community_name}}"
+    }
+  },
+  "news": {
+    "title": "Comunicados",
+    "description": "Permitir que o time da comunidade envie comunicados",
+    "create": "Novo comunicado",
+    "community_news": "Comunicados da comunidade",
+    "got_community_news": "Nova comunicação da comunidade recebida:",
+    "read": "Ler",
+    "already_read": "Lido",
+    "not_read_yet": "Não lido",
+    "other_news": "outros comunicados",
+    "view_more": "Ver todas as notícias",
+    "view_more_with_ellipsis": "... Ver mais",
+    "edit": "Editar",
+    "copy": "Criar cópia",
+    "error_fetching": "Algo de errado aconteceu ao buscar os comunicados da comunidade",
+    "error_highlighting": "Algo de errado aconteceu ao destacar o comunicado",
+    "highlight": "Destacar comunicado",
+    "already_highlighted": "Já existe um comunicado em destaque",
+    "saved": "Comunicado salvo com sucesso",
+    "failed_saving": "Algo de errado aconteceu ao salvar o comunicado",
+    "not_found_title": "Não foi possível achar o comunicado",
+    "not_found_description": "Tente novamente com um comunicado válido",
+    "replace_notice": "Ao destacar esse comunicado, ele vai substituir o existente",
+    "replace_confirmation": "Tem certeza que deseja destacá-lo?",
+    "created_at": "Criado: ",
+    "scheduled_at": "Agendado: ",
+    "scheduled_at_time": " às {{hour}}:{{minute}}",
+    "edited_by": "Editado por ",
+    "edited_date": " em {{date}}",
+    "reaction": {
+      "choose": "Escolha uma reação",
+      "reactions": "{{count}} pessoas reagiram com",
+      "remove": "Remover reação",
+      "add": "Reagir com",
+      "close": "Fechar seletor de reações"
+    },
+    "no_news": {
+      "title": "Não tem nada para ver por aqui",
+      "description": "Sua comunidade ainda não postou nenhum comunicado"
+    },
+    "editor": {
+      "title": "Editor de comunicados",
+      "field": {
+        "title": "Título",
+        "description": "Descrição",
+        "publication_mode": "Publicar ou agendar",
+        "publish_immediately": "Publicar imediatamente",
+        "schedule": "Agendar publicação",
+        "initial_date": "Data inicial",
+        "time": "Horário"
+      },
+      "error": {
+        "title": "O comunicado precisa de um título",
+        "description": "O comunicado precisa de uma descrição",
+        "future_date": "A data agendada precisa ser no futuro",
+        "invalid_date": "Data inválida",
+        "future_time": "O horário agendado precisa ser no futuro",
+        "invalid_time": "Horário inválido"
+      }
+    }
+  },
   "markdown": {
     "link_form": {
       "header": "Adicionar link",
@@ -1127,5 +1381,52 @@
   },
   "block_explorer": {
     "see": "Ver no explorador de blocos"
+  },
+  "currency": {
+    "brl_singular": "Real",
+    "btc_singular": "Bitcoin",
+    "crc_singular": "Colón",
+    "eos_singular": "Eos",
+    "eth_singular": "Ethereum",
+    "usd_singular": "Dólar",
+    "brl_plural": "Reais",
+    "btc_plural": "Bitcoin",
+    "crc_plural": "Colones",
+    "eos_plural": "Eos",
+    "eth_plural": "Ethereum",
+    "usd_plural": "Dólares"
+  },
+  "permissions": {
+    "insufficient": {
+      "title": "Ação não permitida",
+      "explanation": "Você não tem as permissões necessárias para realizar esta ação. Contate os administradores da comunidade para saber como ganhar mais permissões.",
+      "try_again": "Por favor tente novamente quando tiver permissões o suficiente!",
+      "ok": "Entendi"
+    }
+  },
+  "terms_of_conduct": {
+    "title": "Diretrizes da comunidade e Código de conduta {{version}}",
+    "description": "Todas as comunidades digitais criadas usando o webapp Cambiatus são regidas pelas Diretrizes da comunidade e Código de conduta da Cambiatus.",
+    "to_have_good_experience": "Para que você continue tendo uma boa experiência com a comunidade, recomendamos que leia nossas Diretrizes e Código de conduta.",
+    "link": "Ler Diretrizes da comunidade e Código de conduta {{version}} da Cambiatus",
+    "attention": "Atenção: ",
+    "not_accepting": "O não aceite das Diretrizes da comunidade e Código de conduta impede que você realize atividades dentro da comunidade, como comprar, vender, transferir, convidar amigos, etc.",
+    "to_participate": "Para que você pertença e desfrute de todas as atividades que envolvem a comunidade, você deve aceitar as Diretrizes da comunidade e Código de conduta {{version}}.",
+    "are_you_sure": "Tem certeza que deseja não aceitar?",
+    "accept": "Aceito",
+    "deny": "Não aceito",
+    "error_accepting": "Algo de errado aconteceu ao aceitar o Código de conduta"
+  },
+  "footer": {
+    "created_with": "Criado com",
+    "created_by": "por",
+    "created_with_love": "Criado com amor por Satisfied Vagabonds e Cambiatus",
+    "version": "VERSÃO {{version}}"
+  },
+  "account_frozen": {
+    "title": "Sua conta está congelada",
+    "why": "Você não aceitou as Diretrizes da comunidade e Código de conduta.",
+    "solve": "Para resolver essa situação e fazer parte da comunidade, ",
+    "solve_link": "aceite as Diretrizes da comunidade e Código de conduta."
   }
 }

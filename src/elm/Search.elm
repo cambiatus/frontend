@@ -1,11 +1,14 @@
 module Search exposing
     ( ActiveTab(..)
+    , ExternalMsg(..)
     , Model
     , Msg
     , State(..)
+    , closeMsg
     , closeSearch
     , init
     , isActive
+    , isOpenMsg
     , subscriptions
     , update
     , viewForm
@@ -13,21 +16,22 @@ module Search exposing
     )
 
 import Action exposing (Action)
-import Api.Graphql
 import Avatar
 import Browser.Dom as Dom
 import Cambiatus.Object
-import Cambiatus.Object.Product
 import Cambiatus.Object.SearchResult
 import Cambiatus.Query
 import Eos exposing (Symbol)
 import Eos.Account
+import Form
+import Form.Text
 import Graphql.Http
+import Graphql.Operation exposing (RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html exposing (Html, a, br, button, div, h3, img, li, p, span, strong, text, ul)
-import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, required, src, tabindex, type_)
-import Html.Events exposing (onClick, onFocus, onSubmit)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, minlength, src, tabindex, type_)
+import Html.Events exposing (onClick, onFocus)
 import Icons
 import Json.Decode as Decode exposing (list, string)
 import Json.Encode as Encode
@@ -37,11 +41,13 @@ import Profile
 import RemoteData exposing (RemoteData)
 import Route
 import Session.Shared exposing (Shared, Translators)
+import Shop
 import Task
 import Time exposing (Posix)
+import UpdateResult as UR
 import Utils
 import View.Components
-import View.Form.Input as Input
+import View.Feedback as Feedback
 
 
 
@@ -50,7 +56,7 @@ import View.Form.Input as Input
 
 type alias Model =
     { state : State
-    , currentQuery : String
+    , form : Form.Model FormInput
     , recentQueries : List String
     }
 
@@ -58,7 +64,7 @@ type alias Model =
 init : Model
 init =
     { state = Inactive
-    , currentQuery = ""
+    , form = Form.init { query = "" }
     , recentQueries = []
     }
 
@@ -80,19 +86,9 @@ type ActiveTab
 
 
 type alias SearchResults =
-    { offers : List Offer
+    { offers : List Shop.Product
     , actions : List Action
     , members : List Profile.Minimal
-    }
-
-
-type alias Offer =
-    { id : Int
-    , title : String
-    , price : Float
-    , image : Maybe String
-    , units : Int
-    , trackStock : Bool
     }
 
 
@@ -104,15 +100,13 @@ type alias FoundData =
     RemoteData (Graphql.Http.Error SearchResults) SearchResults
 
 
-sendSearchQuery : Symbol -> Shared -> String -> String -> Cmd Msg
-sendSearchQuery selectedCommunity shared queryString authToken =
+sendSearchQuery : Symbol -> String -> ExternalMsg
+sendSearchQuery selectedCommunity queryString =
     let
         req =
             { communityId = Eos.symbolToString selectedCommunity }
     in
-    Api.Graphql.query
-        shared
-        (Just authToken)
+    RequestQuery
         (Cambiatus.Query.search req (searchResultSelectionSet queryString))
         GotSearchResults
 
@@ -120,20 +114,9 @@ sendSearchQuery selectedCommunity shared queryString authToken =
 searchResultSelectionSet : String -> SelectionSet SearchResults Cambiatus.Object.SearchResult
 searchResultSelectionSet queryString =
     SelectionSet.succeed SearchResults
-        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) offersSelectionSet)
+        |> with (Cambiatus.Object.SearchResult.products (\_ -> { query = Present queryString }) Shop.productSelectionSet)
         |> with (Cambiatus.Object.SearchResult.actions (\_ -> { query = Present queryString }) Action.selectionSet)
         |> with (Cambiatus.Object.SearchResult.members (\_ -> { query = Present queryString }) Profile.minimalSelectionSet)
-
-
-offersSelectionSet : SelectionSet Offer Cambiatus.Object.Product
-offersSelectionSet =
-    SelectionSet.map6 Offer
-        Cambiatus.Object.Product.id
-        Cambiatus.Object.Product.title
-        Cambiatus.Object.Product.price
-        Cambiatus.Object.Product.image
-        Cambiatus.Object.Product.units
-        Cambiatus.Object.Product.trackStock
 
 
 storeRecentSearches : List String -> Cmd msg
@@ -164,43 +147,39 @@ type Msg
     | GotSearchResults FoundData
     | QuerySubmitted
     | TabActivated ActiveTab
-    | CurrentQueryChanged String
+    | GotFormMsg (Form.Msg FormInput)
     | ClearSearchIconClicked
     | FoundItemClicked
 
 
-update : Shared -> String -> Symbol -> Model -> Msg -> ( Model, Cmd Msg )
-update shared authToken symbol model msg =
+type alias UpdateResult =
+    UR.UpdateResult Model Msg ExternalMsg
+
+
+type ExternalMsg
+    = SetFeedback Feedback.Model
+    | RequestQuery (SelectionSet SearchResults RootQuery) (FoundData -> Msg)
+
+
+update : Shared -> Symbol -> Model -> Msg -> UpdateResult
+update shared symbol model msg =
     case msg of
         NoOp ->
-            ( model, Cmd.none )
-
-        CurrentQueryChanged q ->
-            if String.isEmpty q then
-                ( { model | currentQuery = q, state = RecentSearchesShowed }
-                , Cmd.none
-                )
-
-            else
-                ( { model | currentQuery = q }
-                , sendSearchQuery symbol shared q authToken
-                )
+            UR.init model
 
         FoundItemClicked ->
-            ( { model
+            { model
                 | state = Inactive
-                , currentQuery = ""
-              }
-            , Cmd.none
-            )
+                , form = Form.updateValues (\form -> { form | query = "" }) model.form
+            }
+                |> UR.init
 
         RecentQueryClicked q ->
             update shared
-                authToken
                 symbol
                 { model
                     | state = ResultsShowed RemoteData.Loading Nothing
-                    , currentQuery = q
+                    , form = Form.updateValues (\form -> { form | query = q }) model.form
                 }
                 QuerySubmitted
 
@@ -209,61 +188,92 @@ update shared authToken symbol model msg =
                 ResultsShowed r previousActiveTab ->
                     let
                         newRecentQueries =
-                            (model.currentQuery :: model.recentQueries)
+                            (Form.getValue .query model.form :: model.recentQueries)
                                 |> List.unique
                                 |> List.take maximumRecentSearches
                     in
-                    ( { model
+                    { model
                         | state = ResultsShowed r (Just activeTab)
                         , recentQueries = newRecentQueries
-                      }
-                    , case previousActiveTab of
-                        Nothing ->
-                            storeRecentSearches newRecentQueries
+                    }
+                        |> UR.init
+                        |> UR.addCmd
+                            (case previousActiveTab of
+                                Nothing ->
+                                    storeRecentSearches newRecentQueries
 
-                        Just _ ->
-                            Cmd.none
-                    )
+                                Just _ ->
+                                    Cmd.none
+                            )
 
                 _ ->
-                    ( model, Cmd.none )
+                    UR.init model
 
         GotSearchResults res ->
-            ( { model
+            { model
                 | state =
-                    if String.isEmpty model.currentQuery then
+                    if String.isEmpty (Form.getValue .query model.form) then
                         model.state
 
                     else
                         ResultsShowed res Nothing
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         GotRecentSearches queries ->
             case Decode.decodeString (list string) queries of
                 Ok queryList ->
-                    ( { model | recentQueries = queryList }, Cmd.none )
+                    { model | recentQueries = queryList }
+                        |> UR.init
 
                 Err _ ->
-                    ( model, Cmd.none )
+                    UR.init model
 
         CancelClicked ->
-            ( closeSearch model
-            , Cmd.none
-            )
+            closeSearch model
+                |> UR.init
+
+        GotFormMsg subMsg ->
+            let
+                oldQuery =
+                    Form.getValue .query model.form
+
+                updateResult =
+                    Form.update shared subMsg model.form
+                        |> UR.fromChild (\newForm -> { model | form = newForm })
+                            GotFormMsg
+                            (SetFeedback >> UR.addExt)
+                            model
+
+                newQuery =
+                    Form.getValue .query updateResult.model.form
+
+                actOnQueryChange =
+                    if String.isEmpty newQuery then
+                        UR.mapModel (\m -> { m | state = RecentSearchesShowed })
+
+                    else if oldQuery /= newQuery then
+                        UR.addExt (sendSearchQuery symbol newQuery)
+
+                    else
+                        identity
+            in
+            updateResult
+                |> actOnQueryChange
 
         ClearSearchIconClicked ->
-            ( { model
-                | currentQuery = ""
+            { model
+                | form = Form.updateValues (\form -> { form | query = "" }) model.form
                 , state = RecentSearchesShowed
-              }
-            , Dom.focus "searchInput"
-                |> Task.attempt (\_ -> NoOp)
-            )
+            }
+                |> UR.init
+                |> UR.addCmd
+                    (Dom.focus "searchInput"
+                        |> Task.attempt (\_ -> NoOp)
+                    )
 
         InputFocused ->
-            ( { model
+            { model
                 | state =
                     case model.state of
                         Inactive ->
@@ -271,35 +281,43 @@ update shared authToken symbol model msg =
 
                         _ ->
                             model.state
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         QuerySubmitted ->
             let
+                currentQuery =
+                    Form.getValue .query model.form
+
                 newRecentSearches : List String
                 newRecentSearches =
-                    (model.currentQuery :: model.recentQueries)
+                    (currentQuery :: model.recentQueries)
                         |> List.unique
                         |> List.take maximumRecentSearches
             in
-            ( { model
+            { model
                 | recentQueries = newRecentSearches
                 , state = ResultsShowed RemoteData.Loading Nothing
-              }
-            , Cmd.batch
-                [ storeRecentSearches newRecentSearches
-                , sendSearchQuery symbol shared model.currentQuery authToken
-                ]
-            )
+            }
+                |> UR.init
+                |> UR.addCmd (storeRecentSearches newRecentSearches)
+                |> UR.addExt (sendSearchQuery symbol currentQuery)
 
 
 
 -- VIEW
 
 
-viewForm : Translators -> Model -> Html Msg
-viewForm ({ t } as translators) model =
+type alias FormInput =
+    { query : String }
+
+
+type alias FormOutput =
+    { query : String }
+
+
+createForm : Translators -> Model -> Form.Form Msg FormInput FormOutput
+createForm { t } model =
     let
         isLoading =
             case model.state of
@@ -308,6 +326,14 @@ viewForm ({ t } as translators) model =
 
                 _ ->
                     False
+
+        isSearchOpen =
+            case model.state of
+                Inactive ->
+                    False
+
+                _ ->
+                    True
 
         iconColor =
             case model.state of
@@ -318,66 +344,65 @@ viewForm ({ t } as translators) model =
                     "text-indigo-500"
 
         viewClearSearchIcon =
-            case model.state of
-                Inactive ->
-                    text ""
+            if isSearchOpen && not (String.isEmpty (Form.getValue .query model.form)) then
+                button
+                    [ class "absolute right-3 flex items-center top-1/2 -translate-y-1/2 focus-ring focus-visible:ring-red focus-visible:ring-opacity-50 rounded-full group"
+                    , onClick ClearSearchIconClicked
+                    , type_ "button"
+                    ]
+                    [ Icons.clearInput "fill-current text-gray-400 hover:text-red group-focus:text-red"
+                    ]
 
-                _ ->
-                    if String.isEmpty model.currentQuery then
-                        text ""
-
-                    else
-                        span
-                            [ class "cursor-pointer absolute right-0 mr-3 h-full flex items-center top-0"
-                            , onClick ClearSearchIconClicked
-                            ]
-                            [ Icons.clearInput ""
-                            ]
-
-        viewCancel =
-            case model.state of
-                Inactive ->
-                    text ""
-
-                _ ->
-                    button
-                        [ class "text-orange-300 ml-3 leading-10 cursor-pointer lowercase hover:underline focus:outline-none focus:underline"
-                        , type_ "button"
-                        , onClick CancelClicked
-                        ]
-                        [ text (t "menu.cancel") ]
+            else
+                text ""
     in
-    Html.form
-        [ class "flex items-center"
-        , onSubmit QuerySubmitted
-        ]
-        [ div [ class "relative w-full" ]
-            [ Input.init
+    Form.succeed FormOutput
+        |> Form.with
+            (Form.Text.init
                 { label = ""
-                , id = "searchInput"
-                , onInput = CurrentQueryChanged
-                , disabled = isLoading
-                , value = model.currentQuery
-                , placeholder = Just (t "menu.search.placeholder")
-                , problems = Nothing
-                , translators = translators
+                , id = "search-input"
                 }
-                |> Input.withContainerAttrs [ class "!m-0" ]
-                |> Input.withAttrs
-                    [ class "rounded-full bg-gray-100 border-0 pl-10 text-base h-10"
+                |> Form.Text.withPlaceholder (t "menu.search.placeholder")
+                |> Form.Text.withDisabled isLoading
+                |> Form.Text.withContainerAttrs [ class "!m-0 w-full" ]
+                |> Form.Text.withExtraAttrs
+                    [ class "rounded-full bg-gray-100 border-0 pl-12 h-12"
                     , onFocus InputFocused
                     , minlength 3
-                    , required True
                     , autocomplete False
                     ]
-                |> Input.withElements
+                |> Form.Text.withElements
                     [ viewClearSearchIcon
-                    , Icons.search <| "absolute top-0 left-0 mt-2 ml-2 fill-current " ++ " " ++ iconColor
+                    , Icons.search ("absolute top-0 mt-[10px] left-4 fill-current " ++ iconColor)
                     ]
-                |> Input.toHtml
-            ]
-        , viewCancel
-        ]
+                |> Form.textField
+                    { parser = Ok
+                    , value = .query
+                    , update = \query input -> { input | query = query }
+                    , externalError = always Nothing
+                    }
+            )
+        |> Form.withNoOutput
+            (Form.unsafeArbitrary
+                (button
+                    [ class "text-orange-300 ml-3 lowercase focus:underline hover:underline focus:outline-none focus:underline"
+                    , classList [ ( "hidden", not isSearchOpen ) ]
+                    , onClick CancelClicked
+                    , type_ "button"
+                    ]
+                    [ text (t "menu.cancel") ]
+                )
+            )
+
+
+viewForm : List (Html.Attribute Msg) -> Translators -> Model -> Html Msg
+viewForm attrs translators model =
+    Form.viewWithoutSubmit (class "flex items-center" :: attrs)
+        translators
+        (\_ -> [])
+        (createForm translators model)
+        model.form
+        { toMsg = GotFormMsg }
 
 
 viewSearchBody :
@@ -393,7 +418,7 @@ viewSearchBody translators selectedCommunity today searchToMsg actionToMsg searc
         [ case searchModel.state of
             ResultsShowed (RemoteData.Success results) activeTab ->
                 if List.isEmpty results.actions && List.isEmpty results.offers && List.isEmpty results.members then
-                    viewEmptyResults translators searchModel.currentQuery
+                    viewEmptyResults translators (Form.getValue .query searchModel.form)
                         |> Html.map searchToMsg
 
                 else
@@ -457,17 +482,17 @@ viewRecentQueries { t } recentQueries =
         viewItem q =
             li []
                 [ button
-                    [ class "w-full text-left leading-10 hover:text-orange-500 focus:text-orange-500 focus:outline-none cursor-pointer"
+                    [ class "flex items-center w-full hover:text-orange-500 focus:text-orange-500 focus:outline-none"
                     , onClick (RecentQueryClicked q)
                     ]
-                    [ Icons.clock "inline-block align-middle mr-3 fill-current"
-                    , span [ class "inline align-middle" ] [ text q ]
+                    [ Icons.clock "mr-3 fill-current"
+                    , span [] [ text q ]
                     ]
                 ]
     in
     div [ class "w-full p-4 bg-white" ]
         [ strong [] [ text (t "menu.search.recentlyHeader") ]
-        , ul [ class "text-gray-900" ]
+        , ul [ class "text-gray-900 mt-4 space-y-2" ]
             (List.map viewItem recentQueries)
         ]
 
@@ -483,9 +508,9 @@ viewTabs { tr } results activeTab =
             in
             li [ class "w-full" ]
                 [ button
-                    [ class "rounded-sm flex-1 text-center cursor-pointer capitalize w-full focus:outline-none focus:ring focus:ring-gray-300"
+                    [ class "rounded-sm text-center capitalize w-full py-3 focus-ring focus-visible:ring-gray-300"
                     , classList
-                        [ ( "bg-orange-300 text-white", activeTab == tabKind )
+                        [ ( "bg-orange-300 text-white font-bold", activeTab == tabKind )
                         , ( "bg-gray-100 hover:bg-gray-200 focus:bg-gray-200", activeTab /= tabKind )
                         , ( "cursor-not-allowed text-gray-300", count <= 0 )
                         ]
@@ -503,7 +528,7 @@ viewTabs { tr } results activeTab =
                     [ text <| tr label [ ( "count", String.fromInt count ) ] ]
                 ]
     in
-    ul [ class "space-x-2 flex items-stretch leading-10 p-4 pb-2 bg-white" ]
+    ul [ class "space-x-2 flex items-stretch p-4 pb-2 bg-white" ]
         [ viewTab OffersTab
             "menu.search.offers_title"
             results.offers
@@ -573,10 +598,10 @@ viewResultsOverview { t, tr } { offers, actions, members } =
         ]
 
 
-viewOffers : Translators -> Symbol -> List Offer -> Html Msg
+viewOffers : Translators -> Symbol -> List Shop.Product -> Html Msg
 viewOffers translators symbol offers =
     let
-        viewOffer : Offer -> Html Msg
+        viewOffer : Shop.Product -> Html Msg
         viewOffer offer =
             let
                 imageUrl =
@@ -599,16 +624,16 @@ viewOffers translators symbol offers =
                     ]
                     [ img [ src imageUrl ] []
                     , h3 [ class "p-3" ] [ text offer.title ]
-                    , if offer.units == 0 && offer.trackStock then
-                        p [ class "px-3 leading-none text-xl text-red" ]
+                    , if Shop.isOutOfStock offer then
+                        p [ class "px-3 text-xl text-red" ]
                             [ text (translators.t "shop.out_of_stock")
                             ]
 
                       else
-                        p [ class "px-3 leading-none" ]
-                            [ span [ class "text-xl text-green font-medium" ] [ text <| String.fromFloat offer.price ]
+                        p [ class "px-3" ]
+                            [ span [ class "text-xl text-green font-semibold" ] [ text <| String.fromFloat offer.price ]
                             , br [] []
-                            , span [ class "text-gray-300 text-xs" ]
+                            , span [ class "text-gray-900 text-sm" ]
                                 [ text <| Eos.symbolToSymbolCodeString symbol
                                 ]
                             ]
@@ -627,7 +652,7 @@ viewMembers { t } members =
                 [ div [ class "grid grid-cols-3 px-4" ]
                     [ Avatar.view member.avatar "h-20 w-20 my-auto"
                     , div [ class "flex flex-col col-span-2" ]
-                        [ span [ class "text-heading font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
+                        [ span [ class "text-lg font-bold capitalize" ] [ text (member.name |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (member.email |> Maybe.withDefault "") ]
                         , span [ class "text-sm text-gray-900" ] [ text (Eos.Account.nameToString member.account) ]
                         ]
@@ -672,4 +697,22 @@ isActive model =
 
 closeSearch : Model -> Model
 closeSearch model =
-    { model | state = Inactive, currentQuery = "" }
+    { model
+        | state = Inactive
+        , form = Form.updateValues (\form -> { form | query = "" }) model.form
+    }
+
+
+closeMsg : Msg
+closeMsg =
+    CancelClicked
+
+
+isOpenMsg : Msg -> Bool
+isOpenMsg msg =
+    case msg of
+        InputFocused ->
+            True
+
+        _ ->
+            False
