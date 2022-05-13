@@ -771,7 +771,7 @@ list groupAttrs current =
                                 ( OptNothing, OptNothing ) ->
                                     OptNothing
                         )
-                        OptNothing
+                        (OptOk [])
                         filledForms
             in
             { fields =
