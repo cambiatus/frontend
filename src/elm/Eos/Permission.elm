@@ -1,8 +1,8 @@
 module Eos.Permission exposing
     ( PermissionType(..), Authorization, Permission, Permissions
     , decoder, encodeAuthorization, encodePermissionType
-    , default, list, parent, toString
-    , authorizationDecoder
+    , default, parent, toString
+    , authorizationDecoder, fromString
     )
 
 {-| This module helps when dealing with Eos Permissions. In EOS, we can have
@@ -22,7 +22,7 @@ ones, `Owner` and `Active`, so we can have type-safe permissions.
 
 ## Helper functions
 
-@docs default, list, parent, toString
+@docs default, parent, toString
 
 -}
 
@@ -191,17 +191,6 @@ internalDecoder =
 -- HELPER FUNCTIONS
 
 
-{-| All the permissions a user can use to sign a transaction.
-
-Note that `RootPermission` isn't included, as it can't be used to sign a
-transaction. `RootPermission` only exists to represent the parent of `Owner`
-
--}
-list : List PermissionType
-list =
-    [ Owner, Active ]
-
-
 {-| The permission to use when we need a default one
 -}
 default : PermissionType
@@ -222,6 +211,21 @@ toString permission =
 
         Active ->
             "active"
+
+
+{-| Turn a string into a permission
+-}
+fromString : String -> PermissionType
+fromString permissionString =
+    case permissionString of
+        "owner" ->
+            Owner
+
+        "active" ->
+            Active
+
+        _ ->
+            RootPermission
 
 
 {-| `Permissions` in EOS are organized hierarchically. Meaning that every
