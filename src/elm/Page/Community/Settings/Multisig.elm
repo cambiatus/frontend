@@ -870,27 +870,6 @@ viewProposeObjective loggedIn model =
         ]
 
 
-viewProposalVoter :
-    LoggedIn.Model
-    -> { profile : Profile.Minimal, isChecked : Bool, permission : Eos.Permission.PermissionType }
-    -> Html Msg
-viewProposalVoter loggedIn { profile, isChecked } =
-    -- Checkbox.init
-    --     { description =
-    --         div [ class "flex flex-col items-center p-2" ]
-    --             [ Avatar.view profile.avatar "w-10 h-10 mb-2"
-    --             , Profile.viewProfileNameTag loggedIn.shared loggedIn.accountName profile
-    --             ]
-    --     , id = "proposal-voter-" ++ Eos.Account.nameToString profile.account
-    --     , value = isChecked
-    --     , disabled = False
-    --     , onCheck = CheckedProposalVoter profile.account
-    --     }
-    --     |> Checkbox.withContainerAttrs [ class "flex flex-col-reverse items-center gap-2 border p-4 rounded-sm" ]
-    --     |> Checkbox.toHtml
-    text "View proposal voter"
-
-
 viewProposalCard : LoggedIn.Model -> Community.Model -> Model -> Html Msg
 viewProposalCard loggedIn community model =
     div [ class "bg-white rounded-sm shadow p-4 my-10" ]

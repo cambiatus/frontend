@@ -31,7 +31,6 @@ module Session.LoggedIn exposing
     )
 
 import Action
-import Api
 import Api.Eos
 import Api.Graphql
 import Auth
