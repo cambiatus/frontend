@@ -190,22 +190,24 @@ view loggedIn model =
                 Authorized formModel ->
                     div [ class "flex-grow flex flex-col" ]
                         [ Page.viewHeader loggedIn title
-                        , div [ class "bg-white flex flex-col flex-grow container mx-auto pt-6 pb-7 px-4 lg:px-6" ]
-                            [ p [ class "text-gray-900" ]
-                                [ text <| t "contact_form.community_header" ]
-                            , h2 [ class "label mt-10" ] [ text <| t "contact_form.options" ]
-                            , Form.view [ class "flex flex-col flex-grow" ]
-                                loggedIn.shared.translators
-                                (\submitButton ->
-                                    [ submitButton [ class "button button-primary mt-auto w-full md:w-56" ]
-                                        [ text <| t "contact_form.submit_multiple" ]
-                                    ]
-                                )
-                                (Contact.form loggedIn.shared.translators)
-                                formModel
-                                { toMsg = GotFormMsg
-                                , onSubmit = SubmittedForm
-                                }
+                        , div [ class "container mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
+                            [ div [ class "bg-white container mx-auto pt-6 pb-7 px-4 lg:px-6 lg:max-w-none lg:w-2/3 lg:rounded lg:shadow-lg" ]
+                                [ p [ class "text-gray-900" ]
+                                    [ text <| t "contact_form.community_header" ]
+                                , h2 [ class "label mt-10" ] [ text <| t "contact_form.options" ]
+                                , Form.view [ class "flex flex-col flex-grow" ]
+                                    loggedIn.shared.translators
+                                    (\submitButton ->
+                                        [ submitButton [ class "button button-primary mt-auto w-full md:w-56" ]
+                                            [ text <| t "contact_form.submit_multiple" ]
+                                        ]
+                                    )
+                                    (Contact.form loggedIn.shared.translators)
+                                    formModel
+                                    { toMsg = GotFormMsg
+                                    , onSubmit = SubmittedForm
+                                    }
+                                ]
                             ]
                         ]
 
