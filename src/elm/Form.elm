@@ -1109,10 +1109,10 @@ update shared msg (Model model) =
                             { errorTracking
                                 | showFieldError =
                                     if fieldInfo.isEmpty then
-                                        Set.remove fieldInfo.fieldId errorTracking.showFieldError
+                                        Set.insert fieldInfo.fieldId errorTracking.showFieldError
 
                                     else
-                                        Set.insert fieldInfo.fieldId errorTracking.showFieldError
+                                        Set.remove fieldInfo.fieldId errorTracking.showFieldError
                             }
                 }
                 |> UR.init
@@ -1344,6 +1344,11 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         onBlur =
             toMsg (BlurredField { fieldId = fieldId, isEmpty = isEmpty state })
+
+        (ErrorTracking errorTracking) =
+            case model of
+                Model model_ ->
+                    model_.errorTracking
     in
     case state of
         Text options baseField ->
@@ -1489,16 +1494,23 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
             Html.div
                 (List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs)
                 (List.map
-                    (viewField
-                        { showError = showError
-                        , translators = translators
-                        , disabled = disabled
-                        , values = values
-                        , model = model
-                        , form = form
-                        , toMsg = toMsg
-                        , onSuccess = onSuccess
-                        }
+                    (\field_ ->
+                        let
+                            showChildError =
+                                Set.member (getId field_.state) errorTracking.showFieldError
+                                    && (field_.validationStrategy == ValidateOnBlur)
+                        in
+                        viewField
+                            { showError = showError || showChildError
+                            , translators = translators
+                            , disabled = disabled
+                            , values = values
+                            , model = model
+                            , form = form
+                            , toMsg = toMsg
+                            , onSuccess = onSuccess
+                            }
+                            field_
                     )
                     fields
                 )
