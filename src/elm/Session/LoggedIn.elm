@@ -546,7 +546,7 @@ viewCommunityContactsModal model =
                                             [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ]
                                                 model.shared.translators
                                                 contact
-                                            , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold line-clamp-2" ]
+                                            , span [ class "text-gray-900 text-sm text-center mt-2 font-semibold line-clamp-2" ]
                                                 [ text (Contact.toLabel contact) ]
                                             ]
                                         ]
