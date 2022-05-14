@@ -397,11 +397,11 @@ viewCommunityCard ({ translators } as shared) community =
                                     [ class "flex flex-col items-center hover:opacity-60"
                                     , href (Contact.toHref contact)
                                     , Html.Attributes.target "blank"
-                                    , title (Contact.toLabel contact)
+                                    , title (Contact.toLabel translators contact)
                                     ]
                                     [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ] translators contact
                                     , span [ class "text-gray-900 text-sm text-center mt-2 font-semibold line-clamp-2" ]
-                                        [ text <| Contact.toLabel contact
+                                        [ text <| Contact.toLabel translators contact
                                         ]
                                     ]
                                 ]

@@ -113,15 +113,16 @@ toHref (Valid valid) =
                 ++ String.filter Char.isAlphaNum valid.value
 
 
-toLabel : Valid -> String
-toLabel (Valid valid) =
+toLabel : Translation.Translators -> Valid -> String
+toLabel translators (Valid valid) =
     valid.label
+        |> Maybe.withDefault (typeToString translators valid.type_)
 
 
 toGraphqlInput : Valid -> Cambiatus.InputObject.ContactInput
 toGraphqlInput (Valid valid) =
     { externalId = Graphql.OptionalArgument.Present valid.value
-    , label = Graphql.OptionalArgument.Present valid.label
+    , label = Graphql.OptionalArgument.fromMaybe valid.label
     , type_ = Graphql.OptionalArgument.Present valid.type_
     }
 
@@ -208,7 +209,7 @@ type FormInput
 type Valid
     = Valid
         { type_ : ContactType
-        , label : String
+        , label : Maybe String
         , value : String
         }
 
@@ -219,7 +220,9 @@ initFormInput valids =
         validToInput : Valid -> ContactFormInput
         validToInput (Valid valid) =
             { type_ = valid.type_
-            , label = valid.label
+            , label =
+                valid.label
+                    |> Maybe.withDefault ""
             , value =
                 case valid.type_ of
                     ContactType.Email ->
@@ -309,7 +312,7 @@ form translators =
                             li [ class "py-2" ]
                                 [ button
                                     [ class "flex items-center w-full py-2 text-gray-333 hover:text-orange-300 group focus-ring rounded-sm"
-                                    , onClick (addContactType translators contactType)
+                                    , onClick (addContactType contactType)
                                     , Html.Attributes.type_ "button"
                                     ]
                                     [ circularIconWithGrayBgInternal
@@ -391,11 +394,12 @@ contactForm translators id =
         |> Form.withGroupOf3
             [ class "flex gap-2" ]
             (Form.introspect
-                (\{ deletionStatus } ->
+                (\{ deletionStatus, type_ } ->
                     Form.Text.init
                         { label = ""
                         , id = labelId
                         }
+                        |> Form.Text.withPlaceholder (typeToString translators type_)
                         |> Form.Text.withContainerAttrs
                             (class "mb-0 w-1/3 sm:w-1/2 lg:w-1/3"
                                 :: slideUpAnimation "h-12" deletionStatus
@@ -409,6 +413,7 @@ contactForm translators id =
                             , update = \newLabel values -> { values | label = newLabel }
                             , externalError = always Nothing
                             }
+                        |> Form.optional
                 )
             )
             (Form.introspect
@@ -488,27 +493,13 @@ closeTypeModal (FormInput values) =
     FormInput { values | isTypeModalOpen = False }
 
 
-addContactType : Translation.Translators -> ContactType -> FormInput -> FormInput
-addContactType translators contactType (FormInput values) =
+addContactType : ContactType -> FormInput -> FormInput
+addContactType contactType (FormInput values) =
     let
-        sameContactTypeCount : Int
-        sameContactTypeCount =
-            values.inputs
-                |> Dict.values
-                |> List.filter (\{ type_, deletionStatus } -> (type_ == contactType) && isNotDeleted deletionStatus)
-                |> List.length
-
         newEntry : ContactFormInput
         newEntry =
             { type_ = contactType
-            , label =
-                if sameContactTypeCount == 0 then
-                    typeToString translators contactType
-
-                else
-                    typeToString translators contactType
-                        ++ " "
-                        ++ String.fromInt (sameContactTypeCount + 1)
+            , label = ""
             , value = ""
             , deletionStatus = NotDeleted
             }
@@ -597,14 +588,17 @@ validateInstagram =
 selectionSet : SelectionSet (Maybe Valid) Cambiatus.Object.Contact
 selectionSet =
     SelectionSet.succeed
-        (Maybe.map3
-            (\type_ externalId label ->
-                Valid
-                    { type_ = type_
-                    , value = externalId
-                    , label = label
-                    }
-            )
+        (\maybeType_ maybeExternalId label ->
+            Maybe.map2
+                (\type_ externalId ->
+                    Valid
+                        { type_ = type_
+                        , value = externalId
+                        , label = label
+                        }
+                )
+                maybeType_
+                maybeExternalId
         )
         |> SelectionSet.with Cambiatus.Object.Contact.type_
         |> SelectionSet.with Cambiatus.Object.Contact.externalId

@@ -540,14 +540,14 @@ viewCommunityContactsModal model =
                                             [ class "flex flex-col items-center hover:opacity-60"
                                             , Html.Attributes.href (Contact.toHref contact)
                                             , Html.Attributes.target "blank"
-                                            , title (Contact.toLabel contact)
+                                            , title (Contact.toLabel model.shared.translators contact)
                                             , onClick ClosedCommunityContactsModal
                                             ]
                                             [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ]
                                                 model.shared.translators
                                                 contact
                                             , span [ class "text-gray-900 text-sm text-center mt-2 font-semibold line-clamp-2" ]
-                                                [ text (Contact.toLabel contact) ]
+                                                [ text (Contact.toLabel model.shared.translators contact) ]
                                             ]
                                         ]
                                 )
