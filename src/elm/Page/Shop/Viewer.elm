@@ -821,7 +821,7 @@ viewContactTheSeller ({ t, tr } as translators) { isGuest } profile =
             ]
         , div [ class "ml-18 mt-2 flex flex-wrap gap-4" ]
             (profile.contacts
-                |> List.map (Profile.Contact.circularIconWithGrayBg translators "")
+                |> List.map (Profile.Contact.circularLinkWithGrayBg translators "")
                 |> (\contacts ->
                         case profile.email of
                             Nothing ->

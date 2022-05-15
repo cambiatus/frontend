@@ -7,6 +7,7 @@ module Icons exposing
     , calendar
     , cambiatusCoin
     , camera
+    , circledPlus
     , circularClose
     , clearInput
     , clock
@@ -94,6 +95,18 @@ plus class_ =
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M24.2829 12.0329H13.9671V1.71711C13.9671 1.18299 13.5341 0.75 13 0.75C12.4659 0.75 12.0329 1.18299 12.0329 1.71711V12.0329H1.71711C1.18299 12.0329 0.75 12.4659 0.75 13C0.75 13.5341 1.18299 13.9671 1.71711 13.9671H12.0329V24.2829C12.0329 24.817 12.4659 25.25 13 25.25C13.5341 25.25 13.9671 24.817 13.9671 24.2829V13.9671H24.2829C24.817 13.9671 25.25 13.5341 25.25 13C25.25 12.4659 24.817 12.0329 24.2829 12.0329Z" ] [] ]
 
 
+circledPlus : String -> Svg msg
+circledPlus class_ =
+    svg
+        [ width "24"
+        , height "24"
+        , viewBox "0 0 24 24"
+        , fill "none"
+        , class class_
+        ]
+        [ Svg.path [ d "M6.6967 17.3035C9.62563 20.2324 14.3744 20.2324 17.3033 17.3035C20.2322 14.3745 20.2322 9.62579 17.3033 6.69686C14.3744 3.76792 9.62563 3.76792 6.6967 6.69686C3.76777 9.62579 3.76777 14.3745 6.6967 17.3035Z", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M15.182 12.0003H8.81802", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [], Svg.path [ d "M12 8.81836V15.1823", stroke "#F99D33", strokeWidth "2", strokeLinecap "round", strokeLinejoin "round" ] [] ]
+
+
 minus : String -> Svg msg
 minus class_ =
     svg
@@ -162,9 +175,9 @@ back class_ =
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M0 14C0 21.732 6.26801 28 14 28C21.732 28 28 21.732 28 14C28 6.26801 21.732 0 14 0C6.26801 0 0 6.26801 0 14Z", fill "white" ] [], Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M10.1818 12.9881C10.1504 13.0302 10.1227 13.0749 10.0991 13.1217C10.0599 13.1713 10.0258 13.2246 9.99724 13.2808C9.97866 13.3388 9.96587 13.3985 9.95906 13.459C9.92071 13.5747 9.92071 13.6997 9.95906 13.8154C9.96587 13.8759 9.97866 13.9356 9.99724 13.9935C10.0258 14.0498 10.0599 14.1031 10.0991 14.1526C10.1227 14.1995 10.1504 14.2442 10.1818 14.2863L15.2727 19.059C15.6586 19.4113 16.2561 19.3878 16.6131 19.0064C16.9702 18.6249 16.9542 18.0272 16.5772 17.6654L12.2309 13.5863L16.5772 9.50718C16.9542 9.14536 16.9702 8.54766 16.6131 8.16617C16.2561 7.78469 15.6586 7.76124 15.2727 8.11354L10.1818 12.9881Z" ] [] ]
 
 
-heartSolid : Svg msg
-heartSolid =
-    svg [ width "49", height "32", viewBox "0 0 49 32", fill "none" ]
+heartSolid : String -> Svg msg
+heartSolid class_ =
+    svg [ width "49", height "32", viewBox "0 0 49 32", fill "none", class class_ ]
         [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M24.4692 27.1195C24.4692 27.1195 12.3218 19.4394 12.3218 10.6168C12.3218 7.20833 14.4914 4.9043 17.8298 4.9043C21.1681 4.9043 24.1335 9.34734 24.7552 9.34734C25.3768 9.34734 28.2552 4.9043 31.5935 4.9043C34.9319 4.9043 36.5669 7.20833 36.5669 10.6168C36.5918 19.3569 24.4692 27.1195 24.4692 27.1195Z", fill "#DB1B1B" ] [] ]
 
 

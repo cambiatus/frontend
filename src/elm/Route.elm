@@ -77,6 +77,7 @@ type Route
     | CommunitySettingsEditObjective Int
     | CommunitySettingsNewAction Int
     | CommunitySettingsEditAction Int Int
+    | CommunitySettingsContacts
     | CommunitySelector (Maybe Route)
     | CommunityThankYou
     | CommunitySponsor
@@ -188,6 +189,7 @@ parser url =
         , Url.map CommunitySettingsEditObjective (s "community" </> s "settings" </> s "objectives" </> int </> s "edit")
         , Url.map CommunitySettingsNewAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> s "new")
         , Url.map CommunitySettingsEditAction (s "community" </> s "settings" </> s "objectives" </> int </> s "action" </> int </> s "edit")
+        , Url.map CommunitySettingsContacts (s "community" </> s "settings" </> s "contacts")
         , Url.map Claim (s "objectives" </> int </> s "action" </> int </> s "claim" </> int)
         , Url.map Shop
             (s "shop"
@@ -632,6 +634,9 @@ routeToString route =
                     ( [ "community", "settings", "objectives", String.fromInt objectiveId, "action", String.fromInt actionId, "edit" ]
                     , []
                     )
+
+                CommunitySettingsContacts ->
+                    ( [ "community", "settings", "contacts" ], [] )
 
                 Claim objectiveId actionId claimId ->
                     ( [ "objectives"

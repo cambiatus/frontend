@@ -4,11 +4,10 @@ module Profile.Contact exposing
     , Msg
     , Normalized
     , circularIcon
-    , circularIconWithGrayBg
+    , circularLinkWithGrayBg
     , contactTypeTextColor
     , contactTypeToIcon
     , contactTypeToString
-    , getLabel
     , initMultiple
     , initSingle
     , selectionSet
@@ -767,8 +766,8 @@ contactTypeToIcon class_ isInverted contactType =
             Icons.link class_
 
 
-circularIconWithGrayBg : Translators -> String -> Normalized -> Html msg
-circularIconWithGrayBg translators class_ (Normalized normalized) =
+circularLinkWithGrayBg : Translators -> String -> Normalized -> Html msg
+circularLinkWithGrayBg translators class_ (Normalized normalized) =
     let
         defaultClass =
             case normalized.contactType of
@@ -787,16 +786,6 @@ circularIconWithGrayBg translators class_ (Normalized normalized) =
         , ariaLabel (ariaLabelForContactType translators normalized.contactType)
         ]
         [ contactTypeToIcon (defaultClass ++ class_) True normalized.contactType ]
-
-
-getLabel : Translators -> Normalized -> String
-getLabel translators (Normalized normalized) =
-    case normalized.label of
-        Nothing ->
-            contactTypeToString translators normalized.contactType
-
-        Just label ->
-            label
 
 
 ariaLabelForContactType : Translators -> ContactType -> String

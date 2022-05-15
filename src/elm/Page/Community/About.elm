@@ -4,10 +4,11 @@ import Avatar
 import Browser.Dom
 import Community
 import Community.News
+import Contact
 import Eos
 import Form.Text
 import Html exposing (Html, a, button, div, h1, h2, hr, img, li, p, span, text, ul)
-import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex)
+import Html.Attributes exposing (alt, class, classList, href, media, src, style, tabindex, title)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -19,7 +20,6 @@ import Log
 import Markdown
 import Maybe.Extra
 import Page
-import Profile.Contact as Contact
 import RemoteData exposing (RemoteData)
 import Route
 import Session.LoggedIn as LoggedIn
@@ -388,16 +388,21 @@ viewCommunityCard ({ translators } as shared) community =
                             |> text
                         ]
             , Markdown.view [ class "mt-6" ] community.description
-            , ul [ class "flex flex-wrap mt-8 gap-6 items-center justify-center" ]
+            , ul [ class "flex flex-wrap mt-8 gap-6 items-start justify-center" ]
                 (community.contacts
                     |> List.map
                         (\contact ->
-                            li [ class "flex flex-col items-center" ]
-                                [ div [ class "w-10 h-10" ]
-                                    [ Contact.circularIconWithGrayBg translators "" contact
+                            li [ class "w-10" ]
+                                [ a
+                                    [ class "flex flex-col items-center hover:opacity-60"
+                                    , href (Contact.toHref contact)
+                                    , Html.Attributes.target "blank"
+                                    , title (Contact.toLabel translators contact)
                                     ]
-                                , span [ class "text-gray-900 text-xxs text-center mt-1 font-semibold" ]
-                                    [ text <| Contact.getLabel translators contact
+                                    [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ] translators contact
+                                    , span [ class "text-gray-900 text-sm text-center mt-2 font-semibold line-clamp-2" ]
+                                        [ text <| Contact.toLabel translators contact
+                                        ]
                                     ]
                                 ]
                         )

@@ -57,7 +57,6 @@ module.exports = {
     // The first item in each list is the font size, and the second item is the
     // default line height for that font size
     fontSize: {
-      xxs: ['0.5rem', '0.9375rem'], // ['8px', '15px']
       xs: ['0.6875rem', '0.75rem'], // ['11px', '12px']
       sm: ['0.75rem', '0.9375rem'], // ['12px', '15px']
       base: ['0.9375rem', '1.375rem'], // ['15px', '22px']
@@ -168,6 +167,9 @@ module.exports = {
       minWidth: {
         '30': '7.5rem',
         '50': '12.5rem'
+      },
+      maxWidth: {
+        '27': '6.75rem'
       },
       opacity: {
         '10': '0.1',
