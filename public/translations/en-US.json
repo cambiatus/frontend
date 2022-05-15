@@ -871,7 +871,8 @@
         "inventory_management": "Inventory management",
         "inventory_management_description": "If you want to disable your offer when there are no more units in stock, enable this option"
       },
-      "continue": "Continue"
+      "continue": "Continue",
+      "index": "Step {{current}} of {{total}}"
     },
     "empty": {
       "all_title": "Where are all the offers?",

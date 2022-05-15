@@ -874,7 +874,8 @@
         "inventory_management": "Gestión del inventario",
         "inventory_management_description": "Si quieres desactivar tu oferta cuando no tengas más unidades en stock, activa esta opción"
       },
-      "continue": "Continuar"
+      "continue": "Continuar",
+      "index": "Paso {{current}} de {{total}}"
     },
     "empty": {
       "all_title": "¿Dónde están las ofertas?",

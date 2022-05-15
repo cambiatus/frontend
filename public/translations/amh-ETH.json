@@ -832,7 +832,8 @@
         "inventory_management": "የንብረት አያያዝ",
         "inventory_management_description": "ተጨማሪ ክፍሎች በሌሉዎት ጊዜ ቅናሽዎን ማሰናከል ከፈለጉ ይህንን አማራጭ ያንቁት"
       },
-      "continue": "ቀጥል"
+      "continue": "ቀጥል",
+      "index": "ደረጃ {{current}} ከ {{total}}"
     },
     "empty": {
       "all_title": "ቅናሾቹ የት አሉ?",

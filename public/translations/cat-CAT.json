@@ -874,7 +874,8 @@
         "inventory_management": "Gestió d'inventari",
         "inventory_management_description": "Si vols desactivar la teva oferta quan no tinguis més unitats en estoc, activa aquesta opció"
       },
-      "continue": "Continua"
+      "continue": "Continua",
+      "index": "Pas {{current}} de {{total}}"
     },
     "empty": {
       "all_title": "On són les ofertes?",

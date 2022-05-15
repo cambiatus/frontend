@@ -878,7 +878,8 @@
         "inventory_management": "Gerenciamento de inventário",
         "inventory_management_description": "Se você quer desabilitar sua oferta quando não tiver mais unidades em estoque, habilite esta opção"
       },
-      "continue": "Continuar"
+      "continue": "Continuar",
+      "index": "Passo {{current}} de {{total}}"
     },
     "empty": {
       "all_title": "Onde estão as ofertas?",

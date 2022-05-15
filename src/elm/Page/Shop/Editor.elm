@@ -466,7 +466,7 @@ viewForm :
     -> Html Msg
 viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
     let
-        { t } =
+        { t, tr } =
             shared.translators
 
         ( actionText, pageTitle ) =
@@ -524,7 +524,12 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
             [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:motion-reduce:animate-none" ]
                 [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
                     [ h2 [ class "font-bold text-black mb-2" ]
-                        [ text ("Step " ++ String.fromInt stepNumber ++ " of 3") ]
+                        [ text <|
+                            tr "shop.steps.index"
+                                [ ( "current", String.fromInt stepNumber )
+                                , ( "total", String.fromInt 3 )
+                                ]
+                        ]
                     , text stepName
                     ]
                 , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10" ] []
