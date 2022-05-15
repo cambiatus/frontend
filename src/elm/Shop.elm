@@ -403,6 +403,7 @@ viewImageCarrousel :
         { containerAttrs : List (Html.Attribute msg)
         , listAttrs : List (Html.Attribute msg)
         , imageContainerAttrs : List (Html.Attribute msg)
+        , imageOverlayAttrs : List (Html.Attribute msg)
         , imageAttrs : List (Html.Attribute msg)
         }
     ->
@@ -415,7 +416,7 @@ viewImageCarrousel :
         }
     -> ( String, List String )
     -> Html msg
-viewImageCarrousel { t, tr } { containerAttrs, listAttrs, imageContainerAttrs, imageAttrs } options ( firstImage, otherImages ) =
+viewImageCarrousel { t, tr } { containerAttrs, listAttrs, imageContainerAttrs, imageOverlayAttrs, imageAttrs } options ( firstImage, otherImages ) =
     let
         maybeProductId =
             Maybe.map (\(Id opaqueId) -> opaqueId) options.productId
@@ -553,7 +554,11 @@ viewImageCarrousel { t, tr } { containerAttrs, listAttrs, imageContainerAttrs, i
             text ""
 
           else
-            div [ class "bg-gradient-to-t rounded-b from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10" ] []
+            div
+                (class "bg-gradient-to-t from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10"
+                    :: imageOverlayAttrs
+                )
+                []
         , View.Components.intersectionObserver
             { targetSelectors =
                 List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls

@@ -616,6 +616,7 @@ view session model =
                                     { containerAttrs = [ class "h-68" ]
                                     , listAttrs = [ class "gap-x-4 rounded" ]
                                     , imageContainerAttrs = [ class "bg-gray-100 rounded" ]
+                                    , imageOverlayAttrs = [ class "rounded-b" ]
                                     , imageAttrs = []
                                     }
                                     { showArrows = True

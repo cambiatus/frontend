@@ -719,6 +719,7 @@ viewOffers translators symbol offers =
                                 { containerAttrs = [ class "h-32" ]
                                 , listAttrs = [ class "gap-x-4 rounded-t bg-gray-100" ]
                                 , imageContainerAttrs = [ class "bg-white rounded-t" ]
+                                , imageOverlayAttrs = []
                                 , imageAttrs = [ class "w-full h-full" ]
                                 }
                                 { showArrows = False
