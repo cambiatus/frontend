@@ -1145,6 +1145,10 @@
       "title": "Objetivos y acciones",
       "description": ""
     },
+    "contacts": {
+      "title": "Contactos de soporte",
+      "description": "Correo electrónico, whatsapp, número de teléfono, etc."
+    },
     "teams": {
       "title": "Tiempo",
       "description": "Construção de times"
@@ -1170,6 +1174,8 @@
     "footer": "Puedes agregarlo más tarde en el área del perfil"
   },
   "contact_form": {
+    "add": "Agregar contacto",
+    "community_header": "Agregue los contactos que estarán disponibles como apoyo para los miembros de la comunidad.",
     "country": "País",
     "contact_type": "Tipo de Contacto",
     "error": "Algo salió mal al agregar su contacto",
@@ -1238,6 +1244,10 @@
       "multiple": {
         "success": "Tus contactos se han guardado correctamente",
         "failure": "Se produjo un error al intentar guardar tus contactos."
+      },
+      "community": {
+        "success": "Contactos de la comunidad guardados con éxito",
+        "failure": "Algo salió mal al intentar guardar los contactos de la comunidad"
       },
       "delete": {
         "success": "Contacto eliminado con éxito",
@@ -1418,6 +1428,9 @@
     "created_with": "Creado con",
     "created_by": "por",
     "created_with_love": "Creado con amor por Satisfied Vagabonds y Cambiatus",
+    "need_help": "¿Necesitas ayuda?",
+    "contact_support": "Habla con nuestro soporte",
+    "choose_contact": "Elija la forma en que le gustaría ponerse en contacto con la comunidad:",
     "version": "VERSIÓN {{version}}"
   },
   "account_frozen": {

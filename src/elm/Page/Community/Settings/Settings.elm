@@ -103,6 +103,7 @@ viewSettingsList shared community =
 
           else
             text ""
+        , settingCard (t "settings.contacts.title") (t "menu.edit") (t "settings.contacts.description") Route.CommunitySettingsContacts
         , settingCard (t "settings.features.title") (t "menu.edit") (t "settings.features.description") Route.CommunitySettingsFeatures
         , if Maybe.Extra.isJust community.contributionConfiguration then
             settingCard (t "sponsorship.title") (t "menu.edit") (t "sponsorship.description") Route.CommunitySettingsSponsorship

@@ -1142,6 +1142,10 @@
       "title": "Objectives and Actions",
       "description": ""
     },
+    "contacts": {
+      "title": "Support contacts",
+      "description": "Email, whatsapp, phone number, etc."
+    },
     "team": {
       "title": "Team",
       "description": "Team building"
@@ -1167,6 +1171,8 @@
     "footer": "You can add it later in the profile's area"
   },
   "contact_form": {
+    "add": "Add contact",
+    "community_header": "Add the contacts that will be available as support for community members.",
     "country": "Country",
     "contact_type": "Contact type",
     "error": "Something went wrong when adding your contact",
@@ -1235,6 +1241,10 @@
       "multiple": {
         "success": "Contacts saved successfully",
         "failure": "Something went wrong while trying to save your contacts"
+      },
+      "community": {
+        "success": "Community contacts saved successfully",
+        "failure": "Something went wrong while trying to save community contacts"
       },
       "delete": {
         "success": "Contact deleted successfully",
@@ -1415,6 +1425,9 @@
     "created_with": "Created with",
     "created_by": "by",
     "created_with_love": "Created with love by Satisfied Vagabonds and Cambiatus",
+    "need_help": "Need help?",
+    "contact_support": "Contact our support",
+    "choose_contact": "Choose how you would like to contact the community:",
     "version": "VERSION {{version}}"
   },
   "account_frozen": {

@@ -1,7 +1,7 @@
 module Form exposing
     ( Form
-    , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
-    , optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
+    , succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
+    , optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy(..)
     , textField, richText, toggle, checkbox, radio, select, file, datePicker, userPicker, userPickerMultiple, arbitrary, arbitraryWith, unsafeArbitrary
     , view, viewWithoutSubmit, Model, init, Msg, update, updateValues, getValue, msgToString
     , withDisabled
@@ -67,12 +67,12 @@ documentation if you're stuck.
 
 ## Composing
 
-@docs succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup
+@docs succeed, fail, with, withNoOutput, withDecoration, withNesting, withGroup, withGroupOf3
 
 
 ## Modifiers
 
-@docs optional, introspect, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
+@docs optional, introspect, list, mapValues, mapOutput, withValidationStrategy, ValidationStrategy
 
 
 ## Fields
@@ -145,7 +145,7 @@ type ValidationStrategy
 
 
 {-| A `FilledForm` represents a form with some (dirty) values in it. It also
-tries to parse the form, and hols the result as either an error or the
+tries to parse the form, and holds the result as either an error or the
 valid/clean model
 -}
 type alias FilledForm msg values output =
@@ -588,38 +588,45 @@ withGroup attributes leftSide rightSide current =
                 , isRequired = False
                 }
                     :: filledCurrent.fields
-            , result =
-                let
-                    leftErrors =
-                        case filledLeft.result of
-                            OptErr ( first, others ) ->
-                                first :: others
+            , result = accumulateResults filledLeft.result filledRight.result filledCurrent.result
+            }
+        )
 
-                            _ ->
-                                []
 
-                    rightErrors =
-                        case filledRight.result of
-                            OptErr ( first, others ) ->
-                                first :: others
+{-| Display three fields as a group. You can pass in arbitrary HTML attributes, as
+long as they don't emit Msgs.
+-}
+withGroupOf3 :
+    List (Html.Attribute Never)
+    -> Form msg values a
+    -> Form msg values b
+    -> Form msg values c
+    -> Form msg values (a -> b -> c -> d)
+    -> Form msg values d
+withGroupOf3 attributes first second third current =
+    Form
+        (\values ->
+            let
+                filledFirst =
+                    fill first values
 
-                            _ ->
-                                []
+                filledSecond =
+                    fill second values
 
-                    leftAndRightErrors =
-                        leftErrors ++ rightErrors
-                in
-                case filledCurrent.result of
-                    OptOk fn ->
-                        OptionalResult.map2 fn filledLeft.result filledRight.result
+                filledThird =
+                    fill third values
 
-                    OptErr ( currentError, currentErrors ) ->
-                        OptErr ( currentError, currentErrors ++ leftAndRightErrors )
-
-                    OptNothing ->
-                        List.head leftAndRightErrors
-                            |> Maybe.map (\head -> OptErr ( head, List.drop 1 leftAndRightErrors ))
-                            |> Maybe.withDefault OptNothing
+                filledCurrent =
+                    fill current values
+            in
+            { fields =
+                { state = Group attributes (filledFirst.fields ++ filledSecond.fields ++ filledThird.fields)
+                , error = Nothing
+                , validationStrategy = ValidateOnBlur
+                , isRequired = False
+                }
+                    :: filledCurrent.fields
+            , result = accumulateResults3 filledFirst.result filledSecond.result filledThird.result filledCurrent.result
             }
         )
 
@@ -727,6 +734,56 @@ some form depends on other fields
 introspect : (values -> Form msg values output) -> Form msg values output
 introspect buildForm =
     Form (\values -> fill (buildForm values) values)
+
+
+{-| Join together multiple forms
+-}
+list : List (Html.Attribute Never) -> List (Form msg values output) -> Form msg values (List output)
+list groupAttrs current =
+    Form
+        (\values ->
+            let
+                filledForms =
+                    List.map (\f -> fill f values) current
+
+                combinedResult =
+                    List.foldr
+                        (\currFilled currResult ->
+                            case ( currFilled.result, currResult ) of
+                                ( OptOk currOk, OptOk resultOk ) ->
+                                    OptOk (currOk :: resultOk)
+
+                                ( OptErr ( currError, currErrors ), OptErr ( resultError, resultErrors ) ) ->
+                                    OptErr ( currError, currErrors ++ (resultError :: resultErrors) )
+
+                                ( OptErr ( currError, currErrors ), _ ) ->
+                                    OptErr ( currError, currErrors )
+
+                                ( _, OptErr ( resultError, resultErrors ) ) ->
+                                    OptErr ( resultError, resultErrors )
+
+                                ( OptOk currOk, OptNothing ) ->
+                                    OptOk [ currOk ]
+
+                                ( OptNothing, OptOk resultOk ) ->
+                                    OptOk resultOk
+
+                                ( OptNothing, OptNothing ) ->
+                                    OptNothing
+                        )
+                        (OptOk [])
+                        filledForms
+            in
+            { fields =
+                [ { state = Group groupAttrs (List.concatMap (.fields >> List.reverse) filledForms)
+                  , error = Nothing
+                  , validationStrategy = ValidateOnBlur
+                  , isRequired = False
+                  }
+                ]
+            , result = combinedResult
+            }
+        )
 
 
 {-| Makes a form optional. Turns the result of the form into `Maybe output`. If
@@ -1052,10 +1109,10 @@ update shared msg (Model model) =
                             { errorTracking
                                 | showFieldError =
                                     if fieldInfo.isEmpty then
-                                        Set.remove fieldInfo.fieldId errorTracking.showFieldError
+                                        Set.insert fieldInfo.fieldId errorTracking.showFieldError
 
                                     else
-                                        Set.insert fieldInfo.fieldId errorTracking.showFieldError
+                                        Set.remove fieldInfo.fieldId errorTracking.showFieldError
                             }
                 }
                 |> UR.init
@@ -1287,6 +1344,11 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
 
         onBlur =
             toMsg (BlurredField { fieldId = fieldId, isEmpty = isEmpty state })
+
+        (ErrorTracking errorTracking) =
+            case model of
+                Model model_ ->
+                    model_.errorTracking
     in
     case state of
         Text options baseField ->
@@ -1432,16 +1494,23 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
             Html.div
                 (List.map (Html.Attributes.map (\_ -> toMsg NoOp)) attrs)
                 (List.map
-                    (viewField
-                        { showError = showError
-                        , translators = translators
-                        , disabled = disabled
-                        , values = values
-                        , model = model
-                        , form = form
-                        , toMsg = toMsg
-                        , onSuccess = onSuccess
-                        }
+                    (\field_ ->
+                        let
+                            showChildError =
+                                Set.member (getId field_.state) errorTracking.showFieldError
+                                    && (field_.validationStrategy == ValidateOnBlur)
+                        in
+                        viewField
+                            { showError = showError || showChildError
+                            , translators = translators
+                            , disabled = disabled
+                            , values = values
+                            , model = model
+                            , form = form
+                            , toMsg = toMsg
+                            , onSuccess = onSuccess
+                            }
+                            field_
                     )
                     fields
                 )
@@ -1753,3 +1822,76 @@ mapMsg fn reverseFn msg =
 
         ClickedSubmitWithErrors errors ->
             ClickedSubmitWithErrors errors
+
+
+accumulateResults :
+    OptionalResult ( String, List String ) a
+    -> OptionalResult ( String, List String ) b
+    -> OptionalResult ( String, List String ) (a -> b -> c)
+    -> OptionalResult ( String, List String ) c
+accumulateResults first second combinator =
+    let
+        getErrors result =
+            case result of
+                OptErr ( firstError, otherErrors ) ->
+                    Just (firstError :: otherErrors)
+
+                _ ->
+                    Nothing
+
+        allErrors =
+            [ getErrors first, getErrors second ]
+                |> List.filterMap identity
+                |> List.concat
+    in
+    case combinator of
+        OptOk fn ->
+            OptionalResult.map2 fn first second
+
+        OptErr ( error, errors ) ->
+            OptErr ( error, errors ++ allErrors )
+
+        OptNothing ->
+            case allErrors of
+                error :: errors ->
+                    OptErr ( error, errors )
+
+                [] ->
+                    OptNothing
+
+
+accumulateResults3 :
+    OptionalResult ( String, List String ) a
+    -> OptionalResult ( String, List String ) b
+    -> OptionalResult ( String, List String ) c
+    -> OptionalResult ( String, List String ) (a -> b -> c -> d)
+    -> OptionalResult ( String, List String ) d
+accumulateResults3 first second third combinator =
+    let
+        getErrors result =
+            case result of
+                OptErr ( firstError, otherErrors ) ->
+                    Just (firstError :: otherErrors)
+
+                _ ->
+                    Nothing
+
+        allErrors =
+            [ getErrors first, getErrors second, getErrors third ]
+                |> List.filterMap identity
+                |> List.concat
+    in
+    case combinator of
+        OptOk fn ->
+            OptionalResult.map3 fn first second third
+
+        OptErr ( error, errors ) ->
+            OptErr ( error, errors ++ allErrors )
+
+        OptNothing ->
+            case allErrors of
+                error :: errors ->
+                    OptErr ( error, errors )
+
+                [] ->
+                    OptNothing

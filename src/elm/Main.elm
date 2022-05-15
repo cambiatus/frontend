@@ -18,6 +18,7 @@ import Page.Community.New as CommunityEditor
 import Page.Community.Objectives as CommunityObjectives
 import Page.Community.Selector as CommunitySelector
 import Page.Community.Settings.ActionEditor as CommunitySettingsActionEditor
+import Page.Community.Settings.Contacts as CommunitySettingsContacts
 import Page.Community.Settings.Currency as CommunitySettingsCurrency
 import Page.Community.Settings.Features as CommunitySettingsFeatures
 import Page.Community.Settings.Info as CommunitySettingsInfo
@@ -184,6 +185,7 @@ type Status
     | CommunitySettingsObjectives CommunitySettingsObjectives.Model
     | CommunitySettingsObjectiveEditor CommunitySettingsObjectiveEditor.Model
     | CommunitySettingsActionEditor CommunitySettingsActionEditor.Model
+    | CommunitySettingsContacts CommunitySettingsContacts.Model
     | Claim Int Int Claim.Model
     | Notification Notification.Model
     | Dashboard Dashboard.Model
@@ -234,6 +236,7 @@ type Msg
     | GotCommunitySettingsObjectivesMsg CommunitySettingsObjectives.Msg
     | GotCommunitySettingsObjectiveEditorMsg CommunitySettingsObjectiveEditor.Msg
     | GotCommunitySettingsActionEditorMsg CommunitySettingsActionEditor.Msg
+    | GotCommunitySettingsContactsMsg CommunitySettingsContacts.Msg
     | GotVerifyClaimMsg Claim.Msg
     | GotDashboardMsg Dashboard.Msg
     | GotLoginMsg Login.Msg
@@ -534,6 +537,11 @@ update msg model =
                 >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
                 |> withLoggedIn
 
+        ( GotCommunitySettingsContactsMsg subMsg, CommunitySettingsContacts subModel ) ->
+            CommunitySettingsContacts.update subMsg subModel
+                >> updateLoggedInUResult CommunitySettingsContacts GotCommunitySettingsContactsMsg model
+                |> withLoggedIn
+
         ( GotVerifyClaimMsg subMsg, Claim objectiveId actionId subModel ) ->
             Claim.update subMsg subModel
                 >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
@@ -682,6 +690,10 @@ broadcast broadcastMessage status =
                 CommunitySettingsObjectiveEditor _ ->
                     CommunitySettingsObjectiveEditor.receiveBroadcast broadcastMessage
                         |> Maybe.map GotCommunitySettingsObjectiveEditorMsg
+
+                CommunitySettingsContacts _ ->
+                    CommunitySettingsContacts.receiveBroadcast broadcastMessage
+                        |> Maybe.map GotCommunitySettingsContactsMsg
 
                 ProfileAddContact _ ->
                     ProfileAddContact.receiveBroadcast broadcastMessage
@@ -1090,6 +1102,9 @@ statusToRoute status session =
 
                 Just actionId ->
                     Just (Route.CommunitySettingsEditAction subModel.objectiveId actionId)
+
+        CommunitySettingsContacts _ ->
+            Just Route.CommunitySettingsContacts
 
         Claim objectiveId actionId subModel ->
             Just (Route.Claim objectiveId actionId subModel.claimId)
@@ -1519,6 +1534,11 @@ changeRouteTo maybeRoute model =
                 >> updateLoggedInUResult CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg model
                 |> withLoggedIn (Route.CommunitySettingsEditAction objectiveId actionId)
 
+        Just Route.CommunitySettingsContacts ->
+            (\l -> CommunitySettingsContacts.init l)
+                >> updateStatusWith CommunitySettingsContacts GotCommunitySettingsContactsMsg model
+                |> withLoggedIn Route.CommunitySettingsContacts
+
         Just (Route.Claim objectiveId actionId claimId) ->
             (\l -> Claim.init l claimId)
                 >> updateLoggedInUResult (Claim objectiveId actionId) GotVerifyClaimMsg model
@@ -1717,6 +1737,9 @@ msgToString msg =
 
         GotCommunitySettingsActionEditorMsg subMsg ->
             "GotCommunitySettingsActionEditorMsg" :: CommunitySettingsActionEditor.msgToString subMsg
+
+        GotCommunitySettingsContactsMsg subMsg ->
+            "GotCommunitySettingsContactsMsg" :: CommunitySettingsContacts.msgToString subMsg
 
         GotVerifyClaimMsg subMsg ->
             "GotVerifyClaimMsg" :: Claim.msgToString subMsg
@@ -1953,6 +1976,9 @@ view model =
 
         CommunitySettingsActionEditor subModel ->
             viewLoggedIn subModel LoggedIn.CommunitySettingsActionEditor GotCommunitySettingsActionEditorMsg CommunitySettingsActionEditor.view
+
+        CommunitySettingsContacts subModel ->
+            viewLoggedIn subModel LoggedIn.CommunitySettingsContacts GotCommunitySettingsContactsMsg CommunitySettingsContacts.view
 
         Claim _ _ subModel ->
             viewLoggedIn subModel LoggedIn.Claim GotVerifyClaimMsg Claim.view

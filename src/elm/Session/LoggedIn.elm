@@ -42,6 +42,7 @@ import Cambiatus.Object.UnreadNotifications
 import Cambiatus.Subscription as Subscription
 import Community
 import Community.News
+import Contact
 import Dict
 import Environment
 import Eos
@@ -52,7 +53,7 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Graphql.OptionalArgument as OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html exposing (Html, a, br, button, div, footer, h2, img, li, nav, p, span, strong, text, ul)
-import Html.Attributes exposing (alt, class, classList, disabled, src, type_)
+import Html.Attributes exposing (alt, class, classList, disabled, src, title, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel, ariaLive, role)
 import Html.Events exposing (onClick, onMouseEnter)
 import Http
@@ -236,6 +237,7 @@ type alias Model =
     , showLanguageItems : Bool
     , showNotificationModal : Bool
     , showMainNav : Bool
+    , showCommunityContactsModal : Bool
     , notification : Notification.Model
     , unreadCount : Int
     , showAuthModal : Bool
@@ -279,6 +281,7 @@ initModel shared lastKnownPin maybePrivateKey_ accountName authToken =
       , showLanguageItems = False
       , showNotificationModal = False
       , showMainNav = False
+      , showCommunityContactsModal = False
       , showCommunitySelector = False
       , showAuthModal = False
       , auth = authModel
@@ -338,6 +341,7 @@ type Page
     | CommunitySettingsObjectives
     | CommunitySettingsObjectiveEditor
     | CommunitySettingsActionEditor
+    | CommunitySettingsContacts
     | Claim
     | Notification
     | Shop
@@ -480,7 +484,10 @@ viewHelper pageMsg page profile_ ({ shared } as model) content =
                         text ""
                )
             :: mainView
-            ++ [ viewFooter shared
+            ++ [ viewFooter model
+                    |> Html.map pageMsg
+               , viewCommunityContactsModal model
+                    |> Html.map pageMsg
                , Action.viewClaimConfirmation shared.translators model.claimingAction
                     |> Html.map (GotActionMsg >> pageMsg)
                , viewAuthModal pageMsg model
@@ -507,6 +514,49 @@ viewAuthModal pageMsg ({ shared } as model) =
             )
         |> Modal.toHtml
         |> Html.map pageMsg
+
+
+viewCommunityContactsModal : Model -> Html (Msg pageMsg)
+viewCommunityContactsModal model =
+    case model.selectedCommunity of
+        RemoteData.Success community ->
+            let
+                { t } =
+                    model.shared.translators
+            in
+            Modal.initWith
+                { closeMsg = ClosedCommunityContactsModal
+                , isVisible = model.showCommunityContactsModal
+                }
+                |> Modal.withHeader (t "footer.need_help")
+                |> Modal.withBody
+                    [ p [] [ text <| t "footer.choose_contact" ]
+                    , ul [ class "flex flex-wrap gap-6 items-start justify-center mt-6 mb-10" ]
+                        (community.contacts
+                            |> List.map
+                                (\contact ->
+                                    li [ class "w-10" ]
+                                        [ a
+                                            [ class "flex flex-col items-center hover:opacity-60"
+                                            , Html.Attributes.href (Contact.toHref contact)
+                                            , Html.Attributes.target "blank"
+                                            , title (Contact.toLabel model.shared.translators contact)
+                                            , onClick ClosedCommunityContactsModal
+                                            ]
+                                            [ Contact.circularIconWithGrayBg [ class "w-10 h-10" ]
+                                                model.shared.translators
+                                                contact
+                                            , span [ class "text-gray-900 text-sm text-center mt-2 font-semibold line-clamp-2" ]
+                                                [ text (Contact.toLabel model.shared.translators contact) ]
+                                            ]
+                                        ]
+                                )
+                        )
+                    ]
+                |> Modal.toHtml
+
+        _ ->
+            text ""
 
 
 viewHighlightedNews : Translators -> (Msg pageMsg -> pageMsg) -> Community.News.Model -> Html pageMsg
@@ -1130,56 +1180,83 @@ isAdminPage page =
         ]
 
 
-viewFooter : Shared -> Html msg
-viewFooter shared =
+viewFooter : Model -> Html (Msg externalMsg)
+viewFooter ({ shared } as model) =
     let
         { t, tr } =
             shared.translators
+
+        viewContactSupport =
+            case model.selectedCommunity of
+                RemoteData.Success community ->
+                    if List.isEmpty community.contacts then
+                        text ""
+
+                    else
+                        let
+                            linkContainer : List (Html.Attribute (Msg externalMsg)) -> List (Html (Msg externalMsg)) -> Html (Msg externalMsg)
+                            linkContainer attrs =
+                                case community.contacts of
+                                    [ contact ] ->
+                                        a
+                                            (Html.Attributes.href (Contact.toHref contact)
+                                                :: Html.Attributes.target "blank"
+                                                :: attrs
+                                            )
+
+                                    _ ->
+                                        button (onClick ClickedOpenCommunityContactsModal :: attrs)
+                        in
+                        div []
+                            [ p [] [ text <| t "footer.need_help" ]
+                            , linkContainer [ class "text-orange-300 hover:underline text-left" ]
+                                [ text <| t "footer.contact_support" ]
+                            ]
+
+                _ ->
+                    text ""
     in
     footer
         [ class "bg-white w-full border-t border-grey-500 relative overflow-hidden"
         , role "contentinfo"
         ]
-        [ div [ class "container mx-auto px-4 py-8 flex flex-col md:flex-row md:py-4 lg:relative lg:overflow-hidden" ]
-            [ div [ class "flex flex-col md:items-center md:flex-row md:flex-grow md:flex-shrink-0 after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 after:md:mr-8 after:md:mt-0 after:md:w-px after:md:h-full after:lg:ml-auto" ]
+        [ div [ class "container mx-auto px-4 pb-6 pt-12 flex flex-col lg:flex-row lg:py-4 lg:relative lg:overflow-hidden" ]
+            [ div [ class "flex flex-col lg:flex-row lg:items-center lg:flex-grow after:h-px after:w-1/4 after:mx-auto after:mt-12 after:bg-gray-500 lg:after:w-px lg:after:h-full lg:after:mr-8 lg:after:mt-0 lg:after:ml-auto" ]
                 [ p [ class "sr-only" ] [ text <| t "footer.created_with_love" ]
-                , p
-                    [ class "text-sm text-center flex justify-center items-center"
-                    , ariaHidden True
-                    ]
-                    [ span [] [ text <| t "footer.created_with" ]
-                    , Icons.heartSolid
-                    , span [] [ text <| t "footer.created_by" ]
-                    ]
-                , div [ class "flex items-center mt-2 mx-auto md:mt-0 md:ml-8" ]
-                    [ img
-                        [ class "h-8"
-                        , src "/images/logo-cambiatus-mobile.svg"
-                        , alt ""
+                , div [ class "flex items-center lg:flex-shrink-0" ]
+                    [ p
+                        [ class "text-center flex justify-center items-center"
+                        , ariaHidden True
                         ]
-                        []
-                    , img
-                        [ class "h-12 ml-8"
-                        , src "/images/satisfied-vagabonds.svg"
-                        , alt ""
+                        [ span [] [ text <| t "footer.created_with" ]
+                        , Icons.heartSolid "w-7"
+                        , span [] [ text <| t "footer.created_by" ]
                         ]
-                        []
+                    , div [ class "flex items-center ml-8" ]
+                        [ img
+                            [ class "h-8"
+                            , src "/images/logo-cambiatus-mobile.svg"
+                            , alt ""
+                            ]
+                            []
+                        , img
+                            [ class "h-12 ml-8"
+                            , src "/images/satisfied-vagabonds.svg"
+                            , alt ""
+                            ]
+                            []
+                        ]
                     ]
                 , a
                     [ Html.Attributes.href (codeOfConductUrl shared.language)
                     , Html.Attributes.target "_blank"
-                    , class "text-center text-sm text-orange-300 mt-4 hover:underline md:hidden"
+                    , class "text-orange-300 mt-6 hover:underline lg:mt-0 lg:ml-10 lg:mr-4"
                     ]
                     [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
                 ]
-            , div [ class "mt-4 md:mt-0 md:flex md:w-2/5 md:pr-12 lg:pr-0 lg:w-auto" ]
+            , div [ class "mt-4 lg:mt-0 lg:flex-shrink-0" ]
                 [ div [ class "mr-32 md:mr-20 lg:mr-52 md:pt-6" ]
-                    [ a
-                        [ Html.Attributes.href (codeOfConductUrl shared.language)
-                        , Html.Attributes.target "_blank"
-                        , class "text-sm text-center text-orange-300 hover:underline hidden md:inline"
-                        ]
-                        [ text <| tr "terms_of_conduct.title" [ ( "version", codeOfConductVersion ) ] ]
+                    [ viewContactSupport
                     , p [ class "text-xs mt-6 text-gray-900" ]
                         [ text <| tr "footer.version" [ ( "version", shared.version ) ] ]
                     ]
@@ -1589,6 +1666,12 @@ mapMsg mapFn msg =
         EndedCodeOfConductWarningAnimation ->
             EndedCodeOfConductWarningAnimation
 
+        ClickedOpenCommunityContactsModal ->
+            ClickedOpenCommunityContactsModal
+
+        ClosedCommunityContactsModal ->
+            ClosedCommunityContactsModal
+
 
 mapExternal : (msg -> otherMsg) -> External msg -> External otherMsg
 mapExternal mapFn msg =
@@ -1935,6 +2018,8 @@ type Msg externalMsg
     | ClickedDenyCodeOfConduct
     | CompletedAcceptingCodeOfConduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
     | EndedCodeOfConductWarningAnimation
+    | ClickedOpenCommunityContactsModal
+    | ClosedCommunityContactsModal
 
 
 update : Msg msg -> Model -> UpdateResult msg
@@ -1948,6 +2033,7 @@ update msg model =
                 | showNotificationModal = False
                 , showUserNav = False
                 , showMainNav = False
+                , showCommunityContactsModal = False
                 , showAuthModal = False
                 , showInsufficientPermissionsModal = False
             }
@@ -2751,6 +2837,14 @@ update msg model =
             }
                 |> UR.init
 
+        ClickedOpenCommunityContactsModal ->
+            { model | showCommunityContactsModal = True }
+                |> UR.init
+
+        ClosedCommunityContactsModal ->
+            { model | showCommunityContactsModal = False }
+                |> UR.init
+
 
 handleActionMsg : Model -> Action.Msg -> UpdateResult msg
 handleActionMsg ({ shared } as model) actionMsg =
@@ -3057,6 +3151,7 @@ closeModal ({ model } as uResult) =
                 | showNotificationModal = False
                 , showUserNav = False
                 , showMainNav = False
+                , showCommunityContactsModal = False
                 , showAuthModal = False
                 , showInsufficientPermissionsModal = False
             }
@@ -3069,6 +3164,7 @@ askedAuthentication model =
         | showNotificationModal = False
         , showUserNav = False
         , showMainNav = False
+        , showCommunityContactsModal = False
         , showAuthModal = True
         , showInsufficientPermissionsModal = False
     }
@@ -3299,6 +3395,12 @@ msgToString msg =
 
         EndedCodeOfConductWarningAnimation ->
             [ "EndedCodeOfConductWarningAnimation" ]
+
+        ClickedOpenCommunityContactsModal ->
+            [ "ClickedOpenCommunityContactsModal" ]
+
+        ClosedCommunityContactsModal ->
+            [ "ClosedCommunityContactsModal" ]
 
 
 externalMsgToString : External msg -> List String
