@@ -2,7 +2,7 @@ module Form.File exposing
     ( init, Options
     , withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
-    , isEmpty, parser
+    , isEmpty, isLoading, parser
     , view
     , Model, initModel, initModelWithChoices, update, Msg, msgToString
     )
@@ -35,7 +35,7 @@ module Form.File exposing
 
 # Helpers
 
-@docs isEmpty, parser
+@docs isEmpty, isLoading, parser
 
 
 # View
@@ -137,6 +137,21 @@ isEmpty model =
 
                 Nothing ->
                     True
+
+
+isLoading : Model -> Bool
+isLoading model =
+    case model of
+        SingleFile file ->
+            RemoteData.isLoading file
+
+        WithChoices { files, selected } ->
+            case List.Extra.getAt selected files of
+                Just file ->
+                    RemoteData.isLoading file
+
+                Nothing ->
+                    False
 
 
 

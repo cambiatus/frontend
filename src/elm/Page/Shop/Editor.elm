@@ -476,7 +476,16 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
             else
                 ( t "menu.create", t "shop.create_offer" )
 
-        viewForm_ formFn formModel submitText toFormMsg onSubmitMsg =
+        viewForm_ :
+            Form.Form Msg input output
+            ->
+                Form.Model
+                    input
+            -> { submitText : String, isSubmitDisabled : Bool }
+            -> (Form.Msg input -> FormMsg)
+            -> (output -> Msg)
+            -> Html Msg
+        viewForm_ formFn formModel { submitText, isSubmitDisabled } toFormMsg onSubmitMsg =
             Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
@@ -493,7 +502,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                                     [ text <| t "menu.cancel" ]
                                 , submitButton
                                     [ class "button button-primary w-full"
-                                    , disabled isDisabled
+                                    , disabled (isDisabled || isSubmitDisabled)
                                     ]
                                     [ text submitText ]
                                 ]
@@ -537,14 +546,20 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                     MainInformation ->
                         viewForm_ (mainInformationForm shared.translators)
                             formData.mainInformation
-                            (t "shop.steps.continue")
+                            { submitText = t "shop.steps.continue"
+                            , isSubmitDisabled = False
+                            }
                             MainInformationMsg
                             SubmittedMainInformation
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
                             formData.images
-                            (t "shop.steps.continue")
+                            { submitText = t "shop.steps.continue"
+                            , isSubmitDisabled =
+                                Form.getValue identity formData.images
+                                    |> List.any Form.File.isLoading
+                            }
                             ImagesMsg
                             SubmittedImages
 
@@ -553,7 +568,9 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                             RemoteData.Success community ->
                                 viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
                                     formData.priceAndInventory
-                                    actionText
+                                    { submitText = actionText
+                                    , isSubmitDisabled = False
+                                    }
                                     PriceAndInventoryMsg
                                     SubmittedPriceAndInventory
 
