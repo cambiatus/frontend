@@ -532,11 +532,9 @@ viewSimplePlus (Options options) viewConfig value toMsg =
                     Icons.plus "fill-current text-orange-300"
 
                 RemoteData.Loading ->
-                    div
-                        [ class "animate-skeleton-loading"
-                        , ariaLive "polite"
-                        ]
-                        [ span [ class "sr-only" ]
+                    div [ class "w-full px-4" ]
+                        [ View.Components.loadingLogoAnimatedFluid
+                        , span [ class "sr-only" ]
                             [ Html.text <| viewConfig.translators.t "menu.loading"
                             ]
                         ]
