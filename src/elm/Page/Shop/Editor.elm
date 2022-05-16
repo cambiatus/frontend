@@ -247,7 +247,7 @@ priceAndInventoryForm translators isDisabled symbol =
 stockTrackingForm : Translation.Translators -> { isDisabled : Bool } -> Form.Form Msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
 stockTrackingForm translators { isDisabled } =
     Form.succeed
-        (\availableUnits trackStock ->
+        (\trackStock availableUnits ->
             if trackStock then
                 Shop.UnitTracking { availableUnits = availableUnits }
 
@@ -255,6 +255,24 @@ stockTrackingForm translators { isDisabled } =
                 Shop.NoTracking
         )
         |> Form.withGroup [ class "bg-gray-100 rounded-sm p-4" ]
+            (Form.Toggle.init
+                { label =
+                    div [ class "text-gray-333 text-base mb-4" ]
+                        [ span [ class "font-bold" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management" ]
+                        , p [ class "mt-2" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management_description" ]
+                        ]
+                , id = "product-track-units-toggle"
+                }
+                |> Form.Toggle.withContainerAttrs [ class "flex flex-col" ]
+                |> Form.Toggle.withToggleContainerAttrs [ class "ml-0 pl-0" ]
+                |> Form.Toggle.withToggleSide (Form.Toggle.Right { invert = True })
+                |> Form.toggle
+                    { parser = Ok
+                    , value = .trackUnits
+                    , update = \newTrackUnits values -> { values | trackUnits = newTrackUnits }
+                    , externalError = always Nothing
+                    }
+            )
             (Form.introspect
                 (\{ trackUnits } ->
                     if trackUnits then
@@ -265,6 +283,7 @@ stockTrackingForm translators { isDisabled } =
                             |> Form.Text.withPlaceholder "0"
                             |> Form.Text.asNumeric
                             |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.withContainerAttrs [ class "mb-0 mt-10" ]
                             |> Form.Text.withExtraAttrs
                                 [ Html.Attributes.min "0"
                                 , class "text-center"
@@ -308,24 +327,6 @@ stockTrackingForm translators { isDisabled } =
                     else
                         Form.succeed 0
                 )
-            )
-            (Form.Toggle.init
-                { label =
-                    div [ class "text-gray-333 text-base mb-4" ]
-                        [ span [ class "font-bold" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management" ]
-                        , p [ class "mt-2" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management_description" ]
-                        ]
-                , id = "product-track-units-toggle"
-                }
-                |> Form.Toggle.withContainerAttrs [ class "flex flex-col" ]
-                |> Form.Toggle.withToggleContainerAttrs [ class "ml-0 pl-0" ]
-                |> Form.Toggle.withToggleSide (Form.Toggle.Right { invert = True })
-                |> Form.toggle
-                    { parser = Ok
-                    , value = .trackUnits
-                    , update = \newTrackUnits values -> { values | trackUnits = newTrackUnits }
-                    , externalError = always Nothing
-                    }
             )
 
 
