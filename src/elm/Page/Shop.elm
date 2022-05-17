@@ -9,6 +9,7 @@ module Page.Shop exposing
     )
 
 import Api
+import Cambiatus.Enum.Permission as Permission
 import Community exposing (Balance)
 import Eos
 import Eos.Account
@@ -18,6 +19,8 @@ import Html.Attributes exposing (alt, class, classList, src)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Http
 import I18Next exposing (t)
+import Json.Encode as Encode
+import List.Extra
 import Page exposing (Session(..))
 import Profile.Summary
 import RemoteData exposing (RemoteData)
@@ -75,40 +78,21 @@ type Status
 
 type alias Card =
     { product : Product
-    , form : SaleTransferForm
     , profileSummary : Profile.Summary.Model
     , isAvailable : Bool
+    , currentVisibleImage : Maybe Shop.ImageId
+    , previousVisibleImage : Maybe Shop.ImageId
     }
 
 
 cardFromSale : Product -> Card
 cardFromSale p =
     { product = p
-    , form = initSaleFrom
     , profileSummary = Profile.Summary.init False
     , isAvailable = not (Shop.isOutOfStock p)
+    , currentVisibleImage = Nothing
+    , previousVisibleImage = Nothing
     }
-
-
-type alias SaleTransferForm =
-    { unit : String
-    , unitValidation : Validation
-    , memo : String
-    , memoValidation : Validation
-    }
-
-
-initSaleFrom : SaleTransferForm
-initSaleFrom =
-    { unit = ""
-    , unitValidation = Valid
-    , memo = ""
-    , memoValidation = Valid
-    }
-
-
-type Validation
-    = Valid
 
 
 
@@ -225,13 +209,22 @@ viewShopFilter loggedIn model =
 
                 Shop.UserSales ->
                     Shop.All
+
+        canSell =
+            case loggedIn.profile of
+                RemoteData.Success profile ->
+                    LoggedIn.hasPermissions profile [ Permission.Sell ]
+
+                _ ->
+                    False
     in
     div [ class "grid xs-max:grid-cols-1 grid-cols-2 md:flex mt-4 gap-4" ]
         [ View.Components.disablableLink
-            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct || not canSell
+            }
             [ class "w-full md:w-40 button button-primary"
             , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-            , Route.href Route.NewSale
+            , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.create_new_offer" ]
         , a
@@ -286,7 +279,7 @@ viewEmptyState { t, tr } communitySymbol model =
         , p [ class "text-black text-center mt-4" ] description
         , a
             [ class "button button-primary mt-6 md:px-6 w-full md:w-max"
-            , Route.href Route.NewSale
+            , Route.href (Route.NewSale Route.SaleMainInformation)
             ]
             [ text <| t "shop.empty.create_new" ]
         ]
@@ -318,16 +311,40 @@ viewCard loggedIn index card =
         ({ t, tr } as translators) =
             loggedIn.shared.translators
 
-        image =
-            Maybe.withDefault
-                ("/icons/shop-placeholder"
-                    ++ (index
-                            |> modBy 3
-                            |> String.fromInt
-                       )
-                    ++ ".svg"
-                )
-                card.product.image
+        images =
+            case card.product.images of
+                [] ->
+                    img
+                        [ class "h-32 rounded-t object-cover"
+                        , alt ""
+                        , src
+                            ("/icons/shop-placeholder"
+                                ++ (index
+                                        |> modBy 3
+                                        |> String.fromInt
+                                   )
+                                ++ ".svg"
+                            )
+                        ]
+                        []
+
+                firstImage :: otherImages ->
+                    Shop.viewImageCarrousel
+                        translators
+                        { containerAttrs = [ class "h-32" ]
+                        , listAttrs = [ class "gap-x-4 rounded-t bg-gray-100" ]
+                        , imageContainerAttrs = [ class "bg-white rounded-t" ]
+                        , imageOverlayAttrs = []
+                        , imageAttrs = [ class "w-full h-full" ]
+                        }
+                        { showArrows = False
+                        , productId = Just card.product.id
+                        , onScrollToImage = ClickedScrollToImage
+                        , currentIntersecting = card.currentVisibleImage
+                        , onStartedIntersecting = ImageStartedIntersecting card.product.id
+                        , onStoppedIntersecting = ImageStoppedIntersecting card.product.id
+                        }
+                        ( firstImage, otherImages )
 
         isFree =
             card.product.price == 0
@@ -338,7 +355,7 @@ viewCard loggedIn index card =
             , Html.Attributes.title card.product.title
             , Route.href (Route.ViewSale card.product.id)
             ]
-            [ img [ src image, alt "", class "rounded-t h-32 object-cover" ] []
+            [ images
             , div [ class "p-4 flex flex-col flex-grow" ]
                 [ h2 [ class "line-clamp-3 text-black" ] [ text card.product.title ]
                 , p [ class "font-bold text-gray-900 text-sm uppercase mb-auto line-clamp-2 mt-1" ]
@@ -402,15 +419,22 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedSalesLoad Eos.Symbol (RemoteData (Graphql.Http.Error (List Product)) (List Product))
+    = NoOp
+    | CompletedSalesLoad Eos.Symbol (RemoteData (Graphql.Http.Error (List Product)) (List Product))
     | CompletedLoadCommunity Community.Model
     | CompletedLoadBalances (Result Http.Error (List Balance))
     | ClickedAcceptCodeOfConduct
+    | ClickedScrollToImage { containerId : String, imageId : String }
+    | ImageStartedIntersecting Shop.Id Shop.ImageId
+    | ImageStoppedIntersecting Shop.Id Shop.ImageId
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
 update msg model loggedIn =
     case msg of
+        NoOp ->
+            UR.init model
+
         CompletedSalesLoad symbol (RemoteData.Success sales) ->
             UR.init { model | cards = Loaded symbol (List.map cardFromSale sales) }
 
@@ -449,6 +473,70 @@ update msg model loggedIn =
                 |> UR.init
                 |> UR.addExt LoggedIn.ShowCodeOfConductModal
 
+        ClickedScrollToImage { containerId, imageId } ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "smoothHorizontalScroll" )
+                            , ( "containerId", Encode.string containerId )
+                            , ( "targetId", Encode.string imageId )
+                            ]
+                    }
+
+        ImageStartedIntersecting cardId imageId ->
+            case model.cards of
+                Loaded symbol cards ->
+                    let
+                        newCards =
+                            List.Extra.updateIf
+                                (\card -> card.product.id == cardId)
+                                (\card ->
+                                    { card
+                                        | currentVisibleImage = Just imageId
+                                        , previousVisibleImage = card.currentVisibleImage
+                                    }
+                                )
+                                cards
+                    in
+                    { model | cards = Loaded symbol newCards }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
+        ImageStoppedIntersecting cardId imageId ->
+            case model.cards of
+                Loaded symbol cards ->
+                    let
+                        newCards : List Card
+                        newCards =
+                            List.Extra.updateIf
+                                (\card -> card.product.id == cardId)
+                                (\card ->
+                                    if Just imageId == card.currentVisibleImage then
+                                        { card
+                                            | currentVisibleImage = card.previousVisibleImage
+                                            , previousVisibleImage = Nothing
+                                        }
+
+                                    else if Just imageId == card.previousVisibleImage then
+                                        { card | previousVisibleImage = Nothing }
+
+                                    else
+                                        card
+                                )
+                                cards
+                    in
+                    { model | cards = Loaded symbol newCards }
+                        |> UR.init
+
+                _ ->
+                    UR.init model
+
 
 receiveBroadcast : LoggedIn.BroadcastMsg -> Maybe Msg
 receiveBroadcast broadcastMsg =
@@ -463,6 +551,9 @@ receiveBroadcast broadcastMsg =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         CompletedSalesLoad _ r ->
             [ "CompletedSalesLoad", UR.remoteDataToString r ]
 
@@ -474,3 +565,12 @@ msgToString msg =
 
         ClickedAcceptCodeOfConduct ->
             [ "ClickedAcceptCodeOfConduct" ]
+
+        ClickedScrollToImage _ ->
+            [ "ClickedScrollToImage" ]
+
+        ImageStartedIntersecting _ _ ->
+            [ "ImageStartedIntersecting" ]
+
+        ImageStoppedIntersecting _ _ ->
+            [ "ImageStoppedIntersecting" ]

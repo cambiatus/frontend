@@ -23,8 +23,9 @@ import Form.RichText
 import Form.Text
 import Form.Validate
 import Graphql.Http
-import Html exposing (Html, a, button, div, h2, h3, img, span, text)
-import Html.Attributes exposing (alt, autocomplete, class, classList, disabled, href, src, type_)
+import Graphql.SelectionSet
+import Html exposing (Html, a, button, div, h2, h3, span, text)
+import Html.Attributes exposing (autocomplete, class, classList, disabled, href, type_)
 import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
 import Html.Events exposing (onClick)
 import Http
@@ -43,9 +44,10 @@ import Session.LoggedIn as LoggedIn
 import Session.Shared as Shared
 import Shop exposing (Product, ProductPreview)
 import Transfer
+import Translation
 import UpdateResult as UR
-import View.Components
 import View.Feedback as Feedback
+import View.Modal
 
 
 
@@ -58,17 +60,23 @@ init session saleId =
         Page.LoggedIn ({ shared, accountName } as loggedIn) ->
             let
                 model =
-                    AsLoggedIn
-                        { status = RemoteData.Loading
-                        , form =
-                            Form.init
-                                { units = "1"
-                                , memo = Form.RichText.initModel "memo-input" Nothing
-                                }
-                        , hasChangedDefaultMemo = False
-                        , balances = []
-                        , isBuyButtonDisabled = False
-                        }
+                    { status =
+                        AsLoggedIn
+                            { status = RemoteData.Loading
+                            , form =
+                                Form.init
+                                    { units = "1"
+                                    , memo = Form.RichText.initModel "memo-input" Nothing
+                                    }
+                            , hasChangedDefaultMemo = False
+                            , balances = []
+                            , isBuyButtonDisabled = False
+                            , isEditModalVisible = False
+                            , confirmDeleteModalStatus = Closed
+                            }
+                    , currentVisibleImage = Nothing
+                    , previousVisibleImage = Nothing
+                    }
             in
             model
                 |> UR.init
@@ -81,15 +89,19 @@ init session saleId =
                 |> UR.map identity identity (Page.LoggedInExternal >> UR.addExt)
 
         Page.Guest guest ->
-            AsGuest
-                { saleId = saleId
-                , productPreview = RemoteData.Loading
-                , form =
-                    Form.init
-                        { units = "1"
-                        , memo = Form.RichText.initModel "memo-input" Nothing
-                        }
-                }
+            { status =
+                AsGuest
+                    { saleId = saleId
+                    , productPreview = RemoteData.Loading
+                    , form =
+                        Form.init
+                            { units = "1"
+                            , memo = Form.RichText.initModel "memo-input" Nothing
+                            }
+                    }
+            , currentVisibleImage = Nothing
+            , previousVisibleImage = Nothing
+            }
                 |> UR.init
                 |> UR.addCmd
                     (Api.Graphql.query guest.shared
@@ -103,7 +115,14 @@ init session saleId =
 -- MODEL
 
 
-type Model
+type alias Model =
+    { status : Status
+    , currentVisibleImage : Maybe Shop.ImageId
+    , previousVisibleImage : Maybe Shop.ImageId
+    }
+
+
+type Status
     = AsGuest GuestModel
     | AsLoggedIn LoggedInModel
 
@@ -121,7 +140,15 @@ type alias LoggedInModel =
     , hasChangedDefaultMemo : Bool
     , balances : List Balance
     , isBuyButtonDisabled : Bool
+    , isEditModalVisible : Bool
+    , confirmDeleteModalStatus : DeleteConfirmModalStatus
     }
+
+
+type DeleteConfirmModalStatus
+    = Closed
+    | Open
+    | Deleting
 
 
 
@@ -129,7 +156,11 @@ type alias LoggedInModel =
 
 
 type Msg
-    = AsGuestMsg GuestMsg
+    = NoOp
+    | ClickedScrollToImage { containerId : String, imageId : String }
+    | ImageStartedIntersecting Shop.ImageId
+    | ImageStoppedIntersecting Shop.ImageId
+    | AsGuestMsg GuestMsg
     | AsLoggedInMsg LoggedInMsg
 
 
@@ -147,6 +178,12 @@ type LoggedInMsg
     | GotFormMsg (Form.Msg FormInput)
     | GotTransferResult (Result (Maybe Value) String)
     | GotFormInteractionMsg FormInteractionMsg
+    | ClickedEditSale
+    | ClosedEditSaleModal
+    | ClickedDelete
+    | ClosedConfirmDeleteModal
+    | ClickedConfirmDelete
+    | CompletedDeleteProduct (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
 
 
 type FormInteractionMsg
@@ -168,14 +205,55 @@ type alias LoggedInUpdateResult =
 
 update : Msg -> Model -> Session -> UpdateResult
 update msg model session =
-    case ( msg, model, session ) of
+    case ( msg, model.status, session ) of
+        ( NoOp, _, _ ) ->
+            UR.init model
+
+        ( ClickedScrollToImage { containerId, imageId }, _, _ ) ->
+            model
+                |> UR.init
+                |> UR.addPort
+                    { responseAddress = NoOp
+                    , responseData = Encode.null
+                    , data =
+                        Encode.object
+                            [ ( "name", Encode.string "smoothHorizontalScroll" )
+                            , ( "containerId", Encode.string containerId )
+                            , ( "targetId", Encode.string imageId )
+                            ]
+                    }
+
+        ( ImageStartedIntersecting imageId, _, _ ) ->
+            { model
+                | currentVisibleImage = Just imageId
+                , previousVisibleImage = model.currentVisibleImage
+            }
+                |> UR.init
+
+        ( ImageStoppedIntersecting imageId, _, _ ) ->
+            if Just imageId == model.currentVisibleImage then
+                { model
+                    | currentVisibleImage = model.previousVisibleImage
+                    , previousVisibleImage = Nothing
+                }
+                    |> UR.init
+
+            else if Just imageId == model.previousVisibleImage then
+                { model | previousVisibleImage = Nothing }
+                    |> UR.init
+
+            else
+                model |> UR.init
+
         ( AsGuestMsg subMsg, AsGuest subModel, Page.Guest guest ) ->
             updateAsGuest subMsg subModel guest
-                |> UR.map AsGuest AsGuestMsg (Page.GuestExternal >> UR.addExt)
+                |> UR.map (\guestModel -> { model | status = AsGuest guestModel })
+                    AsGuestMsg
+                    (Page.GuestExternal >> UR.addExt)
 
         ( AsLoggedInMsg subMsg, AsLoggedIn subModel, Page.LoggedIn loggedIn ) ->
             updateAsLoggedIn subMsg subModel loggedIn
-                |> UR.map AsLoggedIn
+                |> UR.map (\loggedInModel -> { model | status = AsLoggedIn loggedInModel })
                     AsLoggedInMsg
                     (LoggedIn.mapExternal AsLoggedInMsg >> Page.LoggedInExternal >> UR.addExt)
 
@@ -376,6 +454,60 @@ updateAsLoggedIn msg model loggedIn =
             }
                 |> UR.init
 
+        ClickedEditSale ->
+            { model | isEditModalVisible = True }
+                |> UR.init
+
+        ClosedEditSaleModal ->
+            { model | isEditModalVisible = False }
+                |> UR.init
+
+        ClickedDelete ->
+            { model | confirmDeleteModalStatus = Open }
+                |> UR.init
+
+        ClosedConfirmDeleteModal ->
+            { model | confirmDeleteModalStatus = Closed }
+                |> UR.init
+
+        ClickedConfirmDelete ->
+            case model.status of
+                RemoteData.Success sale ->
+                    { model | confirmDeleteModalStatus = Deleting }
+                        |> UR.init
+                        |> UR.addExt
+                            (LoggedIn.mutation loggedIn
+                                (Shop.deleteProduct sale.id Graphql.SelectionSet.empty)
+                                CompletedDeleteProduct
+                            )
+
+                _ ->
+                    model
+                        |> UR.init
+
+        CompletedDeleteProduct (RemoteData.Success _) ->
+            { model | confirmDeleteModalStatus = Closed }
+                |> UR.init
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
+                |> UR.addCmd (Route.pushUrl loggedIn.shared.navKey (Route.Shop Shop.All))
+
+        CompletedDeleteProduct (RemoteData.Failure err) ->
+            { model
+                | isEditModalVisible = False
+                , confirmDeleteModalStatus = Closed
+            }
+                |> UR.init
+                |> UR.logGraphqlError msg
+                    (Just loggedIn.accountName)
+                    "Got an error when deleting product"
+                    { moduleName = "Page.Shop.Viewer", function = "updateAsLoggedIn" }
+                    []
+                    err
+                |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure (t "shop.delete_offer_failure"))
+
+        CompletedDeleteProduct _ ->
+            UR.init model
+
 
 updateFormInteraction : FormInteractionMsg -> { maxUnits : Maybe Int } -> Form.Model FormInput -> Form.Model FormInput
 updateFormInteraction msg { maxUnits } model =
@@ -422,7 +554,7 @@ view session model =
             t "shop.title"
 
         title =
-            case model of
+            case model.status of
                 AsLoggedIn { status } ->
                     case status of
                         RemoteData.Success sale ->
@@ -441,13 +573,13 @@ view session model =
 
         viewContent :
             { product
-                | image : Maybe String
+                | images : List String
                 , title : String
                 , description : Markdown
                 , creator : Profile.Minimal
             }
-            -> Html msg
-            -> Html msg
+            -> Html Msg
+            -> Html Msg
         viewContent sale formView =
             let
                 isGuest =
@@ -470,7 +602,31 @@ view session model =
                 [ div [ class "absolute bg-white top-0 bottom-0 left-0 right-1/2 hidden md:block" ] []
                 , div [ class "container mx-auto px-4 my-4 md:my-10 md:isolate grid md:grid-cols-2" ]
                     [ div [ class "mb-6 md:mb-0 md:w-2/3 md:mx-auto" ]
-                        [ viewProductImg translators sale.image
+                        [ case sale.images of
+                            [] ->
+                                div [ class "h-68 w-full bg-gray-100 flex flex-col items-center justify-center rounded" ]
+                                    [ Icons.image ""
+                                    , span [ class "font-bold uppercase text-black text-sm mt-2" ]
+                                        [ text <| t "shop.no_image" ]
+                                    ]
+
+                            firstImage :: otherImages ->
+                                Shop.viewImageCarrousel
+                                    translators
+                                    { containerAttrs = [ class "h-68" ]
+                                    , listAttrs = [ class "gap-x-4 rounded" ]
+                                    , imageContainerAttrs = [ class "bg-gray-100 rounded" ]
+                                    , imageOverlayAttrs = [ class "rounded-b" ]
+                                    , imageAttrs = []
+                                    }
+                                    { showArrows = True
+                                    , productId = Nothing
+                                    , onScrollToImage = ClickedScrollToImage
+                                    , currentIntersecting = model.currentVisibleImage
+                                    , onStartedIntersecting = ImageStartedIntersecting
+                                    , onStoppedIntersecting = ImageStoppedIntersecting
+                                    }
+                                    ( firstImage, otherImages )
                         , h2 [ class "font-bold text-lg text-black mt-4", ariaHidden True ] [ text sale.title ]
                         , Markdown.view [ class "mt-2 mb-6 text-gray-333" ] sale.description
                         , if isCreator then
@@ -486,7 +642,7 @@ view session model =
                 ]
 
         content =
-            case ( model, session ) of
+            case ( model.status, session ) of
                 ( AsGuest model_, Page.Guest guest ) ->
                     case model_.productPreview of
                         RemoteData.Success sale ->
@@ -516,8 +672,8 @@ view session model =
                                     model_.form
                                     { toMsg = GotFormMsgAsGuest
                                     }
+                                    |> Html.map AsGuestMsg
                                 )
-                                |> Html.map AsGuestMsg
 
                         RemoteData.Failure err ->
                             Page.fullPageGraphQLError (t "shop.title") err
@@ -582,11 +738,11 @@ view session model =
                                                 loggedIn.shared.translators
                                                 (\submitButton ->
                                                     [ if isOwner then
-                                                        View.Components.disablableLink
-                                                            { isDisabled = not loggedIn.hasAcceptedCodeOfConduct }
+                                                        button
                                                             [ class "button button-primary w-full"
-                                                            , classList [ ( "button-disabled", not loggedIn.hasAcceptedCodeOfConduct ) ]
-                                                            , Route.href (Route.EditSale sale.id)
+                                                            , disabled (not loggedIn.hasAcceptedCodeOfConduct)
+                                                            , onClick ClickedEditSale
+                                                            , type_ "button"
                                                             ]
                                                             [ text <| t "shop.edit" ]
 
@@ -613,9 +769,13 @@ view session model =
                                                 { toMsg = GotFormMsg
                                                 , onSubmit = ClickedTransfer sale
                                                 }
+                                                |> Html.map AsLoggedInMsg
                                             )
+                                        , viewEditSaleModal translators model_ sale
+                                            |> Html.map AsLoggedInMsg
+                                        , viewConfirmDeleteModal translators model_
+                                            |> Html.map AsLoggedInMsg
                                         ]
-                                        |> Html.map AsLoggedInMsg
 
                 _ ->
                     Page.fullPageError (t "shop.title") Http.Timeout
@@ -623,36 +783,6 @@ view session model =
     { title = title
     , content = content
     }
-
-
-viewProductImg : Shared.Translators -> Maybe String -> Html msg
-viewProductImg { t } maybeImgUrl =
-    let
-        defaultView =
-            div [ class "flex flex-col items-center gap-2" ]
-                [ Icons.image ""
-                , span [ class "font-bold uppercase text-black text-sm" ]
-                    [ text <| t "shop.no_image" ]
-                ]
-
-        image =
-            case maybeImgUrl of
-                Nothing ->
-                    defaultView
-
-                Just "" ->
-                    defaultView
-
-                Just imgUrl ->
-                    img
-                        [ src imgUrl
-                        , class "object-cover object-center rounded max-h-68 max-w-full"
-                        , alt ""
-                        ]
-                        []
-    in
-    div [ class "bg-gray-100 w-full rounded grid place-items-center h-68" ]
-        [ image ]
 
 
 viewContactTheSeller : Shared.Translators -> { isGuest : Bool } -> Profile.Minimal -> Html msg
@@ -867,6 +997,84 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
             )
 
 
+viewEditSaleModal : Translation.Translators -> LoggedInModel -> Product -> Html LoggedInMsg
+viewEditSaleModal { t } model product =
+    View.Modal.initWith
+        { closeMsg = ClosedEditSaleModal
+        , isVisible = model.isEditModalVisible
+        }
+        |> View.Modal.withHeader (t "shop.edit_offer")
+        |> View.Modal.withBody
+            [ div [ class "flex flex-col divide-y divide-gray-500 mt-1" ]
+                [ a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id Route.SaleMainInformation)
+                    ]
+                    [ text <| t "shop.steps.main_information.title"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id Route.SaleImages)
+                    ]
+                    [ text <| t "shop.steps.images.title"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , a
+                    [ class "py-4 flex items-center hover:opacity-70 focus-ring rounded-sm"
+                    , Route.href (Route.EditSale product.id Route.SalePriceAndInventory)
+                    ]
+                    [ text <| t "shop.steps.price_and_inventory.title"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                , button
+                    [ class "text-red py-4 flex items-center hover:opacity-60 focus-ring rounded-sm"
+                    , onClick ClickedDelete
+                    ]
+                    [ text <| t "shop.delete"
+                    , Icons.arrowDown "-rotate-90 ml-auto"
+                    ]
+                ]
+            ]
+        |> View.Modal.toHtml
+
+
+viewConfirmDeleteModal : Translation.Translators -> LoggedInModel -> Html LoggedInMsg
+viewConfirmDeleteModal { t } model =
+    View.Modal.initWith
+        { closeMsg = ClosedConfirmDeleteModal
+        , isVisible =
+            case model.confirmDeleteModalStatus of
+                Closed ->
+                    False
+
+                Open ->
+                    True
+
+                Deleting ->
+                    True
+        }
+        |> View.Modal.withHeader (t "shop.delete_modal.title")
+        |> View.Modal.withBody
+            [ text <| t "shop.delete_modal.body"
+            ]
+        |> View.Modal.withFooter
+            [ button
+                [ class "button button-secondary"
+                , onClick ClosedConfirmDeleteModal
+                , disabled (model.confirmDeleteModalStatus == Deleting)
+                ]
+                [ text <| t "shop.delete_modal.cancel" ]
+            , button
+                [ class "button button-primary ml-4"
+                , onClick ClickedConfirmDelete
+                , disabled (model.confirmDeleteModalStatus == Deleting)
+                ]
+                [ text <| t "shop.delete_modal.confirm" ]
+            ]
+        |> View.Modal.toHtml
+
+
 
 -- UTILS
 
@@ -874,6 +1082,18 @@ createForm ({ t, tr } as translators) product maybeBalance { isDisabled } toForm
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
+        ClickedScrollToImage _ ->
+            [ "ClickedScrollToImage" ]
+
+        ImageStartedIntersecting _ ->
+            [ "ImageStartedIntersecting" ]
+
+        ImageStoppedIntersecting _ ->
+            [ "ImageStoppedIntersecting" ]
+
         AsGuestMsg subMsg ->
             "AsGuestMsg" :: guestMsgToString subMsg
 
@@ -917,6 +1137,24 @@ loggedInMsgToString msg =
 
         GotFormInteractionMsg subMsg ->
             "GotFormInteractionMsg" :: formInteractionMsgToString subMsg
+
+        ClickedEditSale ->
+            [ "ClickedEditSale" ]
+
+        ClosedEditSaleModal ->
+            [ "ClosedEditSaleModal" ]
+
+        ClickedDelete ->
+            [ "ClickedDelete" ]
+
+        ClosedConfirmDeleteModal ->
+            [ "ClosedConfirmDeleteModal" ]
+
+        ClickedConfirmDelete ->
+            [ "ClickedConfirmDelete" ]
+
+        CompletedDeleteProduct r ->
+            [ "CompletedDeleteProduct", UR.remoteDataToString r ]
 
 
 formInteractionMsgToString : FormInteractionMsg -> List String

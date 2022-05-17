@@ -110,7 +110,7 @@ type alias Community =
 type alias Product =
     { id : Shop.Id
     , title : String
-    , image : Maybe String
+    , images : List String
     , community : Community
     }
 
@@ -185,10 +185,7 @@ saleHistorySelectionSet =
                 (SelectionSet.succeed Product
                     |> with Shop.idSelectionSet
                     |> with Product.title
-                    |> with
-                        (Product.images Cambiatus.Object.ProductImage.uri
-                            |> SelectionSet.map List.head
-                        )
+                    |> with (Product.images Cambiatus.Object.ProductImage.uri)
                     |> with (Product.community logoSelectionSet)
                 )
             )

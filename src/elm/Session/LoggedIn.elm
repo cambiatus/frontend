@@ -1308,6 +1308,7 @@ codeOfConductUrl language =
 -}
 type External msg
     = UpdatedLoggedIn Model
+    | DropFromRouteHistoryWhile (Route -> Bool)
     | SetUpdateTimeEvery Float
     | ShowInsufficientPermissionsModal
     | AddedCommunity Profile.CommunityInfo
@@ -1679,6 +1680,9 @@ mapExternal mapFn msg =
         UpdatedLoggedIn model ->
             UpdatedLoggedIn model
 
+        DropFromRouteHistoryWhile dropFn ->
+            DropFromRouteHistoryWhile dropFn
+
         SetUpdateTimeEvery n ->
             SetUpdateTimeEvery n
 
@@ -1765,6 +1769,9 @@ updateExternal externalMsg ({ shared } as model) =
     case externalMsg of
         UpdatedLoggedIn newModel ->
             { defaultResult | model = newModel }
+
+        DropFromRouteHistoryWhile dropFn ->
+            { defaultResult | model = { model | routeHistory = List.dropWhile dropFn model.routeHistory } }
 
         SetUpdateTimeEvery n ->
             { defaultResult | model = { model | updateTimeEvery = n } }
@@ -3408,6 +3415,9 @@ externalMsgToString externalMsg =
     case externalMsg of
         UpdatedLoggedIn _ ->
             [ "UpdatedLoggedIn" ]
+
+        DropFromRouteHistoryWhile _ ->
+            [ "PopFromRouteHistory" ]
 
         SetUpdateTimeEvery _ ->
             [ "SetUpdateTimeEvery" ]

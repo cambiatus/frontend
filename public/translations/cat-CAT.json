@@ -826,18 +826,14 @@
     "create_offer_success": "Oferta creada amb èxit",
     "edit_offer": "Editar oferta",
     "delete_offer_success": "L’oferta s’ha suprimit correctament",
+    "delete_offer_failure": "S'ha produït un error en eliminar la teva oferta",
     "unauthorized": "No tens autorització per a editar aquesta venda",
-    "photo_label": "Imatge del producte",
-    "what_label": "Nom del producte",
-    "description_label": "Descriure el producte",
-    "description_placeholder": "Descriu el teu producte completament. Això ajudarà en les vendes",
     "which_community_label": "En quina comunitat vols fer la venda?",
     "choose_community_label": "Escull una comunitat",
     "track_stock_label": "Voleu fer un seguiment de les unitats a l'aplicació?",
     "choose_track_stock_label": "Trieu entre fer un seguiment o no",
     "track_stock_no": "No",
     "track_stock_yes": "Sí",
-    "price_label": "Preu del producte",
     "units_available": "Quantitat disponible",
     "out_of_stock": "fora d'estoc",
     "offer_action": "{{accountName}} està VENENT",
@@ -854,6 +850,33 @@
     "no_image": "Cap imatge",
     "subtract_unit": "Resta una unitat",
     "add_unit": "Afegir una unitat",
+    "carrousel": {
+      "previous": "Vés a la imatge anterior",
+      "next": "Vés a la imatge següent",
+      "index": "Vés a la imatge {{index}}"
+    },
+    "steps": {
+      "main_information": {
+        "title": "Informació principal",
+        "name_label": "Nom",
+        "name_placeholder": "Nom del producte",
+        "description_label": "Descripció",
+        "description_placeholder": "Descriu completament el teu producte. Ajudarà amb les vendes"
+      },
+      "images": {
+        "title": "Imatges",
+        "guidance": "Afegeix imatges del producte. Podeu afegir més imatges més endavant"
+      },
+      "price_and_inventory": {
+        "title": "Preu i Inventari",
+        "price_label": "Preu",
+        "quantity_label": "Quantitat en estoc",
+        "inventory_management": "Gestió d'inventari",
+        "inventory_management_description": "Si vols desactivar la teva oferta quan no tinguis més unitats en estoc, activa aquesta opció"
+      },
+      "continue": "Continua",
+      "index": "Pas {{current}} de {{total}}"
+    },
     "empty": {
       "all_title": "On són les ofertes?",
       "user_title": "No tienes ninguna oferta en esta comunidad",

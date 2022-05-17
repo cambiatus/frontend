@@ -2,7 +2,7 @@ module Form.File exposing
     ( init, Options
     , withDisabled, withAttrs, withContainerAttrs, withFileTypes, FileType(..), withVariant, Variant(..), RectangleBackground(..)
     , getId
-    , isEmpty, parser
+    , isEmpty, isLoading, parser
     , view
     , Model, initModel, initModelWithChoices, update, Msg, msgToString
     )
@@ -35,7 +35,7 @@ module Form.File exposing
 
 # Helpers
 
-@docs isEmpty, parser
+@docs isEmpty, isLoading, parser
 
 
 # View
@@ -139,6 +139,21 @@ isEmpty model =
                     True
 
 
+isLoading : Model -> Bool
+isLoading model =
+    case model of
+        SingleFile file ->
+            RemoteData.isLoading file
+
+        WithChoices { files, selected } ->
+            case List.Extra.getAt selected files of
+                Just file ->
+                    RemoteData.isLoading file
+
+                Nothing ->
+                    False
+
+
 
 -- OPTIONS
 
@@ -178,6 +193,7 @@ type FileType
 type Variant
     = SmallCircle
     | LargeRectangle RectangleBackground
+    | SimplePlus
 
 
 type RectangleBackground
@@ -362,6 +378,9 @@ view (Options options) viewConfig toMsg =
                 SmallCircle ->
                     viewSmallCircle (Options options) viewConfig file toMsg
 
+                SimplePlus ->
+                    viewSimplePlus (Options options) viewConfig file toMsg
+
         WithChoices choices ->
             viewHardcodedChoices (Options options) viewConfig choices toMsg
 
@@ -503,6 +522,57 @@ viewSmallCircle (Options options) viewConfig value toMsg =
                 ]
             ]
         , viewConfig.error
+        ]
+
+
+viewSimplePlus : Options msg -> ViewConfig msg -> RemoteData Http.Error String -> (Msg -> msg) -> Html msg
+viewSimplePlus (Options options) viewConfig value toMsg =
+    let
+        imgClasses =
+            "object-cover rounded max-w-full max-h-full"
+    in
+    div options.containerAttrs
+        [ viewInput (Options options) viewConfig toMsg
+        , Html.label
+            (for options.id
+                :: class "hover:opacity-70"
+                :: classList
+                    [ ( "cursor-pointer", not options.disabled )
+                    , ( "cursor-not-allowed", options.disabled )
+                    ]
+                :: options.extraAttrs
+            )
+            [ case value of
+                RemoteData.NotAsked ->
+                    Icons.plus "fill-current text-orange-300"
+
+                RemoteData.Loading ->
+                    div [ class "w-full px-4" ]
+                        [ View.Components.loadingLogoAnimatedFluid
+                        , span [ class "sr-only" ]
+                            [ Html.text <| viewConfig.translators.t "menu.loading"
+                            ]
+                        ]
+
+                RemoteData.Failure _ ->
+                    Icons.plus "fill-current text-orange-300"
+
+                RemoteData.Success url ->
+                    if List.member PDF options.fileTypes then
+                        View.Components.pdfViewer [ class imgClasses ]
+                            { url = url
+                            , childClass = imgClasses
+                            , maybeTranslators = Nothing
+                            }
+
+                    else
+                        img
+                            [ class imgClasses
+                            , src url
+                            , alt ""
+                            ]
+                            []
+            ]
         ]
 
 

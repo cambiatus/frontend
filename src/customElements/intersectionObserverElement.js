@@ -22,9 +22,18 @@ export default () => (
         .filter((target) => target !== null)
     }
 
+    isAboveMaxWidth () {
+      const maxWidthAttribute = this.getAttribute('elm-max-width')
+      if (maxWidthAttribute === 'none') {
+        return false
+      }
+
+      const maxWidth = parseInt(maxWidthAttribute) || 0
+      return window.innerWidth >= maxWidth
+    }
+
     connectedCallback () {
-      this.maxWidth = parseInt(this.getAttribute('elm-max-width')) || 0
-      if (window.innerWidth >= this.maxWidth) {
+      if (this.isAboveMaxWidth()) {
         return
       }
 
@@ -37,7 +46,7 @@ export default () => (
     }
 
     disconnectedCallback () {
-      if (window.innerWidth >= this.maxWidth) {
+      if (this.isAboveMaxWidth()) {
         return
       }
 
@@ -45,7 +54,7 @@ export default () => (
     }
 
     observe () {
-      if (window.innerWidth >= this.maxWidth) {
+      if (this.isAboveMaxWidth()) {
         return
       }
 

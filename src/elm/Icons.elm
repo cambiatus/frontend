@@ -7,6 +7,7 @@ module Icons exposing
     , calendar
     , cambiatusCoin
     , camera
+    , checkmark
     , circledPlus
     , circularClose
     , clearInput
@@ -149,6 +150,11 @@ camera class_ =
             , Svg.path [ d "m7.99998 11.3333c1.47276 0 2.66662-1.1939 2.66662-2.66663 0-1.47276-1.19386-2.66667-2.66662-2.66667s-2.66667 1.19391-2.66667 2.66667c0 1.47273 1.19391 2.66663 2.66667 2.66663z" ] []
             ]
         ]
+
+
+checkmark : String -> Svg msg
+checkmark class_ =
+    svg [ width "14", height "10", fill "none", class class_ ] [ Svg.path [ fillRule "evenodd", clipRule "evenodd", d "M5.662 9.5c-.266 0-.521-.102-.71-.284L.27 4.704a.942.942 0 0 1 .025-1.342 1.031 1.031 0 0 1 1.394-.024l3.974 3.829 6.65-6.408a1.031 1.031 0 0 1 1.394.024.942.942 0 0 1 .025 1.343l-7.36 7.09a1.023 1.023 0 0 1-.71.284Z", fill "#fff" ] [] ]
 
 
 notification : String -> Svg msg

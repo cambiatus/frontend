@@ -896,7 +896,7 @@ view loggedIn model =
                                                         Just ("#" ++ actionCardId action)
                                                 )
                                     , threshold = 0.01
-                                    , breakpointToExclude = View.Components.Lg
+                                    , breakpointToExclude = Just View.Components.Lg
                                     , onStartedIntersecting = Just StartedIntersecting
                                     , onStoppedIntersecting = Just StoppedIntersecting
                                     }

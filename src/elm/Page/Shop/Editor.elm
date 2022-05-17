@@ -1,42 +1,41 @@
 module Page.Shop.Editor exposing
     ( Model
     , Msg(..)
+    , getCurrentStep
     , initCreate
     , initUpdate
+    , maybeSetStep
     , msgToString
     , update
     , view
     )
 
-import Api
 import Cambiatus.Enum.Permission as Permission
-import Community exposing (Balance)
+import Eos
 import Form
 import Form.File
 import Form.RichText
-import Form.Select
 import Form.Text
+import Form.Toggle
 import Form.Validate
 import Graphql.Http
-import Graphql.SelectionSet
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, a, button, div, h2, hr, p, span, text)
 import Html.Attributes exposing (class, classList, disabled, maxlength, type_)
 import Html.Attributes.Aria exposing (ariaLabel)
 import Html.Events exposing (onClick)
-import Http
 import Icons
-import Log
+import List.Extra
 import Markdown exposing (Markdown)
 import Page
 import RemoteData exposing (RemoteData)
-import Result exposing (Result)
 import Route
 import Session.LoggedIn as LoggedIn exposing (External(..))
 import Session.Shared exposing (Shared)
 import Shop exposing (Product)
+import Translation
 import UpdateResult as UR
+import Utils
 import View.Feedback as Feedback
-import View.Modal as Modal
 
 
 
@@ -44,17 +43,19 @@ import View.Modal as Modal
 
 
 initCreate : LoggedIn.Model -> ( Model, Cmd Msg )
-initCreate loggedIn =
-    ( LoadingBalancesCreate
-    , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
-    )
+initCreate _ =
+    ( EditingCreate initFormData, Cmd.none )
 
 
-initUpdate : Shop.Id -> LoggedIn.Model -> ( Model, Cmd Msg )
-initUpdate productId loggedIn =
-    ( LoadingBalancesUpdate productId
-    , Api.getBalances loggedIn.shared loggedIn.accountName CompletedBalancesLoad
-    )
+initUpdate : Shop.Id -> Route.EditSaleStep -> LoggedIn.Model -> UpdateResult
+initUpdate productId step loggedIn =
+    LoadingSaleUpdate step
+        |> UR.init
+        |> UR.addExt
+            (LoggedIn.query loggedIn
+                (Shop.productQuery productId)
+                CompletedSaleLoad
+            )
 
 
 
@@ -68,91 +69,50 @@ type alias Model =
 type
     Status
     -- Create
-    = LoadingBalancesCreate
-    | EditingCreate (List Balance) (Form.Model FormInput)
-    | Creating (List Balance) (Form.Model FormInput)
+    = EditingCreate FormData
+    | Creating FormData
       -- Update
-    | LoadingBalancesUpdate Shop.Id
-    | LoadingSaleUpdate (List Balance)
-    | EditingUpdate (List Balance) Product DeleteModalStatus (Form.Model FormInput)
-    | Saving (List Balance) Product (Form.Model FormInput)
-    | Deleting (List Balance) Product (Form.Model FormInput)
+    | LoadingSaleUpdate Route.EditSaleStep
+    | EditingUpdate Product FormData
+    | Saving Product FormData
       -- Errors
-    | LoadBalancesFailed Http.Error
     | LoadSaleFailed (Graphql.Http.Error (Maybe Product))
 
 
-type DeleteModalStatus
-    = Open
-    | Closed
+type alias FormData =
+    { mainInformation : Form.Model MainInformationFormInput
+    , images : Form.Model ImagesFormInput
+    , priceAndInventory : Form.Model PriceAndInventoryFormInput
+    , currentStep : Step
+    }
 
 
-type alias FormInput =
-    { image : Form.File.Model
-    , title : String
+type Step
+    = MainInformation
+    | Images MainInformationFormOutput
+    | PriceAndInventory MainInformationFormOutput ImagesFormOutput
+
+
+type alias MainInformationFormInput =
+    { title : String
     , description : Form.RichText.Model
-    , trackUnits : Bool
-    , unitsInStock : String
-    , price : String
     }
 
 
-type alias FormOutput =
-    { image : Maybe String
-    , title : String
-    , description : Markdown
-    , unitTracking : Shop.StockTracking
-    , price : Float
-    }
+type alias MainInformationFormOutput =
+    { title : String, description : Markdown }
 
 
-createForm : LoggedIn.Model -> Form.Form Msg FormInput FormOutput
-createForm loggedIn =
-    let
-        ({ t } as translators) =
-            loggedIn.shared.translators
-    in
-    Form.succeed
-        (\maybeImage title description price trackUnits unitsInStock ->
-            { image = maybeImage
-            , title = title
-            , description = description
-            , unitTracking =
-                if trackUnits then
-                    unitsInStock
-
-                else
-                    Shop.NoTracking
-            , price = price
-            }
-        )
+mainInformationForm : Translation.Translators -> Form.Form msg MainInformationFormInput MainInformationFormOutput
+mainInformationForm ({ t } as translators) =
+    Form.succeed MainInformationFormOutput
         |> Form.with
-            (Form.introspect
-                (\values ->
-                    Form.File.init { label = t "shop.photo_label", id = "image-uploader" }
-                        |> Form.File.withVariant (Form.File.LargeRectangle Form.File.Gray)
-                        |> Form.File.withContainerAttrs
-                            [ class "mb-10 lg:place-self-center lg:w-2/3"
-                            , classList
-                                [ ( "lg:row-span-5", not values.trackUnits )
-                                , ( "lg:row-span-6", values.trackUnits )
-                                ]
-                            ]
-                        |> Form.File.withAttrs [ class "border border-dashed border-gray-900 rounded" ]
-                        |> Form.file
-                            { translators = translators
-                            , value = .image
-                            , update = \image input -> { input | image = image }
-                            , externalError = always Nothing
-                            }
-                        |> Form.optional
-                )
-            )
-        |> Form.with
-            (Form.Text.init { label = t "shop.what_label", id = "title-input" }
+            (Form.Text.init
+                { label = t "shop.steps.main_information.name_label"
+                , id = "product-title-input"
+                }
                 |> Form.Text.withExtraAttrs [ maxlength 255 ]
-                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
-                |> Form.Text.withPlaceholder (t "shop.what_label")
+                |> Form.Text.withPlaceholder (t "shop.steps.main_information.name_placeholder")
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
@@ -160,87 +120,196 @@ createForm loggedIn =
                             >> Form.Validate.stringLongerThan 3
                             >> Form.Validate.validate translators
                     , value = .title
-                    , update = \title input -> { input | title = title }
+                    , update = \newTitle values -> { values | title = newTitle }
                     , externalError = always Nothing
                     }
             )
         |> Form.with
-            (Form.RichText.init { label = t "shop.description_label" }
-                |> Form.RichText.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
-                |> Form.RichText.withPlaceholder (t "shop.description_placeholder")
+            (Form.RichText.init
+                { label = t "shop.steps.main_information.description_label"
+                }
+                |> Form.RichText.withPlaceholder (t "shop.steps.main_information.description_placeholder")
                 |> Form.richText
                     { parser =
                         Form.Validate.succeed
                             >> Form.Validate.markdownLongerThan 10
                             >> Form.Validate.validate translators
                     , value = .description
-                    , update = \description input -> { input | description = description }
+                    , update = \newDescription values -> { values | description = newDescription }
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.Text.init { label = t "shop.price_label", id = "price-input" }
-                |> (case loggedIn.selectedCommunity of
-                        RemoteData.Success community ->
-                            Form.Text.withCurrency community.symbol
 
-                        _ ->
-                            identity
-                   )
+
+type alias ImagesFormInput =
+    List Form.File.Model
+
+
+type alias ImagesFormOutput =
+    List String
+
+
+imagesForm : Translation.Translators -> Form.Form Msg ImagesFormInput ImagesFormOutput
+imagesForm translators =
+    Form.succeed (List.filterMap identity)
+        |> Form.withNoOutput
+            (Form.arbitrary
+                (p [ class "mb-4" ] [ text <| translators.t "shop.steps.images.guidance" ])
+            )
+        |> Form.with
+            (Form.introspect
+                (\images ->
+                    List.indexedMap
+                        (\index image ->
+                            Form.succeed (\imageOutput _ -> imageOutput)
+                                |> Form.withGroup [ class "relative" ]
+                                    (Form.File.init
+                                        { label = ""
+                                        , id = "product-image-input-" ++ String.fromInt index
+                                        }
+                                        |> Form.File.withAttrs
+                                            [ class "w-24 h-24 rounded bg-gray-100 flex items-center justify-center"
+                                            ]
+                                        |> Form.File.withVariant Form.File.SimplePlus
+                                        |> Form.File.withContainerAttrs [ classList [ ( "animate-bounce-in", Form.File.isEmpty image ) ] ]
+                                        |> Form.file
+                                            { translators = translators
+                                            , value = \_ -> image
+                                            , update = \newImage _ -> newImage
+                                            , externalError = always Nothing
+                                            }
+                                        |> Form.mapValues
+                                            { value = \_ -> image
+                                            , update = \newImage -> List.Extra.setAt index newImage
+                                            }
+                                        |> Form.optional
+                                    )
+                                    (Form.arbitraryWith ()
+                                        (div
+                                            [ class "absolute top-0 right-0"
+                                            , classList [ ( "hidden", Form.File.isEmpty image ) ]
+                                            ]
+                                            [ button
+                                                [ class "bg-white rounded-full -translate-y-1/2 ml-1/2"
+                                                , onClick (\values -> values |> List.Extra.removeAt index)
+                                                , type_ "button"
+                                                ]
+                                                [ Icons.circularClose "w-6 h-6"
+                                                ]
+                                            ]
+                                        )
+                                    )
+                        )
+                        images
+                        |> Form.list [ class "flex flex-wrap gap-6" ]
+                )
+            )
+
+
+type alias PriceAndInventoryFormInput =
+    { price : String
+    , unitsInStock : String
+    , trackUnits : Bool
+    }
+
+
+type alias PriceAndInventoryFormOutput =
+    { price : Eos.Asset
+    , unitTracking : Shop.StockTracking
+    }
+
+
+priceAndInventoryForm : Translation.Translators -> { isDisabled : Bool } -> Eos.Symbol -> Form.Form Msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
+priceAndInventoryForm translators isDisabled symbol =
+    Form.succeed PriceAndInventoryFormOutput
+        |> Form.withGroup [ class "grid lg:grid-cols-2 gap-8" ]
+            (Form.Text.init
+                { label = translators.t "shop.steps.price_and_inventory.price_label"
+                , id = "product-price-input"
+                }
+                |> Form.Text.withCurrency symbol
                 |> Form.Text.withExtraAttrs [ Html.Attributes.min "0" ]
-                |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
+                |> Form.Text.withContainerAttrs [ class "bg-gray-100 rounded-sm p-4 mb-0 self-start" ]
                 |> Form.textField
                     { parser =
                         Form.Validate.succeed
                             >> Form.Validate.maskedFloat translators
                             >> Form.Validate.floatGreaterThan 0
+                            >> Form.Validate.map (\price -> { amount = price, symbol = symbol })
                             >> Form.Validate.validate translators
                     , value = .price
-                    , update = \price input -> { input | price = price }
+                    , update = \newPrice values -> { values | price = newPrice }
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
-            (Form.Select.init
-                { label = t "shop.track_stock_label"
-                , id = "track-stock-select"
-                , optionToString = boolToString
+            (stockTrackingForm translators isDisabled)
+
+
+stockTrackingForm : Translation.Translators -> { isDisabled : Bool } -> Form.Form Msg { input | unitsInStock : String, trackUnits : Bool } Shop.StockTracking
+stockTrackingForm translators { isDisabled } =
+    Form.succeed
+        (\trackStock availableUnits ->
+            if trackStock then
+                Shop.UnitTracking { availableUnits = availableUnits }
+
+            else
+                Shop.NoTracking
+        )
+        |> Form.withGroup [ class "bg-gray-100 rounded-sm p-4" ]
+            (Form.Toggle.init
+                { label =
+                    div [ class "text-gray-333 text-base mb-4" ]
+                        [ span [ class "font-bold" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management" ]
+                        , p [ class "mt-2" ] [ text <| translators.t "shop.steps.price_and_inventory.inventory_management_description" ]
+                        ]
+                , id = "product-track-units-toggle"
                 }
-                |> Form.Select.withOption False (t "shop.track_stock_no")
-                |> Form.Select.withOption True (t "shop.track_stock_yes")
-                |> Form.Select.withContainerAttrs [ class "mb-10 lg:w-2/3" ]
-                |> Form.select (boolFromString >> Maybe.withDefault False)
+                |> Form.Toggle.withContainerAttrs [ class "flex flex-col" ]
+                |> Form.Toggle.withToggleContainerAttrs [ class "ml-0 pl-0" ]
+                |> Form.Toggle.withToggleSide (Form.Toggle.Right { invert = True })
+                |> Form.toggle
                     { parser = Ok
                     , value = .trackUnits
-                    , update = \trackUnits input -> { input | trackUnits = trackUnits }
+                    , update = \newTrackUnits values -> { values | trackUnits = newTrackUnits }
                     , externalError = always Nothing
                     }
             )
-        |> Form.with
             (Form.introspect
-                (\values ->
-                    if values.trackUnits then
-                        Form.Text.init { label = t "shop.units_label", id = "units-in-stock-input" }
+                (\{ trackUnits } ->
+                    if trackUnits then
+                        Form.Text.init
+                            { label = translators.t "shop.steps.price_and_inventory.quantity_label"
+                            , id = "product-quantity-input"
+                            }
                             |> Form.Text.withPlaceholder "0"
                             |> Form.Text.asNumeric
                             |> Form.Text.withType Form.Text.Number
+                            |> Form.Text.withContainerAttrs [ class "mb-0 mt-10" ]
                             |> Form.Text.withExtraAttrs
                                 [ Html.Attributes.min "0"
                                 , class "text-center"
                                 ]
-                            |> Form.Text.withContainerAttrs [ class "lg:w-2/3" ]
                             |> Form.Text.withElements
                                 [ button
-                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
+                                    [ class "absolute top-1 bottom-1 left-1 px-4 rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                                    , classList
+                                        [ ( "bg-white", not isDisabled )
+                                        , ( "bg-gray-500", isDisabled )
+                                        ]
                                     , type_ "button"
-                                    , ariaLabel <| t "shop.subtract_unit"
+                                    , ariaLabel <| translators.t "shop.subtract_unit"
                                     , onClick ClickedDecrementStockUnits
                                     ]
-                                    [ Icons.minus "fill-current" ]
+                                    [ Icons.minus "fill-current"
+                                    ]
                                 , button
-                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring bg-white text-orange-300 hover:text-orange-300/70"
+                                    [ class "absolute top-1 bottom-1 right-1 px-4 rounded focus-ring text-orange-300 hover:text-orange-300/70"
+                                    , classList
+                                        [ ( "bg-white", not isDisabled )
+                                        , ( "bg-gray-500", isDisabled )
+                                        ]
                                     , type_ "button"
-                                    , ariaLabel <| t "shop.add_unit"
+                                    , ariaLabel <| translators.t "shop.add_unit"
                                     , onClick ClickedIncrementStockUnits
                                     ]
                                     [ Icons.plus "fill-current" ]
@@ -250,69 +319,73 @@ createForm loggedIn =
                                     Form.Validate.succeed
                                         >> Form.Validate.int
                                         >> Form.Validate.intGreaterThanOrEqualTo 0
-                                        >> Form.Validate.map (\units -> Shop.UnitTracking { availableUnits = units })
                                         >> Form.Validate.validate translators
                                 , value = .unitsInStock
-                                , update = \unitsInStock input -> { input | unitsInStock = unitsInStock }
+                                , update = \newUnitsInStock values -> { values | unitsInStock = newUnitsInStock }
                                 , externalError = always Nothing
                                 }
 
                     else
-                        Form.succeed Shop.NoTracking
+                        Form.succeed 0
                 )
             )
 
 
-boolToString : Bool -> String
-boolToString bool =
-    if bool then
-        "True"
-
-    else
-        "False"
-
-
-boolFromString : String -> Maybe Bool
-boolFromString bool =
-    case bool of
-        "True" ->
-            Just True
-
-        "False" ->
-            Just False
-
-        _ ->
-            Nothing
+initFormData : FormData
+initFormData =
+    { mainInformation =
+        Form.init
+            { title = ""
+            , description = Form.RichText.initModel "product-description-editor" Nothing
+            }
+    , images = Form.init [ Form.File.initModel Nothing ]
+    , priceAndInventory =
+        Form.init
+            { price = "0"
+            , unitsInStock = "0"
+            , trackUnits = False
+            }
+    , currentStep = MainInformation
+    }
 
 
-initForm : Form.Model FormInput
-initForm =
-    Form.init
-        { image = Form.File.initModel Nothing
-        , title = ""
-        , description = Form.RichText.initModel "description-editor" Nothing
-        , trackUnits = False
-        , unitsInStock = "0"
-        , price = "0"
-        }
+initEditingFormData : Translation.Translators -> Product -> Route.EditSaleStep -> FormData
+initEditingFormData translators product step =
+    { mainInformation =
+        Form.init
+            { title = product.title
+            , description = Form.RichText.initModel "product-description-editor" (Just product.description)
+            }
+    , images =
+        product.images
+            |> List.map (Just >> Form.File.initModel)
+            |> (\images -> images ++ [ Form.File.initModel Nothing ])
+            |> Form.init
+    , priceAndInventory =
+        Form.init
+            { price = Eos.formatSymbolAmount translators product.symbol product.price
+            , unitsInStock =
+                case product.stockTracking of
+                    Shop.NoTracking ->
+                        String.fromInt 0
 
+                    Shop.UnitTracking { availableUnits } ->
+                        String.fromInt availableUnits
+            , trackUnits = Shop.hasUnitTracking product
+            }
+    , currentStep =
+        case step of
+            Route.SaleMainInformation ->
+                MainInformation
 
-initEditingForm : Product -> Form.Model FormInput
-initEditingForm product =
-    Form.init
-        { image = Form.File.initModel product.image
-        , title = product.title
-        , description = Form.RichText.initModel "description-editor" (Just product.description)
-        , trackUnits = Shop.hasUnitTracking product
-        , unitsInStock =
-            case product.stockTracking of
-                Shop.NoTracking ->
-                    String.fromInt 0
+            Route.SaleImages ->
+                Images { title = product.title, description = product.description }
 
-                Shop.UnitTracking { availableUnits } ->
-                    String.fromInt availableUnits
-        , price = String.fromFloat product.price
-        }
+            Route.SalePriceAndInventory ->
+                PriceAndInventory
+                    { title = product.title, description = product.description }
+                    product.images
+    }
 
 
 
@@ -330,13 +403,10 @@ view loggedIn model =
 
         isEdit =
             case model of
-                EditingUpdate _ _ _ _ ->
+                EditingUpdate _ _ ->
                     True
 
-                Saving _ _ _ ->
-                    True
-
-                Deleting _ _ _ ->
+                Saving _ _ ->
                     True
 
                 _ ->
@@ -351,35 +421,23 @@ view loggedIn model =
 
         content =
             case model of
-                LoadingBalancesCreate ->
-                    Page.fullPageLoading shared
-
-                LoadingBalancesUpdate _ ->
-                    Page.fullPageLoading shared
-
                 LoadingSaleUpdate _ ->
                     Page.fullPageLoading shared
-
-                LoadBalancesFailed error ->
-                    Page.fullPageError (t "shop.title") error
 
                 LoadSaleFailed error ->
                     Page.fullPageGraphQLError (t "shop.title") error
 
-                EditingCreate _ form ->
-                    viewForm loggedIn False False Closed form
+                EditingCreate formData ->
+                    viewForm loggedIn { isEdit = False, isDisabled = False } model formData
 
-                Creating _ form ->
-                    viewForm loggedIn False True Closed form
+                Creating formData ->
+                    viewForm loggedIn { isEdit = False, isDisabled = True } model formData
 
-                EditingUpdate _ _ confirmDelete form ->
-                    viewForm loggedIn True False confirmDelete form
+                EditingUpdate _ formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = False } model formData
 
-                Saving _ _ form ->
-                    viewForm loggedIn True True Closed form
-
-                Deleting _ _ form ->
-                    viewForm loggedIn True True Closed form
+                Saving _ formData ->
+                    viewForm loggedIn { isEdit = True, isDisabled = True } model formData
     in
     { title = title
     , content =
@@ -403,10 +461,15 @@ view loggedIn model =
     }
 
 
-viewForm : LoggedIn.Model -> Bool -> Bool -> DeleteModalStatus -> Form.Model FormInput -> Html Msg
-viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
+viewForm :
+    LoggedIn.Model
+    -> { isEdit : Bool, isDisabled : Bool }
+    -> Model
+    -> FormData
+    -> Html Msg
+viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
     let
-        { t } =
+        { t, tr } =
             shared.translators
 
         ( actionText, pageTitle ) =
@@ -415,72 +478,184 @@ viewForm ({ shared } as loggedIn) isEdit isDisabled deleteModal form =
 
             else
                 ( t "menu.create", t "shop.create_offer" )
-    in
-    div [ class "flex flex-col flex-grow mb-10 lg:mb-0" ]
-        [ Page.viewHeader loggedIn pageTitle
-        , div [ class "flex items-center flex-grow relative bg-white lg:bg-transparent" ]
-            [ div [ class "bg-white top-0 bottom-0 left-0 right-1/2 absolute hidden lg:block" ] []
-            , Form.view [ class "container mx-auto p-4 z-10 lg:py-16 grid lg:grid-cols-2 lg:justify-items-center" ]
+
+        viewForm_ :
+            Form.Form Msg input output
+            ->
+                Form.Model
+                    input
+            -> { submitText : String, isSubmitDisabled : Bool }
+            -> (Form.Msg input -> FormMsg)
+            -> (output -> Msg)
+            -> Html Msg
+        viewForm_ formFn formModel { submitText, isSubmitDisabled } toFormMsg onSubmitMsg =
+            Form.view [ class "container mx-auto px-4 flex-grow flex flex-col lg:max-w-none lg:mx-0 lg:px-6" ]
                 shared.translators
                 (\submitButton ->
-                    [ div [ class "lg:w-2/3 flex flex-col-reverse gap-4 lg:flex-row" ]
-                        [ if isEdit then
-                            button
-                                [ class "button button-danger w-full"
-                                , disabled isDisabled
-                                , onClick ClickedDelete
-                                , type_ "button"
+                    [ div [ class "mt-auto" ]
+                        [ div [ class "mt-10 flex gap-x-4" ]
+                            [ div
+                                [ class "grid grid-cols-2 w-full gap-6 lg:w-1/2 lg:mx-auto"
+                                , classList [ ( "grid-cols-3", isEdit ) ]
                                 ]
-                                [ text (t "shop.delete") ]
-
-                          else
-                            text ""
-                        , submitButton
-                            [ class "button button-primary w-full"
-                            , disabled isDisabled
+                                [ a
+                                    [ class "button button-secondary w-full"
+                                    , Route.href (Route.Shop Shop.All)
+                                    ]
+                                    [ text <| t "menu.cancel" ]
+                                , submitButton
+                                    [ class "button button-primary w-full"
+                                    , disabled (isDisabled || isSubmitDisabled)
+                                    ]
+                                    [ text submitText ]
+                                ]
                             ]
-                            [ text actionText ]
                         ]
-                    , if isEdit && deleteModal == Open then
-                        viewConfirmDeleteModal t
-
-                      else
-                        text ""
                     ]
                 )
-                (createForm loggedIn)
-                (Form.withDisabled isDisabled form)
-                { toMsg = GotFormMsg
-                , onSubmit = ClickedSave
+                formFn
+                (Form.withDisabled isDisabled formModel)
+                { toMsg = toFormMsg >> GotFormMsg
+                , onSubmit = onSubmitMsg
                 }
+
+        ( stepNumber, stepName ) =
+            case formData.currentStep of
+                MainInformation ->
+                    ( 1, t "shop.steps.main_information.title" )
+
+                Images _ ->
+                    ( 2, t "shop.steps.images.title" )
+
+                PriceAndInventory _ _ ->
+                    ( 3, t "shop.steps.price_and_inventory.title" )
+
+        isStepCompleted : Route.EditSaleStep -> Bool
+        isStepCompleted step =
+            case ( step, formData.currentStep ) of
+                ( Route.SaleMainInformation, Images _ ) ->
+                    True
+
+                ( Route.SaleMainInformation, PriceAndInventory _ _ ) ->
+                    True
+
+                ( Route.SaleImages, PriceAndInventory _ _ ) ->
+                    True
+
+                _ ->
+                    False
+
+        stepBall : Route.EditSaleStep -> Html msg
+        stepBall step =
+            let
+                isCurrent =
+                    case formData.currentStep of
+                        MainInformation ->
+                            step == Route.SaleMainInformation
+
+                        Images _ ->
+                            step == Route.SaleImages
+
+                        PriceAndInventory _ _ ->
+                            step == Route.SalePriceAndInventory
+
+                maybeNewRoute =
+                    setCurrentStepInRoute model step
+            in
+            a
+                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors duration-300"
+                , classList
+                    [ ( "bg-orange-300 delay-300", isStepCompleted step || isCurrent )
+                    ]
+                , case maybeNewRoute of
+                    Just newRoute ->
+                        Route.href newRoute
+
+                    Nothing ->
+                        class ""
+                ]
+                [ div
+                    [ class "transition-opacity duration-300"
+                    , classList [ ( "opacity-0", not (isStepCompleted step) ) ]
+                    ]
+                    [ Icons.checkmark ""
+                    ]
+                ]
+
+        stepLine step =
+            div [ class "w-full h-px bg-gray-900 relative" ]
+                [ div
+                    [ class "bg-orange-300 w-full absolute left-0 top-0 bottom-0 transition-transform ease-out origin-left duration-300"
+                    , classList
+                        [ ( "scale-x-0 delay-300", not (isStepCompleted step) )
+                        , ( "scale-x-100", isStepCompleted step )
+                        ]
+                    ]
+                    []
+                ]
+    in
+    div [ class "flex flex-col flex-grow" ]
+        [ Page.viewHeader loggedIn pageTitle
+        , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
+            [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:motion-reduce:animate-none" ]
+                [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
+                    [ div [ class "mb-4 flex items-center" ]
+                        [ stepBall Route.SaleMainInformation
+                        , stepLine Route.SaleMainInformation
+                        , stepBall Route.SaleImages
+                        , stepLine Route.SaleImages
+                        , stepBall Route.SalePriceAndInventory
+                        ]
+                    , h2 [ class "font-bold text-black mb-2" ]
+                        [ text <|
+                            tr "shop.steps.index"
+                                [ ( "current", String.fromInt stepNumber )
+                                , ( "total", String.fromInt 3 )
+                                ]
+                        ]
+                    , text stepName
+                    ]
+                , hr [ class "mt-4 mb-6 border-gray-500 lg:mx-4 lg:mb-10" ] []
+                , case formData.currentStep of
+                    MainInformation ->
+                        viewForm_ (mainInformationForm shared.translators)
+                            formData.mainInformation
+                            { submitText = t "shop.steps.continue"
+                            , isSubmitDisabled = False
+                            }
+                            MainInformationMsg
+                            (SubmittedMainInformation ImagesMainInformationTarget)
+
+                    Images _ ->
+                        viewForm_ (imagesForm shared.translators)
+                            formData.images
+                            { submitText = t "shop.steps.continue"
+                            , isSubmitDisabled =
+                                Form.getValue identity formData.images
+                                    |> List.any Form.File.isLoading
+                            }
+                            ImagesMsg
+                            SubmittedImages
+
+                    PriceAndInventory _ _ ->
+                        case loggedIn.selectedCommunity of
+                            RemoteData.Success community ->
+                                viewForm_ (priceAndInventoryForm shared.translators { isDisabled = isDisabled } community.symbol)
+                                    formData.priceAndInventory
+                                    { submitText = actionText
+                                    , isSubmitDisabled = False
+                                    }
+                                    PriceAndInventoryMsg
+                                    SubmittedPriceAndInventory
+
+                            RemoteData.Failure err ->
+                                Page.fullPageGraphQLError pageTitle err
+
+                            _ ->
+                                Page.fullPageLoading shared
+                ]
             ]
         ]
-
-
-viewConfirmDeleteModal : (String -> String) -> Html Msg
-viewConfirmDeleteModal t =
-    Modal.initWith
-        { closeMsg = ClickedDeleteCancel
-        , isVisible = True
-        }
-        |> Modal.withHeader (t "shop.delete_modal.title")
-        |> Modal.withBody
-            [ text (t "shop.delete_modal.body") ]
-        |> Modal.withFooter
-            [ button
-                [ class "modal-cancel"
-                , onClick ClickedDeleteCancel
-                , type_ "button"
-                ]
-                [ text (t "shop.delete_modal.cancel") ]
-            , button
-                [ class "modal-accept"
-                , onClick ClickedDeleteConfirm
-                , type_ "button"
-                ]
-                [ text (t "shop.delete_modal.confirm") ]
-            ]
-        |> Modal.toHtml
 
 
 
@@ -492,18 +667,26 @@ type alias UpdateResult =
 
 
 type Msg
-    = CompletedBalancesLoad (Result Http.Error (List Balance))
+    = NoOp
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
-    | GotFormMsg (Form.Msg FormInput)
-    | ClickedSave FormOutput
-    | ClickedDelete
-    | ClickedDeleteConfirm
-    | ClickedDeleteCancel
+    | GotFormMsg FormMsg
+    | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
+    | SubmittedImages ImagesFormOutput
+    | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
-    | GotDeleteResponse (RemoteData (Graphql.Http.Error (Maybe ())) (Maybe ()))
-    | ClosedAuthModal
     | ClickedDecrementStockUnits
     | ClickedIncrementStockUnits
+
+
+type MainInformationTarget
+    = ImagesMainInformationTarget
+    | PriceAndInventoryMainInformationTarget
+
+
+type FormMsg
+    = MainInformationMsg (Form.Msg MainInformationFormInput)
+    | ImagesMsg (Form.Msg ImagesFormInput)
+    | PriceAndInventoryMsg (Form.Msg PriceAndInventoryFormInput)
 
 
 update : Msg -> Model -> LoggedIn.Model -> UpdateResult
@@ -513,49 +696,14 @@ update msg model loggedIn =
             loggedIn.shared.translators.t
     in
     case msg of
-        CompletedBalancesLoad (Ok balances) ->
-            case model of
-                LoadingBalancesCreate ->
-                    initForm
-                        |> EditingCreate balances
-                        |> UR.init
-
-                LoadingBalancesUpdate saleId ->
-                    let
-                        addSaleFetch =
-                            LoggedIn.query loggedIn
-                                (Shop.productQuery saleId)
-                                CompletedSaleLoad
-                                |> UR.addExt
-                    in
-                    LoadingSaleUpdate balances
-                        |> UR.init
-                        |> addSaleFetch
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Completed loading balances, but user wasn't creating or updating sale"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-        CompletedBalancesLoad (Err error) ->
-            LoadBalancesFailed error
-                |> UR.init
-                |> UR.logHttpError msg
-                    (Just loggedIn.accountName)
-                    "Got an error when loading balances for shop editor"
-                    { moduleName = "Page.Shop.Editor", function = "update" }
-                    [ Log.contextFromCommunity loggedIn.selectedCommunity ]
-                    error
+        NoOp ->
+            UR.init model
 
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
-                ( LoadingSaleUpdate balances, Just sale ) ->
-                    initEditingForm sale
-                        |> EditingUpdate balances sale Closed
+                ( LoadingSaleUpdate step, Just sale ) ->
+                    initEditingFormData loggedIn.shared.translators sale step
+                        |> EditingUpdate sale
                         |> UR.init
 
                 ( _, _ ) ->
@@ -580,122 +728,6 @@ update msg model loggedIn =
         CompletedSaleLoad _ ->
             UR.init model
 
-        ClickedSave formOutput ->
-            case loggedIn.selectedCommunity of
-                RemoteData.Success community ->
-                    case model of
-                        EditingCreate balances form ->
-                            Creating balances form
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation
-                                        loggedIn
-                                        (Shop.createProduct
-                                            { symbol = community.symbol
-                                            , title = formOutput.title
-                                            , description = formOutput.description
-                                            , images =
-                                                formOutput.image
-                                                    |> Maybe.map List.singleton
-                                                    |> Maybe.withDefault []
-                                            , price = formOutput.price
-                                            , stockTracking = formOutput.unitTracking
-                                            }
-                                            Shop.idSelectionSet
-                                        )
-                                        GotSaveResponse
-                                    )
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Sell ]
-                                    model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                        EditingUpdate balances sale _ form ->
-                            Saving balances sale form
-                                |> UR.init
-                                |> UR.addExt
-                                    (LoggedIn.mutation
-                                        loggedIn
-                                        (Shop.updateProduct
-                                            { id = sale.id
-                                            , symbol = community.symbol
-                                            , title = formOutput.title
-                                            , description = formOutput.description
-                                            , images =
-                                                formOutput.image
-                                                    |> Maybe.map List.singleton
-                                                    |> Maybe.withDefault []
-                                            , price = formOutput.price
-                                            , stockTracking = formOutput.unitTracking
-                                            }
-                                            Shop.idSelectionSet
-                                        )
-                                        GotSaveResponse
-                                    )
-                                |> LoggedIn.withPrivateKey loggedIn
-                                    [ Permission.Sell ]
-                                    model
-                                    { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                        _ ->
-                            model
-                                |> UR.init
-                                |> UR.logImpossible msg
-                                    "Clicked save shop item, but wasn't editing or creating shop offer"
-                                    (Just loggedIn.accountName)
-                                    { moduleName = "Page.Shop.Editor", function = "update" }
-                                    []
-
-                _ ->
-                    UR.init model
-                        |> UR.logImpossible msg
-                            "Clicked save shop item, but community wasn't loaded"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-        ClickedDelete ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Open form
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-
-        ClickedDeleteCancel ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
-
-                _ ->
-                    UR.init model
-
-        ClickedDeleteConfirm ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    Deleting balances sale form
-                        |> UR.init
-                        |> UR.addExt
-                            (LoggedIn.mutation loggedIn
-                                (Shop.deleteProduct sale.id (Graphql.SelectionSet.succeed ()))
-                                GotDeleteResponse
-                            )
-                        |> LoggedIn.withPrivateKey loggedIn
-                            []
-                            model
-                            { successMsg = msg, errorMsg = ClosedAuthModal }
-
-                _ ->
-                    model
-                        |> UR.init
-                        |> UR.logImpossible msg
-                            "Clicked delete shop item, but wasn't editing or creating shop offer"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
         GotSaveResponse (RemoteData.Success maybeId) ->
             let
                 redirectUrl =
@@ -707,8 +739,24 @@ update msg model loggedIn =
                             Route.ViewSale id
             in
             UR.init model
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
+                |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
+                |> UR.addExt
+                    (LoggedIn.DropFromRouteHistoryWhile
+                        (\route ->
+                            case route of
+                                Route.NewSale _ ->
+                                    True
+
+                                Route.EditSale _ _ ->
+                                    True
+
+                                Route.ViewSale _ ->
+                                    True
+
+                                _ ->
+                                    False
+                        )
+                    )
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
         GotSaveResponse (RemoteData.Failure error) ->
@@ -717,8 +765,8 @@ update msg model loggedIn =
                     loggedIn.shared.translators.t "error.unknown"
             in
             case model of
-                Creating balances form ->
-                    EditingCreate balances form
+                Creating form ->
+                    EditingCreate form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -728,8 +776,8 @@ update msg model loggedIn =
                             []
                             error
 
-                Saving balances sale form ->
-                    EditingUpdate balances sale Closed form
+                Saving sale form ->
+                    EditingUpdate sale form
                         |> UR.init
                         |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
                         |> UR.logGraphqlError msg
@@ -751,53 +799,142 @@ update msg model loggedIn =
         GotSaveResponse _ ->
             UR.init model
 
-        GotDeleteResponse (RemoteData.Success _) ->
-            model
-                |> UR.init
-                |> UR.addCmd
-                    (Route.replaceUrl loggedIn.shared.navKey (Route.Shop Shop.All))
-                |> UR.addExt (ShowFeedback Feedback.Success (t "shop.delete_offer_success"))
+        GotFormMsg subMsg ->
+            updateForm loggedIn.shared subMsg model
 
-        GotDeleteResponse (RemoteData.Failure error) ->
+        SubmittedMainInformation target formOutput ->
             let
-                internalError =
-                    loggedIn.shared.translators.t "error.unknown"
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+
+                submitImagesCmd =
+                    case target of
+                        ImagesMainInformationTarget ->
+                            Cmd.none
+
+                        PriceAndInventoryMainInformationTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just formData ->
+                                    Form.parse (imagesForm loggedIn.shared.translators)
+                                        formData.images
+                                        { onError = GotFormMsg << ImagesMsg
+                                        , onSuccess = SubmittedImages
+                                        }
+                                        |> Utils.spawnMessage
             in
-            case model of
-                Deleting balances sale form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
-                        |> UR.addExt (LoggedIn.ShowFeedback Feedback.Failure internalError)
-                        |> UR.logGraphqlError msg
-                            (Just loggedIn.accountName)
-                            "Got an error when deleting a shop offer"
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-                            error
-
-                _ ->
+            case maybeCurrentStep of
+                Just MainInformation ->
                     model
+                        |> setCurrentStep (Images formOutput)
                         |> UR.init
-                        |> UR.logImpossible msg
-                            "Deleted shop item, but wasn't in the state of Deleting"
-                            (Just loggedIn.accountName)
-                            { moduleName = "Page.Shop.Editor", function = "update" }
-                            []
-
-        GotDeleteResponse _ ->
-            UR.init model
-
-        ClosedAuthModal ->
-            case model of
-                EditingUpdate balances sale _ form ->
-                    EditingUpdate balances sale Closed form
-                        |> UR.init
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
+                        |> UR.addCmd submitImagesCmd
 
                 _ ->
                     UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted main information, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
-        GotFormMsg subMsg ->
-            updateForm loggedIn.shared subMsg model
+        SubmittedImages formOutput ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just (Images mainInformation) ->
+                    model
+                        |> setCurrentStep (PriceAndInventory mainInformation formOutput)
+                        |> UR.init
+                        |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SalePriceAndInventory)
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted images, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
+
+        SubmittedPriceAndInventory priceAndInventory ->
+            let
+                maybeCurrentStep =
+                    getFormData model
+                        |> Maybe.map .currentStep
+            in
+            case maybeCurrentStep of
+                Just (PriceAndInventory mainInformation images) ->
+                    case model of
+                        EditingCreate formData ->
+                            Creating formData
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.createProduct
+                                            { symbol = priceAndInventory.price.symbol
+                                            , title = mainInformation.title
+                                            , description = mainInformation.description
+                                            , images = images
+                                            , price = priceAndInventory.price.amount
+                                            , stockTracking = priceAndInventory.unitTracking
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
+                                    model
+                                    { successMsg = msg, errorMsg = NoOp }
+
+                        EditingUpdate sale formData ->
+                            Saving sale formData
+                                |> UR.init
+                                |> UR.addExt
+                                    (LoggedIn.mutation
+                                        loggedIn
+                                        (Shop.updateProduct
+                                            { id = sale.id
+                                            , symbol = priceAndInventory.price.symbol
+                                            , title = mainInformation.title
+                                            , description = mainInformation.description
+                                            , images = images
+                                            , price = priceAndInventory.price.amount
+                                            , stockTracking = priceAndInventory.unitTracking
+                                            }
+                                            Shop.idSelectionSet
+                                        )
+                                        GotSaveResponse
+                                    )
+                                |> LoggedIn.withPrivateKey loggedIn
+                                    [ Permission.Sell ]
+                                    model
+                                    { successMsg = msg, errorMsg = NoOp }
+
+                        _ ->
+                            model
+                                |> UR.init
+                                |> UR.logImpossible msg
+                                    "Clicked save shop item, but wasn't editing or creating shop offer"
+                                    (Just loggedIn.accountName)
+                                    { moduleName = "Page.Shop.Editor", function = "update" }
+                                    []
+
+                _ ->
+                    UR.init model
+                        |> UR.logImpossible msg
+                            "Submitted price and inventory, but was in another step"
+                            (Just loggedIn.accountName)
+                            { moduleName = "Page.Shop.Editor", function = "update" }
+                            []
 
         ClickedDecrementStockUnits ->
             updateFormStockUnits (\price -> price - 1) model
@@ -811,20 +948,17 @@ updateFormStockUnits updateFn model =
     let
         maybeFormInfo =
             case model of
-                EditingCreate balances form ->
-                    Just ( form, EditingCreate balances )
+                EditingCreate form ->
+                    Just ( form, EditingCreate )
 
-                Creating balances form ->
-                    Just ( form, Creating balances )
+                Creating form ->
+                    Just ( form, Creating )
 
-                EditingUpdate balances product deleteModalStatus form ->
-                    Just ( form, EditingUpdate balances product deleteModalStatus )
+                EditingUpdate product form ->
+                    Just ( form, EditingUpdate product )
 
-                Saving balances product form ->
-                    Just ( form, Saving balances product )
-
-                Deleting balances product form ->
-                    Just ( form, Deleting balances product )
+                Saving product form ->
+                    Just ( form, Saving product )
 
                 _ ->
                     Nothing
@@ -833,7 +967,7 @@ updateFormStockUnits updateFn model =
         Nothing ->
             UR.init model
 
-        Just ( form, updateModel ) ->
+        Just ( formData, updateModel ) ->
             Form.updateValues
                 (\values ->
                     case String.toInt values.unitsInStock of
@@ -848,30 +982,169 @@ updateFormStockUnits updateFn model =
                         Nothing ->
                             values
                 )
-                form
+                formData.priceAndInventory
+                |> (\priceAndInventory -> { formData | priceAndInventory = priceAndInventory })
                 |> updateModel
                 |> UR.init
 
 
-updateForm : Shared -> Form.Msg FormInput -> Model -> UpdateResult
-updateForm shared subMsg model =
+getFormData : Model -> Maybe FormData
+getFormData model =
+    case model of
+        EditingCreate formData ->
+            Just formData
+
+        Creating formData ->
+            Just formData
+
+        EditingUpdate _ formData ->
+            Just formData
+
+        Saving _ formData ->
+            Just formData
+
+        _ ->
+            Nothing
+
+
+setCurrentStep : Step -> Model -> Model
+setCurrentStep newStep model =
+    case model of
+        EditingCreate formData ->
+            EditingCreate { formData | currentStep = newStep }
+
+        Creating formData ->
+            Creating { formData | currentStep = newStep }
+
+        EditingUpdate product formData ->
+            EditingUpdate product { formData | currentStep = newStep }
+
+        Saving product formData ->
+            Saving product { formData | currentStep = newStep }
+
+        _ ->
+            model
+
+
+maybeSetStep : Translation.Translators -> Route.EditSaleStep -> Model -> ( Model, Cmd Msg )
+maybeSetStep translators step model =
+    let
+        maybeModelCmd =
+            getFormData model
+                |> Maybe.map
+                    (\formData ->
+                        case formData.currentStep of
+                            MainInformation ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( model
+                                        , Form.parse (mainInformationForm translators)
+                                            formData.mainInformation
+                                            { onError = GotFormMsg << MainInformationMsg
+                                            , onSuccess = SubmittedMainInformation ImagesMainInformationTarget
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model
+                                        , Form.parse (mainInformationForm translators)
+                                            formData.mainInformation
+                                            { onError = GotFormMsg << MainInformationMsg
+                                            , onSuccess = SubmittedMainInformation PriceAndInventoryMainInformationTarget
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
+
+                            Images _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( setCurrentStep MainInformation model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( model, Cmd.none )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model
+                                        , Form.parse (imagesForm translators)
+                                            formData.images
+                                            { onError = GotFormMsg << ImagesMsg
+                                            , onSuccess = SubmittedImages
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
+
+                            PriceAndInventory mainInformationOutput _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( setCurrentStep MainInformation model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model, Cmd.none )
+                    )
+    in
+    case maybeModelCmd of
+        Nothing ->
+            ( model, Cmd.none )
+
+        Just modelCmd ->
+            modelCmd
+
+
+setCurrentStepInRoute : Model -> Route.EditSaleStep -> Maybe Route.Route
+setCurrentStepInRoute model step =
+    case model of
+        EditingCreate _ ->
+            Just (Route.NewSale step)
+
+        Creating _ ->
+            Just (Route.NewSale step)
+
+        LoadingSaleUpdate _ ->
+            Nothing
+
+        EditingUpdate product _ ->
+            Just (Route.EditSale product.id step)
+
+        Saving product _ ->
+            Just (Route.EditSale product.id step)
+
+        LoadSaleFailed _ ->
+            Nothing
+
+
+setCurrentStepInUrl : Shared -> Model -> Route.EditSaleStep -> Cmd msg
+setCurrentStepInUrl shared model step =
+    case setCurrentStepInRoute model step of
+        Nothing ->
+            Cmd.none
+
+        Just route ->
+            Route.replaceUrl shared.navKey route
+
+
+updateForm : Shared -> FormMsg -> Model -> UpdateResult
+updateForm shared formMsg model =
     let
         maybeFormInfo =
             case model of
-                EditingCreate balances form ->
-                    Just ( form, EditingCreate balances )
+                EditingCreate form ->
+                    Just ( form, EditingCreate )
 
-                Creating balances form ->
-                    Just ( form, Creating balances )
+                Creating form ->
+                    Just ( form, Creating )
 
-                EditingUpdate balances product deleteModalStatus form ->
-                    Just ( form, EditingUpdate balances product deleteModalStatus )
+                EditingUpdate product form ->
+                    Just ( form, EditingUpdate product )
 
-                Saving balances product form ->
-                    Just ( form, Saving balances product )
-
-                Deleting balances product form ->
-                    Just ( form, Deleting balances product )
+                Saving product form ->
+                    Just ( form, Saving product )
 
                 _ ->
                     Nothing
@@ -880,51 +1153,134 @@ updateForm shared subMsg model =
         Nothing ->
             UR.init model
 
-        Just ( form, updateModel ) ->
-            Form.update shared
-                subMsg
-                form
-                |> UR.fromChild updateModel
-                    GotFormMsg
-                    LoggedIn.addFeedback
-                    model
+        Just ( formData, updateModel ) ->
+            case formMsg of
+                MainInformationMsg subMsg ->
+                    Form.update shared subMsg formData.mainInformation
+                        |> UR.fromChild
+                            (\newMainInformation -> updateModel { formData | mainInformation = newMainInformation })
+                            (GotFormMsg << MainInformationMsg)
+                            LoggedIn.addFeedback
+                            model
+
+                ImagesMsg subMsg ->
+                    let
+                        updatedForm =
+                            Form.update shared subMsg formData.images
+
+                        oldImages =
+                            Form.getValue identity formData.images
+                                |> List.filter (not << Form.File.isEmpty)
+
+                        newImages =
+                            Form.getValue identity updatedForm.model
+                                |> List.filter (not << Form.File.isEmpty)
+
+                        hasAddedNewImage =
+                            List.length newImages > List.length oldImages
+
+                        addNewImageField values =
+                            values ++ [ Form.File.initModel Nothing ]
+                    in
+                    Form.update shared subMsg formData.images
+                        |> UR.fromChild
+                            (\newImagesForm ->
+                                updateModel
+                                    { formData
+                                        | images =
+                                            if hasAddedNewImage then
+                                                Form.updateValues addNewImageField newImagesForm
+
+                                            else
+                                                newImagesForm
+                                    }
+                            )
+                            (GotFormMsg << ImagesMsg)
+                            LoggedIn.addFeedback
+                            model
+
+                PriceAndInventoryMsg subMsg ->
+                    Form.update shared subMsg formData.priceAndInventory
+                        |> UR.fromChild (\newPriceAndInventory -> updateModel { formData | priceAndInventory = newPriceAndInventory })
+                            (GotFormMsg << PriceAndInventoryMsg)
+                            LoggedIn.addFeedback
+                            model
 
 
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
-        CompletedBalancesLoad r ->
-            [ "CompletedBalancesLoad", UR.resultToString r ]
+        NoOp ->
+            [ "NoOp" ]
 
         CompletedSaleLoad r ->
             [ "CompletedSaleLoad", UR.remoteDataToString r ]
 
-        ClickedSave _ ->
-            [ "ClickedSave" ]
-
-        ClickedDelete ->
-            [ "ClickedDelete" ]
-
-        ClickedDeleteConfirm ->
-            [ "ClickedDeleteConfirm" ]
-
-        ClickedDeleteCancel ->
-            [ "ClickedDeleteCancel" ]
-
         GotSaveResponse r ->
             [ "GotSaveResponse", UR.remoteDataToString r ]
 
-        GotDeleteResponse r ->
-            [ "GotDeleteResponse", UR.remoteDataToString r ]
-
-        ClosedAuthModal ->
-            [ "ClosedAuthModal" ]
-
         GotFormMsg subMsg ->
-            "GotFormMsg" :: Form.msgToString subMsg
+            "GotFormMsg" :: formMsgToString subMsg
+
+        SubmittedMainInformation _ _ ->
+            [ "SubmittedMainInformation" ]
+
+        SubmittedImages _ ->
+            [ "SubmittedImages" ]
+
+        SubmittedPriceAndInventory _ ->
+            [ "SubmittedPriceAndInventory" ]
 
         ClickedDecrementStockUnits ->
             [ "ClickedDecrementStockUnits" ]
 
         ClickedIncrementStockUnits ->
             [ "ClickedIncrementStockUnits" ]
+
+
+formMsgToString : FormMsg -> List String
+formMsgToString msg =
+    case msg of
+        MainInformationMsg subMsg ->
+            "MainInformationMsg" :: Form.msgToString subMsg
+
+        ImagesMsg subMsg ->
+            "ImagesMsg" :: Form.msgToString subMsg
+
+        PriceAndInventoryMsg subMsg ->
+            "PriceAndInventoryMsg" :: Form.msgToString subMsg
+
+
+getCurrentStep : Model -> Route.EditSaleStep
+getCurrentStep model =
+    case model of
+        EditingCreate formData ->
+            getCurrentStepFromFormData formData
+
+        Creating formData ->
+            getCurrentStepFromFormData formData
+
+        LoadingSaleUpdate step ->
+            step
+
+        EditingUpdate _ formData ->
+            getCurrentStepFromFormData formData
+
+        Saving _ formData ->
+            getCurrentStepFromFormData formData
+
+        LoadSaleFailed _ ->
+            Route.SaleMainInformation
+
+
+getCurrentStepFromFormData : FormData -> Route.EditSaleStep
+getCurrentStepFromFormData formData =
+    case formData.currentStep of
+        MainInformation ->
+            Route.SaleMainInformation
+
+        Images _ ->
+            Route.SaleImages
+
+        PriceAndInventory _ _ ->
+            Route.SalePriceAndInventory

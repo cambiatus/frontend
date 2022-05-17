@@ -784,18 +784,14 @@
     "create_offer_success": "የሚሰጠዉ በትክክል ተፈጥሯል",
     "edit_offer": "የሚሰጠዉን አርትዕ",
     "delete_offer_success": "የሚሰጠዉ በትክክል ወጥቷል",
+    "delete_offer_failure": "ቅናሽዎን በሚያስወግዱበት ጊዜ የሆነ ችግር ተፈጥሯል",
     "unauthorized": "እርሶ ይህንን ሽያጭ አርትዕ ለማድረግ አልተፈቃደም",
-    "photo_label": "የምርት ምስል",
-    "what_label": "የምርት ስም",
-    "description_label": "ምርቱን ይግለጹ",
-    "description_placeholder": "ምርትዎን ሙሉ በሙሉ ይግለጹ። ይህ በሽያጭ ላይ ይረዳል",
     "which_community_label": "በየትኛዉ ማህበረሰብ ዉስጥ መነገድ ይፈልጋሉ?",
     "choose_community_label": "ማህበረሰብ ምርጥ",
     "track_stock_label": "በመተግበሪያው ላይ ክፍሎችን መከታተል ይፈልጋሉ?",
     "choose_track_stock_label": "መከታትል ወይም አለመከታተልን ምረጥ",
     "track_stock_no": "አይደለም",
     "track_stock_yes": "አዎ",
-    "price_label": "የምርት ዋጋ",
     "units_available": "አሁን ያለዉ ብዛት",
     "out_of_stock": "የለም",
     "offer_action": "{{accountName}} እየገዛ ነዉ",
@@ -812,6 +808,33 @@
     "no_image": "ምስል የለም",
     "subtract_unit": "አሃድ ቀንስ",
     "add_unit": "ክፍል ጨምር",
+    "carrousel": {
+      "previous": "ወደ ቀዳሚው ምስል ይሂዱ",
+      "next": "ወደ ቀጣዩ ምስል ይሂዱ",
+      "index": "ወደ ምስል {{index}} ይሂዱ"
+    },
+    "steps": {
+      "main_information": {
+        "title": "ዋና መረጃ",
+        "name_label": "ስም",
+        "name_placeholder": "የምርት ስም",
+        "description_label": "መግለጫ",
+        "description_placeholder": "ምርትዎን ሙሉ በሙሉ ይግለጹ። ለሽያጭ ይረዳል"
+      },
+      "images": {
+        "title": "ምስሎች",
+        "guidance": "የምርት ምስሎችን ያክሉ። በኋላ ላይ ተጨማሪ ምስሎችን ማከል ትችላለህ"
+      },
+      "price_and_inventory": {
+        "title": "ዋጋ እና ክምችት",
+        "price_label": "ዋጋ",
+        "quantity_label": "በክምችት ውስጥ ያለው መጠን",
+        "inventory_management": "የንብረት አያያዝ",
+        "inventory_management_description": "ተጨማሪ ክፍሎች በሌሉዎት ጊዜ ቅናሽዎን ማሰናከል ከፈለጉ ይህንን አማራጭ ያንቁት"
+      },
+      "continue": "ቀጥል",
+      "index": "ደረጃ {{current}} ከ {{total}}"
+    },
     "empty": {
       "all_title": "ቅናሾቹ የት አሉ?",
       "user_title": "በዚህ ማህበረሰብ ውስጥ ምንም ቅናሾች የሉዎትም",

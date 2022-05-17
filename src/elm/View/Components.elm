@@ -482,7 +482,7 @@ by id you need to use `#` as a prefix.
 intersectionObserver :
     { targetSelectors : List String
     , threshold : Float
-    , breakpointToExclude : Breakpoint
+    , breakpointToExclude : Maybe Breakpoint
     , onStartedIntersecting : Maybe (String -> msg)
     , onStoppedIntersecting : Maybe (String -> msg)
     }
@@ -504,7 +504,14 @@ intersectionObserver options =
     node "intersection-observer"
         [ attribute "elm-target" (String.join " " options.targetSelectors)
         , attribute "elm-threshold" (String.fromFloat options.threshold)
-        , attribute "elm-max-width" (String.fromInt <| breakpointToPixels options.breakpointToExclude)
+        , attribute "elm-max-width"
+            (case options.breakpointToExclude of
+                Nothing ->
+                    "none"
+
+                Just breakpointToExclude ->
+                    String.fromInt <| breakpointToPixels breakpointToExclude
+            )
         , optionalEvent "started-intersecting" options.onStartedIntersecting
         , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
         ]

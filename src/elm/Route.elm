@@ -1,5 +1,6 @@
 module Route exposing
-    ( NewsEditorKind(..)
+    ( EditSaleStep(..)
+    , NewsEditorKind(..)
     , Route(..)
     , SelectedObjective(..)
     , addEnvironmentToUrl
@@ -35,6 +36,12 @@ type NewsEditorKind
 type SelectedObjective
     = WithObjectiveSelected { id : Int, action : Maybe Int }
     | WithNoObjectiveSelected
+
+
+type EditSaleStep
+    = SaleMainInformation
+    | SaleImages
+    | SalePriceAndInventory
 
 
 type Route
@@ -77,8 +84,8 @@ type Route
     | CommunitySupporters
     | Claim Int Int Int
     | Shop Shop.Filter
-    | NewSale
-    | EditSale Shop.Id
+    | NewSale EditSaleStep
+    | EditSale Shop.Id EditSaleStep
     | ViewSale Shop.Id
     | ViewTransfer Int
     | Invite String
@@ -196,9 +203,19 @@ parser url =
                         )
                         (Query.map (Maybe.withDefault "") (Query.string "filter"))
             )
-        , Url.map NewSale (s "shop" </> s "new" </> s "sell")
+        , Url.map NewSale
+            (s "shop"
+                </> s "new"
+                </> s "sell"
+                <?> Query.map saleStepFromString (Query.string "step")
+            )
         , Url.map ViewSale (s "shop" </> Shop.idUrlParser)
-        , Url.map EditSale (s "shop" </> Shop.idUrlParser </> s "edit")
+        , Url.map EditSale
+            (s "shop"
+                </> Shop.idUrlParser
+                </> s "edit"
+                <?> Query.map saleStepFromString (Query.string "step")
+            )
         , Url.map ViewTransfer (s "transfer" </> int)
         , Url.map Invite (s "invite" </> string)
         , Url.map Join
@@ -396,6 +413,35 @@ parseRedirect url maybeQuery =
     maybeQuery
         |> Maybe.andThen (\query -> Url.fromString (protocol ++ host ++ port_ ++ query))
         |> Maybe.andThen (\url_ -> Url.parse (parser url_) url_)
+
+
+saleStepFromString : Maybe String -> EditSaleStep
+saleStepFromString stepString =
+    case stepString of
+        Just "mainInformation" ->
+            SaleMainInformation
+
+        Just "images" ->
+            SaleImages
+
+        Just "priceAndInventory" ->
+            SalePriceAndInventory
+
+        _ ->
+            SaleMainInformation
+
+
+saleStepToString : EditSaleStep -> String
+saleStepToString step =
+    case step of
+        SaleMainInformation ->
+            "mainInformation"
+
+        SaleImages ->
+            "images"
+
+        SalePriceAndInventory ->
+            "priceAndInventory"
 
 
 shopFilterToString : Shop.Filter -> String
@@ -608,11 +654,15 @@ routeToString route =
                     , queryBuilder shopFilterToString (Just maybeFilter) "filter"
                     )
 
-                NewSale ->
-                    ( [ "shop", "new", "sell" ], [] )
+                NewSale saleStep ->
+                    ( [ "shop", "new", "sell" ]
+                    , queryBuilder saleStepToString (Just saleStep) "step"
+                    )
 
-                EditSale saleId ->
-                    ( [ "shop", Shop.idToString saleId, "edit" ], [] )
+                EditSale saleId saleStep ->
+                    ( [ "shop", Shop.idToString saleId, "edit" ]
+                    , queryBuilder saleStepToString (Just saleStep) "step"
+                    )
 
                 ViewSale saleId ->
                     ( [ "shop", Shop.idToString saleId ], [] )

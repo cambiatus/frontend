@@ -2,7 +2,7 @@ module Form.Toggle exposing
     ( init, Options
     , withTooltip, withTopLabel, withStatusText
     , StatusText(..)
-    , withDisabled, withToggleSide, withContainerAttrs
+    , withDisabled, withToggleSide, withContainerAttrs, withToggleContainerAttrs
     , Side(..)
     , getId
     , view
@@ -33,7 +33,7 @@ module Form.Toggle exposing
 
 ## Adding attributes
 
-@docs withDisabled, withToggleSide, withContainerAttrs
+@docs withDisabled, withToggleSide, withContainerAttrs, withToggleContainerAttrs
 
 @docs Side
 
@@ -52,6 +52,7 @@ module Form.Toggle exposing
 import Html exposing (Html, div, input, p, span)
 import Html.Attributes exposing (checked, class, classList, disabled, for, id, required, type_)
 import Html.Events exposing (onBlur, onCheck)
+import Maybe.Extra
 import Session.Shared as Shared
 import View.Components
 
@@ -70,6 +71,7 @@ type Options msg
         , statusText : StatusText
         , topLabel : Maybe String
         , containerAttrs : List (Html.Attribute msg)
+        , toggleContainerAttrs : List (Html.Attribute msg)
         }
 
 
@@ -82,16 +84,17 @@ init { label, id } =
         , id = id
         , disabled = False
         , tooltip = Nothing
-        , side = Right
+        , side = Right { invert = False }
         , statusText = EnabledDisabled
         , topLabel = Nothing
         , containerAttrs = []
+        , toggleContainerAttrs = []
         }
 
 
 type Side
     = Left
-    | Right
+    | Right { invert : Bool }
 
 
 type StatusText
@@ -148,6 +151,13 @@ withDisabled disabled (Options options) =
 withContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
 withContainerAttrs attrs (Options options) =
     Options { options | containerAttrs = options.containerAttrs ++ attrs }
+
+
+{-| Add attributes to the container that contains the toggle and the status text
+-}
+withToggleContainerAttrs : List (Html.Attribute msg) -> Options msg -> Options msg
+withToggleContainerAttrs attrs (Options options) =
+    Options { options | toggleContainerAttrs = options.toggleContainerAttrs ++ attrs }
 
 
 
@@ -236,21 +246,45 @@ view (Options options) viewConfig =
                     { targetId = options.id, labelText = topLabel }
         , case options.side of
             Left ->
-                div [ class "flex space-x-2 text-sm" ]
+                div
+                    (class "flex space-x-2 text-sm"
+                        :: (if Maybe.Extra.isNothing options.topLabel then
+                                options.containerAttrs
+
+                            else
+                                []
+                           )
+                    )
                     [ viewToggle (Options options) viewConfig
                     , viewLabel (Options options)
                     ]
 
-            Right ->
-                div [ class "flex" ]
+            Right { invert } ->
+                div
+                    (class "flex"
+                        :: (if Maybe.Extra.isNothing options.topLabel then
+                                options.containerAttrs
+
+                            else
+                                []
+                           )
+                    )
                     [ viewLabel (Options options)
                     , Html.label
-                        [ class "flex cursor-pointer ml-auto space-x-7 pl-4"
-                        , for options.id
-                        ]
-                        [ viewStatusText (Options options) viewConfig
-                        , viewToggle (Options options) viewConfig
-                        ]
+                        (class "flex cursor-pointer ml-auto space-x-7 pl-4"
+                            :: for options.id
+                            :: options.toggleContainerAttrs
+                        )
+                        (if invert then
+                            [ viewToggle (Options options) viewConfig
+                            , viewStatusText (Options options) viewConfig
+                            ]
+
+                         else
+                            [ viewStatusText (Options options) viewConfig
+                            , viewToggle (Options options) viewConfig
+                            ]
+                        )
                     ]
         , viewConfig.error
         ]

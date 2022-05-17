@@ -141,7 +141,8 @@ module.exports = {
       minHeight: {
         '25': '6.25rem',
         '36': '9rem',
-        '48': '12rem'
+        '48': '12rem',
+        '150': '37.5rem'
       },
       lineHeight: {
         caption: 0.75

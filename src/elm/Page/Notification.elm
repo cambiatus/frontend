@@ -296,13 +296,16 @@ viewNotificationSaleHistoryDetail ({ shared } as loggedIn) sale date =
             shared
             (Utils.fromDateTime date)
         ]
-    , div [ class "flex flex-none pl-4" ]
-        [ img
-            [ src (Maybe.withDefault "" sale.product.image)
-            , class "object-scale-down rounded-full h-10"
-            ]
-            []
-        ]
+    , case sale.product.images of
+        [] ->
+            text ""
+
+        firstImage :: _ ->
+            img
+                [ src firstImage
+                , class "object-scale-down rounded-full h-10 ml-4"
+                ]
+                []
     ]
 
 

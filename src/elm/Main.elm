@@ -1154,13 +1154,13 @@ statusToRoute status session =
         Shop filter _ ->
             Just (Route.Shop filter)
 
-        ShopEditor maybeSaleId _ ->
+        ShopEditor maybeSaleId subModel ->
             case maybeSaleId of
                 Nothing ->
-                    Just Route.NewSale
+                    Just (Route.NewSale (ShopEditor.getCurrentStep subModel))
 
                 Just saleId ->
-                    Just (Route.EditSale saleId)
+                    Just (Route.EditSale saleId (ShopEditor.getCurrentStep subModel))
 
         ShopViewer saleId _ ->
             Just (Route.ViewSale saleId)
@@ -1549,15 +1549,43 @@ changeRouteTo maybeRoute model =
                 >> updateStatusWith (Shop maybeFilter) GotShopMsg model
                 |> withLoggedIn (Route.Shop maybeFilter)
 
-        Just Route.NewSale ->
-            ShopEditor.initCreate
-                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
-                |> withLoggedIn Route.NewSale
+        Just (Route.NewSale step) ->
+            let
+                newModelCmd l =
+                    case model.status of
+                        ShopEditor _ shopEditorModel ->
+                            ShopEditor.maybeSetStep l.shared.translators
+                                step
+                                shopEditorModel
 
-        Just (Route.EditSale saleId) ->
-            (\l -> ShopEditor.initUpdate saleId l)
-                >> updateStatusWith (ShopEditor (Just saleId)) GotShopEditorMsg model
-                |> withLoggedIn (Route.EditSale saleId)
+                        _ ->
+                            ShopEditor.initCreate l
+            in
+            newModelCmd
+                >> updateStatusWith (ShopEditor Nothing) GotShopEditorMsg model
+                |> withLoggedIn (Route.NewSale step)
+
+        Just (Route.EditSale saleId saleStep) ->
+            let
+                newUpdateResult l =
+                    case model.status of
+                        ShopEditor _ shopEditorModel ->
+                            let
+                                ( newModel, newCmd ) =
+                                    ShopEditor.maybeSetStep l.shared.translators
+                                        saleStep
+                                        shopEditorModel
+                            in
+                            newModel
+                                |> UR.init
+                                |> UR.addCmd newCmd
+
+                        _ ->
+                            ShopEditor.initUpdate saleId saleStep l
+            in
+            newUpdateResult
+                >> updateLoggedInUResult (ShopEditor (Just saleId)) GotShopEditorMsg model
+                |> withLoggedIn (Route.EditSale saleId saleStep)
 
         Just (Route.ViewSale saleId) ->
             (\s -> ShopViewer.init s saleId)

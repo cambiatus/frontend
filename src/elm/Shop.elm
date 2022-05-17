@@ -1,6 +1,7 @@
 module Shop exposing
     ( Filter(..)
     , Id
+    , ImageId
     , Product
     , ProductPreview
     , StockTracking(..)
@@ -18,6 +19,7 @@ module Shop exposing
     , productSelectionSet
     , productsQuery
     , updateProduct
+    , viewImageCarrousel
     )
 
 import Avatar
@@ -32,10 +34,18 @@ import Eos.Account as Eos
 import Graphql.Operation exposing (RootMutation, RootQuery)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
+import Html exposing (Html, button, div, img, text, ul)
+import Html.Attributes exposing (alt, class, classList, id, src)
+import Html.Attributes.Aria exposing (ariaHidden, ariaLabel)
+import Html.Events exposing (onClick)
+import Icons
 import Json.Encode as Encode exposing (Value)
 import Markdown exposing (Markdown)
 import Profile
+import Translation
 import Url.Parser
+import Utils exposing (onClickPreventAll)
+import View.Components
 
 
 
@@ -49,7 +59,7 @@ type alias Product =
     , creatorId : Eos.Name
     , price : Float
     , symbol : Symbol
-    , image : Maybe String
+    , images : List String
     , stockTracking : StockTracking
     , creator : Profile.Minimal
     }
@@ -94,7 +104,7 @@ type alias ProductPreview =
     , creator : Profile.Minimal
     , description : Markdown
     , id : Id
-    , image : Maybe String
+    , images : List String
     , price : Float
     , title : String
     }
@@ -143,10 +153,9 @@ productSelectionSet =
             , creatorId = creatorId
             , price = price
             , symbol = symbol
-            , image =
+            , images =
                 images
                     |> List.filter (not << String.isEmpty)
-                    |> List.head
             , stockTracking =
                 if trackStock then
                     case maybeUnits of
@@ -181,10 +190,9 @@ productPreviewSelectionSet =
             , creator = creator
             , description = description
             , id = id
-            , image =
+            , images =
                 images
                     |> List.filter (not << String.isEmpty)
-                    |> List.head
             , price = price
             , title = title
             }
@@ -377,3 +385,186 @@ getAvailableUnits product =
 
         UnitTracking { availableUnits } ->
             Just availableUnits
+
+
+
+-- VIEWS
+
+
+type ImageId
+    = ImageId String
+
+
+{-| This does not treat the case where there are no images. Treat it accordingly!
+-}
+viewImageCarrousel :
+    Translation.Translators
+    ->
+        { containerAttrs : List (Html.Attribute msg)
+        , listAttrs : List (Html.Attribute msg)
+        , imageContainerAttrs : List (Html.Attribute msg)
+        , imageOverlayAttrs : List (Html.Attribute msg)
+        , imageAttrs : List (Html.Attribute msg)
+        }
+    ->
+        { showArrows : Bool
+        , productId : Maybe Id
+        , onScrollToImage : { containerId : String, imageId : String } -> msg
+        , currentIntersecting : Maybe ImageId
+        , onStartedIntersecting : ImageId -> msg
+        , onStoppedIntersecting : ImageId -> msg
+        }
+    -> ( String, List String )
+    -> Html msg
+viewImageCarrousel { t, tr } { containerAttrs, listAttrs, imageContainerAttrs, imageOverlayAttrs, imageAttrs } options ( firstImage, otherImages ) =
+    let
+        maybeProductId =
+            Maybe.map (\(Id opaqueId) -> opaqueId) options.productId
+
+        imageUrls =
+            firstImage :: otherImages
+
+        containerId =
+            case maybeProductId of
+                Nothing ->
+                    "image-carrousel"
+
+                Just productId ->
+                    "image-carrousel-" ++ String.fromInt productId
+
+        imageId index =
+            case maybeProductId of
+                Nothing ->
+                    "product-image-" ++ String.fromInt index
+
+                Just productId ->
+                    "product-image-" ++ String.fromInt productId ++ "-" ++ String.fromInt index
+
+        indexFromImageId (ImageId imgId) =
+            case maybeProductId of
+                Nothing ->
+                    -- 14 == String.length "product-image-"
+                    String.dropLeft 14 imgId
+                        |> String.toInt
+
+                Just productId ->
+                    String.dropLeft (String.length ("product-image-" ++ String.fromInt productId ++ "-")) imgId
+                        |> String.toInt
+
+        clickedScrollToImage imageIndex =
+            options.onScrollToImage
+                { containerId = containerId
+                , imageId = imageId imageIndex
+                }
+
+        isCurrentIntersecting imageIndex =
+            case options.currentIntersecting of
+                Nothing ->
+                    False
+
+                Just (ImageId currentIntersecting) ->
+                    currentIntersecting == imageId imageIndex
+
+        maybeCurrentIntersectingIndex =
+            options.currentIntersecting
+                |> Maybe.andThen indexFromImageId
+    in
+    div (class "relative" :: containerAttrs)
+        [ case maybeCurrentIntersectingIndex of
+            Nothing ->
+                text ""
+
+            Just currentIntersectingIndex ->
+                div [ class "absolute left-4 bottom-1/2 translate-y-1/2" ]
+                    [ button
+                        [ class "bg-white/80 rounded-full transition-all origin-left"
+                        , classList
+                            [ ( "hidden", not options.showArrows )
+                            , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == 0 )
+                            ]
+                        , onClick (clickedScrollToImage (currentIntersectingIndex - 1))
+                        , ariaLabel <| t "shop.carrousel.previous"
+                        , ariaHidden (currentIntersectingIndex == 0)
+                        ]
+                        [ Icons.arrowDown "rotate-90"
+                        ]
+                    ]
+        , ul
+            (class "flex h-full min-w-full overflow-x-scroll overflow-y-hidden snap-x scrollbar-hidden"
+                :: id containerId
+                :: listAttrs
+            )
+            (List.indexedMap
+                (\index image ->
+                    div
+                        (class "w-full h-full flex-shrink-0 snap-center snap-always grid place-items-center"
+                            :: id (imageId index)
+                            :: imageContainerAttrs
+                        )
+                        [ img
+                            (src image
+                                :: alt ""
+                                :: class "object-cover object-center max-w-full max-h-full"
+                                :: imageAttrs
+                            )
+                            []
+                        ]
+                )
+                imageUrls
+            )
+        , case maybeCurrentIntersectingIndex of
+            Nothing ->
+                text ""
+
+            Just currentIntersectingIndex ->
+                div [ class "absolute right-4 bottom-1/2 translate-y-1/2" ]
+                    [ button
+                        [ class "bg-white/80 rounded-full transition-all origin-right"
+                        , classList
+                            [ ( "hidden", not options.showArrows )
+                            , ( "opacity-0 scale-50 pointer-events-none", currentIntersectingIndex == List.length imageUrls - 1 )
+                            ]
+                        , onClick (clickedScrollToImage (currentIntersectingIndex + 1))
+                        , ariaLabel <| t "shop.carrousel.next"
+                        , ariaHidden (currentIntersectingIndex == List.length imageUrls - 1)
+                        ]
+                        [ Icons.arrowDown "-rotate-90" ]
+                    ]
+        , if List.length imageUrls == 1 then
+            text ""
+
+          else
+            div [ class "absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10" ]
+                (List.indexedMap
+                    (\index _ ->
+                        button
+                            [ class "border-2 w-2 h-2 rounded-full transition-colors"
+                            , classList
+                                [ ( "bg-white border-orange-500", isCurrentIntersecting index )
+                                , ( "bg-white border-white", not (isCurrentIntersecting index) )
+                                ]
+                            , onClickPreventAll (clickedScrollToImage index)
+                            , ariaLabel <| tr "shop.carrousel.index" [ ( "index", String.fromInt (index + 1) ) ]
+                            ]
+                            []
+                    )
+                    imageUrls
+                )
+        , if List.length imageUrls == 1 then
+            text ""
+
+          else
+            div
+                (class "bg-gradient-to-t from-black/40 to-transparent absolute bottom-0 left-0 right-0 h-10"
+                    :: imageOverlayAttrs
+                )
+                []
+        , View.Components.intersectionObserver
+            { targetSelectors =
+                List.indexedMap (\index _ -> "#" ++ imageId index) imageUrls
+            , threshold = 0.01
+            , breakpointToExclude = Nothing
+            , onStartedIntersecting = Just (ImageId >> options.onStartedIntersecting)
+            , onStoppedIntersecting = Just (ImageId >> options.onStoppedIntersecting)
+            }
+        ]

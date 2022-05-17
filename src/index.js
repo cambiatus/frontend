@@ -882,8 +882,9 @@ async function handleJavascriptPort (arg) {
 
       const targetLeft = document.getElementById(targetId).getBoundingClientRect().left
       const container = document.getElementById(containerId)
+      const offset = targetLeft - container.getBoundingClientRect().left
       container.scrollTo({
-        left: container.scrollLeft + targetLeft,
+        left: container.scrollLeft + offset,
         behavior: 'smooth'
       })
 
