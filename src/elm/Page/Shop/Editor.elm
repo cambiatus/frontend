@@ -349,8 +349,8 @@ initFormData =
     }
 
 
-initEditingFormData : Product -> Route.EditSaleStep -> FormData
-initEditingFormData product step =
+initEditingFormData : Translation.Translators -> Product -> Route.EditSaleStep -> FormData
+initEditingFormData translators product step =
     { mainInformation =
         Form.init
             { title = product.title
@@ -363,7 +363,7 @@ initEditingFormData product step =
             |> Form.init
     , priceAndInventory =
         Form.init
-            { price = String.fromFloat product.price
+            { price = Eos.formatSymbolAmount translators product.symbol product.price
             , unitsInStock =
                 case product.stockTracking of
                     Shop.NoTracking ->
@@ -702,7 +702,7 @@ update msg model loggedIn =
         CompletedSaleLoad (RemoteData.Success maybeSale) ->
             case ( model, maybeSale ) of
                 ( LoadingSaleUpdate step, Just sale ) ->
-                    initEditingFormData sale step
+                    initEditingFormData loggedIn.shared.translators sale step
                         |> EditingUpdate sale
                         |> UR.init
 
