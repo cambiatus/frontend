@@ -221,7 +221,7 @@ type alias PriceAndInventoryFormOutput =
 priceAndInventoryForm : Translation.Translators -> { isDisabled : Bool } -> Eos.Symbol -> Form.Form Msg PriceAndInventoryFormInput PriceAndInventoryFormOutput
 priceAndInventoryForm translators isDisabled symbol =
     Form.succeed PriceAndInventoryFormOutput
-        |> Form.withGroup [ class "grid grid-cols-2 gap-8" ]
+        |> Form.withGroup [ class "grid lg:grid-cols-2 gap-8" ]
             (Form.Text.init
                 { label = translators.t "shop.steps.price_and_inventory.price_label"
                 , id = "product-price-input"
