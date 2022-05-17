@@ -428,16 +428,16 @@ view loggedIn model =
                     Page.fullPageGraphQLError (t "shop.title") error
 
                 EditingCreate formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = False } formData
+                    viewForm loggedIn { isEdit = False, isDisabled = False } model formData
 
                 Creating formData ->
-                    viewForm loggedIn { isEdit = False, isDisabled = True } formData
+                    viewForm loggedIn { isEdit = False, isDisabled = True } model formData
 
                 EditingUpdate _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = False } formData
+                    viewForm loggedIn { isEdit = True, isDisabled = False } model formData
 
                 Saving _ formData ->
-                    viewForm loggedIn { isEdit = True, isDisabled = True } formData
+                    viewForm loggedIn { isEdit = True, isDisabled = True } model formData
     in
     { title = title
     , content =
@@ -464,9 +464,10 @@ view loggedIn model =
 viewForm :
     LoggedIn.Model
     -> { isEdit : Bool, isDisabled : Bool }
+    -> Model
     -> FormData
     -> Html Msg
-viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
+viewForm ({ shared } as loggedIn) { isEdit, isDisabled } model formData =
     let
         { t, tr } =
             shared.translators
@@ -557,13 +558,21 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
 
                         PriceAndInventory _ _ ->
                             step == Route.SalePriceAndInventory
+
+                maybeNewRoute =
+                    setCurrentStepInRoute model step
             in
             a
                 [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                 , classList
                     [ ( "bg-orange-300 delay-300", isStepCompleted step || isCurrent )
                     ]
-                , Route.href (Route.NewSale step)
+                , case maybeNewRoute of
+                    Just newRoute ->
+                        Route.href newRoute
+
+                    Nothing ->
+                        class ""
                 ]
                 [ div
                     [ class "transition-opacity duration-300"
@@ -1071,30 +1080,31 @@ maybeSetStep translators step model =
             modelCmd
 
 
+setCurrentStepInRoute : Model -> Route.EditSaleStep -> Maybe Route.Route
+setCurrentStepInRoute model step =
+    case model of
+        EditingCreate _ ->
+            Just (Route.NewSale step)
+
+        Creating _ ->
+            Just (Route.NewSale step)
+
+        LoadingSaleUpdate _ ->
+            Nothing
+
+        EditingUpdate product _ ->
+            Just (Route.EditSale product.id step)
+
+        Saving product _ ->
+            Just (Route.EditSale product.id step)
+
+        LoadSaleFailed _ ->
+            Nothing
+
+
 setCurrentStepInUrl : Shared -> Model -> Route.EditSaleStep -> Cmd msg
 setCurrentStepInUrl shared model step =
-    let
-        maybeRoute =
-            case model of
-                EditingCreate _ ->
-                    Just (Route.NewSale step)
-
-                Creating _ ->
-                    Just (Route.NewSale step)
-
-                LoadingSaleUpdate _ ->
-                    Nothing
-
-                EditingUpdate product _ ->
-                    Just (Route.EditSale product.id step)
-
-                Saving product _ ->
-                    Just (Route.EditSale product.id step)
-
-                LoadSaleFailed _ ->
-                    Nothing
-    in
-    case maybeRoute of
+    case setCurrentStepInRoute model step of
         Nothing ->
             Cmd.none
 
