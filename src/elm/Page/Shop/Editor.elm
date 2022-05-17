@@ -615,7 +615,7 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                             , isSubmitDisabled = False
                             }
                             MainInformationMsg
-                            SubmittedMainInformation
+                            (SubmittedMainInformation ImagesMainInformationTarget)
 
                     Images _ ->
                         viewForm_ (imagesForm shared.translators)
@@ -661,12 +661,17 @@ type Msg
     = NoOp
     | CompletedSaleLoad (RemoteData (Graphql.Http.Error (Maybe Product)) (Maybe Product))
     | GotFormMsg FormMsg
-    | SubmittedMainInformation MainInformationFormOutput
+    | SubmittedMainInformation MainInformationTarget MainInformationFormOutput
     | SubmittedImages ImagesFormOutput
     | SubmittedPriceAndInventory PriceAndInventoryFormOutput
     | GotSaveResponse (RemoteData (Graphql.Http.Error (Maybe Shop.Id)) (Maybe Shop.Id))
     | ClickedDecrementStockUnits
     | ClickedIncrementStockUnits
+
+
+type MainInformationTarget
+    = ImagesMainInformationTarget
+    | PriceAndInventoryMainInformationTarget
 
 
 type FormMsg
@@ -771,11 +776,29 @@ update msg model loggedIn =
         GotFormMsg subMsg ->
             updateForm loggedIn.shared subMsg model
 
-        SubmittedMainInformation formOutput ->
+        SubmittedMainInformation target formOutput ->
             let
                 maybeCurrentStep =
                     getFormData model
                         |> Maybe.map .currentStep
+
+                submitImagesCmd =
+                    case target of
+                        ImagesMainInformationTarget ->
+                            Cmd.none
+
+                        PriceAndInventoryMainInformationTarget ->
+                            case getFormData model of
+                                Nothing ->
+                                    Cmd.none
+
+                                Just formData ->
+                                    Form.parse (imagesForm loggedIn.shared.translators)
+                                        formData.images
+                                        { onError = GotFormMsg << ImagesMsg
+                                        , onSuccess = SubmittedImages
+                                        }
+                                        |> Utils.spawnMessage
             in
             case maybeCurrentStep of
                 Just MainInformation ->
@@ -783,6 +806,7 @@ update msg model loggedIn =
                         |> setCurrentStep (Images formOutput)
                         |> UR.init
                         |> UR.addCmd (setCurrentStepInUrl loggedIn.shared model Route.SaleImages)
+                        |> UR.addCmd submitImagesCmd
 
                 _ ->
                     UR.init model
@@ -994,14 +1018,20 @@ maybeSetStep translators step model =
                                         , Form.parse (mainInformationForm translators)
                                             formData.mainInformation
                                             { onError = GotFormMsg << MainInformationMsg
-                                            , onSuccess = SubmittedMainInformation
+                                            , onSuccess = SubmittedMainInformation ImagesMainInformationTarget
                                             }
                                             |> Utils.spawnMessage
                                         )
 
                                     Route.SalePriceAndInventory ->
-                                        -- TODO - Can we skip steps?
-                                        ( model, Cmd.none )
+                                        ( model
+                                        , Form.parse (mainInformationForm translators)
+                                            formData.mainInformation
+                                            { onError = GotFormMsg << MainInformationMsg
+                                            , onSuccess = SubmittedMainInformation PriceAndInventoryMainInformationTarget
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
 
                             Images _ ->
                                 case step of
@@ -1165,7 +1195,7 @@ msgToString msg =
         GotFormMsg subMsg ->
             "GotFormMsg" :: formMsgToString subMsg
 
-        SubmittedMainInformation _ ->
+        SubmittedMainInformation _ _ ->
             [ "SubmittedMainInformation" ]
 
         SubmittedImages _ ->
