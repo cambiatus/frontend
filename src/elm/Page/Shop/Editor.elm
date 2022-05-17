@@ -4,7 +4,7 @@ module Page.Shop.Editor exposing
     , getCurrentStep
     , initCreate
     , initUpdate
-    , maybeGoBackOneStep
+    , maybeSetStep
     , msgToString
     , update
     , view
@@ -34,6 +34,7 @@ import Session.Shared exposing (Shared)
 import Shop exposing (Product)
 import Translation
 import UpdateResult as UR
+import Utils
 import View.Feedback as Feedback
 
 
@@ -557,14 +558,15 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
                         PriceAndInventory _ _ ->
                             step == Route.SalePriceAndInventory
             in
-            div
-                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors"
+            a
+                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors duration-300"
                 , classList
-                    [ ( "bg-orange-300 delay-150", isStepCompleted step || isCurrent )
+                    [ ( "bg-orange-300 delay-300", isStepCompleted step || isCurrent )
                     ]
+                , Route.href (Route.NewSale step)
                 ]
                 [ div
-                    [ class "transition-opacity"
+                    [ class "transition-opacity duration-300"
                     , classList [ ( "opacity-0", not (isStepCompleted step) ) ]
                     ]
                     [ Icons.checkmark ""
@@ -574,9 +576,9 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
         stepLine step =
             div [ class "w-full h-px bg-gray-900 relative" ]
                 [ div
-                    [ class "bg-orange-300 w-full absolute left-0 top-0 bottom-0 transition-transform ease-out origin-left"
+                    [ class "bg-orange-300 w-full absolute left-0 top-0 bottom-0 transition-transform ease-out origin-left duration-300"
                     , classList
-                        [ ( "scale-x-0 delay-150", not (isStepCompleted step) )
+                        [ ( "scale-x-0 delay-300", not (isStepCompleted step) )
                         , ( "scale-x-100", isStepCompleted step )
                         ]
                     ]
@@ -974,30 +976,69 @@ setCurrentStep newStep model =
             model
 
 
-maybeGoBackOneStep : Route.EditSaleStep -> Model -> Model
-maybeGoBackOneStep step model =
+maybeSetStep : Translation.Translators -> Route.EditSaleStep -> Model -> ( Model, Cmd Msg )
+maybeSetStep translators step model =
     let
-        maybeNewStep =
+        maybeModelCmd =
             getFormData model
                 |> Maybe.map
                     (\formData ->
-                        case ( formData.currentStep, step ) of
-                            ( Images _, Route.SaleMainInformation ) ->
-                                MainInformation
+                        case formData.currentStep of
+                            MainInformation ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( model, Cmd.none )
 
-                            ( PriceAndInventory mainInformationOutput _, Route.SaleImages ) ->
-                                Images mainInformationOutput
+                                    Route.SaleImages ->
+                                        ( model
+                                        , Form.parse (mainInformationForm translators)
+                                            formData.mainInformation
+                                            { onError = GotFormMsg << MainInformationMsg
+                                            , onSuccess = SubmittedMainInformation
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
 
-                            _ ->
-                                formData.currentStep
+                                    Route.SalePriceAndInventory ->
+                                        -- TODO - Can we skip steps?
+                                        ( model, Cmd.none )
+
+                            Images _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( setCurrentStep MainInformation model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( model, Cmd.none )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model
+                                        , Form.parse (imagesForm translators)
+                                            formData.images
+                                            { onError = GotFormMsg << ImagesMsg
+                                            , onSuccess = SubmittedImages
+                                            }
+                                            |> Utils.spawnMessage
+                                        )
+
+                            PriceAndInventory mainInformationOutput _ ->
+                                case step of
+                                    Route.SaleMainInformation ->
+                                        ( setCurrentStep MainInformation model, Cmd.none )
+
+                                    Route.SaleImages ->
+                                        ( setCurrentStep (Images mainInformationOutput) model, Cmd.none )
+
+                                    Route.SalePriceAndInventory ->
+                                        ( model, Cmd.none )
                     )
     in
-    case maybeNewStep of
+    case maybeModelCmd of
         Nothing ->
-            model
+            ( model, Cmd.none )
 
-        Just newStep ->
-            setCurrentStep newStep model
+        Just modelCmd ->
+            modelCmd
 
 
 setCurrentStepInUrl : Shared -> Model -> Route.EditSaleStep -> Cmd msg

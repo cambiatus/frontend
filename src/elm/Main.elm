@@ -1554,9 +1554,9 @@ changeRouteTo maybeRoute model =
                 newModelCmd l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            ( ShopEditor.maybeGoBackOneStep step shopEditorModel
-                            , Cmd.none
-                            )
+                            ShopEditor.maybeSetStep l.shared.translators
+                                step
+                                shopEditorModel
 
                         _ ->
                             ShopEditor.initCreate l
@@ -1570,9 +1570,15 @@ changeRouteTo maybeRoute model =
                 newUpdateResult l =
                     case model.status of
                         ShopEditor _ shopEditorModel ->
-                            shopEditorModel
-                                |> ShopEditor.maybeGoBackOneStep saleStep
+                            let
+                                ( newModel, newCmd ) =
+                                    ShopEditor.maybeSetStep l.shared.translators
+                                        saleStep
+                                        shopEditorModel
+                            in
+                            newModel
                                 |> UR.init
+                                |> UR.addCmd newCmd
 
                         _ ->
                             ShopEditor.initUpdate saleId saleStep l
