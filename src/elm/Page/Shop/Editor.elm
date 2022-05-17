@@ -527,13 +527,75 @@ viewForm ({ shared } as loggedIn) { isEdit, isDisabled } formData =
 
                 PriceAndInventory _ _ ->
                     ( 3, t "shop.steps.price_and_inventory.title" )
+
+        isStepCompleted : Route.EditSaleStep -> Bool
+        isStepCompleted step =
+            case ( step, formData.currentStep ) of
+                ( Route.SaleMainInformation, Images _ ) ->
+                    True
+
+                ( Route.SaleMainInformation, PriceAndInventory _ _ ) ->
+                    True
+
+                ( Route.SaleImages, PriceAndInventory _ _ ) ->
+                    True
+
+                _ ->
+                    False
+
+        stepBall : Route.EditSaleStep -> Html msg
+        stepBall step =
+            let
+                isCurrent =
+                    case formData.currentStep of
+                        MainInformation ->
+                            step == Route.SaleMainInformation
+
+                        Images _ ->
+                            step == Route.SaleImages
+
+                        PriceAndInventory _ _ ->
+                            step == Route.SalePriceAndInventory
+            in
+            div
+                [ class "w-6 h-6 rounded-full bg-gray-900 flex-shrink-0 flex items-center justify-center transition-colors"
+                , classList
+                    [ ( "bg-orange-300 delay-150", isStepCompleted step || isCurrent )
+                    ]
+                ]
+                [ div
+                    [ class "transition-opacity"
+                    , classList [ ( "opacity-0", not (isStepCompleted step) ) ]
+                    ]
+                    [ Icons.checkmark ""
+                    ]
+                ]
+
+        stepLine step =
+            div [ class "w-full h-px bg-gray-900 relative" ]
+                [ div
+                    [ class "bg-orange-300 w-full absolute left-0 top-0 bottom-0 transition-transform ease-out origin-left"
+                    , classList
+                        [ ( "scale-x-0 delay-150", not (isStepCompleted step) )
+                        , ( "scale-x-100", isStepCompleted step )
+                        ]
+                    ]
+                    []
+                ]
     in
     div [ class "flex flex-col flex-grow" ]
         [ Page.viewHeader loggedIn pageTitle
         , div [ class "lg:container lg:mx-auto lg:px-4 lg:mt-6 lg:mb-20" ]
             [ div [ class "bg-white pt-4 pb-8 flex-grow flex flex-col min-h-150 lg:w-2/3 lg:mx-auto lg:rounded lg:shadow-lg lg:animate-fade-in-from-above-lg lg:motion-reduce:animate-none" ]
                 [ div [ class "container mx-auto px-4 lg:max-w-none lg:mx-0 lg:px-6" ]
-                    [ h2 [ class "font-bold text-black mb-2" ]
+                    [ div [ class "mb-4 flex items-center" ]
+                        [ stepBall Route.SaleMainInformation
+                        , stepLine Route.SaleMainInformation
+                        , stepBall Route.SaleImages
+                        , stepLine Route.SaleImages
+                        , stepBall Route.SalePriceAndInventory
+                        ]
+                    , h2 [ class "font-bold text-black mb-2" ]
                         [ text <|
                             tr "shop.steps.index"
                                 [ ( "current", String.fromInt stepNumber )
