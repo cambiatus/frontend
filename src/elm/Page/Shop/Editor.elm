@@ -740,6 +740,23 @@ update msg model loggedIn =
             in
             UR.init model
                 |> UR.addCmd (Route.replaceUrl loggedIn.shared.navKey redirectUrl)
+                |> UR.addExt
+                    (LoggedIn.DropFromRouteHistoryWhile
+                        (\route ->
+                            case route of
+                                Route.NewSale _ ->
+                                    True
+
+                                Route.EditSale _ _ ->
+                                    True
+
+                                Route.ViewSale _ ->
+                                    True
+
+                                _ ->
+                                    False
+                        )
+                    )
                 |> UR.addExt (ShowFeedback Feedback.Success (t "shop.create_offer_success"))
 
         GotSaveResponse (RemoteData.Failure error) ->
