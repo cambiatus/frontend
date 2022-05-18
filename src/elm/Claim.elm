@@ -482,6 +482,7 @@ viewClaimCard loggedIn profileSummaries claim =
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Nothing
+                                , onFileTypeDiscovered = Nothing
                                 }
                             ]
 
@@ -978,6 +979,7 @@ viewClaimModal ({ shared, accountName } as loggedIn) profileSummaries claim =
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Nothing
+                                , onFileTypeDiscovered = Nothing
                                 }
                             ]
 
@@ -1080,6 +1082,7 @@ viewPhotoModal loggedIn claim =
                                 { url = url
                                 , childClass = "max-w-full max-h-full"
                                 , maybeTranslators = Just loggedIn.shared.translators
+                                , onFileTypeDiscovered = Nothing
                                 }
                             , a
                                 [ class "underline inline-block py-1 text-gray"

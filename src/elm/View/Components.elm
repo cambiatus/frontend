@@ -146,13 +146,26 @@ tooltip { message, iconClass } =
         ]
 
 
+type PdfViewerFileType
+    = Pdf
+    | Image
+
+
 {-| Display a PDF coming from a url. If the PDF cannot be read, display an `img`
 with `url` as `src`. This element automatically shows a loading animation while
 it fetches the pdf. If you pass in `Translators`, there will also be a text
 under the loading animation
 -}
-pdfViewer : List (Html.Attribute msg) -> { url : String, childClass : String, maybeTranslators : Maybe Translators } -> Html msg
-pdfViewer attrs { url, childClass, maybeTranslators } =
+pdfViewer :
+    List (Html.Attribute msg)
+    ->
+        { url : String
+        , childClass : String
+        , maybeTranslators : Maybe Translators
+        , onFileTypeDiscovered : Maybe (PdfViewerFileType -> msg)
+        }
+    -> Html msg
+pdfViewer attrs { url, childClass, maybeTranslators, onFileTypeDiscovered } =
     let
         loadingAttributes =
             case maybeTranslators of
@@ -163,11 +176,34 @@ pdfViewer attrs { url, childClass, maybeTranslators } =
                     [ attribute "elm-loading-title" (t "loading.title")
                     , attribute "elm-loading-subtitle" (t "loading.subtitle")
                     ]
+
+        fileTypeDiscoveredListener =
+            case onFileTypeDiscovered of
+                Nothing ->
+                    class ""
+
+                Just eventListener ->
+                    on "file-type-discovered"
+                        (Json.Decode.string
+                            |> Json.Decode.andThen
+                                (\stringFileType ->
+                                    case stringFileType of
+                                        "image" ->
+                                            Json.Decode.succeed (eventListener Image)
+
+                                        "pdf" ->
+                                            Json.Decode.succeed (eventListener Pdf)
+
+                                        _ ->
+                                            Json.Decode.fail ("I was expecting either `image` or `pdf`, but got " ++ stringFileType ++ " instead")
+                                )
+                        )
     in
     node "pdf-viewer"
         (attribute "elm-url" url
             :: attribute "elm-child-class" childClass
             :: class "flex flex-col items-center justify-center"
+            :: fileTypeDiscoveredListener
             :: loadingAttributes
             ++ attrs
         )

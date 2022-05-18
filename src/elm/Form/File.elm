@@ -438,6 +438,7 @@ viewLargeRectangle background (Options options) viewConfig value toMsg =
                                 { url = url
                                 , childClass = "max-h-full max-w-full"
                                 , maybeTranslators = Just viewConfig.translators
+                                , onFileTypeDiscovered = Nothing
                                 }
 
                           else
@@ -474,6 +475,7 @@ viewSmallCircle (Options options) viewConfig value toMsg =
                             { url = url
                             , childClass = imgClasses
                             , maybeTranslators = Nothing
+                            , onFileTypeDiscovered = Nothing
                             }
 
                     else
@@ -563,6 +565,7 @@ viewSimplePlus (Options options) viewConfig value toMsg =
                             { url = url
                             , childClass = imgClasses
                             , maybeTranslators = Nothing
+                            , onFileTypeDiscovered = Nothing
                             }
 
                     else
