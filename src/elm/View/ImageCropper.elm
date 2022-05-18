@@ -104,19 +104,19 @@ view model { imageUrl } =
         floatToPx offset =
             String.fromFloat offset ++ "px"
     in
-    div [ class "relative" ]
+    div [ class "relative max-w-max mx-auto" ]
         [ img
             [ src imageUrl
             , alt ""
             , id entireImageId
 
             -- TODO - Do we need to/Should we keep hardcoded height?
-            , class "opacity-40 pointer-events-none select-none h-96"
+            , class "opacity-20 pointer-events-none select-none max-h-64 lg:max-h-96"
             , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
             ]
             []
         , div
-            [ class "absolute overflow-hidden border border-dashed border-gray-500 cursor-move z-20 select-none"
+            [ class "absolute overflow-hidden border border-dashed border-gray-100 cursor-move z-20 select-none"
             , style "top" (floatToPx topOffset)
             , style "left" (floatToPx leftOffset)
             , style "width" (floatToPx selectionWidth)
@@ -126,7 +126,7 @@ view model { imageUrl } =
             [ img
                 [ src imageUrl
                 , alt ""
-                , class "absolute object-cover max-w-none pointer-events-none select-none h-96"
+                , class "absolute object-cover max-w-none pointer-events-none select-none"
                 , style "width" (floatToPx (model.maxX - model.minX))
                 , style "height" (floatToPx (model.maxY - model.minY))
 
