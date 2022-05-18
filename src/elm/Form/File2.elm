@@ -14,6 +14,7 @@ import Translation
 import UpdateResult as UR
 import View.Components
 import View.Feedback as Feedback
+import View.ImageCropper
 import View.Modal as Modal
 
 
@@ -24,7 +25,10 @@ import View.Modal as Modal
 type Model
     = Model
         { entries : List Entry
+
+        -- TODO - Join these together
         , openEntryIndex : Maybe Int
+        , imageCropper : View.ImageCropper.Model
         }
 
 
@@ -79,6 +83,7 @@ initSingle maybeImage =
                     )
                 |> Maybe.withDefault []
         , openEntryIndex = Nothing
+        , imageCropper = View.ImageCropper.init
         }
 
 
@@ -94,6 +99,7 @@ initMultiple images =
                 )
                 images
         , openEntryIndex = Nothing
+        , imageCropper = View.ImageCropper.init
         }
 
 
@@ -172,10 +178,12 @@ parserMultiple { t } (Model model) =
 
 
 type Msg
-    = RequestedUploadFiles (List File)
+    = NoOp
+    | RequestedUploadFiles (List File)
     | CompletedUploadingFile Int (Result Http.Error String)
     | ClickedEntry Int
     | ClickedCloseEntryModal
+    | GotImageCropperMsg View.ImageCropper.Msg
 
 
 type alias UpdateResult =
@@ -192,6 +200,9 @@ update :
     -> UpdateResult
 update shared msg (Model model) =
     case msg of
+        NoOp ->
+            UR.init (Model model)
+
         RequestedUploadFiles files ->
             let
                 newEntries : List Entry
@@ -233,6 +244,16 @@ update shared msg (Model model) =
             { model | openEntryIndex = Nothing }
                 |> Model
                 |> UR.init
+
+        GotImageCropperMsg subMsg ->
+            let
+                ( newImageCropper, cmd ) =
+                    View.ImageCropper.update subMsg model.imageCropper
+            in
+            { model | imageCropper = newImageCropper }
+                |> Model
+                |> UR.init
+                |> UR.addCmd (Cmd.map GotImageCropperMsg cmd)
 
 
 
@@ -280,7 +301,7 @@ view (Options options) viewConfig toMsg =
                 text ""
 
             Just entry ->
-                viewEntryModal viewConfig.translators entry
+                viewEntryModal viewConfig.translators model.imageCropper entry
                     |> Html.map toMsg
         ]
 
@@ -371,8 +392,8 @@ viewEntry translators index entry =
             text ""
 
 
-viewEntryModal : Translation.Translators -> Entry -> Html Msg
-viewEntryModal translators entry =
+viewEntryModal : Translation.Translators -> View.ImageCropper.Model -> Entry -> Html Msg
+viewEntryModal translators imageCropper entry =
     Modal.initWith
         { closeMsg = ClickedCloseEntryModal
         , isVisible = True
@@ -390,13 +411,14 @@ viewEntryModal translators entry =
                     Loaded url ->
                         case entry.fileType of
                             LoadedFileType Image ->
-                                -- TODO - View Slider
-                                div [ class "flex flex-col items-center" ]
-                                    [ img [ src url, alt "" ] []
+                                div []
+                                    [ View.ImageCropper.view imageCropper { imageUrl = url }
+                                        -- TODO
+                                        |> Html.map GotImageCropperMsg
                                     , div [ class "flex mt-6" ]
                                         [ Icons.magnifyingGlassWithMinus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
 
-                                        -- TODO - Are we using this?
+                                        -- TODO - Are we using this or rolling our own slider?
                                         -- TODO - Style it better
                                         , input
                                             [ type_ "range"
@@ -448,6 +470,8 @@ viewEntryModal translators entry =
                 -- TODO - I18N
                 [ text "Save image" ]
             ]
+        -- TODO - Should it be fullscreen?
+        |> Modal.withSize Modal.FullScreen
         |> Modal.toHtml
 
 
@@ -550,6 +574,9 @@ urlStatusFromResult result =
 msgToString : Msg -> List String
 msgToString msg =
     case msg of
+        NoOp ->
+            [ "NoOp" ]
+
         RequestedUploadFiles _ ->
             [ "RequestedUploadFiles" ]
 
@@ -561,3 +588,6 @@ msgToString msg =
 
         ClickedCloseEntryModal ->
             [ "ClickedCloseEntryModal" ]
+
+        GotImageCropperMsg subMsg ->
+            "GotImageCropperMsg" :: View.ImageCropper.msgToString subMsg

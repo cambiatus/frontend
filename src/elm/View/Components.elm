@@ -2,7 +2,7 @@ module View.Components exposing
     ( loadingLogoAnimated, loadingLogoAnimatedFluid, loadingLogoWithCustomText
     , dialogBubble, masonryLayout, Breakpoint(..)
     , tooltip, pdfViewer, dateViewer, infiniteList, ElementToTrack(..), label, disablableLink
-    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver
+    , bgNoScroll, PreventScroll(..), keyListener, Key(..), focusTrap, intersectionObserver, pointerListener
     )
 
 {-| This module exports some simple components that don't need to manage any
@@ -31,7 +31,7 @@ state or configuration, such as loading indicators and containers
 
 # Helpers
 
-@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver
+@docs bgNoScroll, PreventScroll, keyListener, Key, focusTrap, intersectionObserver, pointerListener
 
 -}
 
@@ -550,6 +550,36 @@ intersectionObserver options =
             )
         , optionalEvent "started-intersecting" options.onStartedIntersecting
         , optionalEvent "stopped-intersecting" options.onStoppedIntersecting
+        ]
+        []
+
+
+{-| A component that attaches events related to pointers to the document and
+passes it into Elm
+-}
+pointerListener :
+    { onPointerMove : Maybe ({ x : Float, y : Float } -> msg)
+    , onPointerUp : Maybe msg
+    }
+    -> Html msg
+pointerListener { onPointerMove, onPointerUp } =
+    node "pointer-listener"
+        [ case onPointerMove of
+            Nothing ->
+                class ""
+
+            Just pointerMoveListener ->
+                on "document-pointermove"
+                    (Json.Decode.map2 (\x y -> pointerMoveListener { x = x, y = y })
+                        (Json.Decode.at [ "detail", "clientX" ] Json.Decode.float)
+                        (Json.Decode.at [ "detail", "clientY" ] Json.Decode.float)
+                    )
+        , case onPointerUp of
+            Nothing ->
+                class ""
+
+            Just pointerUpListener ->
+                on "document-pointerup" (Json.Decode.succeed pointerUpListener)
         ]
         []
 
