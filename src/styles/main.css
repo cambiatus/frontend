@@ -167,7 +167,7 @@ body > * {
 
   .form-file:focus-visible + label .file-decoration,
   .form-file:focus-visible + label.file-decoration {
-    @apply ring ring-green ring-opacity-50 active:ring-0;
+    @apply outline-none ring ring-green ring-opacity-50;
   }
 
   /* End of File */
