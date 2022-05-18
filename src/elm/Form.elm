@@ -101,6 +101,7 @@ import Date exposing (Date)
 import Form.Checkbox as Checkbox
 import Form.DatePicker as DatePicker
 import Form.File
+import Form.File2
 import Form.Radio as Radio
 import Form.RichText as RichText
 import Form.Select as Select
@@ -214,6 +215,7 @@ type Field msg values
     | Checkbox (Checkbox.Options msg) (BaseField Bool values)
     | Radio (Radio.Options String msg) (BaseField String values)
     | File (Form.File.Options msg) (BaseField Form.File.Model values)
+    | File2 (Form.File2.Options msg) (BaseField Form.File2.Model values)
     | Select (Select.Options String msg) (BaseField String values)
     | DatePicker (DatePicker.Options (Msg values)) (BaseField DatePicker.Model values)
     | UserPicker (UserPicker.Options (Msg values)) (BaseField UserPicker.Model values)
@@ -1007,6 +1009,7 @@ type Msg values
     | ChangedValues { fieldId : String } values
     | GotRichTextMsg (values -> RichText.Model) (RichText.Model -> values -> values) RichText.Msg
     | GotFileMsg (values -> Form.File.Model) (Form.File.Model -> values -> values) Form.File.Msg
+    | GotFile2Msg (values -> Form.File2.Model) (Form.File2.Model -> values -> values) Form.File2.Msg
     | GotDatePickerMsg (DatePicker.Options (Msg values)) (DatePicker.ViewConfig (Msg values)) (values -> DatePicker.Model) (DatePicker.Model -> values -> values) DatePicker.Msg
     | GotUserPickerMsg (UserPicker.Options (Msg values)) (UserPicker.ViewConfig (Msg values)) (values -> UserPicker.Model) (UserPicker.Model -> values -> values) UserPicker.Msg
     | BlurredField { fieldId : String, isEmpty : Bool }
@@ -1074,6 +1077,13 @@ update shared msg (Model model) =
                     UR.addExt
                     (Model model)
 
+        GotFile2Msg getModel updateFn subMsg ->
+            Form.File2.update shared subMsg (getModel model.values)
+                |> UR.fromChild (\newFile -> Model { model | values = updateFn newFile model.values })
+                    (GotFile2Msg getModel updateFn)
+                    UR.addExt
+                    (Model model)
+
         GotDatePickerMsg options viewConfig getModel updateFn subMsg ->
             let
                 ( newModel, cmd ) =
@@ -1138,6 +1148,9 @@ msgToString msg =
 
         GotFileMsg _ _ subMsg ->
             "GotFileMsg" :: Form.File.msgToString subMsg
+
+        GotFile2Msg _ _ subMsg ->
+            "GotFile2Msg" :: Form.File2.msgToString subMsg
 
         GotDatePickerMsg _ _ _ _ subMsg ->
             "GotDatePickerMsg" :: DatePicker.msgToString subMsg
@@ -1447,6 +1460,18 @@ viewField { showError, translators, disabled, values, model, form, toMsg, onSucc
                     >> toMsg
                 )
 
+        File2 options baseField ->
+            Form.File2.view (disableIfNotAlreadyDisabled options Form.File2.withDisabled)
+                { value = baseField.value
+                , error = viewError [] showError error
+                , hasError = hasError
+                , isRequired = isRequired
+                , translators = translators
+                }
+                (GotFile2Msg baseField.getValue baseField.updateWithValues
+                    >> toMsg
+                )
+
         Select options baseField ->
             Select.view (disableIfNotAlreadyDisabled options Select.withDisabled)
                 { onSelect =
@@ -1571,6 +1596,9 @@ getId state =
         File options _ ->
             Form.File.getId options
 
+        File2 options _ ->
+            Form.File2.getId options
+
         Select options _ ->
             Select.getId options
 
@@ -1618,6 +1646,9 @@ isEmpty field_ =
 
         File _ { value } ->
             Form.File.isEmpty value
+
+        File2 _ { value } ->
+            Form.File2.isEmpty value
 
         Select _ _ ->
             False
@@ -1764,6 +1795,9 @@ mapField fn reverseFn field_ =
         File options baseField ->
             baseMap File options baseField
 
+        File2 options baseField ->
+            baseMap File2 options baseField
+
         Select options baseField ->
             baseMap Select options baseField
 
@@ -1800,6 +1834,11 @@ mapMsg fn reverseFn msg =
 
         GotFileMsg getModel updateFn subMsg ->
             GotFileMsg (reverseFn >> getModel)
+                (\value values -> reverseFn values |> updateFn value |> fn)
+                subMsg
+
+        GotFile2Msg getModel updateFn subMsg ->
+            GotFile2Msg (reverseFn >> getModel)
                 (\value values -> reverseFn values |> updateFn value |> fn)
                 subMsg
 

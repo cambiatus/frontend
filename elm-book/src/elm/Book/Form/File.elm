@@ -5,6 +5,7 @@ import ElmBook
 import ElmBook.Actions as Actions
 import ElmBook.Chapter as Chapter exposing (Chapter)
 import Form.File
+import Form.File2
 import Html exposing (Html)
 import Html.Attributes
 import Maybe.Extra
@@ -19,6 +20,7 @@ type alias Model =
     { smallCircleExample : Form.File.Model
     , largeRectangleExample : Form.File.Model
     , largeRectangleGrayExample : Form.File.Model
+    , file2 : Form.File2.Model
     }
 
 
@@ -27,6 +29,7 @@ initModel =
     { smallCircleExample = Form.File.initModel Nothing
     , largeRectangleExample = Form.File.initModel Nothing
     , largeRectangleGrayExample = Form.File.initModel Nothing
+    , file2 = Form.File2.initMultiple []
     }
 
 
@@ -38,6 +41,7 @@ type Msg
     = GotSmallCircleMsg Form.File.Msg
     | GotLargeRectangleMsg Form.File.Msg
     | GotLargeRectangleGrayMsg Form.File.Msg
+    | GotFile2Msg Form.File2.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -67,6 +71,14 @@ update msg model =
                 , toMsg = GotLargeRectangleGrayMsg
                 }
 
+        GotFile2Msg subMsg ->
+            updateComponent2 subMsg
+                model
+                { fromModel = .file2
+                , toModel = \file2 model_ -> { model_ | file2 = file2 }
+                , toMsg = GotFile2Msg
+                }
+
 
 updateComponent :
     Form.File.Msg
@@ -85,6 +97,25 @@ updateComponent msg model { fromModel, toModel, toMsg } =
             model
         |> UpdateResult.toModelCmd
             (\_ m -> ( m, Cmd.none ))
+            (\_ -> [])
+
+
+updateComponent2 :
+    Form.File2.Msg
+    -> Model
+    ->
+        { fromModel : Model -> Form.File2.Model
+        , toModel : Form.File2.Model -> Model -> Model
+        , toMsg : Form.File2.Msg -> Msg
+        }
+    -> ( Model, Cmd Msg )
+updateComponent2 msg model { fromModel, toModel, toMsg } =
+    Form.File2.update Book.Helpers.mockShared msg (fromModel model)
+        |> UpdateResult.fromChild (\subModel -> toModel subModel model)
+            toMsg
+            UpdateResult.addExt
+            model
+        |> UpdateResult.toModelCmd (\_ m -> ( m, Cmd.none ))
             (\_ -> [])
 
 
@@ -129,6 +160,23 @@ viewLargeRectangle model =
         , translators = Book.Helpers.mockTranslators
         }
         GotLargeRectangleMsg
+
+
+viewFile2 : Model -> Html Msg
+viewFile2 model =
+    let
+        options =
+            Form.File2.init { id = "file2-example" }
+                |> Form.File2.withMultipleFiles True
+    in
+    Form.File2.view options
+        { value = model.file2
+        , error = Html.text ""
+        , hasError = False
+        , isRequired = True
+        , translators = Book.Helpers.mockTranslators
+        }
+        GotFile2Msg
 
 
 viewLargeRectangleGray : Model -> Html Msg
@@ -327,6 +375,11 @@ chapter =
                     viewLargeRectangleGray fileModel
                         |> mapToState
               )
+            , ( "File2"
+              , \{ fileModel } ->
+                    viewFile2 fileModel
+                        |> mapToState
+              )
             ]
         |> Chapter.render """
 Sometimes we need users to submit files, and this is where this component comes in!
@@ -361,4 +414,6 @@ And be in an error state:
 <component with-label="Large rectangle with error" />
 
 <component with-label="Gray large rectangle with error" />
+
+<component with-label="File2" />
 """
