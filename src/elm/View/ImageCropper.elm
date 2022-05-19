@@ -1,9 +1,10 @@
 module View.ImageCropper exposing (Model, Msg, init, msgToString, update, view)
 
 import Browser.Dom
-import Html exposing (Html, div, img)
-import Html.Attributes exposing (alt, class, id, src, style)
+import Html exposing (Html, div, img, input)
+import Html.Attributes exposing (alt, class, id, src, style, type_, value)
 import Html.Events
+import Icons
 import Json.Decode
 import Task
 import UpdateResult as UR
@@ -14,10 +15,13 @@ type alias Model =
     { topOffset : Float
     , leftOffset : Float
     , isDragging : Bool
-    , minX : Float
-    , maxX : Float
-    , minY : Float
-    , maxY : Float
+    , aspectRatio : Float
+    , left : Float
+    , width : Float
+    , top : Float
+    , height : Float
+    , maximumWidthRatioPossible : Float
+    , selectorBoxSizeMultiplier : Float
     }
 
 
@@ -27,12 +31,13 @@ init =
     { topOffset = 0
     , leftOffset = 0
     , isDragging = False
-
-    -- TODO - Figure this out better
-    , minX = 0
-    , maxX = 0
-    , minY = 0
-    , maxY = 0
+    , aspectRatio = 3 / 4
+    , top = 0
+    , width = 0
+    , left = 0
+    , height = 0
+    , maximumWidthRatioPossible = 1
+    , selectorBoxSizeMultiplier = 0.75
     }
 
 
@@ -42,6 +47,7 @@ type Msg
     | StartedDragging
     | StoppedDragging
     | Dragged { x : Float, y : Float }
+    | ChangedDimmensions String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -54,11 +60,16 @@ update msg model =
             )
 
         GotImageDimmensions (Ok { element }) ->
+            let
+                maximumWidthPossible =
+                    min element.width (element.height * model.aspectRatio)
+            in
             ( { model
-                | minX = element.x
-                , maxX = element.x + element.width
-                , minY = element.y
-                , maxY = element.y + element.height
+                | left = element.x
+                , width = element.width
+                , top = element.y
+                , height = element.height
+                , maximumWidthRatioPossible = maximumWidthPossible / element.width
               }
             , Cmd.none
             )
@@ -81,25 +92,45 @@ update msg model =
             , Cmd.none
             )
 
+        ChangedDimmensions percentageString ->
+            case String.toFloat percentageString of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just percentageValue ->
+                    ( { model | selectorBoxSizeMultiplier = percentageValue }
+                    , Cmd.none
+                    )
+
 
 view : Model -> { imageUrl : String } -> Html Msg
 view model { imageUrl } =
     let
+        calculatedSelectionWidth =
+            model.width * model.selectorBoxSizeMultiplier
+
+        calculatedSelectionHeight =
+            calculatedSelectionWidth / model.aspectRatio
+
         selectionWidth =
-            160
+            if calculatedSelectionHeight > model.height then
+                model.height * model.aspectRatio
+
+            else
+                calculatedSelectionWidth
 
         selectionHeight =
-            80
+            selectionWidth / model.aspectRatio
 
         leftOffset =
             clamp 0
-                (model.maxX - model.minX - selectionWidth)
-                (model.leftOffset - (selectionWidth / 2) - model.minX)
+                (model.width - selectionWidth)
+                (model.leftOffset - (selectionWidth / 2) - model.left)
 
         topOffset =
             clamp 0
-                (model.maxY - model.minY - selectionHeight)
-                (model.topOffset - (selectionHeight / 2) - model.minY)
+                (model.height - selectionHeight)
+                (model.topOffset - (selectionHeight / 2) - model.top)
 
         floatToPx offset =
             String.fromFloat offset ++ "px"
@@ -109,14 +140,12 @@ view model { imageUrl } =
             [ src imageUrl
             , alt ""
             , id entireImageId
-
-            -- TODO - Do we need to/Should we keep hardcoded height?
             , class "opacity-20 pointer-events-none select-none max-h-64 lg:max-h-96"
             , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
             ]
             []
         , div
-            [ class "absolute overflow-hidden border border-dashed border-gray-100 cursor-move z-20 select-none"
+            [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none"
             , style "top" (floatToPx topOffset)
             , style "left" (floatToPx leftOffset)
             , style "width" (floatToPx selectionWidth)
@@ -127,8 +156,8 @@ view model { imageUrl } =
                 [ src imageUrl
                 , alt ""
                 , class "absolute object-cover max-w-none pointer-events-none select-none"
-                , style "width" (floatToPx (model.maxX - model.minX))
-                , style "height" (floatToPx (model.maxY - model.minY))
+                , style "width" (floatToPx model.width)
+                , style "height" (floatToPx model.height)
 
                 -- We need to compensate for the border
                 , style "top" (floatToPx (-topOffset - 1))
@@ -144,6 +173,26 @@ view model { imageUrl } =
 
           else
             Html.text ""
+        , div [ class "flex mt-6" ]
+            -- TODO - Make this into a button
+            [ Icons.magnifyingGlassWithMinus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
+
+            -- TODO - Are we using this or rolling our own slider?
+            -- TODO - Style it better
+            , input
+                [ type_ "range"
+                , class "w-full mx-2"
+                , value (String.fromFloat model.selectorBoxSizeMultiplier)
+                , Html.Events.onInput ChangedDimmensions
+                , Html.Attributes.min "0.1"
+                , Html.Attributes.max (String.fromFloat model.maximumWidthRatioPossible)
+                , Html.Attributes.step "0.001"
+                ]
+                []
+
+            -- TODO - Make this into a button
+            , Icons.magnifyingGlassWithPlus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
+            ]
         ]
 
 
@@ -175,3 +224,6 @@ msgToString msg =
 
         StoppedDragging ->
             [ "StoppedDragging" ]
+
+        ChangedDimmensions _ ->
+            [ "ChangedDimmensions" ]

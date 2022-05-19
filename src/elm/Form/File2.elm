@@ -411,23 +411,8 @@ viewEntryModal translators imageCropper entry =
                     Loaded url ->
                         case entry.fileType of
                             LoadedFileType Image ->
-                                div []
-                                    [ View.ImageCropper.view imageCropper { imageUrl = url }
-                                        -- TODO
-                                        |> Html.map GotImageCropperMsg
-                                    , div [ class "flex mt-6" ]
-                                        [ Icons.magnifyingGlassWithMinus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
-
-                                        -- TODO - Are we using this or rolling our own slider?
-                                        -- TODO - Style it better
-                                        , input
-                                            [ type_ "range"
-                                            , class "w-full mx-2"
-                                            ]
-                                            []
-                                        , Icons.magnifyingGlassWithPlus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
-                                        ]
-                                    ]
+                                View.ImageCropper.view imageCropper { imageUrl = url }
+                                    |> Html.map GotImageCropperMsg
 
                             LoadedFileType Pdf ->
                                 View.Components.pdfViewer []
