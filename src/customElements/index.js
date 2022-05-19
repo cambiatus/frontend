@@ -11,6 +11,7 @@ import pdfViewer from './pdfViewer'
 import intersectionObserverElement from './intersectionObserverElement'
 import masonryLayout from './masonryLayout'
 import pointerListener from './pointerListener'
+import imageCropper from './imageCropper'
 
 const customElements = {
   'bg-no-scroll': bgNoScroll,
@@ -25,7 +26,8 @@ const customElements = {
   'richtext-editor': richTextEditor,
   'intersection-observer': intersectionObserverElement,
   'masonry-layout': masonryLayout,
-  'pointer-listener': pointerListener
+  'pointer-listener': pointerListener,
+  'image-cropper': imageCropper
 }
 
 const register = (app, config, addBreadcrumb) => {

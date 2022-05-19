@@ -1,8 +1,9 @@
 module View.ImageCropper exposing (Model, Msg, init, msgToString, update, view)
 
 import Browser.Dom
-import Html exposing (Html, div, img, input)
-import Html.Attributes exposing (alt, class, id, src, style, type_, value)
+import File
+import Html exposing (Html, div, img, input, node)
+import Html.Attributes exposing (alt, attribute, class, id, src, style, type_, value)
 import Html.Events
 import Icons
 import Json.Decode
@@ -27,7 +28,6 @@ type alias Model =
 
 init : Model
 init =
-    -- TODO - Start in the middle
     { topOffset = 0
     , leftOffset = 0
     , isDragging = False
@@ -48,6 +48,7 @@ type Msg
     | StoppedDragging
     | Dragged { x : Float, y : Float }
     | ChangedDimmensions String
+    | GotCroppedImage File.File
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -104,6 +105,9 @@ update msg model =
                     ( { model | selectorBoxSizeMultiplier = percentageValue }
                     , Cmd.none
                     )
+
+        GotCroppedImage file ->
+            ( model, Cmd.none )
 
 
 view : Model -> { imageUrl : String } -> Html Msg
@@ -196,6 +200,23 @@ view model { imageUrl } =
             -- TODO - Make this into a button
             , Icons.magnifyingGlassWithPlus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
             ]
+
+        -- TODO - Should we generate a new image so often??
+        , node "image-cropper"
+            -- TODO - Review these
+            [ attribute "elm-url" imageUrl
+            , attribute "elm-image-width" (String.fromFloat model.width)
+            , attribute "elm-image-height" (String.fromFloat model.height)
+            , attribute "elm-selection-left" (String.fromFloat leftOffset)
+            , attribute "elm-selection-top" (String.fromFloat topOffset)
+            , attribute "elm-selection-width" (String.fromFloat selectionWidth)
+            , attribute "elm-selection-height" (String.fromFloat selectionHeight)
+            , Html.Events.on "crop-image"
+                (Json.Decode.at [ "detail", "image" ] File.decoder
+                    |> Json.Decode.map GotCroppedImage
+                )
+            ]
+            []
         ]
 
 
@@ -230,3 +251,6 @@ msgToString msg =
 
         ChangedDimmensions _ ->
             [ "ChangedDimmensions" ]
+
+        GotCroppedImage _ ->
+            [ "GotCroppedImageUrl" ]
