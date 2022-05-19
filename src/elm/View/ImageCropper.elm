@@ -12,16 +12,13 @@ import UpdateResult as UR
 import View.Components
 
 
-
--- TODO - Listen to resize events
-
-
 type alias Model =
     { dimmensions : DimmensionsState
     , aspectRatio : Float
     , isDragging : Bool
     , isChangingDimmensions : Bool
     , isRequestingCroppedImage : Bool
+    , isReflowing : Bool
     }
 
 
@@ -32,6 +29,7 @@ init { aspectRatio } =
     , isDragging = False
     , isChangingDimmensions = False
     , isRequestingCroppedImage = False
+    , isReflowing = False
     }
 
 
@@ -82,19 +80,38 @@ update msg model =
             let
                 maximumWidthPossible =
                     min element.width (element.height * model.aspectRatio)
+
+                newDimmensions =
+                    { left = element.x
+                    , width = element.width
+                    , top = element.y
+                    , height = element.height
+                    , maximumWidthRatioPossible = maximumWidthPossible / element.width
+                    , leftOffset = element.x + (element.width / 2)
+                    , topOffset = element.y + (element.height / 2)
+                    , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
+                    }
             in
             ( { model
                 | dimmensions =
-                    Loaded
-                        { left = element.x
-                        , width = element.width
-                        , top = element.y
-                        , height = element.height
-                        , maximumWidthRatioPossible = maximumWidthPossible / element.width
-                        , leftOffset = element.x + (element.width / 2)
-                        , topOffset = element.y + (element.height / 2)
-                        , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
-                        }
+                    case model.dimmensions of
+                        Loading ->
+                            Loaded newDimmensions
+
+                        Loaded existingDimmensions ->
+                            if existingDimmensions.width == element.width && existingDimmensions.height == element.height then
+                                Loaded { newDimmensions | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier }
+
+                            else
+                                Loaded newDimmensions
+                , isReflowing =
+                    case model.dimmensions of
+                        Loading ->
+                            False
+
+                        Loaded existingDimmensions ->
+                            (abs (existingDimmensions.width - newDimmensions.width) > 50)
+                                || (abs (existingDimmensions.height - newDimmensions.height) > 50)
               }
             , Cmd.none
             )
@@ -243,7 +260,7 @@ viewWithDimmensions model dimmensions { imageUrl } =
     in
     [ div
         [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none"
-        , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions ) ]
+        , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
         , style "top" (floatToPx topOffset)
         , style "left" (floatToPx leftOffset)
         , style "width" (floatToPx selectionWidth)
@@ -254,7 +271,7 @@ viewWithDimmensions model dimmensions { imageUrl } =
             [ src imageUrl
             , alt ""
             , class "absolute object-cover max-w-none pointer-events-none select-none"
-            , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions ) ]
+            , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
             , style "width" (floatToPx dimmensions.width)
             , style "height" (floatToPx dimmensions.height)
 
@@ -317,6 +334,7 @@ viewWithDimmensions model dimmensions { imageUrl } =
             (Json.Decode.at [ "detail", "image" ] File.decoder
                 |> Json.Decode.map GotCroppedImage
             )
+        , Html.Events.on "document-resize" (Json.Decode.succeed ImageLoaded)
         ]
         []
     ]

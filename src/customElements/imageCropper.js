@@ -12,6 +12,18 @@ export default () => (
       }
     }
 
+    connectedCallback () {
+      this.documentResizeListener = () => {
+        this.dispatchEvent(new CustomEvent('document-resize'))
+      }
+
+      window.addEventListener('resize', this.documentResizeListener)
+    }
+
+    disconnectedCallback () {
+      window.removeEventListener('resize', this.documentResizeListener)
+    }
+
     crop () {
       const url = this.getAttribute('elm-url')
       const imageWidth = parseFloat(this.getAttribute('elm-image-width'))
