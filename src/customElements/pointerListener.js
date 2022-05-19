@@ -17,7 +17,6 @@ export default () => (
         }
       }
 
-
       Object.keys(this.listeners).forEach((key) => {
         document.addEventListener(key, this.listeners[key])
       })

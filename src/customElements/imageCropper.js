@@ -1,4 +1,4 @@
-/* global HTMLElement, CustomEvent */
+/* global HTMLElement, CustomEvent, Image, File */
 
 export default () => (
   class ImageCropper extends HTMLElement {
