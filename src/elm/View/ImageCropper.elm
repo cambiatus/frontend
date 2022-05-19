@@ -31,13 +31,13 @@ init =
     { topOffset = 0
     , leftOffset = 0
     , isDragging = False
-    , aspectRatio = 3 / 4
+    , aspectRatio = 1 / 1
     , top = 0
     , width = 0
     , left = 0
     , height = 0
-    , maximumWidthRatioPossible = 1
-    , selectorBoxSizeMultiplier = 0.75
+    , maximumWidthRatioPossible = 0
+    , selectorBoxSizeMultiplier = 0
     }
 
 
@@ -70,6 +70,9 @@ update msg model =
                 , top = element.y
                 , height = element.height
                 , maximumWidthRatioPossible = maximumWidthPossible / element.width
+                , leftOffset = element.x + (element.width / 2)
+                , topOffset = element.y + (element.height / 2)
+                , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
               }
             , Cmd.none
             )
@@ -203,8 +206,8 @@ entireImageId =
 
 onPointerDown : msg -> Html.Attribute msg
 onPointerDown msg =
-    Html.Events.on "pointerdown"
-        (Json.Decode.succeed msg)
+    Html.Events.preventDefaultOn "pointerdown"
+        (Json.Decode.succeed ( msg, True ))
 
 
 msgToString : Msg -> List String
