@@ -23,6 +23,7 @@ type alias Model =
     , height : Float
     , maximumWidthRatioPossible : Float
     , selectorBoxSizeMultiplier : Float
+    , isRequestingCroppedImage : Bool
     }
 
 
@@ -38,6 +39,7 @@ init =
     , height = 0
     , maximumWidthRatioPossible = 0
     , selectorBoxSizeMultiplier = 0
+    , isRequestingCroppedImage = False
     }
 
 
@@ -48,6 +50,7 @@ type Msg
     | StoppedDragging
     | Dragged { x : Float, y : Float }
     | ChangedDimmensions String
+    | CompletedChangingDimmensions
     | GotCroppedImage File.File
 
 
@@ -87,7 +90,10 @@ update msg model =
             )
 
         StoppedDragging ->
-            ( { model | isDragging = False }
+            ( { model
+                | isDragging = False
+                , isRequestingCroppedImage = True
+              }
             , Cmd.none
             )
 
@@ -106,8 +112,11 @@ update msg model =
                     , Cmd.none
                     )
 
+        CompletedChangingDimmensions ->
+            ( { model | isRequestingCroppedImage = True }, Cmd.none )
+
         GotCroppedImage file ->
-            ( model, Cmd.none )
+            ( { model | isRequestingCroppedImage = False }, Cmd.none )
 
 
 view : Model -> { imageUrl : String } -> Html Msg
@@ -191,6 +200,7 @@ view model { imageUrl } =
                 , class "w-full mx-2"
                 , value (String.fromFloat model.selectorBoxSizeMultiplier)
                 , Html.Events.onInput ChangedDimmensions
+                , Html.Events.on "change" (Json.Decode.succeed CompletedChangingDimmensions)
                 , Html.Attributes.min "0.1"
                 , Html.Attributes.max (String.fromFloat model.maximumWidthRatioPossible)
                 , Html.Attributes.step "0.001"
@@ -200,11 +210,13 @@ view model { imageUrl } =
             -- TODO - Make this into a button
             , Icons.magnifyingGlassWithPlus "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full"
             ]
-
-        -- TODO - Should we generate a new image so often??
         , node "image-cropper"
-            -- TODO - Review these
-            [ attribute "elm-url" imageUrl
+            [ if model.isRequestingCroppedImage then
+                attribute "elm-generate-new-cropped-image" "true"
+
+              else
+                class ""
+            , attribute "elm-url" imageUrl
             , attribute "elm-image-width" (String.fromFloat model.width)
             , attribute "elm-image-height" (String.fromFloat model.height)
             , attribute "elm-selection-left" (String.fromFloat leftOffset)
@@ -251,6 +263,9 @@ msgToString msg =
 
         ChangedDimmensions _ ->
             [ "ChangedDimmensions" ]
+
+        CompletedChangingDimmensions ->
+            [ "CompletedChangingDimmensions" ]
 
         GotCroppedImage _ ->
             [ "GotCroppedImageUrl" ]

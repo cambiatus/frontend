@@ -3,19 +3,13 @@
 export default () => (
   class ImageCropper extends HTMLElement {
     static get observedAttributes () {
-      return [
-        'elm-image-url',
-        'elm-image-width',
-        'elm-image-height',
-        'elm-selection-left',
-        'elm-selection-top',
-        'elm-selection-width',
-        'elm-selection-height'
-      ]
+      return ['elm-generate-new-cropped-image']
     }
 
-    attributeChangedCallback () {
-      this.crop()
+    attributeChangedCallback (name, oldValue, newValue) {
+      if (name === 'elm-generate-new-cropped-image' && newValue) {
+        this.crop()
+      }
     }
 
     crop () {
