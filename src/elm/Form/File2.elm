@@ -69,11 +69,11 @@ type Options msg
 -- INITIALIZING
 
 
-initSingle : Maybe String -> Model
-initSingle maybeImage =
+initSingle : { imageUrl : Maybe String, aspectRatio : Float } -> Model
+initSingle { imageUrl, aspectRatio } =
     Model
         { entries =
-            maybeImage
+            imageUrl
                 |> Maybe.map
                     (\image ->
                         [ { fileType = LoadingFileType
@@ -83,12 +83,12 @@ initSingle maybeImage =
                     )
                 |> Maybe.withDefault []
         , openEntryIndex = Nothing
-        , imageCropper = View.ImageCropper.init
+        , imageCropper = View.ImageCropper.init { aspectRatio = aspectRatio }
         }
 
 
-initMultiple : List String -> Model
-initMultiple images =
+initMultiple : { images : List String, aspectRatio : Float } -> Model
+initMultiple { images, aspectRatio } =
     Model
         { entries =
             List.map
@@ -99,7 +99,7 @@ initMultiple images =
                 )
                 images
         , openEntryIndex = Nothing
-        , imageCropper = View.ImageCropper.init
+        , imageCropper = View.ImageCropper.init { aspectRatio = aspectRatio }
         }
 
 

@@ -29,7 +29,7 @@ initModel =
     { smallCircleExample = Form.File.initModel Nothing
     , largeRectangleExample = Form.File.initModel Nothing
     , largeRectangleGrayExample = Form.File.initModel Nothing
-    , file2 = Form.File2.initMultiple []
+    , file2 = Form.File2.initMultiple { images = [], aspectRatio = 1 / 1 }
     }
 
 
