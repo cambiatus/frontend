@@ -229,27 +229,35 @@ update msg model =
 
 view : Model -> { imageUrl : String } -> Html Msg
 view model { imageUrl } =
-    div [ class "relative max-w-max mx-auto" ]
-        (img
-            [ src imageUrl
-            , alt ""
-            , id entireImageId
-            , class "opacity-20 pointer-events-none select-none max-h-64 lg:max-h-96"
-            , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
-            ]
-            []
-            :: (case model.dimmensions of
-                    Loading ->
-                        []
+    div [ class "mx-auto w-full md:flex md:flex-col md:w-auto" ]
+        [ div [ class "relative max-w-max mx-auto" ]
+            (img
+                [ src imageUrl
+                , alt ""
+                , id entireImageId
+                , class "opacity-20 pointer-events-none select-none max-h-64 lg:max-h-96"
+                , Html.Events.on "load" (Json.Decode.succeed ImageLoaded)
+                ]
+                []
+                :: (case model.dimmensions of
+                        Loading ->
+                            []
 
-                    Loaded dimmensions ->
-                        viewWithDimmensions model dimmensions { imageUrl = imageUrl }
-               )
-        )
+                        Loaded dimmensions ->
+                            viewCropper model dimmensions { imageUrl = imageUrl }
+                   )
+            )
+        , case model.dimmensions of
+            Loading ->
+                Html.text ""
+
+            Loaded dimmensions ->
+                viewSlider dimmensions
+        ]
 
 
-viewWithDimmensions : Model -> Dimmensions -> { imageUrl : String } -> List (Html Msg)
-viewWithDimmensions model dimmensions { imageUrl } =
+viewCropper : Model -> Dimmensions -> { imageUrl : String } -> List (Html Msg)
+viewCropper model dimmensions { imageUrl } =
     let
         selection =
             calculateSelectionDimmensions model dimmensions
@@ -268,7 +276,7 @@ viewWithDimmensions model dimmensions { imageUrl } =
             String.fromFloat offset ++ "px"
     in
     [ div
-        [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none"
+        [ class "absolute overflow-hidden border border-dashed border-gray-400 cursor-move z-20 select-none mx-auto"
         , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
         , style "top" (floatToPx topOffset)
         , style "left" (floatToPx leftOffset)
@@ -298,7 +306,32 @@ viewWithDimmensions model dimmensions { imageUrl } =
 
       else
         Html.text ""
-    , div [ class "flex mt-6" ]
+    , node "image-cropper"
+        [ if model.isRequestingCroppedImage then
+            attribute "elm-generate-new-cropped-image" "true"
+
+          else
+            class ""
+        , attribute "elm-url" imageUrl
+        , attribute "elm-image-width" (String.fromFloat dimmensions.width)
+        , attribute "elm-image-height" (String.fromFloat dimmensions.height)
+        , attribute "elm-selection-left" (String.fromFloat leftOffset)
+        , attribute "elm-selection-top" (String.fromFloat topOffset)
+        , attribute "elm-selection-width" (String.fromFloat selection.width)
+        , attribute "elm-selection-height" (String.fromFloat selection.height)
+        , Html.Events.on "crop-image"
+            (Json.Decode.at [ "detail", "image" ] File.decoder
+                |> Json.Decode.map GotCroppedImage
+            )
+        , Html.Events.on "document-resize" (Json.Decode.succeed ImageLoaded)
+        ]
+        []
+    ]
+
+
+viewSlider : Dimmensions -> Html Msg
+viewSlider dimmensions =
+    div [ class "flex mt-6 flex-grow-0" ]
         [ button
             [ Html.Events.onClick (ClickedZoomOperation Minus)
             , class "flex-shrink-0 bg-gray-100 p-2 w-10 h-10 rounded-full focus-ring"
@@ -326,27 +359,6 @@ viewWithDimmensions model dimmensions { imageUrl } =
             [ Icons.magnifyingGlassWithPlus ""
             ]
         ]
-    , node "image-cropper"
-        [ if model.isRequestingCroppedImage then
-            attribute "elm-generate-new-cropped-image" "true"
-
-          else
-            class ""
-        , attribute "elm-url" imageUrl
-        , attribute "elm-image-width" (String.fromFloat dimmensions.width)
-        , attribute "elm-image-height" (String.fromFloat dimmensions.height)
-        , attribute "elm-selection-left" (String.fromFloat leftOffset)
-        , attribute "elm-selection-top" (String.fromFloat topOffset)
-        , attribute "elm-selection-width" (String.fromFloat selection.width)
-        , attribute "elm-selection-height" (String.fromFloat selection.height)
-        , Html.Events.on "crop-image"
-            (Json.Decode.at [ "detail", "image" ] File.decoder
-                |> Json.Decode.map GotCroppedImage
-            )
-        , Html.Events.on "document-resize" (Json.Decode.succeed ImageLoaded)
-        ]
-        []
-    ]
 
 
 entireImageId : String
