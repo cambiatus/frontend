@@ -146,7 +146,8 @@ parser { t } (Model model) =
     --         Err (t "error.file_upload")
     --     Just (RemoteData.Success url) ->
     --         Ok url
-    Debug.todo ""
+    -- TODO
+    Err "Implement this"
 
 
 parserMultiple : Translation.Translators -> Model -> Result String (List String)
@@ -170,7 +171,8 @@ parserMultiple { t } (Model model) =
     --     (Ok [])
     --     model.entries
     --     |> Result.map List.reverse
-    Debug.todo ""
+    -- TODO
+    Err "Implement this"
 
 
 
@@ -431,7 +433,8 @@ viewEntryModal translators imageCropper entry =
                                     }
 
                     WithError _ ->
-                        Debug.todo ""
+                        -- TODO
+                        text ""
                 ]
             ]
         |> Modal.withFooter
@@ -473,13 +476,15 @@ isEmpty : Model -> Bool
 isEmpty (Model model) =
     -- List.isEmpty model.entries
     --     || List.any (\entry -> not (RemoteData.isSuccess entry.url)) model.entries
-    Debug.todo ""
+    -- TODO
+    True
 
 
 isLoading : Model -> Bool
 isLoading (Model model) =
     -- List.any (\entry -> RemoteData.isLoading entry.url) model.entries
-    Debug.todo ""
+    -- TODO
+    False
 
 
 fileTypeToString : FileType -> String
