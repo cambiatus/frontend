@@ -558,7 +558,15 @@ intersectionObserver options =
 passes it into Elm
 -}
 pointerListener :
-    { onPointerMove : Maybe ({ x : Float, y : Float } -> msg)
+    { onPointerMove :
+        Maybe
+            ({ x : Float
+             , y : Float
+             , previousX : Float
+             , previousY : Float
+             }
+             -> msg
+            )
     , onPointerUp : Maybe msg
     }
     -> Html msg
@@ -570,9 +578,21 @@ pointerListener { onPointerMove, onPointerUp } =
 
             Just pointerMoveListener ->
                 on "document-pointermove"
-                    (Json.Decode.map2 (\x y -> pointerMoveListener { x = x, y = y })
-                        (Json.Decode.at [ "detail", "clientX" ] Json.Decode.float)
-                        (Json.Decode.at [ "detail", "clientY" ] Json.Decode.float)
+                    (Json.Decode.field "detail"
+                        (Json.Decode.map4
+                            (\x y previousX previousY ->
+                                pointerMoveListener
+                                    { x = x
+                                    , y = y
+                                    , previousX = previousX
+                                    , previousY = previousY
+                                    }
+                            )
+                            (Json.Decode.field "clientX" Json.Decode.float)
+                            (Json.Decode.field "clientY" Json.Decode.float)
+                            (Json.Decode.field "previousX" Json.Decode.float)
+                            (Json.Decode.field "previousY" Json.Decode.float)
+                        )
                     )
         , case onPointerUp of
             Nothing ->

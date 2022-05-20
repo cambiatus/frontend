@@ -55,7 +55,7 @@ type Msg
     | GotImageDimmensions (Result Browser.Dom.Error Browser.Dom.Element)
     | StartedDragging
     | StoppedDragging
-    | Dragged { x : Float, y : Float }
+    | Dragged { x : Float, y : Float, previousX : Float, previousY : Float }
     | ChangedDimmensions String
     | CompletedChangingDimmensions
     | ClickedZoomOperation ZoomOperation
@@ -137,13 +137,30 @@ update msg model =
             , Cmd.none
             )
 
-        Dragged { x, y } ->
+        Dragged { x, y, previousX, previousY } ->
             case model.dimmensions of
                 Loading ->
                     ( model, Cmd.none )
 
                 Loaded dimmensions ->
-                    ( { model | dimmensions = Loaded { dimmensions | topOffset = y, leftOffset = x } }
+                    let
+                        selection =
+                            calculateSelectionDimmensions model dimmensions
+                    in
+                    ( { model
+                        | dimmensions =
+                            Loaded
+                                { dimmensions
+                                    | topOffset =
+                                        clamp dimmensions.top
+                                            (dimmensions.top + dimmensions.height - selection.height)
+                                            (dimmensions.topOffset + y - previousY)
+                                    , leftOffset =
+                                        clamp dimmensions.left
+                                            (dimmensions.left + dimmensions.width - selection.width)
+                                            (dimmensions.leftOffset + x - previousX)
+                                }
+                      }
                     , Cmd.none
                     )
 
@@ -234,31 +251,18 @@ view model { imageUrl } =
 viewWithDimmensions : Model -> Dimmensions -> { imageUrl : String } -> List (Html Msg)
 viewWithDimmensions model dimmensions { imageUrl } =
     let
-        calculatedSelectionWidth =
-            dimmensions.width * dimmensions.selectorBoxSizeMultiplier
-
-        calculatedSelectionHeight =
-            calculatedSelectionWidth / model.aspectRatio
-
-        selectionWidth =
-            if calculatedSelectionHeight > dimmensions.height then
-                dimmensions.height * model.aspectRatio
-
-            else
-                calculatedSelectionWidth
-
-        selectionHeight =
-            selectionWidth / model.aspectRatio
+        selection =
+            calculateSelectionDimmensions model dimmensions
 
         leftOffset =
             clamp 0
-                (dimmensions.width - selectionWidth)
-                (dimmensions.leftOffset - (selectionWidth / 2) - dimmensions.left)
+                (dimmensions.width - selection.width)
+                (dimmensions.leftOffset - dimmensions.left)
 
         topOffset =
             clamp 0
-                (dimmensions.height - selectionHeight)
-                (dimmensions.topOffset - (selectionHeight / 2) - dimmensions.top)
+                (dimmensions.height - selection.height)
+                (dimmensions.topOffset - dimmensions.top)
 
         floatToPx offset =
             String.fromFloat offset ++ "px"
@@ -268,8 +272,8 @@ viewWithDimmensions model dimmensions { imageUrl } =
         , classList [ ( "transition-all origin-center", not model.isDragging && not model.isChangingDimmensions && not model.isReflowing ) ]
         , style "top" (floatToPx topOffset)
         , style "left" (floatToPx leftOffset)
-        , style "width" (floatToPx selectionWidth)
-        , style "height" (floatToPx selectionHeight)
+        , style "width" (floatToPx selection.width)
+        , style "height" (floatToPx selection.height)
         , onPointerDown StartedDragging
         ]
         [ img
@@ -333,8 +337,8 @@ viewWithDimmensions model dimmensions { imageUrl } =
         , attribute "elm-image-height" (String.fromFloat dimmensions.height)
         , attribute "elm-selection-left" (String.fromFloat leftOffset)
         , attribute "elm-selection-top" (String.fromFloat topOffset)
-        , attribute "elm-selection-width" (String.fromFloat selectionWidth)
-        , attribute "elm-selection-height" (String.fromFloat selectionHeight)
+        , attribute "elm-selection-width" (String.fromFloat selection.width)
+        , attribute "elm-selection-height" (String.fromFloat selection.height)
         , Html.Events.on "crop-image"
             (Json.Decode.at [ "detail", "image" ] File.decoder
                 |> Json.Decode.map GotCroppedImage
@@ -348,6 +352,27 @@ viewWithDimmensions model dimmensions { imageUrl } =
 entireImageId : String
 entireImageId =
     "image-cropper-bg-image"
+
+
+calculateSelectionDimmensions : Model -> Dimmensions -> { width : Float, height : Float }
+calculateSelectionDimmensions model dimmensions =
+    let
+        calculatedSelectionWidth =
+            dimmensions.width * dimmensions.selectorBoxSizeMultiplier
+
+        calculatedSelectionHeight =
+            calculatedSelectionWidth / model.aspectRatio
+
+        selectionWidth =
+            if calculatedSelectionHeight > dimmensions.height then
+                dimmensions.height * model.aspectRatio
+
+            else
+                calculatedSelectionWidth
+    in
+    { width = selectionWidth
+    , height = selectionWidth / model.aspectRatio
+    }
 
 
 onPointerDown : msg -> Html.Attribute msg
