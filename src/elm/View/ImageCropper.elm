@@ -100,7 +100,12 @@ update msg model =
 
                         Loaded existingDimmensions ->
                             if existingDimmensions.width == element.width && existingDimmensions.height == element.height then
-                                Loaded { newDimmensions | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier }
+                                Loaded
+                                    { newDimmensions
+                                        | selectorBoxSizeMultiplier = existingDimmensions.selectorBoxSizeMultiplier
+                                        , leftOffset = existingDimmensions.leftOffset + newDimmensions.left - existingDimmensions.left
+                                        , topOffset = existingDimmensions.topOffset + newDimmensions.top - existingDimmensions.top
+                                    }
 
                             else
                                 Loaded newDimmensions
@@ -347,8 +352,13 @@ entireImageId =
 
 onPointerDown : msg -> Html.Attribute msg
 onPointerDown msg =
-    Html.Events.preventDefaultOn "pointerdown"
-        (Json.Decode.succeed ( msg, True ))
+    Html.Events.custom "pointerdown"
+        (Json.Decode.succeed
+            { message = msg
+            , stopPropagation = True
+            , preventDefault = True
+            }
+        )
 
 
 msgToString : Msg -> List String
