@@ -368,8 +368,7 @@ viewSlider dimmensions =
             [ Icons.magnifyingGlassWithMinus ""
             ]
 
-        -- TODO - Are we using this or rolling our own slider?
-        -- TODO - Style it better
+        -- TODO - This doesn't get initialized with the right value
         , input
             [ type_ "range"
             , class "w-full mx-2"
