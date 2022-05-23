@@ -7,6 +7,7 @@ import Html.Attributes exposing (alt, attribute, class, classList, id, src, styl
 import Html.Events
 import Icons
 import Json.Decode
+import Json.Encode
 import Task
 import UpdateResult as UR
 import View.Components
@@ -132,16 +133,32 @@ update msg model =
 
         StartedDragging ->
             { model | isDragging = True }
-                -- TODO - Create port to add `cursor: move` to html, body
                 |> UR.init
+                |> UR.addPort
+                    { responseAddress = StartedDragging
+                    , responseData = Json.Encode.null
+                    , data =
+                        Json.Encode.object
+                            [ ( "name", Json.Encode.string "addClassToDocument" )
+                            , ( "className", Json.Encode.string "cursor-move" )
+                            ]
+                    }
 
         StoppedDragging ->
             { model
                 | isDragging = False
                 , isRequestingCroppedImage = True
             }
-                -- TODO - Create port to remove `cursor: move` from html, body
                 |> UR.init
+                |> UR.addPort
+                    { responseAddress = StartedDragging
+                    , responseData = Json.Encode.null
+                    , data =
+                        Json.Encode.object
+                            [ ( "name", Json.Encode.string "removeClassFromDocument" )
+                            , ( "className", Json.Encode.string "cursor-move" )
+                            ]
+                    }
 
         Dragged { x, y, previousX, previousY } ->
             case model.dimmensions of
