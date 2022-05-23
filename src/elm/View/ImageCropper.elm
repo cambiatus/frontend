@@ -67,14 +67,20 @@ type ZoomOperation
     | Plus
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+type alias UpdateResult extMsg =
+    UR.UpdateResult Model Msg extMsg
+
+
+update : Msg -> Model -> UpdateResult extMsg
 update msg model =
     case msg of
         ImageLoaded ->
-            ( model
-            , Browser.Dom.getElement entireImageId
-                |> Task.attempt GotImageDimmensions
-            )
+            model
+                |> UR.init
+                |> UR.addCmd
+                    (Browser.Dom.getElement entireImageId
+                        |> Task.attempt GotImageDimmensions
+                    )
 
         GotImageDimmensions (Ok { element }) ->
             let
@@ -92,7 +98,7 @@ update msg model =
                     , selectorBoxSizeMultiplier = (maximumWidthPossible / element.width) * 0.75
                     }
             in
-            ( { model
+            { model
                 | dimmensions =
                     case model.dimmensions of
                         Loading ->
@@ -117,37 +123,37 @@ update msg model =
                         Loaded existingDimmensions ->
                             (abs (existingDimmensions.width - newDimmensions.width) > 50)
                                 || (abs (existingDimmensions.height - newDimmensions.height) > 50)
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         GotImageDimmensions (Err _) ->
-            ( model, Cmd.none )
+            -- TODO - Log something?
+            UR.init model
 
         StartedDragging ->
-            ( { model | isDragging = True }
-            , Cmd.none
-            )
+            { model | isDragging = True }
+                -- TODO - Create port to add `cursor: move` to html, body
+                |> UR.init
 
         StoppedDragging ->
-            ( { model
+            { model
                 | isDragging = False
                 , isRequestingCroppedImage = True
-              }
-            , Cmd.none
-            )
+            }
+                -- TODO - Create port to remove `cursor: move` from html, body
+                |> UR.init
 
         Dragged { x, y, previousX, previousY } ->
             case model.dimmensions of
                 Loading ->
-                    ( model, Cmd.none )
+                    UR.init model
 
                 Loaded dimmensions ->
                     let
                         selection =
                             calculateSelectionDimmensions model dimmensions
                     in
-                    ( { model
+                    { model
                         | dimmensions =
                             Loaded
                                 { dimmensions
@@ -160,41 +166,38 @@ update msg model =
                                             (dimmensions.left + dimmensions.width - selection.width)
                                             (dimmensions.leftOffset + x - previousX)
                                 }
-                      }
-                    , Cmd.none
-                    )
+                    }
+                        |> UR.init
 
         ChangedDimmensions percentageString ->
             case model.dimmensions of
                 Loading ->
-                    ( model, Cmd.none )
+                    UR.init model
 
                 Loaded dimmensions ->
                     case String.toFloat percentageString of
                         Nothing ->
-                            ( model, Cmd.none )
+                            UR.init model
 
                         Just percentageValue ->
-                            ( { model
+                            { model
                                 | dimmensions =
                                     Loaded { dimmensions | selectorBoxSizeMultiplier = percentageValue }
                                 , isChangingDimmensions = abs (percentageValue - dimmensions.selectorBoxSizeMultiplier) <= 0.05
-                              }
-                            , Cmd.none
-                            )
+                            }
+                                |> UR.init
 
         CompletedChangingDimmensions ->
-            ( { model
+            { model
                 | isRequestingCroppedImage = True
                 , isChangingDimmensions = False
-              }
-            , Cmd.none
-            )
+            }
+                |> UR.init
 
         ClickedZoomOperation operation ->
             case model.dimmensions of
                 Loading ->
-                    ( model, Cmd.none )
+                    UR.init model
 
                 Loaded dimmensions ->
                     let
@@ -207,7 +210,7 @@ update msg model =
                         delta =
                             0.1 * entireRange
                     in
-                    ( { model
+                    { model
                         | dimmensions =
                             Loaded
                                 { dimmensions
@@ -219,12 +222,13 @@ update msg model =
                                             Plus ->
                                                 clampPossibleValues (dimmensions.selectorBoxSizeMultiplier + delta)
                                 }
-                      }
-                    , Cmd.none
-                    )
+                    }
+                        |> UR.init
 
         GotCroppedImage file ->
-            ( { model | isRequestingCroppedImage = False }, Cmd.none )
+            -- TODO - Do something with the file
+            { model | isRequestingCroppedImage = False }
+                |> UR.init
 
 
 view : Model -> { imageUrl : String } -> Html Msg

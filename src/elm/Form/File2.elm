@@ -248,14 +248,11 @@ update shared msg (Model model) =
                 |> UR.init
 
         GotImageCropperMsg subMsg ->
-            let
-                ( newImageCropper, cmd ) =
-                    View.ImageCropper.update subMsg model.imageCropper
-            in
-            { model | imageCropper = newImageCropper }
-                |> Model
-                |> UR.init
-                |> UR.addCmd (Cmd.map GotImageCropperMsg cmd)
+            View.ImageCropper.update subMsg model.imageCropper
+                |> UR.fromChild (\newImageCropper -> Model { model | imageCropper = newImageCropper })
+                    GotImageCropperMsg
+                    (\_ -> identity)
+                    (Model model)
 
 
 
