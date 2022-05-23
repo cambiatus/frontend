@@ -1,6 +1,7 @@
 module View.ImageCropper exposing (Model, Msg, init, msgToString, update, view)
 
 import Browser.Dom
+import Dict
 import File
 import Html exposing (Html, button, div, img, input, node)
 import Html.Attributes exposing (alt, attribute, class, classList, id, src, style, type_, value)
@@ -127,9 +128,16 @@ update msg model =
             }
                 |> UR.init
 
-        GotImageDimmensions (Err _) ->
-            -- TODO - Log something?
+        GotImageDimmensions (Err (Browser.Dom.NotFound id)) ->
             UR.init model
+                |> UR.logImpossible msg
+                    "Could not get image dimmensions"
+                    Nothing
+                    { moduleName = "View.ImageCropper", function = "update" }
+                    [ { name = "Browser.Dom error"
+                      , extras = Dict.fromList [ ( "id", Json.Encode.string id ) ]
+                      }
+                    ]
 
         StartedDragging ->
             { model | isDragging = True }
